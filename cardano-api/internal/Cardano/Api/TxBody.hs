@@ -1718,7 +1718,7 @@ data TxBodyContent build era =
        txCertificates     :: TxCertificates build era,
        txUpdateProposal   :: TxUpdateProposal era,
        txMintValue        :: TxMintValue    build era,
-       txScriptValidity   :: FeatureValue (TxScriptValidityFeature era) ScriptValidity
+       txScriptValidity   :: FeatureValue TxScriptValidityFeature era ScriptValidity
      }
      deriving (Eq, Show)
 
@@ -1803,7 +1803,7 @@ setTxUpdateProposal v txBodyContent = txBodyContent { txUpdateProposal = v }
 setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
 setTxMintValue v txBodyContent = txBodyContent { txMintValue = v }
 
-setTxScriptValidity :: FeatureValue (TxScriptValidityFeature era) ScriptValidity -> TxBodyContent build era -> TxBodyContent build era
+setTxScriptValidity :: FeatureValue TxScriptValidityFeature era ScriptValidity -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent { txScriptValidity = v }
 
 -- ----------------------------------------------------------------------------
@@ -1839,7 +1839,7 @@ data TxBody era where
           -- auxiliary data.
        -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
 
-       -> FeatureValue (TxScriptValidityFeature era) ScriptValidity -- ^ Mark script as expected to pass or fail validation
+       -> FeatureValue TxScriptValidityFeature era ScriptValidity -- ^ Mark script as expected to pass or fail validation
 
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
@@ -2071,7 +2071,7 @@ serialiseShelleyBasedTxBody
   -> [Ledger.Script ledgerera]
   -> TxBodyScriptData era
   -> Maybe (L.TxAuxData ledgerera)
-  -> FeatureValue (TxScriptValidityFeature era) ScriptValidity -- ^ Mark script as expected to pass or fail validation
+  -> FeatureValue TxScriptValidityFeature era ScriptValidity -- ^ Mark script as expected to pass or fail validation
   -> ByteString
 serialiseShelleyBasedTxBody era txbody txscripts
                             TxBodyNoScriptData txmetadata scriptValidity =
@@ -2676,7 +2676,7 @@ getTxBodyContent (ShelleyTxBody era body _scripts scriptdata mAux scriptValidity
 
 fromLedgerTxBody
   :: ShelleyBasedEra era
-  -> FeatureValue (TxScriptValidityFeature era) ScriptValidity
+  -> FeatureValue TxScriptValidityFeature era ScriptValidity
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxBodyScriptData era
   -> Maybe (L.TxAuxData (ShelleyLedgerEra era))

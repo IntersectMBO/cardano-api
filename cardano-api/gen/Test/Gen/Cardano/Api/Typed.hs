@@ -941,7 +941,6 @@ genProtocolParametersUpdate era = do
 
   pure ProtocolParametersUpdate{..}
 
-
 genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
 genUpdateProposal era =
   UpdateProposal
