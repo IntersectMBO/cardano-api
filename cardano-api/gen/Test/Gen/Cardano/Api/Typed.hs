@@ -142,6 +142,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
+import           Data.Functor (($>))
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
 import           Data.Ratio (Ratio, (%))
@@ -898,8 +899,8 @@ genValidProtocolParameters =
     <*> fmap Just genNat
     <*> fmap Just genLovelace
 
-genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
-genProtocolParametersUpdate = do
+genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
+genProtocolParametersUpdate era = do
   protocolUpdateProtocolVersion     <- Gen.maybe ((,) <$> genNat <*> genNat)
   protocolUpdateDecentralization    <- Gen.maybe genRational
   protocolUpdateExtraPraosEntropy   <- Gen.maybe genMaybePraosNonce
@@ -927,16 +928,18 @@ genProtocolParametersUpdate = do
   protocolUpdateMaxValueSize        <- Gen.maybe genNat
   protocolUpdateCollateralPercent   <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
-  protocolUpdateUTxOCostPerByte     <- Gen.maybe genLovelace
+  protocolUpdateUTxOCostPerByte     <- sequence $ protocolUTxOCostPerByteSupportedInEra era $> genLovelace
+
   pure ProtocolParametersUpdate{..}
 
-
 genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
-genUpdateProposal _era = -- TODO Make era specific
+genUpdateProposal era =
   UpdateProposal
     <$> Gen.map (Range.constant 1 3)
-                ((,) <$> genVerificationKeyHash AsGenesisKey
-                     <*> genProtocolParametersUpdate)
+        ( (,)
+          <$> genVerificationKeyHash AsGenesisKey
+          <*> genProtocolParametersUpdate era
+        )
     <*> genEpochNo
 
 genCostModel :: Gen Alonzo.CostModel
