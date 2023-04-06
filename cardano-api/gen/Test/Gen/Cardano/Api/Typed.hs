@@ -946,11 +946,13 @@ genProtocolParametersUpdate = do
 
 
 genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
-genUpdateProposal _era = -- TODO Make era specific
+genUpdateProposal _era =
   UpdateProposal
     <$> Gen.map (Range.constant 1 3)
-                ((,) <$> genVerificationKeyHash AsGenesisKey
-                     <*> genProtocolParametersUpdate)
+        ( (,)
+          <$> genVerificationKeyHash AsGenesisKey
+          <*> genProtocolParametersUpdate
+        )
     <*> genEpochNo
 
 genCostModel :: Gen Alonzo.CostModel
