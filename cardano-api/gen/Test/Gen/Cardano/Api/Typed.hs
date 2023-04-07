@@ -636,7 +636,7 @@ genTxBodyContent era = do
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts era
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
-  txProtocolParams <- BuildTxWith <$> Gen.maybe genValidProtocolParameters
+  txProtocolParams <- BuildTxWith <$> Gen.maybe (genValidProtocolParameters era)
   txWithdrawals <- genTxWithdrawals era
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
@@ -833,8 +833,8 @@ genPraosNonce = makePraosNonce <$> Gen.bytes (Range.linear 0 32)
 genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce = Gen.maybe genPraosNonce
 
-genProtocolParameters :: Gen ProtocolParameters
-genProtocolParameters = do
+genProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
+genProtocolParameters era = do
   protocolParamProtocolVersion <- (,) <$> genNat <*> genNat
   protocolParamDecentralization <- Gen.maybe genRational
   protocolParamExtraPraosEntropy <- genMaybePraosNonce
@@ -862,13 +862,13 @@ genProtocolParameters = do
   protocolParamMaxValueSize <- Gen.maybe genNat
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <- Gen.maybe genLovelace
+  protocolParamUTxOCostPerByte <- sequence $ protocolUTxOCostPerByteSupportedInEra era $> genLovelace
 
   pure ProtocolParameters {..}
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
-genValidProtocolParameters :: Gen ProtocolParameters
-genValidProtocolParameters =
+genValidProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
+genValidProtocolParameters era =
   ProtocolParameters
     <$> ((,) <$> genNat <*> genNat)
     <*> Gen.maybe genRational
@@ -899,7 +899,7 @@ genValidProtocolParameters =
     <*> fmap Just genNat
     <*> fmap Just genNat
     <*> fmap Just genNat
-    <*> fmap Just genLovelace
+    <*> sequence (protocolUTxOCostPerByteSupportedInEra era $> genLovelace)
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do
