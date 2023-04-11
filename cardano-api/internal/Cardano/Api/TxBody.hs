@@ -177,6 +177,7 @@ module Cardano.Api.TxBody (
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
+
   ) where
 
 import           Cardano.Api.Address
