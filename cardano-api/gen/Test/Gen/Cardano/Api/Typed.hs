@@ -847,7 +847,7 @@ genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce = Gen.maybe genPraosNonce
 
 genProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
-genProtocolParameters _era = do
+genProtocolParameters era = do
   protocolParamProtocolVersion <- (,) <$> genNat <*> genNat
   protocolParamDecentralization <- Gen.maybe genRational
   protocolParamExtraPraosEntropy <- genMaybePraosNonce
@@ -865,7 +865,7 @@ genProtocolParameters _era = do
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
-  protocolParamUTxOCostPerWord <- Gen.maybe genLovelace
+  protocolParamUTxOCostPerWord <- featureInEra @ProtocolUTxOCostPerWordFeature (pure Nothing) (const (Just <$> genLovelace)) era
   protocolParamCostModels <- pure mempty
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
@@ -875,13 +875,13 @@ genProtocolParameters _era = do
   protocolParamMaxValueSize <- Gen.maybe genNat
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <- fmap Just genLovelace
+  protocolParamUTxOCostPerByte <- featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
 
   pure ProtocolParameters {..}
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
 genValidProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
-genValidProtocolParameters _era =
+genValidProtocolParameters era =
   ProtocolParameters
     <$> ((,) <$> genNat <*> genNat)
     <*> Gen.maybe genRational
@@ -901,7 +901,7 @@ genValidProtocolParameters _era =
     <*> genRational
     <*> genRational
     -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
-    <*> fmap Just genLovelace
+    <*> featureInEra @ProtocolUTxOCostPerWordFeature (pure Nothing) (const (Just <$> genLovelace)) era
     <*> return mempty
     --TODO: Babbage figure out how to deal with
     -- asymmetric cost model JSON instances
@@ -912,10 +912,10 @@ genValidProtocolParameters _era =
     <*> fmap Just genNat
     <*> fmap Just genNat
     <*> fmap Just genNat
-    <*> fmap Just genLovelace
+    <*> featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
 
-genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
-genProtocolParametersUpdate = do
+genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
+genProtocolParametersUpdate era = do
   protocolUpdateProtocolVersion     <- Gen.maybe ((,) <$> genNat <*> genNat)
   protocolUpdateDecentralization    <- Gen.maybe genRational
   protocolUpdateExtraPraosEntropy   <- Gen.maybe genMaybePraosNonce
@@ -933,7 +933,7 @@ genProtocolParametersUpdate = do
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
   protocolUpdateTreasuryCut         <- Gen.maybe genRational
-  protocolUpdateUTxOCostPerWord     <- Gen.maybe genLovelace
+  protocolUpdateUTxOCostPerWord     <- featureInEra @ProtocolUTxOCostPerWordFeature (pure Nothing) (const (Just <$> genLovelace)) era
   let protocolUpdateCostModels = mempty -- genCostModels
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
@@ -943,17 +943,18 @@ genProtocolParametersUpdate = do
   protocolUpdateMaxValueSize        <- Gen.maybe genNat
   protocolUpdateCollateralPercent   <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
-  protocolUpdateUTxOCostPerByte     <- Gen.maybe genLovelace
+  protocolUpdateUTxOCostPerByte     <- featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+
   pure ProtocolParametersUpdate{..}
 
 
 genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
-genUpdateProposal _era =
+genUpdateProposal era =
   UpdateProposal
     <$> Gen.map (Range.constant 1 3)
         ( (,)
           <$> genVerificationKeyHash AsGenesisKey
-          <*> genProtocolParametersUpdate
+          <*> genProtocolParametersUpdate era
         )
     <*> genEpochNo
 

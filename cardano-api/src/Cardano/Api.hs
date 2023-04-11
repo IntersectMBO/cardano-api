@@ -277,6 +277,7 @@ module Cardano.Api (
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
+    FeatureInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -861,6 +862,7 @@ import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
