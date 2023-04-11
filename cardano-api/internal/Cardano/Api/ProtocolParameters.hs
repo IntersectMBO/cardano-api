@@ -74,6 +74,7 @@ module Cardano.Api.ProtocolParameters (
 
     -- ** Era-dependent protocol features
     ProtocolUTxOCostPerByteFeature(..),
+    ProtocolUTxOCostPerWordFeature(..),
 
   ) where
 
@@ -698,6 +699,27 @@ instance FeatureInEra ProtocolUTxOCostPerByteFeature where
     AlonzoEra   -> no
     BabbageEra  -> yes ProtocolUTxOCostPerByteInBabbageEra
     ConwayEra   -> yes ProtocolUTxOCostPerByteInConwayEra
+
+-- | A representation of whether the era supports the 'UTxO Cost Per Word'
+-- protocol parameter.
+--
+-- The Babbage and subsequent eras support such a protocol parameter.
+--
+data ProtocolUTxOCostPerWordFeature era where
+  ProtocolUpdateUTxOCostPerWordInAlonzoEra :: ProtocolUTxOCostPerWordFeature AlonzoEra
+
+deriving instance Eq   (ProtocolUTxOCostPerWordFeature era)
+deriving instance Show (ProtocolUTxOCostPerWordFeature era)
+
+instance FeatureInEra ProtocolUTxOCostPerWordFeature where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> no
+    AllegraEra  -> no
+    MaryEra     -> no
+    AlonzoEra   -> yes ProtocolUpdateUTxOCostPerWordInAlonzoEra
+    BabbageEra  -> no
+    ConwayEra   -> no
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
