@@ -13,6 +13,7 @@ module Cardano.CLI.Shelley.Commands
     ShelleyCommand (..)
   , AddressCmd (..)
   , CommitteeCmd (..)
+  , DRepCmd (..)
   , StakeAddressCmd (..)
   , KeyCmd (..)
   , TransactionCmd (..)
@@ -62,7 +63,7 @@ module Cardano.CLI.Shelley.Commands
   , ColdVerificationKeyOrFile (..)
   ) where
 
-import           Cardano.Api.Shelley
+import           Cardano.Api.Shelley hiding (DRepMetadataHash)
 
 import           Cardano.Chain.Common (BlockCount)
 import           Cardano.CLI.Shelley.Key (PaymentVerifier, PoolDelegationTarget, StakeIdentifier,
@@ -88,6 +89,7 @@ import           Data.Text (Text)
 --
 data ShelleyCommand
   = AddressCmd      AddressCmd
+  | DRepCmd         DRepCmd
   | StakeAddressCmd StakeAddressCmd
   | KeyCmd          KeyCmd
   | TransactionCmd  TransactionCmd
@@ -102,6 +104,7 @@ renderShelleyCommand :: ShelleyCommand -> Text
 renderShelleyCommand sc =
   case sc of
     AddressCmd cmd -> renderAddressCmd cmd
+    DRepCmd cmd -> renderDRepCmd cmd
     StakeAddressCmd cmd -> renderStakeAddressCmd cmd
     KeyCmd cmd -> renderKeyCmd cmd
     TransactionCmd cmd -> renderTransactionCmd cmd
@@ -382,6 +385,26 @@ data PoolCmd
   | PoolMetadataHash (File StakePoolMetadata In) (Maybe (File () Out))
   deriving Show
 
+data DRepCmd
+  = DRepRegistrationCert
+      NetworkId
+      -- ^ Network ID.
+      (VerificationKeyOrFile DRepKey)
+      -- ^ VRF Verification key.
+      (Maybe DRepMetadataReference)
+      -- ^  DRep metadata.
+      (File Certificate Out)
+      -- ^ File path to where the certificate will be written.
+  | DRepRetirementCert
+      (VerificationKeyOrFile DRepKey)
+      -- ^ DRep verification key.
+      EpochNo
+      -- ^ Epoch in which to retire the  DRep.
+      (File Certificate Out)
+  | DRepGetId (VerificationKeyOrFile DRepKey) OutputFormat
+  | DRepMetadataHash (File DRepMetadata In) (Maybe (File () Out))
+  deriving Show
+
 renderPoolCmd :: PoolCmd -> Text
 renderPoolCmd cmd =
   case cmd of
@@ -389,6 +412,14 @@ renderPoolCmd cmd =
     PoolRetirementCert {} -> "stake-pool deregistration-certificate"
     PoolGetId {} -> "stake-pool id"
     PoolMetadataHash {} -> "stake-pool metadata-hash"
+
+renderDRepCmd :: DRepCmd -> Text
+renderDRepCmd cmd =
+  case cmd of
+    DRepRegistrationCert {} -> "drep registration-certificate"
+    DRepRetirementCert {} -> "drep deregistration-certificate"
+    DRepGetId {} -> "drep id"
+    DRepMetadataHash {} -> "drep metadata-hash"
 
 data QueryCmd =
     QueryLeadershipSchedule
