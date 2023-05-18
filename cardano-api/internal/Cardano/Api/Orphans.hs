@@ -1,18 +1,25 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Api.Orphans () where
 
 import           Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
+import           Data.Data (Data)
 
+import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 
+-- FIXME: A temporary workaround for missing Eq and Data instances in plutus-ledger-api
+-- TODO: remove this when plutus-ledger-api gets bumped to >=1.6.1
+deriving instance Eq Ledger.CostModelApplyError
+deriving instance Data Ledger.CostModelApplyError
+
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
-
------
 
 instance Crypto.Crypto crypto => ToJSON (Consensus.StakeSnapshots crypto) where
   toJSON = object . stakeSnapshotsToPair

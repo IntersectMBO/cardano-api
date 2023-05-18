@@ -9,33 +9,33 @@ module Test.Golden.ErrorsSpec
 import           Cardano.Api
 import           Cardano.Api.Shelley (LeadershipError (..), OperationalCertIssueError (..),
                    ProtocolParametersError (..), ReferenceScript (..))
-
 import           Cardano.Binary as CBOR
-
-import           Test.Hspec
-
-import           Data.ByteString (ByteString)
-import           Data.Text (Text)
-import           Data.Typeable (typeRep)
-
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-
 import qualified Cardano.Crypto.Seed as Crypto
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
+import qualified Cardano.Ledger.Alonzo.TxInfo as Ledger
 import qualified Cardano.Ledger.Alonzo.TxWits as Ledger
 
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus
 
-import qualified Cardano.Ledger.Alonzo.TxInfo as Ledger
 import qualified Codec.Binary.Bech32 as Bech32
+import           Control.Monad.IO.Class
 import qualified Data.Aeson as Aeson
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Data (Data (..))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import           Data.Text (Text)
+import           Data.Typeable
+import           GHC.Stack (withFrozenCallStack)
 import qualified HaskellWorks.Hspec.Hedgehog as H
+import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Golden as H
+import           System.FilePath ((</>))
+import           Test.Hspec
 
 seed1 :: ByteString
 seed1 = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -88,9 +88,13 @@ spec = describe "Test.Golden.Errors" $ do
     flip H.diffVsGoldenFile "test/golden/errors/InputDecodeError/InputInvalidError.txt"
       $ displayError InputInvalidError
 
-  it "InvalidCostModel" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/InvalidCostModel/InvalidCostModel.txt"
-      $ displayError $ InvalidCostModel costModel (Plutus.CMInternalWriteError string)
+  it "ProtocolParametersConversionError" $ H.requireTest $ do
+    mapM_ testErrorMessage
+      [ PpceOutOfBounds "pparam" 0.1
+      , PpceVersionInvalid 99999
+      , PpceInvalidCostModel costModel (Plutus.CMInternalWriteError string)
+      , PpceMissingParameter "pparam"
+      ]
 
   it "JsonDecodeError" $ H.requireTest $ do
     flip H.diffVsGoldenFile "test/golden/errors/JsonDecodeError/JsonDecodeError.txt"
@@ -295,3 +299,11 @@ spec = describe "Test.Golden.Errors" $ do
   it "TxMetadataRangeError" $ H.requireTest $ do
     flip H.diffVsGoldenFile "test/golden/errors/TxMetadataRangeError/TxMetadataJsonToplevelNotMap.txt"
       $ displayError $ TxMetadataBytesTooLong 0
+
+testErrorMessage :: (HasCallStack, MonadIO m, MonadTest m, Data p , Error p) => p -> m ()
+testErrorMessage err = withFrozenCallStack $ do
+  let typeName = show $ typeOf err
+      constructorName = show $ toConstr err
+  H.note_ "Incorrect error message in golden file"
+  displayError err `H.diffVsGoldenFile` ("test/golden/errors" </> typeName </> constructorName <> ".txt")
+

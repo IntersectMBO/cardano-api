@@ -805,7 +805,6 @@ data TxBodyErrorAutoBalance =
          ScriptWitnessIndex
          (Map ScriptWitnessIndex ExecutionUnits)
 
-
   deriving Show
 
 
@@ -917,7 +916,6 @@ makeTransactionBodyAutoBalance
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
 makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDeposits
                             utxo txbodycontent changeaddr mnkeys = do
-
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
     -- 2. figure out the overall min fees
@@ -931,6 +929,7 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
             -- 1,2,4 or 8 bytes?
         }
 
+    bpparams <- first (TxBodyError . TxBodyProtocolParamsConversionError) $ bundleProtocolParams era' pparams
     exUnitsMap <- first TxBodyErrorValidityInterval $
                     evaluateTransactionExecutionUnits
                       systemstart history
@@ -1014,7 +1013,7 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
 
     -- check if the balance is positive or negative
     -- in one case we can produce change, in the other the inputs are insufficient
-    balanceCheck balance
+    balanceCheck bpparams balance
 
     --TODO: we could add the extra fee for the CBOR encoding of the change,
     -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
@@ -1039,8 +1038,6 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
         createAndValidateTransactionBody finalTxBodyContent
     return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
-   bpparams = bundleProtocolParams era' pparams
-
    -- Essentially we check for the existence of collateral inputs. If they exist we
    -- create a fictitious collateral return output. Why? Because we need to put dummy values
    -- to get a fee estimate (i.e we overestimate the fee.)
@@ -1140,8 +1137,8 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
        -- of the outputs
        _ -> rest ++ [change]
 
-   balanceCheck :: TxOutValue era -> Either TxBodyErrorAutoBalance ()
-   balanceCheck balance
+   balanceCheck :: BundledProtocolParameters era -> TxOutValue era -> Either TxBodyErrorAutoBalance ()
+   balanceCheck bpparams balance
     | txOutValueToLovelace balance == 0 && onlyAda (txOutValueToValue balance) = return ()
     | txOutValueToLovelace balance < 0 =
         Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance

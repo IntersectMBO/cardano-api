@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
@@ -22,7 +23,6 @@ module Cardano.Api.ProtocolParameters (
     -- * The updatable protocol parameters
     ProtocolParameters(..),
     checkProtocolParameters,
-    ProtocolParametersError(..),
     EpochNo,
     BundledProtocolParameters(..),
     bundleProtocolParams,
@@ -33,7 +33,8 @@ module Cardano.Api.ProtocolParameters (
     ProtocolParametersUpdate(..),
 
     -- * Errors
-    InvalidCostModel(..),
+    ProtocolParametersError(..),
+    ProtocolParametersConversionError(..),
 
     -- * PraosNonce
     PraosNonce,
@@ -56,9 +57,7 @@ module Cardano.Api.ProtocolParameters (
     toLedgerProposedPPUpdates,
     fromLedgerProposedPPUpdates,
     toLedgerPParams,
-    toLedgerPParamsEither,
     toLedgerPParamsUpdate,
-    toLedgerPParamsUpdateEither,
     fromLedgerPParams,
     fromLedgerPParamsUpdate,
     toAlonzoPrices,
@@ -78,6 +77,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!
                    (.=))
 import           Data.Bifunctor (bimap, first)
 import           Data.ByteString (ByteString)
+import           Data.Data (Data)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -118,6 +118,7 @@ import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -752,7 +753,7 @@ instance FromJSON ExecutionUnitPrices where
         <*> o .: "priceMemory"
 
 
-toAlonzoPrices :: ExecutionUnitPrices -> Either String Alonzo.Prices
+toAlonzoPrices :: ExecutionUnitPrices -> Either ProtocolParametersConversionError Alonzo.Prices
 toAlonzoPrices ExecutionUnitPrices {
                  priceExecutionSteps,
                  priceExecutionMemory
@@ -777,7 +778,7 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 --
 
 newtype CostModel = CostModel [Integer]
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
   deriving newtype (ToCBOR, FromCBOR)
 
 newtype CostModels = CostModels { unCostModels :: Map AnyPlutusScriptVersion CostModel }
@@ -789,29 +790,19 @@ instance FromJSON CostModels where
 instance ToJSON CostModels where
   toJSON (CostModels costModels) =
     case toAlonzoCostModels costModels of
-      Left err -> error $ "Invalid cost model was constructed: " ++ err
+      Left err -> error $ displayError err
       Right ledgerCostModels -> toJSON ledgerCostModels
-
-data InvalidCostModel = InvalidCostModel CostModel Alonzo.CostModelApplyError
-  deriving Show
-
-instance Error InvalidCostModel where
-  displayError (InvalidCostModel cm err) =
-    "Invalid cost model: " ++ display err ++
-    " Cost model: " ++ show cm
-
 
 toAlonzoCostModels
   :: Map AnyPlutusScriptVersion CostModel
-  -> Either String Alonzo.CostModels
+  -> Either ProtocolParametersConversionError Alonzo.CostModels
 toAlonzoCostModels m = do
   f <- mapM conv $ Map.toList m
   Right (Alonzo.emptyCostModels { Alonzo.costModelsValid = Map.fromList f })
  where
-  conv :: (AnyPlutusScriptVersion, CostModel) -> Either String (Alonzo.Language, Alonzo.CostModel)
+  conv :: (AnyPlutusScriptVersion, CostModel) -> Either ProtocolParametersConversionError (Alonzo.Language, Alonzo.CostModel)
   conv (anySVer, cModel) = do
-    -- TODO: Propagate InvalidCostModel further
-    alonzoCostModel <- first displayError $ toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
+    alonzoCostModel <- toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
     Right (toAlonzoScriptLanguage anySVer, alonzoCostModel)
 
 fromAlonzoCostModels
@@ -830,8 +821,8 @@ fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
-toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either InvalidCostModel Alonzo.CostModel
-toAlonzoCostModel (CostModel m) l = first (InvalidCostModel (CostModel m)) $ Alonzo.mkCostModel l m
+toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either ProtocolParametersConversionError Alonzo.CostModel
+toAlonzoCostModel (CostModel m) l = first (PpceInvalidCostModel (CostModel m)) $ Alonzo.mkCostModel l m
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
 fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
@@ -888,9 +879,9 @@ toLedgerUpdate :: forall era ledgerera.
                => Ledger.EraCrypto ledgerera ~ StandardCrypto
                => ShelleyBasedEra era
                -> UpdateProposal
-               -> Ledger.Update ledgerera
+               -> Either ProtocolParametersConversionError (Ledger.Update ledgerera)
 toLedgerUpdate era (UpdateProposal ppup epochno) =
-    Ledger.Update (toLedgerProposedPPUpdates era ppup) epochno
+  (`Ledger.Update` epochno) <$> toLedgerProposedPPUpdates era ppup
 
 
 toLedgerProposedPPUpdates :: forall era ledgerera.
@@ -898,32 +889,24 @@ toLedgerProposedPPUpdates :: forall era ledgerera.
                           => Ledger.EraCrypto ledgerera ~ StandardCrypto
                           => ShelleyBasedEra era
                           -> Map (Hash GenesisKey) ProtocolParametersUpdate
-                          -> Ledger.ProposedPPUpdates ledgerera
-toLedgerProposedPPUpdates era =
-    Ledger.ProposedPPUpdates
-  . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh)
-  . Map.map (toLedgerPParamsUpdate era)
+                          -> Either ProtocolParametersConversionError (Ledger.ProposedPPUpdates ledgerera)
+toLedgerProposedPPUpdates era m =
+  Ledger.ProposedPPUpdates . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) <$> traverse (toLedgerPParamsUpdate era) m
 
--- TODO: Stop using partial function and switch to the Either String variant
 toLedgerPParamsUpdate :: ShelleyBasedEra era
                       -> ProtocolParametersUpdate
-                      -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-toLedgerPParamsUpdate sbe = either error id . toLedgerPParamsUpdateEither sbe
-
-toLedgerPParamsUpdateEither :: ShelleyBasedEra era
-                            -> ProtocolParametersUpdate
-                            -> Either String (PParamsUpdate (ShelleyLedgerEra era))
-toLedgerPParamsUpdateEither ShelleyBasedEraShelley = toShelleyPParamsUpdate
-toLedgerPParamsUpdateEither ShelleyBasedEraAllegra = toShelleyPParamsUpdate
-toLedgerPParamsUpdateEither ShelleyBasedEraMary    = toShelleyPParamsUpdate
-toLedgerPParamsUpdateEither ShelleyBasedEraAlonzo  = toAlonzoPParamsUpdate
-toLedgerPParamsUpdateEither ShelleyBasedEraBabbage = toBabbagePParamsUpdate
-toLedgerPParamsUpdateEither ShelleyBasedEraConway  = toConwayPParamsUpdate
+                      -> Either ProtocolParametersConversionError (PParamsUpdate (ShelleyLedgerEra era))
+toLedgerPParamsUpdate ShelleyBasedEraShelley = toShelleyPParamsUpdate
+toLedgerPParamsUpdate ShelleyBasedEraAllegra = toShelleyPParamsUpdate
+toLedgerPParamsUpdate ShelleyBasedEraMary    = toShelleyPParamsUpdate
+toLedgerPParamsUpdate ShelleyBasedEraAlonzo  = toAlonzoPParamsUpdate
+toLedgerPParamsUpdate ShelleyBasedEraBabbage = toBabbagePParamsUpdate
+toLedgerPParamsUpdate ShelleyBasedEraConway  = toConwayPParamsUpdate
 
 
 toShelleyCommonPParamsUpdate :: EraPParams ledgerera
                              => ProtocolParametersUpdate
-                             -> Either String (PParamsUpdate ledgerera)
+                             -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
 toShelleyCommonPParamsUpdate
     ProtocolParametersUpdate {
       protocolUpdateProtocolVersion
@@ -974,7 +957,7 @@ toShelleyPParamsUpdate :: ( EraPParams ledgerera
                           , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
                           )
                        => ProtocolParametersUpdate
-                       -> Either String (PParamsUpdate ledgerera)
+                       -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
 toShelleyPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateDecentralization
@@ -995,7 +978,7 @@ toShelleyPParamsUpdate
 
 toAlonzoCommonPParamsUpdate :: AlonzoEraPParams ledgerera
                             => ProtocolParametersUpdate
-                            -> Either String (PParamsUpdate ledgerera)
+                            -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
 toAlonzoCommonPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateCostModels
@@ -1028,7 +1011,7 @@ toAlonzoCommonPParamsUpdate
 
 toAlonzoPParamsUpdate :: Ledger.Crypto crypto
                       => ProtocolParametersUpdate
-                      -> Either String (PParamsUpdate (Ledger.AlonzoEra crypto))
+                      -> Either ProtocolParametersConversionError (PParamsUpdate (Ledger.AlonzoEra crypto))
 toAlonzoPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateDecentralization
@@ -1047,7 +1030,7 @@ toAlonzoPParamsUpdate
 
 toBabbagePParamsUpdate :: BabbageEraPParams ledgerera
                        => ProtocolParametersUpdate
-                       -> Either String (PParamsUpdate ledgerera)
+                       -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
 toBabbagePParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateUTxOCostPerByte
@@ -1060,28 +1043,23 @@ toBabbagePParamsUpdate
            noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
   pure ppuBabbage
 
-requireParam :: String -> (a -> Either String b) -> Maybe a -> Either String b
-requireParam paramName = maybe (Left $ "Must specify " ++ paramName)
+requireParam :: String -> (a -> Either ProtocolParametersConversionError b) -> Maybe a -> Either ProtocolParametersConversionError b
+requireParam paramName = maybe (Left $ PpceMissingParameter paramName)
 
-mkProtVer :: (Natural, Natural) -> Either String Ledger.ProtVer
-mkProtVer (majorProtVer, minorProtVer) =
-  case Ledger.mkVersion majorProtVer of
-    Nothing -> Left $ "Major protocol version is invalid: " ++ show majorProtVer
-    Just v -> Right $ Ledger.ProtVer v minorProtVer
+mkProtVer :: (Natural, Natural) -> Either ProtocolParametersConversionError Ledger.ProtVer
+mkProtVer (majorProtVer, minorProtVer) = maybeToRight (PpceVersionInvalid majorProtVer) $
+  (`Ledger.ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer
 
 boundRationalEither :: Ledger.BoundedRational b
                     => String
                     -> Rational
-                    -> Either String b
-boundRationalEither name r =
-  case Ledger.boundRational r of
-    Just br -> Right br
-    Nothing -> Left $ "Rational value for '" ++ name ++ "' is outside of bounds: " ++ show r
+                    -> Either ProtocolParametersConversionError b
+boundRationalEither name r = maybeToRight (PpceOutOfBounds name r) $ Ledger.boundRational r
 
 -- Conway uses the same PParams as Babbage for now.
 toConwayPParamsUpdate :: BabbageEraPParams ledgerera
                       => ProtocolParametersUpdate
-                      -> Either String (PParamsUpdate ledgerera)
+                      -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
 toConwayPParamsUpdate = toBabbagePParamsUpdate
 
 -- ----------------------------------------------------------------------------
@@ -1238,10 +1216,12 @@ data BundledProtocolParameters era where
     -> Ledger.PParams (ShelleyLedgerEra era)
     -> BundledProtocolParameters era
 
-bundleProtocolParams :: CardanoEra era -> ProtocolParameters -> BundledProtocolParameters era
+bundleProtocolParams :: CardanoEra era
+                     -> ProtocolParameters
+                     -> Either ProtocolParametersConversionError (BundledProtocolParameters era)
 bundleProtocolParams cEra pp = case cardanoEraStyle cEra of
-  LegacyByronEra -> BundleAsByronProtocolParameters pp
-  ShelleyBasedEra sbe -> BundleAsShelleyBasedProtocolParameters sbe pp (toLedgerPParams sbe pp)
+  LegacyByronEra -> pure $ BundleAsByronProtocolParameters pp
+  ShelleyBasedEra sbe -> BundleAsShelleyBasedProtocolParameters sbe pp <$> toLedgerPParams sbe pp
 
 unbundleLedgerShelleyBasedProtocolParams
   :: ShelleyBasedEra era
@@ -1263,28 +1243,21 @@ unbundleProtocolParams (BundleAsShelleyBasedProtocolParameters _ pp _) = pp
 -- Conversion functions: protocol parameters to ledger types
 --
 
---TODO: Propagate the `Either String (PParams (ShelleyLedgerEra era))` to the use sites,
---rather than fail with `error` here.
 toLedgerPParams
   :: ShelleyBasedEra era
   -> ProtocolParameters
-  -> Ledger.PParams (ShelleyLedgerEra era)
-toLedgerPParams era = either error id . toLedgerPParamsEither era
-
-toLedgerPParamsEither :: ShelleyBasedEra era
-                      -> ProtocolParameters
-                      -> Either String (PParams (ShelleyLedgerEra era))
-toLedgerPParamsEither ShelleyBasedEraShelley = toShelleyPParams
-toLedgerPParamsEither ShelleyBasedEraAllegra = toShelleyPParams
-toLedgerPParamsEither ShelleyBasedEraMary    = toShelleyPParams
-toLedgerPParamsEither ShelleyBasedEraAlonzo  = toAlonzoPParams
-toLedgerPParamsEither ShelleyBasedEraBabbage = toBabbagePParams
-toLedgerPParamsEither ShelleyBasedEraConway  = toConwayPParams
+  -> Either ProtocolParametersConversionError (Ledger.PParams (ShelleyLedgerEra era))
+toLedgerPParams ShelleyBasedEraShelley = toShelleyPParams
+toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
+toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
+toLedgerPParams ShelleyBasedEraAlonzo  = toAlonzoPParams
+toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
+toLedgerPParams ShelleyBasedEraConway  = toConwayPParams
 
 
 toShelleyCommonPParams :: EraPParams ledgerera
                        => ProtocolParameters
-                       -> Either String (PParams ledgerera)
+                       -> Either ProtocolParametersConversionError (PParams ledgerera)
 toShelleyCommonPParams
     ProtocolParameters {
       protocolParamProtocolVersion
@@ -1329,7 +1302,7 @@ toShelleyPParams :: ( EraPParams ledgerera
                     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
                     )
                  => ProtocolParameters
-                 -> Either String (PParams ledgerera)
+                 -> Either ProtocolParametersConversionError (PParams ledgerera)
 toShelleyPParams
     protocolParameters@ProtocolParameters {
       protocolParamDecentralization
@@ -1337,12 +1310,8 @@ toShelleyPParams
     , protocolParamMinUTxOValue
     } = do
   ppCommon <- toShelleyCommonPParams protocolParameters
-  d <- case protocolParamDecentralization of
-    Nothing -> Left "Missing Decentralization parameter"
-    Just dr -> boundRationalEither "D" dr
-  minUTxOValue <-
-    maybe (Left "toShelleyPParams: must specify protocolParamMinUTxOValue") Right
-    protocolParamMinUTxOValue
+  d <- boundRationalEither "D" =<< maybeToRight (PpceMissingParameter "decentralization") protocolParamDecentralization
+  minUTxOValue <- maybeToRight (PpceMissingParameter "protocolParamMinUTxOValue") protocolParamMinUTxOValue
   let ppShelley =
         ppCommon
         & ppDL            .~ d
@@ -1353,7 +1322,7 @@ toShelleyPParams
 
 toAlonzoCommonPParams :: AlonzoEraPParams ledgerera
                       => ProtocolParameters
-                      -> Either String (PParams ledgerera)
+                      -> Either ProtocolParametersConversionError (PParams ledgerera)
 toAlonzoCommonPParams
     protocolParameters@ProtocolParameters {
       protocolParamCostModels
@@ -1391,7 +1360,7 @@ toAlonzoCommonPParams
 
 toAlonzoPParams :: Ledger.Crypto crypto
                 => ProtocolParameters
-                -> Either String (PParams (Ledger.AlonzoEra crypto))
+                -> Either ProtocolParametersConversionError (PParams (Ledger.AlonzoEra crypto))
 toAlonzoPParams
     protocolParameters@ProtocolParameters {
       protocolParamDecentralization
@@ -1425,7 +1394,7 @@ toAlonzoPParams
 
 toBabbagePParams :: BabbageEraPParams ledgerera
                  => ProtocolParameters
-                 -> Either String (PParams ledgerera)
+                 -> Either ProtocolParametersConversionError (PParams ledgerera)
 toBabbagePParams
     protocolParameters@ProtocolParameters {
       protocolParamUTxOCostPerByte
@@ -1440,7 +1409,7 @@ toBabbagePParams
 
 toConwayPParams :: BabbageEraPParams ledgerera
                 => ProtocolParameters
-                -> Either String (PParams ledgerera)
+                -> Either ProtocolParametersConversionError (PParams ledgerera)
 toConwayPParams = toBabbagePParams
 
 -- ----------------------------------------------------------------------------
@@ -1545,24 +1514,6 @@ fromConwayPParams :: BabbageEraPParams ledgerera
                   -> ProtocolParameters
 fromConwayPParams = fromBabbagePParams
 
-data ProtocolParametersError =
-    PParamsErrorMissingMinUTxoValue AnyCardanoEra
-  | PParamsErrorMissingAlonzoProtocolParameter
-  deriving Show
-
-instance Error ProtocolParametersError where
-  displayError (PParamsErrorMissingMinUTxoValue (AnyCardanoEra era)) = mconcat
-    [ "The " <> show era <> " protocol parameters value is missing the following "
-    , "field: MinUTxoValue. Did you intend to use a " <> show era <> " protocol "
-    , " parameters value?"
-    ]
-  displayError PParamsErrorMissingAlonzoProtocolParameter = mconcat
-    [ "The Alonzo era protocol parameters in use is missing one or more of the "
-    , "following fields: UTxOCostPerWord, CostModels, Prices, MaxTxExUnits, "
-    , "MaxBlockExUnits, MaxValueSize, CollateralPercent, MaxCollateralInputs. Did "
-    , "you intend to use an Alonzo era protocol parameters value?"
-    ]
-
 checkProtocolParameters
   :: forall era. IsCardanoEra era
   => ShelleyBasedEra era
@@ -1638,3 +1589,42 @@ checkProtocolParameters sbe ProtocolParameters{..} =
      then return ()
      else Left . PParamsErrorMissingMinUTxoValue
                $ AnyCardanoEra era
+
+
+data ProtocolParametersError
+  = PParamsErrorMissingMinUTxoValue !AnyCardanoEra
+  | PParamsErrorMissingAlonzoProtocolParameter
+  deriving (Show)
+
+instance Error ProtocolParametersError where
+  displayError (PParamsErrorMissingMinUTxoValue (AnyCardanoEra era)) = mconcat
+    [ "The " <> show era <> " protocol parameters value is missing the following "
+    , "field: MinUTxoValue. Did you intend to use a " <> show era <> " protocol "
+    , "parameters value?"
+    ]
+  displayError PParamsErrorMissingAlonzoProtocolParameter = mconcat
+    [ "The Alonzo era protocol parameters in use is missing one or more of the "
+    , "following fields: UTxOCostPerWord, CostModels, Prices, MaxTxExUnits, "
+    , "MaxBlockExUnits, MaxValueSize, CollateralPercent, MaxCollateralInputs. Did "
+    , "you intend to use an Alonzo era protocol parameters value?"
+    ]
+
+
+data ProtocolParametersConversionError
+  = PpceOutOfBounds !ProtocolParameterName !Rational
+  | PpceVersionInvalid !ProtocolParameterVersion
+  | PpceInvalidCostModel !CostModel !Alonzo.CostModelApplyError
+  | PpceMissingParameter !ProtocolParameterName
+  deriving (Eq, Show, Data)
+
+
+type ProtocolParameterName = String
+type ProtocolParameterVersion = Natural
+
+instance Error ProtocolParametersConversionError where
+  displayError = \case
+    PpceOutOfBounds name r -> "Value for '" <> name <> "' is outside of bounds: " <> show (fromRational r :: Double)
+    PpceVersionInvalid majorProtVer -> "Major protocol version is invalid: " <> show majorProtVer
+    PpceInvalidCostModel cm err -> "Invalid cost model: " <> display err <> " Cost model: " <> show cm
+    PpceMissingParameter name -> "Missing parameter: " <> name
+
