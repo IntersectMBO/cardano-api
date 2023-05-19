@@ -636,7 +636,7 @@ genTxBodyContent era = do
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts era
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
-  txProtocolParams <- BuildTxWith <$> Gen.maybe genValidProtocolParameters
+  txProtocolParams <- BuildTxWith <$> Gen.maybe (genValidProtocolParameters era)
   txWithdrawals <- genTxWithdrawals era
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
@@ -852,7 +852,7 @@ genProtocolParameters era = do
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
-  protocolParamUTxOCostPerWord <- sequence $ supportedInEra ProtocolParameterUTxOCostPerWord era $> genLovelace
+  protocolParamUTxOCostPerWord <- Api.supportedInEraF era . ProtocolParameterUTxOCostPerWord <$> genLovelace
   protocolParamCostModels <- pure mempty
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
@@ -867,8 +867,8 @@ genProtocolParameters era = do
   pure ProtocolParameters {..}
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
-genValidProtocolParameters :: Gen ProtocolParameters
-genValidProtocolParameters =
+genValidProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
+genValidProtocolParameters era =
   ProtocolParameters
     <$> ((,) <$> genNat <*> genNat)
     <*> Gen.maybe genRational
@@ -888,7 +888,7 @@ genValidProtocolParameters =
     <*> genRational
     <*> genRational
     -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
-    <*> fmap Just genLovelace
+    <*> (Api.supportedInEraF era . ProtocolParameterUTxOCostPerWord <$> genLovelace)
     <*> return mempty
     --TODO: Babbage figure out how to deal with
     -- asymmetric cost model JSON instances
@@ -920,7 +920,7 @@ genProtocolParametersUpdate era = do
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
   protocolUpdateTreasuryCut         <- Gen.maybe genRational
-  protocolUpdateUTxOCostPerWord     <- sequence $ supportedInEra ProtocolParameterUTxOCostPerWord era $> genLovelace
+  protocolUpdateUTxOCostPerWord     <- Api.supportedInEraF era . ProtocolParameterUTxOCostPerWord <$> genLovelace
   let protocolUpdateCostModels = mempty -- genCostModels
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances

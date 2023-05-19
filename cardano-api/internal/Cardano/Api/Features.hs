@@ -5,10 +5,15 @@ module Cardano.Api.Features
   ( Feature(..)
   , SupportedInEra(..)
   , supportedInEra
+  , supportedInEraF
+
+  -- * Features
+  , ProtocolParameterUTxOCostPerWord
   ) where
 
 import           Cardano.Api.Eras
-import           Data.Aeson (ToJSON (..))
+import           Cardano.Api.Value
+import           Data.Aeson
 
 data ProtocolParameterUTxOCostPerWord
 
@@ -16,7 +21,7 @@ data ProtocolParameterUTxOCostPerByte
 
 -- | A representation of a feature that is supported in a given era.
 data Feature f where
-  ProtocolParameterUTxOCostPerWord :: Feature ProtocolParameterUTxOCostPerWord
+  ProtocolParameterUTxOCostPerWord :: Lovelace -> Feature ProtocolParameterUTxOCostPerWord
   ProtocolParameterUTxOCostPerByte :: Feature ProtocolParameterUTxOCostPerByte
 
 deriving instance Eq (Feature f)
@@ -24,6 +29,9 @@ deriving instance Show (Feature f)
 
 instance ToJSON (Feature f) where
   toJSON = toJSON . show
+
+instance FromJSON (Feature f) where
+  parseJSON = undefined
 
 -- | A representation of a feature whether a feature is supported in a given era.
 data SupportedInEra f era where
@@ -46,9 +54,22 @@ supportedInEra
   -> CardanoEra era
   -> Maybe (SupportedInEra f era)
 
-supportedInEra ProtocolParameterUTxOCostPerWord AlonzoEra  = Just ProtocolParameterUTxOCostPerWordSupportedInAlonzoEra
+supportedInEra (ProtocolParameterUTxOCostPerWord{}) AlonzoEra  = Just ProtocolParameterUTxOCostPerWordSupportedInAlonzoEra
 
 supportedInEra ProtocolParameterUTxOCostPerByte BabbageEra = Just ProtocolParameterUTxOCostPerByteSupportedInBabbageEra
 supportedInEra ProtocolParameterUTxOCostPerByte ConwayEra  = Just ProtocolParameterUTxOCostPerByteSupportedInConwayEra
 
 supportedInEra _ _  = Nothing
+
+
+
+supportedInEraF
+  :: CardanoEra era
+  -> Feature f
+  -> Maybe (Feature f)
+supportedInEraF AlonzoEra (ProtocolParameterUTxOCostPerWord ll)   =  Just (ProtocolParameterUTxOCostPerWord ll)
+
+--supportedInEraF ProtocolParameterUTxOCostPerByte BabbageEra = Just ProtocolParameterUTxOCostPerByteSupportedInBabbageEra
+--supportedInEraF ProtocolParameterUTxOCostPerByte ConwayEra  = Just ProtocolParameterUTxOCostPerByteSupportedInConwayEra
+
+supportedInEraF _ _  = Nothing

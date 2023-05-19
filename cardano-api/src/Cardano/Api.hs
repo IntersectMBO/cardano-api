@@ -296,6 +296,7 @@ module Cardano.Api (
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
     supportedInEra,
+    supportedInEraF,
 
     -- ** Fee calculation
     LedgerEpochInfo(..),

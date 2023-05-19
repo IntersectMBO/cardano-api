@@ -75,6 +75,7 @@ module Cardano.Api.ProtocolParameters (
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Features
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Json (toRationalJSON)
@@ -250,7 +251,7 @@ data ProtocolParameters =
        -- | Cost in ada per word of UTxO storage.
        --
        -- /Introduced in Alonzo/
-       protocolParamUTxOCostPerWord :: Maybe Lovelace,
+       protocolParamUTxOCostPerWord :: Maybe (Feature ProtocolParameterUTxOCostPerWord),
 
        -- | Cost models for script languages that use them.
        --
@@ -487,7 +488,7 @@ data ProtocolParametersUpdate =
        -- | Cost in ada per word of UTxO storage.
        --
        -- /Introduced in Alonzo, obsoleted in Babbage by 'protocolUpdateUTxOCostPerByte'/
-       protocolUpdateUTxOCostPerWord :: Maybe Lovelace,
+       protocolUpdateUTxOCostPerWord :: Maybe (Feature ProtocolParameterUTxOCostPerWord),
 
        -- Introduced in Alonzo,
 
@@ -608,6 +609,7 @@ instance Monoid ProtocolParametersUpdate where
 
 instance ToCBOR ProtocolParametersUpdate where
     toCBOR ProtocolParametersUpdate{..} =
+
         CBOR.encodeListLen 26
      <> toCBOR protocolUpdateProtocolVersion
      <> toCBOR protocolUpdateDecentralization
@@ -626,7 +628,7 @@ instance ToCBOR ProtocolParametersUpdate where
      <> toCBOR protocolUpdatePoolPledgeInfluence
      <> toCBOR protocolUpdateMonetaryExpansion
      <> toCBOR protocolUpdateTreasuryCut
-     <> toCBOR protocolUpdateUTxOCostPerWord
+     <> error "" --toCBOR protocolUpdateUTxOCostPerWord
      <> toCBOR protocolUpdateCostModels
      <> toCBOR protocolUpdatePrices
      <> toCBOR protocolUpdateMaxTxExUnits
@@ -657,7 +659,7 @@ instance FromCBOR ProtocolParametersUpdate where
         <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
-        <*> fromCBOR
+        <*> error "" -- fromCBOR
         <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
@@ -1014,12 +1016,14 @@ toAlonzoPParamsUpdate
     } = do
   ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
   d <- mapM (boundRationalEither "D") protocolUpdateDecentralization
-  let ppuAlonzo =
+
+  let mLL = protocolUpdateUTxOCostPerWord >>= (\(ProtocolParameterUTxOCostPerWord ll) -> Just ll)
+      ppuAlonzo =
         ppuAlonzoCommon
         & ppuDL .~ noInlineMaybeToStrictMaybe d
         & ppuCoinsPerUTxOWordL .~
           (CoinPerWord . toShelleyLovelace <$>
-           noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord)
+           noInlineMaybeToStrictMaybe mLL)
   pure ppuAlonzo
 
 
@@ -1040,6 +1044,12 @@ toBabbagePParamsUpdate
 
 requireParam :: String -> (a -> Either ProtocolParametersConversionError b) -> Maybe a -> Either ProtocolParametersConversionError b
 requireParam paramName = maybe (Left $ PpceMissingParameter paramName)
+
+requireParamF :: String -> (a -> Either ProtocolParametersConversionError (Feature b)) -> Maybe a -> Either ProtocolParametersConversionError (Feature b)
+requireParamF paramName = maybe (Left $ PpceMissingParameter paramName)
+
+_requireParam2 :: String -> (a -> Either String b) -> Maybe a -> Either String b
+_requireParam2 paramName = maybe (Left $ "Must specify " ++ paramName)
 
 mkProtVer :: (Natural, Natural) -> Either ProtocolParametersConversionError Ledger.ProtVer
 mkProtVer (majorProtVer, minorProtVer) = maybeToRight (PpceVersionInvalid majorProtVer) $
@@ -1178,7 +1188,7 @@ fromAlonzoPParamsUpdate :: Ledger.Crypto crypto
                         -> ProtocolParametersUpdate
 fromAlonzoPParamsUpdate ppu =
   (fromAlonzoCommonPParamsUpdate ppu) {
-    protocolUpdateUTxOCostPerWord = fromShelleyLovelace . unCoinPerWord <$>
+    protocolUpdateUTxOCostPerWord = ProtocolParameterUTxOCostPerWord . fromShelleyLovelace . unCoinPerWord <$>
                                       strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOWordL)
     }
 
@@ -1378,13 +1388,14 @@ toAlonzoPParams
   -- d <- requireParam "protocolParamDecentralization"
   --                   (boundRationalEither "D")
   --                   protocolParamDecentralization
-  utxoCostPerWord <-
-    requireParam "protocolParamUTxOCostPerWord" Right protocolParamUTxOCostPerWord
-  let ppAlonzo =
-        ppAlonzoCommon
-        & ppDL .~ d
-        & ppCoinsPerUTxOWordL .~ CoinPerWord (toShelleyLovelace utxoCostPerWord)
-  pure ppAlonzo
+  case requireParamF "protocolParamUTxOCostPerWord" Right protocolParamUTxOCostPerWord of
+    Left e -> Left e
+    Right (ProtocolParameterUTxOCostPerWord utxoCostPerWord) ->
+      let ppAlonzo =
+            ppAlonzoCommon
+            & ppDL .~ d
+            & ppCoinsPerUTxOWordL .~ CoinPerWord (toShelleyLovelace utxoCostPerWord)
+      in pure ppAlonzo
 
 
 toBabbagePParams :: BabbageEraPParams ledgerera
@@ -1491,8 +1502,8 @@ fromAlonzoPParams :: Ledger.Crypto crypto
                   -> ProtocolParameters
 fromAlonzoPParams pp =
   (fromAlonzoCommonPParams pp) {
-    protocolParamUTxOCostPerWord = Just . fromShelleyLovelace . unCoinPerWord $
-                                     pp ^. ppCoinsPerUTxOWordL
+    protocolParamUTxOCostPerWord = Just . ProtocolParameterUTxOCostPerWord . fromShelleyLovelace
+                                        $ unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
     }
 
 fromBabbagePParams :: BabbageEraPParams ledgerera
