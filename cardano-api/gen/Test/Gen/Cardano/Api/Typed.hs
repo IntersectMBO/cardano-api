@@ -118,8 +118,8 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..),
-                   Hash (..), KESPeriod (KESPeriod),
+import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
+                   KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (..),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
@@ -154,7 +154,6 @@ import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
-import           Data.Functor (($>))
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
@@ -851,7 +850,7 @@ genProtocolParameters era = do
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
-  protocolParamUTxOCostPerWord <- sequence $ supportedInEra ProtocolParameterUTxOCostPerWord era $> genLovelace
+  protocolParamUTxOCostPerWord <- whenMaybeSupportedInEra genLovelace ProtocolParameterUTxOCostPerWord era
   protocolParamCostModels <- pure mempty
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
@@ -861,7 +860,7 @@ genProtocolParameters era = do
   protocolParamMaxValueSize <- Gen.maybe genNat
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <- sequence $ supportedInEra ProtocolParameterUTxOCostPerByte era $> genLovelace
+  protocolParamUTxOCostPerByte <- whenMaybeSupportedInEra genLovelace ProtocolParameterUTxOCostPerByte era
 
   pure ProtocolParameters {..}
 
@@ -884,7 +883,7 @@ genProtocolParametersUpdate era = do
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
   protocolUpdateTreasuryCut         <- Gen.maybe genRational
-  protocolUpdateUTxOCostPerWord     <- sequence $ supportedInEra ProtocolParameterUTxOCostPerWord era $> genLovelace
+  protocolUpdateUTxOCostPerWord     <- whenMaybeSupportedInEra genLovelace ProtocolParameterUTxOCostPerWord era
   let protocolUpdateCostModels = mempty -- genCostModels
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
@@ -894,7 +893,7 @@ genProtocolParametersUpdate era = do
   protocolUpdateMaxValueSize        <- Gen.maybe genNat
   protocolUpdateCollateralPercent   <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
-  protocolUpdateUTxOCostPerByte     <- sequence $ supportedInEra ProtocolParameterUTxOCostPerByte era $> genLovelace
+  protocolUpdateUTxOCostPerByte     <- whenMaybeSupportedInEra genLovelace ProtocolParameterUTxOCostPerByte era
 
   pure ProtocolParametersUpdate{..}
 
