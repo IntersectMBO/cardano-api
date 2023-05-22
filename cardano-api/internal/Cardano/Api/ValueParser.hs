@@ -4,6 +4,11 @@ module Cardano.Api.ValueParser
   , policyId
   ) where
 
+import           Cardano.Api.Error (displayError)
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils (failEitherWith)
+import           Cardano.Api.Value
+
 import           Control.Applicative (many, some, (<|>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
@@ -17,11 +22,6 @@ import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, space
 import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
 import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
-
-import           Cardano.Api.Error (displayError)
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.Utils (failEitherWith)
-import           Cardano.Api.Value
 
 -- | Parse a 'Value' from its string representation.
 parseValue :: Parser Value

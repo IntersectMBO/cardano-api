@@ -25,21 +25,11 @@ module Cardano.Api.Genesis
   , ConwayGenesisFile
   ) where
 
-import           Data.ByteString (ByteString)
-import qualified Data.ListMap as ListMap
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
-import           Data.Text (Text)
-import qualified Data.Time as Time
-import           Lens.Micro
-
-import qualified Cardano.Crypto.Hash.Blake2b
-import qualified Cardano.Crypto.Hash.Class
-
 import           Cardano.Api.IO
 
 import qualified Cardano.Chain.Genesis
-
+import qualified Cardano.Crypto.Hash.Blake2b
+import qualified Cardano.Crypto.Hash.Class
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Coin (Coin (..))
@@ -48,10 +38,16 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Shelley.Core
 import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGenesis (..),
                    emptyGenesisStaking)
-
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
-
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
+
+import           Data.ByteString (ByteString)
+import qualified Data.ListMap as ListMap
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
+import           Data.Text (Text)
+import qualified Data.Time as Time
+import           Lens.Micro
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)

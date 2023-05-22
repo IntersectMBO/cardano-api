@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Api.Metadata
   ( tests
@@ -9,19 +9,20 @@ module Test.Cardano.Api.Metadata
 
 import           Cardano.Api
 
+import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Word (Word64)
-import           Hedgehog (Gen, Property, property, (===))
-import           Test.Gen.Cardano.Api.Metadata
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
 
-import qualified Data.Aeson as Aeson
-import qualified Data.Map.Strict as Map
+import           Test.Gen.Cardano.Api.Metadata
+
+import           Hedgehog (Gen, Property, property, (===))
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 -- ----------------------------------------------------------------------------
 -- Golden / unit tests

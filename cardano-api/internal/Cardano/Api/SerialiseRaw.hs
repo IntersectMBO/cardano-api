@@ -13,6 +13,9 @@ module Cardano.Api.SerialiseRaw
   , serialiseToRawBytesHexText
   ) where
 
+import           Cardano.Api.Error (Error, displayError)
+import           Cardano.Api.HasTypeProxy
+
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
@@ -21,9 +24,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (TypeRep, Typeable)
-
-import           Cardano.Api.Error (Error, displayError)
-import           Cardano.Api.HasTypeProxy
 
 newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
   -- TODO We can do better than use String to carry the error message

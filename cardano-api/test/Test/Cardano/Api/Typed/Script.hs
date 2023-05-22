@@ -6,15 +6,18 @@ module Test.Cardano.Api.Typed.Script
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
+
 import qualified Cardano.Ledger.Api.Era as L
+
 import           Data.Aeson
-import           Hedgehog (Property, (===))
-import           Hedgehog.Extras.Aeson
+
 import           Test.Gen.Cardano.Api.Typed
+
+import           Hedgehog (Property, (===))
+import qualified Hedgehog as H
+import           Hedgehog.Extras.Aeson
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
-
-import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 

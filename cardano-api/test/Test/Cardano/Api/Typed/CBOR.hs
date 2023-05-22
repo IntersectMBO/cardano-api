@@ -7,14 +7,17 @@ module Test.Cardano.Api.Typed.CBOR
   ) where
 
 import           Cardano.Api
-
 import           Cardano.Api.Shelley (AsType (..))
+
 import           Data.Proxy (Proxy (..))
+
+import           Test.Gen.Cardano.Api.Typed
+
+import           Test.Cardano.Api.Typed.Orphans ()
+
 import           Hedgehog (Property, forAll, property, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
-import           Test.Cardano.Api.Typed.Orphans ()
-import           Test.Gen.Cardano.Api.Typed
 import qualified Test.Hedgehog.Roundtrip.CBOR as H
 import           Test.Hedgehog.Roundtrip.CBOR
 import           Test.Tasty (TestTree, testGroup)

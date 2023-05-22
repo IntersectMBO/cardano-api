@@ -10,6 +10,7 @@ import           Cardano.Api
 
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
+
 import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}

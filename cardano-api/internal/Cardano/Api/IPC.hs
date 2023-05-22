@@ -82,17 +82,29 @@ module Cardano.Api.IPC (
     UnsupportedNtcVersionError(..),
   ) where
 
-import           Data.Void (Void)
+import           Cardano.Api.Block
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.InMode
+import           Cardano.Api.IO
+import           Cardano.Api.IPC.Version
+import           Cardano.Api.Modes
+import           Cardano.Api.NetworkId
+import           Cardano.Api.Protocol
+import           Cardano.Api.Query
+import           Cardano.Api.Tx (getTxBody)
+import           Cardano.Api.TxBody
 
-import           Data.Aeson (ToJSON, object, toJSON, (.=))
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
-
-import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
-                   tryPutTMVar)
-import           Control.Monad (void)
-import           Control.Tracer (nullTracer)
-
+import qualified Ouroboros.Consensus.Block as Consensus
+import           Ouroboros.Consensus.Cardano.CanHardFork
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
+import qualified Ouroboros.Consensus.Network.NodeToClient as Consensus
+import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as Consensus
+import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
+import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
+import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
@@ -114,29 +126,14 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSub
                    SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
-import qualified Ouroboros.Consensus.Block as Consensus
-import           Ouroboros.Consensus.Cardano.CanHardFork
-import qualified Ouroboros.Consensus.Ledger.Query as Consensus
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
-import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
-import qualified Ouroboros.Consensus.Network.NodeToClient as Consensus
-import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as Consensus
-import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
-import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
-import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
-
-import           Cardano.Api.Block
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.InMode
-import           Cardano.Api.IO
-import           Cardano.Api.IPC.Version
-import           Cardano.Api.Modes
-import           Cardano.Api.NetworkId
-import           Cardano.Api.Protocol
-import           Cardano.Api.Query
-import           Cardano.Api.Tx (getTxBody)
-import           Cardano.Api.TxBody
+import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
+                   tryPutTMVar)
+import           Control.Monad (void)
+import           Control.Tracer (nullTracer)
+import           Data.Aeson (ToJSON, object, toJSON, (.=))
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict as Map
+import           Data.Void (Void)
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols

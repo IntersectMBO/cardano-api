@@ -14,6 +14,9 @@ module Cardano.Api.SerialiseJSON
   , writeFileJSON
   ) where
 
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+
 import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 import           Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
@@ -22,9 +25,6 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 
 
 newtype JsonDecodeError = JsonDecodeError String

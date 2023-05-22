@@ -16,18 +16,17 @@ module Cardano.Api.GenesisParameters (
 
   ) where
 
-import           Data.Time (NominalDiffTime, UTCTime)
-
-import           Cardano.Slotting.Slot (EpochSize (..))
-
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Crypto as Ledger
-import qualified Cardano.Ledger.Shelley.Genesis as Shelley
-
 import           Cardano.Api.Eras (ShelleyBasedEra (ShelleyBasedEraShelley))
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Value
+
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Crypto as Ledger
+import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import           Cardano.Slotting.Slot (EpochSize (..))
+
+import           Data.Time (NominalDiffTime, UTCTime)
 
 
 -- ----------------------------------------------------------------------------

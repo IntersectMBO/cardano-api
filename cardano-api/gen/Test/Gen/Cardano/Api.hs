@@ -8,19 +8,18 @@ module Test.Gen.Cardano.Api
   , genAlonzoGenesis
   ) where
 
-import qualified Data.Map.Strict as Map
-import           Data.Word (Word64)
-
---TODO: why do we have this odd split? We can get rid of the old name "typed"
-import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
-
+import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
-import qualified Cardano.Ledger.Alonzo.Core as Ledger
-import           Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData (..), Metadatum (..))
+import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
+
+import qualified Data.Map.Strict as Map
+import           Data.Word (Word64)
+
+import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen

@@ -50,8 +50,10 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
+
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
+
 import           Control.Applicative (Alternative (..))
 import           Control.Monad (guard, when)
 import qualified Data.Aeson as Aeson

@@ -18,11 +18,6 @@ module Cardano.Api.OperationalCertificate (
     AsType(..)
   ) where
 
-import           Data.Word
-
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Error
@@ -36,7 +31,11 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Tx
 
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Protocol.TPraos.OCert as Shelley
+
+import           Data.Word
 
 -- ----------------------------------------------------------------------------
 -- Operational certificates

@@ -77,27 +77,6 @@ module Cardano.Api.Address (
     isKeyAddress
   ) where
 
-import           Control.Applicative ((<|>))
-import           Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
-import qualified Data.Aeson as Aeson
-import           Data.Bifunctor (first)
-import qualified Data.ByteString.Base58 as Base58
-import           Data.Char (isAsciiLower, isAsciiUpper, isDigit)
-import           Data.Either.Combinators (rightToMaybe)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Text.Parsec as Parsec
-import qualified Text.Parsec.String as Parsec
-
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified PlutusLedgerApi.V1 as Plutus
-
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
@@ -109,7 +88,28 @@ import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils
+
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Ledger.Address as Shelley
+import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Shelley
+import qualified Cardano.Ledger.Credential as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified PlutusLedgerApi.V1 as Plutus
+
+import           Control.Applicative ((<|>))
 import           Control.DeepSeq (NFData (..), deepseq)
+import           Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Bifunctor (first)
+import qualified Data.ByteString.Base58 as Base58
+import           Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import           Data.Either.Combinators (rightToMaybe)
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.String as Parsec
 
 
 

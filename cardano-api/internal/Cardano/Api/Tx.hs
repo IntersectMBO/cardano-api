@@ -47,52 +47,6 @@ module Cardano.Api.Tx (
            AsKeyWitness, AsByronWitness, AsShelleyWitness),
   ) where
 
-import           Data.Maybe
-
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
-
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import qualified Data.Vector as Vector
-import           Lens.Micro
-
---
--- Crypto API used by consensus and Shelley (and should be used by Byron)
---
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Util as Crypto
-import qualified Cardano.Crypto.Wallet as Crypto.HD
-
---
--- Byron imports
---
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hashing as Byron
-import qualified Cardano.Crypto.ProtocolMagic as Byron
-import qualified Cardano.Crypto.Signing as Byron
-
---
--- Shelley imports
---
-import           Cardano.Ledger.Binary (Annotated (..))
-import qualified Cardano.Ledger.Binary as CBOR
-import qualified Cardano.Ledger.Binary.Plain as Plain
-
-import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.Keys.Bootstrap as Shelley
-import qualified Cardano.Ledger.SafeHash as Ledger
-
-import qualified Cardano.Ledger.Alonzo.Core as L
-import qualified Cardano.Ledger.Api as L
-
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
@@ -104,6 +58,36 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxBody
+
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Chain.UTxO as Byron
+import qualified Cardano.Crypto.DSIGN.Class as Crypto
+import qualified Cardano.Crypto.Hashing as Byron
+import qualified Cardano.Crypto.ProtocolMagic as Byron
+import qualified Cardano.Crypto.Signing as Byron
+import qualified Cardano.Crypto.Util as Crypto
+import qualified Cardano.Crypto.Wallet as Crypto.HD
+import qualified Cardano.Ledger.Alonzo.Core as L
+import qualified Cardano.Ledger.Api as L
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import           Cardano.Ledger.Binary (Annotated (..))
+import qualified Cardano.Ledger.Binary as CBOR
+import qualified Cardano.Ledger.Binary.Plain as Plain
+import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Keys.Bootstrap as Shelley
+import qualified Cardano.Ledger.SafeHash as Ledger
+
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict as Map
+import           Data.Maybe
+import qualified Data.Set as Set
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import qualified Data.Vector as Vector
+import           Lens.Micro
 
 -- ----------------------------------------------------------------------------
 -- Signed transactions

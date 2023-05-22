@@ -9,21 +9,21 @@ module Cardano.Api.IPC.Monad
   , determineEraExpr
   ) where
 
+import           Cardano.Api.Block
+import           Cardano.Api.Eras
+import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Version
+import           Cardano.Api.Modes
+
+import           Cardano.Ledger.Shelley.Scripts ()
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
+
 import           Control.Concurrent.STM
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Cont
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-
-import           Cardano.Ledger.Shelley.Scripts ()
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
-
-import           Cardano.Api.Block
-import           Cardano.Api.Eras
-import           Cardano.Api.IPC
-import           Cardano.Api.IPC.Version
-import           Cardano.Api.Modes
 
 
 {- HLINT ignore "Use const" -}

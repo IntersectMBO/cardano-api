@@ -80,45 +80,6 @@ module Cardano.Api.LedgerState
   )
   where
 
-import qualified Cardano.Binary as CBOR
-import           Control.Exception
-import           Control.Monad (when)
-import           Control.Monad.Trans.Class
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
-import           Data.Aeson as Aeson
-import           Data.Aeson.Types (Parser)
-import           Data.Bifunctor
-import           Data.ByteArray (ByteArrayAccess)
-import qualified Data.ByteArray
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LB
-import           Data.ByteString.Short as BSS
-import           Data.Foldable
-import           Data.IORef
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (mapMaybe)
-import           Data.Proxy (Proxy (Proxy))
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.SOP.Strict (K (..), NP (..), fn, (:.:) (Comp))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as LT
-import           Data.Text.Lazy.Builder (toLazyText)
-import           Data.Word
-import qualified Data.Yaml as Yaml
-import           Formatting.Buildable (build)
-import           Lens.Micro ((^.))
-import           Network.TypedProtocol.Pipelined (Nat (..))
-import           System.FilePath
-
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
@@ -139,6 +100,8 @@ import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (un
                    ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import           Cardano.Api.Utils (textShow)
+
+import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
 import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
@@ -200,6 +163,44 @@ import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
+
+import           Control.Exception
+import           Control.Monad (when)
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
+import           Data.Aeson as Aeson
+import           Data.Aeson.Types (Parser)
+import           Data.Bifunctor
+import           Data.ByteArray (ByteArrayAccess)
+import qualified Data.ByteArray
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as LB
+import           Data.ByteString.Short as BSS
+import           Data.Foldable
+import           Data.IORef
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (mapMaybe)
+import           Data.Proxy (Proxy (Proxy))
+import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.SOP.Strict (K (..), NP (..), fn, (:.:) (Comp))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.Lazy as LT
+import           Data.Text.Lazy.Builder (toLazyText)
+import           Data.Word
+import qualified Data.Yaml as Yaml
+import           Formatting.Buildable (build)
+import           Lens.Micro ((^.))
+import           Network.TypedProtocol.Pipelined (Nat (..))
+import           System.FilePath
 
 data InitialLedgerStateError
   = ILSEConfigFile Text

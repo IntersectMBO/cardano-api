@@ -16,13 +16,12 @@ module Cardano.Api.NetworkId (
     fromShelleyNetwork,
   ) where
 
-import           Ouroboros.Network.Magic (NetworkMagic (..))
-
 import qualified Cardano.Chain.Common as Byron (NetworkMagic (..))
 import qualified Cardano.Chain.Genesis as Byron (mainnetProtocolMagicId)
 import qualified Cardano.Crypto.ProtocolMagic as Byron (ProtocolMagicId (..),
                    RequiresNetworkMagic (..))
 import qualified Cardano.Ledger.BaseTypes as Shelley (Network (..))
+import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 
 -- ----------------------------------------------------------------------------

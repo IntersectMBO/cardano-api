@@ -182,6 +182,62 @@ module Cardano.Api.TxBody (
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
   ) where
 
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.EraCast
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.NetworkId
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Script
+import           Cardano.Api.ScriptData
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.TxIn
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
+import           Cardano.Api.Value
+import           Cardano.Api.ValueParser
+
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Chain.UTxO as Byron
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.Hashing as Byron
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (hashScriptIntegrity)
+import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
+import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Babbage.TxBody as Babbage
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Cardano.Ledger.Binary (Annotated (..), reAnnotate, recoverBytes)
+import qualified Cardano.Ledger.Binary as CBOR
+import qualified Cardano.Ledger.Block as Ledger
+import qualified Cardano.Ledger.Conway.Core as L
+import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Credential as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Keys as Shelley
+import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
+import qualified Cardano.Ledger.SafeHash as SafeHash
+import qualified Cardano.Ledger.Shelley.API as Ledger
+import qualified Cardano.Ledger.Shelley.Delegation.Certificates as Shelley
+import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import qualified Cardano.Ledger.TxIn as L
+import           Cardano.Ledger.Val as L (isZero)
+import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardBabbage,
+                   StandardConway, StandardMary, StandardShelley)
+
 import           Control.Applicative (some)
 import           Control.Monad (guard, unless)
 import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
@@ -217,69 +273,6 @@ import           Lens.Micro.Extras (view)
 import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Binary (Annotated (..), reAnnotate, recoverBytes)
-import qualified Cardano.Ledger.Binary as CBOR
-import           Cardano.Slotting.Slot (SlotNo (..))
-
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hashing as Byron
-
-import qualified Cardano.Ledger.Api as L
-
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import qualified Cardano.Ledger.Block as Ledger
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.TxIn as L
-import           Cardano.Ledger.Val as L (isZero)
-
-import qualified Cardano.Ledger.Shelley.API as Ledger
-import qualified Cardano.Ledger.Shelley.Delegation.Certificates as Shelley
-import qualified Cardano.Ledger.Shelley.Genesis as Shelley
-
-import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
-
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (hashScriptIntegrity)
-import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
-
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage
-import qualified Cardano.Ledger.Conway.Core as L
-import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardBabbage,
-                   StandardConway, StandardMary, StandardShelley)
-
-import           Cardano.Api.Address
-import           Cardano.Api.Certificate
-import           Cardano.Api.Convenience.Constraints
-import           Cardano.Api.EraCast
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Byron
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.NetworkId
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Script
-import           Cardano.Api.ScriptData
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.TxIn
-import           Cardano.Api.TxMetadata
-import           Cardano.Api.Utils
-import           Cardano.Api.Value
-import           Cardano.Api.ValueParser
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity

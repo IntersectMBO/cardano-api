@@ -106,51 +106,6 @@ module Cardano.Api.Script (
     Hash(..),
   ) where
 
-import qualified Data.ByteString.Lazy as LBS
-import           Data.ByteString.Short (ShortByteString)
-import qualified Data.ByteString.Short as SBS
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Foldable (toList)
-import           Data.Functor
-import           Data.Scientific (toBoundedInteger)
-import           Data.String (IsString)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           Data.Typeable (Typeable)
-import           Numeric.Natural (Natural)
-
-import           Data.Aeson (Value (..), object, (.:), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.Vector (Vector)
-import qualified Data.Vector as Vector
-
-import           Control.Applicative
-import           Control.Monad
-
-import qualified Cardano.Binary as CBOR
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
-import           Cardano.Slotting.Slot (SlotNo)
-
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import           Cardano.Ledger.Core (Era (EraCrypto))
-import qualified Cardano.Ledger.Core as Ledger
-
-import qualified Cardano.Ledger.Allegra.Scripts as Timelock
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.Shelley.Scripts as Shelley
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Binary as Binary (decCBOR, decodeFullAnnotator)
-
-import qualified PlutusLedgerApi.Test.Examples as Plutus
-
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -165,7 +120,44 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxIn
 import           Cardano.Api.Utils (failEitherWith)
+
+import qualified Cardano.Binary as CBOR
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Allegra.Scripts as Timelock
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import qualified Cardano.Ledger.Binary as Binary (decCBOR, decodeFullAnnotator)
+import           Cardano.Ledger.Core (Era (EraCrypto))
+import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Shelley.Scripts as Shelley
+import           Cardano.Slotting.Slot (SlotNo)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import qualified PlutusLedgerApi.Test.Examples as Plutus
+
+import           Control.Applicative
+import           Control.Monad
+import           Data.Aeson (Value (..), object, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Lazy as LBS
+import           Data.ByteString.Short (ShortByteString)
+import qualified Data.ByteString.Short as SBS
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Foldable (toList)
+import           Data.Functor
+import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
+import           Data.String (IsString)
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vector
+import           Numeric.Natural (Natural)
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version

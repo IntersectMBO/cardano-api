@@ -53,15 +53,15 @@ module Cardano.Api.Eras
 
 import           Cardano.Api.HasTypeProxy
 
-import           Control.DeepSeq
-import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
-import qualified Data.Text as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardBabbage, StandardConway, StandardMary, StandardShelley)
+
+import           Control.DeepSeq
+import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
+import qualified Data.Text as Text
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra

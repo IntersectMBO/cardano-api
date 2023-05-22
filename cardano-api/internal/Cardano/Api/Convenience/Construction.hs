@@ -13,13 +13,6 @@ module Cardano.Api.Convenience.Construction (
 
   ) where
 
-import qualified Data.List as List
-import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.Text (Text)
-import qualified Data.Text as Text
-
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
@@ -30,6 +23,13 @@ import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
+
+import qualified Data.List as List
+import qualified Data.Map.Strict as Map
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
 -- | Construct a balanced transaction.
 -- See Cardano.Api.Convenience.Query.queryStateForBalancedTx for a

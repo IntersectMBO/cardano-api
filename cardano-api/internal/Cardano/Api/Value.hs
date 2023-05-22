@@ -55,6 +55,21 @@ module Cardano.Api.Value
   , AsType(..)
   ) where
 
+import           Cardano.Api.Error (displayError)
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Utils (failEitherWith)
+
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Ledger.Coin as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
+import           Cardano.Ledger.Mary.Value (MaryValue (..))
+import qualified Cardano.Ledger.Mary.Value as Mary
+
 import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
@@ -71,21 +86,6 @@ import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Ledger.Coin as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import           Cardano.Api.Error (displayError)
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Script
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.Utils (failEitherWith)
-import           Cardano.Ledger.Mary.Value (MaryValue (..))
-import qualified Cardano.Ledger.Mary.Value as Mary
-import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 
 -- ----------------------------------------------------------------------------
 -- Lovelace

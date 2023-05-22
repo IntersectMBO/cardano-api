@@ -9,13 +9,13 @@ module Test.Golden.ErrorsSpec
 import           Cardano.Api
 import           Cardano.Api.Shelley (LeadershipError (..), OperationalCertIssueError (..),
                    ProtocolParametersError (..), ReferenceScript (..))
+
 import           Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Alonzo.TxInfo as Ledger
 import qualified Cardano.Ledger.Alonzo.TxWits as Ledger
-
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus
 
@@ -28,13 +28,14 @@ import           Data.Data (Data (..))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Text (Text)
-import           Data.Typeable
+import           Data.Typeable (typeOf, typeRep)
 import           GHC.Stack (withFrozenCallStack)
+import           System.FilePath ((</>))
+
 import qualified HaskellWorks.Hspec.Hedgehog as H
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Golden as H
-import           System.FilePath ((</>))
 import           Test.Hspec
 
 seed1 :: ByteString

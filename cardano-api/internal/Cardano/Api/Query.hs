@@ -78,6 +78,49 @@ module Cardano.Api.Query (
     fromLedgerUTxO,
   ) where
 
+import           Cardano.Api.Address
+import           Cardano.Api.Block
+import           Cardano.Api.Certificate
+import           Cardano.Api.EraCast
+import           Cardano.Api.Eras
+import           Cardano.Api.GenesisParameters
+import           Cardano.Api.IPC.Version
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Modes
+import           Cardano.Api.NetworkId
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.TxBody
+import           Cardano.Api.Value
+
+import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
+import           Cardano.Ledger.Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
+import qualified Cardano.Ledger.Credential as Shelley
+import           Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Shelley.API as Shelley
+import qualified Cardano.Ledger.Shelley.Core as Core
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
+import           Cardano.Slotting.Slot (WithOrigin (..))
+import           Cardano.Slotting.Time (SystemStart (..))
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
+import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
+import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
+import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
+import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
+import qualified Ouroboros.Consensus.HardFork.History as Consensus
+import qualified Ouroboros.Consensus.HardFork.History as History
+import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
+import qualified Ouroboros.Consensus.Ledger.Query as Consensus
+import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+import           Ouroboros.Network.Block (Serialised (..))
+import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
+
 import           Control.Monad (forM)
 import           Control.Monad.Trans.Except
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=))
@@ -98,54 +141,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Typeable
 import           Data.Word (Word64)
-
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
-
-import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
-import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
-import qualified Ouroboros.Consensus.HardFork.History as Consensus
-import qualified Ouroboros.Consensus.HardFork.History as History
-import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
-
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
-import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.Ledger.Query as Consensus
-import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import           Ouroboros.Network.Block (Serialised (..))
-import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
-
-import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
-import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Slotting.Time (SystemStart (..))
-
-import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
-
-import           Cardano.Ledger.Binary
-import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (Crypto)
-import qualified Cardano.Ledger.Shelley.API as Shelley
-import qualified Cardano.Ledger.Shelley.Core as Core
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-
-import           Cardano.Api.Address
-import           Cardano.Api.Block
-import           Cardano.Api.Certificate
-import           Cardano.Api.EraCast
-import           Cardano.Api.Eras
-import           Cardano.Api.GenesisParameters
-import           Cardano.Api.IPC.Version
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.Modes
-import           Cardano.Api.NetworkId
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.TxBody
-import           Cardano.Api.Value
 
 
 -- ----------------------------------------------------------------------------

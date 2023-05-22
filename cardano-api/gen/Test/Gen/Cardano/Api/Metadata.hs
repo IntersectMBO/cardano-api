@@ -7,19 +7,20 @@ module Test.Gen.Cardano.Api.Metadata
   ) where
 
 import           Cardano.Api
-import           Data.Aeson (ToJSON (..))
-import           Data.ByteString (ByteString)
-import           Data.Text (Text)
-import           Data.Word (Word64)
-import           Hedgehog (Gen)
 
+import           Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.Map.Strict as Map
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Word (Word64)
+
+import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Gen as Gen
 import qualified Hedgehog.Range as Range

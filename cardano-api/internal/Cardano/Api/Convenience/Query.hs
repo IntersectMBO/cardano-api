@@ -14,18 +14,6 @@ module Cardano.Api.Convenience.Query (
     renderQueryConvenienceError,
   ) where
 
-import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, left, onLeft,
-                   onNothing)
-import           Data.Function ((&))
-import           Data.Map (Map)
-import           Data.Maybe (mapMaybe)
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.Text (Text)
-
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
-
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
@@ -39,7 +27,19 @@ import           Cardano.Api.Query
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
+
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
+
 import           Control.Monad.Trans (MonadTrans (..))
+import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, left, onLeft,
+                   onNothing)
+import           Data.Function ((&))
+import           Data.Map (Map)
+import           Data.Maybe (mapMaybe)
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Text (Text)
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
