@@ -24,14 +24,15 @@ module Cardano.Api.Utils
   , renderEra
   , runParsecParser
   , textShow
-  , writeSecrets
 
     -- ** CLI option parsing
   , bounded
   ) where
 
+import           Cardano.Api.Eras
+
 import           Control.Exception (bracket)
-import           Control.Monad (forM_, when)
+import           Control.Monad (when)
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as Builder
@@ -40,22 +41,13 @@ import           Data.Maybe.Strict
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.IO.Handle.FD (openFileBlocking)
+import           Options.Applicative (ReadM)
 import qualified Options.Applicative as Opt
-import           System.FilePath ((</>))
+import           Options.Applicative.Builder (eitherReader)
 import           System.IO (IOMode (ReadMode), hClose)
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.ParserCombinators.Parsec.Error as Parsec
-import           Text.Printf (printf)
-#ifdef UNIX
-import           System.Posix.Files (ownerReadMode, setFileMode)
-#else
-import           System.Directory (emptyPermissions, readable, setPermissions)
-#endif
-
-import           Cardano.Api.Eras
-import           Options.Applicative (ReadM)
-import           Options.Applicative.Builder (eitherReader)
 import qualified Text.Read as Read
 
 (?!) :: Maybe a -> e -> Either e a
@@ -102,18 +94,6 @@ parseFilePath optname desc =
     <> Opt.help desc
     <> Opt.completer (Opt.bashCompleter "file")
     )
-
-writeSecrets :: FilePath -> [Char] -> [Char] -> (a -> BS.ByteString) -> [a] -> IO ()
-writeSecrets outDir prefix suffix secretOp xs =
-  forM_ (zip xs [0::Int ..]) $
-  \(secret, nr)-> do
-    let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
-    BS.writeFile filename $ secretOp secret
-#ifdef UNIX
-    setFileMode    filename ownerReadMode
-#else
-    setPermissions filename (emptyPermissions {readable = True})
-#endif
 
 readFileBlocking :: FilePath -> IO BS.ByteString
 readFileBlocking path = bracket
