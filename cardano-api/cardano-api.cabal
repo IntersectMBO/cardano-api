@@ -94,6 +94,10 @@ library internal
                         Cardano.Api.Utils
                         Cardano.Api.Value
                         Cardano.Api.ValueParser
+                        -- TODO: Eliminate in the future when
+                        -- we create wrapper types for the ledger types
+                        -- in this module
+                        Cardano.Api.Orphans
 
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
@@ -174,23 +178,16 @@ library
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.Shelley
-                        -- TODO: Eliminate in the future when
-                        -- we create wrapper types for the ledger types
-                        -- in this module
-                        Cardano.Api.Orphans
 
-  build-depends:        aeson             >= 1.5.6.0
-                      , bytestring
+  build-depends:        bytestring
                       , cardano-api:internal
                       , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class >= 2.1.1
-                      , cardano-ledger-core >= 1.1
                       , cryptonite
                       , deepseq
                       , memory
                       , nothunks
-                      , ouroboros-consensus-cardano >= 0.5
                       , ouroboros-network-protocols
                       , typed-protocols ^>= 0.1
 
@@ -234,6 +231,7 @@ test-suite cardano-api-test
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
+                      , cardano-api:internal
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
@@ -292,6 +290,8 @@ test-suite cardano-api-golden
                       , cardano-crypto-class
                       , cardano-ledger-alonzo
                       , containers
+                      , filepath
+                      , hedgehog
                       , hedgehog-extras >= 0.4.3.0
                       , hspec
                       , hw-hspec-hedgehog
@@ -304,4 +304,4 @@ test-suite cardano-api-golden
   build-tool-depends:   hspec-discover:hspec-discover
 
   other-modules:        Test.Golden.ErrorsSpec
-  
+

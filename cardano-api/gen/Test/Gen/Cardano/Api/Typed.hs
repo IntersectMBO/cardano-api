@@ -14,6 +14,7 @@ module Test.Gen.Cardano.Api.Typed
   , genCostModel
   , genMaybePraosNonce
   , genPraosNonce
+  , genValidProtocolParameters
   , genProtocolParameters
   , genValueNestedRep
   , genValueNestedBundle
@@ -118,8 +119,8 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..),
-                   Hash (..), KESPeriod (KESPeriod),
+import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
+                   KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
@@ -633,7 +634,7 @@ genTxBodyContent era = do
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts era
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
-  txProtocolParams <- BuildTxWith <$> Gen.maybe genProtocolParameters
+  txProtocolParams <- BuildTxWith <$> Gen.maybe genValidProtocolParameters
   txWithdrawals <- genTxWithdrawals era
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
@@ -861,6 +862,41 @@ genProtocolParameters =
     <*> Gen.maybe genNat
     <*> Gen.maybe genNat
     <*> Gen.maybe genLovelace
+
+-- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
+genValidProtocolParameters :: Gen ProtocolParameters
+genValidProtocolParameters =
+  ProtocolParameters
+    <$> ((,) <$> genNat <*> genNat)
+    <*> Gen.maybe genRational
+    <*> genMaybePraosNonce
+    <*> genNat
+    <*> genNat
+    <*> genNat
+    <*> genLovelace
+    <*> genLovelace
+    <*> Gen.maybe genLovelace
+    <*> genLovelace
+    <*> genLovelace
+    <*> genLovelace
+    <*> genEpochNo
+    <*> genNat
+    <*> genRationalInt64
+    <*> genRational
+    <*> genRational
+    -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
+    <*> fmap Just genLovelace
+    <*> return mempty
+    --TODO: Babbage figure out how to deal with
+    -- asymmetric cost model JSON instances
+    -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
+    <*> fmap Just genExecutionUnitPrices
+    <*> fmap Just genExecutionUnits
+    <*> fmap Just genExecutionUnits
+    <*> fmap Just genNat
+    <*> fmap Just genNat
+    <*> fmap Just genNat
+    <*> fmap Just genLovelace
 
 genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
 genProtocolParametersUpdate = do

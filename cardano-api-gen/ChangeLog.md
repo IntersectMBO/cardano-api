@@ -1,5 +1,8 @@
 # Changelog for cardano-api
 
+## New
+- Added `genValidProtocolParameters` generator producing `ProtocolParameters` which do pass validations in `Cardano.Api.ProtocolParameters` module ([PR 1](https://github.com/input-output-hk/cardano-api/pull/1))
+
 ## 8.1.0
 
 - Addition of `QueryStakeDelegDeposits` ledger state query.

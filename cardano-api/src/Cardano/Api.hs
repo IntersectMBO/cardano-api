@@ -478,7 +478,6 @@ module Cardano.Api (
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
     CostModel(..),
-    InvalidCostModel(..),
     toAlonzoCostModel,
     fromAlonzoCostModel,
 
@@ -782,6 +781,7 @@ module Cardano.Api (
     BundledProtocolParameters(..),
     bundleProtocolParams,
     unbundleProtocolParams,
+    ProtocolParametersConversionError(..),
 
     -- ** Conversions
     toLedgerPParams,
@@ -873,6 +873,7 @@ import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters

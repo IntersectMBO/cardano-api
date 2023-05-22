@@ -189,7 +189,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor (first)
+import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
@@ -2324,12 +2324,13 @@ data TxBodyError =
        TxBodyEmptyTxIns
      | TxBodyEmptyTxInsCollateral
      | TxBodyEmptyTxOuts
-     | TxBodyOutputNegative Quantity TxOutInAnyEra
-     | TxBodyOutputOverflow Quantity TxOutInAnyEra
-     | TxBodyMetadataError [(Word64, TxMetadataRangeError)]
+     | TxBodyOutputNegative !Quantity !TxOutInAnyEra
+     | TxBodyOutputOverflow !Quantity !TxOutInAnyEra
+     | TxBodyMetadataError ![(Word64, TxMetadataRangeError)]
      | TxBodyMintAdaError
+     | TxBodyInIxOverflow !TxIn
      | TxBodyMissingProtocolParams
-     | TxBodyInIxOverflow TxIn
+     | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
      deriving (Eq, Show)
 
 instance Error TxBodyError where
@@ -2359,11 +2360,13 @@ instance Error TxBodyError where
       "Transaction input index is too big, " ++
       "acceptable value is up to 2^32-1, " ++
       "in input " ++ show txin
+    displayError (TxBodyProtocolParamsConversionError ppces) =
+      "Errors in protocol parameters conversion: " ++ displayError ppces
 
 createTransactionBody
   :: ShelleyBasedEra era
   -> TxBodyContent BuildTx era
-  -> TxBody era
+  -> Either TxBodyError (TxBody era)
 createTransactionBody era txBodyContent =
   let apiTxOuts = txOuts txBodyContent
       apiScriptWitnesses = collectTxBodyScriptWitnesses txBodyContent
@@ -2395,22 +2398,21 @@ createTransactionBody era txBodyContent =
                -> TxBodyContent BuildTx era
                -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
                -> L.TxBody (ShelleyLedgerEra era)
-      mkTxBody era' bc aux =
+      mkTxBody era' bc =
         mkCommonTxBody
           era'
           (txIns bc)
           (txOuts bc)
           (txFee bc)
           (txWithdrawals bc)
-          aux
 
   in case era of
-       ShelleyBasedEraShelley ->
+       ShelleyBasedEraShelley -> do
+        update <- convTxUpdateProposal era (txUpdateProposal txBodyContent)
         let (_, upperBound) = txValidityRange txBodyContent
             ttl = case upperBound of
                     TxValidityNoUpperBound era' -> case era' of {}
                     TxValidityUpperBound _ ttl'  -> ttl'
-            update = convTxUpdateProposal era (txUpdateProposal txBodyContent)
             ledgerTxBody = mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
                            & L.certsTxBodyL  .~ certs
                            & L.ttlTxBodyL    .~ ttl
@@ -2418,54 +2420,54 @@ createTransactionBody era txBodyContent =
 
             sData = convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses
 
-        in ShelleyTxBody era
+        pure $ ShelleyTxBody era
               ledgerTxBody
               scripts
               sData
               txAuxData
               apiScriptValidity
 
-       ShelleyBasedEraAllegra ->
-        let update = convTxUpdateProposal era (txUpdateProposal txBodyContent)
-            ledgerTxBody = mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
+       ShelleyBasedEraAllegra -> do
+        update <- convTxUpdateProposal era (txUpdateProposal txBodyContent)
+        let ledgerTxBody = mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
                            & L.certsTxBodyL  .~ certs
                            & L.updateTxBodyL .~ update
                            & L.vldtTxBodyL   .~ validityInterval
-        in ShelleyTxBody era
+        pure $ ShelleyTxBody era
               ledgerTxBody
               scripts
               (convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
 
-       ShelleyBasedEraMary ->
-        let update = convTxUpdateProposal era (txUpdateProposal txBodyContent)
-            ledgerTxBody = mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
+       ShelleyBasedEraMary -> do
+        update <- convTxUpdateProposal era (txUpdateProposal txBodyContent)
+        let ledgerTxBody = mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
                            & L.certsTxBodyL  .~ certs
                            & L.updateTxBodyL .~ update
                            & L.vldtTxBodyL   .~ validityInterval
                            & L.mintTxBodyL   .~ convMintValue apiMintValue
-        in ShelleyTxBody era
+        pure $ ShelleyTxBody era
               ledgerTxBody
               scripts
               (convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
-       ShelleyBasedEraAlonzo ->
-        let sData = convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses
-            scriptIntegrityHash =
-              case sData of
-                TxBodyNoScriptData -> SNothing
-                TxBodyScriptData _ datums redeemers ->
-                  convPParamsToScriptIntegrityHash
-                    era
-                    apiProtocolParameters
-                    redeemers
-                    datums
-                    languages
 
-            update = convTxUpdateProposal era (txUpdateProposal txBodyContent)
-            ledgerTxBody = mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
+       ShelleyBasedEraAlonzo -> do
+        update <- convTxUpdateProposal era (txUpdateProposal txBodyContent)
+        let sData = convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses
+        scriptIntegrityHash <-
+          case sData of
+            TxBodyNoScriptData -> pure SNothing
+            TxBodyScriptData _ datums redeemers ->
+              convPParamsToScriptIntegrityHash
+                era
+                apiProtocolParameters
+                redeemers
+                datums
+                languages
+        let ledgerTxBody = mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
                            & L.certsTxBodyL               .~ certs
                            & L.updateTxBodyL              .~ update
                            & L.vldtTxBodyL                .~ validityInterval
@@ -2476,28 +2478,28 @@ createTransactionBody era txBodyContent =
                            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
                            -- TODO: NetworkId for hardware wallets. We don't always want this
                            -- & L.networkIdTxBodyL .~ ...
-        in ShelleyTxBody era
+        pure $ ShelleyTxBody era
               ledgerTxBody
               scripts
               (convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
-       ShelleyBasedEraBabbage ->
-        let sData = convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses
 
-            scriptIntegrityHash =
-                    case sData of
-                      TxBodyNoScriptData -> SNothing
-                      TxBodyScriptData _sDataSupported datums redeemers ->
-                        getLedgerEraConstraint era
-                          $ convPParamsToScriptIntegrityHash
-                              era
-                              apiProtocolParameters
-                              redeemers
-                              datums
-                              languages
-            update = convTxUpdateProposal era (txUpdateProposal txBodyContent)
-            ledgerTxBody = mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
+       ShelleyBasedEraBabbage -> do
+        update <- convTxUpdateProposal era (txUpdateProposal txBodyContent)
+        let sData = convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses
+        scriptIntegrityHash <-
+          case sData of
+            TxBodyNoScriptData -> pure SNothing
+            TxBodyScriptData _sDataSupported datums redeemers ->
+              getLedgerEraConstraint era
+                $ convPParamsToScriptIntegrityHash
+                    era
+                    apiProtocolParameters
+                    redeemers
+                    datums
+                    languages
+        let ledgerTxBody = mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
                            & L.certsTxBodyL               .~ certs
                            & L.updateTxBodyL              .~ update
                            & L.vldtTxBodyL                .~ validityInterval
@@ -2511,28 +2513,27 @@ createTransactionBody era txBodyContent =
                            & L.totalCollateralTxBodyL     .~ totalCollateral
                            -- TODO: NetworkId for hardware wallets. We don't always want this
                            -- & L.networkIdTxBodyL .~ ...
-        in ShelleyTxBody era
+        pure $ ShelleyTxBody era
               ledgerTxBody
               scripts
               sData
               txAuxData
               apiScriptValidity
 
-       ShelleyBasedEraConway ->
+       ShelleyBasedEraConway -> do
         let sData = convScriptData (shelleyBasedToCardanoEra era) apiTxOuts apiScriptWitnesses
-
-            scriptIntegrityHash =
-                    case sData of
-                      TxBodyNoScriptData -> SNothing
-                      TxBodyScriptData _sDataSupported datums redeemers ->
-                        getLedgerEraConstraint era
-                          $ convPParamsToScriptIntegrityHash
-                              era
-                              apiProtocolParameters
-                              redeemers
-                              datums
-                              languages
-            ledgerTxBody = mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
+        scriptIntegrityHash <-
+          case sData of
+            TxBodyNoScriptData -> pure SNothing
+            TxBodyScriptData _sDataSupported datums redeemers ->
+              getLedgerEraConstraint era
+                $ convPParamsToScriptIntegrityHash
+                    era
+                    apiProtocolParameters
+                    redeemers
+                    datums
+                    languages
+        let ledgerTxBody = mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
                            & L.conwayCertsTxBodyL         .~ conwayCerts
                            & L.vldtTxBodyL                .~ validityInterval
                            & L.collateralInputsTxBodyL    .~ collTxIns
@@ -2545,12 +2546,12 @@ createTransactionBody era txBodyContent =
                            & L.totalCollateralTxBodyL     .~ totalCollateral
                            -- TODO: NetworkId for hardware wallets. We don't always want this
                            -- & L.networkIdTxBodyL .~ ...
-        in ShelleyTxBody era
-              ledgerTxBody
-              scripts
-              sData
-              txAuxData
-              apiScriptValidity
+        pure $ ShelleyTxBody era
+          ledgerTxBody
+          scripts
+          sData
+          txAuxData
+          apiScriptValidity
 
 validateTxBodyContent
   :: ShelleyBasedEra era
@@ -3489,16 +3490,18 @@ convValidityInterval (lowerBound, upperBound) =
                            TxValidityUpperBound _ s -> SJust s
     }
 
+-- | Convert transaction update proposal into ledger update proposal
 convTxUpdateProposal
   :: forall era ledgerera. ShelleyLedgerEra era ~ ledgerera
   => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => ShelleyBasedEra era
   -> TxUpdateProposal era
-  -> StrictMaybe (Ledger.Update ledgerera)
-convTxUpdateProposal era txUpdateProposal =
-  case txUpdateProposal of
-    TxUpdateProposalNone -> SNothing
-    TxUpdateProposal _ p -> SJust (toLedgerUpdate era p)
+  -> Either TxBodyError (StrictMaybe (Ledger.Update ledgerera))
+  -- ^ 'Left' when there's protocol params conversion error, 'Right' otherwise, 'Right SNothing' means that
+  -- there's no update proposal
+convTxUpdateProposal era = \case
+  TxUpdateProposalNone -> Right SNothing
+  TxUpdateProposal _ p -> bimap TxBodyProtocolParamsConversionError pure $ toLedgerUpdate era p
 
 convMintValue :: TxMintValue build era -> MultiAsset StandardCrypto
 convMintValue txMintValue =
@@ -3568,14 +3571,15 @@ convPParamsToScriptIntegrityHash
   -> Alonzo.Redeemers (ShelleyLedgerEra era)
   -> Alonzo.TxDats (ShelleyLedgerEra era)
   -> Set Alonzo.Language
-  -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era)))
+  -> Either TxBodyError (StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era))))
 convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages =
   case txProtocolParams of
-    BuildTxWith Nothing -> SNothing
-    BuildTxWith (Just pparams) ->
-      Alonzo.hashScriptIntegrity
+    BuildTxWith Nothing -> pure SNothing
+    BuildTxWith (Just pparams) -> do
+      ledgerPp <- first TxBodyProtocolParamsConversionError $ toLedgerPParams sbe pparams
+      pure $ Alonzo.hashScriptIntegrity
         (Set.map
-           (L.getLanguageView (toLedgerPParams sbe pparams))
+           (L.getLanguageView ledgerPp)
            languages
         )
         redeemers
@@ -3661,12 +3665,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
                            } = do
 
     validateTxBodyContent era txbodycontent
-
+    update <- convTxUpdateProposal era txUpdateProposal
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
            & L.certsTxBodyL  .~ convCertificates txCertificates
-           & L.updateTxBodyL .~ convTxUpdateProposal era txUpdateProposal
+           & L.updateTxBodyL .~ update
            & L.ttlTxBodyL    .~ case upperBound of
                                   TxValidityNoUpperBound era' -> case era' of {}
                                   TxValidityUpperBound _ ttl  -> ttl
@@ -3700,13 +3704,13 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                            } = do
 
     validateTxBodyContent era txbodycontent
-
+    update <- convTxUpdateProposal era txUpdateProposal
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
            & L.certsTxBodyL  .~ convCertificates txCertificates
            & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
-           & L.updateTxBodyL .~ convTxUpdateProposal era txUpdateProposal
+           & L.updateTxBodyL .~ update
         )
         scripts_
         TxBodyNoScriptData
@@ -3738,13 +3742,13 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
                            } = do
 
     validateTxBodyContent era txbodycontent
-
+    update <- convTxUpdateProposal era txUpdateProposal
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
            & L.certsTxBodyL  .~ convCertificates txCertificates
            & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
-           & L.updateTxBodyL .~ convTxUpdateProposal era txUpdateProposal
+           & L.updateTxBodyL .~ update
            & L.mintTxBodyL   .~ convMintValue txMintValue
         )
         scripts
@@ -3781,18 +3785,18 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                            } = do
 
     validateTxBodyContent era txbodycontent
-
+    update <- convTxUpdateProposal era txUpdateProposal
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash era txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
            & L.collateralInputsTxBodyL    .~ convCollateralTxIns txInsCollateral
            & L.certsTxBodyL               .~ convCertificates txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
-           & L.updateTxBodyL              .~ convTxUpdateProposal era txUpdateProposal
+           & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
-           & L.scriptIntegrityHashTxBodyL .~ convPParamsToScriptIntegrityHash
-                                             era txProtocolParams redeemers datums languages
+           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
            -- TODO Alonzo: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )
@@ -3867,7 +3871,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                            } = do
 
     validateTxBodyContent era txbodycontent
-
+    update <- convTxUpdateProposal era txUpdateProposal
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash era txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
@@ -3880,11 +3885,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
            & L.certsTxBodyL               .~ convCertificates txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
-           & L.updateTxBodyL              .~ convTxUpdateProposal era txUpdateProposal
+           & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
-           & L.scriptIntegrityHashTxBodyL .~ convPParamsToScriptIntegrityHash
-                                             era txProtocolParams redeemers datums languages
+           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
            -- TODO Babbage: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )
@@ -3966,7 +3970,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
                            } = do
 
     validateTxBodyContent era txbodycontent
-
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash era txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
@@ -3981,8 +3985,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
-           & L.scriptIntegrityHashTxBodyL .~ convPParamsToScriptIntegrityHash
-                                             era txProtocolParams redeemers datums languages
+           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )
