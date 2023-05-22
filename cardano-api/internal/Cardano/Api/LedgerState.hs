@@ -99,6 +99,7 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
                    ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
+import           Cardano.Api.SpecialByron as Byron
 import           Cardano.Api.Utils (textShow)
 
 import qualified Cardano.Binary as CBOR
@@ -799,7 +800,6 @@ data NodeConfig = NodeConfig
   , ncConwayGenesisFile :: !(File ConwayGenesisConfig 'In)
   , ncConwayGenesisHash :: !GenesisHashConway
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
-  , ncByronSoftwareVersion :: !Cardano.Chain.Update.SoftwareVersion
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
 
   -- Per-era parameters for the hardfok transitions:
@@ -831,7 +831,6 @@ instance FromJSON NodeConfig where
           <*> fmap File (o .: "ConwayGenesisFile")
           <*> fmap GenesisHashConway (o .: "ConwayGenesisHash")
           <*> o .: "RequiresNetworkMagic"
-          <*> parseByronSoftwareVersion o
           <*> parseByronProtocolVersion o
           <*> (Consensus.ProtocolTransitionParamsShelleyBased emptyFromByronTranslationContext
                  <$> parseShelleyHardForkEpoch o)
@@ -849,12 +848,6 @@ instance FromJSON NodeConfig where
           <$> o .: "LastKnownBlockVersion-Major"
           <*> o .: "LastKnownBlockVersion-Minor"
           <*> o .: "LastKnownBlockVersion-Alt"
-
-      parseByronSoftwareVersion :: Object -> Parser Cardano.Chain.Update.SoftwareVersion
-      parseByronSoftwareVersion o =
-        Cardano.Chain.Update.SoftwareVersion
-          <$> fmap Cardano.Chain.Update.ApplicationName (o .: "ApplicationName")
-          <*> o .: "ApplicationVersion"
 
       parseShelleyHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseShelleyHardForkEpoch o =
@@ -1006,7 +999,7 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
             { Consensus.byronGenesis = byronGenesis
             , Consensus.byronPbftSignatureThreshold = Consensus.PBftSignatureThreshold <$> ncPBftSignatureThreshold dnc
             , Consensus.byronProtocolVersion = ncByronProtocolVersion dnc
-            , Consensus.byronSoftwareVersion = ncByronSoftwareVersion dnc
+            , Consensus.byronSoftwareVersion = Byron.softwareVersion
             , Consensus.byronLeaderCredentials = Nothing
             , Consensus.byronMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
