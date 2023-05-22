@@ -30,6 +30,24 @@ module Cardano.Api.Keys.Byron (
     toByronSigningKey
   ) where
 
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+
+import           Cardano.Binary (cborError, toStrictByteString)
+import qualified Cardano.Chain.Common as Crypto
+import qualified Cardano.Crypto.DSIGN.Class as Crypto
+import qualified Cardano.Crypto.Hashing as Crypto
+import qualified Cardano.Crypto.Seed as Crypto
+import qualified Cardano.Crypto.Signing as Crypto
+import qualified Cardano.Crypto.Wallet as Crypto.HD
+import qualified Cardano.Crypto.Wallet as Wallet
+
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Read as CBOR
 import           Control.Monad
@@ -40,26 +58,6 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Formatting (build, formatToString)
-
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Crypto.Signing as Crypto
-import qualified Cardano.Crypto.Wallet as Crypto.HD
-
-import           Cardano.Binary (toStrictByteString, cborError)
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Crypto.Hashing as Byron
-import qualified Cardano.Crypto.Signing as Byron
-import qualified Cardano.Crypto.Wallet as Wallet
-
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Class
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.SerialiseUsing
 
 
 -- | Byron-era payment keys. Used for Byron addresses and witnessing
@@ -86,7 +84,7 @@ data SomeByronSigningKey
   = AByronSigningKeyLegacy (SigningKey ByronKeyLegacy)
   | AByronSigningKey (SigningKey ByronKey)
 
-toByronSigningKey :: SomeByronSigningKey -> Byron.SigningKey
+toByronSigningKey :: SomeByronSigningKey -> Crypto.SigningKey
 toByronSigningKey bWit =
   case bWit of
     AByronSigningKeyLegacy (ByronSigningKeyLegacy sKey) -> sKey
@@ -99,32 +97,32 @@ toByronSigningKey bWit =
 instance Key ByronKey where
 
     newtype VerificationKey ByronKey =
-           ByronVerificationKey Byron.VerificationKey
+           ByronVerificationKey Crypto.VerificationKey
       deriving stock Eq
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKey)
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey ByronKey =
-           ByronSigningKey Byron.SigningKey
+           ByronSigningKey Crypto.SigningKey
       deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKey)
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR
 
     deterministicSigningKey :: AsType ByronKey -> Crypto.Seed -> SigningKey ByronKey
     deterministicSigningKey AsByronKey seed =
-       ByronSigningKey (snd (Crypto.runMonadRandomWithSeed seed Byron.keyGen))
+       ByronSigningKey (snd (Crypto.runMonadRandomWithSeed seed Crypto.keyGen))
 
     deterministicSigningKeySeedSize :: AsType ByronKey -> Word
     deterministicSigningKeySeedSize AsByronKey = 32
 
     getVerificationKey :: SigningKey ByronKey -> VerificationKey ByronKey
     getVerificationKey (ByronSigningKey sk) =
-      ByronVerificationKey (Byron.toVerification sk)
+      ByronVerificationKey (Crypto.toVerification sk)
 
     verificationKeyHash :: VerificationKey ByronKey -> Hash ByronKey
     verificationKeyHash (ByronVerificationKey vkey) =
-      ByronKeyHash (Byron.hashKey vkey)
+      ByronKeyHash (Crypto.hashKey vkey)
 
 instance HasTypeProxy ByronKey where
     data AsType ByronKey = AsByronKey
@@ -137,12 +135,12 @@ instance HasTextEnvelope (SigningKey ByronKey) where
     textEnvelopeType _ = "PaymentSigningKeyByron_ed25519_bip32"
 
 instance SerialiseAsRawBytes (VerificationKey ByronKey) where
-    serialiseToRawBytes (ByronVerificationKey (Byron.VerificationKey xvk)) =
+    serialiseToRawBytes (ByronVerificationKey (Crypto.VerificationKey xvk)) =
       Crypto.HD.unXPub xvk
 
     deserialiseFromRawBytes (AsVerificationKey AsByronKey) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise VerificationKey ByronKey" ++ msg)) $
-        ByronVerificationKey . Byron.VerificationKey <$> Crypto.HD.xpub bs
+        ByronVerificationKey . Crypto.VerificationKey <$> Crypto.HD.xpub bs
 
 instance SerialiseAsRawBytes (SigningKey ByronKey) where
     serialiseToRawBytes (ByronSigningKey sk) = toStrictByteString $ toCBOR sk
@@ -151,24 +149,24 @@ instance SerialiseAsRawBytes (SigningKey ByronKey) where
       first (\e -> SerialiseAsRawBytesError ("Unable to deserialise SigningKey ByronKey" ++ show e)) $
         ByronSigningKey . snd <$> CBOR.deserialiseFromBytes fromCBOR (LB.fromStrict bs)
 
-newtype instance Hash ByronKey = ByronKeyHash Byron.KeyHash
+newtype instance Hash ByronKey = ByronKeyHash Crypto.KeyHash
   deriving (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKey)
   deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash ByronKey) where
-    serialiseToRawBytes (ByronKeyHash (Byron.KeyHash vkh)) =
-      Byron.abstractHashToBytes vkh
+    serialiseToRawBytes (ByronKeyHash (Crypto.KeyHash vkh)) =
+      Crypto.abstractHashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsByronKey) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash ByronKey") $
-        ByronKeyHash . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
+        ByronKeyHash . Crypto.KeyHash <$> Crypto.abstractHashFromBytes bs
 
 instance CastVerificationKeyRole ByronKey PaymentExtendedKey where
     castVerificationKey (ByronVerificationKey vk) =
         PaymentExtendedVerificationKey
-          (Byron.unVerificationKey vk)
+          (Crypto.unVerificationKey vk)
 
 instance CastVerificationKeyRole ByronKey PaymentKey where
     castVerificationKey =
@@ -187,14 +185,14 @@ instance IsByronKey ByronKey where
 instance Key ByronKeyLegacy where
 
     newtype VerificationKey ByronKeyLegacy =
-           ByronVerificationKeyLegacy Byron.VerificationKey
+           ByronVerificationKeyLegacy Crypto.VerificationKey
       deriving stock (Eq)
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKeyLegacy)
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR
 
     newtype SigningKey ByronKeyLegacy =
-           ByronSigningKeyLegacy Byron.SigningKey
+           ByronSigningKeyLegacy Crypto.SigningKey
       deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKeyLegacy)
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR
@@ -207,11 +205,11 @@ instance Key ByronKeyLegacy where
 
     getVerificationKey :: SigningKey ByronKeyLegacy -> VerificationKey ByronKeyLegacy
     getVerificationKey (ByronSigningKeyLegacy sk) =
-      ByronVerificationKeyLegacy (Byron.toVerification sk)
+      ByronVerificationKeyLegacy (Crypto.toVerification sk)
 
     verificationKeyHash :: VerificationKey ByronKeyLegacy -> Hash ByronKeyLegacy
     verificationKeyHash (ByronVerificationKeyLegacy vkey) =
-      ByronKeyHashLegacy (Byron.hashKey vkey)
+      ByronKeyHashLegacy (Crypto.hashKey vkey)
 
 instance HasTypeProxy ByronKeyLegacy where
   data AsType ByronKeyLegacy = AsByronKeyLegacy
@@ -223,30 +221,30 @@ instance HasTextEnvelope (VerificationKey ByronKeyLegacy) where
 instance HasTextEnvelope (SigningKey ByronKeyLegacy) where
     textEnvelopeType _ = "PaymentSigningKeyByronLegacy_ed25519_bip32"
 
-newtype instance Hash ByronKeyLegacy = ByronKeyHashLegacy Byron.KeyHash
+newtype instance Hash ByronKeyLegacy = ByronKeyHashLegacy Crypto.KeyHash
   deriving (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKeyLegacy)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKeyLegacy)
   deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash ByronKeyLegacy) where
-    serialiseToRawBytes (ByronKeyHashLegacy (Byron.KeyHash vkh)) =
-      Byron.abstractHashToBytes vkh
+    serialiseToRawBytes (ByronKeyHashLegacy (Crypto.KeyHash vkh)) =
+      Crypto.abstractHashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsByronKeyLegacy) bs =
       maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash ByronKeyLegacy") $
-        ByronKeyHashLegacy . Byron.KeyHash <$> Byron.abstractHashFromBytes bs
+        ByronKeyHashLegacy . Crypto.KeyHash <$> Crypto.abstractHashFromBytes bs
 
 instance SerialiseAsRawBytes (VerificationKey ByronKeyLegacy) where
-    serialiseToRawBytes (ByronVerificationKeyLegacy (Byron.VerificationKey xvk)) =
+    serialiseToRawBytes (ByronVerificationKeyLegacy (Crypto.VerificationKey xvk)) =
       Crypto.HD.unXPub xvk
 
     deserialiseFromRawBytes (AsVerificationKey AsByronKeyLegacy) bs =
       first (\msg -> SerialiseAsRawBytesError ("Unable to deserialise VerificationKey ByronKeyLegacy" ++ msg)) $
-        ByronVerificationKeyLegacy . Byron.VerificationKey <$> Crypto.HD.xpub bs
+        ByronVerificationKeyLegacy . Crypto.VerificationKey <$> Crypto.HD.xpub bs
 
 instance SerialiseAsRawBytes (SigningKey ByronKeyLegacy) where
-    serialiseToRawBytes (ByronSigningKeyLegacy (Byron.SigningKey xsk)) =
+    serialiseToRawBytes (ByronSigningKeyLegacy (Crypto.SigningKey xsk)) =
       Crypto.HD.unXPrv xsk
 
     deserialiseFromRawBytes (AsSigningKey AsByronKeyLegacy) bs =
@@ -273,7 +271,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKeyLegacy) where
 
       -- | Decoder for a Byron/Classic signing key.
       --   Lifted from cardano-sl legacy codebase.
-      decodeLegacyDelegateKey :: CBOR.Decoder s Byron.SigningKey
+      decodeLegacyDelegateKey :: CBOR.Decoder s Crypto.SigningKey
       decodeLegacyDelegateKey = do
           enforceSize "UserSecret" 4
           _    <- do
@@ -281,7 +279,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKeyLegacy) where
             CBOR.decodeBytes
           pkey <- do
             enforceSize "pkey" 1
-            Byron.SigningKey <$> decodeXPrv
+            Crypto.SigningKey <$> decodeXPrv
           _    <- do
             CBOR.decodeListLenIndef
             CBOR.decodeSequenceLenIndef (flip (:)) [] reverse CBOR.decodeNull
