@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -67,6 +68,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Data (Data)
 import qualified Data.List as List
 import qualified Data.Map.Lazy as Map.Lazy
 import           Data.Map.Strict (Map)
@@ -328,7 +330,7 @@ data TxMetadataRangeError =
     -- 64 bytes.
     --
   | TxMetadataBytesTooLong !Int
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 instance Error TxMetadataRangeError where
   displayError (TxMetadataNumberOutOfRange n) =
@@ -655,7 +657,7 @@ data TxMetadataJsonError =
      | TxMetadataJsonToplevelBadKey !Text
      | TxMetadataJsonSchemaError !Word64 !Aeson.Value !TxMetadataJsonSchemaError
      | TxMetadataRangeError      !Word64 !Aeson.Value !TxMetadataRangeError
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 data TxMetadataJsonSchemaError =
        -- Only used for 'TxMetadataJsonNoSchema'
@@ -670,7 +672,7 @@ data TxMetadataJsonSchemaError =
      | TxMetadataJsonBadObject ![(Text, Aeson.Value)]
      | TxMetadataJsonBadMapPair !Aeson.Value
      | TxMetadataJsonTypeMismatch !Text !Aeson.Value
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 instance Error TxMetadataJsonError where
     displayError TxMetadataJsonToplevelNotMap =

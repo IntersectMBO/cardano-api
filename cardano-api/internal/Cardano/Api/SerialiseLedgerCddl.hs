@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
@@ -49,6 +50,7 @@ import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Data (Data)
 import qualified Data.List as List
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -101,7 +103,7 @@ data TextEnvelopeCddlError
       Text   -- ^ Actual types
   | TextEnvelopeCddlErrUnknownType Text
   | TextEnvelopeCddlErrByronKeyWitnessUnsupported
-  deriving (Show, Eq)
+  deriving (Show, Eq, Data)
 
 instance Error TextEnvelopeCddlError where
   displayError (TextEnvelopeCddlErrCBORDecodingError decoderError) =

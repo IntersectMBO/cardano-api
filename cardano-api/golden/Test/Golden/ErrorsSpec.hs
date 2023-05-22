@@ -1,3 +1,7 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
 {- HLINT ignore "Redundant do" -}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
@@ -20,20 +24,17 @@ import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus
 
 import qualified Codec.Binary.Bech32 as Bech32
-import           Control.Monad.IO.Class
 import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Data (Data (..))
+import           Data.Data
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Text (Text)
-import           Data.Typeable (typeOf, typeRep)
 import           GHC.Stack (withFrozenCallStack)
 import           System.FilePath ((</>))
 
 import qualified HaskellWorks.Hspec.Hedgehog as H
-import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Golden as H
 import           Test.Hspec
@@ -68,243 +69,210 @@ spec = describe "Test.Golden.Errors" $ do
   let txOutValue1 = TxOutAdaOnly AdaOnlyInAllegraEra 1
   let txout1 = TxOut changeaddr1 txOutValue1 TxOutDatumNone ReferenceScriptNone
   let txOutInAnyEra1 = txOutInAnyEra txout1
+  let (Right poolId) = deserialiseFromRawBytesHex (AsHash AsStakePoolKey)
+        "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
 
-  it "Bech32DecodeError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/Bech32DecodeError/Bech32DecodingError.txt"
-      $ displayError $ Bech32DecodingError Bech32.StringToDecodeTooLong
-    flip H.diffVsGoldenFile "test/golden/errors/Bech32DecodeError/Bech32UnexpectedPrefix.txt"
-      $ displayError $ Bech32UnexpectedPrefix text $ Set.singleton text
-    flip H.diffVsGoldenFile "test/golden/errors/Bech32DecodeError/Bech32DataPartToBytesError.txt"
-      $ displayError $ Bech32DataPartToBytesError text
-    flip H.diffVsGoldenFile "test/golden/errors/Bech32DecodeError/Bech32DeserialiseFromBytesError.txt"
-      $ displayError $ Bech32DeserialiseFromBytesError bytestring
-    flip H.diffVsGoldenFile "test/golden/errors/Bech32DecodeError/Bech32WrongPrefix.txt"
-      $ displayError $ Bech32WrongPrefix text text
+  testAllErrorMessages @Bech32DecodeError
+    [ Bech32DecodingError Bech32.StringToDecodeTooLong
+    , Bech32UnexpectedPrefix text $ Set.singleton text
+    , Bech32DataPartToBytesError text
+    , Bech32DeserialiseFromBytesError bytestring
+    , Bech32WrongPrefix text text
+    ]
 
-  it "InputDecodeError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/InputDecodeError/InputTextEnvelopeError.txt"
-      $ displayError $ InputTextEnvelopeError $ TextEnvelopeAesonDecodeError string
-    flip H.diffVsGoldenFile "test/golden/errors/InputDecodeError/InputBech32DecodeError.txt"
-      $ displayError $ InputBech32DecodeError $ Bech32WrongPrefix text text
-    flip H.diffVsGoldenFile "test/golden/errors/InputDecodeError/InputInvalidError.txt"
-      $ displayError InputInvalidError
+  testAllErrorMessages @InputDecodeError
+    [ InputTextEnvelopeError $ TextEnvelopeAesonDecodeError string
+    , InputBech32DecodeError $ Bech32WrongPrefix text text
+    , InputInvalidError
+    ]
 
-  it "ProtocolParametersConversionError" $ H.requireTest $ do
-    mapM_ testErrorMessage
-      [ PpceOutOfBounds "pparam" 0.1
-      , PpceVersionInvalid 99999
-      , PpceInvalidCostModel costModel (Plutus.CMInternalWriteError string)
-      , PpceMissingParameter "pparam"
-      ]
+  testAllErrorMessages @ProtocolParametersConversionError
+    [ PpceOutOfBounds "pparam" 0.1
+    , PpceVersionInvalid 99999
+    , PpceInvalidCostModel costModel (Plutus.CMInternalWriteError string)
+    , PpceMissingParameter "pparam"
+    ]
 
-  it "JsonDecodeError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/JsonDecodeError/JsonDecodeError.txt"
-      $ displayError $ JsonDecodeError string
+  testAllErrorMessages @JsonDecodeError
+    [ JsonDecodeError string
+    ]
 
-  it "LeadershipError" $ H.requireTest $ do
-    poolId <- H.leftFail $ deserialiseFromRawBytesHex (AsHash AsStakePoolKey)
-      "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrDecodeLedgerStateFailure.txt"
-      $ displayError LeaderErrDecodeLedgerStateFailure
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrDecodeProtocolStateFailure.txt"
-      $ displayError $ LeaderErrDecodeProtocolStateFailure
+  testAllErrorMessages_ "Cardano.Api.LedgerState" "LeadershipError"
+    [ ("LeaderErrDecodeLedgerStateFailure", LeaderErrDecodeLedgerStateFailure)
+    , ("LeaderErrDecodeProtocolStateFailure", LeaderErrDecodeProtocolStateFailure
           ( lazyBytestring
           , CBOR.DecoderErrorVoid
-          )
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrDecodeProtocolEpochStateFailure.txt"
-      $ displayError $ LeaderErrDecodeProtocolEpochStateFailure CBOR.DecoderErrorVoid
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrGenesisSlot.txt"
-      $ displayError LeaderErrGenesisSlot
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrStakePoolHasNoStake.txt"
-      $ displayError $ LeaderErrStakePoolHasNoStake poolId
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrStakeDistribUnstable.txt"
-      $ displayError $ LeaderErrStakeDistribUnstable 1 2 3 4
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrSlotRangeCalculationFailure.txt"
-      $ displayError $ LeaderErrSlotRangeCalculationFailure text
-    flip H.diffVsGoldenFile "test/golden/errors/LeadershipError/LeaderErrCandidateNonceStillEvolving.txt"
-      $ displayError LeaderErrCandidateNonceStillEvolving
+          ))
+    , ("LeaderErrDecodeProtocolEpochStateFailure", LeaderErrDecodeProtocolEpochStateFailure CBOR.DecoderErrorVoid)
+    , ("LeaderErrGenesisSlot", LeaderErrGenesisSlot)
+    , ("LeaderErrStakePoolHasNoStake", LeaderErrStakePoolHasNoStake poolId)
+    , ("LeaderErrStakeDistribUnstable", LeaderErrStakeDistribUnstable 1 2 3 4)
+    , ("LeaderErrSlotRangeCalculationFailure", LeaderErrSlotRangeCalculationFailure text)
+    , ("LeaderErrCandidateNonceStillEvolving", LeaderErrCandidateNonceStillEvolving)
+    ]
 
-  it "OperationalCertIssueError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/OperationalCertIssueError/OperationalCertKeyMismatch.txt"
-      $ displayError $ OperationalCertKeyMismatch stakePoolVerKey1 stakePoolVerKey2
+  testAllErrorMessages_ "Cardano.Api.OperationalCertificate" "OperationalCertIssueError"
+      [ ("OperationalCertKeyMismatch", OperationalCertKeyMismatch stakePoolVerKey1 stakePoolVerKey2)
+      ]
 
-  it "ProtocolParametersError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/ProtocolParametersError/PParamsErrorMissingMinUTxoValue.txt"
-      $ displayError $ PParamsErrorMissingMinUTxoValue (AnyCardanoEra ConwayEra)
-    flip H.diffVsGoldenFile "test/golden/errors/ProtocolParametersError/PParamsErrorMissingAlonzoProtocolParameter.txt"
-      $ displayError PParamsErrorMissingAlonzoProtocolParameter
+  testAllErrorMessages_ "Cardano.Api.ProtocolParameters" "ProtocolParametersError"
+      [ ("PParamsErrorMissingMinUTxoValue", PParamsErrorMissingMinUTxoValue (AnyCardanoEra ConwayEra))
+      , ("PParamsErrorMissingAlonzoProtocolParameter", PParamsErrorMissingAlonzoProtocolParameter)
+      ]
 
-  it "RawBytesHexError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/RawBytesHexError/RawBytesHexErrorBase16DecodeFail.txt"
-      $ displayError $ RawBytesHexErrorBase16DecodeFail bytestring string
-    flip H.diffVsGoldenFile "test/golden/errors/RawBytesHexError/RawBytesHexErrorRawBytesDecodeFail.txt"
-      $ displayError $ RawBytesHexErrorRawBytesDecodeFail
+  testAllErrorMessages_ "Cardano.Api.SerialiseRaw" "RawBytesHexError"
+      [ ("RawBytesHexErrorBase16DecodeFail", RawBytesHexErrorBase16DecodeFail bytestring string)
+      , ("RawBytesHexErrorRawBytesDecodeFail", RawBytesHexErrorRawBytesDecodeFail
           bytestring
           (typeRep (AsVerificationKey AsGenesisKey))
-          (SerialiseAsRawBytesError string)
+          (SerialiseAsRawBytesError string))
+      ]
 
-  it "ScriptDataJsonBytesError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonBytesError/ScriptDataJsonBytesErrorValue.txt"
-      $ displayError $ ScriptDataJsonBytesErrorValue $ ScriptDataJsonSchemaError Aeson.Null ScriptDataJsonNullNotAllowed
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonBytesError/ScriptDataJsonBytesErrorInvalid.txt"
-      $ displayError $ ScriptDataJsonBytesErrorInvalid $ ScriptDataConstructorOutOfRange 0
+  testAllErrorMessages @ScriptDataJsonBytesError
+    [ ScriptDataJsonBytesErrorValue $ ScriptDataJsonSchemaError Aeson.Null ScriptDataJsonNullNotAllowed
+    , ScriptDataJsonBytesErrorInvalid $ ScriptDataConstructorOutOfRange 0
+    ]
 
-  it "ScriptDataJsonError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonError/ScriptDataJsonSchemaError.txt"
-      $ displayError $ ScriptDataJsonSchemaError (Aeson.String "<JSON>") ScriptDataJsonNullNotAllowed
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonError/ScriptDataRangeError.txt"
-      $ displayError $ ScriptDataRangeError (Aeson.String "<JSON>") (ScriptDataConstructorOutOfRange 1)
+  testAllErrorMessages @ScriptDataJsonError
+    [ ScriptDataJsonSchemaError (Aeson.String "<JSON>") ScriptDataJsonNullNotAllowed
+    , ScriptDataRangeError (Aeson.String "<JSON>") (ScriptDataConstructorOutOfRange 1)
+    ]
 
-  it "ScriptDataJsonSchemaError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonSchemaError.txt"
-      $ displayError $ ScriptDataJsonSchemaError Aeson.Null ScriptDataJsonNullNotAllowed
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonNullNotAllowed.txt"
-      $ displayError ScriptDataJsonNullNotAllowed
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonBoolNotAllowed.txt"
-      $ displayError ScriptDataJsonBoolNotAllowed
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonNumberNotInteger.txt"
-      $ displayError $ ScriptDataJsonNumberNotInteger 0.0
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonNotObject.txt"
-      $ displayError $ ScriptDataJsonNotObject json
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonBadObject.txt"
-      $ displayError $ ScriptDataJsonBadObject (replicate 5 (text, json))
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonBadMapPair.txt"
-      $ displayError $ ScriptDataJsonBadMapPair json
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataJsonSchemaError/ScriptDataJsonTypeMismatch.txt"
-      $ displayError $ ScriptDataJsonTypeMismatch text json
+  testAllErrorMessages @ScriptDataJsonSchemaError
+    [ ScriptDataJsonNullNotAllowed
+    , ScriptDataJsonBoolNotAllowed
+    , ScriptDataJsonNumberNotInteger 0.0
+    , ScriptDataJsonNotObject json
+    , ScriptDataJsonBadObject (replicate 5 (text, json))
+    , ScriptDataJsonBadMapPair json
+    , ScriptDataJsonTypeMismatch text json
+    ]
 
-  it "ScriptDataRangeError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptDataRangeError/ScriptDataConstructorOutOfRange.txt"
-      $ displayError $ ScriptDataConstructorOutOfRange 1
+  testAllErrorMessages @ScriptDataRangeError
+    [ ScriptDataConstructorOutOfRange 1
+    ]
 
-  it "ScriptExecutionError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorMissingTxIn.txt"
-      $ displayError $ ScriptErrorMissingTxIn txin1
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorTxInWithoutDatum.txt"
-      $ displayError $ ScriptErrorTxInWithoutDatum txin1
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorWrongDatum.txt"
-      $ displayError $ ScriptErrorWrongDatum hashScriptData1
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorEvaluationFailed.txt"
-      $ displayError $ ScriptErrorEvaluationFailed Plutus.CostModelParameterMismatch (replicate 5 text)
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorExecutionUnitsOverflow.txt"
-      $ displayError ScriptErrorExecutionUnitsOverflow
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorNotPlutusWitnessedTxIn.txt"
-      $ displayError $ ScriptErrorNotPlutusWitnessedTxIn (ScriptWitnessIndexTxIn 0) scriptHash
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorRedeemerPointsToUnknownScriptHash.txt"
-      $ displayError $ ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0)
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorMissingScript.txt"
-      $ displayError $ ScriptErrorMissingScript (Ledger.RdmrPtr Ledger.Mint 0) Map.empty
-    flip H.diffVsGoldenFile "test/golden/errors/ScriptExecutionError/ScriptErrorMissingCostModel.txt"
-      $ displayError $ ScriptErrorMissingCostModel Alonzo.PlutusV2
+  testAllErrorMessages_ "Cardano.Api.Fees" "ScriptExecutionError"
+    [ ("ScriptErrorMissingTxIn", ScriptErrorMissingTxIn txin1)
+    , ("ScriptErrorTxInWithoutDatum", ScriptErrorTxInWithoutDatum txin1)
+    , ("ScriptErrorWrongDatum", ScriptErrorWrongDatum hashScriptData1)
+    , ("ScriptErrorEvaluationFailed", ScriptErrorEvaluationFailed Plutus.CostModelParameterMismatch (replicate 5 text))
+    , ("ScriptErrorExecutionUnitsOverflow", ScriptErrorExecutionUnitsOverflow)
+    , ("ScriptErrorNotPlutusWitnessedTxIn", ScriptErrorNotPlutusWitnessedTxIn (ScriptWitnessIndexTxIn 0) scriptHash)
+    , ("ScriptErrorRedeemerPointsToUnknownScriptHash", ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0))
+    , ("ScriptErrorMissingScript", ScriptErrorMissingScript (Ledger.RdmrPtr Ledger.Mint 0) Map.empty)
+    , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Alonzo.PlutusV2)
+    ]
 
-  it "StakePoolMetadataValidationError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/StakePoolMetadataValidationError/StakePoolMetadataJsonDecodeError.txt"
-      $ displayError $ StakePoolMetadataJsonDecodeError string
-    flip H.diffVsGoldenFile "test/golden/errors/StakePoolMetadataValidationError/StakePoolMetadataInvalidLengthError.txt"
-      $ displayError $ StakePoolMetadataInvalidLengthError 0 1
+  testAllErrorMessages @StakePoolMetadataValidationError
+    [ StakePoolMetadataJsonDecodeError string
+    , StakePoolMetadataInvalidLengthError 0 1
+    ]
 
-  it "TextEnvelopeCddlError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeCddlError/TextEnvelopeCddlErrCBORDecodingError.txt"
-      $ displayError $ TextEnvelopeCddlErrCBORDecodingError CBOR.DecoderErrorVoid
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeCddlError/TextEnvelopeCddlAesonDecodeError.txt"
-      $ displayError $ TextEnvelopeCddlAesonDecodeError string string
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeCddlError/TextEnvelopeCddlUnknownKeyWitness.txt"
-      $ displayError TextEnvelopeCddlUnknownKeyWitness
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeCddlError/TextEnvelopeCddlTypeError.txt"
-      $ displayError $ TextEnvelopeCddlTypeError [text] text
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeCddlError/TextEnvelopeCddlErrUnknownType.txt"
-      $ displayError $ TextEnvelopeCddlErrUnknownType text
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeCddlError/TextEnvelopeCddlErrByronKeyWitnessUnsupported.txt"
-      $ displayError TextEnvelopeCddlErrByronKeyWitnessUnsupported
+  testAllErrorMessages @TextEnvelopeCddlError
+    [ TextEnvelopeCddlErrCBORDecodingError CBOR.DecoderErrorVoid
+    , TextEnvelopeCddlAesonDecodeError string string
+    , TextEnvelopeCddlUnknownKeyWitness
+    , TextEnvelopeCddlTypeError [text] text
+    , TextEnvelopeCddlErrUnknownType text
+    , TextEnvelopeCddlErrByronKeyWitnessUnsupported
+    ]
 
-  it "TextEnvelopeError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeError/TextEnvelopeTypeError.txt"
-      $ displayError $ TextEnvelopeTypeError [TextEnvelopeType string, TextEnvelopeType string] (TextEnvelopeType string)
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeError/TextEnvelopeDecodeError.txt"
-      $ displayError $ TextEnvelopeDecodeError CBOR.DecoderErrorVoid
-    flip H.diffVsGoldenFile "test/golden/errors/TextEnvelopeError/TextEnvelopeAesonDecodeError.txt"
-      $ displayError $ TextEnvelopeAesonDecodeError string
+  testAllErrorMessages @TextEnvelopeError
+    [ TextEnvelopeTypeError [TextEnvelopeType string, TextEnvelopeType string] (TextEnvelopeType string)
+    , TextEnvelopeDecodeError CBOR.DecoderErrorVoid
+    , TextEnvelopeAesonDecodeError string
+    ]
 
-  it "TransactionValidityError" $ H.requireTest $ do
-    -- TODO implement this
-    -- flip H.diffVsGoldenFile "test/golden/errors/TransactionValidityError/TransactionValidityIntervalError.txt"
-    --   $ displayError $ TransactionValidityIntervalError $
-    --       Qry.PastHorizon
-    --       { Qry.pastHorizonCallStack = GHC.callStack
-    --       , Qry.pastHorizonExpression = error "" -- Some $ Qry.ClosedExpr $ Qry.ELit 0
-    --       , Qry.pastHorizonSummary = []
-    --       }
-    flip H.diffVsGoldenFile "test/golden/errors/TransactionValidityError/TransactionValidityTranslationError.txt"
-      $ displayError $ TransactionValidityTranslationError $ Ledger.TimeTranslationPastHorizon text
-    flip H.diffVsGoldenFile "test/golden/errors/TransactionValidityError/TransactionValidityCostModelError.txt"
-      $ displayError $ TransactionValidityCostModelError
-          (Map.fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
-          string
+  testAllErrorMessages_ "Cardano.Api.Fees" "TransactionValidityError"
+    [ ("TransactionValidityTranslationError", TransactionValidityTranslationError $ Ledger.TimeTranslationPastHorizon text)
+    , ("TransactionValidityCostModelError", TransactionValidityCostModelError
+        (Map.fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
+        string)
+    -- TODO Implement this when we get access to data constructors of PastHorizon or its fields' types' constructors
+    -- or we get a dummy value for such purposes.
+    --
+    -- , ("TransactionValidityIntervalError", TransactionValidityIntervalError $
+    --     Qry.PastHorizon
+    --     { Qry.pastHorizonCallStack = GHC.callStack
+    --     , Qry.pastHorizonExpression = error "" -- Some $ Qry.ClosedExpr $ Qry.ELit 0
+    --     , Qry.pastHorizonSummary = []
+    --     })
+    ]
 
-  it "TxBodyError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyEmptyTxIns.txt"
-      $ displayError TxBodyEmptyTxIns
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyEmptyTxInsCollateral.txt"
-      $ displayError TxBodyEmptyTxInsCollateral
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyEmptyTxOuts.txt"
-      $ displayError TxBodyEmptyTxOuts
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyOutputNegative.txt"
-      $ displayError $ TxBodyOutputNegative 1 txOutInAnyEra1
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyOutputOverflow.txt"
-      $ displayError $ TxBodyOutputOverflow 1 txOutInAnyEra1
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyMetadataError.txt"
-      $ displayError $ TxBodyMetadataError [(1, TxMetadataBytesTooLong 2)]
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyMintAdaError.txt"
-      $ displayError TxBodyMintAdaError
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyMissingProtocolParams.txt"
-      $ displayError TxBodyMissingProtocolParams
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyError/TxBodyInIxOverflow.txt"
-      $ displayError $ TxBodyInIxOverflow txin1
 
-  it "TxBodyErrorAutoBalance" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyError.txt"
-      $ displayError $ TxBodyError TxBodyEmptyTxIns
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyScriptExecutionError.txt"
-      $ displayError $ TxBodyScriptExecutionError [(ScriptWitnessIndexTxIn 1, ScriptErrorExecutionUnitsOverflow)]
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyScriptBadScriptValidity.txt"
-      $ displayError TxBodyScriptBadScriptValidity
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorAdaBalanceNegative.txt"
-      $ displayError $ TxBodyErrorAdaBalanceNegative 1
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorAdaBalanceTooSmall.txt"
-      $ displayError $ TxBodyErrorAdaBalanceTooSmall txOutInAnyEra1 0 1
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorByronEraNotSupported.txt"
-      $ displayError TxBodyErrorByronEraNotSupported
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorMissingParamMinUTxO.txt"
-      $ displayError TxBodyErrorMissingParamMinUTxO
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorValidityInterval.txt"
-      $ displayError $ TxBodyErrorValidityInterval $ TransactionValidityCostModelError Map.empty string
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorMinUTxONotMet.txt"
-      $ displayError $ TxBodyErrorMinUTxONotMet txOutInAnyEra1 1
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorNonAdaAssetsUnbalanced.txt"
-      $ displayError $ TxBodyErrorNonAdaAssetsUnbalanced (valueFromList [(AdaAssetId, Quantity 1)])
-    flip H.diffVsGoldenFile "test/golden/errors/TxBodyErrorAutoBalance/TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap.txt"
-      $ displayError $ TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
-          (ScriptWitnessIndexTxIn 1)
-          (Map.fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)])
+  testAllErrorMessages_ "Cardano.Api.TxBody" "TxBodyError"
+    [ ("TxBodyEmptyTxIns", TxBodyEmptyTxIns)
+    , ("TxBodyEmptyTxInsCollateral", TxBodyEmptyTxInsCollateral)
+    , ("TxBodyEmptyTxOuts", TxBodyEmptyTxOuts)
+    , ("TxBodyOutputNegative", TxBodyOutputNegative 1 txOutInAnyEra1)
+    , ("TxBodyOutputOverflow", TxBodyOutputOverflow 1 txOutInAnyEra1)
+    , ("TxBodyMetadataError", TxBodyMetadataError [(1, TxMetadataBytesTooLong 2)])
+    , ("TxBodyMintAdaError", TxBodyMintAdaError)
+    , ("TxBodyMissingProtocolParams", TxBodyMissingProtocolParams)
+    , ("TxBodyInIxOverflow", TxBodyInIxOverflow txin1)
+    ]
 
-  it "TxMetadataJsonError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/TxMetadataJsonError/TxMetadataJsonToplevelNotMap.txt"
-      $ displayError TxMetadataJsonToplevelNotMap
-    flip H.diffVsGoldenFile "test/golden/errors/TxMetadataJsonError/TxMetadataJsonToplevelBadKey.txt"
-      $ displayError $ TxMetadataJsonToplevelBadKey text
-    flip H.diffVsGoldenFile "test/golden/errors/TxMetadataJsonError/TxMetadataJsonSchemaError.txt"
-      $ displayError $ TxMetadataJsonSchemaError 0 json TxMetadataJsonNullNotAllowed
-    flip H.diffVsGoldenFile "test/golden/errors/TxMetadataJsonError/TxMetadataRangeError.txt"
-      $ displayError $ TxMetadataRangeError 0 json (TxMetadataBytesTooLong 0)
+  testAllErrorMessages_ "Cardano.Api.Fees" "TxBodyErrorAutoBalance"
+    [ ("TxBodyError", TxBodyError TxBodyEmptyTxIns)
+    , ("TxBodyScriptExecutionError", TxBodyScriptExecutionError [(ScriptWitnessIndexTxIn 1, ScriptErrorExecutionUnitsOverflow)])
+    , ("TxBodyScriptBadScriptValidity", TxBodyScriptBadScriptValidity)
+    , ("TxBodyErrorAdaBalanceNegative", TxBodyErrorAdaBalanceNegative 1)
+    , ("TxBodyErrorAdaBalanceTooSmall", TxBodyErrorAdaBalanceTooSmall txOutInAnyEra1 0 1)
+    , ("TxBodyErrorByronEraNotSupported", TxBodyErrorByronEraNotSupported)
+    , ("TxBodyErrorMissingParamMinUTxO", TxBodyErrorMissingParamMinUTxO)
+    , ("TxBodyErrorValidityInterval", TxBodyErrorValidityInterval $ TransactionValidityCostModelError Map.empty string)
+    , ("TxBodyErrorMinUTxONotMet", TxBodyErrorMinUTxONotMet txOutInAnyEra1 1)
+    , ("TxBodyErrorNonAdaAssetsUnbalanced", TxBodyErrorNonAdaAssetsUnbalanced (valueFromList [(AdaAssetId, Quantity 1)]))
+    , ("TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap", TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
+                (ScriptWitnessIndexTxIn 1)
+                (Map.fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)]))
+    ]
 
-  it "TxMetadataRangeError" $ H.requireTest $ do
-    flip H.diffVsGoldenFile "test/golden/errors/TxMetadataRangeError/TxMetadataJsonToplevelNotMap.txt"
-      $ displayError $ TxMetadataBytesTooLong 0
+  testAllErrorMessages @TxMetadataJsonError
+    [ TxMetadataJsonToplevelNotMap
+    , TxMetadataJsonToplevelBadKey text
+    , TxMetadataJsonSchemaError 0 json TxMetadataJsonNullNotAllowed
+    , TxMetadataRangeError 0 json (TxMetadataBytesTooLong 0)
+    ]
 
-testErrorMessage :: (HasCallStack, MonadIO m, MonadTest m, Data p , Error p) => p -> m ()
+  testAllErrorMessages @TxMetadataRangeError
+    [ TxMetadataTextTooLong 0
+    , TxMetadataBytesTooLong 0
+    , TxMetadataNumberOutOfRange 0
+    ]
+
+testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a) => [a] -> Spec
+testAllErrorMessages errs = withFrozenCallStack $ do
+  let typeName = show $ typeRep (Proxy @a)
+  describe typeName $
+    mapM_ testErrorMessage errs
+
+-- | Creates error messages for all values and tests them agains the golden files.
+--
+-- An escape hatch when adding of 'Data' instance gets impossible (like when we embed 'TypeRep' in our error data
+-- types) or requires significant multi-package changes and outweights the benefits here.
+testAllErrorMessages_ :: forall a. (HasCallStack, Error a)
+                      => String -- ^ module name
+                      -> String -- ^ type name
+                      -> [(String, a)]  -- ^ list of constructor names and values
+                      -> Spec
+testAllErrorMessages_ moduleName typeName errs = withFrozenCallStack $ do
+  describe typeName $
+    mapM_ (uncurry $ testErrorMessage_ moduleName typeName) errs
+
+testErrorMessage :: (HasCallStack, Data a, Error a) => a -> Spec
 testErrorMessage err = withFrozenCallStack $ do
-  let typeName = show $ typeOf err
+  let errTypeRep = typeOf err
+      typeName = show errTypeRep
+      moduleName = tyConModule $ typeRepTyCon errTypeRep
       constructorName = show $ toConstr err
-  H.note_ "Incorrect error message in golden file"
-  displayError err `H.diffVsGoldenFile` ("test/golden/errors" </> typeName </> constructorName <> ".txt")
+  testErrorMessage_ moduleName typeName constructorName err
+
+testErrorMessage_ :: (HasCallStack, Error a) => String -> String -> String -> a -> Spec
+testErrorMessage_ moduleName typeName constructorName err = withFrozenCallStack $ do
+  let fqtn = moduleName <> "." <> typeName
+  it constructorName $ H.requireTest $ do
+    H.note_ "Incorrect error message in golden file"
+    displayError err `H.diffVsGoldenFile` ("test/golden/errors" </> fqtn </> constructorName <> ".txt")
 
