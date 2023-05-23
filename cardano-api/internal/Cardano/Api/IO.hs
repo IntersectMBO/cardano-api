@@ -30,6 +30,7 @@ module Cardano.Api.IO
 
   , intoFile
 
+  , checkVrfFilePermissions
   , writeSecrets
   ) where
 

@@ -33,8 +33,12 @@ common maybe-unix
   if !os(windows)
      build-depends:    unix
 
+common maybe-Win32
+  if os(windows)
+    build-depends:      Win32
+
 library internal
-  import:               project-config, maybe-unix
+  import:               project-config, maybe-unix, maybe-Win32
 
   hs-source-dirs:       internal
 

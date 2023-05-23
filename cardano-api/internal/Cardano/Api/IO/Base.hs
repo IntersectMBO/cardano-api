@@ -9,6 +9,7 @@ module Cardano.Api.IO.Base
   , File(..)
   , Socket
   , SocketPath
+  , VRFPrivateKeyFilePermissionError(..)
   ) where
 
 import           Data.Aeson (FromJSON, ToJSON)
@@ -31,3 +32,9 @@ newtype File content (direction :: FileDirection) = File
 data Socket
 
 type SocketPath = File Socket 'InOut
+
+data VRFPrivateKeyFilePermissionError
+  = OtherPermissionsExist FilePath
+  | GroupPermissionsExist FilePath
+  | GenericPermissionsExist FilePath
+  deriving Show
