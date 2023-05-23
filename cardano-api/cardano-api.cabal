@@ -40,11 +40,10 @@ common maybe-Win32
 library internal
   import:               project-config, maybe-unix, maybe-Win32
 
+  visibility:           public
+
   hs-source-dirs:       internal
 
-  -- Do not expose any additional modules. The correct way
-  -- to expose new functionality is via Cardano.Api or
-  -- Cardano.Api.Shelley
   exposed-modules:      Cardano.Api.Address
                         Cardano.Api.Block
                         Cardano.Api.Certificate
