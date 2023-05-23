@@ -19,6 +19,7 @@ index-state:
 packages:
     cardano-api
     cardano-api-gen
+    cardano-cli
 
 package cardano-api
   ghc-options: -Werror
