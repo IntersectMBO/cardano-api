@@ -8,6 +8,8 @@
 module Cardano.Api.IO.Compat.Posix
   (
 #ifdef UNIX
+    VRFPrivateKeyFilePermissionError,
+    checkVrfFilePermissionsImpl,
     handleFileForWritingWithOwnerPermissionImpl,
     writeSecretsImpl,
 #endif
@@ -16,18 +18,23 @@ module Cardano.Api.IO.Compat.Posix
 #ifdef UNIX
 
 import           Cardano.Api.Error (FileError (..))
+import           Cardano.Api.IO.Base
 
 import           Control.Exception (IOException, bracket, bracketOnError, try)
-import           Control.Monad (forM_)
-import           Control.Monad.Except (runExceptT)
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import           Control.Monad (forM_, when)
+import           Control.Monad.Except (ExceptT, runExceptT)
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
 import           System.Directory ()
 import           System.FilePath ((</>))
 import qualified System.IO as IO
 import           System.IO (Handle)
-import           System.Posix.Files (ownerModes, ownerReadMode, setFdOwnerAndGroup, setFileMode)
+import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
+                   nullFileMode, otherModes, ownerModes, ownerReadMode, setFdOwnerAndGroup,
+                   setFileMode)
 import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
+import           System.Posix.Types (FileMode)
 import           System.Posix.User (getRealUserID)
 import           Text.Printf (printf)
 
@@ -64,5 +71,27 @@ writeSecretsImpl outDir prefix suffix secretOp xs =
     let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
     BS.writeFile filename $ secretOp secret
     setFileMode filename ownerReadMode
+
+-- | Make sure the VRF private key file is readable only
+-- by the current process owner the node is running under.
+checkVrfFilePermissionsImpl :: File content direction -> ExceptT VRFPrivateKeyFilePermissionError IO ()
+checkVrfFilePermissionsImpl (File vrfPrivKey) = do
+  fs <- liftIO $ getFileStatus vrfPrivKey
+  let fm = fileMode fs
+  -- Check the the VRF private key file does not give read/write/exec permissions to others.
+  when (hasOtherPermissions fm)
+       (left $ OtherPermissionsExist vrfPrivKey)
+  -- Check the the VRF private key file does not give read/write/exec permissions to any group.
+  when (hasGroupPermissions fm)
+       (left $ GroupPermissionsExist vrfPrivKey)
+ where
+  hasPermission :: FileMode -> FileMode -> Bool
+  hasPermission fModeA fModeB = fModeA `intersectFileModes` fModeB /= nullFileMode
+
+  hasOtherPermissions :: FileMode -> Bool
+  hasOtherPermissions fm' = fm' `hasPermission` otherModes
+
+  hasGroupPermissions :: FileMode -> Bool
+  hasGroupPermissions fm' = fm' `hasPermission` groupModes
 
 #endif
