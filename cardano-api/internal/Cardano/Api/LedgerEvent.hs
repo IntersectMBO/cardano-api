@@ -22,6 +22,7 @@ import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Certificate (Certificate)
 import           Cardano.Api.Keys.Shelley (Hash (StakePoolKeyHash), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
+
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoEvent (..),
                    AlonzoUtxosEvent (FailedPlutusScriptsEvent, SuccessfulPlutusScriptsEvent),
                    AlonzoUtxowEvent (..))
@@ -42,12 +43,6 @@ import           Cardano.Ledger.Shelley.Rules (RupdEvent (..), ShelleyBbodyEvent
                    ShelleyUtxowEvent (UtxoEvent))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyLedgerEvent (UtxowEvent),
                    ShelleyLedgersEvent (LedgerEvent))
-import           Control.State.Transition (Event)
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
-import           Data.SOP.Strict
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (HardForkBlock)
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (getOneEraLedgerEvent)
@@ -55,6 +50,13 @@ import           Ouroboros.Consensus.Ledger.Basics (AuxLedgerEvent)
 import           Ouroboros.Consensus.Shelley.Ledger (LedgerState, ShelleyBlock,
                    ShelleyLedgerEvent (ShelleyLedgerEventBBODY, ShelleyLedgerEventTICK))
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (unwrapLedgerEvent))
+
+import           Control.State.Transition (Event)
+import           Data.List.NonEmpty (NonEmpty)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Set (Set)
+import           Data.SOP.Strict
 
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.

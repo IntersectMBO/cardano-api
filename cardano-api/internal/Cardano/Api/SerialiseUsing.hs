@@ -8,6 +8,13 @@ module Cardano.Api.SerialiseUsing
   , UsingBech32(..)
   ) where
 
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+
 import qualified Data.Aeson.Types as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
@@ -16,13 +23,6 @@ import           Data.String (IsString (..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (tyConName, typeRep, typeRepTyCon)
-
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.SerialiseBech32
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseRaw
 
 
 

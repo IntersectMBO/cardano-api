@@ -32,6 +32,20 @@ module Cardano.Api.SerialiseTextEnvelope
   , AsType(..)
   ) where
 
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.Utils (readFileBlocking)
+
+import           Cardano.Binary (DecoderError)
+
+import           Control.Monad (unless)
+import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
@@ -41,23 +55,6 @@ import           Data.Maybe (fromMaybe)
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
-
-import           Control.Monad (unless)
-import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
-
-
-import           Cardano.Binary (DecoderError)
-
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.IO
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.Utils (readFileBlocking)
 
 -- ----------------------------------------------------------------------------
 -- Text envelopes

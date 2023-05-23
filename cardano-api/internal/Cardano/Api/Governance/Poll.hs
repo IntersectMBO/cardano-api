@@ -36,22 +36,9 @@ module Cardano.Api.Governance.Poll(
     verifyPollAnswer,
   ) where
 
-import           Control.Arrow (left)
-import           Control.Monad (foldM, when)
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Function ((&))
-import qualified Data.Map.Strict as Map
-import           Data.String (IsString(..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.Text.Lazy.Builder as Text.Builder
-import           Data.Word (Word64)
-import           Formatting (build, sformat)
-
 import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -62,11 +49,23 @@ import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 
-import           Cardano.Binary (DecoderError(..))
-import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
-
+import           Cardano.Binary (DecoderError (..))
 import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import qualified Cardano.Crypto.Hash as Hash
+import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
+
+import           Control.Arrow (left)
+import           Control.Monad (foldM, when)
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Function ((&))
+import qualified Data.Map.Strict as Map
+import           Data.String (IsString (..))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Lazy as Text.Lazy
+import qualified Data.Text.Lazy.Builder as Text.Builder
+import           Data.Word (Word64)
+import           Formatting (build, sformat)
 
 -- | Associated metadata label as defined in CIP-0094
 pollMetadataLabel :: Word64

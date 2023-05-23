@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  check-stylish-haskell:
     runs-on: ubuntu-latest
 
     strategy:

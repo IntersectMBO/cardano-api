@@ -14,19 +14,6 @@ module Cardano.Api.StakePoolMetadata (
     Hash(..),
   ) where
 
-import           Data.Bifunctor (first)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-
-import           Data.Aeson ((.:))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
@@ -36,9 +23,20 @@ import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
-import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
+
+import           Data.Aeson ((.:))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
+import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
 
 -- ----------------------------------------------------------------------------

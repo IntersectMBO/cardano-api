@@ -35,11 +35,27 @@ module Cardano.Api.TxIn (
     renderTxIn,
   ) where
 
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Utils
+
+import qualified Cardano.Chain.UTxO as Byron
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.Hashing as Byron
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.SafeHash as SafeHash
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import qualified Cardano.Ledger.TxIn as Ledger
+
 import           Control.Applicative (some)
 import           Data.Aeson (withText)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
-
 import qualified Data.ByteString.Char8 as BSC
 import           Data.String
 import           Data.Text (Text)
@@ -49,26 +65,6 @@ import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hashing as Byron
-
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.SafeHash as SafeHash
-
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import qualified Cardano.Ledger.TxIn as Ledger
-
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.Utils
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use section" -}

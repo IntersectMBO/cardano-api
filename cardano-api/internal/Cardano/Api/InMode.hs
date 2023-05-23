@@ -24,7 +24,10 @@ module Cardano.Api.InMode (
     fromConsensusApplyTxErr,
   ) where
 
-import           Data.SOP.Strict (NS (S, Z))
+import           Cardano.Api.Eras
+import           Cardano.Api.Modes
+import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -38,10 +41,7 @@ import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 
-import           Cardano.Api.Eras
-import           Cardano.Api.Modes
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Data.SOP.Strict (NS (S, Z))
 
 
 -- ----------------------------------------------------------------------------

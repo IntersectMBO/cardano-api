@@ -29,6 +29,17 @@ module Cardano.Api.SerialiseLedgerCddl
   )
   where
 
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.Tx
+import           Cardano.Api.Utils
+
+import           Cardano.Ledger.Binary (DecoderError)
+import qualified Cardano.Ledger.Binary as CBOR
+
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    newExceptT, runExceptT)
 import           Data.Aeson
@@ -42,17 +53,6 @@ import qualified Data.List as List
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-
-import           Cardano.Ledger.Binary (DecoderError)
-import qualified Cardano.Ledger.Binary as CBOR
-
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.IO
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.Tx
-import           Cardano.Api.Utils
 
 
 -- Why have we gone this route? The serialization format of `TxBody era`

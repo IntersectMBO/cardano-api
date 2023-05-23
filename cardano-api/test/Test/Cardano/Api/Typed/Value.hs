@@ -2,17 +2,18 @@ module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
-import           Prelude
-
 import           Cardano.Api (ValueNestedBundle (..), ValueNestedRep (..), valueFromNestedRep,
                    valueToNestedRep)
+
+import           Prelude
 
 import           Data.Aeson (eitherDecode, encode)
 import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
 
-import           Hedgehog (Property, forAll, property, tripping, (===))
 import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+
+import           Hedgehog (Property, forAll, property, tripping, (===))
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
 

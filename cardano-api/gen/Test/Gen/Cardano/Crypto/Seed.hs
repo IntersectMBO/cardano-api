@@ -4,11 +4,12 @@ module Test.Gen.Cardano.Crypto.Seed
   ) where
 
 import           Cardano.Api (AsType, Key)
-import           Cardano.Crypto.Seed (Seed)
-import           Hedgehog (MonadGen, Range)
-
 import qualified Cardano.Api as API
+
+import           Cardano.Crypto.Seed (Seed)
 import qualified Cardano.Crypto.Seed as C
+
+import           Hedgehog (MonadGen, Range)
 import qualified Hedgehog.Gen as G
 import qualified Hedgehog.Range as R
 

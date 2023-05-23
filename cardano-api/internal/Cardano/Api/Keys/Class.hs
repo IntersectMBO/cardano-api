@@ -11,18 +11,17 @@ module Cardano.Api.Keys.Class
   , AsType(AsVerificationKey, AsSigningKey)
   ) where
 
-import           Data.Kind (Type)
-
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Seed as Crypto
-
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
-import           System.Random (StdGen)
 
+import qualified Cardano.Crypto.DSIGN.Class as Crypto
+import qualified Cardano.Crypto.Seed as Crypto
+
+import           Data.Kind (Type)
 import qualified System.Random as Random
+import           System.Random (StdGen)
 
 -- | An interface for cryptographic keys used for signatures with a 'SigningKey'
 -- and a 'VerificationKey' key.

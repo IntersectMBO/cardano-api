@@ -26,9 +26,14 @@ module Cardano.Api.Keys.Praos (
     signArbitraryBytesKes,
   ) where
 
-import           Data.ByteString (ByteString)
-import           Data.Either.Combinators (maybeToRight)
-import           Data.String (IsString (..))
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
 
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -38,14 +43,9 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Shelley (KES, VRF)
 import qualified Cardano.Ledger.Keys as Shelley
 
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Class
-import           Cardano.Api.SerialiseBech32
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.SerialiseUsing
+import           Data.ByteString (ByteString)
+import           Data.Either.Combinators (maybeToRight)
+import           Data.String (IsString (..))
 
 --
 -- KES keys

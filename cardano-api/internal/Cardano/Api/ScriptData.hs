@@ -44,8 +44,32 @@ module Cardano.Api.ScriptData (
     Hash(..),
   ) where
 
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
+
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Scripts.Data as Alonzo
+import           Cardano.Ledger.Core (Era)
+import qualified Cardano.Ledger.SafeHash as Ledger
+import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
+import qualified PlutusLedgerApi.V1 as Plutus
+
 import           Codec.Serialise.Class (Serialise (..))
+import           Control.Applicative (Alternative (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Aeson.Text as Aeson.Text
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
@@ -64,34 +88,6 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Vector as Vector
 import           Data.Word
-
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Aeson.Text as Aeson.Text
-import qualified Data.Attoparsec.ByteString.Char8 as Atto
-
-import           Control.Applicative (Alternative (..))
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Core (Era)
-import qualified Cardano.Ledger.Alonzo.Scripts.Data as Alonzo
-import qualified Cardano.Ledger.SafeHash as Ledger
-import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
-import qualified PlutusLedgerApi.V1 as Plutus
-
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.Hash
-
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Shelley
-
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
 
 -- Original script data bytes
 data HashableScriptData

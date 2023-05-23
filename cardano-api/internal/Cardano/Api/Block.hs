@@ -50,19 +50,23 @@ module Cardano.Api.Block (
     makeChainTip,
   ) where
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Short as SBS
-import           Data.Foldable (Foldable (toList))
-import           Data.String (IsString)
-import           Data.Text (Text)
+import           Cardano.Api.Eras
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Modes
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Tx
 
-import           Cardano.Slotting.Block (BlockNo)
-import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
-
+import qualified Cardano.Chain.Block as Byron
+import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing
+import qualified Cardano.Ledger.Block as Ledger
+import qualified Cardano.Ledger.Era as Ledger
+import           Cardano.Slotting.Block (BlockNo)
+import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
 import qualified Ouroboros.Consensus.Block as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -76,19 +80,13 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 import qualified Ouroboros.Network.Block as Consensus
 
-import qualified Cardano.Chain.Block as Byron
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Ledger.Block as Ledger
-import qualified Cardano.Ledger.Era as Ledger
-
-import           Cardano.Api.Eras
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.Modes
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.Tx
+import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Short as SBS
+import           Data.Foldable (Foldable (toList))
+import           Data.String (IsString)
+import           Data.Text (Text)
 
 {- HLINT ignore "Use lambda" -}
 {- HLINT ignore "Use lambda-case" -}

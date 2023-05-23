@@ -15,12 +15,6 @@ module Cardano.Api.SpecialByron
     toByronLedgertoByronVote,
   ) where
 
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.Map.Strict as M
-import           Data.Word
-import           Numeric.Natural
-
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId (NetworkId, toByronProtocolMagicId)
@@ -36,10 +30,15 @@ import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerH
 import qualified Cardano.Chain.Update.Vote as ByronVote
 import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
 import qualified Cardano.Ledger.Binary as Binary (Annotated (..), ByteSpan (..), annotation,
-                   annotationBytes, reAnnotate, byronProtVer)
-
+                   annotationBytes, byronProtVer, reAnnotate)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
+
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.Map.Strict as M
+import           Data.Word
+import           Numeric.Natural
 
 {- HLINT ignore "Use void" -}
 

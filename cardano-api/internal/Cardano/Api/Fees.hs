@@ -40,26 +40,20 @@ module Cardano.Api.Fees (
     mapTxScriptWitnesses,
   ) where
 
-import           Control.Monad (forM_)
-import           Data.Bifunctor (bimap, first)
-import qualified Data.ByteString as BS
-import           Data.ByteString.Short (ShortByteString)
-import           Data.Function ((&))
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
-import           Data.Ratio
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import qualified Data.Text as Text
-import           Lens.Micro ((^.))
-import           Prettyprinter
-import           Prettyprinter.Render.String
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.NetworkId
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query
+import           Cardano.Api.Script
+import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
+import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
-
 import qualified Cardano.Chain.Common as Byron
-
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -76,22 +70,24 @@ import           Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionFee)
 import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import           Cardano.Ledger.UTxO as Ledger (EraUTxO)
-
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
-
 import qualified PlutusLedgerApi.V1 as Plutus
 
-import           Cardano.Api.Address
-import           Cardano.Api.Certificate
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.NetworkId
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query
-import           Cardano.Api.Script
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
-import           Cardano.Api.Value
+import           Control.Monad (forM_)
+import           Data.Bifunctor (bimap, first)
+import qualified Data.ByteString as BS
+import           Data.ByteString.Short (ShortByteString)
+import           Data.Function ((&))
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.Ratio
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import qualified Data.Text as Text
+import           Lens.Micro ((^.))
+import           Prettyprinter
+import           Prettyprinter.Render.String
 
 {- HLINT ignore "Redundant return" -}
 

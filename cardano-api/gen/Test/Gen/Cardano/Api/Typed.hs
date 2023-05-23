@@ -127,6 +127,14 @@ import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer 
                    StakeCredential (StakeCredentialByKey), StakePoolKey,
                    refInsScriptsAndInlineDatsSupportedInEra)
 
+import qualified Cardano.Binary as CBOR
+import qualified Cardano.Crypto.Hash as Crypto
+import qualified Cardano.Crypto.Hash.Class as CRYPTO
+import qualified Cardano.Crypto.Seed as Crypto
+import           Cardano.Ledger.Alonzo.Language (Language (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 
 import           Control.Applicative (optional)
 import           Data.ByteString (ByteString)
@@ -140,24 +148,15 @@ import           Data.String
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Hash as Crypto
-import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
+import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
+
+import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
+import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Plutus
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
-import qualified Cardano.Crypto.Hash.Class as CRYPTO
-import           Cardano.Ledger.Alonzo.Language (Language (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-
-import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
-import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 {- HLINT ignore "Reduce duplication" -}
 

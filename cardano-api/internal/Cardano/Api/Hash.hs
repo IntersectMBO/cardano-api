@@ -7,9 +7,9 @@ module Cardano.Api.Hash
   , AsType(AsHash)
   ) where
 
-import           Data.Kind (Type)
-
 import           Cardano.Api.HasTypeProxy
+
+import           Data.Kind (Type)
 
 
 data family Hash keyrole :: Type

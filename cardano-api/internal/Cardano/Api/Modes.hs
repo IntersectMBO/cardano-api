@@ -44,13 +44,9 @@ module Cardano.Api.Modes (
   ) where
 
 import           Cardano.Api.Eras
+
+import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
-import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
-import           Data.SOP.Strict (K (K), NS (S, Z))
-import           Data.Text (Text)
-
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHFC)
@@ -61,7 +57,10 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
-import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
+import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
+import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
+import           Data.SOP.Strict (K (K), NS (S, Z))
+import           Data.Text (Text)
 
 -- ----------------------------------------------------------------------------
 -- Consensus modes

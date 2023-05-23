@@ -37,31 +37,6 @@ module Cardano.Api.Certificate (
     AsType(..)
   ) where
 
-import           Data.ByteString (ByteString)
-import qualified Data.Foldable as Foldable
-import qualified Data.Map.Strict as Map
-import           Data.Maybe
-import qualified Data.Sequence.Strict as Seq
-import qualified Data.Set as Set
-import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
-
-import           Data.IP (IPv4, IPv6)
-import           Network.Socket (PortNumber)
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Slotting.Slot (EpochNo (..))
-
-import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
-import qualified Cardano.Ledger.Core as Shelley
-import qualified Cardano.Ledger.Shelley as Shelley
-import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-
 import           Cardano.Api.Address
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
@@ -72,6 +47,28 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Value
+
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import qualified Cardano.Ledger.BaseTypes as Shelley
+import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
+import qualified Cardano.Ledger.Core as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Shelley as Shelley
+import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import           Cardano.Slotting.Slot (EpochNo (..))
+
+import           Data.ByteString (ByteString)
+import qualified Data.Foldable as Foldable
+import           Data.IP (IPv4, IPv6)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe
+import qualified Data.Sequence.Strict as Seq
+import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
+import           Network.Socket (PortNumber)
 
 
 -- ----------------------------------------------------------------------------

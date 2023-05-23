@@ -15,23 +15,23 @@ module Cardano.Api.Protocol
   , ProtocolClientInfoArgs(..)
   ) where
 
+import           Cardano.Api.Modes
+
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
 import           Ouroboros.Consensus.Cardano.Node
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
+import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
+import           Ouroboros.Consensus.Protocol.Praos.Translate ()
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
+import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Ouroboros.Consensus.Shelley.Node.Praos
 import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 import           Ouroboros.Consensus.Util.IOLike (IOLike)
-
-import           Cardano.Api.Modes
-import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
-import           Ouroboros.Consensus.Protocol.Praos.Translate ()
-import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 
 class (RunNode blk, IOLike m) => Protocol m blk where
   data ProtocolInfoArgs m blk

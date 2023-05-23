@@ -9,13 +9,6 @@ module Test.Cardano.Api.Genesis
 
 import           Cardano.Api.Shelley (ShelleyGenesis (..))
 
-import           Data.ListMap (ListMap (ListMap))
-import qualified Data.Map.Strict as Map
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           Lens.Micro
-
-import           Cardano.Slotting.Slot (EpochSize (..))
-
 import           Cardano.Ledger.Address (Addr (..))
 import           Cardano.Ledger.BaseTypes (Network (..))
 import           Cardano.Ledger.Coin (Coin (..))
@@ -26,6 +19,12 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
 import           Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
+import           Cardano.Slotting.Slot (EpochSize (..))
+
+import           Data.ListMap (ListMap (ListMap))
+import qualified Data.Map.Strict as Map
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Lens.Micro
 
 import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 

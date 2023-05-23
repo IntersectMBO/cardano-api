@@ -18,6 +18,19 @@ module Cardano.Api.DeserialiseAnyOf
   , renderSomeAddressVerificationKey
   ) where
 
+import           Cardano.Api.Address
+import           Cardano.Api.Error
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+
+import qualified Cardano.Chain.Common as Common
+import qualified Cardano.Crypto.Signing as Crypto
+
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
@@ -29,21 +42,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Formatting (build, sformat, (%))
-
-import qualified Cardano.Chain.Common as Common
-import qualified Cardano.Crypto.Signing as Crypto
-
-import           Cardano.Api.Error
-import           Cardano.Api.SerialiseBech32
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
-
--- TODO: Think about if these belong
-import           Cardano.Api.Address
-import           Cardano.Api.Keys.Byron
-import           Cardano.Api.Keys.Class
-import           Cardano.Api.Keys.Praos
-import           Cardano.Api.Keys.Shelley
 
 ------------------------------------------------------------------------------
 -- Formatted/encoded input deserialisation

@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -31,23 +30,12 @@ module Cardano.Api.IO
   , onlyOut
 
   , intoFile
+
+  , writeSecrets
   ) where
 
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
-
-#ifdef UNIX
-import           Control.Exception (IOException, bracket, bracketOnError, try)
-import           System.Directory ()
-import           System.Posix.Files (ownerModes, setFdOwnerAndGroup)
-import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
-import           System.Posix.User (getRealUserID)
-#else
-import           Control.Exception (bracketOnError)
-import qualified System.Directory as IO
-import           System.FilePath (splitFileName, (<.>))
-#endif
+import           Cardano.Api.Error (FileError (..))
+import           Cardano.Api.IO.Compat
 
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (..))
@@ -61,10 +49,6 @@ import qualified Data.ByteString.Lazy as LBSC
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
-import qualified System.IO as IO
-import           System.IO (Handle)
-
-import           Cardano.Api.Error (FileError (..))
 
 data FileDirection
   = In
@@ -79,50 +63,6 @@ data FileDirection
 newtype File content (direction :: FileDirection) = File
   { unFile :: FilePath
   } deriving newtype (Eq, Ord, Read, Show, IsString, FromJSON, ToJSON)
-
-handleFileForWritingWithOwnerPermission
-  :: FilePath
-  -> (Handle -> IO ())
-  -> IO (Either (FileError e) ())
-handleFileForWritingWithOwnerPermission path f = do
-#ifdef UNIX
-  -- On a unix based system, we grab a file descriptor and set ourselves as owner.
-  -- Since we're holding the file descriptor at this point, we can be sure that
-  -- what we're about to write to is owned by us if an error didn't occur.
-  user <- getRealUserID
-  ownedFile <- try $
-    -- We only close the FD on error here, otherwise we let it leak out, since
-    -- it will be immediately turned into a Handle (which will be closed when
-    -- the Handle is closed)
-    bracketOnError
-      (openFd path WriteOnly (Just ownerModes) defaultFileFlags)
-      closeFd
-      (\fd -> setFdOwnerAndGroup fd user (-1) >> pure fd)
-  case ownedFile of
-    Left (err :: IOException) -> do
-      pure $ Left $ FileIOError path err
-    Right fd -> do
-      bracket
-        (fdToHandle fd)
-        IO.hClose
-        (runExceptT . handleIOExceptT (FileIOError path) . f)
-#else
-  -- On something other than unix, we make a _new_ file, and since we created it,
-  -- we must own it. We then place it at the target location. Unfortunately this
-  -- won't work correctly with pseudo-files.
-  bracketOnError
-    (IO.openTempFile targetDir $ targetFile <.> "tmp")
-    (\(tmpPath, h) -> do
-      IO.hClose h >> IO.removeFile tmpPath
-      return . Left $ FileErrorTempFile path tmpPath h)
-    (\(tmpPath, h) -> do
-        f h
-        IO.hClose h
-        IO.renameFile tmpPath path
-        return $ Right ())
-  where
-    (targetDir, targetFile) = splitFileName path
-#endif
 
 readByteStringFile :: ()
   => MonadIO m

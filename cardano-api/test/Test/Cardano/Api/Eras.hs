@@ -6,7 +6,9 @@ module Test.Cardano.Api.Eras
 
 import           Cardano.Api
 import           Cardano.Api.Orphans ()
+
 import           Data.Aeson (ToJSON (..), decode, encode)
+
 import           Hedgehog (Property, forAll, property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen

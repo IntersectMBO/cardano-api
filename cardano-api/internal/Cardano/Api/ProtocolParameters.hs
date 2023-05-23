@@ -72,6 +72,39 @@ module Cardano.Api.ProtocolParameters (
     AsType(..),
   ) where
 
+import           Cardano.Api.Address
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Json (toRationalJSON)
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Orphans ()
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
+import           Cardano.Api.Value
+
+import qualified Cardano.Binary as CBOR
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Api.Era as Ledger
+import           Cardano.Ledger.Api.PParams
+import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Keys as Ledger
+import qualified Cardano.Ledger.Shelley.API as Ledger
+import           Cardano.Slotting.Slot (EpochNo)
+
 import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
                    (.=))
@@ -87,47 +120,7 @@ import           Data.String (IsString)
 import           GHC.Generics
 import           Lens.Micro
 import           Numeric.Natural
-
-import           Cardano.Api.Json (toRationalJSON)
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Slotting.Slot (EpochNo)
-
-import qualified Cardano.Ledger.Api.Era as Ledger
-import           Cardano.Ledger.Api.PParams
-import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Ledger
-
--- Some of the things from Cardano.Ledger.ShelleyPParams are generic across all
--- eras, and some are specific to the Shelley era (and other pre-Alonzo eras).
--- So we import in twice under different names.
-
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Shelley.API as Ledger
-
 import           Text.PrettyBy.Default (display)
-
-import           Cardano.Api.Address
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Byron
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.Orphans ()
-import           Cardano.Api.Script
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.TxMetadata
-import           Cardano.Api.Utils
-import           Cardano.Api.Value
 
 -- | The values of the set of /updatable/ protocol parameters. At any
 -- particular point on the chain there is a current set of parameters in use.

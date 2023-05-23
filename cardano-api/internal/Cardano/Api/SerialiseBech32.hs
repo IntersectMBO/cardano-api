@@ -10,21 +10,18 @@ module Cardano.Api.SerialiseBech32
   , deserialiseAnyOfFromBech32
   ) where
 
-import           Data.ByteString (ByteString)
-import           Data.Text (Text)
-
-import qualified Data.List as List
-import           Data.Set (Set)
-import qualified Data.Set as Set
-
-import           Control.Monad (guard)
-
-import qualified Codec.Binary.Bech32 as Bech32
-
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils
+
+import qualified Codec.Binary.Bech32 as Bech32
+import           Control.Monad (guard)
+import           Data.ByteString (ByteString)
+import qualified Data.List as List
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Text (Text)
 
 
 class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where

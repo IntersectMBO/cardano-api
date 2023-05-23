@@ -18,22 +18,21 @@ module Cardano.Api.Crypto.Ed25519Bip32
   )
 where
 
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import           Cardano.Crypto.DSIGN.Class
+import           Cardano.Crypto.Seed
+import           Cardano.Crypto.Util (SignableRepresentation (..))
+import qualified Cardano.Crypto.Wallet as CC
+
 import           Control.DeepSeq (NFData)
 import           Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           GHC.Generics (Generic)
-import           NoThunks.Class (InspectHeap (..), NoThunks)
-
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import qualified Cardano.Crypto.Wallet as CC
-
-import           Cardano.Crypto.DSIGN.Class
-import           Cardano.Crypto.Seed
-import           Cardano.Crypto.Util (SignableRepresentation (..))
 
 import qualified Crypto.ECC.Edwards25519 as Ed25519
 import           Crypto.Error (eitherCryptoError)
+import           NoThunks.Class (InspectHeap (..), NoThunks)
 
 
 data Ed25519Bip32DSIGN

@@ -6,13 +6,14 @@ module Test.Cardano.Api.Typed.Envelope
 
 import           Cardano.Api
 
-import           Hedgehog (Property)
-import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Gen.Cardano.Api.Typed
+
+import           Test.Cardano.Api.Typed.Orphans ()
+
+import           Hedgehog (Property)
+import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
-
-import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 
