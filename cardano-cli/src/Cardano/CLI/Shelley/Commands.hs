@@ -187,6 +187,8 @@ data TransactionCmd
       [MetadataFile]
       (Maybe ProtocolParamsFile)
       (Maybe UpdateProposalFile)
+      (Maybe (File GovernanceAction In))
+      (Maybe (File GovernanceVote In))
       (TxBodyFile Out)
 
     -- | Like 'TxBuildRaw' but without the fee, and with a change output.
@@ -230,6 +232,8 @@ data TransactionCmd
       [MetadataFile]
       (Maybe ProtocolParamsFile)
       (Maybe UpdateProposalFile)
+      (Maybe (File GovernanceAction In))
+      (Maybe (File GovernanceVote In))
       TxBuildOutputOptions
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) (TxFile Out)
   | TxCreateWitness (TxBodyFile In) WitnessSigningData (Maybe NetworkId) (File () Out)
