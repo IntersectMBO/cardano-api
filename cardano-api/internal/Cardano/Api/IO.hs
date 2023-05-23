@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -35,34 +34,19 @@ module Cardano.Api.IO
   ) where
 
 import           Cardano.Api.Error (FileError (..))
+import           Cardano.Api.IO.Base
 import           Cardano.Api.IO.Compat
 
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Data.Aeson (FromJSON, ToJSON)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy as LBSC
-import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text.IO as Text
-
-data FileDirection
-  = In
-  -- ^ Indicate the file is to be used for reading.
-  | Out
-  -- ^ Indicate the file is to be used for writing.
-  | InOut
-  -- ^ Indicate the file is to be used for both reading and writing.
-
--- | A file path with additional type information to indicate what the file is meant to
--- contain and whether it is to be used for reading or writing.
-newtype File content (direction :: FileDirection) = File
-  { unFile :: FilePath
-  } deriving newtype (Eq, Ord, Read, Show, IsString, FromJSON, ToJSON)
 
 readByteStringFile :: ()
   => MonadIO m
@@ -188,7 +172,3 @@ intoFile :: ()
   -> (content -> stream)
   -> result
 intoFile fp content write serialise = write fp (serialise content)
-
-data Socket
-
-type SocketPath = File Socket 'InOut

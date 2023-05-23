@@ -59,6 +59,7 @@ library internal
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.InMode
                         Cardano.Api.IO
+                        Cardano.Api.IO.Base
                         Cardano.Api.IO.Compat
                         Cardano.Api.IO.Compat.Posix
                         Cardano.Api.IO.Compat.Win32
