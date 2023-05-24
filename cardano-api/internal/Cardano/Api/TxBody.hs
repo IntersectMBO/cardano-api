@@ -3452,7 +3452,16 @@ convConwayCertificates txCertificates =
       Seq.fromList (mapMaybe (fromShelleyDCertMaybe . toShelleyCertificate) cs)
 
 fromShelleyDCertMaybe :: Shelley.DCert c -> Maybe (Conway.ConwayDCert c)
-fromShelleyDCertMaybe (Shelley.DCertDeleg dc) = Just $ Conway.ConwayDCertDeleg dc
+fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.RegKey sc)) =
+  Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
+  -- TODO when ledger is fixed, use ConwayReg sc
+  -- Note that ConwayUnDeleg is *blatantly* wrong
+fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.DeRegKey sc)) =
+  Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
+  -- TODO when ledger is fixed, make zero coin a Nothing
+fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.Delegate (Shelley.Delegation sc pool))) =
+  Just $ Conway.ConwayDCertDeleg (Conway.ConwayDeleg sc (Conway.DelegStake pool) (Ledger.Coin 0))
+  -- TODO when ledger is fixed, make zero coin a Nothing
 fromShelleyDCertMaybe (Shelley.DCertPool pc) = Just $ Conway.ConwayDCertPool pc
 fromShelleyDCertMaybe (Shelley.DCertGenesis gdc) = Just $ Conway.ConwayDCertConstitutional gdc
 fromShelleyDCertMaybe Shelley.DCertMir {} = Nothing

@@ -590,6 +590,8 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
           ScriptErrorEvaluationFailed err logs
         L.ValidationFailure (L.ValidationFailedV2 err logs _) ->
           ScriptErrorEvaluationFailed err logs
+        L.ValidationFailure (L.ValidationFailedV3 err logs _) ->
+          ScriptErrorEvaluationFailed err logs
         L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
         -- This is only possible for spending scripts and occurs when
