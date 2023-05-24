@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -35,6 +36,7 @@ module Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IO
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Utils (readFileBlocking)
 
@@ -50,6 +52,7 @@ import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Data (Data)
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import           Data.String (IsString)
@@ -61,11 +64,11 @@ import qualified Data.Text.Encoding as Text
 --
 
 newtype TextEnvelopeType = TextEnvelopeType String
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
   deriving newtype (IsString, Semigroup, ToJSON, FromJSON)
 
 newtype TextEnvelopeDescr = TextEnvelopeDescr String
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
   deriving newtype (IsString, Semigroup, ToJSON, FromJSON)
 
 -- | A 'TextEnvelope' is a structured envelope for serialised binary values
@@ -121,7 +124,7 @@ data TextEnvelopeError
   = TextEnvelopeTypeError   ![TextEnvelopeType] !TextEnvelopeType -- ^ expected, actual
   | TextEnvelopeDecodeError !DecoderError
   | TextEnvelopeAesonDecodeError !String
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 instance Error TextEnvelopeError where
   displayError tee =

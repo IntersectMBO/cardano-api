@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 
 -- | JSON serialisation
 --
@@ -25,10 +26,11 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Data (Data)
 
 
 newtype JsonDecodeError = JsonDecodeError String
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 instance Error JsonDecodeError where
   displayError (JsonDecodeError err) = err

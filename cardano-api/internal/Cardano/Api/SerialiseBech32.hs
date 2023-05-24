@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Bech32 Serialisation
@@ -12,12 +13,14 @@ module Cardano.Api.SerialiseBech32
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils
 
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Monad (guard)
 import           Data.ByteString (ByteString)
+import           Data.Data (Data)
 import qualified Data.List as List
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -141,7 +144,7 @@ data Bech32DecodeError =
        -- correspond to the prefix that should be used for the payload value.
      | Bech32WrongPrefix !Text !Text
 
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 instance Error Bech32DecodeError where
   displayError err = case err of

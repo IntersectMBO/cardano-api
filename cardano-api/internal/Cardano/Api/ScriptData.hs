@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -77,6 +78,7 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Short as SB
 import qualified Data.Char as Char
+import           Data.Data (Data)
 import           Data.Either.Combinators
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
@@ -270,7 +272,7 @@ newtype ScriptDataRangeError =
     -- | The constructor number is outside the maximum range of @-2^64-1 .. 2^64-1@.
     --
   ScriptDataConstructorOutOfRange Integer
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 instance Error ScriptDataRangeError where
   displayError (ScriptDataConstructorOutOfRange n) =
@@ -474,7 +476,7 @@ bytesPrefix = "0x"
 data ScriptDataJsonBytesError
     = ScriptDataJsonBytesErrorValue ScriptDataJsonError
     | ScriptDataJsonBytesErrorInvalid ScriptDataRangeError
-    deriving Show
+    deriving (Show, Data)
 
 instance Error ScriptDataJsonBytesError where
   displayError (ScriptDataJsonBytesErrorValue e) =
@@ -588,7 +590,7 @@ scriptDataFromJsonDetailedSchema = fmap (\sd -> HashableScriptData (serialiseToC
 data ScriptDataJsonError =
        ScriptDataJsonSchemaError !Aeson.Value !ScriptDataJsonSchemaError
      | ScriptDataRangeError      !Aeson.Value !ScriptDataRangeError
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 data ScriptDataJsonSchemaError =
        -- Only used for 'ScriptDataJsonNoSchema'
@@ -603,7 +605,7 @@ data ScriptDataJsonSchemaError =
      | ScriptDataJsonBadObject ![(Text, Aeson.Value)]
      | ScriptDataJsonBadMapPair !Aeson.Value
      | ScriptDataJsonTypeMismatch !Text !Aeson.Value
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 
 instance Error ScriptDataJsonError where
     displayError (ScriptDataJsonSchemaError v detail) =

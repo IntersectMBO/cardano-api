@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -79,6 +80,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Short as Short
+import           Data.Data (Data)
 import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -127,6 +129,7 @@ fromShelleyDeltaLovelace (Shelley.DeltaCoin d) = Lovelace d
 --
 
 newtype Quantity = Quantity Integer
+  deriving stock (Data)
   deriving newtype (Eq, Ord, Num, Show, ToJSON, FromJSON)
 
 instance Semigroup Quantity where

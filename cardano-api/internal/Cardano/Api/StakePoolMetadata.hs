@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -34,6 +35,7 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import           Data.Data (Data)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -141,7 +143,7 @@ data StakePoolMetadataValidationError
       -- ^ Maximum byte length.
       !Int
       -- ^ Actual byte length.
-  deriving Show
+  deriving (Eq, Show, Data)
 
 instance Error StakePoolMetadataValidationError where
     displayError (StakePoolMetadataJsonDecodeError errStr) = errStr

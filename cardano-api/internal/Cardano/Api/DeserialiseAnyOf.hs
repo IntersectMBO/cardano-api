@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -36,6 +37,7 @@ import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toLower)
+import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
@@ -72,7 +74,7 @@ data InputDecodeError
   | InputInvalidError
   -- ^ The provided data does not represent a valid value of the provided
   -- type.
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data)
 instance Error InputDecodeError where
   displayError = Text.unpack . renderInputDecodeError
 
