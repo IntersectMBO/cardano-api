@@ -2,7 +2,8 @@ Usage: cardano-cli governance
             ( create-mir-certificate
             | create-genesis-key-delegation-certificate
             | action
-            | committee
+            | cc
+            | drep
             | vote
             | create-update-proposal
             | create-poll
@@ -21,7 +22,8 @@ Available commands:
   create-genesis-key-delegation-certificate
                            Create a genesis key delegation certificate
   action                   Commands related to governance actions
-  committee                Constitutional Committee operation commands
+  cc                       Constitutional Committee operation commands
+  drep                     DRep operation commands
   vote                     Commands related to governance votes
   create-update-proposal   Create an update proposal
   create-poll              Create an SPO poll

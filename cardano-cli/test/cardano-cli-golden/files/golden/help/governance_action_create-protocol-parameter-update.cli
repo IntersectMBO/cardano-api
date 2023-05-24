@@ -1,4 +1,11 @@
 Usage: cardano-cli governance action create-protocol-parameter-update 
+<<<<<<< HEAD
+=======
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            )
+>>>>>>> 5a8cadba9 (Move drep command to under governance command group)
             [--protocol-major-version NATURAL --protocol-minor-version NATURAL]
             [--decentralization-parameter RATIONAL]
             [--extra-entropy HEX | --reset-extra-entropy]
@@ -29,6 +36,14 @@ Usage: cardano-cli governance action create-protocol-parameter-update
   Create an protocol-parameter-update action
 
 Available options:
+<<<<<<< HEAD
+=======
+  --stake-verification-key STRING
+                           Stake verification key (Bech32 or hex-encoded).
+  --stake-verification-key-file FILE
+                           Filepath of the staking verification key.
+  --stake-script-file FILE Filepath of the staking script.
+>>>>>>> 5a8cadba9 (Move drep command to under governance command group)
   --protocol-major-version NATURAL
                            Major protocol version. An increase indicates a hard
                            fork.

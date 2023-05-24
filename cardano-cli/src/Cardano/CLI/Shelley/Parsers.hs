@@ -88,8 +88,6 @@ parseShelleyCommands envCli =
         Opt.info (NodeCmd <$> pNodeCmd) $ Opt.progDesc "Node operation commands"
     , Opt.command "stake-pool" $
         Opt.info (PoolCmd <$> pPoolCmd envCli) $ Opt.progDesc "Stake pool commands"
-    , Opt.command "drep" $
-        Opt.info (DRepCmd <$> pDRepCmd envCli) $ Opt.progDesc "DRep commands"
     , Opt.command "query" $
         Opt.info (QueryCmd <$> pQueryCmd envCli) . Opt.progDesc $ mconcat
           [ "Node query commands. Will query the local node whose Unix domain socket "
@@ -976,8 +974,8 @@ pPoolCmd  envCli =
     pPoolMetadataHashSubCmd :: Parser PoolCmd
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
 
-pDRepCmd :: EnvCli -> Parser DRepCmd
-pDRepCmd  envCli =
+pGovernanceDRepCmd :: EnvCli -> Parser DRepCmd
+pGovernanceDRepCmd  envCli =
   asum
     [ subParser "registration-certificate"
       (Opt.info (pDRepRegistrationCert envCli) $ Opt.progDesc "Create a DRep registration certificate")
@@ -1380,6 +1378,9 @@ pGovernanceCmd envCli =
     , subParser "committee"
       $ Opt.info pCommitteeCmd
       $ Opt.progDesc "Constitutional Committee operation commands"
+    , subParser "drep"
+      $ Opt.info pDRepCmd
+      $ Opt.progDesc "DRep operation commands"
     , subParser "vote"
       $ Opt.info pVoteCmd
       $ Opt.progDesc "Commands related to governance votes"
@@ -1458,6 +1459,11 @@ pGovernanceCmd envCli =
     pCommitteeCmd =
       GovernanceCommitteeCmd
         <$> pGovernanceCommitteeCmd
+
+    pDRepCmd :: Parser GovernanceCmd
+    pDRepCmd =
+      GovernanceDRepCmd
+        <$> pGovernanceDRepCmd envCli
 
     pUpdateProposal :: Parser GovernanceCmd
     pUpdateProposal = GovernanceUpdateProposal
