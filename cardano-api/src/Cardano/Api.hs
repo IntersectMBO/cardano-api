@@ -480,6 +480,7 @@ module Cardano.Api (
     CostModel(..),
     toAlonzoCostModel,
     fromAlonzoCostModel,
+    toAlonzoCostModels,
 
     -- ** Script addresses
     -- | Making addresses from scripts.
