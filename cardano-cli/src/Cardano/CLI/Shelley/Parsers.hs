@@ -15,6 +15,19 @@ module Cardano.CLI.Shelley.Parsers
   , parseTxIn
   ) where
 
+import           Cardano.Api
+import           Cardano.Api.Shelley
+
+import           Cardano.Chain.Common (BlockCount (BlockCount))
+import           Cardano.CLI.Common.Parsers
+import           Cardano.CLI.Environment (EnvCli (..))
+import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), PoolDelegationTarget (..),
+                   StakeIdentifier (..), StakeVerifier (..), VerificationKeyOrFile (..),
+                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..))
+import           Cardano.CLI.Types
+import qualified Cardano.Ledger.BaseTypes as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import           Cardano.Prelude (ConvertText (..))
 
 import qualified Data.Aeson as Aeson
@@ -50,22 +63,6 @@ import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
 import           Text.Read (readEither, readMaybe)
-
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-
-import           Cardano.Api
-import           Cardano.Api.Shelley
-
-import           Cardano.Chain.Common (BlockCount (BlockCount))
-
-import           Cardano.CLI.Common.Parsers
-import           Cardano.CLI.Environment (EnvCli (..))
-import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (DelegationTarget (..), PaymentVerifier (..),
-                   StakeIdentifier (..), StakeVerifier (..), VerificationKeyOrFile (..),
-                   VerificationKeyOrHashOrFile (..), VerificationKeyTextOrFile (..))
-import           Cardano.CLI.Types
 
 {- HLINT ignore "Use <$>" -}
 {- HLINT ignore "Move brackets to avoid $" -}
@@ -411,7 +408,7 @@ pStakeAddressCmd envCli =
     pStakeAddressPoolDelegationCert =
       StakeCredentialDelegationCert
         <$> pStakeIdentifier
-        <*> pDelegationTarget
+        <*> pPoolDelegationTarget
         <*> pOutputFile
 
 pKeyCmd :: Parser KeyCmd
@@ -916,7 +913,7 @@ pPoolCmd  envCli =
     ]
   where
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
+    pId = PoolGetId <$> pPoolVerificationKeyOrFile <*> pOutputFormat
 
     pPoolMetadataHashSubCmd :: Parser PoolCmd
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
@@ -1078,7 +1075,7 @@ pQueryCmd envCli =
         <*> pConsensusModeParams
         <*> pNetworkId envCli
         <*> pGenesisFile "Shelley genesis filepath"
-        <*> pStakePoolVerificationKeyOrHashOrFile
+        <*> pPoolVerificationKeyOrHashOrFile
         <*> pVrfSigningKeyFile
         <*> pWhichLeadershipSchedule
         <*> pMaybeOutputFile
@@ -2738,21 +2735,25 @@ pStakePoolVerificationKey =
       <> Opt.help "Stake pool verification key (Bech32 or hex-encoded)."
       )
 
-pStakePoolVerificationKeyOrFile
+pPoolVerificationKeyOrFile
   :: Parser (VerificationKeyOrFile StakePoolKey)
-pStakePoolVerificationKeyOrFile =
-  VerificationKeyValue <$> pStakePoolVerificationKey
-    <|> VerificationKeyFilePath <$> pStakePoolVerificationKeyFile
+pPoolVerificationKeyOrFile =
+  asum
+    [ VerificationKeyValue <$> pStakePoolVerificationKey
+    , VerificationKeyFilePath <$> pStakePoolVerificationKeyFile
+    ]
 
-pDelegationTarget
-  :: Parser DelegationTarget
-pDelegationTarget = StakePoolDelegationTarget <$> pStakePoolVerificationKeyOrHashOrFile
+pPoolDelegationTarget
+  :: Parser PoolDelegationTarget
+pPoolDelegationTarget = PoolDelegationTarget <$> pPoolVerificationKeyOrHashOrFile
 
-pStakePoolVerificationKeyOrHashOrFile
+pPoolVerificationKeyOrHashOrFile
   :: Parser (VerificationKeyOrHashOrFile StakePoolKey)
-pStakePoolVerificationKeyOrHashOrFile =
-  VerificationKeyOrFile <$> pStakePoolVerificationKeyOrFile
-    <|> VerificationKeyHash <$> pStakePoolVerificationKeyHash
+pPoolVerificationKeyOrHashOrFile =
+  asum
+    [ VerificationKeyOrFile <$> pPoolVerificationKeyOrFile
+    , VerificationKeyHash <$> pStakePoolVerificationKeyHash
+    ]
 
 pVrfVerificationKeyFile :: Parser (VerificationKeyFile In)
 pVrfVerificationKeyFile =
@@ -2990,7 +2991,7 @@ pStakePoolMetadataHash =
 pStakePoolRegistrationCert :: EnvCli -> Parser PoolCmd
 pStakePoolRegistrationCert envCli =
   PoolRegistrationCert
-    <$> pStakePoolVerificationKeyOrFile
+    <$> pPoolVerificationKeyOrFile
     <*> pVrfVerificationKeyOrFile
     <*> pPoolPledge
     <*> pPoolCost
@@ -3005,7 +3006,7 @@ pStakePoolRegistrationCert envCli =
 pStakePoolRetirementCert :: Parser PoolCmd
 pStakePoolRetirementCert =
   PoolRetirementCert
-    <$> pStakePoolVerificationKeyOrFile
+    <$> pPoolVerificationKeyOrFile
     <*> pEpochNo
     <*> pOutputFile
 

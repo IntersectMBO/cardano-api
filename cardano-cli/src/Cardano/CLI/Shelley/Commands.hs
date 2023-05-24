@@ -44,19 +44,18 @@ module Cardano.CLI.Shelley.Commands
   , ColdVerificationKeyOrFile (..)
   ) where
 
-import           Prelude
-
 import           Cardano.Api.Shelley
 
-import           Data.Text (Text)
-
-import           Cardano.CLI.Shelley.Key (DelegationTarget, PaymentVerifier, StakeIdentifier,
+import           Cardano.Chain.Common (BlockCount)
+import           Cardano.CLI.Shelley.Key (PaymentVerifier, PoolDelegationTarget, StakeIdentifier,
                    StakeVerifier, VerificationKeyOrFile, VerificationKeyOrHashOrFile,
                    VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
-
-import           Cardano.Chain.Common (BlockCount)
 import           Cardano.Ledger.Shelley.TxBody (MIRPot)
+
+import           Prelude
+
+import           Data.Text (Text)
 --
 -- Shelley CLI command data types
 --
@@ -116,7 +115,7 @@ data StakeAddressCmd
   | StakeRegistrationCert StakeIdentifier (File () Out)
   | StakeCredentialDelegationCert
       StakeIdentifier
-      DelegationTarget
+      PoolDelegationTarget
       (File () Out)
   | StakeCredentialDeRegistrationCert StakeIdentifier (File () Out)
   deriving Show
