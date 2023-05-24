@@ -1,41 +1,17 @@
-# Technical writers
-README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk
-
 # Release manager added for notification on dependency updates
-cabal.project                                                 @Jimbo4350 @newhoggy @LaurenceIO
+cabal.project                                                 @Jimbo4350 @newhoggy @disassembler
 
 # General reviewers per PR
-#                        Duncan   Jordan     Erik   John      Jared         Carlos
-*                        @dcoutts @Jimbo4350 @erikd @newhoggy @JaredCorduan @CarlosLopezDeLara
+#                        Duncan   Jordan     Erik   John      Kevin          Carlos              Sam
+*                        @dcoutts @Jimbo4350 @erikd @newhoggy @kevinhammmond @CarlosLopezDeLara  @disassembler
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
 
+*.nix                                                         @input-output-hk/core-tech-release
+flake.lock                                                    @input-output-hk/core-tech-release
 
+# Technical writers
+README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk @disassembler @CarlosLopezDeLara
 
-# /doc folder and README.* needs to be owned by @docs-access
-doc/                                                          @input-output-hk/docs-access
-
-README.*                                                      @input-output-hk/docs-access
-
-bench/                                                        @deepfire @jutaro @mgmeier @fmaste @cleverca22
-cardano-tracer/                                               @deepfire
-nix/workbench/                                                @deepfire @jutaro @mgmeier @fmaste
-trace-dispatcher/                                             @deepfire @jutaro @mgmeier
-trace-forward/                                                @deepfire @jutaro @mgmeier
-trace-resources/                                              @deepfire @jutaro @mgmeier
-Makefile                                                      @deepfire @mgmeier @fmaste
-*.mk                                                          @deepfire @mgmeier @fmaste
-
-nix/                                                          @input-output-hk/devops @deepfire @mgmeier @fmaste
-*.nix                                                         @input-output-hk/devops @deepfire @mgmeier @fmaste
-flake.lock                                                    @input-output-hk/devops @deepfire @mgmeier @fmaste
-
-.buildkite                                                    @Jimbo4350 @newhoggy @input-output-hk/devops
-.github                                                       @Jimbo4350 @newhoggy @input-output-hk/devops
-ci/                                                           @Jimbo4350 @newhoggy @input-output-hk/devops
-configuration/                                                @Jimbo4350 @newhoggy @input-output-hk/devops
-bors.toml                                                     @Jimbo4350 @newhoggy @input-output-hk/devops
-docker-compose.yml                                            @Jimbo4350 @newhoggy @input-output-hk/devops
-cardano-node/src/Cardano/Node/Tracing/                        @Jimbo4350 @newhoggy @deepfire @jutaro @coot
-cardano-node/src/Cardano/Tracing/OrphanInstances/             @Jimbo4350 @newhoggy @input-output-hk/devops @coot
+.github                                                       @Jimbo4350 @newhoggy @input-output-hk/core-tech-release
