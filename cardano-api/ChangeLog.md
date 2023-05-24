@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## New
+
+- **Breaking change** Remove support for reading `ApplicationName` and `ApplicationVersion` from node configuration and replace with hardcoded values. ([PR 8](https://github.com/input-output-hk/cardano-api/pull/8))
+
 ## 8.1.0
 
 - Addition of `QueryStakeDelegDeposits` ledger state query.

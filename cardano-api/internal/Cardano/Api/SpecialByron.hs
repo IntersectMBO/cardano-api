@@ -13,6 +13,9 @@ module Cardano.Api.SpecialByron
     makeByronUpdateProposal,
     makeByronVote,
     toByronLedgertoByronVote,
+    applicationName,
+    applicationVersion,
+    softwareVersion
   ) where
 
 import           Cardano.Api.HasTypeProxy
@@ -27,6 +30,7 @@ import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerH
                    ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion,
                    SoftforkRule, SoftwareVersion, SystemTag, UpId, mkVote, recoverUpId,
                    recoverVoteId, signProposal)
+import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Vote as ByronVote
 import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
 import qualified Cardano.Ledger.Binary as Binary (Annotated (..), ByteSpan (..), annotation,
@@ -197,3 +201,18 @@ makeByronVote nId sKey (ByronUpdateProposal proposal) yesOrNo =
 
 toByronLedgertoByronVote :: ByronVote -> Mempool.GenTx ByronBlock
 toByronLedgertoByronVote (ByronVote vote) = Mempool.ByronUpdateVote (recoverVoteId vote) vote
+
+-- | An application name.
+-- It has no functional impact in the Shelley eras onwards and therefore it is hardcoded.
+applicationName :: Update.ApplicationName
+applicationName = Update.ApplicationName "cardano-sl"
+
+-- | An application version.
+-- It has no functional impact in the Shelley eras onwards and therefore it is hardcoded.
+applicationVersion :: Update.NumSoftwareVersion
+applicationVersion = 1
+
+-- | A software version composed of 'applicationVersion' and 'applicationName'.
+-- It has no functional impact in the Shelley eras onwards and therefore it is hardcoded.
+softwareVersion :: Update.SoftwareVersion
+softwareVersion = Update.SoftwareVersion applicationName applicationVersion

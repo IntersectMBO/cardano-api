@@ -84,6 +84,10 @@ module Cardano.Api.Byron
     toByronProtocolMagicId,
     toByronRequiresNetworkMagic,
 
+    -- * Hardcoded configuration parameters
+    applicationName,
+    applicationVersion,
+    softwareVersion
   ) where
 
 import           Cardano.Api
