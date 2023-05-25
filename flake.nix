@@ -8,9 +8,6 @@
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
 
-    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror";
-    cardano-mainnet-mirror.flake = false;
-
     CHaP.url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
     CHaP.flake = false;
 
