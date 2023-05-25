@@ -119,6 +119,7 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
+import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
                    KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
@@ -512,7 +513,7 @@ genReferenceScript :: CardanoEra era -> Gen (ReferenceScript era)
 genReferenceScript era =
   case refInsScriptsAndInlineDatsSupportedInEra era of
     Nothing -> return ReferenceScriptNone
-    Just supp -> ReferenceScript supp <$> genScriptInAnyLang
+    Just _ -> scriptInEraToRefScript <$> genScriptInEra era
 
 genUTxO :: CardanoEra era -> Gen (UTxO era)
 genUTxO era =
