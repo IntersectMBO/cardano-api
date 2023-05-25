@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.1.1.1
+
+- Make `cardano-api:internal` component public
+  (feature; compatible)
+  [PR 26](https://github.com/input-output-hk/cardano-api/pull/26)
+
 ## 8.1.1.0
 
 - Expose `toAlonzoCostModels` function from `Cardano.Api`
