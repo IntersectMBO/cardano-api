@@ -2,8 +2,8 @@
 cabal.project                                                 @Jimbo4350 @newhoggy @disassembler
 
 # General reviewers per PR
-#                        Duncan   Jordan     Erik   John      Kevin          Carlos              Sam
-*                        @dcoutts @Jimbo4350 @erikd @newhoggy @kevinhammmond @CarlosLopezDeLara  @disassembler
+#                        Duncan   Jordan     Erik   John      Mateusz     Kevin          Carlos             Sam
+*                        @dcoutts @Jimbo4350 @erikd @newhoggy @carbolymer @kevinhammmond @CarlosLopezDeLara @disassembler
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -14,4 +14,4 @@ flake.lock                                                    @input-output-hk/c
 # Technical writers
 README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk @disassembler @CarlosLopezDeLara
 
-.github                                                       @Jimbo4350 @newhoggy @input-output-hk/core-tech-release
+.github                                                       @Jimbo4350 @newhoggy @carbolymer @input-output-hk/core-tech-release
