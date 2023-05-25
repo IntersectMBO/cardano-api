@@ -35,9 +35,15 @@
         # setup our nixpkgs with the haskell.nix overlays, and the iohk-nix
         # overlays...
         nixpkgs = import inputs.nixpkgs {
-          overlays =
-            [inputs.haskellNix.overlay]
-            ++ builtins.attrValues inputs.iohkNix.overlays;
+          overlays = with inputs; [
+            # crypto needs to come before haskell.nix.
+            # FIXME: _THIS_IS_BAD_
+            iohkNix.overlays.crypto
+            haskellNix.overlay
+            iohkNix.overlays.haskell-nix-extra
+            iohkNix.overlays.cardano-lib
+            iohkNix.overlays.utils
+          ];
           inherit system;
           inherit (inputs.haskellNix) config;
         };
