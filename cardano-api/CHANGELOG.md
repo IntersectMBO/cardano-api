@@ -1,8 +1,27 @@
 # Changelog for cardano-api
 
-## New
+## 8.1.1.0
 
-- **Breaking change** Remove support for reading `ApplicationName` and `ApplicationVersion` from node configuration and replace with hardcoded values. ([PR 8](https://github.com/input-output-hk/cardano-api/pull/8))
+- Expose `toAlonzoCostModels` function from `Cardano.Api`
+  (feature; compatible)
+  [PR 17](https://github.com/input-output-hk/cardano-api/pull/17)
+
+- Add `Eq` and `Data` instances to various error types
+  (feature; compatible)
+  [PR 9](https://github.com/input-output-hk/cardano-api/pull/9)
+
+- Remove support for reading `ApplicationName` and `ApplicationVersion` from node configuration and replace with hardcoded values.
+  (feature; breaking)
+  [PR 8](https://github.com/input-output-hk/cardano-api/pull/8)
+
+- Add new `checkVrfFilePermissions` function
+  (feature; compatible)
+  [PR 11](https://github.com/input-output-hk/cardano-api/pull/11)
+
+- Added `genValidProtocolParameters` generator producing `ProtocolParameters` which do pass
+  validations in `Cardano.Api.ProtocolParameters` module.  Remove `Cardano.Api.Orphans` from public API.
+  (feature, test; breaking)
+  [PR 1](https://github.com/input-output-hk/cardano-api/pull/1)
 
 ## 8.1.0
 
