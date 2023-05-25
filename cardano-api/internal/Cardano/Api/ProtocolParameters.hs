@@ -809,10 +809,12 @@ fromAlonzoCostModels (Alonzo.CostModels m _ _) =
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV3) = Alonzo.PlutusV3
 
 fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
+fromAlonzoScriptLanguage Alonzo.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
 
 toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either ProtocolParametersConversionError Alonzo.CostModel
 toAlonzoCostModel (CostModel m) l = first (PpceInvalidCostModel (CostModel m)) $ Alonzo.mkCostModel l m

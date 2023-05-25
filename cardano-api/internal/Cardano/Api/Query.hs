@@ -455,14 +455,14 @@ decodeCurrentEpochState sbe (SerialisedCurrentEpochState (Serialised ls)) =
 
 
 newtype SerialisedPoolState era
-  = SerialisedPoolState (Serialised (Shelley.PState (Core.EraCrypto (ShelleyLedgerEra era))))
+  = SerialisedPoolState (Serialised (Shelley.PState (ShelleyLedgerEra era)))
 
-newtype PoolState era = PoolState (Shelley.PState (Core.EraCrypto (ShelleyLedgerEra era)))
+newtype PoolState era = PoolState (Shelley.PState (ShelleyLedgerEra era))
 
 decodePoolState
   :: forall era. ()
   => Core.Era (ShelleyLedgerEra era)
-  => DecCBOR (Shelley.PState (Core.EraCrypto (ShelleyLedgerEra era)))
+  => DecCBOR (Shelley.PState (ShelleyLedgerEra era))
   => SerialisedPoolState era
   -> Either DecoderError (PoolState era)
 decodePoolState (SerialisedPoolState (Serialised ls)) =

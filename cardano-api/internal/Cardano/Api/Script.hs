@@ -100,6 +100,7 @@ module Cardano.Api.Script (
     toAlonzoLanguage,
     fromAlonzoLanguage,
     fromShelleyScriptToReferenceScript,
+    scriptInEraToRefScript,
 
     -- * Data family instances
     AsType(..),
@@ -192,6 +193,7 @@ data SimpleScript'
 --
 data PlutusScriptV1
 data PlutusScriptV2
+data PlutusScriptV3
 
 instance HasTypeProxy SimpleScript' where
     data AsType SimpleScript' = AsSimpleScript
@@ -205,6 +207,10 @@ instance HasTypeProxy PlutusScriptV1 where
 instance HasTypeProxy PlutusScriptV2 where
     data AsType PlutusScriptV2 = AsPlutusScriptV2
     proxyToAsType _ = AsPlutusScriptV2
+
+instance HasTypeProxy PlutusScriptV3 where
+    data AsType PlutusScriptV3 = AsPlutusScriptV3
+    proxyToAsType _ = AsPlutusScriptV3
 
 -- ----------------------------------------------------------------------------
 -- Value level representation for script languages
@@ -230,6 +236,7 @@ instance TestEquality ScriptLanguage where
 data PlutusScriptVersion lang where
     PlutusScriptV1 :: PlutusScriptVersion PlutusScriptV1
     PlutusScriptV2 :: PlutusScriptVersion PlutusScriptV2
+    PlutusScriptV3 :: PlutusScriptVersion PlutusScriptV3
 
 deriving instance (Eq   (PlutusScriptVersion lang))
 deriving instance (Show (PlutusScriptVersion lang))
@@ -237,6 +244,7 @@ deriving instance (Show (PlutusScriptVersion lang))
 instance TestEquality PlutusScriptVersion where
     testEquality PlutusScriptV1 PlutusScriptV1 = Just Refl
     testEquality PlutusScriptV2 PlutusScriptV2 = Just Refl
+    testEquality PlutusScriptV3 PlutusScriptV3 = Just Refl
     testEquality _ _ = Nothing
 
 
@@ -255,15 +263,17 @@ instance Enum AnyScriptLanguage where
     toEnum 0 = AnyScriptLanguage SimpleScriptLanguage
     toEnum 1 = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)
     toEnum 2 = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV2)
+    toEnum 3 = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV3)
     toEnum err = error $ "AnyScriptLanguage.toEnum: bad argument: " <> show err
 
     fromEnum (AnyScriptLanguage SimpleScriptLanguage) = 0
     fromEnum (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV1)) = 1
     fromEnum (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV2)) = 2
+    fromEnum (AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV3)) = 3
 
 instance Bounded AnyScriptLanguage where
     minBound = AnyScriptLanguage SimpleScriptLanguage
-    maxBound = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV2)
+    maxBound = AnyScriptLanguage (PlutusScriptLanguage PlutusScriptV3)
 
 
 data AnyPlutusScriptVersion where
@@ -281,14 +291,16 @@ instance Ord AnyPlutusScriptVersion where
 instance Enum AnyPlutusScriptVersion where
     toEnum 0 = AnyPlutusScriptVersion PlutusScriptV1
     toEnum 1 = AnyPlutusScriptVersion PlutusScriptV2
+    toEnum 2 = AnyPlutusScriptVersion PlutusScriptV3
     toEnum err = error $ "AnyPlutusScriptVersion.toEnum: bad argument: " <> show err
 
     fromEnum (AnyPlutusScriptVersion PlutusScriptV1) = 0
     fromEnum (AnyPlutusScriptVersion PlutusScriptV2) = 1
+    fromEnum (AnyPlutusScriptVersion PlutusScriptV3) = 2
 
 instance Bounded AnyPlutusScriptVersion where
     minBound = AnyPlutusScriptVersion PlutusScriptV1
-    maxBound = AnyPlutusScriptVersion PlutusScriptV2
+    maxBound = AnyPlutusScriptVersion PlutusScriptV3
 
 instance ToCBOR AnyPlutusScriptVersion where
     toCBOR = toCBOR . fromEnum
@@ -306,13 +318,16 @@ instance ToJSON AnyPlutusScriptVersion where
       Aeson.String "PlutusScriptV1"
     toJSON (AnyPlutusScriptVersion PlutusScriptV2) =
       Aeson.String "PlutusScriptV2"
+    toJSON (AnyPlutusScriptVersion PlutusScriptV3) =
+      Aeson.String "PlutusScriptV3"
 
 parsePlutusScriptVersion :: Text -> Aeson.Parser AnyPlutusScriptVersion
 parsePlutusScriptVersion t =
   case t of
     "PlutusScriptV1" -> return (AnyPlutusScriptVersion PlutusScriptV1)
     "PlutusScriptV2" -> return (AnyPlutusScriptVersion PlutusScriptV2)
-    _                -> fail "Expected PlutusScriptV1 or PlutusScriptV2"
+    "PlutusScriptV3" -> return (AnyPlutusScriptVersion PlutusScriptV3)
+    _                -> fail "Expected PlutusScriptVX, for X = 1, 2, or 3"
 
 instance FromJSON AnyPlutusScriptVersion where
     parseJSON = Aeson.withText "PlutusScriptVersion" parsePlutusScriptVersion
@@ -326,14 +341,17 @@ instance Aeson.ToJSONKey AnyPlutusScriptVersion where
         toText :: AnyPlutusScriptVersion -> Text
         toText (AnyPlutusScriptVersion PlutusScriptV1) = "PlutusScriptV1"
         toText (AnyPlutusScriptVersion PlutusScriptV2) = "PlutusScriptV2"
+        toText (AnyPlutusScriptVersion PlutusScriptV3) = "PlutusScriptV3"
 
 toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
 toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV3) = Alonzo.PlutusV3
 
 fromAlonzoLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
+fromAlonzoLanguage Alonzo.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
 
 
 class HasTypeProxy lang => IsScriptLanguage lang where
@@ -348,6 +366,9 @@ instance IsScriptLanguage PlutusScriptV1 where
 instance IsScriptLanguage PlutusScriptV2 where
     scriptLanguage = PlutusScriptLanguage PlutusScriptV2
 
+instance IsScriptLanguage PlutusScriptV3 where
+    scriptLanguage = PlutusScriptLanguage PlutusScriptV3
+
 class IsScriptLanguage lang => IsPlutusScriptLanguage lang where
     plutusScriptVersion :: PlutusScriptVersion lang
 
@@ -356,6 +377,9 @@ instance IsPlutusScriptLanguage PlutusScriptV1 where
 
 instance IsPlutusScriptLanguage PlutusScriptV2 where
     plutusScriptVersion = PlutusScriptV2
+
+instance IsPlutusScriptLanguage PlutusScriptV3 where
+    plutusScriptVersion = PlutusScriptV3
 
 -- ----------------------------------------------------------------------------
 -- Script type: covering all script languages
@@ -398,6 +422,9 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
     serialiseToCBOR (PlutusScript PlutusScriptV2 s) =
       CBOR.serialize' s
 
+    serialiseToCBOR (PlutusScript PlutusScriptV3 s) =
+      CBOR.serialize' s
+
     deserialiseFromCBOR _ bs =
       case scriptLanguage :: ScriptLanguage lang of
         SimpleScriptLanguage ->
@@ -413,12 +440,17 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
               PlutusScript PlutusScriptV2
           <$> CBOR.decodeFull' bs
 
+        PlutusScriptLanguage PlutusScriptV3 ->
+              PlutusScript PlutusScriptV3
+          <$> CBOR.decodeFull' bs
+
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
     textEnvelopeType _ =
       case scriptLanguage :: ScriptLanguage lang of
         SimpleScriptLanguage -> "SimpleScript"
         PlutusScriptLanguage PlutusScriptV1 -> "PlutusScriptV1"
         PlutusScriptLanguage PlutusScriptV2 -> "PlutusScriptV2"
+        PlutusScriptLanguage PlutusScriptV3 -> "PlutusScriptV3"
 
 
 -- ----------------------------------------------------------------------------
@@ -460,6 +492,7 @@ instance ToJSON ScriptInAnyLang where
        obtainScriptLangConstraint SimpleScriptLanguage f = f
        obtainScriptLangConstraint (PlutusScriptLanguage PlutusScriptV1) f = f
        obtainScriptLangConstraint (PlutusScriptLanguage PlutusScriptV2) f = f
+       obtainScriptLangConstraint (PlutusScriptLanguage PlutusScriptV3) f = f
 
 instance FromJSON ScriptInAnyLang where
   parseJSON = Aeson.withObject "ScriptInAnyLang" $ \o -> do
@@ -522,6 +555,8 @@ data ScriptLanguageInEra lang era where
      PlutusScriptV2InBabbage :: ScriptLanguageInEra PlutusScriptV2 BabbageEra
      PlutusScriptV2InConway  :: ScriptLanguageInEra PlutusScriptV2 ConwayEra
 
+     PlutusScriptV3InConway  :: ScriptLanguageInEra PlutusScriptV3 ConwayEra
+
 
 
 deriving instance Eq   (ScriptLanguageInEra lang era)
@@ -571,6 +606,9 @@ scriptLanguageSupportedInEra era lang =
       (ConwayEra, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InConway
 
+      (ConwayEra, PlutusScriptLanguage PlutusScriptV3) ->
+        Just PlutusScriptV3InConway
+
       _ -> Nothing
 
 languageOfScriptLanguageInEra :: ScriptLanguageInEra lang era
@@ -590,6 +628,8 @@ languageOfScriptLanguageInEra langInEra =
 
       PlutusScriptV2InBabbage -> PlutusScriptLanguage PlutusScriptV2
       PlutusScriptV2InConway  -> PlutusScriptLanguage PlutusScriptV2
+
+      PlutusScriptV3InConway  -> PlutusScriptLanguage PlutusScriptV3
 
 eraOfScriptLanguageInEra :: ScriptLanguageInEra lang era
                          -> ShelleyBasedEra era
@@ -611,6 +651,7 @@ eraOfScriptLanguageInEra langInEra =
       PlutusScriptV1InConway  -> ShelleyBasedEraConway
       PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
       PlutusScriptV2InConway  -> ShelleyBasedEraConway
+      PlutusScriptV3InConway  -> ShelleyBasedEraConway
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
@@ -920,6 +961,11 @@ hashScript (PlutusScript PlutusScriptV2 (PlutusScriptSerialised script)) =
   . Ledger.hashScript @(ShelleyLedgerEra BabbageEra)
   $ Alonzo.PlutusScript Alonzo.PlutusV2 script
 
+hashScript (PlutusScript PlutusScriptV3 (PlutusScriptSerialised script)) =
+    ScriptHash
+  . Ledger.hashScript @(ShelleyLedgerEra ConwayEra)
+  $ Alonzo.PlutusScript Alonzo.PlutusV3 script
+
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
 toShelleyScriptHash (ScriptHash h) =  h
 
@@ -974,6 +1020,7 @@ instance IsPlutusScriptLanguage lang => HasTextEnvelope (PlutusScript lang) wher
       case plutusScriptVersion :: PlutusScriptVersion lang of
         PlutusScriptV1 -> "PlutusScriptV1"
         PlutusScriptV2 -> "PlutusScriptV2"
+        PlutusScriptV3 -> "PlutusScriptV3"
 
 
 -- | An example Plutus script that always succeeds, irrespective of inputs.
@@ -1046,6 +1093,11 @@ toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV2
       PlutusScriptV2InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV2 script
       PlutusScriptV2InConway  -> Alonzo.PlutusScript Alonzo.PlutusV2 script
 
+toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV3
+                                         (PlutusScriptSerialised script))) =
+    case langInEra of
+      PlutusScriptV3InConway  -> Alonzo.PlutusScript Alonzo.PlutusV3 script
+
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
                         -> ScriptInEra era
@@ -1071,6 +1123,8 @@ fromShelleyBasedScript era script =
             $ PlutusScriptSerialised s
         Alonzo.PlutusScript Alonzo.PlutusV2 _ ->
           error "fromShelleyBasedScript: PlutusV2 not supported in Alonzo era"
+        Alonzo.PlutusScript Alonzo.PlutusV3 _ ->
+          error "fromShelleyBasedScript: PlutusV3 not supported in Alonzo era"
     ShelleyBasedEraBabbage ->
       case script of
         Alonzo.TimelockScript s ->
@@ -1082,6 +1136,8 @@ fromShelleyBasedScript era script =
         Alonzo.PlutusScript Alonzo.PlutusV2 s ->
           ScriptInEra PlutusScriptV2InBabbage
             . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
+        Alonzo.PlutusScript Alonzo.PlutusV3 _ ->
+          error "fromShelleyBasedScript: PlutusV3 not supported in Babbage era"
 
     ShelleyBasedEraConway ->
       case script of
@@ -1094,6 +1150,9 @@ fromShelleyBasedScript era script =
         Alonzo.PlutusScript Alonzo.PlutusV2 s ->
           ScriptInEra PlutusScriptV2InConway
             . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
+        Alonzo.PlutusScript Alonzo.PlutusV3 s ->
+          ScriptInEra PlutusScriptV3InConway
+            . PlutusScript PlutusScriptV3 $ PlutusScriptSerialised s
 
 
 data MultiSigError = MultiSigErrorTimelockNotsupported deriving Show
@@ -1378,4 +1437,6 @@ textEnvelopeToScript = deserialiseFromTextEnvelopeAnyOf textEnvTypes
                    (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1))
     , FromSomeType (AsScript AsPlutusScriptV2)
                    (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2))
+    , FromSomeType (AsScript AsPlutusScriptV3)
+                   (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV3))
     ]

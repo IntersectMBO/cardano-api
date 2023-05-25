@@ -1,7 +1,7 @@
 cabal-version: 3.4
 
 name:                   cardano-api
-version:                8.1.1.1
+version:                8.2.0.0
 synopsis:               The cardano api
 description:            The cardano api.
 category:               Cardano,
@@ -128,7 +128,7 @@ library internal
                       , cardano-ledger-binary >= 1.1
                       , cardano-ledger-byron >= 1.0
                       , cardano-ledger-conway >= 1.1
-                      , cardano-ledger-core >= 1.1
+                      , cardano-ledger-core >= 1.2
                       , cardano-ledger-mary >= 1.1
                       , cardano-ledger-shelley >= 1.1.1
                       , cardano-protocol-tpraos >= 1.0.2
@@ -148,16 +148,16 @@ library internal
                       , mtl
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.6
-                      , ouroboros-consensus-cardano >= 0.5
-                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , ouroboros-consensus >= 0.7
+                      , ouroboros-consensus-cardano >= 0.6
+                      , ouroboros-consensus-diffusion >= 0.6
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , ouroboros-network-protocols
                       , parsec
-                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.1
+                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.5
                       , prettyprinter
                       , prettyprinter-configurable ^>= 1.1
                       , random
@@ -219,13 +219,14 @@ library gen
                       , base16-bytestring
                       , bytestring
                       , cardano-api
+                      , cardano-api:internal
                       , cardano-binary >= 1.6 && < 1.8
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
                       , cardano-ledger-alonzo >= 1.1
                       , cardano-ledger-alonzo-test
                       , cardano-ledger-byron-test >= 1.5
-                      , cardano-ledger-core >= 1.1
+                      , cardano-ledger-core >= 1.2
                       , cardano-ledger-shelley >= 1.1
                       , containers
                       , hedgehog
@@ -248,7 +249,7 @@ test-suite cardano-api-test
                       , cardano-crypto-tests ^>= 2.1
                       , cardano-data >= 1.0
                       , cardano-ledger-api >= 1.1
-                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.1
+                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.2
                       , cardano-ledger-shelley
                       , cardano-ledger-shelley-test >= 1.1
                       , cardano-slotting ^>= 0.1
@@ -304,8 +305,8 @@ test-suite cardano-api-golden
                       , hedgehog-extras >= 0.4.3.0
                       , hspec
                       , hw-hspec-hedgehog
-                      , plutus-core ^>= 1.1
-                      , plutus-ledger-api ^>= 1.1
+                      , plutus-core ^>= 1.5
+                      , plutus-ledger-api ^>= 1.5
                       , text
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
