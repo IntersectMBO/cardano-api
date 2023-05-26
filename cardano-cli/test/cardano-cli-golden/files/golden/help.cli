@@ -13,7 +13,7 @@ Usage: cardano-cli governance
             ( create-mir-certificate
             | create-genesis-key-delegation-certificate
             | action
-            | cc
+            | committee
             | drep
             | vote
             | create-update-proposal
@@ -87,7 +87,6 @@ Usage: cardano-cli governance action
 
   Commands related to governance actions
 
-<<<<<<< HEAD
 Usage: cardano-cli governance action create-no-confidence-motion --out-file FILE
 
   Create a no-confidence motion action
@@ -101,52 +100,10 @@ Usage: cardano-cli governance action create-constitution-update --out-file FILE
   Create a constitution-update action
 
 Usage: cardano-cli governance action create-hard-fork-initiation --out-file FILE
-=======
-Usage: cardano-cli governance action create-no-confidence-motion 
-            ( --stake-verification-key STRING
-            | --stake-verification-key-file FILE
-            | --stake-script-file FILE
-            )
-            --out-file FILE
-
-  Create a no-confidence motion action
-
-Usage: cardano-cli governance action create-new-committee 
-            ( --stake-verification-key STRING
-            | --stake-verification-key-file FILE
-            | --stake-script-file FILE
-            )
-            --out-file FILE
-
-  Create a new-committee action
-
-Usage: cardano-cli governance action create-constitution-update 
-            ( --stake-verification-key STRING
-            | --stake-verification-key-file FILE
-            | --stake-script-file FILE
-            )
-            --out-file FILE
-
-  Create a constitution-update action
-
-Usage: cardano-cli governance action create-hard-fork-initiation 
-            ( --stake-verification-key STRING
-            | --stake-verification-key-file FILE
-            | --stake-script-file FILE
-            )
-            --out-file FILE
->>>>>>> 5a8cadba9 (Move drep command to under governance command group)
 
   Create a hard-fork-initiation action
 
 Usage: cardano-cli governance action create-protocol-parameter-update 
-<<<<<<< HEAD
-=======
-            ( --stake-verification-key STRING
-            | --stake-verification-key-file FILE
-            | --stake-script-file FILE
-            )
->>>>>>> 5a8cadba9 (Move drep command to under governance command group)
             [--protocol-major-version NATURAL --protocol-minor-version NATURAL]
             [--decentralization-parameter RATIONAL]
             [--extra-entropy HEX | --reset-extra-entropy]
@@ -176,26 +133,12 @@ Usage: cardano-cli governance action create-protocol-parameter-update
 
   Create an protocol-parameter-update action
 
-<<<<<<< HEAD
 Usage: cardano-cli governance action create-treasury-withdrawal --out-file FILE
 
   Create an treasury-withdrawal action
 
 Usage: cardano-cli governance action create-info --metadata-url URL
             --metadata-hash HASH
-=======
-Usage: cardano-cli governance action create-treasury-withdrawal 
-            ( --stake-verification-key STRING
-            | --stake-verification-key-file FILE
-            | --stake-script-file FILE
-            )
-            --out-file FILE
-
-  Create an treasury-withdrawal action
-
-Usage: cardano-cli governance action create-info 
-            (--metadata-url URL | --metadata-file FILE)
->>>>>>> 5a8cadba9 (Move drep command to under governance command group)
             --out-file FILE
 
   Create an info action
@@ -271,21 +214,27 @@ Usage: cardano-cli governance drep
 
 Usage: cardano-cli governance drep registration-certificate 
             (--mainnet | --testnet-magic NATURAL)
-            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
             [--metadata-url URL --metadata-hash HASH]
             --out-file FILE
 
   Create a DRep registration certificate
 
 Usage: cardano-cli governance drep deregistration-certificate 
-            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
             --epoch NATURAL
             --out-file FILE
 
   Create a DRep deregistration certificate
 
 Usage: cardano-cli governance drep id 
-            (--drep-verification-key STRING | --cold-verification-key-file FILE)
+            ( --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            )
             [--output-format STRING]
 
   Build DRep id from the offline key
@@ -1214,6 +1163,7 @@ Usage: cardano-cli stake-address
             | registration-certificate
             | deregistration-certificate
             | pool-delegation-certificate
+            | drep-delegation-certificate
             )
 
   Stake address commands
@@ -1274,6 +1224,20 @@ Usage: cardano-cli stake-address pool-delegation-certificate
             --out-file FILE
 
   Create a stake address pool delegation certificate
+
+Usage: cardano-cli stake-address drep-delegation-certificate 
+            ( --stake-verification-key STRING
+            | --stake-verification-key-file FILE
+            | --stake-script-file FILE
+            | --stake-address ADDRESS
+            )
+            [ --drep-verification-key STRING
+            | --drep-cold-verification-key-file FILE
+            | --drep-id DREP_ID
+            ]
+            --out-file FILE
+
+  Create a stake address drep delegation certificate
 
 Usage: cardano-cli address (key-gen | key-hash | build | info)
 
