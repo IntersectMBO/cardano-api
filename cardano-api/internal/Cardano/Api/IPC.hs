@@ -254,7 +254,8 @@ mkVersionedProtocols :: forall block.
                           Net.NodeToClientVersionData
                           (Net.OuroborosApplication
                              Net.InitiatorMode
-                             Net.LocalAddress
+                             (Net.MinimalInitiatorContext Net.LocalAddress)
+                             (Net.ResponderContext Net.LocalAddress)
                              LBS.ByteString IO () Void)
 mkVersionedProtocols networkid ptcl unversionedClients =
      --TODO: really we should construct specific combinations of
@@ -268,7 +269,7 @@ mkVersionedProtocols networkid ptcl unversionedClients =
               networkMagic = toNetworkMagic networkid,
               query = False
             }
-            (\_connid _ctl -> protocols (unversionedClients ptclVersion) ptclBlockVersion ptclVersion))
+            (protocols (unversionedClients ptclVersion) ptclBlockVersion ptclVersion))
       (Map.toList (Consensus.supportedNodeToClientVersions proxy))
   where
     proxy :: Proxy block
@@ -277,7 +278,7 @@ mkVersionedProtocols networkid ptcl unversionedClients =
     protocols :: LocalNodeClientProtocolsForBlock block
               -> Consensus.BlockNodeToClientVersion block
               -> NodeToClientVersion
-              -> NodeToClientProtocols Net.InitiatorMode LBS.ByteString IO () Void
+              -> NodeToClientProtocols Net.InitiatorMode Net.LocalAddress LBS.ByteString IO () Void
     protocols
       LocalNodeClientProtocolsForBlock {
         localChainSyncClientForBlock,
@@ -291,43 +292,43 @@ mkVersionedProtocols networkid ptcl unversionedClients =
           localChainSyncProtocol =
             Net.InitiatorProtocolOnly $ case localChainSyncClientForBlock of
               NoLocalChainSyncClient
-                -> Net.MuxPeer nullTracer cChainSyncCodec Net.chainSyncPeerNull
+                -> Net.mkMiniProtocolCbFromPeer $ const
+                   (nullTracer, cChainSyncCodec, Net.chainSyncPeerNull)
               LocalChainSyncClient client
-                -> Net.MuxPeer
-                      nullTracer
-                      cChainSyncCodec
-                      (Net.Sync.chainSyncClientPeer client)
+                -> Net.mkMiniProtocolCbFromPeer $ const
+                   (nullTracer, cChainSyncCodec, Net.Sync.chainSyncClientPeer client)
               LocalChainSyncClientPipelined clientPipelined
-                -> Net.MuxPeerPipelined
-                      nullTracer
-                      cChainSyncCodec
-                      (Net.SyncP.chainSyncClientPeerPipelined clientPipelined)
+                -> Net.mkMiniProtocolCbFromPeerPipelined $ const
+                   (nullTracer, cChainSyncCodec, Net.SyncP.chainSyncClientPeerPipelined clientPipelined)
 
         , localTxSubmissionProtocol =
             Net.InitiatorProtocolOnly $
-              Net.MuxPeer
-                nullTracer
-                cTxSubmissionCodec
-                (maybe Net.localTxSubmissionPeerNull
-                       Net.Tx.localTxSubmissionClientPeer
-                       localTxSubmissionClientForBlock)
+              Net.mkMiniProtocolCbFromPeer $ const
+                ( nullTracer
+                , cTxSubmissionCodec
+                , maybe Net.localTxSubmissionPeerNull
+                        Net.Tx.localTxSubmissionClientPeer
+                        localTxSubmissionClientForBlock
+                )
 
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
-              Net.MuxPeer
-                nullTracer
-                cStateQueryCodec
-                (maybe Net.localStateQueryPeerNull
-                       Net.Query.localStateQueryClientPeer
-                       localStateQueryClientForBlock)
+              Net.mkMiniProtocolCbFromPeer $ const
+                ( nullTracer
+                , cStateQueryCodec
+                , maybe Net.localStateQueryPeerNull
+                        Net.Query.localStateQueryClientPeer
+                        localStateQueryClientForBlock
+                )
         , localTxMonitorProtocol =
             Net.InitiatorProtocolOnly $
-              Net.MuxPeer
-                nullTracer
-                cTxMonitorCodec
-                (maybe Net.localTxMonitorPeerNull
-                       localTxMonitorClientPeer
-                       localTxMonitoringClientForBlock)
+              Net.mkMiniProtocolCbFromPeer $ const
+                ( nullTracer
+                , cTxMonitorCodec
+                , maybe Net.localTxMonitorPeerNull
+                        localTxMonitorClientPeer
+                        localTxMonitoringClientForBlock
+                )
         }
       where
         Consensus.Codecs {
