@@ -7,12 +7,31 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Test.Golden.ErrorsSpec
-  ( spec
+  ( test_Bech32DecodeError
+  , test_InputDecodeError
+  , test_JsonDecodeError
+  , test_LeadershipError
+  , test_OperationalCertIssueError
+  , test_ProtocolParametersConversionError
+  , test_ProtocolParametersError
+  , test_RawBytesHexError
+  , test_ScriptDataJsonBytesError
+  , test_ScriptDataJsonError
+  , test_ScriptDataJsonSchemaError
+  , test_ScriptDataRangeError
+  , test_ScriptExecutionError
+  , test_StakePoolMetadataValidationError
+  , test_TextEnvelopeCddlError
+  , test_TextEnvelopeError
+  , test_TransactionValidityError
+  , test_TxBodyError
+  , test_TxBodyErrorAutoBalance
+  , test_TxMetadataJsonError
+  , test_TxMetadataRangeError
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (LeadershipError (..), OperationalCertIssueError (..),
-                   ProtocolParametersError (..), ReferenceScript (..))
+import           Cardano.Api.Shelley
 
 import           Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Seed as Crypto
@@ -24,20 +43,23 @@ import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus
 
 import qualified Codec.Binary.Bech32 as Bech32
+import           Control.Error.Util (hush)
 import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data
 import qualified Data.Map as Map
+import           Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import           Data.Text (Text)
-import           GHC.Stack (withFrozenCallStack)
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath ((</>))
 
-import qualified HaskellWorks.Hspec.Hedgehog as H
+import           Hedgehog
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Golden as H
-import           Test.Hspec
+import           Test.Tasty
+import           Test.Tasty.Hedgehog
 
 seed1 :: ByteString
 seed1 = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -45,33 +67,73 @@ seed1 = "00000000000000000000000000000000000000000000000000000000000000000000000
 seed2 :: ByteString
 seed2 = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
 
-spec :: Spec
-spec = describe "Test.Golden.Errors" $ do
-  let json = Aeson.String "<JSON>"
-  let text = "<text>" :: Text
-  let string = "<string>" :: String
-  let bytestring = "<bytestring>" :: ByteString
-  let lazyBytestring = "<lazy-bytestring>" :: LBS.ByteString
-  let stakePoolVerKey1 = getVerificationKey $ deterministicSigningKey AsStakePoolKey (Crypto.mkSeedFromBytes seed1)
-  let stakePoolVerKey2 = getVerificationKey $ deterministicSigningKey AsStakePoolKey (Crypto.mkSeedFromBytes seed2)
-  let paymentVerKey1 = getVerificationKey $ deterministicSigningKey AsPaymentKey (Crypto.mkSeedFromBytes seed1)
-  let Right txid1 = deserialiseFromRawBytesHex AsTxId "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
-  let txin1 = TxIn txid1 (TxIx 1)
-  let scriptData1 = ScriptDataNumber 1
-  let Right scriptDataHash1 = deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR scriptData1
-  let hashScriptData1 = hashScriptDataBytes scriptDataHash1 -- ScriptDataHash $ Ledger.unsafeMakeSafeHash hash1
-  let scriptHash = hashScript $ SimpleScript $ RequireTimeBefore $ SlotNo 1
-  let costModel = CostModel [0 .. 42]
-  let changeaddr1 = AddressInEra
-        (ShelleyAddressInEra ShelleyBasedEraAllegra)
-        (makeShelleyAddress Mainnet
-          (PaymentCredentialByKey (verificationKeyHash paymentVerKey1)) NoStakeAddress)
-  let txOutValue1 = TxOutAdaOnly AdaOnlyInAllegraEra 1
-  let txout1 = TxOut changeaddr1 txOutValue1 TxOutDatumNone ReferenceScriptNone
-  let txOutInAnyEra1 = txOutInAnyEra txout1
-  let (Right poolId) = deserialiseFromRawBytesHex (AsHash AsStakePoolKey)
-        "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
+json :: Aeson.Value
+json = Aeson.String "<JSON>"
 
+text :: Text
+text = "<text>" :: Text
+
+string :: String
+string = "<string>" :: String
+
+bytestring :: ByteString
+bytestring = "<bytestring>" :: ByteString
+
+lazyBytestring :: LBS.ByteString
+lazyBytestring = "<lazy-bytestring>" :: LBS.ByteString
+
+stakePoolVerKey1 :: VerificationKey StakePoolKey
+stakePoolVerKey1 = getVerificationKey $ deterministicSigningKey AsStakePoolKey (Crypto.mkSeedFromBytes seed1)
+
+stakePoolVerKey2 :: VerificationKey StakePoolKey
+stakePoolVerKey2 = getVerificationKey $ deterministicSigningKey AsStakePoolKey (Crypto.mkSeedFromBytes seed2)
+
+paymentVerKey1 :: VerificationKey PaymentKey
+paymentVerKey1 = getVerificationKey $ deterministicSigningKey AsPaymentKey (Crypto.mkSeedFromBytes seed1)
+
+txid1 :: TxId
+txid1 = fromJust $ hush $ deserialiseFromRawBytesHex AsTxId "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
+
+txin1 :: TxIn
+txin1 = TxIn txid1 (TxIx 1)
+
+scriptData1 :: ScriptData
+scriptData1 = ScriptDataNumber 1
+
+scriptDataHash1 :: HashableScriptData
+scriptDataHash1 = fromJust $ hush $ deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR scriptData1
+
+hashScriptData1 :: Hash ScriptData
+hashScriptData1 = hashScriptDataBytes scriptDataHash1 -- ScriptDataHash $ Ledger.unsafeMakeSafeHash hash1
+
+scriptHash :: ScriptHash
+scriptHash = hashScript $ SimpleScript $ RequireTimeBefore $ SlotNo 1
+
+costModel :: CostModel
+costModel = CostModel [0 .. 42]
+
+changeaddr1 :: AddressInEra AllegraEra
+changeaddr1 =
+  AddressInEra
+    (ShelleyAddressInEra ShelleyBasedEraAllegra)
+    (makeShelleyAddress Mainnet
+      (PaymentCredentialByKey (verificationKeyHash paymentVerKey1)) NoStakeAddress)
+
+txOutValue1 :: TxOutValue AllegraEra
+txOutValue1 = TxOutAdaOnly AdaOnlyInAllegraEra 1
+
+txout1 :: TxOut ctx AllegraEra
+txout1 = TxOut changeaddr1 txOutValue1 TxOutDatumNone ReferenceScriptNone
+
+txOutInAnyEra1 :: TxOutInAnyEra
+txOutInAnyEra1 = txOutInAnyEra txout1
+
+poolId :: Hash StakePoolKey
+poolId = fromJust $ hush $ deserialiseFromRawBytesHex (AsHash AsStakePoolKey)
+      "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
+
+test_Bech32DecodeError :: TestTree
+test_Bech32DecodeError =
   testAllErrorMessages @Bech32DecodeError
     [ Bech32DecodingError Bech32.StringToDecodeTooLong
     , Bech32UnexpectedPrefix text $ Set.singleton text
@@ -80,12 +142,16 @@ spec = describe "Test.Golden.Errors" $ do
     , Bech32WrongPrefix text text
     ]
 
+test_InputDecodeError :: TestTree
+test_InputDecodeError =
   testAllErrorMessages @InputDecodeError
     [ InputTextEnvelopeError $ TextEnvelopeAesonDecodeError string
     , InputBech32DecodeError $ Bech32WrongPrefix text text
     , InputInvalidError
     ]
 
+test_ProtocolParametersConversionError :: TestTree
+test_ProtocolParametersConversionError =
   testAllErrorMessages @ProtocolParametersConversionError
     [ PpceOutOfBounds "pparam" 0.1
     , PpceVersionInvalid 99999
@@ -93,10 +159,14 @@ spec = describe "Test.Golden.Errors" $ do
     , PpceMissingParameter "pparam"
     ]
 
+test_JsonDecodeError :: TestTree
+test_JsonDecodeError =
   testAllErrorMessages @JsonDecodeError
     [ JsonDecodeError string
     ]
 
+test_LeadershipError :: TestTree
+test_LeadershipError =
   testAllErrorMessages_ "Cardano.Api.LedgerState" "LeadershipError"
     [ ("LeaderErrDecodeLedgerStateFailure", LeaderErrDecodeLedgerStateFailure)
     , ("LeaderErrDecodeProtocolStateFailure", LeaderErrDecodeProtocolStateFailure
@@ -111,15 +181,21 @@ spec = describe "Test.Golden.Errors" $ do
     , ("LeaderErrCandidateNonceStillEvolving", LeaderErrCandidateNonceStillEvolving)
     ]
 
+test_OperationalCertIssueError :: TestTree
+test_OperationalCertIssueError =
   testAllErrorMessages_ "Cardano.Api.OperationalCertificate" "OperationalCertIssueError"
       [ ("OperationalCertKeyMismatch", OperationalCertKeyMismatch stakePoolVerKey1 stakePoolVerKey2)
       ]
 
+test_ProtocolParametersError :: TestTree
+test_ProtocolParametersError =
   testAllErrorMessages_ "Cardano.Api.ProtocolParameters" "ProtocolParametersError"
       [ ("PParamsErrorMissingMinUTxoValue", PParamsErrorMissingMinUTxoValue (AnyCardanoEra ConwayEra))
       , ("PParamsErrorMissingAlonzoProtocolParameter", PParamsErrorMissingAlonzoProtocolParameter)
       ]
 
+test_RawBytesHexError :: TestTree
+test_RawBytesHexError =
   testAllErrorMessages_ "Cardano.Api.SerialiseRaw" "RawBytesHexError"
       [ ("RawBytesHexErrorBase16DecodeFail", RawBytesHexErrorBase16DecodeFail bytestring string)
       , ("RawBytesHexErrorRawBytesDecodeFail", RawBytesHexErrorRawBytesDecodeFail
@@ -128,16 +204,22 @@ spec = describe "Test.Golden.Errors" $ do
           (SerialiseAsRawBytesError string))
       ]
 
+test_ScriptDataJsonBytesError :: TestTree
+test_ScriptDataJsonBytesError =
   testAllErrorMessages @ScriptDataJsonBytesError
     [ ScriptDataJsonBytesErrorValue $ ScriptDataJsonSchemaError Aeson.Null ScriptDataJsonNullNotAllowed
     , ScriptDataJsonBytesErrorInvalid $ ScriptDataConstructorOutOfRange 0
     ]
 
+test_ScriptDataJsonError :: TestTree
+test_ScriptDataJsonError =
   testAllErrorMessages @ScriptDataJsonError
     [ ScriptDataJsonSchemaError (Aeson.String "<JSON>") ScriptDataJsonNullNotAllowed
     , ScriptDataRangeError (Aeson.String "<JSON>") (ScriptDataConstructorOutOfRange 1)
     ]
 
+test_ScriptDataJsonSchemaError :: TestTree
+test_ScriptDataJsonSchemaError =
   testAllErrorMessages @ScriptDataJsonSchemaError
     [ ScriptDataJsonNullNotAllowed
     , ScriptDataJsonBoolNotAllowed
@@ -148,10 +230,14 @@ spec = describe "Test.Golden.Errors" $ do
     , ScriptDataJsonTypeMismatch text json
     ]
 
+test_ScriptDataRangeError :: TestTree
+test_ScriptDataRangeError =
   testAllErrorMessages @ScriptDataRangeError
     [ ScriptDataConstructorOutOfRange 1
     ]
 
+test_ScriptExecutionError :: TestTree
+test_ScriptExecutionError =
   testAllErrorMessages_ "Cardano.Api.Fees" "ScriptExecutionError"
     [ ("ScriptErrorMissingTxIn", ScriptErrorMissingTxIn txin1)
     , ("ScriptErrorTxInWithoutDatum", ScriptErrorTxInWithoutDatum txin1)
@@ -164,11 +250,15 @@ spec = describe "Test.Golden.Errors" $ do
     , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Alonzo.PlutusV2)
     ]
 
+test_StakePoolMetadataValidationError :: TestTree
+test_StakePoolMetadataValidationError =
   testAllErrorMessages @StakePoolMetadataValidationError
     [ StakePoolMetadataJsonDecodeError string
     , StakePoolMetadataInvalidLengthError 0 1
     ]
 
+test_TextEnvelopeCddlError :: TestTree
+test_TextEnvelopeCddlError =
   testAllErrorMessages @TextEnvelopeCddlError
     [ TextEnvelopeCddlErrCBORDecodingError CBOR.DecoderErrorVoid
     , TextEnvelopeCddlAesonDecodeError string string
@@ -178,12 +268,16 @@ spec = describe "Test.Golden.Errors" $ do
     , TextEnvelopeCddlErrByronKeyWitnessUnsupported
     ]
 
+test_TextEnvelopeError :: TestTree
+test_TextEnvelopeError =
   testAllErrorMessages @TextEnvelopeError
     [ TextEnvelopeTypeError [TextEnvelopeType string, TextEnvelopeType string] (TextEnvelopeType string)
     , TextEnvelopeDecodeError CBOR.DecoderErrorVoid
     , TextEnvelopeAesonDecodeError string
     ]
 
+test_TransactionValidityError :: TestTree
+test_TransactionValidityError =
   testAllErrorMessages_ "Cardano.Api.Fees" "TransactionValidityError"
     [ ("TransactionValidityTranslationError", TransactionValidityTranslationError $ Ledger.TimeTranslationPastHorizon text)
     , ("TransactionValidityCostModelError", TransactionValidityCostModelError
@@ -200,7 +294,8 @@ spec = describe "Test.Golden.Errors" $ do
     --     })
     ]
 
-
+test_TxBodyError :: TestTree
+test_TxBodyError =
   testAllErrorMessages_ "Cardano.Api.TxBody" "TxBodyError"
     [ ("TxBodyEmptyTxIns", TxBodyEmptyTxIns)
     , ("TxBodyEmptyTxInsCollateral", TxBodyEmptyTxInsCollateral)
@@ -213,6 +308,8 @@ spec = describe "Test.Golden.Errors" $ do
     , ("TxBodyInIxOverflow", TxBodyInIxOverflow txin1)
     ]
 
+test_TxBodyErrorAutoBalance :: TestTree
+test_TxBodyErrorAutoBalance =
   testAllErrorMessages_ "Cardano.Api.Fees" "TxBodyErrorAutoBalance"
     [ ("TxBodyError", TxBodyError TxBodyEmptyTxIns)
     , ("TxBodyScriptExecutionError", TxBodyScriptExecutionError [(ScriptWitnessIndexTxIn 1, ScriptErrorExecutionUnitsOverflow)])
@@ -229,6 +326,8 @@ spec = describe "Test.Golden.Errors" $ do
                 (Map.fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)]))
     ]
 
+test_TxMetadataJsonError :: TestTree
+test_TxMetadataJsonError =
   testAllErrorMessages @TxMetadataJsonError
     [ TxMetadataJsonToplevelNotMap
     , TxMetadataJsonToplevelBadKey text
@@ -236,17 +335,19 @@ spec = describe "Test.Golden.Errors" $ do
     , TxMetadataRangeError 0 json (TxMetadataBytesTooLong 0)
     ]
 
+test_TxMetadataRangeError :: TestTree
+test_TxMetadataRangeError =
   testAllErrorMessages @TxMetadataRangeError
     [ TxMetadataTextTooLong 0
     , TxMetadataBytesTooLong 0
     , TxMetadataNumberOutOfRange 0
     ]
 
-testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a) => [a] -> Spec
+testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a) => [a] -> TestTree
 testAllErrorMessages errs = withFrozenCallStack $ do
   let typeName = show $ typeRep (Proxy @a)
-  describe typeName $
-    mapM_ testErrorMessage errs
+  testGroup typeName $
+    fmap testErrorMessage errs
 
 -- | Creates error messages for all values and tests them agains the golden files.
 --
@@ -256,12 +357,12 @@ testAllErrorMessages_ :: forall a. (HasCallStack, Error a)
                       => String -- ^ module name
                       -> String -- ^ type name
                       -> [(String, a)]  -- ^ list of constructor names and values
-                      -> Spec
+                      -> TestTree
 testAllErrorMessages_ moduleName typeName errs = withFrozenCallStack $ do
-  describe typeName $
-    mapM_ (uncurry $ testErrorMessage_ moduleName typeName) errs
+  testGroup typeName $
+    fmap (uncurry $ testErrorMessage_ moduleName typeName) errs
 
-testErrorMessage :: (HasCallStack, Data a, Error a) => a -> Spec
+testErrorMessage :: (HasCallStack, Data a, Error a) => a -> TestTree
 testErrorMessage err = withFrozenCallStack $ do
   let errTypeRep = typeOf err
       typeName = show errTypeRep
@@ -269,9 +370,9 @@ testErrorMessage err = withFrozenCallStack $ do
       constructorName = show $ toConstr err
   testErrorMessage_ moduleName typeName constructorName err
 
-testErrorMessage_ :: (HasCallStack, Error a) => String -> String -> String -> a -> Spec
+testErrorMessage_ :: (HasCallStack, Error a) => String -> String -> String -> a -> TestTree
 testErrorMessage_ moduleName typeName constructorName err = withFrozenCallStack $ do
   let fqtn = moduleName <> "." <> typeName
-  it constructorName $ H.requireTest $ do
+  testProperty constructorName $ withTests 1 $ property $ do
     H.note_ "Incorrect error message in golden file"
     displayError err `H.diffVsGoldenFile` ("test/cardano-api-golden/files/golden/errors" </> fqtn </> constructorName <> ".txt")
