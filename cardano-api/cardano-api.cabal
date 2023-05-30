@@ -289,7 +289,7 @@ test-suite cardano-api-test
 test-suite cardano-api-golden
   import:               project-config
 
-  hs-source-dirs:       golden
+  hs-source-dirs:       test/cardano-api-golden
   main-is:              cardano-api-golden.hs
   type:                 exitcode-stdio-1.0
 

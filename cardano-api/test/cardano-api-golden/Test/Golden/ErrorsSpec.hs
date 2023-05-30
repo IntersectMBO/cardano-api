@@ -274,5 +274,4 @@ testErrorMessage_ moduleName typeName constructorName err = withFrozenCallStack 
   let fqtn = moduleName <> "." <> typeName
   it constructorName $ H.requireTest $ do
     H.note_ "Incorrect error message in golden file"
-    displayError err `H.diffVsGoldenFile` ("test/golden/errors" </> fqtn </> constructorName <> ".txt")
-
+    displayError err `H.diffVsGoldenFile` ("test/cardano-api-golden/files/golden/errors" </> fqtn </> constructorName <> ".txt")
