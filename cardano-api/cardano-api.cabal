@@ -234,7 +234,7 @@ library gen
 
 test-suite cardano-api-test
   import:               project-config
-  hs-source-dirs:       test
+  hs-source-dirs:       test/cardano-api-test
   main-is:              cardano-api-test.hs
   type:                 exitcode-stdio-1.0
 
