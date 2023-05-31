@@ -1,11 +1,25 @@
 #!/usr/bin/env bash
 
+# This script is used to tag new versions of packages in a way that sanity checks
+# various items before a tag is created and pushed.
+#
+# To tag a new version of a component, the cabal file's version must first
+# be updated, committed and pushed and an entry is added to the relevant
+# changelog file.
+#
+# The script checks that:
+#
+# * The commit has been pushed to the remote
+# * The tag doesn't already exist
+# * The tag hasn't already been pushed
+# * The change log for the relevant component has a section for the version being released.
+
 set -euo pipefail
 
 main_branch="main"
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-  echo -e "\e[31mRefusing to run because ther are untracked changes in the repository.\e[0m"
+  echo -e "\e[31mRefusing to run because there are untracked changes in the repository.\e[0m"
   exit 1
 fi
 
@@ -20,6 +34,7 @@ cat dist-newstyle/cache/plan.json \
       | { "component": ."component-name"
         , "name": ."pkg-name"
         , "version": ."pkg-version"
+        , "path": ."pkg-src".path
         }
       ' > "$components_file"
 
@@ -31,7 +46,14 @@ git fetch origin --tags > /dev/null 2> /dev/null
 for line in "${lines[@]}"; do
   # Do something with each line
   name="$(echo "$line" | jq -r '.name')"
+  version="$(echo "$line" | jq -r '.version')"
   tag="$(echo "$line" | jq -r '.name + "-" + .version')"
+  path="$(echo "$line" | jq -r '.path')"
+
+  if ! grep -q "## $version" "$path/CHANGELOG.md"; then
+    echo -e "\e[31m$path/CHANGELOG.md does not contain a section for this version $version.\e[0m"
+    continue
+  fi
 
   head_commit="$(git rev-parse --quiet --verify HEAD)"
   tag_commit="$(git rev-parse --quiet --verify "refs/tags/$tag" || true)"
