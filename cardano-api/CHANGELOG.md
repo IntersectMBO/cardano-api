@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.2.0.0
+
+- Changes:
+  - Updated plutus, ledger, and consensus dependency bounds
+  - Added support for Plutus V3 in conway
+  - Added a `query` field to `LocalNodeConnectInfo`
+  - Field added to `LocalNodeConnectInfo`
+  (feature; breaking)
+  [PR 24](https://github.com/input-output-hk/cardano-api/pull/24)
+
+- Crypto pinning via `iohkNix` overlay
+  (bugfix; no-api-changes)
+  [PR 27](https://github.com/input-output-hk/cardano-api/pull/27)
+
 ## 8.1.1.1
 
 - Make `cardano-api:internal` component public
