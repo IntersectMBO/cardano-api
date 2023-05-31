@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
 
+# This script is used to tag new versions of packages in a way that sanity checks
+# various items before a tag is created and pushed.
+#
+# To tag a new version of a component, the cabal file's version must first
+# be updated, committed and pushed and an entry is added to the relevant
+# changelog file.
+#
+# The script checks that:
+#
+# * The commit has been pushed to the remote
+# * The tag doesn't already exist
+# * The tag hasn't already been pushed
+# * The change log for the relevant component has a section for the version being released.
+
 set -euo pipefail
 
 main_branch="main"
