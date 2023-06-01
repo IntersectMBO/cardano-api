@@ -17,18 +17,13 @@ import           Control.Monad.Identity
 
 import           Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Genesis (exampleShelleyGenesis)
 import           Test.Cardano.Ledger.Core.Arbitrary ()
 
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Aeson as H
 import           Hedgehog.Gen.QuickCheck (arbitrary)
 import           Hedgehog.Internal.Property
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testPropertyNamed)
-
-prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/golden/ShelleyGenesis"
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at
@@ -71,8 +66,7 @@ prop_roundtrip_scriptdata_plutusdata = H.property $ do
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Ledger"
-  [ testPropertyNamed "golden ShelleyGenesis"  "golden ShelleyGenesis"  prop_golden_ShelleyGenesis
-  , testPropertyNamed "roundtrip Address CBOR" "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
+  [ testPropertyNamed "roundtrip Address CBOR" "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
   , testPropertyNamed "roundtrip ScriptData" "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
   , testPropertyNamed "script data bytes preserved" "script data bytes preserved" prop_original_scriptdata_bytes_preserved
   ]

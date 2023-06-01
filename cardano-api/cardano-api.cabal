@@ -247,27 +247,19 @@ test-suite cardano-api-test
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
-                      , cardano-data >= 1.0
                       , cardano-ledger-api >= 1.1
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.2
-                      , cardano-ledger-shelley
-                      , cardano-ledger-shelley-test >= 1.1
-                      , cardano-slotting ^>= 0.1
                       , containers
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.3
                       , hedgehog-quickcheck
                       , mtl
-                      , microlens
                       , QuickCheck
                       , tasty
                       , tasty-hedgehog
                       , tasty-quickcheck
-                      , time
 
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.Eras
-                        Test.Cardano.Api.Genesis
                         Test.Cardano.Api.Json
                         Test.Cardano.Api.KeysByron
                         Test.Cardano.Api.Ledger
@@ -280,7 +272,6 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Ord
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
-                        Test.Cardano.Api.Typed.Script
                         Test.Cardano.Api.Typed.TxBody
                         Test.Cardano.Api.Typed.Value
 
@@ -297,22 +288,34 @@ test-suite cardano-api-golden
                       , bech32 >= 1.1.0
                       , bytestring
                       , cardano-api
+                      , cardano-api:gen
                       , cardano-binary
                       , cardano-crypto-class
+                      , cardano-data >= 1.0
                       , cardano-ledger-alonzo
+                      , cardano-ledger-api >= 1.1
+                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.2
+                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley-test >= 1.1
+                      , cardano-slotting ^>= 0.1
                       , containers
                       , errors
                       , filepath
                       , hedgehog
                       , hedgehog-extras >= 0.4.3.0
+                      , microlens
                       , plutus-core ^>= 1.5
                       , plutus-ledger-api ^>= 1.5
                       , tasty
                       , tasty-hedgehog
+                      , time
                       , text
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   tasty-discover:tasty-discover
 
-  other-modules:        Test.Golden.ErrorsSpec
+  other-modules:        Test.Golden.Cardano.Api.Genesis
+                      , Test.Golden.Cardano.Api.Ledger
+                      , Test.Golden.Cardano.Api.Typed.Script
+                      , Test.Golden.ErrorsSpec

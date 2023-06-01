@@ -345,9 +345,20 @@ test_TxMetadataRangeError =
 
 testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a) => [a] -> TestTree
 testAllErrorMessages errs = withFrozenCallStack $ do
-  let typeName = show $ typeRep (Proxy @a)
+  -- 'err' here is only needed for its 'Data' instance and it's never evaluated
+  -- it's equivalent of having @err = undefined :: a@
+  let err = head errs
+      typeName = show $ typeOf err
+      testedConstructors = map toConstr errs
+      allConstructors = dataTypeConstrs $ dataTypeOf err
+      notTestedConstructors = [ c | c <- allConstructors, c `notElem` testedConstructors]
+      testAllConstructors =
+        testProperty "check if all constructors are tested" . withTests 1 . property $ do
+          H.note_ $ "Untested constructors: " <> show notTestedConstructors
+          notTestedConstructors === []
+
   testGroup typeName $
-    fmap testErrorMessage errs
+    testAllConstructors : map testErrorMessage errs
 
 -- | Creates error messages for all values and tests them agains the golden files.
 --
@@ -373,6 +384,6 @@ testErrorMessage err = withFrozenCallStack $ do
 testErrorMessage_ :: (HasCallStack, Error a) => String -> String -> String -> a -> TestTree
 testErrorMessage_ moduleName typeName constructorName err = withFrozenCallStack $ do
   let fqtn = moduleName <> "." <> typeName
-  testProperty constructorName $ withTests 1 $ property $ do
+  testProperty constructorName . withTests 1 . property $ do
     H.note_ "Incorrect error message in golden file"
     displayError err `H.diffVsGoldenFile` ("test/cardano-api-golden/files/golden/errors" </> fqtn </> constructorName <> ".txt")

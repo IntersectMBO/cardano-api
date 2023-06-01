@@ -3,7 +3,7 @@
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Test.Cardano.Api.Genesis
+module Test.Golden.Cardano.Api.Genesis
   ( exampleShelleyGenesis
   ) where
 
