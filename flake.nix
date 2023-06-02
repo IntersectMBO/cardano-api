@@ -3,7 +3,6 @@
 
   inputs = {
     haskellNix.url = "github:input-output-hk/haskell.nix";
-    haskellNix.inputs.tullia.follows = "tullia";
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
@@ -25,9 +24,9 @@
   outputs = inputs: let
     supportedSystems = [
       "x86_64-linux"
-      #"x86_64-darwin"
-      #"aarch64-linux"
-      #"aarch64-darwin"
+      "x86_64-darwin"
+      "aarch64-linux"
+      "aarch64-darwin"
     ];
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
@@ -36,25 +35,29 @@
         # overlays...
         nixpkgs = import inputs.nixpkgs {
           overlays = with inputs; [
-            # crypto needs to come before haskell.nix.
-            # FIXME: _THIS_IS_BAD_
-            iohkNix.overlays.crypto
-            haskellNix.overlay
-            iohkNix.overlays.haskell-nix-extra
-            iohkNix.overlays.cardano-lib
-            iohkNix.overlays.utils
+            # iohkNix.overlays.crypto provide libsodium-vrf, libblst and libsecp256k1.
+            inputs.iohkNix.overlays.crypto
+            # haskellNix.overlay can be configured by later overlays, so need to come before them.
+            inputs.haskellNix.overlay
+            # configure haskell.nix to use iohk-nix crypto librairies.
+            inputs.iohkNix.overlays.haskell-nix-crypto
           ];
           inherit system;
           inherit (inputs.haskellNix) config;
         };
         inherit (nixpkgs) lib;
 
+        # see flake `variants` below for alternative compilers
+        defaultCompiler = "ghc928";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
-        cabalProject = nixpkgs.haskell-nix.cabalProject' {
+        cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
           src = ./.;
           name = "cardano-api";
-          compiler-nix-name = "ghc8107";
+          compiler-nix-name = lib.mkDefault defaultCompiler;
+
+          # we also want cross compilation to windows (only with default compiler).
+          crossPlatforms = p: lib.optional (config.compiler-nix-name == defaultCompiler) p.mingwW64;
 
           # CHaP input map, so we can find CHaP packages (needs to be more
           # recent than the index-state we set!). Can be updated with
@@ -65,51 +68,34 @@
             "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
           };
 
-          # tools we want in our shell
-          # TODO: removed tools to get building properly
-          shell.tools = {
-            cabal = "3.10.1.0";
-            #ghcid = "0.8.8";
-            #haskell-language-server = "latest";
-            #hlint = {};
-            #fourmolu = "0.10.1.0";
-          };
-          # Now we use pkgsBuildBuild, to make sure that even in the cross
-          # compilation setting, we don't run into issues where we pick tools
-          # for the target.
-          #shell.nativeBuildInputs = with nixpkgs.pkgsBuildBuild; [
-          #  (pkgs.python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
-          #  haskellPackages.implicit-hie
-          #];
+          # tools we want in our shell, from hackage
+          shell.tools =
+            {
+              cabal = "3.10.1.0";
+              ghcid = "0.8.8";
+              haskell-language-server = "latest";
+            }
+            // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
+              # tools that work or should be used only with default compiler
+              hlint = "latest";
+              stylish-haskell = "0.14.4.0";
+            };
+          # and from nixpkgs or other inputs
+          shell.nativeBuildInputs = with nixpkgs;
+            [
+            ]
+            ++ (with inputs.tullia.packages.${system}; [
+              # for testing tullia ci locally
+              tullia
+              nix-systems
+            ]);
+          # disable Hoogle until someone request it
           shell.withHoogle = false;
 
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
           modules = [
             ({pkgs, ...}: {
-              # Use our forked libsodium from iohk-nix crypto overlay.
-              packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [[pkgs.libsodium-vrf pkgs.secp256k1]];
-              packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [[pkgs.libsodium-vrf]];
-              packages.byron-spec-chain.configureFlags = ["--ghc-option=-Werror"];
-              packages.byron-spec-ledger.configureFlags = ["--ghc-option=-Werror"];
-              packages.delegation.configureFlags = ["--ghc-option=-Werror"];
-              packages.non-integral.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-shelley.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-shelley-ma.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-shelley-ma-test.configureFlags = ["--ghc-option=-Werror"];
-              packages.small-steps.configureFlags = ["--ghc-option=-Werror"];
-              packages.cardano-ledger-byron = {
-                configureFlags = ["--ghc-option=-Werror"];
-                components = {
-                  tests.cardano-ledger-byron-test = {
-                    preCheck = ''
-                      export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
-                      cp ${./eras/byron/ledger/impl/mainnet-genesis.json} ./mainnet-genesis.json
-                    '';
-                    testFlags = ["--scenario=ContinuousIntegration"];
-                  };
-                };
-              };
               packages.cardano-api = {
                 configureFlags = ["--ghc-option=-Werror"];
                 components = {
@@ -121,33 +107,16 @@
                 };
               };
             })
-            ({pkgs, ...}:
-              lib.mkIf pkgs.stdenv.hostPlatform.isUnix {
-                packages.cardano-ledger-shelley-ma-test.components.tests.cardano-ledger-shelley-ma-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-shelley-test.components.tests.cardano-ledger-shelley-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-alonzo-test.components.tests.cardano-ledger-alonzo-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-babbage-test.components.tests.cardano-ledger-babbage-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-                packages.cardano-ledger-conway-test.components.tests.cardano-ledger-conway-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
-              })
-            ({pkgs, ...}:
-              lib.mkIf pkgs.stdenv.hostPlatform.isWindows {
-                packages.set-algebra.components.tests.tests.buildable = lib.mkForce false;
-                packages.plutus-preprocessor.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-shelley-ma-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-shelley-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-alonzo-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-babbage-test.package.buildable = lib.mkForce false;
-                packages.cardano-ledger-conway-test.package.buildable = lib.mkForce false;
-              })
           ];
-        };
+        });
         # ... and construct a flake from the cabal project
         flake =
           cabalProject.flake (
-            # we also want cross compilation to windows.
             lib.optionalAttrs (system == "x86_64-linux") {
-              #crossPlatforms = p: [p.mingwW64];
+              # on linux, build/test other supported compilers
+              variants = lib.genAttrs ["ghc8107"] (compiler-nix-name: {
+                inherit compiler-nix-name;
+              });
             }
           )
           # add cicero logic.
@@ -175,15 +144,15 @@
                     };
                   };
 
-                  command.text = config.preset.github.status.lib.reportBulk {
-                    bulk.text = ''
-                      nix eval .#hydraJobs --apply __attrNames --json |
+                  command.text = ''
+                    # filter out systems that we cannot build for:
+                    systems=$(nix eval .#packages --apply builtins.attrNames --json |
                       nix-systems -i |
-                      jq 'with_entries(select(.value))' # filter out systems that we cannot build for
-                    '';
-                    each.text = ''nix build -L .#hydraJobs."$1".required'';
-                    skippedDescription = lib.escapeShellArg "No nix builder for this system";
-                  };
+                      jq -r 'with_entries(select(.value)) | keys | .[]')
+                    targets=$(for s in $systems; do echo .#hydraJobs."$s".required; done)
+                    # shellcheck disable=SC2086
+                    nix build --keep-going $targets || nix build --keep-going -L $targets
+                  '';
 
                   memory = 1024 * 8;
                   nomad.driver = "exec";
@@ -217,15 +186,31 @@
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
             {
-              ciJobs = flake.hydraJobs;
+              ciJobs =
+                flake.hydraJobs
+                // {
+                  # This ensure hydra send a status for the required job (even if no change other than commit hash)
+                  revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
+                };
             };
           legacyPackages = rec {
-            inherit cabalProject;
+            inherit cabalProject nixpkgs;
             # also provide hydraJobs through legacyPackages to allow building without system prefix:
             inherit hydraJobs;
           };
-          # `nix develop .#profiling`: a shell with profiling enabled
-          devShells.profiling = (cabalProject.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
+          devShells = let
+            profillingShell = p: {
+              # `nix develop .#profiling` (or `.#ghc927.profiling): a shell with profiling enabled
+              profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
+            };
+          in
+            profillingShell cabalProject
+            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc927`
+            // lib.mapAttrs (compiler-nix-name: _: let
+              p = cabalProject.appendModule {inherit compiler-nix-name;};
+            in
+              p.shell // (profillingShell p))
+            nixpkgs.haskell-nix.compiler;
           # formatter used by nix fmt
           formatter = nixpkgs.alejandra;
         }
