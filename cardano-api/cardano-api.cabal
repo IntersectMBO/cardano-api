@@ -57,6 +57,7 @@ library internal
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
                         Cardano.Api.Error
+                        Cardano.Api.Feature
                         Cardano.Api.Fees
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters

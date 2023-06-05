@@ -7,7 +7,9 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Gen.Cardano.Api.Typed
-  ( genAddressByron
+  ( genFeatureValue
+
+  , genAddressByron
   , genAddressInEra
   , genAddressShelley
   , genCertificate
@@ -119,6 +121,7 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
+import           Cardano.Api.Feature
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
                    KESPeriod (KESPeriod),
@@ -702,6 +705,14 @@ genTxBody era = do
   case res of
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
+
+genFeatureValue :: ()
+  => Feature feature
+  => Applicative f
+  => f a
+  -> CardanoEra era
+  -> f (FeatureValue (feature era) a)
+genFeatureValue gen = supportedInEra (pure NoFeatureValue) (flip fmap gen . FeatureValue)
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
