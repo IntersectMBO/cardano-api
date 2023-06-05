@@ -44,6 +44,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -939,7 +940,7 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
       case Map.mapEither id exUnitsMap of
         (failures, exUnitsMap') ->
           handleExUnitsErrors
-            (txScriptValidityToScriptValidity (txScriptValidity txbodycontent))
+            (valueOrDefault defaultScriptValidity (txScriptValidity txbodycontent))
             failures
             exUnitsMap'
 

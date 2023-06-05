@@ -57,15 +57,14 @@ module Cardano.Api.TxBody (
     setTxScriptValidity,
     TxBodyError(..),
     TxBodyScriptData(..),
-    TxScriptValidity(..),
-    TxScriptValiditySupportedInEra(..),
 
     ScriptValidity(..),
+    defaultScriptValidity,
+
+    TxScriptValidityFeature(..),
+
     scriptValidityToIsValid,
     isValidToScriptValidity,
-    scriptValidityToTxScriptValidity,
-    txScriptValidityToIsValid,
-    txScriptValidityToScriptValidity,
 
     -- * Transaction Ids
     TxId(..),
@@ -145,8 +144,6 @@ module Cardano.Api.TxBody (
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
-    txScriptValiditySupportedInShelleyBasedEra,
-    txScriptValiditySupportedInCardanoEra,
     totalAndReturnCollateralSupportedInEra,
 
     -- * Inspecting 'ScriptWitness'es
@@ -188,6 +185,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
@@ -300,58 +298,26 @@ isValidToScriptValidity :: L.IsValid -> ScriptValidity
 isValidToScriptValidity (L.IsValid False) = ScriptInvalid
 isValidToScriptValidity (L.IsValid True) = ScriptValid
 
--- | A representation of whether the era supports tx script validity.
---
--- The Alonzo and subsequent eras support script validity.
---
-data TxScriptValidity era where
-  TxScriptValidityNone :: TxScriptValidity era
+data TxScriptValidityFeature era where
+  TxScriptValiditySupportedInAlonzoEra  :: TxScriptValidityFeature AlonzoEra
+  TxScriptValiditySupportedInBabbageEra :: TxScriptValidityFeature BabbageEra
+  TxScriptValiditySupportedInConwayEra  :: TxScriptValidityFeature ConwayEra
 
-  -- | Tx script validity is supported in transactions in the 'Alonzo' era onwards.
-  TxScriptValidity
-    :: TxScriptValiditySupportedInEra era
-    -> ScriptValidity
-    -> TxScriptValidity era
+deriving instance Eq (TxScriptValidityFeature era)
+deriving instance Show (TxScriptValidityFeature era)
 
-deriving instance Eq   (TxScriptValiditySupportedInEra era)
-deriving instance Show (TxScriptValiditySupportedInEra era)
+instance FeatureInEra TxScriptValidityFeature where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> no
+    AllegraEra  -> no
+    MaryEra     -> no
+    AlonzoEra   -> yes TxScriptValiditySupportedInAlonzoEra
+    BabbageEra  -> yes TxScriptValiditySupportedInBabbageEra
+    ConwayEra   -> yes TxScriptValiditySupportedInConwayEra
 
-data TxScriptValiditySupportedInEra era where
-  TxScriptValiditySupportedInAlonzoEra  :: TxScriptValiditySupportedInEra AlonzoEra
-  TxScriptValiditySupportedInBabbageEra :: TxScriptValiditySupportedInEra BabbageEra
-  TxScriptValiditySupportedInConwayEra  :: TxScriptValiditySupportedInEra ConwayEra
-
-deriving instance Eq   (TxScriptValidity era)
-deriving instance Show (TxScriptValidity era)
-
-txScriptValiditySupportedInCardanoEra :: CardanoEra era -> Maybe (TxScriptValiditySupportedInEra era)
-txScriptValiditySupportedInCardanoEra ByronEra   = Nothing
-txScriptValiditySupportedInCardanoEra ShelleyEra = Nothing
-txScriptValiditySupportedInCardanoEra AllegraEra = Nothing
-txScriptValiditySupportedInCardanoEra MaryEra    = Nothing
-txScriptValiditySupportedInCardanoEra AlonzoEra  = Just TxScriptValiditySupportedInAlonzoEra
-txScriptValiditySupportedInCardanoEra BabbageEra = Just TxScriptValiditySupportedInBabbageEra
-txScriptValiditySupportedInCardanoEra ConwayEra = Just TxScriptValiditySupportedInConwayEra
-
-txScriptValiditySupportedInShelleyBasedEra :: ShelleyBasedEra era -> Maybe (TxScriptValiditySupportedInEra era)
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraShelley = Nothing
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAllegra = Nothing
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraMary    = Nothing
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAlonzo  = Just TxScriptValiditySupportedInAlonzoEra
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraBabbage = Just TxScriptValiditySupportedInBabbageEra
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraConway = Just TxScriptValiditySupportedInConwayEra
-
-txScriptValidityToScriptValidity :: TxScriptValidity era -> ScriptValidity
-txScriptValidityToScriptValidity TxScriptValidityNone = ScriptValid
-txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptValidity
-
-scriptValidityToTxScriptValidity :: ShelleyBasedEra era -> ScriptValidity -> TxScriptValidity era
-scriptValidityToTxScriptValidity era scriptValidity = case txScriptValiditySupportedInShelleyBasedEra era of
-  Nothing -> TxScriptValidityNone
-  Just witness -> TxScriptValidity witness scriptValidity
-
-txScriptValidityToIsValid :: TxScriptValidity era -> L.IsValid
-txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
+defaultScriptValidity :: ScriptValidity
+defaultScriptValidity = ScriptValid
 
 -- ----------------------------------------------------------------------------
 -- Transaction outputs
@@ -1751,7 +1717,7 @@ data TxBodyContent build era =
        txCertificates     :: TxCertificates build era,
        txUpdateProposal   :: TxUpdateProposal era,
        txMintValue        :: TxMintValue    build era,
-       txScriptValidity   :: TxScriptValidity era
+       txScriptValidity   :: FeatureValue (TxScriptValidityFeature era) ScriptValidity
      }
      deriving (Eq, Show)
 
@@ -1773,7 +1739,7 @@ defaultTxBodyContent = TxBodyContent
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
-    , txScriptValidity = TxScriptValidityNone
+    , txScriptValidity = NoFeatureValue
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -1836,7 +1802,7 @@ setTxUpdateProposal v txBodyContent = txBodyContent { txUpdateProposal = v }
 setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
 setTxMintValue v txBodyContent = txBodyContent { txMintValue = v }
 
-setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
+setTxScriptValidity :: FeatureValue (TxScriptValidityFeature era) ScriptValidity -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent { txScriptValidity = v }
 
 -- ----------------------------------------------------------------------------
@@ -1872,7 +1838,7 @@ data TxBody era where
           -- auxiliary data.
        -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
 
-       -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
+       -> FeatureValue (TxScriptValidityFeature era) ScriptValidity -- ^ Mark script as expected to pass or fail validation
 
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
@@ -2104,7 +2070,7 @@ serialiseShelleyBasedTxBody
   -> [Ledger.Script ledgerera]
   -> TxBodyScriptData era
   -> Maybe (L.TxAuxData ledgerera)
-  -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
+  -> FeatureValue (TxScriptValidityFeature era) ScriptValidity -- ^ Mark script as expected to pass or fail validation
   -> ByteString
 serialiseShelleyBasedTxBody era txbody txscripts
                             TxBodyNoScriptData txmetadata scriptValidity =
@@ -2118,21 +2084,21 @@ serialiseShelleyBasedTxBody era txbody txscripts
           $ CBOR.encodeListLen 4
          <> CBOR.encCBOR txbody
          <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
+         <> CBOR.encCBOR (valueOrDefault defaultScriptValidity scriptValidity)
          <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
       ShelleyBasedEraBabbage ->
         CBOR.serialize' (L.eraProtVerLow @L.Babbage)
           $ CBOR.encodeListLen 4
          <> CBOR.encCBOR txbody
          <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
+         <> CBOR.encCBOR (valueOrDefault defaultScriptValidity scriptValidity)
          <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
       ShelleyBasedEraConway ->
         CBOR.serialize' (L.eraProtVerLow @L.Babbage)
           $ CBOR.encodeListLen 4
          <> CBOR.encCBOR txbody
          <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
+         <> CBOR.encCBOR (valueOrDefault defaultScriptValidity scriptValidity)
          <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
  where
    preAlonzo v = CBOR.serialize' v
@@ -2150,7 +2116,7 @@ serialiseShelleyBasedTxBody _era txbody txscripts
      <> CBOR.encCBOR txscripts
      <> CBOR.encCBOR datums
      <> CBOR.encCBOR redeemers
-     <> CBOR.encCBOR (txScriptValidityToScriptValidity txBodyScriptValidity)
+     <> CBOR.encCBOR (valueOrDefault defaultScriptValidity txBodyScriptValidity)
      <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
 
 deserialiseShelleyBasedTxBody
@@ -2187,7 +2153,7 @@ deserialiseShelleyBasedTxBody era bs =
               [] -- scripts
               (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
               (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
+              (flip CBOR.runAnnotator fbs (return NoFeatureValue))
         3 -> do
           txbody     <- CBOR.decCBOR
           txscripts  <- CBOR.decCBOR
@@ -2198,10 +2164,10 @@ deserialiseShelleyBasedTxBody era bs =
               (map (flip CBOR.runAnnotator fbs) txscripts)
               (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
               (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
+              (flip CBOR.runAnnotator fbs (return NoFeatureValue))
         4 -> do
           sValiditySupported <-
-            case txScriptValiditySupportedInShelleyBasedEra era of
+            case featureInShelleyBasedEra Nothing Just era of
               Nothing -> fail $ mconcat
                 [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
                 , "script validity flag but got: "
@@ -2219,7 +2185,7 @@ deserialiseShelleyBasedTxBody era bs =
               (map (flip CBOR.runAnnotator fbs) txscripts)
               (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
               (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
+              (flip CBOR.runAnnotator fbs (return $ FeatureValue sValiditySupported scriptValidity))
         6 -> do
           sDataSupported <-
             case scriptDataSupportedInEra (shelleyBasedToCardanoEra era) of
@@ -2231,7 +2197,7 @@ deserialiseShelleyBasedTxBody era bs =
               Just supported -> return supported
 
           sValiditySupported <-
-            case txScriptValiditySupportedInShelleyBasedEra era of
+            case featureInShelleyBasedEra Nothing Just era of
               Nothing -> fail $ mconcat
                 [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
                 , "script validity flag but got: "
@@ -2257,7 +2223,7 @@ deserialiseShelleyBasedTxBody era bs =
               (map (flip CBOR.runAnnotator fbs) txscripts)
               (flip CBOR.runAnnotator fbs txscriptdata)
               (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
+              (flip CBOR.runAnnotator fbs (return $ FeatureValue sValiditySupported scriptValidity))
         _ -> fail $ "expected tx body tuple of size 2, 3, 4 or 6, got " <> show len
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
@@ -2709,7 +2675,7 @@ getTxBodyContent (ShelleyTxBody era body _scripts scriptdata mAux scriptValidity
 
 fromLedgerTxBody
   :: ShelleyBasedEra era
-  -> TxScriptValidity era
+  -> FeatureValue (TxScriptValidityFeature era) ScriptValidity
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxBodyScriptData era
   -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
@@ -3404,7 +3370,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txCertificates     = TxCertificatesNone
   , txUpdateProposal   = TxUpdateProposalNone
   , txMintValue        = TxMintNone
-  , txScriptValidity   = TxScriptValidityNone
+  , txScriptValidity   = NoFeatureValue
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
@@ -3680,7 +3646,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
         scripts_
         TxBodyNoScriptData
         txAuxData
-        TxScriptValidityNone
+        NoFeatureValue
   where
     scripts_ :: [Ledger.Script StandardShelley]
     scripts_ = catMaybes
@@ -3717,7 +3683,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
         scripts_
         TxBodyNoScriptData
         txAuxData
-        TxScriptValidityNone
+        NoFeatureValue
   where
     scripts_ :: [Ledger.Script StandardAllegra]
     scripts_ = catMaybes
@@ -3756,7 +3722,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
         scripts
         TxBodyNoScriptData
         txAuxData
-        TxScriptValidityNone
+        NoFeatureValue
   where
     scripts :: [Ledger.Script StandardMary]
     scripts = List.nub $ catMaybes
