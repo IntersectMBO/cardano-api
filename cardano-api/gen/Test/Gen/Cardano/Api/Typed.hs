@@ -7,7 +7,9 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Gen.Cardano.Api.Typed
-  ( genAddressByron
+  ( genFeatureValueInEra
+
+  , genAddressByron
   , genAddressInEra
   , genAddressShelley
   , genCertificate
@@ -119,6 +121,7 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
+import           Cardano.Api.Feature
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
                    KESPeriod (KESPeriod),
@@ -137,7 +140,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 
-import           Control.Applicative (optional)
+import           Control.Applicative (Alternative (..), optional)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
@@ -702,6 +705,17 @@ genTxBody era = do
   case res of
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
+
+-- | Generate a 'FeatureValue' for the given 'CardanoEra' with the provided generator.
+genFeatureValueInEra :: ()
+  => FeatureInEra feature
+  => Alternative f
+  => f a
+  -> CardanoEra era
+  -> f (FeatureValue feature era a)
+genFeatureValueInEra gen =
+  featureInEra (pure NoFeatureValue) $ \witness ->
+    pure NoFeatureValue <|> fmap (FeatureValue witness) gen
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
