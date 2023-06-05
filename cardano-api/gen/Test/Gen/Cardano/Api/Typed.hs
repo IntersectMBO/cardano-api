@@ -97,7 +97,6 @@ module Test.Gen.Cardano.Api.Typed
   , genTxOutDatumHashUTxOContext
   , genTxOutValue
   , genTxReturnCollateral
-  , genTxScriptValidity
   , genTxTotalCollateral
   , genTxUpdateProposal
   , genTxValidityLowerBound
@@ -642,7 +641,7 @@ genTxBodyContent era = do
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
-  txScriptValidity <- genTxScriptValidity era
+  txScriptValidity <- genFeatureValue genScriptValidity era
 
   pure $ TxBodyContent
     { Api.txIns
@@ -713,11 +712,6 @@ genFeatureValue :: ()
   -> CardanoEra era
   -> f (FeatureValue (feature era) a)
 genFeatureValue gen = supportedInEra (pure NoFeatureValue) (flip fmap gen . FeatureValue)
-
-genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
-genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
-  Nothing -> pure TxScriptValidityNone
-  Just witness -> TxScriptValidity witness <$> genScriptValidity
 
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]

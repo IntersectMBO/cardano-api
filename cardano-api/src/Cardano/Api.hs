@@ -317,13 +317,9 @@ module Cardano.Api (
     makeTransactionBodyAutoBalance,
     BalancedTxBody(..),
     TxBodyErrorAutoBalance(..),
-    TxScriptValidity(..),
     ScriptValidity(..),
-    TxScriptValiditySupportedInEra(..),
-    scriptValidityToTxScriptValidity,
-    txScriptValiditySupportedInShelleyBasedEra,
-    txScriptValiditySupportedInCardanoEra,
-    txScriptValidityToScriptValidity,
+    TxScriptValidityFeature(..),
+    defaultScriptValidity,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
@@ -874,8 +870,8 @@ import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
-import           Cardano.Api.Orphans ()
 import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
