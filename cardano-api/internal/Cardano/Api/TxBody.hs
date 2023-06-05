@@ -104,7 +104,6 @@ module Cardano.Api.TxBody (
     TxExtraKeyWitnesses(..),
     TxWithdrawals(..),
     TxCertificates(..),
-    TxUpdateProposal(..),
     TxMintValue(..),
 
     -- ** Building vs viewing transactions
@@ -127,7 +126,7 @@ module Cardano.Api.TxBody (
     ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
-    UpdateProposalSupportedInEra(..),
+    UpdateProposalFeature(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -143,7 +142,6 @@ module Cardano.Api.TxBody (
     scriptDataSupportedInEra,
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
-    updateProposalSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
     -- * Inspecting 'ScriptWitness'es
@@ -1247,27 +1245,26 @@ certificatesSupportedInEra ConwayEra  = Just CertificatesInConwayEra
 -- era has a notion of an update proposal, but it is a standalone chain object
 -- and not embedded in a transaction.
 --
-data UpdateProposalSupportedInEra era where
+data UpdateProposalFeature era where
+  UpdateProposalInShelleyEra :: UpdateProposalFeature ShelleyEra
+  UpdateProposalInAllegraEra :: UpdateProposalFeature AllegraEra
+  UpdateProposalInMaryEra    :: UpdateProposalFeature MaryEra
+  UpdateProposalInAlonzoEra  :: UpdateProposalFeature AlonzoEra
+  UpdateProposalInBabbageEra :: UpdateProposalFeature BabbageEra
+  UpdateProposalInConwayEra  :: UpdateProposalFeature ConwayEra
 
-     UpdateProposalInShelleyEra :: UpdateProposalSupportedInEra ShelleyEra
-     UpdateProposalInAllegraEra :: UpdateProposalSupportedInEra AllegraEra
-     UpdateProposalInMaryEra    :: UpdateProposalSupportedInEra MaryEra
-     UpdateProposalInAlonzoEra  :: UpdateProposalSupportedInEra AlonzoEra
-     UpdateProposalInBabbageEra :: UpdateProposalSupportedInEra BabbageEra
-     UpdateProposalInConwayEra  :: UpdateProposalSupportedInEra ConwayEra
+deriving instance Eq   (UpdateProposalFeature era)
+deriving instance Show (UpdateProposalFeature era)
 
-deriving instance Eq   (UpdateProposalSupportedInEra era)
-deriving instance Show (UpdateProposalSupportedInEra era)
-
-updateProposalSupportedInEra :: CardanoEra era
-                             -> Maybe (UpdateProposalSupportedInEra era)
-updateProposalSupportedInEra ByronEra   = Nothing
-updateProposalSupportedInEra ShelleyEra = Just UpdateProposalInShelleyEra
-updateProposalSupportedInEra AllegraEra = Just UpdateProposalInAllegraEra
-updateProposalSupportedInEra MaryEra    = Just UpdateProposalInMaryEra
-updateProposalSupportedInEra AlonzoEra  = Just UpdateProposalInAlonzoEra
-updateProposalSupportedInEra BabbageEra = Just UpdateProposalInBabbageEra
-updateProposalSupportedInEra ConwayEra  = Just UpdateProposalInConwayEra
+instance FeatureInEra UpdateProposalFeature where
+  featureInEra no yes = \case
+    ByronEra   -> no
+    ShelleyEra -> yes UpdateProposalInShelleyEra
+    AllegraEra -> yes UpdateProposalInAllegraEra
+    MaryEra    -> yes UpdateProposalInMaryEra
+    AlonzoEra  -> yes UpdateProposalInAlonzoEra
+    BabbageEra -> yes UpdateProposalInBabbageEra
+    ConwayEra  -> yes UpdateProposalInConwayEra
 
 -- ----------------------------------------------------------------------------
 -- Building vs viewing transactions
@@ -1663,21 +1660,6 @@ deriving instance Eq   (TxCertificates build era)
 deriving instance Show (TxCertificates build era)
 
 -- ----------------------------------------------------------------------------
--- Transaction update proposal (era-dependent)
---
-
-data TxUpdateProposal era where
-
-     TxUpdateProposalNone :: TxUpdateProposal era
-
-     TxUpdateProposal     :: UpdateProposalSupportedInEra era
-                          -> UpdateProposal
-                          -> TxUpdateProposal era
-
-deriving instance Eq   (TxUpdateProposal era)
-deriving instance Show (TxUpdateProposal era)
-
--- ----------------------------------------------------------------------------
 -- Value minting within transactions (era-dependent)
 --
 
@@ -1715,7 +1697,7 @@ data TxBodyContent build era =
        txProtocolParams   :: BuildTxWith build (Maybe ProtocolParameters),
        txWithdrawals      :: TxWithdrawals  build era,
        txCertificates     :: TxCertificates build era,
-       txUpdateProposal   :: TxUpdateProposal era,
+       txUpdateProposal   :: FeatureValue UpdateProposalFeature era UpdateProposal,
        txMintValue        :: TxMintValue    build era,
        txScriptValidity   :: FeatureValue TxScriptValidityFeature era ScriptValidity
      }
@@ -1737,7 +1719,7 @@ defaultTxBodyContent = TxBodyContent
     , txProtocolParams = BuildTxWith Nothing
     , txWithdrawals = TxWithdrawalsNone
     , txCertificates = TxCertificatesNone
-    , txUpdateProposal = TxUpdateProposalNone
+    , txUpdateProposal = NoFeatureValue
     , txMintValue = TxMintNone
     , txScriptValidity = NoFeatureValue
     }
@@ -1796,7 +1778,7 @@ setTxWithdrawals v txBodyContent = txBodyContent { txWithdrawals = v }
 setTxCertificates :: TxCertificates build era -> TxBodyContent build era -> TxBodyContent build era
 setTxCertificates v txBodyContent = txBodyContent { txCertificates = v }
 
-setTxUpdateProposal :: TxUpdateProposal era -> TxBodyContent build era -> TxBodyContent build era
+setTxUpdateProposal :: FeatureValue UpdateProposalFeature era UpdateProposal -> TxBodyContent build era -> TxBodyContent build era
 setTxUpdateProposal v txBodyContent = txBodyContent { txUpdateProposal = v }
 
 setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
@@ -3251,45 +3233,35 @@ fromLedgerTxCertificates era body =
 fromLedgerTxUpdateProposal
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> TxUpdateProposal era
+  -> FeatureValue UpdateProposalFeature era UpdateProposal
 fromLedgerTxUpdateProposal era body =
   case era of
     ShelleyBasedEraShelley ->
       case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInShelleyEra
-                           (fromLedgerUpdate era p)
+        SNothing -> NoFeatureValue
+        SJust p -> FeatureValue UpdateProposalInShelleyEra (fromLedgerUpdate era p)
 
     ShelleyBasedEraAllegra ->
       case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInAllegraEra
-                           (fromLedgerUpdate era p)
+        SNothing -> NoFeatureValue
+        SJust p -> FeatureValue UpdateProposalInAllegraEra (fromLedgerUpdate era p)
 
     ShelleyBasedEraMary ->
       case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInMaryEra
-                           (fromLedgerUpdate era p)
+        SNothing -> NoFeatureValue
+        SJust p -> FeatureValue UpdateProposalInMaryEra (fromLedgerUpdate era p)
 
     ShelleyBasedEraAlonzo ->
       case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInAlonzoEra
-                           (fromLedgerUpdate era p)
+        SNothing -> NoFeatureValue
+        SJust p -> FeatureValue UpdateProposalInAlonzoEra (fromLedgerUpdate era p)
 
     ShelleyBasedEraBabbage ->
       case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInBabbageEra
-                           (fromLedgerUpdate era p)
+        SNothing -> NoFeatureValue
+        SJust p -> FeatureValue UpdateProposalInBabbageEra (fromLedgerUpdate era p)
 
-    ShelleyBasedEraConway -> TxUpdateProposalNone
+    ShelleyBasedEraConway -> NoFeatureValue
 
 fromLedgerTxMintValue
   :: ShelleyBasedEra era
@@ -3368,7 +3340,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txProtocolParams   = ViewTx
   , txWithdrawals      = TxWithdrawalsNone
   , txCertificates     = TxCertificatesNone
-  , txUpdateProposal   = TxUpdateProposalNone
+  , txUpdateProposal   = NoFeatureValue
   , txMintValue        = TxMintNone
   , txScriptValidity   = NoFeatureValue
   }
@@ -3463,13 +3435,13 @@ convTxUpdateProposal
   :: forall era ledgerera. ShelleyLedgerEra era ~ ledgerera
   => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => ShelleyBasedEra era
-  -> TxUpdateProposal era
+  -> FeatureValue UpdateProposalFeature era UpdateProposal
   -> Either TxBodyError (StrictMaybe (Ledger.Update ledgerera))
   -- ^ 'Left' when there's protocol params conversion error, 'Right' otherwise, 'Right SNothing' means that
   -- there's no update proposal
 convTxUpdateProposal era = \case
-  TxUpdateProposalNone -> Right SNothing
-  TxUpdateProposal _ p -> bimap TxBodyProtocolParamsConversionError pure $ toLedgerUpdate era p
+  NoFeatureValue -> Right SNothing
+  FeatureValue _ p -> bimap TxBodyProtocolParamsConversionError pure $ toLedgerUpdate era p
 
 convMintValue :: TxMintValue build era -> MultiAsset StandardCrypto
 convMintValue txMintValue =

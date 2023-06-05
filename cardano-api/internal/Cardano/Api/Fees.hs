@@ -304,9 +304,9 @@ estimateTransactionKeyWitnessCount TxBodyContent {
       _ -> 0
 
   + case txUpdateProposal of
-      TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _)
+      FeatureValue _ (UpdateProposal updatePerGenesisKey _)
         -> Map.size updatePerGenesisKey
-      _ -> 0
+      NoFeatureValue -> 0
 
 
 -- ----------------------------------------------------------------------------

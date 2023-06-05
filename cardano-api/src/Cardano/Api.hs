@@ -255,7 +255,6 @@ module Cardano.Api (
     TxExtraKeyWitnesses(..),
     TxWithdrawals(..),
     TxCertificates(..),
-    TxUpdateProposal(..),
     TxMintValue(..),
 
     -- ** Building vs viewing transactions
@@ -278,7 +277,7 @@ module Cardano.Api (
     ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
-    UpdateProposalSupportedInEra(..),
+    UpdateProposalFeature(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
     FeatureInEra(..),
 
@@ -294,7 +293,6 @@ module Cardano.Api (
     extraKeyWitnessesSupportedInEra,
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
-    updateProposalSupportedInEra,
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
