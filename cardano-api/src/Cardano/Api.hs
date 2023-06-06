@@ -883,10 +883,16 @@ module Cardano.Api (
     determineEraExpr,
     -- * Governance
 
+    -- ** DReps
+    DRepKey,
+    DRepMetadata,
+    DRepMetadataReference,
+    DRepMetadataValidationError,
+    validateAndHashDRepMetadata,
+
     -- ** Governance Committee
     makeCommitteeDelegationCertificate,
     makeCommitteeHotKeyUnregistrationCertificate,
-
   ) where
 
 import           Cardano.Api.Address
@@ -896,6 +902,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
+import           Cardano.Api.DRepMetadata
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
