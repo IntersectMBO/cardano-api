@@ -22,22 +22,15 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 
-import           Data.Aeson ((.:))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           Data.Either.Combinators (maybeToRight)
-import           Data.Text (Text)
-import qualified Data.Text as Text
 
 -- ----------------------------------------------------------------------------
 -- DRep metadata
@@ -45,18 +38,8 @@ import qualified Data.Text as Text
 
 -- | A representation of the required fields for off-chain drep metadata.
 --
-data DRepMetadata =
-  DRepMetadata
-  { drepName :: !Text
-    -- ^ A name of up to 50 characters.
-  , drepDescription :: !Text
-    -- ^ A description of up to 255 characters.
-  , drepTicker :: !Text
-    -- ^ A ticker of 3-5 characters, for a compact display of dreps in
-    -- a wallet.
-  , drepHomepage :: !Text
-    -- ^ A URL to a homepage with additional information about the drep.
-    -- n.b. the spec does not specify a character limit for this field.
+newtype DRepMetadata = DRepMetadata
+  { unDRepMetadata :: ByteString
   } deriving (Eq, Show)
 
 newtype instance Hash DRepMetadata = DRepMetadataHash (Shelley.Hash StandardCrypto ByteString)
@@ -73,66 +56,9 @@ instance SerialiseAsRawBytes (Hash DRepMetadata) where
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash DRepMetadata") $
       DRepMetadataHash <$> Crypto.hashFromBytes bs
 
---TODO: instance ToJSON DRepMetadata where
-
-instance FromJSON DRepMetadata where
-  parseJSON =
-    Aeson.withObject "DRepMetadata" $ \obj ->
-      DRepMetadata
-        <$> parseName obj
-        <*> parseDescription obj
-        <*> parseTicker obj
-        <*> obj .: "homepage"
-
-    where
-      -- Parse and validate the drep metadata name from a JSON object.
-      -- The name must be 50 characters or fewer.
-      parseName :: Aeson.Object -> Aeson.Parser Text
-      parseName obj = do
-        name <- obj .: "name"
-        if Text.length name <= 50
-          then pure name
-          else
-            fail $ mconcat
-              [ "\"name\" must have at most 50 characters, but it has "
-              , show (Text.length name)
-              , " characters."
-              ]
-
-      -- Parse and validate the drep metadata description
-      -- The description must be 255 characters or fewer.
-      parseDescription :: Aeson.Object -> Aeson.Parser Text
-      parseDescription obj = do
-        description <- obj .: "description"
-        if Text.length description <= 255
-          then pure description
-          else
-            fail $ mconcat
-              [ "\"description\" must have at most 255 characters, but it has "
-              , show (Text.length description)
-              , " characters."
-              ]
-
-      -- | Parse and validate the drep ticker description
-      -- The ticker must be 3 to 5 characters long.
-      parseTicker :: Aeson.Object -> Aeson.Parser Text
-      parseTicker obj = do
-        ticker <- obj .: "ticker"
-        let tickerLen = Text.length ticker
-        if tickerLen >= 3 && tickerLen <= 5
-          then pure ticker
-          else
-            fail $ mconcat
-              [ "\"ticker\" must have at least 3 and at most 5 "
-              , "characters, but it has "
-              , show (Text.length ticker)
-              , " characters."
-              ]
-
 -- | A drep metadata validation error.
 data DRepMetadataValidationError
-  = DRepMetadataJsonDecodeError !String
-  | DRepMetadataInvalidLengthError
+  = DRepMetadataInvalidLengthError
     -- ^ The length of the JSON-encoded drep metadata exceeds the
     -- maximum.
       !Int
@@ -143,7 +69,6 @@ data DRepMetadataValidationError
 
 instance Error DRepMetadataValidationError where
   displayError = \case
-    DRepMetadataJsonDecodeError errStr -> errStr
     DRepMetadataInvalidLengthError maxLen actualLen ->
       mconcat
         [ "DRep metadata must consist of at most "
@@ -159,9 +84,9 @@ validateAndHashDRepMetadata
   :: ByteString
   -> Either DRepMetadataValidationError (DRepMetadata, Hash DRepMetadata)
 validateAndHashDRepMetadata bs
+  -- TODO confirm if there are size limits to the DRep metadata
   | BS.length bs <= 512 = do
-      md <- first DRepMetadataJsonDecodeError
-                  (Aeson.eitherDecodeStrict' bs)
+      let md = DRepMetadata bs
       let mdh = DRepMetadataHash (Crypto.hashWith id bs)
       return (md, mdh)
   | otherwise = Left $ DRepMetadataInvalidLengthError 512 (BS.length bs)
