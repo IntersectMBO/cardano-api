@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {- HLINT ignore "Redundant ==" -}
@@ -70,11 +71,17 @@ module Cardano.Api.ProtocolParameters (
 
     -- * Data family instances
     AsType(..),
+
+    -- ** Era-dependent protocol features
+    ProtocolUTxOCostPerByteFeature(..),
+    ProtocolUTxOCostPerWordFeature(..),
+
   ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Json (toRationalJSON)
@@ -667,6 +674,52 @@ instance FromCBOR ProtocolParametersUpdate where
         <*> fromCBOR
         <*> fromCBOR
 
+-- ----------------------------------------------------------------------------
+-- Features
+--
+
+-- | A representation of whether the era supports the 'UTxO Cost Per Byte'
+-- protocol parameter.
+--
+-- The Babbage and subsequent eras support such a protocol parameter.
+--
+data ProtocolUTxOCostPerByteFeature era where
+  ProtocolUTxOCostPerByteInBabbageEra :: ProtocolUTxOCostPerByteFeature BabbageEra
+  ProtocolUTxOCostPerByteInConwayEra  :: ProtocolUTxOCostPerByteFeature ConwayEra
+
+deriving instance Eq   (ProtocolUTxOCostPerByteFeature era)
+deriving instance Show (ProtocolUTxOCostPerByteFeature era)
+
+instance FeatureInEra ProtocolUTxOCostPerByteFeature where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> no
+    AllegraEra  -> no
+    MaryEra     -> no
+    AlonzoEra   -> no
+    BabbageEra  -> yes ProtocolUTxOCostPerByteInBabbageEra
+    ConwayEra   -> yes ProtocolUTxOCostPerByteInConwayEra
+
+-- | A representation of whether the era supports the 'UTxO Cost Per Word'
+-- protocol parameter.
+--
+-- The Babbage and subsequent eras support such a protocol parameter.
+--
+data ProtocolUTxOCostPerWordFeature era where
+  ProtocolUpdateUTxOCostPerWordInAlonzoEra :: ProtocolUTxOCostPerWordFeature AlonzoEra
+
+deriving instance Eq   (ProtocolUTxOCostPerWordFeature era)
+deriving instance Show (ProtocolUTxOCostPerWordFeature era)
+
+instance FeatureInEra ProtocolUTxOCostPerWordFeature where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> no
+    AllegraEra  -> no
+    MaryEra     -> no
+    AlonzoEra   -> yes ProtocolUpdateUTxOCostPerWordInAlonzoEra
+    BabbageEra  -> no
+    ConwayEra   -> no
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
