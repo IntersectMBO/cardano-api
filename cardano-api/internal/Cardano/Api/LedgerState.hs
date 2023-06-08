@@ -1642,7 +1642,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo bpp ptclState poolid (VrfSign
 constructGlobals
   :: ShelleyGenesis Shelley.StandardCrypto
   -> EpochInfo (Either Text)
-  -> ProtocolParameters
+  -> ProtocolParameters era
   -> Globals
 constructGlobals sGen eInfo pParams =
   let majorPParamsVer = fst $ protocolParamProtocolVersion pParams

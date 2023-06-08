@@ -240,10 +240,10 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era EpochNo
 
   QueryGenesisParameters
-    :: QueryInShelleyBasedEra ShelleyEra GenesisParameters
+    :: QueryInShelleyBasedEra ShelleyEra (GenesisParameters ShelleyEra)
 
   QueryProtocolParameters
-    :: QueryInShelleyBasedEra era ProtocolParameters
+    :: QueryInShelleyBasedEra era (ProtocolParameters era)
 
   QueryProtocolParametersUpdate
     :: QueryInShelleyBasedEra era
@@ -831,8 +831,7 @@ fromConsensusQueryResultShelleyBased _ QueryConstitutionHash q' mCHash =
 
 fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
     case q' of
-      Consensus.GetGenesisConfig -> fromShelleyGenesis
-                                      (Consensus.getCompactGenesis r')
+      Consensus.GetGenesisConfig -> fromShelleyGenesis (Consensus.getCompactGenesis r')
       _                          -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased sbe QueryProtocolParameters q' r' =

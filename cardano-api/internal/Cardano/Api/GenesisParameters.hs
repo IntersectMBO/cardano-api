@@ -16,7 +16,7 @@ module Cardano.Api.GenesisParameters (
 
   ) where
 
-import           Cardano.Api.Eras (ShelleyBasedEra (ShelleyBasedEraShelley))
+import           Cardano.Api.Eras
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Value
@@ -33,7 +33,7 @@ import           Data.Time (NominalDiffTime, UTCTime)
 -- Genesis parameters
 --
 
-data GenesisParameters =
+data GenesisParameters era =
      GenesisParameters {
 
        -- | The reference time the system started. The time of slot zero.
@@ -92,7 +92,7 @@ data GenesisParameters =
 
        -- | The initial values of the updateable 'ProtocolParameters'.
        --
-       protocolInitialUpdateableProtocolParameters :: ProtocolParameters
+       protocolInitialUpdateableProtocolParameters :: ProtocolParameters era
      }
 
 
@@ -100,10 +100,12 @@ data GenesisParameters =
 -- Conversion functions
 --
 
-fromShelleyGenesis :: Shelley.ShelleyGenesis Ledger.StandardCrypto -> GenesisParameters
+fromShelleyGenesis :: ()
+  => Shelley.ShelleyGenesis Ledger.StandardCrypto
+  -> GenesisParameters ShelleyEra
 fromShelleyGenesis
-    Shelley.ShelleyGenesis {
-      Shelley.sgSystemStart
+    Shelley.ShelleyGenesis
+    { Shelley.sgSystemStart
     , Shelley.sgNetworkMagic
     , Shelley.sgNetworkId
     , Shelley.sgActiveSlotsCoeff
@@ -119,21 +121,16 @@ fromShelleyGenesis
     , Shelley.sgInitialFunds = _  -- unused, not retained by the node
     , Shelley.sgStaking      = _  -- unused, not retained by the node
     } =
-    GenesisParameters {
-      protocolParamSystemStart            = sgSystemStart
-    , protocolParamNetworkId              = fromShelleyNetwork sgNetworkId
-                                              (NetworkMagic sgNetworkMagic)
-    , protocolParamActiveSlotsCoefficient = Ledger.unboundRational
-                                              sgActiveSlotsCoeff
-    , protocolParamSecurity               = fromIntegral sgSecurityParam
-    , protocolParamEpochLength            = sgEpochLength
-    , protocolParamSlotLength             = Shelley.fromNominalDiffTimeMicro sgSlotLength
-    , protocolParamSlotsPerKESPeriod      = fromIntegral sgSlotsPerKESPeriod
-    , protocolParamMaxKESEvolutions       = fromIntegral sgMaxKESEvolutions
-    , protocolParamUpdateQuorum           = fromIntegral sgUpdateQuorum
-    , protocolParamMaxLovelaceSupply      = Lovelace
-                                              (fromIntegral sgMaxLovelaceSupply)
-    , protocolInitialUpdateableProtocolParameters = fromLedgerPParams
-                                                      ShelleyBasedEraShelley
-                                                      sgProtocolParams
+    GenesisParameters
+    { protocolParamSystemStart                    = sgSystemStart
+    , protocolParamNetworkId                      = fromShelleyNetwork sgNetworkId (NetworkMagic sgNetworkMagic)
+    , protocolParamActiveSlotsCoefficient         = Ledger.unboundRational sgActiveSlotsCoeff
+    , protocolParamSecurity                       = fromIntegral sgSecurityParam
+    , protocolParamEpochLength                    = sgEpochLength
+    , protocolParamSlotLength                     = Shelley.fromNominalDiffTimeMicro sgSlotLength
+    , protocolParamSlotsPerKESPeriod              = fromIntegral sgSlotsPerKESPeriod
+    , protocolParamMaxKESEvolutions               = fromIntegral sgMaxKESEvolutions
+    , protocolParamUpdateQuorum                   = fromIntegral sgUpdateQuorum
+    , protocolParamMaxLovelaceSupply              = Lovelace (fromIntegral sgMaxLovelaceSupply)
+    , protocolInitialUpdateableProtocolParameters = fromLedgerPParams ShelleyBasedEraShelley sgProtocolParams
     }
