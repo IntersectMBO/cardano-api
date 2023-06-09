@@ -264,8 +264,8 @@ module Cardano.Api (
 
     -- ** Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    MultiAssetSupportedInEra(..),
-    OnlyAdaSupportedInEra(..),
+    MultiAssetFeature(..),
+    OnlyAdaFeature(..),
     TxFeesExplicitInEra(..),
     TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
@@ -283,6 +283,7 @@ module Cardano.Api (
 
     -- ** Feature availability functions
     collateralSupportedInEra,
+    onlyAdaOrMultiAssetFeatureInEra,
     multiAssetSupportedInEra,
     txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,

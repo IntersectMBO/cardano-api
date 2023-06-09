@@ -675,7 +675,7 @@ evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
                    => ShelleyEraTxBody ledgerera
                    => LedgerEraConstraints ledgerera
                    => LedgerMultiAssetConstraints ledgerera
-                   => MultiAssetSupportedInEra era
+                   => MultiAssetFeature era
                    -> TxOutValue era
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
@@ -691,7 +691,7 @@ evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
                 => ShelleyEraTxBody ledgerera
                 => LedgerEraConstraints ledgerera
                 => LedgerAdaOnlyConstraints ledgerera
-                => OnlyAdaSupportedInEra era
+                => OnlyAdaFeature era
                 -> TxOutValue era
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
@@ -710,13 +710,13 @@ evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
           => LedgerAdaOnlyConstraints ledgerera
           => LedgerPParamsConstraints ledgerera
           => LedgerTxBodyConstraints ledgerera
-          => OnlyAdaSupportedInEra era
+          => OnlyAdaFeature era
           -> a)
       -> (   LedgerEraConstraints ledgerera
           => LedgerMultiAssetConstraints ledgerera
           => LedgerPParamsConstraints ledgerera
           => LedgerTxBodyConstraints ledgerera
-          => MultiAssetSupportedInEra era
+          => MultiAssetFeature era
           -> a)
       -> a
     withLedgerConstraints ShelleyBasedEraShelley f _ = f AdaOnlyInShelleyEra

@@ -113,8 +113,8 @@ module Cardano.Api.TxBody (
 
     -- * Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    MultiAssetSupportedInEra(..),
-    OnlyAdaSupportedInEra(..),
+    MultiAssetFeature(..),
+    OnlyAdaFeature(..),
     TxFeesExplicitInEra(..),
     TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
@@ -132,6 +132,7 @@ module Cardano.Api.TxBody (
     -- ** Feature availability functions
     collateralSupportedInEra,
     multiAssetSupportedInEra,
+    onlyAdaOrMultiAssetFeatureInEra,
     txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
@@ -894,56 +895,83 @@ collateralSupportedInEra ConwayEra = Just CollateralInConwayEra
 --
 -- The Mary and subsequent eras support multi-asset transactions.
 --
--- The negation of this is 'OnlyAdaSupportedInEra'.
+-- The negation of this is 'OnlyAdaFeature'.
 --
-data MultiAssetSupportedInEra era where
+data MultiAssetFeature era where
 
      -- | Multi-asset transactions are supported in the 'Mary' era.
-     MultiAssetInMaryEra :: MultiAssetSupportedInEra MaryEra
+     MultiAssetInMaryEra :: MultiAssetFeature MaryEra
 
      -- | Multi-asset transactions are supported in the 'Alonzo' era.
-     MultiAssetInAlonzoEra :: MultiAssetSupportedInEra AlonzoEra
+     MultiAssetInAlonzoEra :: MultiAssetFeature AlonzoEra
 
      -- | Multi-asset transactions are supported in the 'Babbage' era.
-     MultiAssetInBabbageEra :: MultiAssetSupportedInEra BabbageEra
+     MultiAssetInBabbageEra :: MultiAssetFeature BabbageEra
 
      -- | Multi-asset transactions are supported in the 'Conway' era.
-     MultiAssetInConwayEra :: MultiAssetSupportedInEra ConwayEra
+     MultiAssetInConwayEra :: MultiAssetFeature ConwayEra
 
-deriving instance Eq   (MultiAssetSupportedInEra era)
-deriving instance Show (MultiAssetSupportedInEra era)
+deriving instance Eq   (MultiAssetFeature era)
+deriving instance Show (MultiAssetFeature era)
 
-instance ToJSON (MultiAssetSupportedInEra era) where
+instance ToJSON (MultiAssetFeature era) where
   toJSON = Aeson.String . Text.pack . show
+
+instance FeatureInEra MultiAssetFeature where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> no
+    AllegraEra  -> no
+    MaryEra     -> yes MultiAssetInMaryEra
+    AlonzoEra   -> yes MultiAssetInAlonzoEra
+    BabbageEra  -> yes MultiAssetInBabbageEra
+    ConwayEra   -> yes MultiAssetInConwayEra
 
 -- | A representation of whether the era supports only ada transactions.
 --
 -- Prior to the Mary era only ada transactions are supported. Multi-assets are
 -- supported from the Mary era onwards.
 --
--- This is the negation of 'MultiAssetSupportedInEra'. It exists since we need
+-- This is the negation of 'MultiAssetFeature'. It exists since we need
 -- evidence to be positive.
 --
-data OnlyAdaSupportedInEra era where
+data OnlyAdaFeature era where
 
-     AdaOnlyInByronEra   :: OnlyAdaSupportedInEra ByronEra
-     AdaOnlyInShelleyEra :: OnlyAdaSupportedInEra ShelleyEra
-     AdaOnlyInAllegraEra :: OnlyAdaSupportedInEra AllegraEra
+     AdaOnlyInByronEra   :: OnlyAdaFeature ByronEra
+     AdaOnlyInShelleyEra :: OnlyAdaFeature ShelleyEra
+     AdaOnlyInAllegraEra :: OnlyAdaFeature AllegraEra
 
-deriving instance Eq   (OnlyAdaSupportedInEra era)
-deriving instance Show (OnlyAdaSupportedInEra era)
+deriving instance Eq   (OnlyAdaFeature era)
+deriving instance Show (OnlyAdaFeature era)
+
+instance FeatureInEra OnlyAdaFeature where
+  featureInEra no yes = \case
+    ByronEra    -> yes AdaOnlyInByronEra
+    ShelleyEra  -> yes AdaOnlyInShelleyEra
+    AllegraEra  -> yes AdaOnlyInAllegraEra
+    MaryEra     -> no
+    AlonzoEra   -> no
+    BabbageEra  -> no
+    ConwayEra   -> no
+
+onlyAdaOrMultiAssetFeatureInEra :: ()
+  => (OnlyAdaFeature era -> a)    -- ^ Value to use if the feature is not supported in the era
+  -> (MultiAssetFeature era -> b) -- ^ Function to get thealue to use if the feature is supported in the era
+  -> CardanoEra era               -- ^ Era to check
+  -> Either a b
+onlyAdaOrMultiAssetFeatureInEra onlyAda multiAsset era =
+  featureInEra
+    (featureInEra
+      (error "IMPOSSIBLE: This is checked by prop_total_onlyAdaOrMultiAssetFeatureInEra")
+      (Left . onlyAda)
+      era)
+    (Right . multiAsset)
+    era
 
 multiAssetSupportedInEra :: CardanoEra era
-                         -> Either (OnlyAdaSupportedInEra era)
-                                   (MultiAssetSupportedInEra era)
-multiAssetSupportedInEra ByronEra   = Left AdaOnlyInByronEra
-multiAssetSupportedInEra ShelleyEra = Left AdaOnlyInShelleyEra
-multiAssetSupportedInEra AllegraEra = Left AdaOnlyInAllegraEra
-multiAssetSupportedInEra MaryEra    = Right MultiAssetInMaryEra
-multiAssetSupportedInEra AlonzoEra  = Right MultiAssetInAlonzoEra
-multiAssetSupportedInEra BabbageEra = Right MultiAssetInBabbageEra
-multiAssetSupportedInEra ConwayEra = Right MultiAssetInConwayEra
-
+                         -> Either (OnlyAdaFeature era)
+                                   (MultiAssetFeature era)
+multiAssetSupportedInEra = onlyAdaOrMultiAssetFeatureInEra id id
 
 -- | A representation of whether the era requires explicitly specified fees in
 -- transactions.
@@ -1319,9 +1347,9 @@ deriving instance Show (TxInsReference build era)
 
 data TxOutValue era where
 
-     TxOutAdaOnly :: OnlyAdaSupportedInEra era -> Lovelace -> TxOutValue era
+     TxOutAdaOnly :: OnlyAdaFeature era -> Lovelace -> TxOutValue era
 
-     TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
+     TxOutValue   :: MultiAssetFeature era -> Value -> TxOutValue era
 
 instance EraCast TxOutValue where
   eraCast toEra v = case v of
@@ -1329,7 +1357,7 @@ instance EraCast TxOutValue where
       case multiAssetSupportedInEra toEra of
         Left adaOnly -> Right $ TxOutAdaOnly adaOnly lovelace
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
-    TxOutValue  (_ :: MultiAssetSupportedInEra fromEra) value  ->
+    TxOutValue  (_ :: MultiAssetFeature fromEra) value  ->
       case multiAssetSupportedInEra toEra of
         Left _adaOnly -> Left $ EraCastError v (cardanoEra @fromEra) toEra
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp value
@@ -1667,7 +1695,7 @@ data TxMintValue build era where
 
      TxMintNone  :: TxMintValue build era
 
-     TxMintValue :: MultiAssetSupportedInEra era
+     TxMintValue :: MultiAssetFeature era
                  -> Value
                  -> BuildTxWith build
                       (Map PolicyId (ScriptWitness WitCtxMint era))
@@ -2800,7 +2828,7 @@ fromAlonzoTxOut :: forall era ledgerera.
                 => L.AlonzoEraTxOut ledgerera
                 => Ledger.EraCrypto ledgerera ~ StandardCrypto
                 => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-                => MultiAssetSupportedInEra era
+                => MultiAssetFeature era
                 -> ScriptDataSupportedInEra era
                 -> Map (L.DataHash StandardCrypto)
                        (L.Data ledgerera)
@@ -2829,7 +2857,7 @@ fromBabbageTxOut
   => ShelleyLedgerEra era ~ ledgerera
   => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-  => MultiAssetSupportedInEra era
+  => MultiAssetFeature era
   -> ScriptDataSupportedInEra era
   -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
   -> Map (L.DataHash StandardCrypto)
