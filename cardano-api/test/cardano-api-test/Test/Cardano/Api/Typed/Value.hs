@@ -15,7 +15,7 @@ import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genV
 
 import           Hedgehog (Property, forAll, property, tripping, (===))
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
@@ -85,9 +85,9 @@ prop_roundtrip_AssetName_JSONKey =
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.Value"
-  [ testPropertyNamed "roundtrip Value JSON"              "roundtrip Value JSON"              prop_roundtrip_Value_JSON
-  , testPropertyNamed "roundtrip Value flatten unflatten" "roundtrip Value flatten unflatten" prop_roundtrip_Value_flatten_unflatten
-  , testPropertyNamed "roundtrip Value unflatten flatten" "roundtrip Value unflatten flatten" prop_roundtrip_Value_unflatten_flatten
-  , testPropertyNamed "roundtrip AssetName JSON"          "roundtrip AssetName JSON"          prop_roundtrip_AssetName_JSON
-  , testPropertyNamed "roundtrip AssetName JSONKey"       "roundtrip AssetName JSONKey"       prop_roundtrip_AssetName_JSONKey
+  [ testProperty "roundtrip Value JSON"              prop_roundtrip_Value_JSON
+  , testProperty "roundtrip Value flatten unflatten" prop_roundtrip_Value_flatten_unflatten
+  , testProperty "roundtrip Value unflatten flatten" prop_roundtrip_Value_unflatten_flatten
+  , testProperty "roundtrip AssetName JSON"          prop_roundtrip_AssetName_JSON
+  , testProperty "roundtrip AssetName JSONKey"       prop_roundtrip_AssetName_JSONKey
   ]

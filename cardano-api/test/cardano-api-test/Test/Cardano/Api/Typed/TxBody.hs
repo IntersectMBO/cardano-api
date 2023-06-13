@@ -17,7 +17,7 @@ import           Test.Cardano.Api.Typed.Orphans ()
 import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -76,5 +76,5 @@ prop_roundtrip_txbodycontent_txouts =
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.TxBody"
-  [ testPropertyNamed "roundtrip txbodycontent txouts" "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
+  [ testProperty "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
   ]

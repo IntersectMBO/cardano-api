@@ -20,7 +20,7 @@ import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -39,6 +39,6 @@ prop_roundtrip_protocol_parameters_JSON = H.property $ do
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.JSON"
-  [ testPropertyNamed "roundtrip praos nonce JSON"         "roundtrip praos nonce JSON"         prop_roundtrip_praos_nonce_JSON
-  , testPropertyNamed "roundtrip protocol parameters JSON" "roundtrip protocol parameters JSON" prop_roundtrip_protocol_parameters_JSON
+  [ testProperty "roundtrip praos nonce JSON"         prop_roundtrip_praos_nonce_JSON
+  , testProperty "roundtrip protocol parameters JSON" prop_roundtrip_protocol_parameters_JSON
   ]

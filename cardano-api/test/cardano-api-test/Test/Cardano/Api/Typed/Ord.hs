@@ -12,7 +12,7 @@ import           Test.Cardano.Api.Metadata (genTxMetadataValue)
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -56,10 +56,10 @@ prop_ord_distributive_ScriptData =
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.Ord"
-  [ testPropertyNamed "ord distributive TxId"         "ord distributive TxId"           prop_ord_distributive_TxId
-  , testPropertyNamed "ord distributive TxIn"         "ord distributive TxIn"           prop_ord_distributive_TxIn
-  , testPropertyNamed "ord distributive Address"      "ord distributive Address"        prop_ord_distributive_Address
-  , testPropertyNamed "ord distributive StakeAddress" "ord distributive StakeAddress"   prop_ord_distributive_StakeAddress
-  , testPropertyNamed "ord distributive TxMetadata"   "ord distributive TxMetadata"     prop_ord_distributive_TxMetadata
-  , testPropertyNamed "ord distributive ScriptData"   "ord distributive ScriptData"     prop_ord_distributive_ScriptData
+  [ testProperty "ord distributive TxId"         prop_ord_distributive_TxId
+  , testProperty "ord distributive TxIn"         prop_ord_distributive_TxIn
+  , testProperty "ord distributive Address"      prop_ord_distributive_Address
+  , testProperty "ord distributive StakeAddress" prop_ord_distributive_StakeAddress
+  , testProperty "ord distributive TxMetadata"   prop_ord_distributive_TxMetadata
+  , testProperty "ord distributive ScriptData"   prop_ord_distributive_ScriptData
   ]

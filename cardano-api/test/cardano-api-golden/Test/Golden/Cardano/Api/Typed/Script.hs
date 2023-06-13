@@ -26,7 +26,7 @@ import           Hedgehog ((===))
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Aeson
 import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -91,55 +91,48 @@ goldenPath = "test/cardano-api-golden/files/golden/Script"
 
 test_golden_SimpleScriptV1_All :: TestTree
 test_golden_SimpleScriptV1_All =
-  testPropertyNamed "golden SimpleScriptV1 All" "golden SimpleScriptV1 All" $
-    goldenTestJsonValuePretty exampleSimpleScriptV1_All
-                              (goldenPath </> "SimpleV1/all")
+  testProperty "golden SimpleScriptV1 All" $
+    goldenTestJsonValuePretty exampleSimpleScriptV1_All (goldenPath </> "SimpleV1/all")
 
 test_golden_SimpleScriptV1_Any :: TestTree
 test_golden_SimpleScriptV1_Any =
-  testPropertyNamed "golden SimpleScriptV1 Any" "golden SimpleScriptV1 Any" $
-    goldenTestJsonValuePretty exampleSimpleScriptV1_Any
-                              (goldenPath </> "SimpleV1/any")
+  testProperty "golden SimpleScriptV1 Any" $
+    goldenTestJsonValuePretty exampleSimpleScriptV1_Any (goldenPath </> "SimpleV1/any")
 
 test_golden_SimpleScriptV1_MofN :: TestTree
 test_golden_SimpleScriptV1_MofN =
-  testPropertyNamed "golden SimpleScriptV1 MofN"    "golden SimpleScriptV1 MofN" $
-    goldenTestJsonValuePretty exampleSimpleScriptV1_MofN
-                              (goldenPath </> "SimpleV1/atleast")
+  testProperty "golden SimpleScriptV1 MofN" $
+    goldenTestJsonValuePretty exampleSimpleScriptV1_MofN (goldenPath </> "SimpleV1/atleast")
 
 test_golden_SimpleScriptV2_All :: TestTree
 test_golden_SimpleScriptV2_All =
-  testPropertyNamed "golden SimpleScriptV2 All" "golden SimpleScriptV2 All" $
-    goldenTestJsonValuePretty exampleSimpleScriptV2_All
-                              (goldenPath </> "SimpleV2/all")
+  testProperty "golden SimpleScriptV2 All" $
+    goldenTestJsonValuePretty exampleSimpleScriptV2_All (goldenPath </> "SimpleV2/all")
 
 test_golden_SimpleScriptV2_Any :: TestTree
 test_golden_SimpleScriptV2_Any =
-  testPropertyNamed "golden SimpleScriptV2 Any" "golden SimpleScriptV2 Any" $
-    goldenTestJsonValuePretty exampleSimpleScriptV2_Any
-                              (goldenPath </> "SimpleV2/any")
+  testProperty "golden SimpleScriptV2 Any" $
+    goldenTestJsonValuePretty exampleSimpleScriptV2_Any (goldenPath </> "SimpleV2/any")
 
 test_golden_SimpleScriptV2_MofN :: TestTree
 test_golden_SimpleScriptV2_MofN =
-  testPropertyNamed "golden SimpleScriptV2 MofN" "golden SimpleScriptV2 MofN" $
-    goldenTestJsonValuePretty exampleSimpleScriptV2_MofN
-                              (goldenPath </> "SimpleV2/atleast")
+  testProperty "golden SimpleScriptV2 MofN" $
+    goldenTestJsonValuePretty exampleSimpleScriptV2_MofN (goldenPath </> "SimpleV2/atleast")
 
 test_roundtrip_SimpleScript_JSON :: TestTree
 test_roundtrip_SimpleScript_JSON =
-  testPropertyNamed "roundtrip SimpleScript JSON" "roundtrip SimpleScript JSON" . H.property $ do
+  testProperty "roundtrip SimpleScript JSON" . H.property $ do
     mss <- H.forAll genSimpleScript
     H.tripping mss encode eitherDecode
 
 test_roundtrip_ScriptData :: TestTree
 test_roundtrip_ScriptData =
-  testPropertyNamed "roundtrip ScriptData" "roundtrip ScriptData" . H.property $ do
+  testProperty "roundtrip ScriptData" . H.property $ do
     sData <- H.forAll genHashableScriptData
     sData === fromAlonzoData (toAlonzoData @L.Alonzo sData)
 
 test_roundtrip_HashableScriptData_JSON :: TestTree
 test_roundtrip_HashableScriptData_JSON =
-  testPropertyNamed "roundtrip HashableScriptData"  "roundtrip HashableScriptData" . H.property $ do
+  testProperty "roundtrip HashableScriptData" . H.property $ do
     sData <- H.forAll genHashableScriptData
     H.tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
-

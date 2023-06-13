@@ -13,7 +13,7 @@ import           Test.Cardano.Api.Typed.Orphans ()
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -96,17 +96,17 @@ roundtrip_verification_key_hash_raw roletoken =
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.RawBytes"
-  [ testPropertyNamed "roundtrip shelley address raw"                      "roundtrip shelley address raw"                       prop_roundtrip_shelley_address_raw
-  , testPropertyNamed "roundtrip byron address raw"                        "roundtrip byron address raw"                         prop_roundtrip_byron_address_raw
-  , testPropertyNamed "roundtrip stake address raw"                        "roundtrip stake address raw"                         prop_roundtrip_stake_address_raw
-  , testPropertyNamed "roundtrip script hash raw"                          "roundtrip script hash raw"                           prop_roundtrip_script_hash_raw
-  , testPropertyNamed "roundtrip verification ByronKey hash raw"           "roundtrip verification ByronKey hash raw"            prop_roundtrip_verification_ByronKey_hash_raw
-  , testPropertyNamed "roundtrip verification PaymentKey hash raw"         "roundtrip verification PaymentKey hash raw"          prop_roundtrip_verification_PaymentKey_hash_raw
-  , testPropertyNamed "roundtrip verification StakeKey hash raw"           "roundtrip verification StakeKey hash raw"            prop_roundtrip_verification_StakeKey_hash_raw
-  , testPropertyNamed "roundtrip verification StakePoolKey hash raw"       "roundtrip verification StakePoolKey hash raw"        prop_roundtrip_verification_StakePoolKey_hash_raw
-  , testPropertyNamed "roundtrip verification GenesisKey hash raw"         "roundtrip verification GenesisKey hash raw"          prop_roundtrip_verification_GenesisKey_hash_raw
-  , testPropertyNamed "roundtrip verification GenesisDelegateKey hash raw" "roundtrip verification GenesisDelegateKey hash raw"  prop_roundtrip_verification_GenesisDelegateKey_hash_raw
-  , testPropertyNamed "roundtrip verification KesKey hash raw"             "roundtrip verification KesKey hash raw"              prop_roundtrip_verification_KesKey_hash_raw
-  , testPropertyNamed "roundtrip verification VrfKey hash raw"             "roundtrip verification VrfKey hash raw"              prop_roundtrip_verification_VrfKey_hash_raw
-  , testPropertyNamed "roundtrip verification GenesisUTxOKey hash raw"     "roundtrip verification GenesisUTxOKey hash raw"      prop_roundtrip_verification_GenesisUTxOKey_hash_raw
+  [ testProperty "roundtrip shelley address raw"                      prop_roundtrip_shelley_address_raw
+  , testProperty "roundtrip byron address raw"                        prop_roundtrip_byron_address_raw
+  , testProperty "roundtrip stake address raw"                        prop_roundtrip_stake_address_raw
+  , testProperty "roundtrip script hash raw"                          prop_roundtrip_script_hash_raw
+  , testProperty "roundtrip verification ByronKey hash raw"           prop_roundtrip_verification_ByronKey_hash_raw
+  , testProperty "roundtrip verification PaymentKey hash raw"         prop_roundtrip_verification_PaymentKey_hash_raw
+  , testProperty "roundtrip verification StakeKey hash raw"           prop_roundtrip_verification_StakeKey_hash_raw
+  , testProperty "roundtrip verification StakePoolKey hash raw"       prop_roundtrip_verification_StakePoolKey_hash_raw
+  , testProperty "roundtrip verification GenesisKey hash raw"         prop_roundtrip_verification_GenesisKey_hash_raw
+  , testProperty "roundtrip verification GenesisDelegateKey hash raw" prop_roundtrip_verification_GenesisDelegateKey_hash_raw
+  , testProperty "roundtrip verification KesKey hash raw"             prop_roundtrip_verification_KesKey_hash_raw
+  , testProperty "roundtrip verification VrfKey hash raw"             prop_roundtrip_verification_VrfKey_hash_raw
+  , testProperty "roundtrip verification GenesisUTxOKey hash raw"     prop_roundtrip_verification_GenesisUTxOKey_hash_raw
   ]

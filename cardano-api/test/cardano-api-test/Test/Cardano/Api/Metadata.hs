@@ -22,7 +22,7 @@ import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 -- ----------------------------------------------------------------------------
 -- Golden / unit tests
@@ -169,17 +169,17 @@ prop_metadata_bytes_chunks =
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Metadata"
-  [ testPropertyNamed "golden 1"                             "golden 1"                             prop_golden_1
-  , testPropertyNamed "golden 2"                             "golden 2"                             prop_golden_2
-  , testPropertyNamed "golden 3"                             "golden 3"                             prop_golden_3
-  , testPropertyNamed "golden 4"                             "golden 4"                             prop_golden_4
-  , testPropertyNamed "golden 5"                             "golden 5"                             prop_golden_5
-  , testPropertyNamed "golden 6"                             "golden 6"                             prop_golden_6
-  , testPropertyNamed "golden 7"                             "golden 7"                             prop_golden_7
-  , testPropertyNamed "golden 8"                             "golden 8"                             prop_golden_8
-  , testPropertyNamed "noschema json roundtrip via metadata" "noschema json roundtrip via metadata" prop_noschema_json_roundtrip_via_metadata
-  , testPropertyNamed "schema json roundtrip via metadata"   "schema json roundtrip via metadata"   prop_schema_json_roundtrip_via_metadata
-  , testPropertyNamed "metadata roundtrip via schema json"   "metadata roundtrip via schema json"   prop_metadata_roundtrip_via_schema_json
-  , testPropertyNamed "valid & rountrip text chunks"         "valid & roundtrip text chunks"        prop_metadata_text_chunks
-  , testPropertyNamed "valid & rountrip bytes chunks"        "valid & roundtrip bytes chunks"       prop_metadata_bytes_chunks
+  [ testProperty "golden 1"                             prop_golden_1
+  , testProperty "golden 2"                             prop_golden_2
+  , testProperty "golden 3"                             prop_golden_3
+  , testProperty "golden 4"                             prop_golden_4
+  , testProperty "golden 5"                             prop_golden_5
+  , testProperty "golden 6"                             prop_golden_6
+  , testProperty "golden 7"                             prop_golden_7
+  , testProperty "golden 8"                             prop_golden_8
+  , testProperty "noschema json roundtrip via metadata" prop_noschema_json_roundtrip_via_metadata
+  , testProperty "schema json roundtrip via metadata"   prop_schema_json_roundtrip_via_metadata
+  , testProperty "metadata roundtrip via schema json"   prop_metadata_roundtrip_via_schema_json
+  , testProperty "valid & rountrip text chunks"         prop_metadata_text_chunks
+  , testProperty "valid & rountrip bytes chunks"        prop_metadata_bytes_chunks
   ]
