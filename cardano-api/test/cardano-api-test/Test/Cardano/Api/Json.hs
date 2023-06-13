@@ -18,7 +18,7 @@ import           Test.Gen.Cardano.Api.Typed
 import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -87,12 +87,12 @@ prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Json"
-  [ testPropertyNamed "json roundtrip alonzo genesis"           "json roundtrip alonzo genesis"           prop_json_roundtrip_alonzo_genesis
-  , testPropertyNamed "json roundtrip utxo"                     "json roundtrip utxo"                     prop_json_roundtrip_utxo
-  , testPropertyNamed "json roundtrip reference scripts"        "json roundtrip reference scripts"        prop_json_roundtrip_reference_scripts
-  , testPropertyNamed "json roundtrip txoutvalue"               "json roundtrip txoutvalue"               prop_json_roundtrip_txoutvalue
-  , testPropertyNamed "json roundtrip txout tx context"         "json roundtrip txout tx context"         prop_json_roundtrip_txout_tx_context
-  , testPropertyNamed "json roundtrip txout utxo context"       "json roundtrip txout utxo context"       prop_json_roundtrip_txout_utxo_context
-  , testPropertyNamed "json roundtrip eraInMode"                "json roundtrip eraInMode"                prop_json_roundtrip_eraInMode
-  , testPropertyNamed "json roundtrip scriptdata detailed json" "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
+  [ testProperty "json roundtrip alonzo genesis"           prop_json_roundtrip_alonzo_genesis
+  , testProperty "json roundtrip utxo"                     prop_json_roundtrip_utxo
+  , testProperty "json roundtrip reference scripts"        prop_json_roundtrip_reference_scripts
+  , testProperty "json roundtrip txoutvalue"               prop_json_roundtrip_txoutvalue
+  , testProperty "json roundtrip txout tx context"         prop_json_roundtrip_txout_tx_context
+  , testProperty "json roundtrip txout utxo context"       prop_json_roundtrip_txout_utxo_context
+  , testProperty "json roundtrip eraInMode"                prop_json_roundtrip_eraInMode
+  , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
   ]

@@ -13,7 +13,7 @@ import           Hedgehog (Property, forAll, property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 --------------------------------------------------------------------------------
 -- Bounded instances
@@ -48,8 +48,8 @@ prop_toJSON_CardanoMatchesShelley = property $ do
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Json"
-  [ testPropertyNamed "maxBound cardano matches shelley"           "maxBound cardano matches shelley"           prop_maxBound_CardanoMatchesShelley
-  , testPropertyNamed "roundtrip JSON shelley"                     "roundtrip JSON shelley"                     prop_roundtrip_JSON_Shelley
-  , testPropertyNamed "roundtrip JSON cardano"                     "roundtrip JSON cardano"                     prop_roundtrip_JSON_Cardano
-  , testPropertyNamed "toJSON cardano matches shelley"             "toJSON cardano matches shelley"             prop_toJSON_CardanoMatchesShelley
+  [ testProperty "maxBound cardano matches shelley" prop_maxBound_CardanoMatchesShelley
+  , testProperty "roundtrip JSON shelley"           prop_roundtrip_JSON_Shelley
+  , testProperty "roundtrip JSON cardano"           prop_roundtrip_JSON_Cardano
+  , testProperty "toJSON cardano matches shelley"   prop_toJSON_CardanoMatchesShelley
   ]
