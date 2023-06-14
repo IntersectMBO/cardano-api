@@ -32,8 +32,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
 
 import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistMaybe, left, onLeft,
-                   onNothing)
+import           Control.Monad.Trans.Except.Extra (hoistMaybe, left, onLeft, onNothing)
 import           Data.Function ((&))
 import           Data.Map (Map)
 import           Data.Maybe (mapMaybe)
@@ -96,15 +95,15 @@ queryStateForBalancedTx localNodeConnInfo era allTxIns certs = runExceptT $ do
         QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakeDelegDeposits stakeCreds
 
   -- Query execution
-  utxo <- ExceptT $ executeQueryAnyMode era localNodeConnInfo utxoQuery
-  pparams <- ExceptT $ executeQueryAnyMode era localNodeConnInfo pparamsQuery
-  eraHistory <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
-  systemStart <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing systemStartQuery
-  stakePools <- ExceptT $ executeQueryAnyMode era localNodeConnInfo stakePoolsQuery
+  utxo <- lift (executeQueryAnyMode era localNodeConnInfo utxoQuery) & onLeft left
+  pparams <- lift (executeQueryAnyMode era localNodeConnInfo pparamsQuery) & onLeft left
+  eraHistory <- lift (queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery) & onLeft (left . AcqFailure)
+  systemStart <- lift (queryNodeLocalState localNodeConnInfo Nothing systemStartQuery) & onLeft (left . AcqFailure)
+  stakePools <- lift (executeQueryAnyMode era localNodeConnInfo stakePoolsQuery) & onLeft left
   stakeDelegDeposits <-
     if null stakeCreds
     then pure mempty
-    else ExceptT $ executeQueryAnyMode era localNodeConnInfo stakeDelegDepositsQuery
+    else lift (executeQueryAnyMode era localNodeConnInfo stakeDelegDepositsQuery) & onLeft left
 
   return (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
