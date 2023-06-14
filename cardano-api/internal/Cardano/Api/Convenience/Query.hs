@@ -26,6 +26,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import           Cardano.Api.Query.Expr
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
@@ -68,72 +69,58 @@ renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionErro
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
-queryStateForBalancedTx
-  :: LocalNodeConnectInfo CardanoMode
-  -> CardanoEra era
+queryStateForBalancedTx :: ()
+  => CardanoEra era
   -> [TxIn]
   -> [Certificate]
-  -> IO (Either QueryConvenienceError ( UTxO era
-                                      , ProtocolParameters
-                                      , EraHistory CardanoMode
-                                      , SystemStart
-                                      , Set PoolId
-                                      , Map StakeCredential Lovelace
-                                      )
-        )
-queryStateForBalancedTx localNodeConnInfo era allTxIns certs = runExceptT $ do
-  lift
-    ( executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
-        qSbe <- pure (getSbe $ cardanoEraStyle era)
-          & onLeft left
+  -> LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO
+      ( Either
+          QueryConvenienceError
+          ( UTxO era
+          , ProtocolParameters
+          , EraHistory CardanoMode
+          , SystemStart
+          , Set PoolId
+          , Map StakeCredential Lovelace))
+queryStateForBalancedTx era allTxIns certs = runExceptT $ do
+  qSbe <- pure (getSbe $ cardanoEraStyle era)
+    & onLeft left
 
-        qeInMode <- pure (toEraInMode era CardanoMode)
-          & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
+  qeInMode <- pure (toEraInMode era CardanoMode)
+    & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
 
-        -- Queries
-        let utxoQuery = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
-                          $ QueryUTxO (QueryUTxOByTxIn (Set.fromList allTxIns))
-            pparamsQuery = QueryInEra qeInMode
-                              $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
-            eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
-            systemStartQuery = QuerySystemStart
-            stakePoolsQuery = QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakePools
-            stakeCreds = Set.fromList $ flip mapMaybe certs $ \case
-              StakeAddressDeregistrationCertificate cred -> Just cred
-              _ -> Nothing
-            stakeDelegDepositsQuery =
-              QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakeDelegDeposits stakeCreds
+  let stakeCreds = Set.fromList $ flip mapMaybe certs $ \case
+        StakeAddressDeregistrationCertificate cred -> Just cred
+        _ -> Nothing
 
-        -- Query execution
-        utxo <- lift (queryExpr utxoQuery)
+  -- Query execution
+  utxo <- lift (queryUtxo qeInMode qSbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
+    & onLeft (left . QceUnsupportedNtcVersion)
+    & onLeft (left . QueryEraMismatch)
+
+  pparams <- lift (queryPparams qeInMode qSbe)
+    & onLeft (left . QceUnsupportedNtcVersion)
+    & onLeft (left . QueryEraMismatch)
+
+  eraHistory <- lift queryEraHistory
+    & onLeft (left . QceUnsupportedNtcVersion)
+
+  systemStart <- lift querySystemStart
+    & onLeft (left . QceUnsupportedNtcVersion)
+
+  stakePools <- lift (queryStakePools qeInMode qSbe)
+    & onLeft (left . QceUnsupportedNtcVersion)
+    & onLeft (left . QueryEraMismatch)
+
+  stakeDelegDeposits <-
+    if null stakeCreds
+      then pure mempty
+      else do
+        lift (queryStakeDelegDeposits qeInMode qSbe stakeCreds)
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch)
 
-        pparams <- lift (queryExpr pparamsQuery)
-          & onLeft (left . QceUnsupportedNtcVersion)
-          & onLeft (left . QueryEraMismatch)
-
-        eraHistory <- lift (queryExpr eraHistoryQuery)
-          & onLeft (left . QceUnsupportedNtcVersion)
-
-        systemStart <- lift (queryExpr systemStartQuery)
-          & onLeft (left . QceUnsupportedNtcVersion)
-
-        stakePools <- lift (queryExpr stakePoolsQuery)
-          & onLeft (left . QceUnsupportedNtcVersion)
-          & onLeft (left . QueryEraMismatch)
-
-        stakeDelegDeposits <-
-          if null stakeCreds
-            then pure mempty
-            else do
-              lift (queryExpr stakeDelegDepositsQuery)
-                & onLeft (left . QceUnsupportedNtcVersion)
-                & onLeft (left . QueryEraMismatch)
-
-        pure (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
-    ) & onLeft @AcquiringFailure (left . AcqFailure)
-      & onLeft @QueryConvenienceError left
+  pure (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
 -- | Query the node to determine which era it is in.
 determineEra
