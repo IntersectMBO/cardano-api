@@ -32,8 +32,8 @@ import           Cardano.Api.Value
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 
 import           Control.Monad.Trans (MonadTrans (..))
-import           Control.Monad.Trans.Except (ExceptT (..), except, runExceptT)
-import           Control.Monad.Trans.Except.Extra (hoistMaybe, left, onLeft, onNothing)
+import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import           Control.Monad.Trans.Except.Extra (left, onLeft, onNothing)
 import           Data.Function ((&))
 import           Data.Map (Map)
 import           Data.Maybe (mapMaybe)
@@ -81,10 +81,11 @@ queryStateForBalancedTx
                                       )
         )
 queryStateForBalancedTx localNodeConnInfo era allTxIns certs = runExceptT $ do
-  qSbe <- except $ getSbe $ cardanoEraStyle era
+  qSbe <- pure (getSbe $ cardanoEraStyle era)
+    & onLeft left
 
-  qeInMode <- toEraInMode era CardanoMode
-    & hoistMaybe (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era))
+  qeInMode <- pure (toEraInMode era CardanoMode)
+    & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
 
   -- Queries
   let utxoQuery = QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
