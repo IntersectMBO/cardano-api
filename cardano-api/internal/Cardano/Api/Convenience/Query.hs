@@ -63,9 +63,8 @@ renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
 queryStateForBalancedTx
-  :: SocketPath
+  :: LocalNodeConnectInfo CardanoMode
   -> CardanoEra era
-  -> NetworkId
   -> [TxIn]
   -> [Certificate]
   -> IO (Either QueryConvenienceError ( UTxO era
@@ -76,10 +75,7 @@ queryStateForBalancedTx
                                       , Map StakeCredential Lovelace
                                       )
         )
-queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ do
-  let cModeParams = CardanoModeParams $ EpochSlots 21600
-      localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId socketPath
-
+queryStateForBalancedTx localNodeConnInfo era allTxIns certs = runExceptT $ do
   qSbe <- except $ getSbe $ cardanoEraStyle era
 
   qeInMode <- toEraInMode era CardanoMode
@@ -100,15 +96,15 @@ queryStateForBalancedTx socketPath era networkId allTxIns certs = runExceptT $ d
         QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakeDelegDeposits stakeCreds
 
   -- Query execution
-  utxo <- ExceptT $ executeQueryCardanoMode socketPath era networkId utxoQuery
-  pparams <- ExceptT $ executeQueryCardanoMode socketPath era networkId pparamsQuery
+  utxo <- ExceptT $ executeQueryAnyMode era localNodeConnInfo utxoQuery
+  pparams <- ExceptT $ executeQueryAnyMode era localNodeConnInfo pparamsQuery
   eraHistory <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
   systemStart <- firstExceptT AcqFailure $ ExceptT $ queryNodeLocalState localNodeConnInfo Nothing systemStartQuery
-  stakePools <- ExceptT $ executeQueryCardanoMode socketPath era networkId stakePoolsQuery
+  stakePools <- ExceptT $ executeQueryAnyMode era localNodeConnInfo stakePoolsQuery
   stakeDelegDeposits <-
     if null stakeCreds
     then pure mempty
-    else ExceptT $ executeQueryCardanoMode socketPath era networkId stakeDelegDepositsQuery
+    else ExceptT $ executeQueryAnyMode era localNodeConnInfo stakeDelegDepositsQuery
 
   return (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
