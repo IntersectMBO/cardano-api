@@ -87,6 +87,7 @@ library internal
                         Cardano.Api.Protocol
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
+                        Cardano.Api.Query.Expr
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
                         Cardano.Api.SerialiseBech32
