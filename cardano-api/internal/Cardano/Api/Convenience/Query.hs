@@ -20,6 +20,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eras
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
@@ -46,6 +47,7 @@ data QueryConvenienceError
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
   | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
+  | QceUnsupportedNtcVersionError !UnsupportedNtcVersionError
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
 renderQueryConvenienceError (AcqFailure e) =
@@ -59,6 +61,10 @@ renderQueryConvenienceError ByronEraNotSupported =
 renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
   "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
   " Era: " <> textShow anyCEra
+renderQueryConvenienceError (QceUnsupportedNtcVersionError (UnsupportedNtcVersionError minNtcVersion ntcVersion)) =
+  "Unsupported feature for the node-to-client protocol version.\n" <>
+  "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
+  "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
@@ -164,6 +170,7 @@ executeQueryAnyMode era localNodeConnInfo q = runExceptT $ do
   case eraInMode of
     ByronEraInByronMode -> left ByronEraNotSupported
     _ ->
-      lift (queryNodeLocalState localNodeConnInfo Nothing q)
+      lift (executeLocalStateQueryExpr localNodeConnInfo Nothing (queryExpr q))
         & onLeft (left . AcqFailure)
+        & onLeft (left . QceUnsupportedNtcVersionError)
         & onLeft (left . QueryEraMismatch)
