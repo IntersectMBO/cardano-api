@@ -6,14 +6,11 @@ module Cardano.Api.IPC.Monad
   ( LocalStateQueryExpr
   , executeLocalStateQueryExpr
   , queryExpr
-  , determineEraExpr
   ) where
 
 import           Cardano.Api.Block
-import           Cardano.Api.Eras
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Version
-import           Cardano.Api.Modes
 
 import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
@@ -23,8 +20,6 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Cont
-import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-
 
 {- HLINT ignore "Use const" -}
 {- HLINT ignore "Use let" -}
@@ -109,13 +104,3 @@ queryExpr q = do
           { Net.Query.recvMsgResult = f
           }
     else pure (Left (UnsupportedNtcVersionError minNtcVersion ntcVersion))
-
--- | A monad expression that determines what era the node is in.
-determineEraExpr ::
-     ConsensusModeParams mode
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
-determineEraExpr cModeParams = runExceptT $
-  case consensusModeOnly cModeParams of
-    ByronMode -> return $ AnyCardanoEra ByronEra
-    ShelleyMode -> return $ AnyCardanoEra ShelleyEra
-    CardanoMode -> ExceptT $ queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
