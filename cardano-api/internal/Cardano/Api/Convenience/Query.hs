@@ -20,6 +20,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eras
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
@@ -45,6 +46,7 @@ data QueryConvenienceError
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
   | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
+  | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
 renderQueryConvenienceError (AcqFailure e) =
@@ -58,6 +60,10 @@ renderQueryConvenienceError ByronEraNotSupported =
 renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
   "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
   " Era: " <> textShow anyCEra
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionError minNtcVersion ntcVersion)) =
+  "Unsupported feature for the node-to-client protocol version.\n" <>
+  "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
+  "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
@@ -95,15 +101,37 @@ queryStateForBalancedTx localNodeConnInfo era allTxIns certs = runExceptT $ do
         QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakeDelegDeposits stakeCreds
 
   -- Query execution
-  utxo <- lift (executeQueryAnyMode era localNodeConnInfo utxoQuery) & onLeft left
-  pparams <- lift (executeQueryAnyMode era localNodeConnInfo pparamsQuery) & onLeft left
-  eraHistory <- lift (queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery) & onLeft (left . AcqFailure)
-  systemStart <- lift (queryNodeLocalState localNodeConnInfo Nothing systemStartQuery) & onLeft (left . AcqFailure)
-  stakePools <- lift (executeQueryAnyMode era localNodeConnInfo stakePoolsQuery) & onLeft left
+  utxo <- lift (executeLocalStateQueryExpr localNodeConnInfo Nothing (queryExpr utxoQuery))
+    & onLeft (left . AcqFailure)
+    & onLeft (left . QceUnsupportedNtcVersion)
+    & onLeft (left . QueryEraMismatch)
+
+  pparams <- lift (executeLocalStateQueryExpr localNodeConnInfo Nothing (queryExpr pparamsQuery))
+    & onLeft (left . AcqFailure)
+    & onLeft (left . QceUnsupportedNtcVersion)
+    & onLeft (left . QueryEraMismatch)
+
+  eraHistory <- lift (executeLocalStateQueryExpr localNodeConnInfo Nothing (queryExpr eraHistoryQuery))
+    & onLeft (left . AcqFailure)
+    & onLeft (left . QceUnsupportedNtcVersion)
+
+  systemStart <- lift (executeLocalStateQueryExpr localNodeConnInfo Nothing (queryExpr systemStartQuery))
+    & onLeft (left . AcqFailure)
+    & onLeft (left . QceUnsupportedNtcVersion)
+
+  stakePools <- lift (executeLocalStateQueryExpr localNodeConnInfo Nothing (queryExpr stakePoolsQuery))
+    & onLeft (left . AcqFailure)
+    & onLeft (left . QceUnsupportedNtcVersion)
+    & onLeft (left . QueryEraMismatch)
+
   stakeDelegDeposits <-
     if null stakeCreds
-    then pure mempty
-    else lift (executeQueryAnyMode era localNodeConnInfo stakeDelegDepositsQuery) & onLeft left
+      then pure mempty
+      else do
+        lift (executeLocalStateQueryExpr localNodeConnInfo Nothing (queryExpr stakeDelegDepositsQuery))
+          & onLeft (left . AcqFailure)
+          & onLeft (left . QceUnsupportedNtcVersion)
+          & onLeft (left . QueryEraMismatch)
 
   return (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
