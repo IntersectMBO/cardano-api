@@ -856,6 +856,7 @@ module Cardano.Api (
     queryCurrentEpochState,
     queryCurrentEra,
     queryDebugLedgerState,
+    queryEpoch,
     queryEraHistory,
     queryGenesisParameters,
     queryPoolDistribution,
