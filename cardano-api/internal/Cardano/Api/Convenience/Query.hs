@@ -98,7 +98,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
-  pparams <- lift (queryPparams qeInMode qSbe)
+  pparams <- lift (queryProtocolParameters qeInMode qSbe)
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
