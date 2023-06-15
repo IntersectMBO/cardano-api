@@ -1,5 +1,25 @@
 # Changelog for cardano-api
 
+## 8.5.0.0
+
+- New queries:
+  * `queryCurrentEpochState`
+  * `queryDebugLedgerState`
+  * `queryGenesisParameters`
+  * `queryPoolDistribution`
+  * `queryPoolState`
+  * `queryProtocolParameters`
+  * `queryProtocolParametersUpdate`
+  * `queryProtocolState`
+  * `queryStakeAddresses`
+  * `queryStakeDistribution`
+  * `queryStakePoolParameters`
+  * `queryStakeSnapshot`
+  Deprecate:
+  * `queryPparams`
+  (feature; breaking)
+  [PR 53](https://github.com/input-output-hk/cardano-api/pull/53)
+
 ## 8.4.0.0
 
 - Simplify `queryStateForBalancedTx` such that:
