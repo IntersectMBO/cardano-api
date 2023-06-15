@@ -38,37 +38,40 @@ This part requires user to have the following tools installed on your local mach
 
 In order to generate changelog files in markdown format use the following steps:
 
-1. Clone the `cardano-updates` repo (necessary only when doing it for the first time):
+1. *When doing this guide for the first time:* Clone the `cardano-dev` repo at the same level as `cardano-api`:
     ```bash
-    git clone https://github.com/input-output-hk/cardano-updates
-    cd cardano-updates
+    git clone https://github.com/input-output-hk/cardano-dev
+    ```
+    Check that you're authenticated to GitHub using GitHub CLI:
+    ```bash
+    gh auth status
+    ```
+    If you're not authenticated, follow the steps shown on the command output.
+
+1. Create a new release branch, for example:
+    ```bash
+    git checkout -b release/cardano-api-8.3.0.0.x
     ```
 
-1. Download all PRs from the `cardano-api` repo.
+1. Download all PRs data from the `cardano-api` repo.
     This will take some time if the number of all PRs is large.
     ```bash
-    ./scripts/download-prs.sh input-output-hk/cardano-api
+    ../cardano-dev/scripts/download-prs.sh input-output-hk/cardano-api
     ```
-    This script extracts changelog entries from PR descriptions.
-    It would be advisable to make changelog lines corrections in the descriptions of GitHub PRs itself, as this would let us use GitHub PRs as a single source of truth for the changelog generation process.
-    This also means, that after making change to PR description, the process of generating changelogs needs to be restarted from this download step.
+    This script extracts changelog entries from downloaded PR descriptions.
+    It would be advisable to make changelog entries corrections in the descriptions of GitHub PRs itself, as this would let us use GitHub PRs as a single source of truth for the changelog generation process.
+    This also means, that after making change to a changelog in a PR description, the whole procedure needs to be restarted from this download step.
 
-1. Process just downloaded PRs data by splitting it into separate data files related to separate repository components.
-    Provide the date range you're interested in - only PRs from that period will be processed.
+    The downloaded changelog files can be inspected in `~/.cache/cardano-updates/` directory.
+
+1. Generate markdown changelogs from yaml detail file:
     ```bash
-    ./scripts/distribute-merged-prs.sh input-output-hk/cardano-api . 2023-01-01 2023-06-01
+    ../cardano-dev/scripts/generate-pr-changelogs.sh input-output-hk/cardano-api 89fd11781d8ba19ce50f516ecef30607d2e704e8..HEAD
     ```
-    For each repository component (cabal packages, nix configuration) a file with PRs details (in yaml format) will be generated in `gen/input-output-hk/cardano-api/detail` directory.
-    Those data files can be modified before next step to alter the information being put into final changelogs in markdown format.
-    For example, to exclude a PR from the changelog, set its `included` field value to `false`.
+    The generated changelog will be printed to standard output.
 
-1. Generate markdown changelogs from yaml details files:
-    ```bash
-    ./scripts/summarise-merged-prs.sh input-output-hk/cardano-api .
-    ```
-    The output files will be placed in the `gen/input-output-hk/cardano-api/summary` subdirectory.
-
-1. Add generated changelogs to `CHANGELOG.md` files in respective cabal packages in `cardano-api` repository, and create a PR from a new branch back to main.
+1. Add generated changelog in the previous step to `CHANGELOG.md` file in respective cabal package in `cardano-api` repository, near the top of the file, adding a new section for the version being prepared, for example: `## 8.3.0.0`.
+    After doing that, create a PR from a new branch back to main.
     Make sure that the release PR contains:
     * updated changelogs
     * bumped version fields in cabal files
@@ -77,11 +80,11 @@ In order to generate changelog files in markdown format use the following steps:
 **After merging of the release PR** into the `main` or release branch, prepare the tag.
 Firstly, make sure that:
 1. Your `HEAD` is on the commit which you are planning to make a release from.
-1. Your `HEAD` is included in `main` or `release/packagename-version` branch history on the origin remote.
+1. Your `HEAD` is included in `main` or in `release/packagename-version.x` branch history on the origin remote.
 
 Then you can use the following script to prepare the tag:
 ```bash
-./scripts/tag.sh
+../cardano-dev/scripts/tag.sh
 ```
 This script will extract the version numbers from cabal files, create the tag and **push it to the `origin` remote**.
 Please note that the tagging process will fail if:
@@ -89,9 +92,9 @@ Please note that the tagging process will fail if:
 1. The `packagename/CHANGELOG.md` does not contain entry for the new version.
 
 ### Releasing to `cardano-haskell-packages`
-After the `cardano-api` version gets tagged, it needs to be pushed into .
-Detailed description of the release process is in [CHaP repository README](https://github.com/input-output-hk/cardano-haskell-packages#how-to-add-a-new-package-version).
-Briefly, the process requires executing of the following steps:
+After the `cardano-api` version gets tagged, it needs to be pushed into `cardano-haskell-packages` (aka **CHaP**).
+Detailed description of the release process is described in [CHaP repository README](https://github.com/input-output-hk/cardano-haskell-packages#how-to-add-a-new-package-version).
+Briefly speaking, it requires executing of the following steps:
 
 1. Clone `cardano-haskell-packages`:
     ```bash
@@ -103,14 +106,15 @@ Briefly, the process requires executing of the following steps:
     ```bash
     ./scripts/add-from-github.sh https://github.com/input-output-hk/cardano-api <commit-hash> cardano-api cardano-api-gen
     ```
-    List all packages names for release in the script invocation, after the commit hash.
+    List all packages names for release in the script invocation, after the commit hash like in the example above.
     The script will create a separate commit for each package.
 
 1. Push your `HEAD` to a new branch, and create a PR in CHaP.
+    An example release PR which you might want to use as a reference: https://github.com/input-output-hk/cardano-haskell-packages/pull/345 .
 
 1. Merge the PR - you don't need additional approvals for that if you belong to the correct GitHub access group.
 
-After package gets released, you can check the released version at: https://input-output-hk.github.io/cardano-haskell-packages/all-package-versions/
+After package gets released, you can check the released version at: https://input-output-hk.github.io/cardano-haskell-packages/all-package-versions/ and update the version in the dependant packages, in their cabal files, for example: `cardano-api ^>= 8.3`
 
 
 ## References
