@@ -34,6 +34,9 @@ module Cardano.Api (
     cardanoEraStyle,
     shelleyBasedToCardanoEra,
 
+    -- * Assertions on era
+    requireShelleyBasedEra,
+
     -- ** IO
     File(..),
     FileDirection(..),
