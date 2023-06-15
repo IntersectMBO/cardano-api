@@ -13,7 +13,7 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Test.Hedgehog.Roundtrip.CBOR (trippingCbor)
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -24,5 +24,5 @@ prop_roundtrip_byron_key_CBOR = H.property $ do
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.KeysByron"
-  [ testPropertyNamed "roundtrip byron key CBOR" "roundtrip byron key CBOR" prop_roundtrip_byron_key_CBOR
+  [ testProperty "roundtrip byron key CBOR" prop_roundtrip_byron_key_CBOR
   ]

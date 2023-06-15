@@ -23,7 +23,7 @@ import qualified Hedgehog as H
 import           Hedgehog.Gen.QuickCheck (arbitrary)
 import           Hedgehog.Internal.Property
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at
@@ -66,7 +66,7 @@ prop_roundtrip_scriptdata_plutusdata = H.property $ do
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Ledger"
-  [ testPropertyNamed "roundtrip Address CBOR" "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
-  , testPropertyNamed "roundtrip ScriptData" "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
-  , testPropertyNamed "script data bytes preserved" "script data bytes preserved" prop_original_scriptdata_bytes_preserved
+  [ testProperty "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
+  , testProperty "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
+  , testProperty "script data bytes preserved" prop_original_scriptdata_bytes_preserved
   ]

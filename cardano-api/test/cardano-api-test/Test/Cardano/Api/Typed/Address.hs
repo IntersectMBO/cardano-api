@@ -15,7 +15,7 @@ import           Test.Cardano.Api.Typed.Orphans ()
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testPropertyNamed)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -58,8 +58,8 @@ prop_roundtrip_shelley_address_JSON =
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.Address"
-  [ testPropertyNamed "roundtrip shelley address" "roundtrip shelley address" prop_roundtrip_shelley_address
-  , testPropertyNamed "roundtrip byron address"   "roundtrip byron address" prop_roundtrip_byron_address
-  , testPropertyNamed "roundtrip byron address JSON"   "roundtrip byron address JSON" prop_roundtrip_byron_address_JSON
-  , testPropertyNamed "roundtrip shelley address JSON"   "roundtrip shelley address JSON" prop_roundtrip_shelley_address_JSON
+  [ testProperty "roundtrip shelley address"      prop_roundtrip_shelley_address
+  , testProperty "roundtrip byron address"        prop_roundtrip_byron_address
+  , testProperty "roundtrip byron address JSON"   prop_roundtrip_byron_address_JSON
+  , testProperty "roundtrip shelley address JSON" prop_roundtrip_shelley_address_JSON
   ]
