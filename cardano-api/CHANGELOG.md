@@ -1,5 +1,13 @@
 # Changelog for cardano-api
 
+## 8.4.0.0
+
+- Simplify `queryStateForBalancedTx` such that:
+  * It no longer invokes `executeQueryCardanoMode` `queryNodeLocalState, allowing it to run over a single connection
+  * It no longer takes `socketPath` and `networkId` parameters
+  (feature; breaking)
+  [PR 47](https://github.com/input-output-hk/cardano-api/pull/47)
+
 ## 8.3.0.0
 
 - This module exports our query API as functions.  It is intended to replace our query API as the public API.
