@@ -82,8 +82,8 @@ queryStateForBalancedTx :: ()
           , Set PoolId
           , Map StakeCredential Lovelace))
 queryStateForBalancedTx era allTxIns certs = runExceptT $ do
-  qSbe <- pure (getSbe $ cardanoEraStyle era)
-    & onLeft left
+  sbe <- requireShelleyBasedEra era
+    & onNothing (left ByronEraNotSupported)
 
   qeInMode <- pure (toEraInMode era CardanoMode)
     & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
@@ -93,11 +93,11 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
         _ -> Nothing
 
   -- Query execution
-  utxo <- lift (queryUtxo qeInMode qSbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
+  utxo <- lift (queryUtxo qeInMode sbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
-  pparams <- lift (queryProtocolParameters qeInMode qSbe)
+  pparams <- lift (queryProtocolParameters qeInMode sbe)
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
@@ -107,7 +107,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   systemStart <- lift querySystemStart
     & onLeft (left . QceUnsupportedNtcVersion)
 
-  stakePools <- lift (queryStakePools qeInMode qSbe)
+  stakePools <- lift (queryStakePools qeInMode sbe)
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
@@ -115,7 +115,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     if null stakeCreds
       then pure mempty
       else do
-        lift (queryStakeDelegDeposits qeInMode qSbe stakeCreds)
+        lift (queryStakeDelegDeposits qeInMode sbe stakeCreds)
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch)
 
@@ -133,10 +133,6 @@ determineEra cModeParams localNodeConnInfo =
     CardanoMode ->
       queryNodeLocalState localNodeConnInfo Nothing
         $ QueryCurrentEra CardanoModeIsMultiEra
-
-getSbe :: CardanoEraStyle era -> Either QueryConvenienceError (ShelleyBasedEra era)
-getSbe LegacyByronEra = Left ByronEraNotSupported
-getSbe (ShelleyBasedEra sbe) = return sbe
 
 -- | Execute a query against the local node. The local
 -- node must be in CardanoMode.

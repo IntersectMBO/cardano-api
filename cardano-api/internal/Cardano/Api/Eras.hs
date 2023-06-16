@@ -49,6 +49,9 @@ module Cardano.Api.Eras
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra,
            AsByron,    AsShelley,    AsAllegra,    AsMary,    AsAlonzo,    AsBabbage, AsConway)
+
+    -- * Assertions on era
+  , requireShelleyBasedEra
   ) where
 
 import           Cardano.Api.HasTypeProxy
@@ -523,3 +526,12 @@ eraProtVerLow era =
     ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
     ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
     ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
+
+requireShelleyBasedEra :: ()
+  => Applicative m
+  => CardanoEra era
+  -> m (Maybe (ShelleyBasedEra era))
+requireShelleyBasedEra era =
+  case cardanoEraStyle era of
+    LegacyByronEra -> pure Nothing
+    ShelleyBasedEra sbe -> pure (Just sbe)
