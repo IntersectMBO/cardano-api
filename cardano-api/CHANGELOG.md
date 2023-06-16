@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.5.2.0
+
+- New `requireShelleyBasedEra` function
+  (feature; compatible)
+  [PR 58](https://github.com/input-output-hk/cardano-api/pull/58)
+
 ## 8.5.1.0
 
 - New `queryEpoch` function
