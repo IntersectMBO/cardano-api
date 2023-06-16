@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.5.1.0
+
+- New `queryEpoch` function
+  (feature; compatible)
+  [PR 56](https://github.com/input-output-hk/cardano-api/pull/56)
+
 ## 8.5.0.0
 
 - New queries:
