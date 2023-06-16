@@ -48,27 +48,28 @@ In order to generate changelog files in markdown format use the following steps:
     ```
     If you're not authenticated, follow the steps shown on the command output.
 
-1. Create a new release branch, for example:
+1. Create a new branch, for example:
     ```bash
-    git checkout -b release/cardano-api-8.3.0.0.x
+    git checkout -b <github-user-name>/new-version-cardano-api-8.3.0.0
     ```
+    It does not matter much, as after the merge to `main` branch, this branch will be deleted.
 
 1. Download all PRs data from the `cardano-api` repo.
     This will take some time if the number of all PRs is large.
     ```bash
     ../cardano-dev/scripts/download-prs.sh input-output-hk/cardano-api
     ```
-    This script extracts changelog entries from downloaded PR descriptions.
     It would be advisable to make changelog entries corrections in the descriptions of GitHub PRs itself, as this would let us use GitHub PRs as a single source of truth for the changelog generation process.
-    This also means, that after making change to a changelog in a PR description, the whole procedure needs to be restarted from this download step.
+    This also means, that after making a change to a changelog in a PR description, the whole procedure needs to be restarted from this download step.
+    The output changelog can be reviewed in the next step.
 
-    The downloaded changelog files can be inspected in `~/.cache/cardano-updates/` directory.
+    The downloaded PRs can be inspected in `~/.cache/cardano-updates/` directory.
 
 1. Generate markdown changelogs from yaml detail file:
     ```bash
     ../cardano-dev/scripts/generate-pr-changelogs.sh input-output-hk/cardano-api 89fd11781d8ba19ce50f516ecef30607d2e704e8..HEAD
     ```
-    The generated changelog will be printed to standard output.
+    This will process downloaded PRs and use those marked with `feature` or `bug` to produce the changelog to the standard output.
 
 1. Add generated changelog in the previous step to `CHANGELOG.md` file in respective cabal package in `cardano-api` repository, near the top of the file, adding a new section for the version being prepared, for example: `## 8.3.0.0`.
     After doing that, create a PR from a new branch back to main.
@@ -98,7 +99,7 @@ Briefly speaking, it requires executing of the following steps:
 
 1. Clone `cardano-haskell-packages`:
     ```bash
-    git clone https://github.com/input-output-hk/cardano-haskell-packages
+    git clone git@github.com:input-output-hk/cardano-haskell-packages.git
     cd cardano-haskell-packages
     ```
 
