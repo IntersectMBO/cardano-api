@@ -7,23 +7,23 @@ When making a new release, firstly you have to decide on a new version number fo
 ### Version bumping
 `cardano-api` is using [Haskell Package Versioning Policy](https://pvp.haskell.org/) for numbering each release version.
 
-In order to decide if the version number needs to be bumped up it is necessary to know what was the latest released version of a package.
-Two simple ways are either look at the version on [`cardano-haskell-packages` (aka **CHaP**)](https://input-output-hk.github.io/cardano-haskell-packages/index.html) or look at the latest git tag for the version.
+In order to decide which version number needs to be bumped up, it is necessary to know what was the latest released version of a package.
+Three simple ways are:
+* look at the latest version on [`cardano-haskell-packages` (aka **CHaP**)](https://input-output-hk.github.io/cardano-haskell-packages/index.html) - the most reliable way
+* current version in the changelog
+* look at the latest git tag for the version
 
-However the easiest, while also reliable way to figure out whether you need to bump up the version is to simply look at the current version in the changelog.
-It will be easier to explain why this is the case with an example.
+When you found out the current version of `cardano-api`, the next step is to find out if the changes within the scope of the release are breaking or not.
+To make this process easier, each pull request has information about that - [see the `compatibility` field in the example changelog here](https://github.com/input-output-hk/cardano-api/pull/53).
+This information becomes available in the next step of the process, in the changelog preparation after executing `generate-pr-changelogs.sh` script.
+You can defer decision about the version bump to that point.
 
-Let's say you submit a PR which contains breaking changes to `cardano-api`.
-You then look into the changelog for current development version on `master`:
-
-* If the current version is set to `cardano-api-1.2.3.5`.
-    We see that the patch version is bumped (not zero), that means that the latest version released is `cardano-api-1.2.3.4`, so you update it to `cardano-api-1.3.0.0`, because your changes break stuff.
-* If the current version is set to `cardano-api-1.2.4.0` and currently released in CHaP version is `cardano-api-1.2.3.x`.
-    Your changes are breaking so you increase it even further to `cardano-api-1.3.0.0`.
-* If the current version is `cardano-api-1.3.0.0` and the released version to CHaP is `cardano-api-1.2.x.x`.
-    There is nothing to do, the version on `master` already contains some other breaking changes since the last release to CHaP.
-* If the current version is `cardano-api-2.0.0.0`.
-    There was a complete overhaul. Definitely nothing needs to be bumped.
+In general, the [PVP decision tree](https://pvp.haskell.org/#decision-tree) may become useful in the process.
+For example, if the current version of cardano-api is `8.4.1.2`, you need to bump version to:
+* `8.4.1.3` - if there are only backwards-compatible bug-fixes
+* `8.4.2.0` - if there are only backwards-compatible features or bug-fixes
+* `8.5.0.0` - if there are any breaking changes
+* `9.0.0.0` - for major Cardano releases
 
 After deciding on the version number, set the correct `version` field in all cabal files in this repo.
 
