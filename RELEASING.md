@@ -65,7 +65,14 @@ In order to generate changelog files in markdown format use the following steps:
 
     The downloaded PRs can be inspected in `~/.cache/cardano-updates/` directory.
 
-1. Generate markdown changelogs from yaml detail file:
+1. Find out the hash of the previous tag.
+    You can list all the tags and their hashes using the following command:
+    ```bash
+    git show-ref --tags --dereference | sort -V -t '/' -k 3,3
+    ```
+
+1. Generate markdown changelogs from yaml detail file providing the hash of the previous release tag in the command line argument.
+    For example for the changelog between the tag `cardano-api-8.2.0.0` and `HEAD`:
     ```bash
     ../cardano-dev/scripts/generate-pr-changelogs.sh input-output-hk/cardano-api 89fd11781d8ba19ce50f516ecef30607d2e704e8..HEAD
     ```
