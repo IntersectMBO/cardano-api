@@ -101,7 +101,7 @@ data Certificate =
       (Hash CommitteeColdKey)
       (Hash CommitteeHotKey)
 
-   | CommitteeHotKeyUnregistrationCertificate
+   | CommitteeHotKeyDeregistrationCertificate
       (Hash CommitteeColdKey)
 
    | MIRCertificate MIRPot MIRTarget
@@ -123,13 +123,13 @@ instance HasTextEnvelope Certificate where
     textEnvelopeType _ = "CertificateShelley"
     textEnvelopeDefaultDescr cert = case cert of
       StakeAddressRegistrationCertificate{}   -> "Stake address registration"
-      StakeAddressDeregistrationCertificate{} -> "Stake address de-registration"
+      StakeAddressDeregistrationCertificate{} -> "Stake address deregistration"
       StakeAddressPoolDelegationCertificate{} -> "Stake address stake pool delegation"
       StakePoolRegistrationCertificate{}      -> "Pool registration"
       StakePoolRetirementCertificate{}        -> "Pool retirement"
       GenesisKeyDelegationCertificate{}       -> "Genesis key delegation"
-      CommitteeDelegationCertificate{}               -> "Constitution Committee key delegation"
-      CommitteeHotKeyUnregistrationCertificate{}     -> "Constitution Committee hot key unregistration"
+      CommitteeDelegationCertificate{} -> "Constitution committee member key delegation"
+      CommitteeHotKeyDeregistrationCertificate{} -> "Constitution committee member hot key deregistration"
       MIRCertificate{}                        -> "MIR"
 
 -- | The 'MIRTarget' determines the target of a 'MIRCertificate'.
@@ -239,7 +239,7 @@ makeCommitteeDelegationCertificate = CommitteeDelegationCertificate
 makeCommitteeHotKeyUnregistrationCertificate :: ()
   => Hash CommitteeColdKey
   -> Certificate
-makeCommitteeHotKeyUnregistrationCertificate = CommitteeHotKeyUnregistrationCertificate
+makeCommitteeHotKeyUnregistrationCertificate = CommitteeHotKeyDeregistrationCertificate
 
 makeMIRCertificate :: MIRPot -> MIRTarget -> Certificate
 makeMIRCertificate = MIRCertificate
@@ -297,9 +297,9 @@ toShelleyCertificate
   ) = error "TODO CIP-1694 Need ledger types for CommitteeDelegationCertificate"
 
 toShelleyCertificate
-  ( CommitteeHotKeyUnregistrationCertificate
+  ( CommitteeHotKeyDeregistrationCertificate
     (CommitteeColdKeyHash _ckh)
-  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyUnregistrationCertificate"
+  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyDeregistrationCertificate"
 
 toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
     Shelley.DCertMir $
