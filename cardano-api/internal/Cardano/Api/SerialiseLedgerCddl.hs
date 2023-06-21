@@ -41,7 +41,7 @@ import           Cardano.Api.Utils
 import           Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Binary as CBOR
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither,
                    newExceptT, runExceptT)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -328,7 +328,6 @@ readTextEnvelopeCddlFromFile
   -> IO (Either (FileError TextEnvelopeCddlError) TextEnvelopeCddl)
 readTextEnvelopeCddlFromFile path =
   runExceptT $ do
-    bs <- handleIOExceptT (FileIOError path) $
-            readFileBlocking path
+    bs <- fileIOExceptT path readFileBlocking
     firstExceptT (FileError path . TextEnvelopeCddlAesonDecodeError path)
       . hoistEither $ Aeson.eitherDecodeStrict' bs
