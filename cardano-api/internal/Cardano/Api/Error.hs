@@ -9,11 +9,21 @@ module Cardano.Api.Error
   , throwErrorAsException
   , ErrorAsException(..)
   , FileError(..)
+  , fileIOExceptT
   ) where
 
 import           Control.Exception (Exception (..), IOException, throwIO)
+import           Control.Monad.Except (throwError)
+import           Control.Monad.IO.Class (MonadIO)
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import           System.Directory (doesFileExist)
 import           System.IO (Handle)
-
+import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import Control.Monad.IO.Class (MonadIO)
+import System.Directory (doesFileExist)
+import Control.Monad.Except (throwError)
 
 class Show e => Error e where
 
@@ -46,6 +56,7 @@ data FileError e = FileError FilePath e
                      FilePath
                      -- ^ Temporary path
                      Handle
+                 | FileDoesNotExistError FilePath
                  | FileIOError FilePath IOException
   deriving (Show, Eq, Functor)
 
@@ -54,6 +65,8 @@ instance Error e => Error (FileError e) where
     "Error creating temporary file at: " ++ tempPath ++
     "/n" ++ "Target path: " ++ targetPath ++
     "/n" ++ "Handle: " ++ show h
+  displayError (FileDoesNotExistError path) =
+    "Error file not found at: " ++ path
   displayError (FileIOError path ioe) =
     path ++ ": " ++ displayException ioe
   displayError (FileError path e) =
@@ -61,4 +74,13 @@ instance Error e => Error (FileError e) where
 
 instance Error IOException where
   displayError = show
+
+fileIOExceptT :: MonadIO m
+              => FilePath
+              -> (FilePath -> IO s)
+              -> ExceptT (FileError e) m s
+fileIOExceptT fp readFile' = do
+  fileExists <- handleIOExceptT (FileIOError fp) $ doesFileExist fp
+  if fileExists then handleIOExceptT (FileIOError fp) $ readFile' fp
+                else throwError (FileDoesNotExistError fp)
 
