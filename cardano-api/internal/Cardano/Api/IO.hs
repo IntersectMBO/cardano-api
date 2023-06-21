@@ -34,7 +34,7 @@ module Cardano.Api.IO
   , writeSecrets
   ) where
 
-import           Cardano.Api.Error (FileError (..))
+import           Cardano.Api.Error (FileError (..), fileIOExceptT)
 import           Cardano.Api.IO.Base
 import           Cardano.Api.IO.Compat
 
@@ -54,21 +54,21 @@ readByteStringFile :: ()
   => File content In
   -> m (Either (FileError e) ByteString)
 readByteStringFile fp = runExceptT $
-  handleIOExceptT (FileIOError (unFile fp)) $ BS.readFile (unFile fp)
+  fileIOExceptT (unFile fp) BS.readFile
 
 readLazyByteStringFile :: ()
   => MonadIO m
   => File content In
   -> m (Either (FileError e) LBS.ByteString)
 readLazyByteStringFile fp = runExceptT $
-  handleIOExceptT (FileIOError (unFile fp)) $ LBS.readFile (unFile fp)
+  fileIOExceptT (unFile fp) LBS.readFile
 
 readTextFile :: ()
   => MonadIO m
   => File content In
   -> m (Either (FileError e) Text)
 readTextFile fp = runExceptT $
-  handleIOExceptT (FileIOError (unFile fp)) $ Text.readFile (unFile fp)
+  fileIOExceptT (unFile fp) Text.readFile
 
 writeByteStringFile :: ()
   => MonadIO m
