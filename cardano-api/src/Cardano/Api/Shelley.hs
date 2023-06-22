@@ -237,10 +237,14 @@ module Cardano.Api.Shelley
     SystemStart(..),
 
     -- ** Governance
+    GovernanceActionIdentifier(..),
+    TxGovernanceActions(..),
+    TxVotes(..),
     GovernancePoll (..),
     GovernancePollAnswer (..),
     GovernancePollError (..),
     renderGovernancePollError,
+    toVotingCredential,
     hashGovernancePoll,
     verifyPollAnswer,
 

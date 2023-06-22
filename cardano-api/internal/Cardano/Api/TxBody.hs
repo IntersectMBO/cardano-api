@@ -188,6 +188,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
@@ -222,6 +223,7 @@ import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
+import qualified Cardano.Ledger.Conway.Governance as Conway
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
@@ -1751,7 +1753,8 @@ data TxBodyContent build era =
        txCertificates     :: TxCertificates build era,
        txUpdateProposal   :: TxUpdateProposal era,
        txMintValue        :: TxMintValue    build era,
-       txScriptValidity   :: TxScriptValidity era
+       txScriptValidity   :: TxScriptValidity era,
+       txGovernanceActions :: TxGovernanceAction era
      }
      deriving (Eq, Show)
 
@@ -1774,6 +1777,7 @@ defaultTxBodyContent = TxBodyContent
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
+    , txGovernanceActions = TxGovernanceActionsNone
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -2722,10 +2726,28 @@ fromLedgerTxBody era scriptValidity body scriptdata mAux =
       , txMetadata
       , txAuxScripts
       , txScriptValidity   = scriptValidity
+      , txGovernanceActions = fromLedgerProposalProcedure era body
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
 
+-- TODO: Conway
+fromLedgerProposalProcedure
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxGovernanceAction era
+fromLedgerProposalProcedure _ _bdy = TxGovernanceActionsNone
+ where
+   _proposalProcedures
+     :: ShelleyBasedEra era
+     -> Ledger.TxBody (ShelleyLedgerEra era)
+     -> Seq.StrictSeq (Conway.ProposalProcedure era)
+   _proposalProcedures ShelleyBasedEraShelley _bdy = mempty
+   _proposalProcedures ShelleyBasedEraAllegra _bdy = mempty
+   _proposalProcedures ShelleyBasedEraMary _bdy = mempty
+   _proposalProcedures ShelleyBasedEraAlonzo _bdy = mempty
+   _proposalProcedures ShelleyBasedEraBabbage _bdy = mempty
+   _proposalProcedures ShelleyBasedEraConway _bdy = mempty
 
 fromLedgerTxIns
   :: forall era.
@@ -3394,6 +3416,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txUpdateProposal   = TxUpdateProposalNone
   , txMintValue        = TxMintNone
   , txScriptValidity   = TxScriptValidityNone
+  , txGovernanceActions = TxGovernanceActionsNone
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)

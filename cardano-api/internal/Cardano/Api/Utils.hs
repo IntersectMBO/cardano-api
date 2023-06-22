@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
@@ -128,3 +129,28 @@ bounded t = eitherReader $ \s -> do
   when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
   when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
   pure (fromIntegral i)
+
+obtainEraCryptoConstraints
+  :: ShelleyBasedEra era
+  -> (EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto => a)
+  -> a
+obtainEraCryptoConstraints ShelleyBasedEraShelley f = f
+obtainEraCryptoConstraints ShelleyBasedEraAllegra f = f
+obtainEraCryptoConstraints ShelleyBasedEraMary    f = f
+obtainEraCryptoConstraints ShelleyBasedEraAlonzo  f = f
+obtainEraCryptoConstraints ShelleyBasedEraBabbage f = f
+obtainEraCryptoConstraints ShelleyBasedEraConway  f = f
+
+--obtainCryptoConstraints
+--  :: ShelleyBasedEra era
+--  -> (( ShelleyLedgerEra era ~ StandardShelley
+--       , Crypto (ShelleyLedgerEra era)
+--      ) => a
+--     )
+--  -> a
+--obtainCryptoConstraints ShelleyBasedEraShelley f = f
+--obtainCryptoConstraints ShelleyBasedEraAllegra f = f
+--obtainCryptoConstraints ShelleyBasedEraMary    f = f
+--obtainCryptoConstraints ShelleyBasedEraAlonzo  f = f
+--obtainCryptoConstraints ShelleyBasedEraBabbage f = f
+--obtainCryptoConstraints ShelleyBasedEraConway  f = f
