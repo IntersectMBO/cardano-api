@@ -269,6 +269,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eras
 import           Cardano.Api.Genesis
+import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Poll
 import           Cardano.Api.InMode
 import           Cardano.Api.IPC
