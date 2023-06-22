@@ -128,7 +128,7 @@ import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer 
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (..),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
-                   StakeCredential (StakeCredentialByKey), StakePoolKey, TxGovernanceAction (..),
+                   StakeCredential (StakeCredentialByKey), StakePoolKey,
                    refInsScriptsAndInlineDatsSupportedInEra)
 
 import qualified Cardano.Binary as CBOR
@@ -645,6 +645,7 @@ genTxBodyContent era = do
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
   txGovernanceActions <- return TxGovernanceActionsNone -- TODO: Conway era
+  txVotes <- return TxVotesNone -- TODO: Conway era
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
@@ -664,6 +665,7 @@ genTxBodyContent era = do
     , Api.txMintValue
     , Api.txScriptValidity
     , Api.txGovernanceActions
+    , Api.txVotes
     }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
