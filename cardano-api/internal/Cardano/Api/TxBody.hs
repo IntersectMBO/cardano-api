@@ -189,6 +189,7 @@ import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Governance.Actions.ProposalProcedure
+import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
@@ -1736,25 +1737,26 @@ deriving instance Show (TxMintValue build era)
 
 data TxBodyContent build era =
      TxBodyContent {
-       txIns              :: TxIns build era,
-       txInsCollateral    :: TxInsCollateral era,
-       txInsReference     :: TxInsReference build era,
-       txOuts             :: [TxOut CtxTx era],
-       txTotalCollateral  :: TxTotalCollateral era,
-       txReturnCollateral :: TxReturnCollateral CtxTx era,
-       txFee              :: TxFee era,
-       txValidityRange    :: (TxValidityLowerBound era,
+       txIns               :: TxIns build era,
+       txInsCollateral     :: TxInsCollateral era,
+       txInsReference      :: TxInsReference build era,
+       txOuts              :: [TxOut CtxTx era],
+       txTotalCollateral   :: TxTotalCollateral era,
+       txReturnCollateral  :: TxReturnCollateral CtxTx era,
+       txFee               :: TxFee era,
+       txValidityRange     :: (TxValidityLowerBound era,
                               TxValidityUpperBound era),
-       txMetadata         :: TxMetadataInEra era,
-       txAuxScripts       :: TxAuxScripts era,
-       txExtraKeyWits     :: TxExtraKeyWitnesses era,
-       txProtocolParams   :: BuildTxWith build (Maybe ProtocolParameters),
-       txWithdrawals      :: TxWithdrawals  build era,
-       txCertificates     :: TxCertificates build era,
-       txUpdateProposal   :: TxUpdateProposal era,
-       txMintValue        :: TxMintValue    build era,
-       txScriptValidity   :: TxScriptValidity era,
-       txGovernanceActions :: TxGovernanceAction era
+       txMetadata          :: TxMetadataInEra era,
+       txAuxScripts        :: TxAuxScripts era,
+       txExtraKeyWits      :: TxExtraKeyWitnesses era,
+       txProtocolParams    :: BuildTxWith build (Maybe ProtocolParameters),
+       txWithdrawals       :: TxWithdrawals  build era,
+       txCertificates      :: TxCertificates build era,
+       txUpdateProposal    :: TxUpdateProposal era,
+       txMintValue         :: TxMintValue    build era,
+       txScriptValidity    :: TxScriptValidity era,
+       txGovernanceActions :: TxGovernanceActions era,
+       txVotes             :: TxVotes era
      }
      deriving (Eq, Show)
 
@@ -1778,6 +1780,7 @@ defaultTxBodyContent = TxBodyContent
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
     , txGovernanceActions = TxGovernanceActionsNone
+    , txVotes = TxVotesNone
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -2727,6 +2730,7 @@ fromLedgerTxBody era scriptValidity body scriptdata mAux =
       , txAuxScripts
       , txScriptValidity   = scriptValidity
       , txGovernanceActions = fromLedgerProposalProcedure era body
+      , txVotes = error "fromLedgerTxBody.txVotes: TODO: Conway"
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
@@ -2735,7 +2739,7 @@ fromLedgerTxBody era scriptValidity body scriptdata mAux =
 fromLedgerProposalProcedure
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> TxGovernanceAction era
+  -> TxGovernanceActions era
 fromLedgerProposalProcedure _ _bdy = TxGovernanceActionsNone
  where
    _proposalProcedures
@@ -3399,24 +3403,25 @@ getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
 getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   TxBodyContent
-  { txIns              = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
-  , txInsCollateral    = TxInsCollateralNone
-  , txInsReference     = TxInsReferenceNone
-  , txOuts             = fromByronTxOut <$> toList txOutputs
-  , txReturnCollateral = TxReturnCollateralNone
-  , txTotalCollateral  = TxTotalCollateralNone
-  , txFee              = TxFeeImplicit TxFeesImplicitInByronEra
-  , txValidityRange    = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
-  , txMetadata         = TxMetadataNone
-  , txAuxScripts       = TxAuxScriptsNone
-  , txExtraKeyWits     = TxExtraKeyWitnessesNone
-  , txProtocolParams   = ViewTx
-  , txWithdrawals      = TxWithdrawalsNone
-  , txCertificates     = TxCertificatesNone
-  , txUpdateProposal   = TxUpdateProposalNone
-  , txMintValue        = TxMintNone
-  , txScriptValidity   = TxScriptValidityNone
+  { txIns               = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
+  , txInsCollateral     = TxInsCollateralNone
+  , txInsReference      = TxInsReferenceNone
+  , txOuts              = fromByronTxOut <$> toList txOutputs
+  , txReturnCollateral  = TxReturnCollateralNone
+  , txTotalCollateral   = TxTotalCollateralNone
+  , txFee               = TxFeeImplicit TxFeesImplicitInByronEra
+  , txValidityRange     = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
+  , txMetadata          = TxMetadataNone
+  , txAuxScripts        = TxAuxScriptsNone
+  , txExtraKeyWits      = TxExtraKeyWitnessesNone
+  , txProtocolParams    = ViewTx
+  , txWithdrawals       = TxWithdrawalsNone
+  , txCertificates      = TxCertificatesNone
+  , txUpdateProposal    = TxUpdateProposalNone
+  , txMintValue         = TxMintNone
+  , txScriptValidity    = TxScriptValidityNone
   , txGovernanceActions = TxGovernanceActionsNone
+  , txVotes             = TxVotesNone
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
