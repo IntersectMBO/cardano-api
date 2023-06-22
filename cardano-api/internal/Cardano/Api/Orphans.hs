@@ -7,7 +7,6 @@
 module Cardano.Api.Orphans () where
 
 import           Cardano.Binary (DecoderError (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 
@@ -16,12 +15,6 @@ import qualified Codec.CBOR.Read as CBOR
 import           Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Data (Data)
-
-
--- FIXME: A temporary workaround for missing Eq and Data instances in plutus-ledger-api
--- TODO: remove this when plutus-ledger-api gets bumped to >=1.6.1
-deriving instance Eq Ledger.CostModelApplyError
-deriving instance Data Ledger.CostModelApplyError
 
 deriving instance Data DecoderError
 deriving instance Data CBOR.DeserialiseFailure

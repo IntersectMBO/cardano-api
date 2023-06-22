@@ -150,18 +150,18 @@ library internal
                       , mtl
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.7
-                      , ouroboros-consensus-cardano >= 0.6
-                      , ouroboros-consensus-diffusion >= 0.6
+                      , ouroboros-consensus >= 0.8
+                      , ouroboros-consensus-cardano >= 0.6.1
+                      , ouroboros-consensus-diffusion >= 0.6.1
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , ouroboros-network-protocols
                       , parsec
-                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.5
+                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.7
                       , prettyprinter
-                      , prettyprinter-configurable ^>= 1.1
+                      , prettyprinter-configurable >= 1.1
                       , random
                       , scientific
                       , serialise
@@ -306,8 +306,8 @@ test-suite cardano-api-golden
                       , hedgehog
                       , hedgehog-extras >= 0.4.3.0
                       , microlens
-                      , plutus-core ^>= 1.5
-                      , plutus-ledger-api ^>= 1.5
+                      , plutus-core ^>= 1.7
+                      , plutus-ledger-api ^>= 1.7
                       , tasty
                       , tasty-hedgehog
                       , time
