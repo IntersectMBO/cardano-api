@@ -227,6 +227,7 @@ import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
 import qualified Cardano.Ledger.Conway.Governance as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
+import qualified Cardano.Ledger.Conway.TxCert as Conway
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
