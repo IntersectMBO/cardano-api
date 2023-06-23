@@ -221,7 +221,7 @@ import           Cardano.Ledger.Binary (Annotated (..), reAnnotate, recoverBytes
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
-import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
+import qualified Cardano.Ledger.Conway.TxCert as Conway
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
