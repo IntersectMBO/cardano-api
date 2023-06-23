@@ -18,7 +18,7 @@ extra-doc-files:        README.md, CHANGELOG.md
 common project-config
   default-language:     Haskell2010
   default-extensions:   OverloadedStrings
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base >= 4.14 && < 4.19
 
   ghc-options:          -Wall
                         -Wcompat
@@ -124,7 +124,7 @@ library internal
                       , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class >= 2.1.1
-                      , cardano-crypto-wrapper ^>= 1.5
+                      , cardano-crypto-wrapper
                       , cardano-data >= 1.0
                       , cardano-ledger-alonzo >= 1.1.1
                       , cardano-ledger-allegra >= 1.1
@@ -152,7 +152,7 @@ library internal
                       , microlens
                       , mtl
                       , network
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , ouroboros-consensus >= 0.7
                       , ouroboros-consensus-cardano >= 0.6
                       , ouroboros-consensus-diffusion >= 0.6
@@ -162,13 +162,13 @@ library internal
                       , ouroboros-network-framework
                       , ouroboros-network-protocols
                       , parsec
-                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.5
+                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.7
                       , prettyprinter
-                      , prettyprinter-configurable ^>= 1.1
+                      , prettyprinter-configurable >= 1.1
                       , random
                       , scientific
                       , serialise
-                      , small-steps ^>= 1.0
+                      , small-steps
                       , stm
                       , text
                       , time
@@ -309,8 +309,8 @@ test-suite cardano-api-golden
                       , hedgehog
                       , hedgehog-extras >= 0.4.3.0
                       , microlens
-                      , plutus-core ^>= 1.5
-                      , plutus-ledger-api ^>= 1.5
+                      , plutus-core
+                      , plutus-ledger-api
                       , tasty
                       , tasty-hedgehog
                       , time
