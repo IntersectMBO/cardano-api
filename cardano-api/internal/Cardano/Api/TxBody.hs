@@ -232,6 +232,7 @@ import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.Delegation.Certificates as Shelley
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 import qualified Cardano.Ledger.TxIn as L
 import           Cardano.Ledger.Val as L (isZero)
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -2516,7 +2517,7 @@ createTransactionBody era txBodyContent =
                     datums
                     languages
         let ledgerTxBody = mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
-                           & L.conwayCertsTxBodyL         .~ conwayCerts
+                           & L.certsTxBodyL               .~ conwayCerts
                            & L.vldtTxBodyL                .~ validityInterval
                            & L.collateralInputsTxBodyL    .~ collTxIns
                            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
@@ -3426,34 +3427,41 @@ convTxOuts
 convTxOuts era txOuts = Seq.fromList $ map (toShelleyTxOutAny era) txOuts
 
 convCertificates
-  :: TxCertificates build era -> Seq.StrictSeq (Shelley.DCert StandardCrypto)
+  :: forall build era someera. 
+  ( L.EraCrypto era ~ StandardCrypto 
+  , era ~ someera StandardCrypto
+  ) => 
+  TxCertificates build era -> Seq.StrictSeq (Core.TxCert era)
 convCertificates txCertificates =
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
     TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
 
 convConwayCertificates
-  :: TxCertificates build era -> Seq.StrictSeq (Conway.ConwayDCert StandardCrypto)
+  :: TxCertificates build era -> Seq.StrictSeq (Conway.ConwayTxCert (L.ConwayEra StandardCrypto))
 convConwayCertificates txCertificates =
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
     TxCertificates _ cs _ ->
-      Seq.fromList (mapMaybe (fromShelleyDCertMaybe . toShelleyCertificate) cs)
+      Seq.fromList (mapMaybe (fromShelleyTxCertMaybe . toShelleyCertificate) cs)
 
-fromShelleyDCertMaybe :: Shelley.DCert c -> Maybe (Conway.ConwayDCert c)
-fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.RegKey sc)) =
-  Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
+fromShelleyTxCertMaybe :: Shelley.TxCert c -> Maybe (Conway.ConwayTxCert c)
+fromShelleyTxCertMaybe (Shelley.RegTxCert (Shelley.RegKey sc)) =
+  Just $ Conway.ConwayTxCertDeleg (Conway.ConwayRegCert sc $ SJust (Ledger.Coin 0))
   -- TODO when ledger is fixed, use ConwayReg sc
   -- Note that ConwayUnDeleg is *blatantly* wrong
-fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.DeRegKey sc)) =
-  Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
+  -- NOTE: @aniketd may have fixed this. Please contact me if `ConwayRegCert` is not the intended one here.
+fromShelleyTxCertMaybe (Shelley.RegTxCert (Shelley.DeRegKey sc)) =
+  Just $ Conway.ConwayTxCertDeleg (Conway.ConwayUnRegCert sc $ SJust (Ledger.Coin 0))
   -- TODO when ledger is fixed, make zero coin a Nothing
-fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.Delegate (Shelley.Delegation sc pool))) =
-  Just $ Conway.ConwayDCertDeleg (Conway.ConwayDeleg sc (Conway.DelegStake pool) (Ledger.Coin 0))
+fromShelleyTxCertMaybe (Shelley.RegTxCert (Shelley.Delegate (Shelley.Delegation sc pool))) =
+  Just $ Conway.ConwayTxCertDeleg (Conway.ConwayRegDelegCert sc (Conway.DelegStake pool) $ SJust (Ledger.Coin 0))
   -- TODO when ledger is fixed, make zero coin a Nothing
-fromShelleyDCertMaybe (Shelley.DCertPool pc) = Just $ Conway.ConwayDCertPool pc
-fromShelleyDCertMaybe (Shelley.DCertGenesis gdc) = Just $ Conway.ConwayDCertConstitutional gdc
-fromShelleyDCertMaybe Shelley.DCertMir {} = Nothing
+fromShelleyTxCertMaybe (Shelley.RegPoolTxCert pc) = Just $ Core.RegPoolTxCert pc
+fromShelleyTxCertMaybe (Shelley.ShelleyTxCertGenesisDeleg gdc) = Nothing -- NOTE: Perhaps this does not to 
+  -- be converted to Conway because Conway will have a different mechanism
+  -- Just $ Conway.ConwayTxCertConstitutional gdc
+fromShelleyTxCertMaybe Shelley.ShelleyTxCertMir {} = Nothing
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
@@ -3950,7 +3958,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
            & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
-           & L.conwayCertsTxBodyL         .~ convConwayCertificates txCertificates
+           & L.certsTxBodyL         .~ convConwayCertificates txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
