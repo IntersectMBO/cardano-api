@@ -212,7 +212,7 @@ makeMIRCertificate = MIRCertificate
 -- Internal conversion functions
 --
 
-toShelleyCertificate :: Certificate -> Shelley.TxCert StandardCrypto
+toShelleyCertificate :: Certificate -> Shelley.TxCert Shelley.Shelley
 toShelleyCertificate (StakeAddressRegistrationCertificate stakecred) =
     Shelley.RegTxCert (toShelleyStakeCredential stakecred)
 
@@ -237,7 +237,7 @@ toShelleyCertificate (GenesisKeyDelegationCertificate
     Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
 
 toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
-    Shelley.ShelleyTxCertMir $
+    Shelley.MirTxCert $
       Shelley.MIRCert
         mirpot
         (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
@@ -247,7 +247,7 @@ toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
 toShelleyCertificate (MIRCertificate mirPot (SendToReservesMIR amount)) =
     case mirPot of
       TreasuryMIR ->
-        Shelley.ShelleyTxCertMir $
+        Shelley.MirTxCert $
           Shelley.MIRCert
             TreasuryMIR
             (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
@@ -257,7 +257,7 @@ toShelleyCertificate (MIRCertificate mirPot (SendToReservesMIR amount)) =
 toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
     case mirPot of
       ReservesMIR ->
-        Shelley.ShelleyTxCertMir $
+        Shelley.MirTxCert $
           Shelley.MIRCert
             ReservesMIR
             (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
@@ -265,12 +265,13 @@ toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
         error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
 
 
-fromShelleyCertificate :: Shelley.TxCert StandardCrypto -> Certificate
+fromShelleyCertificate :: Shelley.TxCert Shelley.Shelley -> Certificate
 fromShelleyCertificate (Shelley.RegTxCert stakecred) =
     StakeAddressRegistrationCertificate
       (fromShelleyStakeCredential stakecred)
 
-fromShelleyCertificate (Shelley.RegTxCert stakecred) =
+-- this overlaps with the previous case, so something is wrong
+fromShelleyCertificate (Shelley.UnRegTxCert stakecred) =
     StakeAddressDeregistrationCertificate
       (fromShelleyStakeCredential stakecred)
 
@@ -288,14 +289,13 @@ fromShelleyCertificate (Shelley.RetirePoolTxCert poolid epochno) =
       (StakePoolKeyHash poolid)
       epochno
 
-fromShelleyCertificate (Shelley.ShelleyTxCertGenesisDeleg
-                         (Shelley.GenesisDelegCert genesiskh delegatekh vrfkh)) =
+fromShelleyCertificate (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh) =
     GenesisKeyDelegationCertificate
       (GenesisKeyHash         genesiskh)
       (GenesisDelegateKeyHash delegatekh)
       (VrfKeyHash             vrfkh)
 
-fromShelleyCertificate (Shelley.ShelleyTxCertMir
+fromShelleyCertificate (Shelley.MirTxCert
                          (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) =
     MIRCertificate
       mirpot
@@ -303,12 +303,12 @@ fromShelleyCertificate (Shelley.ShelleyTxCertMir
         [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
         | (sc, v) <- Map.toList amounts ]
       )
-fromShelleyCertificate (Shelley.ShelleyTxCertMir
+fromShelleyCertificate (Shelley.MirTxCert
                          (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) =
     MIRCertificate ReservesMIR
       (SendToTreasuryMIR $ fromShelleyLovelace amount)
 
-fromShelleyCertificate (Shelley.ShelleyTxCertMir
+fromShelleyCertificate (Shelley.MirTxCert
                          (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) =
     MIRCertificate TreasuryMIR
       (SendToReservesMIR $ fromShelleyLovelace amount)
