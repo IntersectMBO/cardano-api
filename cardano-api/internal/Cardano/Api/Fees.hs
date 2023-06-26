@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -111,22 +112,12 @@ transactionFee txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in case tx of
-       ShelleyTx _ tx' -> let x = obtainEraTx shelleyBasedEra $ tx' ^. L.sizeTxF
-                          in Lovelace (a * x + b)
+       ShelleyTx _ tx' ->
+        let x = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ tx' ^. L.sizeTxF
+        in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
-       ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
- where
-  obtainEraTx
-    :: ShelleyBasedEra era
-    -> (L.EraTx (ShelleyLedgerEra era) => a)
-    -> a
-  obtainEraTx ShelleyBasedEraShelley f = f
-  obtainEraTx ShelleyBasedEraAllegra f = f
-  obtainEraTx ShelleyBasedEraMary    f = f
-  obtainEraTx ShelleyBasedEraAlonzo  f = f
-  obtainEraTx ShelleyBasedEraBabbage f = f
-  obtainEraTx ShelleyBasedEraConway  f = f
+       ByronTx _ -> case shelleyBasedEra @era of {}
 
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
@@ -201,7 +192,7 @@ estimateTransactionFee nw txFeeFixed txFeePerByte (ShelleyTx era tx) =
 --TODO: This can be made to work for Byron txs too. Do that: fill in this case
 -- and remove the IsShelleyBasedEra constraint.
 estimateTransactionFee _ _ _ (ByronTx _) =
-    case shelleyBasedEra :: ShelleyBasedEra era of {}
+    case shelleyBasedEra @era of {}
 
 --TODO: also deprecate estimateTransactionFee:
 --{-# DEPRECATED estimateTransactionFee "Use 'evaluateTransactionFee' instead" #-}
@@ -228,7 +219,7 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
       ByronTx{} -> case shelleyBasedEra :: ShelleyBasedEra era of {}
       --TODO: we could actually support Byron here, it'd be different but simpler
 
-      ShelleyTx era tx -> withLedgerConstraints era (evalShelleyBasedEra tx)
+      ShelleyTx era tx -> withShelleyBasedEraConstraintsForLedger era (evalShelleyBasedEra tx)
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
@@ -241,19 +232,6 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
           (unbundleLedgerShelleyBasedProtocolParams shelleyBasedEra bpparams)
           tx
           keywitcount
-
-    -- Conjure up all the necessary class instances and evidence
-    withLedgerConstraints
-      :: ShelleyLedgerEra era ~ ledgerera
-      => ShelleyBasedEra era
-      -> (L.EraTx ledgerera => a)
-      -> a
-    withLedgerConstraints ShelleyBasedEraShelley f = f
-    withLedgerConstraints ShelleyBasedEraAllegra f = f
-    withLedgerConstraints ShelleyBasedEraMary    f = f
-    withLedgerConstraints ShelleyBasedEraAlonzo  f = f
-    withLedgerConstraints ShelleyBasedEraBabbage f = f
-    withLedgerConstraints ShelleyBasedEraConway  f = f
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.

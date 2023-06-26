@@ -1494,7 +1494,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
                                 decodeCurrentEpochState sbe serCurrEpochState
 
   let snapshot :: ShelleyAPI.SnapShot Shelley.StandardCrypto
-      snapshot = ShelleyAPI.ssStakeMark $ obtainIsStandardCrypto sbe $ ShelleyAPI.esSnapshots cEstate
+      snapshot = ShelleyAPI.ssStakeMark $ withShelleyBasedEraConstraintsForLedger sbe $ ShelleyAPI.esSnapshots cEstate
       markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
       markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
@@ -1575,19 +1575,6 @@ isLeadingSlotsPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey 
               certifiedNatValue = vrfLeaderValue (Proxy @Shelley.StandardCrypto) rho
 
   Right $ Set.filter isLeader slotRangeOfInterest
-
-obtainIsStandardCrypto
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> (Core.EraCrypto ledgerera ~ Shelley.StandardCrypto => a)
-  -> a
-obtainIsStandardCrypto ShelleyBasedEraShelley f = f
-obtainIsStandardCrypto ShelleyBasedEraAllegra f = f
-obtainIsStandardCrypto ShelleyBasedEraMary    f = f
-obtainIsStandardCrypto ShelleyBasedEraAlonzo  f = f
-obtainIsStandardCrypto ShelleyBasedEraBabbage f = f
-obtainIsStandardCrypto ShelleyBasedEraConway  f = f
-
 
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.
