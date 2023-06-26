@@ -292,10 +292,10 @@ estimateTransactionKeyWitnessCount TxBodyContent {
 
 type PlutusScriptBytes = ShortByteString
 
-type ResolvablePointers =
+type ResolvablePointers era =
        Map
          Alonzo.RdmrPtr
-         ( Alonzo.ScriptPurpose Ledger.StandardCrypto
+         ( Alonzo.ScriptPurpose era
          , Maybe (PlutusScriptBytes, Alonzo.Language)
          , Ledger.ScriptHash Ledger.StandardCrypto
          )
@@ -349,7 +349,8 @@ data ScriptExecutionError =
        -- | A redeemer pointer points to a script that does not exist.
      | ScriptErrorMissingScript
          Alonzo.RdmrPtr -- The invalid pointer
-         ResolvablePointers -- A mapping a pointers that are possible to resolve
+         (ResolvablePointers L.Shelley) -- A mapping a pointers that are possible to resolve
+        -- ^ FIXME!
 
        -- | A cost model was missing for a language which was used.
      | ScriptErrorMissingCostModel Alonzo.Language
@@ -546,7 +547,7 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     fromLedgerScriptExUnitsMap
-      :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure Ledger.StandardCrypto)
+      :: (Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto ) =>  Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure ledgerera)
                                     Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap exmap =
@@ -555,7 +556,7 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
            bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
-    fromAlonzoScriptExecutionError :: L.TransactionScriptFailure Ledger.StandardCrypto
+    fromAlonzoScriptExecutionError :: (Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto ) => L.TransactionScriptFailure ledgerera
                                    -> ScriptExecutionError
     fromAlonzoScriptExecutionError failure =
       case failure of
@@ -584,7 +585,7 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
-        L.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr resolveable
+        L.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr (undefined resolveable {- FIXME -})
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 

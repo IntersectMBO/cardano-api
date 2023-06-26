@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Api.Eras
   ( tests
@@ -30,13 +31,13 @@ prop_maxBound_CardanoMatchesShelley = property $ do
 
 prop_roundtrip_JSON_Shelley :: Property
 prop_roundtrip_JSON_Shelley = property $ do
-  anySbe <- forAll $ Gen.element @_ @AnyShelleyBasedEra [minBound..maxBound]
+  anySbe :: AnyShelleyBasedEra <- forAll $ Gen.element [minBound..maxBound]
 
   H.tripping anySbe encode decode
 
 prop_roundtrip_JSON_Cardano :: Property
 prop_roundtrip_JSON_Cardano = property $ do
-  anyEra <- forAll $ Gen.element @_ @AnyCardanoEra [minBound..maxBound]
+  anyEra :: AnyCardanoEra <- forAll $ Gen.element [minBound..maxBound]
 
   H.tripping anyEra encode decode
 

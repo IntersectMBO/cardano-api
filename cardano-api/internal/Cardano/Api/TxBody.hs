@@ -2357,7 +2357,8 @@ instance Error TxBodyError where
       "Errors in protocol parameters conversion: " ++ displayError ppces
 
 createTransactionBody
-  :: ShelleyBasedEra era
+  :: (L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
+  => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody era txBodyContent =
@@ -2377,8 +2378,7 @@ createTransactionBody era txBodyContent =
       refTxIns = convReferenceInputs apiReferenceInputs
       returnCollateral = convReturnCollateral era apiReturnCollateral
       totalCollateral = convTotalCollateral apiTotalCollateral
-      certs = convCertificates $ txCertificates txBodyContent
-      conwayCerts = convConwayCertificates $ txCertificates txBodyContent
+      certs = convCertificates era $ txCertificates txBodyContent
       txAuxData = toAuxiliaryData era (txMetadata txBodyContent) (txAuxScripts txBodyContent)
       scripts = convScripts apiScriptWitnesses
       validityInterval = convValidityInterval $ txValidityRange txBodyContent
@@ -2386,7 +2386,8 @@ createTransactionBody era txBodyContent =
 
       mkTxBody :: ( L.EraTxBody (ShelleyLedgerEra era)
                   , L.EraTxAuxData (ShelleyLedgerEra era)
-                  , L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
+                  , L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+                  )
                => ShelleyBasedEra era
                -> TxBodyContent BuildTx era
                -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
@@ -2527,7 +2528,7 @@ createTransactionBody era txBodyContent =
                     datums
                     languages
         let ledgerTxBody = mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
-                           & L.certsTxBodyL               .~ conwayCerts
+                           & L.certsTxBodyL               .~ certs
                            & L.vldtTxBodyL                .~ validityInterval
                            & L.collateralInputsTxBodyL    .~ collTxIns
                            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
@@ -3458,41 +3459,27 @@ convTxOuts
 convTxOuts era txOuts = Seq.fromList $ map (toShelleyTxOutAny era) txOuts
 
 convCertificates
-  :: forall build era someera. 
-  ( L.EraCrypto era ~ StandardCrypto 
-  , era ~ someera StandardCrypto
-  ) => 
-  TxCertificates build era -> Seq.StrictSeq (Core.TxCert era)
-convCertificates txCertificates =
+  :: ShelleyBasedEra era -> TxCertificates build era -> Seq.StrictSeq (Core.TxCert (ShelleyLedgerEra era))
+convCertificates era txCertificates =
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
+    TxCertificates _ cs _ -> 
+      case era of
+        ShelleyBasedEraShelley ->
+          Seq.fromList (map toShelleyCertificate cs)
+        ShelleyBasedEraAllegra ->
+          Seq.fromList (map toShelleyCertificate cs)
+        ShelleyBasedEraMary ->
+          Seq.fromList (map toShelleyCertificate cs)
+        ShelleyBasedEraAlonzo ->
+          Seq.fromList (map toShelleyCertificate cs)
+        ShelleyBasedEraBabbage ->
+          Seq.fromList (map toShelleyCertificate cs)
+        ShelleyBasedEraConway ->
+          Seq.fromList (map toConwayCertificate cs)
 
-convConwayCertificates
-  :: TxCertificates build era -> Seq.StrictSeq (Conway.ConwayTxCert (L.ConwayEra StandardCrypto))
-convConwayCertificates txCertificates =
-  case txCertificates of
-    TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ ->
-      Seq.fromList (mapMaybe (fromShelleyTxCertMaybe . toShelleyCertificate) cs)
-
-fromShelleyTxCertMaybe :: Shelley.TxCert c -> Maybe (Conway.ConwayTxCert c)
-fromShelleyTxCertMaybe (Shelley.RegTxCert (Shelley.RegKey sc)) =
-  Just $ Conway.ConwayTxCertDeleg (Conway.ConwayRegCert sc $ SJust (Ledger.Coin 0))
-  -- TODO when ledger is fixed, use ConwayReg sc
-  -- Note that ConwayUnDeleg is *blatantly* wrong
-  -- NOTE: @aniketd may have fixed this. Please contact me if `ConwayRegCert` is not the intended one here.
-fromShelleyTxCertMaybe (Shelley.RegTxCert (Shelley.DeRegKey sc)) =
-  Just $ Conway.ConwayTxCertDeleg (Conway.ConwayUnRegCert sc $ SJust (Ledger.Coin 0))
-  -- TODO when ledger is fixed, make zero coin a Nothing
-fromShelleyTxCertMaybe (Shelley.RegTxCert (Shelley.Delegate (Shelley.Delegation sc pool))) =
-  Just $ Conway.ConwayTxCertDeleg (Conway.ConwayRegDelegCert sc (Conway.DelegStake pool) $ SJust (Ledger.Coin 0))
-  -- TODO when ledger is fixed, make zero coin a Nothing
-fromShelleyTxCertMaybe (Shelley.RegPoolTxCert pc) = Just $ Core.RegPoolTxCert pc
-fromShelleyTxCertMaybe (Shelley.ShelleyTxCertGenesisDeleg gdc) = Nothing -- NOTE: Perhaps this does not to 
-  -- be converted to Conway because Conway will have a different mechanism
-  -- Just $ Conway.ConwayTxCertConstitutional gdc
-fromShelleyTxCertMaybe Shelley.ShelleyTxCertMir {} = Nothing
+toConwayCertificate :: Certificate -> Shelley.TxCert L.Conway
+toConwayCertificate = error "FIXME"
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
@@ -3673,7 +3660,8 @@ mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData =
 
 
 makeShelleyTransactionBody
-  :: ShelleyBasedEra era
+  :: ()
+  => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 makeShelleyTransactionBody era@ShelleyBasedEraShelley
@@ -3693,7 +3681,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
-           & L.certsTxBodyL  .~ convCertificates txCertificates
+           & L.certsTxBodyL  .~ convCertificates era txCertificates
            & L.updateTxBodyL .~ update
            & L.ttlTxBodyL    .~ case upperBound of
                                   TxValidityNoUpperBound era' -> case era' of {}
@@ -3732,7 +3720,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
-           & L.certsTxBodyL  .~ convCertificates txCertificates
+           & L.certsTxBodyL  .~ convCertificates era txCertificates
            & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL .~ update
         )
@@ -3770,7 +3758,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
     return $
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
-           & L.certsTxBodyL  .~ convCertificates txCertificates
+           & L.certsTxBodyL  .~ convCertificates era txCertificates
            & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL .~ update
            & L.mintTxBodyL   .~ convMintValue txMintValue
@@ -3815,7 +3803,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
       ShelleyTxBody era
         (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
            & L.collateralInputsTxBodyL    .~ convCollateralTxIns txInsCollateral
-           & L.certsTxBodyL               .~ convCertificates txCertificates
+           & L.certsTxBodyL               .~ convCertificates era txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
@@ -3907,7 +3895,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
            & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
-           & L.certsTxBodyL               .~ convCertificates txCertificates
+           & L.certsTxBodyL               .~ convCertificates era txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
@@ -4007,7 +3995,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
            & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
-           & L.certsTxBodyL         .~ convConwayCertificates txCertificates
+           & L.certsTxBodyL               .~ convCertificates era txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
