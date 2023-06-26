@@ -171,7 +171,7 @@ getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
             }
         } -> map ByronTx txs
 getBlockTxs (ShelleyBlock era Consensus.ShelleyBlock{Consensus.shelleyBlockRaw}) =
-    obtainConsensusShelleyCompatibleEra era $
+    withShelleyBasedEraConstraintForConsensus era $
       getShelleyBlockTxs era shelleyBlockRaw
 
 
@@ -185,19 +185,6 @@ getShelleyBlockTxs :: forall era ledgerera blockheader.
 getShelleyBlockTxs era (Ledger.Block _header txs) =
   [ ShelleyTx era txinblock
   | txinblock <- toList (Ledger.fromTxSeq txs) ]
-
-obtainConsensusShelleyCompatibleEra
-  :: forall era ledgerera a.
-     ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> (Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera => a)
-  -> a
-obtainConsensusShelleyCompatibleEra ShelleyBasedEraShelley f = f
-obtainConsensusShelleyCompatibleEra ShelleyBasedEraAllegra f = f
-obtainConsensusShelleyCompatibleEra ShelleyBasedEraMary    f = f
-obtainConsensusShelleyCompatibleEra ShelleyBasedEraAlonzo  f = f
-obtainConsensusShelleyCompatibleEra ShelleyBasedEraBabbage f = f
-obtainConsensusShelleyCompatibleEra ShelleyBasedEraConway f = f
 
 -- ----------------------------------------------------------------------------
 -- Block in a consensus mode

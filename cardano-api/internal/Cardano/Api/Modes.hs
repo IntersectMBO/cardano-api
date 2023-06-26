@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -41,6 +44,8 @@ module Cardano.Api.Modes (
     ConsensusBlockForEra,
     toConsensusEraIndex,
     fromConsensusEraIndex,
+
+    withShelleyBasedEraConstraintForConsensus,
   ) where
 
 import           Cardano.Api.Eras
@@ -49,12 +54,13 @@ import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHFC)
+import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
                    eraIndexZero)
 import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
@@ -424,3 +430,16 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (S (Z (K ()))))))))) =
       AnyEraInMode ConwayEraInCardanoMode
 
+withShelleyBasedEraConstraintForConsensus
+  :: forall era ledgerera a. ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera => a)
+  -> a
+withShelleyBasedEraConstraintForConsensus = \case
+  ShelleyBasedEraShelley  -> id
+  ShelleyBasedEraAllegra  -> id
+  ShelleyBasedEraMary     -> id
+  ShelleyBasedEraAlonzo   -> id
+  ShelleyBasedEraBabbage  -> id
+  ShelleyBasedEraConway   -> id
