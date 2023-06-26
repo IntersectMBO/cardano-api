@@ -180,6 +180,7 @@ module Cardano.Api.TxBody (
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
+
   ) where
 
 import           Cardano.Api.Address
@@ -225,6 +226,7 @@ import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
 import qualified Cardano.Ledger.Conway.Governance as Conway
+import qualified Cardano.Ledger.Conway.Governance as Gov
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
@@ -3617,6 +3619,22 @@ convReferenceInputs txInsReference =
     TxInsReferenceNone -> mempty
     TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
 
+convGovActions :: ShelleyBasedEra era -> TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedure (ShelleyLedgerEra era))
+convGovActions _ TxGovernanceActionsNone = Seq.empty
+convGovActions sbe (TxGovernanceActions _ govActions) =
+  Seq.fromList
+    [ createProposalProcedure sbe deposit stakeCred action
+    | (deposit, stakeCred, action) <- govActions
+    ]
+
+convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
+convVotes _ TxVotesNone = Seq.empty
+convVotes sbe (TxVotes _ votes) =
+  Seq.fromList
+    [ unVote $ createVotingProcedure sbe voteChoice voterType govActionIdentifier votingCred
+    | (voteChoice, voterType, govActionIdentifier, votingCred) <- votes
+    ]
+
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
     for_ txIns $ \txin@(TxIn _ (TxIx txix)) ->
@@ -3963,7 +3981,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
                              txWithdrawals,
                              txCertificates,
                              txMintValue,
-                             txScriptValidity
+                             txScriptValidity,
+                             txVotes,
+                             txGovernanceActions
                            } = do
 
     validateTxBodyContent era txbodycontent
@@ -3983,6 +4003,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+           & L.votingProceduresTxBodyL    .~ convVotes era txVotes
+           & L.proposalProceduresTxBodyL  .~ convGovActions era txGovernanceActions
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )
