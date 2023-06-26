@@ -49,6 +49,8 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Value
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Allegra.Core (AtMostEra)
+import qualified Cardano.Ledger.Babbage as L
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
@@ -101,10 +103,10 @@ instance HasTypeProxy Certificate where
     proxyToAsType _ = AsCertificate
 
 instance ToCBOR Certificate where
-    toCBOR = Shelley.toEraCBOR @Shelley.Shelley . toShelleyCertificate
+    toCBOR = Shelley.toEraCBOR @Shelley.Shelley . (toShelleyCertificate @Shelley.Shelley) -- FIXME!
 
 instance FromCBOR Certificate where
-    fromCBOR = fromShelleyCertificate <$> Shelley.fromEraCBOR @Shelley.Shelley
+    fromCBOR = (fromShelleyCertificate @Shelley.Shelley) <$> Shelley.fromEraCBOR @Shelley.Shelley
 
 instance HasTextEnvelope Certificate where
     textEnvelopeType _ = "CertificateShelley"
@@ -212,7 +214,10 @@ makeMIRCertificate = MIRCertificate
 -- Internal conversion functions
 --
 
-toShelleyCertificate ::  Certificate -> Shelley.TxCert Shelley.Shelley
+toShelleyCertificate :: (Shelley.EraCrypto era ~ StandardCrypto,
+  Shelley.ShelleyEraTxCert era,
+  Shelley.TxCert era ~ Shelley.ShelleyTxCert era,
+                        AtMostEra L.BabbageEra era) => Certificate -> Shelley.ShelleyTxCert era
 toShelleyCertificate (StakeAddressRegistrationCertificate stakecred) =
     Shelley.RegTxCert (toShelleyStakeCredential stakecred)
 
@@ -265,9 +270,14 @@ toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
         error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
 
 
-fromShelleyCertificate :: Shelley.TxCert Shelley.Shelley -> Certificate
+fromShelleyCertificate ::
+  (Shelley.EraCrypto era ~ StandardCrypto,
+    Shelley.ShelleyEraTxCert era,
+    Shelley.TxCert era ~ Shelley.ShelleyTxCert era,
+                          AtMostEra L.BabbageEra era)
+  => Shelley.ShelleyTxCert era -> Certificate
 fromShelleyCertificate (Shelley.RegTxCert stakecred) =
-    StakeAddressRegistrationCertificate 
+    StakeAddressRegistrationCertificate
       (fromShelleyStakeCredential stakecred)
 
 fromShelleyCertificate (Shelley.UnRegTxCert stakecred) =

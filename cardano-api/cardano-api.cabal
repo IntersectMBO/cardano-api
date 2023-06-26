@@ -18,7 +18,7 @@ extra-doc-files:        README.md, CHANGELOG.md
 common project-config
   default-language:     Haskell2010
   default-extensions:   OverloadedStrings
-  build-depends:        base >= 4.14 && < 4.19
+  build-depends:        base >= 4.14 && < 4.17
 
   ghc-options:          -Wall
                         -Wcompat
@@ -121,19 +121,19 @@ library internal
                       , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class >= 2.1.1
-                      , cardano-crypto-wrapper
+                      , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data >= 1.0
-                      , cardano-ledger-alonzo >= 1.1.1
-                      , cardano-ledger-allegra >= 1.1
-                      , cardano-ledger-api >= 1.1
-                      , cardano-ledger-babbage >= 1.1
-                      , cardano-ledger-binary >= 1.1
-                      , cardano-ledger-byron >= 1.0
-                      , cardano-ledger-conway >= 1.1
-                      , cardano-ledger-core >= 1.2
-                      , cardano-ledger-mary >= 1.1
-                      , cardano-ledger-shelley >= 1.1.1
-                      , cardano-protocol-tpraos >= 1.0.2
+                      , cardano-ledger-alonzo >= 1.3.1
+                      , cardano-ledger-allegra >= 1.2.0.1
+                      , cardano-ledger-api >= 1.2.1
+                      , cardano-ledger-babbage >= 1.4
+                      , cardano-ledger-binary >= 1.1.1.1
+                      , cardano-ledger-byron >= 1.0.0.1
+                      , cardano-ledger-conway >= 1.4
+                      , cardano-ledger-core >= 1.3.1
+                      , cardano-ledger-mary >= 1.3.0.1
+                      , cardano-ledger-shelley >= 1.4
+                      , cardano-protocol-tpraos >= 1.0.3.2
                       , cardano-slotting >= 0.1
                       , cardano-strict-containers >= 0.1
                       , cborg
@@ -149,11 +149,11 @@ library internal
                       , microlens
                       , mtl
                       , network
-                      , optparse-applicative
-                      , ouroboros-consensus >= 0.7
-                      , ouroboros-consensus-cardano >= 0.6
-                      , ouroboros-consensus-diffusion >= 0.6
-                      , ouroboros-consensus-protocol >= 0.5
+                      , optparse-applicative-fork
+                      , ouroboros-consensus >= 0.8
+                      , ouroboros-consensus-cardano >= 0.6.1
+                      , ouroboros-consensus-diffusion >= 0.6.1
+                      , ouroboros-consensus-protocol >= 0.5.0.3
                       , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -161,7 +161,7 @@ library internal
                       , parsec
                       , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.7
                       , prettyprinter
-                      , prettyprinter-configurable >= 1.1
+                      , prettyprinter-configurable >= 1.7
                       , random
                       , scientific
                       , serialise
@@ -225,11 +225,11 @@ library gen
                       , cardano-binary >= 1.6 && < 1.8
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
-                      , cardano-ledger-alonzo >= 1.1
-                      , cardano-ledger-alonzo-test
+                      , cardano-ledger-alonzo >= 1.3.1
+                      , cardano-ledger-alonzo-test >= 1.1.2.1
                       , cardano-ledger-byron-test >= 1.5
-                      , cardano-ledger-core >= 1.2
-                      , cardano-ledger-shelley >= 1.1
+                      , cardano-ledger-core >= 1.3.1
+                      , cardano-ledger-shelley >= 1.4
                       , containers
                       , hedgehog
                       , text
@@ -249,8 +249,8 @@ test-suite cardano-api-test
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
-                      , cardano-ledger-api >= 1.1
-                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.2
+                      , cardano-ledger-api >= 1.2.1
+                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.3.1
                       , containers
                       , hedgehog
                       , hedgehog-quickcheck
@@ -294,11 +294,11 @@ test-suite cardano-api-golden
                       , cardano-binary
                       , cardano-crypto-class
                       , cardano-data >= 1.0
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-api >= 1.1
-                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.2
-                      , cardano-ledger-shelley
-                      , cardano-ledger-shelley-test >= 1.1
+                      , cardano-ledger-alonzo >= 1.3.1.0
+                      , cardano-ledger-api >= 1.2.1
+                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.3.1
+                      , cardano-ledger-shelley >= 1.4
+                      , cardano-ledger-shelley-test >= 1.2.0.1
                       , cardano-slotting ^>= 0.1
                       , containers
                       , errors
@@ -306,8 +306,8 @@ test-suite cardano-api-golden
                       , hedgehog
                       , hedgehog-extras >= 0.4.3.0
                       , microlens
-                      , plutus-core
-                      , plutus-ledger-api
+                      , plutus-core ^>= 1.7
+                      , plutus-ledger-api ^>= 1.7
                       , tasty
                       , tasty-hedgehog
                       , time
