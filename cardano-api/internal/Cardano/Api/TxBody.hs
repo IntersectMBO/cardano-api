@@ -2286,18 +2286,7 @@ getTxId (ByronTxBody tx) =
       error "getTxId: byron and shelley hash sizes do not match"
 
 getTxId (ShelleyTxBody era tx _ _ _ _) =
-  obtainConstraints era $ getTxIdShelley era tx
- where
-  obtainConstraints
-    :: ShelleyBasedEra era
-    -> ((Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto, Ledger.EraTxBody (ShelleyLedgerEra era)) => a)
-    -> a
-  obtainConstraints ShelleyBasedEraShelley f = f
-  obtainConstraints ShelleyBasedEraAllegra f = f
-  obtainConstraints ShelleyBasedEraMary    f = f
-  obtainConstraints ShelleyBasedEraAlonzo  f = f
-  obtainConstraints ShelleyBasedEraBabbage f = f
-  obtainConstraints ShelleyBasedEraConway  f = f
+  withShelleyBasedEraConstraintsForLedger era $ getTxIdShelley era tx
 
 getTxIdShelley
   :: Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
@@ -2485,7 +2474,7 @@ createTransactionBody era txBodyContent =
           case sData of
             TxBodyNoScriptData -> pure SNothing
             TxBodyScriptData _sDataSupported datums redeemers ->
-              getLedgerEraConstraint era
+              withShelleyBasedEraConstraintsForLedger era
                 $ convPParamsToScriptIntegrityHash
                     era
                     apiProtocolParameters
@@ -2519,7 +2508,7 @@ createTransactionBody era txBodyContent =
           case sData of
             TxBodyNoScriptData -> pure SNothing
             TxBodyScriptData _sDataSupported datums redeemers ->
-              getLedgerEraConstraint era
+              withShelleyBasedEraConstraintsForLedger era
                 $ convPParamsToScriptIntegrityHash
                     era
                     apiProtocolParameters
@@ -3423,7 +3412,7 @@ convReturnCollateral
 convReturnCollateral era txReturnCollateral =
   case txReturnCollateral of
     TxReturnCollateralNone -> SNothing
-    TxReturnCollateral _ colTxOut -> SJust $ getCBORConstraint era $ toShelleyTxOutAny era colTxOut
+    TxReturnCollateral _ colTxOut -> SJust $ withShelleyBasedEraConstraintsForLedger era $ toShelleyTxOutAny era colTxOut
 
 convTotalCollateral :: TxTotalCollateral era -> StrictMaybe Ledger.Coin
 convTotalCollateral txTotalCollateral =
@@ -3599,28 +3588,6 @@ convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
     TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
-
-getCBORConstraint
-  :: ShelleyBasedEra era
-  -> (ToCBOR (Ledger.TxOut (ShelleyLedgerEra era)) => a)
-  -> a
-getCBORConstraint ShelleyBasedEraShelley f = f
-getCBORConstraint ShelleyBasedEraAllegra f = f
-getCBORConstraint ShelleyBasedEraMary f = f
-getCBORConstraint ShelleyBasedEraAlonzo f = f
-getCBORConstraint ShelleyBasedEraBabbage f = f
-getCBORConstraint ShelleyBasedEraConway f = f
-
-getLedgerEraConstraint
-  :: ShelleyBasedEra era
-  -> (Ledger.Era (ShelleyLedgerEra era) => a)
-  -> a
-getLedgerEraConstraint ShelleyBasedEraShelley f = f
-getLedgerEraConstraint ShelleyBasedEraAllegra f = f
-getLedgerEraConstraint ShelleyBasedEraMary f = f
-getLedgerEraConstraint ShelleyBasedEraAlonzo f = f
-getLedgerEraConstraint ShelleyBasedEraBabbage f = f
-getLedgerEraConstraint ShelleyBasedEraConway f = f
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do

@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -52,6 +54,8 @@ module Cardano.Api.Eras
 
     -- * Assertions on era
   , requireShelleyBasedEra
+
+  , withShelleyBasedEraConstraintsForLedger
   ) where
 
 import           Cardano.Api.HasTypeProxy
@@ -535,3 +539,22 @@ requireShelleyBasedEra era =
   case cardanoEraStyle era of
     LegacyByronEra -> pure Nothing
     ShelleyBasedEra sbe -> pure (Just sbe)
+
+withShelleyBasedEraConstraintsForLedger :: ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  ->  ( ()
+      => L.EraCrypto ledgerera ~ L.StandardCrypto
+      => L.EraTx ledgerera
+      => L.EraTxBody ledgerera
+      => L.Era ledgerera
+      => a
+      )
+  -> a
+withShelleyBasedEraConstraintsForLedger = \case
+  ShelleyBasedEraShelley -> id
+  ShelleyBasedEraAllegra -> id
+  ShelleyBasedEraMary    -> id
+  ShelleyBasedEraAlonzo  -> id
+  ShelleyBasedEraBabbage -> id
+  ShelleyBasedEraConway  -> id
