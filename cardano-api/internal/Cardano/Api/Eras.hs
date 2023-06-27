@@ -8,6 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 
 -- | Cardano eras, sometimes we have to distinguish them.
@@ -509,7 +510,7 @@ cardanoEraStyle ConwayEra  = ShelleyBasedEra ShelleyBasedEraConway
 -- ledger library which allows writing conversion functions in a more generic
 -- way.
 --
-type family ShelleyLedgerEra era where
+type family ShelleyLedgerEra era = r | r -> era where
 
   ShelleyLedgerEra ShelleyEra = Consensus.StandardShelley
   ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
