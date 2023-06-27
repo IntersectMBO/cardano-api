@@ -180,6 +180,7 @@ module Cardano.Api.TxBody (
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
+
   ) where
 
 import           Cardano.Api.Address
@@ -188,6 +189,8 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Governance.Actions.ProposalProcedure
+import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
@@ -222,6 +225,8 @@ import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
+import qualified Cardano.Ledger.Conway.Governance as Conway
+import qualified Cardano.Ledger.Conway.Governance as Gov
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
@@ -1734,24 +1739,26 @@ deriving instance Show (TxMintValue build era)
 
 data TxBodyContent build era =
      TxBodyContent {
-       txIns              :: TxIns build era,
-       txInsCollateral    :: TxInsCollateral era,
-       txInsReference     :: TxInsReference build era,
-       txOuts             :: [TxOut CtxTx era],
-       txTotalCollateral  :: TxTotalCollateral era,
-       txReturnCollateral :: TxReturnCollateral CtxTx era,
-       txFee              :: TxFee era,
-       txValidityRange    :: (TxValidityLowerBound era,
+       txIns               :: TxIns build era,
+       txInsCollateral     :: TxInsCollateral era,
+       txInsReference      :: TxInsReference build era,
+       txOuts              :: [TxOut CtxTx era],
+       txTotalCollateral   :: TxTotalCollateral era,
+       txReturnCollateral  :: TxReturnCollateral CtxTx era,
+       txFee               :: TxFee era,
+       txValidityRange     :: (TxValidityLowerBound era,
                               TxValidityUpperBound era),
-       txMetadata         :: TxMetadataInEra era,
-       txAuxScripts       :: TxAuxScripts era,
-       txExtraKeyWits     :: TxExtraKeyWitnesses era,
-       txProtocolParams   :: BuildTxWith build (Maybe ProtocolParameters),
-       txWithdrawals      :: TxWithdrawals  build era,
-       txCertificates     :: TxCertificates build era,
-       txUpdateProposal   :: TxUpdateProposal era,
-       txMintValue        :: TxMintValue    build era,
-       txScriptValidity   :: TxScriptValidity era
+       txMetadata          :: TxMetadataInEra era,
+       txAuxScripts        :: TxAuxScripts era,
+       txExtraKeyWits      :: TxExtraKeyWitnesses era,
+       txProtocolParams    :: BuildTxWith build (Maybe ProtocolParameters),
+       txWithdrawals       :: TxWithdrawals  build era,
+       txCertificates      :: TxCertificates build era,
+       txUpdateProposal    :: TxUpdateProposal era,
+       txMintValue         :: TxMintValue    build era,
+       txScriptValidity    :: TxScriptValidity era,
+       txGovernanceActions :: TxGovernanceActions era,
+       txVotes             :: TxVotes era
      }
      deriving (Eq, Show)
 
@@ -1774,6 +1781,8 @@ defaultTxBodyContent = TxBodyContent
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
+    , txGovernanceActions = TxGovernanceActionsNone
+    , txVotes = TxVotesNone
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -2722,10 +2731,29 @@ fromLedgerTxBody era scriptValidity body scriptdata mAux =
       , txMetadata
       , txAuxScripts
       , txScriptValidity   = scriptValidity
+      , txGovernanceActions = fromLedgerProposalProcedure era body
+      , txVotes = error "fromLedgerTxBody.txVotes: TODO: Conway"
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
 
+-- TODO: Conway
+fromLedgerProposalProcedure
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxGovernanceActions era
+fromLedgerProposalProcedure _ _bdy = TxGovernanceActionsNone
+ where
+   _proposalProcedures
+     :: ShelleyBasedEra era
+     -> Ledger.TxBody (ShelleyLedgerEra era)
+     -> Seq.StrictSeq (Conway.ProposalProcedure era)
+   _proposalProcedures ShelleyBasedEraShelley _bdy = mempty
+   _proposalProcedures ShelleyBasedEraAllegra _bdy = mempty
+   _proposalProcedures ShelleyBasedEraMary _bdy = mempty
+   _proposalProcedures ShelleyBasedEraAlonzo _bdy = mempty
+   _proposalProcedures ShelleyBasedEraBabbage _bdy = mempty
+   _proposalProcedures ShelleyBasedEraConway _bdy = mempty
 
 fromLedgerTxIns
   :: forall era.
@@ -3377,23 +3405,25 @@ getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
 getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   TxBodyContent
-  { txIns              = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
-  , txInsCollateral    = TxInsCollateralNone
-  , txInsReference     = TxInsReferenceNone
-  , txOuts             = fromByronTxOut <$> toList txOutputs
-  , txReturnCollateral = TxReturnCollateralNone
-  , txTotalCollateral  = TxTotalCollateralNone
-  , txFee              = TxFeeImplicit TxFeesImplicitInByronEra
-  , txValidityRange    = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
-  , txMetadata         = TxMetadataNone
-  , txAuxScripts       = TxAuxScriptsNone
-  , txExtraKeyWits     = TxExtraKeyWitnessesNone
-  , txProtocolParams   = ViewTx
-  , txWithdrawals      = TxWithdrawalsNone
-  , txCertificates     = TxCertificatesNone
-  , txUpdateProposal   = TxUpdateProposalNone
-  , txMintValue        = TxMintNone
-  , txScriptValidity   = TxScriptValidityNone
+  { txIns               = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
+  , txInsCollateral     = TxInsCollateralNone
+  , txInsReference      = TxInsReferenceNone
+  , txOuts              = fromByronTxOut <$> toList txOutputs
+  , txReturnCollateral  = TxReturnCollateralNone
+  , txTotalCollateral   = TxTotalCollateralNone
+  , txFee               = TxFeeImplicit TxFeesImplicitInByronEra
+  , txValidityRange     = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
+  , txMetadata          = TxMetadataNone
+  , txAuxScripts        = TxAuxScriptsNone
+  , txExtraKeyWits      = TxExtraKeyWitnessesNone
+  , txProtocolParams    = ViewTx
+  , txWithdrawals       = TxWithdrawalsNone
+  , txCertificates      = TxCertificatesNone
+  , txUpdateProposal    = TxUpdateProposalNone
+  , txMintValue         = TxMintNone
+  , txScriptValidity    = TxScriptValidityNone
+  , txGovernanceActions = TxGovernanceActionsNone
+  , txVotes             = TxVotesNone
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
@@ -3588,6 +3618,22 @@ convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
     TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
+
+convGovActions :: ShelleyBasedEra era -> TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedure (ShelleyLedgerEra era))
+convGovActions _ TxGovernanceActionsNone = Seq.empty
+convGovActions sbe (TxGovernanceActions _ govActions) =
+  Seq.fromList
+    [ createProposalProcedure sbe deposit stakeCred action
+    | (deposit, stakeCred, action) <- govActions
+    ]
+
+convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
+convVotes _ TxVotesNone = Seq.empty
+convVotes sbe (TxVotes _ votes) =
+  Seq.fromList
+    [ unVote $ createVotingProcedure sbe voteChoice voterType govActionIdentifier votingCred
+    | (voteChoice, voterType, govActionIdentifier, votingCred) <- votes
+    ]
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
@@ -3935,7 +3981,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
                              txWithdrawals,
                              txCertificates,
                              txMintValue,
-                             txScriptValidity
+                             txScriptValidity,
+                             txVotes,
+                             txGovernanceActions
                            } = do
 
     validateTxBodyContent era txbodycontent
@@ -3955,6 +4003,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+           & L.votingProceduresTxBodyL    .~ convVotes era txVotes
+           & L.proposalProceduresTxBodyL  .~ convGovActions era txGovernanceActions
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )

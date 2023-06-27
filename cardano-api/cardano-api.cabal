@@ -54,6 +54,7 @@ library internal
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
+                        Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
                         Cardano.Api.Error
@@ -61,6 +62,8 @@ library internal
                         Cardano.Api.Fees
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters
+                        Cardano.Api.Governance.Actions.ProposalProcedure
+                        Cardano.Api.Governance.Actions.VotingProcedure
                         Cardano.Api.Governance.Poll
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy

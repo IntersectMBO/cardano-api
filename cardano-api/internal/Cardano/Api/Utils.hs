@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
@@ -27,9 +28,17 @@ module Cardano.Api.Utils
 
     -- ** CLI option parsing
   , bounded
+
+    -- ** Constraint solvers
+  , obtainCryptoConstraints
+  , obtainEraCryptoConstraints
   ) where
 
 import           Cardano.Api.Eras
+
+import           Cardano.Ledger.Core (EraCrypto)
+import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import           Cardano.Ledger.Shelley ()
 
 import           Control.Exception (bracket)
 import           Control.Monad (when)
@@ -49,6 +58,7 @@ import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.ParserCombinators.Parsec.Error as Parsec
 import qualified Text.Read as Read
+
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -128,3 +138,25 @@ bounded t = eitherReader $ \s -> do
   when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
   when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
   pure (fromIntegral i)
+
+obtainEraCryptoConstraints
+  :: ShelleyBasedEra era
+  -> ((EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto) => a)
+  -> a
+obtainEraCryptoConstraints ShelleyBasedEraShelley f = f
+obtainEraCryptoConstraints ShelleyBasedEraAllegra f = f
+obtainEraCryptoConstraints ShelleyBasedEraMary    f = f
+obtainEraCryptoConstraints ShelleyBasedEraAlonzo  f = f
+obtainEraCryptoConstraints ShelleyBasedEraBabbage f = f
+obtainEraCryptoConstraints ShelleyBasedEraConway  f = f
+
+obtainCryptoConstraints
+  :: ShelleyBasedEra era
+  -> ((Crypto (EraCrypto (ShelleyLedgerEra era))) => a)
+  -> a
+obtainCryptoConstraints ShelleyBasedEraShelley f = f
+obtainCryptoConstraints ShelleyBasedEraAllegra f = f
+obtainCryptoConstraints ShelleyBasedEraMary    f = f
+obtainCryptoConstraints ShelleyBasedEraAlonzo  f = f
+obtainCryptoConstraints ShelleyBasedEraBabbage f = f
+obtainCryptoConstraints ShelleyBasedEraConway  f = f

@@ -257,6 +257,8 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
+    TxVotes(..),
+    TxGovernanceActions(..),
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),
@@ -758,6 +760,10 @@ module Cardano.Api (
     getOpCertCount,
     issueOperationalCertificate,
 
+    -- * Constitutional Committee keys
+    CommitteeColdKey,
+    CommitteeHotKey,
+
     -- * Genesis file
     -- | Types and functions needed to inspect or create a genesis file.
     GenesisKey,
@@ -877,6 +883,18 @@ module Cardano.Api (
     querySystemStart,
     queryUtxo,
     determineEraExpr,
+    -- * Governance
+
+    -- ** DReps
+    DRepKey,
+    DRepMetadata,
+    DRepMetadataReference,
+    DRepMetadataValidationError,
+    validateAndHashDRepMetadata,
+
+    -- ** Governance Committee
+    makeCommitteeDelegationCertificate,
+    makeCommitteeHotKeyUnregistrationCertificate,
   ) where
 
 import           Cardano.Api.Address
@@ -886,6 +904,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
+import           Cardano.Api.DRepMetadata
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -893,6 +912,8 @@ import           Cardano.Api.Feature
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
+import           Cardano.Api.Governance.Actions.ProposalProcedure
+import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode

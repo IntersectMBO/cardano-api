@@ -22,6 +22,12 @@ module Cardano.Api.Certificate (
     StakePoolRelay(..),
     StakePoolMetadataReference(..),
 
+    makeCommitteeDelegationCertificate,
+    makeCommitteeHotKeyUnregistrationCertificate,
+
+    -- * Registering DReps
+    DRepMetadataReference(..),
+
     -- * Special certificates
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
@@ -38,9 +44,8 @@ module Cardano.Api.Certificate (
   ) where
 
 import           Cardano.Api.Address
-import           Cardano.Api.Hash
+import           Cardano.Api.DRepMetadata
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
@@ -87,9 +92,18 @@ data Certificate =
    | StakePoolRetirementCertificate   PoolId EpochNo
 
      -- Special certificates
-   | GenesisKeyDelegationCertificate (Hash GenesisKey)
-                                     (Hash GenesisDelegateKey)
-                                     (Hash VrfKey)
+   | GenesisKeyDelegationCertificate
+      (Hash GenesisKey)
+      (Hash GenesisDelegateKey)
+      (Hash VrfKey)
+
+   | CommitteeDelegationCertificate
+      (Hash CommitteeColdKey)
+      (Hash CommitteeHotKey)
+
+   | CommitteeHotKeyDeregistrationCertificate
+      (Hash CommitteeColdKey)
+
    | MIRCertificate MIRPot MIRTarget
 
   deriving stock (Eq, Show)
@@ -109,11 +123,13 @@ instance HasTextEnvelope Certificate where
     textEnvelopeType _ = "CertificateShelley"
     textEnvelopeDefaultDescr cert = case cert of
       StakeAddressRegistrationCertificate{}   -> "Stake address registration"
-      StakeAddressDeregistrationCertificate{} -> "Stake address de-registration"
+      StakeAddressDeregistrationCertificate{} -> "Stake address deregistration"
       StakeAddressPoolDelegationCertificate{} -> "Stake address stake pool delegation"
       StakePoolRegistrationCertificate{}      -> "Pool registration"
       StakePoolRetirementCertificate{}        -> "Pool retirement"
       GenesisKeyDelegationCertificate{}       -> "Genesis key delegation"
+      CommitteeDelegationCertificate{} -> "Constitution committee member key delegation"
+      CommitteeHotKeyDeregistrationCertificate{} -> "Constitution committee member hot key deregistration"
       MIRCertificate{}                        -> "MIR"
 
 -- | The 'MIRTarget' determines the target of a 'MIRCertificate'.
@@ -177,6 +193,17 @@ data StakePoolMetadataReference =
      }
   deriving (Eq, Show)
 
+-- ----------------------------------------------------------------------------
+-- DRep parameters
+--
+
+data DRepMetadataReference =
+  DRepMetadataReference
+  { drepMetadataURL  :: Text
+  , drepMetadataHash :: Hash DRepMetadata
+  }
+  deriving (Eq, Show)
+
 
 -- ----------------------------------------------------------------------------
 -- Constructor functions
@@ -202,6 +229,17 @@ makeGenesisKeyDelegationCertificate :: Hash GenesisKey
                                     -> Hash VrfKey
                                     -> Certificate
 makeGenesisKeyDelegationCertificate = GenesisKeyDelegationCertificate
+
+makeCommitteeDelegationCertificate :: ()
+  => Hash CommitteeColdKey
+  -> Hash CommitteeHotKey
+  -> Certificate
+makeCommitteeDelegationCertificate = CommitteeDelegationCertificate
+
+makeCommitteeHotKeyUnregistrationCertificate :: ()
+  => Hash CommitteeColdKey
+  -> Certificate
+makeCommitteeHotKeyUnregistrationCertificate = CommitteeHotKeyDeregistrationCertificate
 
 makeMIRCertificate :: MIRPot -> MIRTarget -> Certificate
 makeMIRCertificate = MIRCertificate
@@ -251,6 +289,17 @@ toShelleyCertificate (GenesisKeyDelegationCertificate
         genesiskh
         delegatekh
         vrfkh
+
+toShelleyCertificate
+  ( CommitteeDelegationCertificate
+    (CommitteeColdKeyHash _ckh)
+    (CommitteeHotKeyHash  _hkh)
+  ) = error "TODO CIP-1694 Need ledger types for CommitteeDelegationCertificate"
+
+toShelleyCertificate
+  ( CommitteeHotKeyDeregistrationCertificate
+    (CommitteeColdKeyHash _ckh)
+  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyDeregistrationCertificate"
 
 toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
     Shelley.DCertMir $

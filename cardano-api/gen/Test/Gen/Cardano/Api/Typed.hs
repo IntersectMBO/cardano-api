@@ -644,7 +644,8 @@ genTxBodyContent era = do
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
-
+  txGovernanceActions <- return TxGovernanceActionsNone -- TODO: Conway era
+  txVotes <- return TxVotesNone -- TODO: Conway era
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
@@ -663,6 +664,8 @@ genTxBodyContent era = do
     , Api.txUpdateProposal
     , Api.txMintValue
     , Api.txScriptValidity
+    , Api.txGovernanceActions
+    , Api.txVotes
     }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
