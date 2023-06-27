@@ -236,7 +236,6 @@ import qualified Cardano.Ledger.Keys as Shelley
 import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Ledger
-import qualified Cardano.Ledger.Shelley.Delegation.Certificates as Shelley
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 import qualified Cardano.Ledger.TxIn as L
@@ -264,7 +263,7 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
+import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -3463,7 +3462,7 @@ convCertificates
 convCertificates era txCertificates =
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ -> 
+    TxCertificates _ cs _ ->
       case era of
         ShelleyBasedEraShelley ->
           Seq.fromList (map toShelleyCertificate cs)

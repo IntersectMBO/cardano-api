@@ -152,7 +152,7 @@ library internal
                       , microlens
                       , mtl
                       , network
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , ouroboros-consensus >= 0.8
                       , ouroboros-consensus-cardano >= 0.6.1
                       , ouroboros-consensus-diffusion >= 0.6.1
