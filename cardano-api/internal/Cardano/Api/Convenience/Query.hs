@@ -89,7 +89,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
 
   let stakeCreds = Set.fromList $ flip mapMaybe certs $ \case
-        StakeAddressDeregistrationCertificate cred -> Just cred
+        AllErasCerts (StakeAddressDeregistrationCertificate cred) -> Just cred
         _ -> Nothing
 
   -- Query execution

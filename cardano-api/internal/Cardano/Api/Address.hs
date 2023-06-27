@@ -654,8 +654,9 @@ toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
 toShelleyPaymentCredential (PaymentCredentialByScript sh) =
     Shelley.ScriptHashObj (toShelleyScriptHash sh)
 
-toShelleyStakeCredential :: StakeCredential
-                         -> Shelley.StakeCredential StandardCrypto
+toShelleyStakeCredential
+  :: StakeCredential
+  -> Shelley.StakeCredential StandardCrypto
 toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
     Shelley.KeyHashObj kh
 toShelleyStakeCredential (StakeCredentialByScript sh) =

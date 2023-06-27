@@ -601,8 +601,8 @@ genTxCertificates era =
 genCertificate :: Gen Certificate
 genCertificate =
   Gen.choice
-    [ StakeAddressRegistrationCertificate <$> genStakeCredential
-    , StakeAddressDeregistrationCertificate <$> genStakeCredential
+    [ AllErasCerts . StakeAddressRegistrationCertificate <$> genStakeCredential
+    , AllErasCerts . StakeAddressDeregistrationCertificate <$> genStakeCredential
     ]
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)

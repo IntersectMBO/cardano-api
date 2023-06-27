@@ -1267,8 +1267,8 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
 
     selectStakeCredential cert =
       case cert of
-        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
-        StakeAddressPoolDelegationCertificate stakecred _ -> Just stakecred
+        AllErasCerts (StakeAddressDeregistrationCertificate stakecred) -> Just stakecred
+        AllErasCerts (StakeAddressPoolDelegationCertificate stakecred _) -> Just stakecred
         _                                                 -> Nothing
 
     mapScriptWitnessesMinting

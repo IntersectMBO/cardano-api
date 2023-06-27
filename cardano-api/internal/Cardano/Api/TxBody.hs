@@ -235,7 +235,6 @@ import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
-import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 import qualified Cardano.Ledger.TxIn as L
 import           Cardano.Ledger.Val as L (isZero)
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -261,7 +260,7 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -3251,7 +3250,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInShelleyEra
-            (map fromShelleyCertificate $ toList certificates)
+            (mapMaybe (fromShelleyCertificate era) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3261,7 +3260,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInAllegraEra
-            (map fromShelleyCertificate $ toList certificates)
+            (mapMaybe (fromShelleyCertificate era) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3271,7 +3270,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInMaryEra
-            (map fromShelleyCertificate $ toList certificates)
+            (mapMaybe (fromShelleyCertificate era) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3281,7 +3280,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInAlonzoEra
-            (map fromShelleyCertificate $ toList certificates)
+            (mapMaybe (fromShelleyCertificate era) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3291,7 +3290,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInBabbageEra
-            (map fromShelleyCertificate $ toList certificates)
+            (mapMaybe (fromShelleyCertificate era) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3463,20 +3462,17 @@ convCertificates era txCertificates =
     TxCertificates _ cs _ ->
       case era of
         ShelleyBasedEraShelley ->
-          Seq.fromList (map toShelleyCertificate cs)
+          Seq.fromList (mapMaybe (toShelleyCertificate era) cs)
         ShelleyBasedEraAllegra ->
-          Seq.fromList (map toShelleyCertificate cs)
+          Seq.fromList (mapMaybe (toShelleyCertificate era) cs)
         ShelleyBasedEraMary ->
-          Seq.fromList (map toShelleyCertificate cs)
+          Seq.fromList (mapMaybe (toShelleyCertificate era) cs)
         ShelleyBasedEraAlonzo ->
-          Seq.fromList (map toShelleyCertificate cs)
+          Seq.fromList (mapMaybe (toShelleyCertificate era) cs)
         ShelleyBasedEraBabbage ->
-          Seq.fromList (map toShelleyCertificate cs)
+          Seq.fromList (mapMaybe (toShelleyCertificate era) cs)
         ShelleyBasedEraConway ->
-          Seq.fromList (map toConwayCertificate cs)
-
-toConwayCertificate :: Certificate -> Shelley.TxCert L.Conway
-toConwayCertificate = error "FIXME"
+          Seq.fromList (mapMaybe (toShelleyCertificate era) cs)
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
@@ -4247,8 +4243,8 @@ collectTxBodyScriptWitnesses TxBodyContent {
 
     selectStakeCredential cert =
       case cert of
-        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
-        StakeAddressPoolDelegationCertificate stakecred _ -> Just stakecred
+        AllErasCerts (StakeAddressDeregistrationCertificate stakecred  ) -> Just stakecred
+        AllErasCerts (StakeAddressPoolDelegationCertificate stakecred _) -> Just stakecred
         _                                                 -> Nothing
 
     scriptWitnessesMinting

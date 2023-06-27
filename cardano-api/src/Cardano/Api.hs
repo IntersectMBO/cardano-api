@@ -379,6 +379,7 @@ module Cardano.Api (
 
     -- * Certificates
     Certificate(..),
+    AllErasCertificates(..),
 
     -- ** Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and

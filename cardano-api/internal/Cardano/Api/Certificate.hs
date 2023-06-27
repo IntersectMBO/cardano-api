@@ -1,13 +1,18 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
 
 -- | Certificates embedded in transactions
 --
 module Cardano.Api.Certificate (
     Certificate(..),
+    AllErasCertificates(..),
 
     -- * Registering stake address and delegating
     makeStakeAddressRegistrationCertificate,
@@ -45,6 +50,7 @@ module Cardano.Api.Certificate (
 
 import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
@@ -54,14 +60,16 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Value
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Allegra.Core (AtMostEra)
 import qualified Cardano.Ledger.Babbage as L
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Shelley
+import qualified Cardano.Ledger.Binary.Decoding as LedgerDec
+import qualified Cardano.Ledger.Binary.Plain as Ledger
+import qualified Cardano.Ledger.Binary.Version as Ledger
 import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
+import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Core as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Shelley as Shelley
 import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.Shelley.TxCert as Shelley
@@ -83,9 +91,16 @@ import           Network.Socket (PortNumber)
 -- Certificates embedded in transactions
 --
 
-data Certificate =
+data DeprecatedAfterBabbageCertificates
+  = GenesisKeyDelegationCertificate
+      (Hash GenesisKey)
+      (Hash GenesisDelegateKey)
+      (Hash VrfKey)
+  | MIRCertificate MIRPot MIRTarget
+  deriving (Eq, Show)
 
-     -- Stake address certificates
+data AllErasCertificates
+   = -- Stake address certificates
      StakeAddressRegistrationCertificate   StakeCredential
    | StakeAddressDeregistrationCertificate StakeCredential
    | StakeAddressPoolDelegationCertificate StakeCredential PoolId
@@ -93,13 +108,167 @@ data Certificate =
      -- Stake pool certificates
    | StakePoolRegistrationCertificate StakePoolParameters
    | StakePoolRetirementCertificate   PoolId EpochNo
+   deriving (Eq, Show)
 
-     -- Special certificates
-   | GenesisKeyDelegationCertificate
-      (Hash GenesisKey)
-      (Hash GenesisDelegateKey)
-      (Hash VrfKey)
+toBabbageCertificate
+  :: ShelleyBasedEra era
+  -> DeprecatedAfterBabbageCertificates
+  -> Maybe (Shelley.TxCert (ShelleyLedgerEra era))
+toBabbageCertificate sbe (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
+  case sbe of
+    ShelleyBasedEraShelley ->
+      case mirPot of
+        ReservesMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              ReservesMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        TreasuryMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
+    ShelleyBasedEraAllegra ->
+      case mirPot of
+        ReservesMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              ReservesMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        TreasuryMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
+    ShelleyBasedEraMary ->
+      case mirPot of
+        ReservesMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              ReservesMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        TreasuryMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
+    ShelleyBasedEraAlonzo ->
+      case mirPot of
+        ReservesMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              ReservesMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        TreasuryMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
+    ShelleyBasedEraBabbage ->
+      case mirPot of
+        ReservesMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              ReservesMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        TreasuryMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
+    _ -> Nothing
 
+toBabbageCertificate sbe (MIRCertificate mirPot (SendToReservesMIR amount)) =
+  case sbe of
+    ShelleyBasedEraShelley ->
+      case mirPot of
+        TreasuryMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              TreasuryMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        ReservesMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected TreasuryMIR but got ReservesMIR"
+    ShelleyBasedEraAllegra ->
+      case mirPot of
+        TreasuryMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              TreasuryMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        ReservesMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected TreasuryMIR but got ReservesMIR"
+    ShelleyBasedEraMary ->
+            case mirPot of
+        TreasuryMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              TreasuryMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        ReservesMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected TreasuryMIR but got ReservesMIR"
+    ShelleyBasedEraAlonzo ->
+            case mirPot of
+        TreasuryMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              TreasuryMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        ReservesMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected TreasuryMIR but got ReservesMIR"
+    ShelleyBasedEraBabbage ->
+            case mirPot of
+        TreasuryMIR ->
+          Just $ Shelley.MirTxCert $
+            Shelley.MIRCert
+              TreasuryMIR
+              (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
+        ReservesMIR ->
+          error "toBabbageCertificate: Incorrect MIRPot specified. Expected TreasuryMIR but got ReservesMIR"
+    _ -> Nothing
+
+toBabbageCertificate sbe (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
+  case sbe of
+    ShelleyBasedEraShelley ->
+          Just $ Shelley.MirTxCert $
+      Shelley.MIRCert
+        mirpot
+        (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
+           [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
+           | (sc, v) <- amounts ])
+    ShelleyBasedEraAllegra ->
+          Just $ Shelley.MirTxCert $
+      Shelley.MIRCert
+        mirpot
+        (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
+           [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
+           | (sc, v) <- amounts ])
+    ShelleyBasedEraMary ->
+          Just $ Shelley.MirTxCert $
+      Shelley.MIRCert
+        mirpot
+        (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
+           [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
+           | (sc, v) <- amounts ])
+    ShelleyBasedEraAlonzo ->
+          Just $ Shelley.MirTxCert $
+      Shelley.MIRCert
+        mirpot
+        (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
+           [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
+           | (sc, v) <- amounts ])
+    ShelleyBasedEraBabbage ->
+          Just $ Shelley.MirTxCert $
+      Shelley.MIRCert
+        mirpot
+        (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
+           [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
+           | (sc, v) <- amounts ])
+    _ -> Nothing
+toBabbageCertificate sbe (GenesisKeyDelegationCertificate (GenesisKeyHash genesiskh) (GenesisDelegateKeyHash delegatekh) (VrfKeyHash vrfkh)) =
+  case sbe of
+    ShelleyBasedEraShelley ->   Just $ Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
+    ShelleyBasedEraAllegra -> Just $ Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
+    ShelleyBasedEraMary -> Just $ Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
+    ShelleyBasedEraAlonzo -> Just $ Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
+    ShelleyBasedEraBabbage -> Just $ Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
+    _ -> Nothing
+
+
+data Certificate
+   =
+   -- Certificates that work in all eras (Shelley era onwards)
+     AllErasCerts  AllErasCertificates
+
+   -- Special certificates
+   | DeprecatedAfterBabbageCerts DeprecatedAfterBabbageCertificates
+
+   -- Conway certs
    | CommitteeDelegationCertificate
       (Hash CommitteeColdKey)
       (Hash CommitteeHotKey)
@@ -107,7 +276,7 @@ data Certificate =
    | CommitteeHotKeyDeregistrationCertificate
       (Hash CommitteeColdKey)
 
-   | MIRCertificate MIRPot MIRTarget
+
 
   deriving stock (Eq, Show)
   deriving anyclass SerialiseAsCBOR
@@ -117,23 +286,69 @@ instance HasTypeProxy Certificate where
     proxyToAsType _ = AsCertificate
 
 instance ToCBOR Certificate where
-    toCBOR = Shelley.toEraCBOR @Shelley.Shelley . (toShelleyCertificate @Shelley.Shelley) -- FIXME!
+    toCBOR cert =
+      case cert of
+        DeprecatedAfterBabbageCerts c ->
+          case toShelleyCertificate ShelleyBasedEraBabbage $ DeprecatedAfterBabbageCerts c of
+            Nothing -> error $ "ToCBOR Certificate: Failed to convert cardano-api babbage certificate to ledger certificate: " <> show cert
+            Just ledgerCert -> Shelley.toEraCBOR @L.Babbage ledgerCert
+        shelleyCert -> do
+          case toShelleyCertificate ShelleyBasedEraConway shelleyCert of
+            Nothing -> error $ "ToCBOR Certificate: Failed to convert cardano-api shelley certificate to ledger certificate: " <> show cert
+            Just ledgerCert -> Shelley.toEraCBOR @Conway.Conway ledgerCert
 
 instance FromCBOR Certificate where
-    fromCBOR = (fromShelleyCertificate @Shelley.Shelley) <$> Shelley.fromEraCBOR @Shelley.Shelley
+    fromCBOR = hackyCertificateDecoder
+
+-- Conway: TODO
+-- This is a hack. The solution is to parameterize `data Certificate` over the era.
+hackyCertificateDecoder :: Ledger.Decoder s Certificate
+hackyCertificateDecoder = do
+ bs <- Ledger.decodeBytes
+ babbageVersion <- Ledger.mkVersion (8 :: Int)
+ case LedgerDec.decodeFull' babbageVersion bs of
+  Right babbageCert ->
+    case fromShelleyCertificate ShelleyBasedEraBabbage babbageCert of
+      Just c -> pure c
+      Nothing ->
+       fail $ mconcat [ "Successfully decoded a babbage certificate but failed to convert it to a cardano-api certificate"
+                      , "\n"
+                      , "Babbage certificate: " <> show babbageCert
+                      ]
+  Left babErr -> do
+    conwayVersion <- Ledger.mkVersion (9 :: Int)
+    case LedgerDec.decodeFull' conwayVersion bs of
+     Right conwayCert ->
+       case fromShelleyCertificate ShelleyBasedEraConway conwayCert of
+         Just c -> pure c
+         Nothing ->
+          fail $ mconcat [ "Successfully decoded a conway certificate but failed to convert it to a cardano-api certificate"
+                         , "\n"
+                         , "Conway certificate: " <> show conwayCert
+                         ]
+     Left conErr ->
+            fail $ mconcat ["Failed to decode neither a babbage certificate nor a conway certificate"
+                           , "\n"
+                           , "Babbage decode error: " <> show babErr
+                           , "\n"
+                           , "Conway decode error: " <> show conErr
+                           ]
+
+
+    -- (fromShelleyCertificate @Shelley.Shelley) <$> Shelley.fromEraCBOR @Conway.Conway
 
 instance HasTextEnvelope Certificate where
     textEnvelopeType _ = "CertificateShelley"
     textEnvelopeDefaultDescr cert = case cert of
-      StakeAddressRegistrationCertificate{}   -> "Stake address registration"
-      StakeAddressDeregistrationCertificate{} -> "Stake address deregistration"
-      StakeAddressPoolDelegationCertificate{} -> "Stake address stake pool delegation"
-      StakePoolRegistrationCertificate{}      -> "Pool registration"
-      StakePoolRetirementCertificate{}        -> "Pool retirement"
-      GenesisKeyDelegationCertificate{}       -> "Genesis key delegation"
+      AllErasCerts StakeAddressRegistrationCertificate{} -> "Stake address registration"
+      AllErasCerts StakeAddressDeregistrationCertificate{} -> "Stake address deregistration"
+      AllErasCerts StakeAddressPoolDelegationCertificate{} -> "Stake address stake pool delegation"
+      AllErasCerts StakePoolRegistrationCertificate{} -> "Pool registration"
+      AllErasCerts StakePoolRetirementCertificate{} -> "Pool retirement"
+      DeprecatedAfterBabbageCerts GenesisKeyDelegationCertificate{} -> "Genesis key delegation"
       CommitteeDelegationCertificate{} -> "Constitution committee member key delegation"
       CommitteeHotKeyDeregistrationCertificate{} -> "Constitution committee member hot key deregistration"
-      MIRCertificate{}                        -> "MIR"
+      DeprecatedAfterBabbageCerts MIRCertificate{} -> "MIR"
 
 -- | The 'MIRTarget' determines the target of a 'MIRCertificate'.
 -- A 'MIRCertificate' moves lovelace from either the reserves or the treasury
@@ -213,25 +428,26 @@ data DRepMetadataReference =
 --
 
 makeStakeAddressRegistrationCertificate :: StakeCredential -> Certificate
-makeStakeAddressRegistrationCertificate = StakeAddressRegistrationCertificate
+makeStakeAddressRegistrationCertificate = AllErasCerts . StakeAddressRegistrationCertificate
 
 makeStakeAddressDeregistrationCertificate :: StakeCredential -> Certificate
-makeStakeAddressDeregistrationCertificate = StakeAddressDeregistrationCertificate
+makeStakeAddressDeregistrationCertificate = AllErasCerts . StakeAddressDeregistrationCertificate
 
 makeStakeAddressPoolDelegationCertificate :: StakeCredential -> PoolId -> Certificate
-makeStakeAddressPoolDelegationCertificate = StakeAddressPoolDelegationCertificate
+makeStakeAddressPoolDelegationCertificate s pid = AllErasCerts $ StakeAddressPoolDelegationCertificate s pid
 
 makeStakePoolRegistrationCertificate :: StakePoolParameters -> Certificate
-makeStakePoolRegistrationCertificate = StakePoolRegistrationCertificate
+makeStakePoolRegistrationCertificate = AllErasCerts . StakePoolRegistrationCertificate
 
 makeStakePoolRetirementCertificate :: PoolId -> EpochNo -> Certificate
-makeStakePoolRetirementCertificate = StakePoolRetirementCertificate
+makeStakePoolRetirementCertificate pid eNo = AllErasCerts $ StakePoolRetirementCertificate pid eNo
 
 makeGenesisKeyDelegationCertificate :: Hash GenesisKey
                                     -> Hash GenesisDelegateKey
                                     -> Hash VrfKey
                                     -> Certificate
-makeGenesisKeyDelegationCertificate = GenesisKeyDelegationCertificate
+makeGenesisKeyDelegationCertificate gKey gDelegKey vryK =
+  DeprecatedAfterBabbageCerts $ GenesisKeyDelegationCertificate gKey gDelegKey vryK
 
 makeCommitteeDelegationCertificate :: ()
   => Hash CommitteeColdKey
@@ -245,131 +461,178 @@ makeCommitteeHotKeyUnregistrationCertificate :: ()
 makeCommitteeHotKeyUnregistrationCertificate = CommitteeHotKeyDeregistrationCertificate
 
 makeMIRCertificate :: MIRPot -> MIRTarget -> Certificate
-makeMIRCertificate = MIRCertificate
+makeMIRCertificate p t = DeprecatedAfterBabbageCerts $ MIRCertificate p t
 
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
 --
 
-toShelleyCertificate :: (Shelley.EraCrypto era ~ StandardCrypto,
-  Shelley.ShelleyEraTxCert era,
-  Shelley.TxCert era ~ Shelley.ShelleyTxCert era,
-                        AtMostEra L.BabbageEra era) => Certificate -> Shelley.ShelleyTxCert era
-toShelleyCertificate (StakeAddressRegistrationCertificate stakecred) =
-    Shelley.RegTxCert (toShelleyStakeCredential stakecred)
-
-toShelleyCertificate (StakeAddressDeregistrationCertificate stakecred) =
-    Shelley.UnRegTxCert (toShelleyStakeCredential stakecred)
-
-toShelleyCertificate (StakeAddressPoolDelegationCertificate
-                        stakecred (StakePoolKeyHash poolid)) =
-    Shelley.DelegStakeTxCert (toShelleyStakeCredential stakecred) poolid
-
-toShelleyCertificate (StakePoolRegistrationCertificate poolparams) =
-    Shelley.RegPoolTxCert (toShelleyPoolParams poolparams)
-
-toShelleyCertificate (StakePoolRetirementCertificate
-                       (StakePoolKeyHash poolid) epochno) =
-    Shelley.RetirePoolTxCert poolid epochno
-
-toShelleyCertificate (GenesisKeyDelegationCertificate
-                       (GenesisKeyHash         genesiskh)
-                       (GenesisDelegateKeyHash delegatekh)
-                       (VrfKeyHash             vrfkh)) =
-    Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
 
 toShelleyCertificate
+  :: Shelley.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
+  => ShelleyBasedEra era -> Certificate -> Maybe (Shelley.TxCert (ShelleyLedgerEra era))
+toShelleyCertificate _ (AllErasCerts (StakeAddressRegistrationCertificate stakecred)) =
+    Just $ Shelley.mkRegTxCert (toShelleyStakeCredential stakecred)
+
+toShelleyCertificate _ (AllErasCerts (StakeAddressDeregistrationCertificate stakecred)) =
+    Just $ Shelley.mkUnRegTxCert (toShelleyStakeCredential stakecred)
+
+toShelleyCertificate _ (AllErasCerts (StakeAddressPoolDelegationCertificate
+                        stakecred (StakePoolKeyHash poolid))) =
+    Just $ Shelley.mkDelegStakeTxCert (toShelleyStakeCredential stakecred) poolid
+
+toShelleyCertificate _ (AllErasCerts (StakePoolRegistrationCertificate poolparams)) =
+    Just $ Shelley.mkRegPoolTxCert (toShelleyPoolParams poolparams)
+
+toShelleyCertificate _ (AllErasCerts (StakePoolRetirementCertificate
+                       (StakePoolKeyHash poolid) epochno)) =
+    Just $ Shelley.mkRetirePoolTxCert poolid epochno
+
+toShelleyCertificate sbe (DeprecatedAfterBabbageCerts babbage) = toBabbageCertificate sbe babbage
+
+toShelleyCertificate _
   ( CommitteeDelegationCertificate
     (CommitteeColdKeyHash _ckh)
     (CommitteeHotKeyHash  _hkh)
   ) = error "TODO CIP-1694 Need ledger types for CommitteeDelegationCertificate"
 
-toShelleyCertificate
+toShelleyCertificate _
   ( CommitteeHotKeyDeregistrationCertificate
     (CommitteeColdKeyHash _ckh)
   ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyDeregistrationCertificate"
 
-toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
-    Shelley.MirTxCert $
-      Shelley.MIRCert
-        mirpot
-        (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
-           [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
-           | (sc, v) <- amounts ])
 
-toShelleyCertificate (MIRCertificate mirPot (SendToReservesMIR amount)) =
-    case mirPot of
-      TreasuryMIR ->
-        Shelley.MirTxCert $
-          Shelley.MIRCert
-            TreasuryMIR
-            (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
-      ReservesMIR ->
-        error "toShelleyCertificate: Incorrect MIRPot specified. Expected TreasuryMIR but got ReservesMIR"
-
-toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
-    case mirPot of
-      ReservesMIR ->
-        Shelley.MirTxCert $
-          Shelley.MIRCert
-            ReservesMIR
-            (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
-      TreasuryMIR ->
-        error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
-
-
-fromShelleyCertificate ::
-  (Shelley.EraCrypto era ~ StandardCrypto,
-    Shelley.ShelleyEraTxCert era,
-    Shelley.TxCert era ~ Shelley.ShelleyTxCert era,
-                          AtMostEra L.BabbageEra era)
-  => Shelley.ShelleyTxCert era -> Certificate
-fromShelleyCertificate (Shelley.RegTxCert stakecred) =
-    StakeAddressRegistrationCertificate
+fromShelleyCertificate
+  :: Shelley.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
+  => ShelleyBasedEra era -> Shelley.TxCert (ShelleyLedgerEra era) -> Maybe Certificate
+fromShelleyCertificate _ (Shelley.RegTxCert stakecred) =
+    Just. AllErasCerts  $ StakeAddressRegistrationCertificate
       (fromShelleyStakeCredential stakecred)
 
-fromShelleyCertificate (Shelley.UnRegTxCert stakecred) =
-    StakeAddressDeregistrationCertificate
+fromShelleyCertificate _ (Shelley.UnRegTxCert stakecred) =
+    Just. AllErasCerts  $ StakeAddressDeregistrationCertificate
       (fromShelleyStakeCredential stakecred)
 
-fromShelleyCertificate (Shelley.DelegStakeTxCert stakecred poolid) =
-    StakeAddressPoolDelegationCertificate
+fromShelleyCertificate _ (Shelley.DelegStakeTxCert stakecred poolid) =
+    Just. AllErasCerts  $ StakeAddressPoolDelegationCertificate
       (fromShelleyStakeCredential stakecred)
       (StakePoolKeyHash poolid)
 
-fromShelleyCertificate (Shelley.RegPoolTxCert poolparams) =
-    StakePoolRegistrationCertificate
+fromShelleyCertificate _ (Shelley.RegPoolTxCert poolparams) =
+    Just. AllErasCerts  $ StakePoolRegistrationCertificate
       (fromShelleyPoolParams poolparams)
 
-fromShelleyCertificate (Shelley.RetirePoolTxCert poolid epochno) =
-    StakePoolRetirementCertificate
+fromShelleyCertificate _ (Shelley.RetirePoolTxCert poolid epochno) =
+    Just. AllErasCerts  $ StakePoolRetirementCertificate
       (StakePoolKeyHash poolid)
       epochno
 
-fromShelleyCertificate (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh) =
-    GenesisKeyDelegationCertificate
-      (GenesisKeyHash         genesiskh)
-      (GenesisDelegateKeyHash delegatekh)
-      (VrfKeyHash             vrfkh)
+fromShelleyCertificate sbe cert =
+  case sbe of
+    ShelleyBasedEraConway -> Nothing
+    ShelleyBasedEraShelley ->
+      case cert of
+        (Shelley.MirTxCert (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate
+            mirpot
+            (StakeAddressesMIR
+              [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
+              | (sc, v) <- Map.toList amounts ]
+            )
+        (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh)->
+          Just $ DeprecatedAfterBabbageCerts $ GenesisKeyDelegationCertificate
+            (GenesisKeyHash genesiskh)
+            (GenesisDelegateKeyHash delegatekh)
+            (VrfKeyHash vrfkh)
+        (Shelley.MirTxCert (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate ReservesMIR (SendToTreasuryMIR $ fromShelleyLovelace amount)
+        (Shelley.MirTxCert (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate TreasuryMIR
+                                (SendToReservesMIR $ fromShelleyLovelace amount)
 
-fromShelleyCertificate (Shelley.MirTxCert
-                         (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) =
-    MIRCertificate
-      mirpot
-      (StakeAddressesMIR
-        [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
-        | (sc, v) <- Map.toList amounts ]
-      )
-fromShelleyCertificate (Shelley.MirTxCert
-                         (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) =
-    MIRCertificate ReservesMIR
-      (SendToTreasuryMIR $ fromShelleyLovelace amount)
+    ShelleyBasedEraAllegra ->
+      case cert of
+        (Shelley.MirTxCert (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate
+            mirpot
+            (StakeAddressesMIR
+              [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
+              | (sc, v) <- Map.toList amounts ]
+            )
+        (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh)->
+          Just $ DeprecatedAfterBabbageCerts $ GenesisKeyDelegationCertificate
+            (GenesisKeyHash genesiskh)
+            (GenesisDelegateKeyHash delegatekh)
+            (VrfKeyHash vrfkh)
+        (Shelley.MirTxCert (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate ReservesMIR (SendToTreasuryMIR $ fromShelleyLovelace amount)
+        (Shelley.MirTxCert (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate TreasuryMIR
+                                (SendToReservesMIR $ fromShelleyLovelace amount)
 
-fromShelleyCertificate (Shelley.MirTxCert
-                         (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) =
-    MIRCertificate TreasuryMIR
-      (SendToReservesMIR $ fromShelleyLovelace amount)
+    ShelleyBasedEraMary ->
+      case cert of
+        (Shelley.MirTxCert (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate
+            mirpot
+            (StakeAddressesMIR
+              [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
+              | (sc, v) <- Map.toList amounts ]
+            )
+        (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh)->
+          Just $ DeprecatedAfterBabbageCerts $ GenesisKeyDelegationCertificate
+            (GenesisKeyHash genesiskh)
+            (GenesisDelegateKeyHash delegatekh)
+            (VrfKeyHash vrfkh)
+        (Shelley.MirTxCert (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate ReservesMIR (SendToTreasuryMIR $ fromShelleyLovelace amount)
+        (Shelley.MirTxCert (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate TreasuryMIR
+                                (SendToReservesMIR $ fromShelleyLovelace amount)
+
+    ShelleyBasedEraAlonzo ->
+      case cert of
+        (Shelley.MirTxCert (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate
+            mirpot
+            (StakeAddressesMIR
+              [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
+              | (sc, v) <- Map.toList amounts ]
+            )
+        (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh)->
+          Just $ DeprecatedAfterBabbageCerts $ GenesisKeyDelegationCertificate
+            (GenesisKeyHash genesiskh)
+            (GenesisDelegateKeyHash delegatekh)
+            (VrfKeyHash vrfkh)
+        (Shelley.MirTxCert (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate ReservesMIR (SendToTreasuryMIR $ fromShelleyLovelace amount)
+        (Shelley.MirTxCert (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate TreasuryMIR
+                                (SendToReservesMIR $ fromShelleyLovelace amount)
+
+    ShelleyBasedEraBabbage ->
+      case cert of
+        (Shelley.MirTxCert (Shelley.MIRCert mirpot (Shelley.StakeAddressesMIR amounts))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate
+            mirpot
+            (StakeAddressesMIR
+              [ (fromShelleyStakeCredential sc, fromShelleyDeltaLovelace v)
+              | (sc, v) <- Map.toList amounts ]
+            )
+        (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh)->
+          Just $ DeprecatedAfterBabbageCerts $ GenesisKeyDelegationCertificate
+            (GenesisKeyHash genesiskh)
+            (GenesisDelegateKeyHash delegatekh)
+            (VrfKeyHash vrfkh)
+        (Shelley.MirTxCert (Shelley.MIRCert ReservesMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate ReservesMIR (SendToTreasuryMIR $ fromShelleyLovelace amount)
+        (Shelley.MirTxCert (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) ->
+          Just $ DeprecatedAfterBabbageCerts $ MIRCertificate TreasuryMIR
+                                (SendToReservesMIR $ fromShelleyLovelace amount)
+
 
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams StandardCrypto
 toShelleyPoolParams StakePoolParameters {
