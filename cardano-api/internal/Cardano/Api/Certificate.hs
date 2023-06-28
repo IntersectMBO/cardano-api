@@ -36,6 +36,8 @@ module Cardano.Api.Certificate (
     -- * Internal conversion functions
     toShelleyCertificate,
     fromShelleyCertificate,
+    toConwayCertificate,
+    fromConwayCertificate,
     toShelleyPoolParams,
     fromShelleyPoolParams,
 
@@ -252,10 +254,11 @@ makeMIRCertificate = MIRCertificate
 -- Internal conversion functions
 --
 
-toShelleyCertificate :: (Shelley.EraCrypto era ~ StandardCrypto,
-  Shelley.ShelleyEraTxCert era,
-  Shelley.TxCert era ~ Shelley.ShelleyTxCert era,
-                        AtMostEra L.BabbageEra era) => Certificate -> Shelley.ShelleyTxCert era
+toShelleyCertificate :: ( Shelley.EraCrypto era ~ StandardCrypto
+                        , Shelley.ShelleyEraTxCert era
+                        , Shelley.TxCert era ~ Shelley.ShelleyTxCert era
+                        , AtMostEra L.BabbageEra era
+                        ) => Certificate -> Shelley.TxCert era
 toShelleyCertificate (StakeAddressRegistrationCertificate stakecred) =
     Shelley.RegTxCert (toShelleyStakeCredential stakecred)
 
@@ -318,13 +321,51 @@ toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
       TreasuryMIR ->
         error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
 
+------------
+
+toConwayCertificate :: ( Shelley.EraCrypto era ~ StandardCrypto
+                       , Shelley.ShelleyEraTxCert era
+                       , Shelley.ConwayEraTxCert era
+                       ) => Certificate -> Shelley.TxCert era
+toConwayCertificate (StakeAddressRegistrationCertificate stakecred) =
+    Shelley.RegTxCert (toShelleyStakeCredential stakecred)
+
+toConwayCertificate (StakeAddressDeregistrationCertificate stakecred) =
+    Shelley.UnRegTxCert (toShelleyStakeCredential stakecred)
+
+toConwayCertificate (StakeAddressPoolDelegationCertificate
+                        stakecred (StakePoolKeyHash poolid)) =
+    Shelley.DelegStakeTxCert (toShelleyStakeCredential stakecred) poolid
+
+toConwayCertificate (StakePoolRegistrationCertificate poolparams) =
+    Shelley.RegPoolTxCert (toShelleyPoolParams poolparams)
+
+toConwayCertificate (StakePoolRetirementCertificate
+                       (StakePoolKeyHash poolid) epochno) =
+    Shelley.RetirePoolTxCert poolid epochno
+
+toConwayCertificate (GenesisKeyDelegationCertificate
+                       (GenesisKeyHash         genesiskh)
+                       (GenesisDelegateKeyHash delegatekh)
+                       (VrfKeyHash             vrfkh)) =
+    Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh
+toConwayCertificate
+  ( CommitteeDelegationCertificate
+    (CommitteeColdKeyHash _ckh)
+    (CommitteeHotKeyHash  _hkh)
+  ) = error "TODO CIP-1694 Need ledger types for CommitteeDelegationCertificate"
+
+toConwayCertificate
+  ( CommitteeHotKeyDeregistrationCertificate
+    (CommitteeColdKeyHash _ckh)
+  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyDeregistrationCertificate"
+
 
 fromShelleyCertificate ::
-  (Shelley.EraCrypto era ~ StandardCrypto,
-    Shelley.ShelleyEraTxCert era,
-    Shelley.TxCert era ~ Shelley.ShelleyTxCert era,
-                          AtMostEra L.BabbageEra era)
-  => Shelley.ShelleyTxCert era -> Certificate
+  ( Shelley.EraCrypto era ~ StandardCrypto
+  , Shelley.ShelleyEraTxCert era
+  , AtMostEra L.BabbageEra era
+  ) => Shelley.TxCert era -> Certificate
 fromShelleyCertificate (Shelley.RegTxCert stakecred) =
     StakeAddressRegistrationCertificate
       (fromShelleyStakeCredential stakecred)
@@ -370,6 +411,36 @@ fromShelleyCertificate (Shelley.MirTxCert
                          (Shelley.MIRCert TreasuryMIR (Shelley.SendToOppositePotMIR amount))) =
     MIRCertificate TreasuryMIR
       (SendToReservesMIR $ fromShelleyLovelace amount)
+
+----
+
+fromConwayCertificate ::
+  ( Shelley.EraCrypto era ~ StandardCrypto
+  , Shelley.ShelleyEraTxCert era
+  ) => Shelley.TxCert era -> Certificate
+fromConwayCertificate (Shelley.RegTxCert stakecred) =
+    StakeAddressRegistrationCertificate
+      (fromShelleyStakeCredential stakecred)
+
+fromConwayCertificate (Shelley.UnRegTxCert stakecred) =
+    StakeAddressDeregistrationCertificate
+      (fromShelleyStakeCredential stakecred)
+
+fromConwayCertificate (Shelley.DelegStakeTxCert stakecred poolid) =
+    StakeAddressPoolDelegationCertificate
+      (fromShelleyStakeCredential stakecred)
+      (StakePoolKeyHash poolid)
+
+fromConwayCertificate (Shelley.RegPoolTxCert poolparams) =
+    StakePoolRegistrationCertificate
+      (fromShelleyPoolParams poolparams)
+
+fromConwayCertificate (Shelley.RetirePoolTxCert poolid epochno) =
+    StakePoolRetirementCertificate
+      (StakePoolKeyHash poolid)
+      epochno
+
+fromConwayCertificate _ = error "Unimplemented yet"
 
 toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams StandardCrypto
 toShelleyPoolParams StakePoolParameters {

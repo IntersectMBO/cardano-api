@@ -3296,8 +3296,15 @@ fromLedgerTxCertificates era body =
       where
         certificates = body ^. L.certsTxBodyL
 
-    -- TODO: Implement once certificates are done in Conway.
-    ShelleyBasedEraConway -> TxCertificatesNone
+    ShelleyBasedEraConway
+      | null certificates -> TxCertificatesNone
+      | otherwise ->
+          TxCertificates
+            CertificatesInConwayEra
+            (map fromConwayCertificate $ toList certificates)
+            ViewTx
+      where
+        certificates = body ^. L.certsTxBodyL
 
 fromLedgerTxUpdateProposal
   :: ShelleyBasedEra era
@@ -3474,9 +3481,6 @@ convCertificates era txCertificates =
           Seq.fromList (map toShelleyCertificate cs)
         ShelleyBasedEraConway ->
           Seq.fromList (map toConwayCertificate cs)
-
-toConwayCertificate :: Certificate -> Shelley.TxCert L.Conway
-toConwayCertificate = error "FIXME"
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
