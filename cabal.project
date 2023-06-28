@@ -14,9 +14,9 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   -- Bump this if you need newer packages from Hackage
-  , hackage.haskell.org 2023-06-21T21:42:02Z
+  , hackage.haskell.org 2023-06-28T06:00:02Z
   -- Bump this if you need newer packages from CHaP
-  , cardano-haskell-packages 2023-06-26T00:00:00Z
+  , cardano-haskell-packages 2023-06-28T00:00:00Z
 
 packages:
     cardano-api
@@ -51,10 +51,17 @@ if impl(ghc >= 9.6)
     , *:ghc-prim
     , *:template-haskell
 
+-- * SRPs for GHC 9.6
+
+  source-repository-package
+      type: git
+      location: https://github.com/input-output-hk/int-cast.git
+      tag: a95a5eb8d3a4633a2230dd058b38b7ae82dd19a2
+
   source-repository-package
       type: git
       location: https://github.com/input-output-hk/cardano-ledger.git
-      tag: 5eac3c4c0d582b5fdf620afe93e599bf0894c414
+      tag: ece91ff62a15e329b6b9dd6bae5066c7b62d363a
       subdir:
         eras/byron/ledger/impl
         eras/byron/ledger/impl/test/
@@ -70,21 +77,9 @@ if impl(ghc >= 9.6)
   source-repository-package
       type: git
       location: https://github.com/input-output-hk/ouroboros-consensus.git
-      tag: c53480d3c195b606de221ae9bdf185616de09b9a
+      tag: 791e822cdb87050bdc8abb1eb0a7e9705b63313d
       subdir:
         ouroboros-consensus
         ouroboros-consensus-cardano
         ouroboros-consensus-protocol
         ouroboros-consensus-diffusion
-
-  source-repository-package
-      type: git
-      location: https://github.com/input-output-hk/int-cast.git
-      tag: a95a5eb8d3a4633a2230dd058b38b7ae82dd19a2
-
-  -- EXTERNAL
-  -- https://github.com/haskell-streaming/streaming-bytestring/pull/72
-  source-repository-package
-      type: git
-      location: https://github.com/carbolymer/streaming-bytestring.git
-      tag: ca275b663b797523e1fa938724f7f4ea32a8e4f1
