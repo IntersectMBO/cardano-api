@@ -594,7 +594,7 @@ genTxCertificates era =
         ]
 
 -- TODO: Add remaining certificates
-genCertificate :: Gen Certificate
+genCertificate :: Gen (Certificate era)
 genCertificate =
   Gen.choice
     [ StakeAddressRegistrationCertificate <$> genStakeCredential

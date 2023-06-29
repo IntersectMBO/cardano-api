@@ -23,6 +23,7 @@ module Cardano.Api (
     IsCardanoEra(..),
     AnyCardanoEra(..),
     anyCardanoEra,
+    cardanoEraConstraints,
     InAnyCardanoEra(..),
 
     -- ** Shelley-based eras
@@ -554,6 +555,7 @@ module Cardano.Api (
     TextEnvelopeType(..),
     TextEnvelopeDescr,
     TextEnvelopeError(..),
+    textEnvelopeTypeInEra,
     textEnvelopeRawCBOR,
     textEnvelopeToJSON,
     serialiseToTextEnvelope,
@@ -845,6 +847,9 @@ module Cardano.Api (
 
     -- ** CLI option parsing
     bounded,
+
+    requireShelleyBasedEra,
+    withShelleyBasedEraConstraintsForLedger,
   ) where
 
 import           Cardano.Api.Address
@@ -874,8 +879,8 @@ import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
-import           Cardano.Api.Orphans ()
 import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))

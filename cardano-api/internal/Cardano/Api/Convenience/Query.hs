@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -67,7 +68,7 @@ queryStateForBalancedTx
   -> CardanoEra era
   -> NetworkId
   -> [TxIn]
-  -> [Certificate]
+  -> [Certificate era]
   -> IO (Either QueryConvenienceError ( UTxO era
                                       , ProtocolParameters
                                       , EraHistory CardanoMode

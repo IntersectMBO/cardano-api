@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -23,6 +24,7 @@ module Cardano.Api.Eras
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
+  , cardanoEraConstraints
   , InAnyCardanoEra(..)
 
     -- * Deprecated aliases
@@ -37,6 +39,8 @@ module Cardano.Api.Eras
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , shelleyBasedToCardanoEra
+  , requireShelleyBasedEra
+  , withShelleyBasedEraConstraintsForLedger
 
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
@@ -49,6 +53,7 @@ module Cardano.Api.Eras
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra,
            AsByron,    AsShelley,    AsAllegra,    AsMary,    AsAlonzo,    AsBabbage, AsConway)
+
   ) where
 
 import           Cardano.Api.HasTypeProxy
@@ -62,6 +67,7 @@ import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
 
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra
@@ -523,3 +529,41 @@ eraProtVerLow era =
     ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
     ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
     ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
+
+requireShelleyBasedEra :: ()
+  => Applicative m
+  => CardanoEra era
+  -> m (Maybe (ShelleyBasedEra era))
+requireShelleyBasedEra era =
+  case cardanoEraStyle era of
+    LegacyByronEra -> pure Nothing
+    ShelleyBasedEra sbe -> pure (Just sbe)
+
+withShelleyBasedEraConstraintsForLedger :: ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  ->  ( ()
+      => L.EraCrypto ledgerera ~ L.StandardCrypto
+      => L.EraTx ledgerera
+      => L.EraTxBody ledgerera
+      => L.Era ledgerera
+      => a
+      )
+  -> a
+withShelleyBasedEraConstraintsForLedger = \case
+  ShelleyBasedEraShelley -> id
+  ShelleyBasedEraAllegra -> id
+  ShelleyBasedEraMary    -> id
+  ShelleyBasedEraAlonzo  -> id
+  ShelleyBasedEraBabbage -> id
+  ShelleyBasedEraConway  -> id
+
+cardanoEraConstraints :: CardanoEra era -> (Typeable era => IsCardanoEra era => a) -> a
+cardanoEraConstraints = \case
+  ByronEra   -> id
+  ShelleyEra -> id
+  AllegraEra -> id
+  MaryEra    -> id
+  AlonzoEra  -> id
+  BabbageEra -> id
+  ConwayEra  -> id
