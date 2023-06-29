@@ -1,11 +1,15 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Governance.Actions.ProposalProcedure where
 
 import           Cardano.Api.Eras
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
@@ -16,7 +20,6 @@ import           Cardano.Ledger.SafeHash
 
 import           Data.ByteString (ByteString)
 import           Data.Maybe.Strict
-import           Data.Proxy
 
 -- | A representation of whether the era supports tx governance actions.
 --
@@ -67,14 +70,35 @@ toGovernanceAction MotionOfNoConfidence = Gov.NoConfidence
 toGovernanceAction (ProposeNewConstitution bs) =
   Gov.NewConstitution $ toSafeHash bs
 
+newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era) }
+instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
+  toCBOR (Proposal _vp) = undefined
+
+instance IsShelleyBasedEra era => FromCBOR (Proposal era) where
+  fromCBOR = undefined
+
+instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
+
+  serialiseToCBOR = undefined
+  deserialiseFromCBOR = undefined
+
+
+instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
+  textEnvelopeType _ = "Governance proposal"
+
+instance HasTypeProxy era => HasTypeProxy (Proposal era) where
+    data AsType (Proposal era) = AsProposal
+    proxyToAsType _ = AsProposal
+
+
 createProposalProcedure
   :: ShelleyBasedEra era
   -> Lovelace -- ^ Deposit
   -> Hash StakeKey -- ^ Return address
   -> GovernanceAction
-  -> Gov.ProposalProcedure (ShelleyLedgerEra era)
+  -> Proposal era
 createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
-  obtainEraCryptoConstraints sbe $
+  Proposal $ obtainEraCryptoConstraints sbe $
     Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
       , Gov.pProcReturnAddr = retAddrh

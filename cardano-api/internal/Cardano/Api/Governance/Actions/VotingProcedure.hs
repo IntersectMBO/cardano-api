@@ -13,7 +13,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseCBOR (FromCBOR (fromCBOR), SerialiseAsCBOR (..),
+                   ToCBOR (toCBOR))
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxIn
 import           Cardano.Api.Utils
@@ -171,6 +172,7 @@ instance IsShelleyBasedEra era => ToCBOR (Vote era) where
 
 instance IsShelleyBasedEra era => FromCBOR (Vote era) where
   fromCBOR = undefined
+
 instance IsShelleyBasedEra era => SerialiseAsCBOR (Vote era) where
 
   serialiseToCBOR = undefined

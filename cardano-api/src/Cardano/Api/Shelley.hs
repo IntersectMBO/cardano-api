@@ -237,7 +237,9 @@ module Cardano.Api.Shelley
     SystemStart(..),
 
     -- ** Governance
+    GovernanceAction(..),
     GovernanceActionIdentifier(..),
+    Proposal(..),
     TxGovernanceActions(..),
     TxVotes(..),
     GovernancePoll (..),
@@ -246,6 +248,7 @@ module Cardano.Api.Shelley
     VoteChoice(..),
     VotingCredential(..),
     VoterType(..),
+    createProposalProcedure,
     createVotingProcedure,
     makeGoveranceActionIdentifier,
     renderGovernancePollError,
@@ -274,6 +277,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eras
 import           Cardano.Api.Genesis
+import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Governance.Poll
 import           Cardano.Api.InMode

@@ -3623,7 +3623,7 @@ convGovActions :: ShelleyBasedEra era -> TxGovernanceActions era -> Seq.StrictSe
 convGovActions _ TxGovernanceActionsNone = Seq.empty
 convGovActions sbe (TxGovernanceActions _ govActions) =
   Seq.fromList
-    [ createProposalProcedure sbe deposit stakeCred action
+    [ unProposal $ createProposalProcedure sbe deposit stakeCred action
     | (deposit, stakeCred, action) <- govActions
     ]
 
