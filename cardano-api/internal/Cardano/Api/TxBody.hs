@@ -1688,7 +1688,7 @@ data TxCertificates build era where
      TxCertificatesNone :: TxCertificates build era
 
      TxCertificates     :: CertificatesSupportedInEra era
-                        -> [Certificate]
+                        -> [Certificate era]
                         -> BuildTxWith build
                              (Map StakeCredential (Witness WitCtxStake era))
                         -> TxCertificates build era

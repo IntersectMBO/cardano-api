@@ -2,11 +2,11 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-
 
 -- | Cardano eras, sometimes we have to distinguish them.
 --
@@ -23,6 +23,7 @@ module Cardano.Api.Eras
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
+  , cardanoEraConstraints
   , InAnyCardanoEra(..)
 
     -- * Deprecated aliases
@@ -37,6 +38,7 @@ module Cardano.Api.Eras
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , shelleyBasedToCardanoEra
+  , withShelleyBasedEraConstraintsForLedger
 
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
@@ -65,6 +67,7 @@ import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
 
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra
@@ -535,3 +538,32 @@ requireShelleyBasedEra era =
   case cardanoEraStyle era of
     LegacyByronEra -> pure Nothing
     ShelleyBasedEra sbe -> pure (Just sbe)
+
+withShelleyBasedEraConstraintsForLedger :: ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  ->  ( ()
+      => L.EraCrypto ledgerera ~ L.StandardCrypto
+      => L.EraTx ledgerera
+      => L.EraTxBody ledgerera
+      => L.Era ledgerera
+      => a
+      )
+  -> a
+withShelleyBasedEraConstraintsForLedger = \case
+  ShelleyBasedEraShelley -> id
+  ShelleyBasedEraAllegra -> id
+  ShelleyBasedEraMary    -> id
+  ShelleyBasedEraAlonzo  -> id
+  ShelleyBasedEraBabbage -> id
+  ShelleyBasedEraConway  -> id
+
+cardanoEraConstraints :: CardanoEra era -> (Typeable era => IsCardanoEra era => a) -> a
+cardanoEraConstraints = \case
+  ByronEra   -> id
+  ShelleyEra -> id
+  AllegraEra -> id
+  MaryEra    -> id
+  AlonzoEra  -> id
+  BabbageEra -> id
+  ConwayEra  -> id

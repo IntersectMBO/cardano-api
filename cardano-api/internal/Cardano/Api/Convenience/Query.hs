@@ -71,7 +71,7 @@ renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionErro
 queryStateForBalancedTx :: ()
   => CardanoEra era
   -> [TxIn]
-  -> [Certificate]
+  -> [Certificate era]
   -> LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO
       ( Either
           QueryConvenienceError
