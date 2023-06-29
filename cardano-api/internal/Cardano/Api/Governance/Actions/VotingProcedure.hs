@@ -39,7 +39,7 @@ data TxVotes era where
 
   TxVotes
     :: TxVotesSupportedInEra era
-    -> [(VoteChoice, VoterType, GovernanceActionIdentifier (ShelleyLedgerEra era), VotingCredential (ShelleyLedgerEra era))]
+    -> [(VoteChoice, VoterType, GovernanceActionIdentifier (ShelleyLedgerEra era), VotingCredential era)]
     -> TxVotes era
 
 deriving instance Show (TxVotes era)
@@ -107,23 +107,10 @@ toVote No = Gov.VoteNo
 toVote Yes = Gov.VoteYes
 toVote Abst = Gov.Abstain
 
---toVotingCredential'
---  :: ShelleyBasedEra era
---  -> StakeCredential
---  -> Either CBOR.DecoderError (Ledger.Credential 'Voting (ShelleyLedgerEra era))
---toVotingCredential' sbe (StakeCredentialByKey (StakeKeyHash kh)) = do
---    let cbor = CBOR.serialize kh
---    obtainEraCryptoConstraints sbe $ eraDecodeVotingCredential sbe $ BS.toStrict cbor
---
---toVotingCredential' sbe (StakeCredentialByScript (ScriptHash sh)) = do
---    let cbor = CBOR.serialize sh
---    obtainEraCryptoConstraints sbe $ eraDecodeVotingCredential sbe $ BS.toStrict cbor
-
-
 toVotingCredential
   :: ShelleyBasedEra era
   -> StakeCredential
-  -> Either Plain.DecoderError (VotingCredential (ShelleyLedgerEra era))
+  -> Either Plain.DecoderError (VotingCredential era)
 toVotingCredential sbe (StakeCredentialByKey (StakeKeyHash kh)) = do
     let cbor = Plain.serialize kh
     eraDecodeVotingCredential sbe cbor
@@ -132,21 +119,29 @@ toVotingCredential sbe (StakeCredentialByScript (ScriptHash sh)) = do
     let cbor = Plain.serialize sh
     eraDecodeVotingCredential sbe cbor
 
+--test :: ShelleyBasedEra era -> StakeCredential -> VotingCredential ConwayEra
+--test sbe (StakeCredentialByKey k)= undefined
+--test sbe (StakeCredentialByScript shash) =
+--  let shelleyScHash = toShelleyScriptHash shash
+--      shelleyCredential = Ledger.ScriptHashObj shelleyScHash
+--  in VotingCredential shelleyCredential
+
+
 -- TODO: Conway era
 -- This is a hack. data StakeCredential in cardano-api is not parameterized by era, it defaults to StandardCrypto.
--- However VotingProcedure is parameterized on era so we need to figure out a way to reconcile this.
+-- However VotingProcedure is parameterized on era. We need to also parameterize StakeCredential on era.
 eraDecodeVotingCredential
   :: ShelleyBasedEra era
   -> ByteString
-  -> Either Plain.DecoderError (VotingCredential (ShelleyLedgerEra era))
+  -> Either Plain.DecoderError (VotingCredential era)
 eraDecodeVotingCredential sbe bs = obtainCryptoConstraints sbe $
   case Plain.decodeFull bs of
     Left e -> Left e
     Right x -> Right $ VotingCredential x
 
 
-newtype VotingCredential ledgerera
-  = VotingCredential (Ledger.Credential 'Voting (EraCrypto ledgerera))
+newtype VotingCredential era
+  = VotingCredential (Ledger.Credential 'Voting (EraCrypto (ShelleyLedgerEra era)))
 
 deriving instance Show (VotingCredential crypto)
 deriving instance Eq (VotingCredential crypto)
@@ -156,7 +151,7 @@ createVotingProcedure
   -> VoteChoice
   -> VoterType
   -> GovernanceActionIdentifier (ShelleyLedgerEra era)
-  -> VotingCredential (ShelleyLedgerEra era) -- ^ Governance witness credential (ledger checks that you are allowed to vote)
+  -> VotingCredential era -- ^ Governance witness credential (ledger checks that you are allowed to vote)
   -> Vote era
 createVotingProcedure sbe vChoice vt (GovernanceActionIdentifier govActId) (VotingCredential govWitnessCredential) =
   obtainEraCryptoConstraints sbe
