@@ -1,5 +1,32 @@
 # Changelog for cardano-api
 
+## 8.6.0.0
+
+- - Parameterise `Certificate` type with phantom `era` type argument
+  - Additional `CardanoEra era` argument for:
+    - `makeCommitteeDelegationCertificate`
+    - `makeCommitteeHotKeyUnregistrationCertificate`
+    - `makeMIRCertificate`
+    - `makeStakeAddressDeregistrationCertificate`
+    - `makeStakeAddressPoolDelegationCertificate`
+    - `makeStakeAddressRegistrationCertificate`
+    - `makeStakePoolRegistrationCertificate`
+    - `makeStakePoolRetirementCertificate`
+  - New functions:
+    - `cardanoEraConstraints`
+    - `textEnvelopeTypeInEra`
+  - Delete `Certificate` constructor arguments from:
+    - `PoolRegistration`
+    - `PoolReRegistration`
+  (feature; breaking)
+  [PR 83](https://github.com/input-output-hk/cardano-api/pull/83)
+
+- - Conway related
+  - Incorporate the ability to specify votes and governance actions in transactions
+  - Introduce TxVotes and TxGovernanceActions types
+  (feature; breaking)
+  [PR 41](https://github.com/input-output-hk/cardano-api/pull/41)
+
 ## 8.5.2.0
 
 - New `requireShelleyBasedEra` function
