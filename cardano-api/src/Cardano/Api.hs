@@ -23,7 +23,6 @@ module Cardano.Api (
     IsCardanoEra(..),
     AnyCardanoEra(..),
     anyCardanoEra,
-    cardanoEraConstraints,
     InAnyCardanoEra(..),
 
     -- ** Shelley-based eras
@@ -565,7 +564,6 @@ module Cardano.Api (
     TextEnvelopeType(..),
     TextEnvelopeDescr,
     TextEnvelopeError(..),
-    textEnvelopeTypeInEra,
     textEnvelopeRawCBOR,
     textEnvelopeToJSON,
     serialiseToTextEnvelope,

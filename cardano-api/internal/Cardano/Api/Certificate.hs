@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -46,8 +45,6 @@ module Cardano.Api.Certificate (
 
 import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
-import           Cardano.Api.EraCast
-import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
@@ -76,7 +73,6 @@ import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import           Data.Typeable
 import           Network.Socket (PortNumber)
 
 
@@ -84,7 +80,7 @@ import           Network.Socket (PortNumber)
 -- Certificates embedded in transactions
 --
 
-data Certificate era =
+data Certificate =
 
      -- Stake address certificates
      StakeAddressRegistrationCertificate   StakeCredential
@@ -113,49 +109,28 @@ data Certificate era =
   deriving stock (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
-instance Typeable era => HasTypeProxy (Certificate era) where
-    data AsType (Certificate era) = AsCertificate
+instance HasTypeProxy Certificate where
+    data AsType Certificate = AsCertificate
     proxyToAsType _ = AsCertificate
 
-instance Typeable era => ToCBOR (Certificate era) where
+instance ToCBOR Certificate where
     toCBOR = Shelley.toEraCBOR @Shelley.Shelley . toShelleyCertificate
 
-instance Typeable era => FromCBOR (Certificate era) where
+instance FromCBOR Certificate where
     fromCBOR = fromShelleyCertificate <$> Shelley.fromEraCBOR @Shelley.Shelley
 
-instance Typeable era => HasTextEnvelope (Certificate era) where
+instance HasTextEnvelope Certificate where
     textEnvelopeType _ = "CertificateShelley"
     textEnvelopeDefaultDescr cert = case cert of
-      StakeAddressRegistrationCertificate{}       -> "Stake address registration"
-      StakeAddressDeregistrationCertificate{}     -> "Stake address deregistration"
-      StakeAddressPoolDelegationCertificate{}     -> "Stake address stake pool delegation"
-      StakePoolRegistrationCertificate{}          -> "Pool registration"
-      StakePoolRetirementCertificate{}            -> "Pool retirement"
-      GenesisKeyDelegationCertificate{}           -> "Genesis key delegation"
-      CommitteeDelegationCertificate{}            -> "Constitution committee member key delegation"
-      CommitteeHotKeyDeregistrationCertificate{}  -> "Constitution committee member hot key deregistration"
-      MIRCertificate{}                            -> "MIR"
-
-instance EraCast Certificate where
-  eraCast _ = \case
-    StakeAddressRegistrationCertificate c ->
-      pure $ StakeAddressRegistrationCertificate c
-    StakeAddressDeregistrationCertificate stakeCredential ->
-      pure $ StakeAddressDeregistrationCertificate stakeCredential
-    StakeAddressPoolDelegationCertificate stakeCredential poolId ->
-      pure $ StakeAddressPoolDelegationCertificate stakeCredential poolId
-    StakePoolRegistrationCertificate stakePoolParameters ->
-      pure $ StakePoolRegistrationCertificate stakePoolParameters
-    StakePoolRetirementCertificate poolId epochNo ->
-      pure $ StakePoolRetirementCertificate poolId epochNo
-    GenesisKeyDelegationCertificate genesisKH genesisDelegateKH vrfKH ->
-      pure $ GenesisKeyDelegationCertificate genesisKH genesisDelegateKH vrfKH
-    CommitteeDelegationCertificate coldKeyHash hotKeyHash ->
-      pure $ CommitteeDelegationCertificate coldKeyHash hotKeyHash
-    CommitteeHotKeyDeregistrationCertificate coldKeyHash ->
-      pure $ CommitteeHotKeyDeregistrationCertificate coldKeyHash
-    MIRCertificate mirPot mirTarget ->
-      pure $ MIRCertificate mirPot mirTarget
+      StakeAddressRegistrationCertificate{}   -> "Stake address registration"
+      StakeAddressDeregistrationCertificate{} -> "Stake address deregistration"
+      StakeAddressPoolDelegationCertificate{} -> "Stake address stake pool delegation"
+      StakePoolRegistrationCertificate{}      -> "Pool registration"
+      StakePoolRetirementCertificate{}        -> "Pool retirement"
+      GenesisKeyDelegationCertificate{}       -> "Genesis key delegation"
+      CommitteeDelegationCertificate{} -> "Constitution committee member key delegation"
+      CommitteeHotKeyDeregistrationCertificate{} -> "Constitution committee member hot key deregistration"
+      MIRCertificate{}                        -> "MIR"
 
 -- | The 'MIRTarget' determines the target of a 'MIRCertificate'.
 -- A 'MIRCertificate' moves lovelace from either the reserves or the treasury
@@ -234,81 +209,47 @@ data DRepMetadataReference =
 -- Constructor functions
 --
 
-makeStakeAddressRegistrationCertificate :: ()
-  => CardanoEra era
-  -> StakeCredential
-  -> Certificate era
-makeStakeAddressRegistrationCertificate _ =
-  StakeAddressRegistrationCertificate
+makeStakeAddressRegistrationCertificate :: StakeCredential -> Certificate
+makeStakeAddressRegistrationCertificate = StakeAddressRegistrationCertificate
 
-makeStakeAddressDeregistrationCertificate :: ()
-  => CardanoEra era
-  -> StakeCredential
-  -> Certificate era
-makeStakeAddressDeregistrationCertificate _ =
-  StakeAddressDeregistrationCertificate
+makeStakeAddressDeregistrationCertificate :: StakeCredential -> Certificate
+makeStakeAddressDeregistrationCertificate = StakeAddressDeregistrationCertificate
 
-makeStakeAddressPoolDelegationCertificate :: ()
-  => CardanoEra era
-  -> StakeCredential
-  -> PoolId
-  -> Certificate era
-makeStakeAddressPoolDelegationCertificate _ =
-  StakeAddressPoolDelegationCertificate
+makeStakeAddressPoolDelegationCertificate :: StakeCredential -> PoolId -> Certificate
+makeStakeAddressPoolDelegationCertificate = StakeAddressPoolDelegationCertificate
 
-makeStakePoolRegistrationCertificate :: ()
-  => CardanoEra era
-  -> StakePoolParameters
-  -> Certificate era
-makeStakePoolRegistrationCertificate _ =
-  StakePoolRegistrationCertificate
+makeStakePoolRegistrationCertificate :: StakePoolParameters -> Certificate
+makeStakePoolRegistrationCertificate = StakePoolRegistrationCertificate
 
-makeStakePoolRetirementCertificate :: ()
-  => CardanoEra era
-  -> PoolId
-  -> EpochNo
-  -> Certificate era
-makeStakePoolRetirementCertificate _ =
-  StakePoolRetirementCertificate
+makeStakePoolRetirementCertificate :: PoolId -> EpochNo -> Certificate
+makeStakePoolRetirementCertificate = StakePoolRetirementCertificate
 
-makeGenesisKeyDelegationCertificate :: ()
-  => CardanoEra era
-  -> Hash GenesisKey
-  -> Hash GenesisDelegateKey
-  -> Hash VrfKey
-  -> Certificate era
-makeGenesisKeyDelegationCertificate _ =
-  GenesisKeyDelegationCertificate
+makeGenesisKeyDelegationCertificate :: Hash GenesisKey
+                                    -> Hash GenesisDelegateKey
+                                    -> Hash VrfKey
+                                    -> Certificate
+makeGenesisKeyDelegationCertificate = GenesisKeyDelegationCertificate
 
 makeCommitteeDelegationCertificate :: ()
-  => CardanoEra era
-  -> Hash CommitteeColdKey
+  => Hash CommitteeColdKey
   -> Hash CommitteeHotKey
-  -> Certificate era
-makeCommitteeDelegationCertificate _ =
-  CommitteeDelegationCertificate
+  -> Certificate
+makeCommitteeDelegationCertificate = CommitteeDelegationCertificate
 
 makeCommitteeHotKeyUnregistrationCertificate :: ()
-  => CardanoEra era
-  -> Hash CommitteeColdKey
-  -> Certificate era
-makeCommitteeHotKeyUnregistrationCertificate _ =
-  CommitteeHotKeyDeregistrationCertificate
+  => Hash CommitteeColdKey
+  -> Certificate
+makeCommitteeHotKeyUnregistrationCertificate = CommitteeHotKeyDeregistrationCertificate
 
-makeMIRCertificate :: ()
-  => CardanoEra era
-  -> MIRPot
-  -> MIRTarget
-  -> Certificate era
-makeMIRCertificate _ =
-  MIRCertificate
+makeMIRCertificate :: MIRPot -> MIRTarget -> Certificate
+makeMIRCertificate = MIRCertificate
 
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
 --
 
-toShelleyCertificate :: Certificate era -> Shelley.DCert StandardCrypto
+toShelleyCertificate :: Certificate -> Shelley.DCert StandardCrypto
 toShelleyCertificate (StakeAddressRegistrationCertificate stakecred) =
     Shelley.DCertDeleg $
       Shelley.RegKey
@@ -389,7 +330,7 @@ toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
         error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
 
 
-fromShelleyCertificate :: Shelley.DCert StandardCrypto -> Certificate era
+fromShelleyCertificate :: Shelley.DCert StandardCrypto -> Certificate
 fromShelleyCertificate (Shelley.DCertDeleg (Shelley.RegKey stakecred)) =
     StakeAddressRegistrationCertificate
       (fromShelleyStakeCredential stakecred)

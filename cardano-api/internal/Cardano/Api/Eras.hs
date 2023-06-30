@@ -25,7 +25,6 @@ module Cardano.Api.Eras
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
-  , cardanoEraConstraints
   , InAnyCardanoEra(..)
 
     -- * Deprecated aliases
@@ -70,7 +69,6 @@ import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           Data.Typeable (Typeable)
 
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra
@@ -560,13 +558,3 @@ withShelleyBasedEraConstraintsForLedger = \case
   ShelleyBasedEraAlonzo  -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway  -> id
-
-cardanoEraConstraints :: CardanoEra era -> (Typeable era => IsCardanoEra era => a) -> a
-cardanoEraConstraints = \case
-  ByronEra   -> id
-  ShelleyEra -> id
-  AllegraEra -> id
-  MaryEra    -> id
-  AlonzoEra  -> id
-  BabbageEra -> id
-  ConwayEra  -> id
