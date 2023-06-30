@@ -267,6 +267,7 @@ module Cardano.Api.Shelley
     fromAlonzoCostModels,
     --TODO: arrange not to export these
     toShelleyNetwork,
+    obtainEraPParamsConstraint,
 
   ) where
 
@@ -295,4 +296,5 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
 import           Cardano.Api.Value

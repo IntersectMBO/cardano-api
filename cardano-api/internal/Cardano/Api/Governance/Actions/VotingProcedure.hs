@@ -3,9 +3,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Governance.Actions.VotingProcedure where
 
@@ -19,17 +22,19 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxIn
 import           Cardano.Api.Utils
 
+import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
 import           Cardano.Ledger.Core (EraCrypto)
+import qualified Cardano.Ledger.Core as Shelley
 import qualified Cardano.Ledger.Credential as Ledger
 import           Cardano.Ledger.Keys
 import qualified Cardano.Ledger.TxIn as Ledger
 
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Maybe.Strict
-
 
 -- | A representation of whether the era supports tx voting on governance actions.
 --
@@ -113,20 +118,14 @@ toVotingCredential
   -> StakeCredential
   -> Either Plain.DecoderError (VotingCredential era)
 toVotingCredential sbe (StakeCredentialByKey (StakeKeyHash kh)) = do
-    let cbor = Plain.serialize kh
+    let cbor = Plain.serialize $ Ledger.KeyHashObj kh
     eraDecodeVotingCredential sbe cbor
 
-toVotingCredential sbe (StakeCredentialByScript (ScriptHash sh)) = do
-    let cbor = Plain.serialize sh
-    eraDecodeVotingCredential sbe cbor
-
---test :: ShelleyBasedEra era -> StakeCredential -> VotingCredential ConwayEra
---test sbe (StakeCredentialByKey k)= undefined
---test sbe (StakeCredentialByScript shash) =
---  let shelleyScHash = toShelleyScriptHash shash
---      shelleyCredential = Ledger.ScriptHashObj shelleyScHash
---  in VotingCredential shelleyCredential
-
+toVotingCredential _sbe (StakeCredentialByScript (ScriptHash _sh)) =
+    error "toVotingCredential: script stake credentials not implemented yet"
+    -- TODO: Conway era
+    -- let cbor = Plain.serialize $ Ledger.ScriptHashObj sh
+    -- eraDecodeVotingCredential sbe cbor
 
 -- TODO: Conway era
 -- This is a hack. data StakeCredential in cardano-api is not parameterized by era, it defaults to StandardCrypto.
@@ -164,22 +163,32 @@ createVotingProcedure sbe vChoice vt (GovernanceActionIdentifier govActId) (Voti
       , Gov.vProcAnchor = SNothing -- TODO: Conway
       }
 
+
 newtype Vote era = Vote { unVote :: Gov.VotingProcedure (ShelleyLedgerEra era) }
   deriving (Show, Eq)
 
-instance IsShelleyBasedEra era => ToCBOR (Vote era) where
-  toCBOR (Vote _vp) = undefined
+-- TODO: Conway - convert newtype Vote to a GADT with a ShelleyBasedEra era value
+instance (Shelley.Era (ShelleyLedgerEra era)
+         , IsShelleyBasedEra era
+         ) => ToCBOR (Vote era) where
+  toCBOR (Vote vp) = Shelley.toEraCBOR @Conway.Conway vp
 
-instance IsShelleyBasedEra era => FromCBOR (Vote era) where
-  fromCBOR = undefined
+instance ( IsShelleyBasedEra era
+         , Shelley.Era (ShelleyLedgerEra era)
+         ) => FromCBOR (Vote era) where
+  fromCBOR = Vote <$> Shelley.fromEraCBOR @Conway.Conway
 
-instance IsShelleyBasedEra era => SerialiseAsCBOR (Vote era) where
+instance ( IsShelleyBasedEra era
+         , Shelley.Era (ShelleyLedgerEra era)
+         ) => SerialiseAsCBOR (Vote era) where
 
-  serialiseToCBOR = undefined
-  deserialiseFromCBOR = undefined
+  serialiseToCBOR = CBOR.serialize'
+  deserialiseFromCBOR _proxy = CBOR.decodeFull'
 
 
-instance IsShelleyBasedEra era => HasTextEnvelope (Vote era) where
+instance ( IsShelleyBasedEra era
+         , Shelley.Era (ShelleyLedgerEra era)
+         ) => HasTextEnvelope (Vote era) where
   textEnvelopeType _ = "Governance vote"
 
 instance HasTypeProxy era => HasTypeProxy (Vote era) where

@@ -1,7 +1,11 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Governance.Actions.ProposalProcedure where
 
@@ -13,8 +17,11 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
+import qualified Cardano.Binary as CBOR
+import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
 import           Cardano.Ledger.Core (EraCrypto)
+import qualified Cardano.Ledger.Core as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.SafeHash
 
@@ -71,19 +78,26 @@ toGovernanceAction (ProposeNewConstitution bs) =
   Gov.NewConstitution $ toSafeHash bs
 
 newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era) }
-instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
-  toCBOR (Proposal _vp) = undefined
 
-instance IsShelleyBasedEra era => FromCBOR (Proposal era) where
-  fromCBOR = undefined
+instance (IsShelleyBasedEra era, Shelley.EraPParams (ShelleyLedgerEra era)) => ToCBOR (Proposal era) where
+  toCBOR (Proposal vp) = Shelley.toEraCBOR @Conway.Conway vp
 
-instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
+instance ( IsShelleyBasedEra era
+         , Shelley.EraPParams (ShelleyLedgerEra era)
+         ) => FromCBOR (Proposal era) where
+  fromCBOR = Proposal <$> Shelley.fromEraCBOR @Conway.Conway
 
-  serialiseToCBOR = undefined
-  deserialiseFromCBOR = undefined
+instance ( IsShelleyBasedEra era
+         , Shelley.EraPParams (ShelleyLedgerEra era)
+         ) => SerialiseAsCBOR (Proposal era) where
+
+  serialiseToCBOR = CBOR.serialize'
+  deserialiseFromCBOR _proxy = CBOR.decodeFull'
 
 
-instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
+instance ( IsShelleyBasedEra era
+         , Shelley.EraPParams (ShelleyLedgerEra era)
+         ) => HasTextEnvelope (Proposal era) where
   textEnvelopeType _ = "Governance proposal"
 
 instance HasTypeProxy era => HasTypeProxy (Proposal era) where
