@@ -31,12 +31,14 @@ module Cardano.Api.Utils
 
     -- ** Constraint solvers
   , obtainCryptoConstraints
+  , obtainEraPParamsConstraint
   , obtainEraCryptoConstraints
   ) where
 
 import           Cardano.Api.Eras
 
 import           Cardano.Ledger.Core (EraCrypto)
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import           Cardano.Ledger.Shelley ()
 
@@ -160,3 +162,16 @@ obtainCryptoConstraints ShelleyBasedEraMary    f = f
 obtainCryptoConstraints ShelleyBasedEraAlonzo  f = f
 obtainCryptoConstraints ShelleyBasedEraBabbage f = f
 obtainCryptoConstraints ShelleyBasedEraConway  f = f
+
+
+obtainEraPParamsConstraint
+  :: ShelleyBasedEra era
+  -> (Ledger.EraPParams (ShelleyLedgerEra era) => a)
+  -> a
+obtainEraPParamsConstraint ShelleyBasedEraShelley f = f
+obtainEraPParamsConstraint ShelleyBasedEraAllegra f = f
+obtainEraPParamsConstraint ShelleyBasedEraMary    f = f
+obtainEraPParamsConstraint ShelleyBasedEraAlonzo  f = f
+obtainEraPParamsConstraint ShelleyBasedEraBabbage f = f
+obtainEraPParamsConstraint ShelleyBasedEraConway  f = f
+
