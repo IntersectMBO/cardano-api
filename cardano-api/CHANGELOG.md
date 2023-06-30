@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.7.0.0
+
+- Update VotingCredential to be parameterized on cardano-api's era type
+  (feature; breaking)
+  [PR 85](https://github.com/input-output-hk/cardano-api/pull/85)
+
 ## 8.6.0.0
 
 - - Parameterise `Certificate` type with phantom `era` type argument
