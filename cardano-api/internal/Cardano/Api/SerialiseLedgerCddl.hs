@@ -41,8 +41,8 @@ import           Cardano.Api.Utils
 import           Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Binary as CBOR
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither,
-                   newExceptT, runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, newExceptT,
+                   runExceptT)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
