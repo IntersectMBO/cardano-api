@@ -3629,11 +3629,7 @@ convGovActions sbe (TxGovernanceActions _ govActions) =
 
 convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
 convVotes _ TxVotesNone = Seq.empty
-convVotes sbe (TxVotes _ votes) =
-  Seq.fromList
-    [ unVote $ createVotingProcedure sbe voteChoice voterType govActionIdentifier votingCred
-    | (voteChoice, voterType, govActionIdentifier, votingCred) <- votes
-    ]
+convVotes _ (TxVotes _ votes) = Seq.fromList $ map unVote votes
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
