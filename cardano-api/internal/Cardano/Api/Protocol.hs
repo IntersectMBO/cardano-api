@@ -20,8 +20,6 @@ module Cardano.Api.Protocol
 
 import           Cardano.Api.Modes
 
-import           Data.Bifunctor (bimap)
-
 import           Ouroboros.Consensus.Block.Forging (BlockForging)
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Cardano.Block
@@ -38,6 +36,8 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Ouroboros.Consensus.Shelley.Node.Praos
 import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 import           Ouroboros.Consensus.Util.IOLike (IOLike)
+
+import           Data.Bifunctor (bimap)
 
 import           Type.Reflection ((:~:) (..))
 

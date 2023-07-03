@@ -18,9 +18,9 @@ import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Utils
 
+import           Control.Monad.Except (runExceptT)
 import           Data.Bifunctor
 import           Data.List.NonEmpty (NonEmpty)
-import Control.Monad.Except (runExceptT)
 
 -- | Read a cryptographic key from a file.
 --
