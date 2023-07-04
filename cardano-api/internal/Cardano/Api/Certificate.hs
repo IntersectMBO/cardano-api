@@ -5,10 +5,7 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -43,8 +40,6 @@ module Cardano.Api.Certificate (
 
     -- * Internal conversion functions
     toShelleyCertificate,
-    toShelleyCertificateAtMostBabbage,
-    toShelleyCertificateAtLeastConway,
     fromShelleyCertificate,
     toShelleyPoolParams,
     fromShelleyPoolParams,
@@ -63,6 +58,7 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -130,31 +126,43 @@ instance Typeable era => HasTypeProxy (Certificate era) where
 
 instance
   forall era.
-  ( IsCardanoEra era
+  ( IsShelleyBasedEra era
   ) => ToCBOR (Certificate era) where
     toCBOR =
       -- TODO CIP-1694 clean this up
-      case cardanoEra @era of
-        ByronEra    -> error "ToCBOR (Certificate ByronEra) not implemented"
-        ShelleyEra  -> Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate (shelleyBasedEra @era)
-        AllegraEra  -> Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate (shelleyBasedEra @era)
-        MaryEra     -> Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate (shelleyBasedEra @era)
-        AlonzoEra   -> Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate (shelleyBasedEra @era)
-        BabbageEra  -> Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate (shelleyBasedEra @era)
-        ConwayEra   -> error "ToCBOR (Certificate ConwayEra) not implemented"
+      case shelleyBasedEra @era of
+        ShelleyBasedEraShelley  ->
+          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+        ShelleyBasedEraAllegra  ->
+          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+        ShelleyBasedEraMary     ->
+          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+        ShelleyBasedEraAlonzo   ->
+          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+        ShelleyBasedEraBabbage  ->
+          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+        ShelleyBasedEraConway   ->
+          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+
+
 
 instance
   ( IsShelleyBasedEra era
   ) => FromCBOR (Certificate era) where
     fromCBOR =
-      case cardanoEra @era of
-        ByronEra    -> error "ToCBOR (Certificate ByronEra) not implemented"
-        ShelleyEra  -> fromShelleyCertificate (shelleyBasedEra @era) <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
-        AllegraEra  -> fromShelleyCertificate (shelleyBasedEra @era) <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
-        MaryEra     -> fromShelleyCertificate (shelleyBasedEra @era) <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
-        AlonzoEra   -> fromShelleyCertificate (shelleyBasedEra @era) <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
-        BabbageEra  -> fromShelleyCertificate (shelleyBasedEra @era) <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
-        ConwayEra   -> error "ToCBOR (Certificate ConwayEra) not implemented"
+      case shelleyBasedEra @era of
+        ShelleyBasedEraShelley  ->
+          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+        ShelleyBasedEraAllegra  ->
+          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+        ShelleyBasedEraMary     ->
+          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+        ShelleyBasedEraAlonzo   ->
+          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+        ShelleyBasedEraBabbage  ->
+          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+        ShelleyBasedEraConway   ->
+          fromShelleyCertificateAtLeastConway <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
 
 
 instance
@@ -171,6 +179,7 @@ instance
       CommitteeDelegationCertificate{}            -> "Constitution committee member key delegation"
       CommitteeHotKeyDeregistrationCertificate{}  -> "Constitution committee member hot key deregistration"
       MIRCertificate{}                            -> "MIR"
+
 
 instance EraCast Certificate where
   eraCast _ = \case
@@ -271,21 +280,21 @@ data DRepMetadataReference =
 --
 
 makeStakeAddressRegistrationCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> StakeCredential
   -> Certificate era
 makeStakeAddressRegistrationCertificate _ =
   StakeAddressRegistrationCertificate
 
 makeStakeAddressDeregistrationCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> StakeCredential
   -> Certificate era
 makeStakeAddressDeregistrationCertificate _ =
   StakeAddressDeregistrationCertificate
 
 makeStakeAddressPoolDelegationCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> StakeCredential
   -> PoolId
   -> Certificate era
@@ -293,14 +302,14 @@ makeStakeAddressPoolDelegationCertificate _ =
   StakeAddressPoolDelegationCertificate
 
 makeStakePoolRegistrationCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> StakePoolParameters
   -> Certificate era
 makeStakePoolRegistrationCertificate _ =
   StakePoolRegistrationCertificate
 
 makeStakePoolRetirementCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> PoolId
   -> EpochNo
   -> Certificate era
@@ -308,7 +317,7 @@ makeStakePoolRetirementCertificate _ =
   StakePoolRetirementCertificate
 
 makeGenesisKeyDelegationCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> Hash GenesisKey
   -> Hash GenesisDelegateKey
   -> Hash VrfKey
@@ -317,7 +326,7 @@ makeGenesisKeyDelegationCertificate _ =
   GenesisKeyDelegationCertificate
 
 makeCommitteeDelegationCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> Hash CommitteeColdKey
   -> Hash CommitteeHotKey
   -> Certificate era
@@ -325,14 +334,14 @@ makeCommitteeDelegationCertificate _ =
   CommitteeDelegationCertificate
 
 makeCommitteeHotKeyUnregistrationCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> Hash CommitteeColdKey
   -> Certificate era
 makeCommitteeHotKeyUnregistrationCertificate _ =
   CommitteeHotKeyDeregistrationCertificate
 
 makeMIRCertificate :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> MIRPot
   -> MIRTarget
   -> Certificate era
@@ -345,18 +354,22 @@ makeMIRCertificate _ =
 --
 
 toShelleyCertificate :: ()
-  => Shelley.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
   => ShelleyBasedEra era
   -> Certificate era
   -> Shelley.TxCert (ShelleyLedgerEra era)
-toShelleyCertificate = \case
-  ShelleyBasedEraShelley  -> toShelleyCertificateAtMostBabbage
-  ShelleyBasedEraAllegra  -> toShelleyCertificateAtMostBabbage
-  ShelleyBasedEraMary     -> toShelleyCertificateAtMostBabbage
-  ShelleyBasedEraAlonzo   -> toShelleyCertificateAtMostBabbage
-  ShelleyBasedEraBabbage  -> toShelleyCertificateAtMostBabbage
-  ShelleyBasedEraConway   -> toShelleyCertificateAtLeastConway
+toShelleyCertificate sbe =
+  case sbe of
+    ShelleyBasedEraShelley ->
+      obtainCertificateConstraints sbe toShelleyCertificateAtMostBabbage
+    ShelleyBasedEraAllegra ->
+      obtainCertificateConstraints sbe toShelleyCertificateAtMostBabbage
+    ShelleyBasedEraMary ->
+      obtainCertificateConstraints sbe toShelleyCertificateAtMostBabbage
+    ShelleyBasedEraAlonzo ->
+      obtainCertificateConstraints sbe toShelleyCertificateAtMostBabbage
+    ShelleyBasedEraBabbage ->
+      obtainCertificateConstraints sbe toShelleyCertificateAtMostBabbage
+    ShelleyBasedEraConway -> toShelleyCertificateAtLeastConway
 
 toShelleyCertificateAtMostBabbage :: ()
   => Shelley.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto

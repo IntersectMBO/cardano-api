@@ -294,6 +294,8 @@ estimateTransactionKeyWitnessCount TxBodyContent {
 
 type PlutusScriptBytes = ShortByteString
 
+-- TODO: Conway era - We don't really want to parameterise error
+-- types on the error for now. As a stop gap we should implement a rendering function
 data ResolvablePointers where
   ResolvablePointers ::
       ( Ledger.Era (ShelleyLedgerEra era)

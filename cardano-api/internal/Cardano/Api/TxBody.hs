@@ -226,7 +226,6 @@ import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.Governance as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
-import qualified Cardano.Ledger.Conway.TxCert as Conway
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
@@ -2354,10 +2353,8 @@ instance Error TxBodyError where
     displayError (TxBodyProtocolParamsConversionError ppces) =
       "Errors in protocol parameters conversion: " ++ displayError ppces
 
-createTransactionBody :: forall era. ()
-  => IsShelleyBasedEra era
-  => Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => ShelleyBasedEra era
+createTransactionBody
+  :: ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody era txBodyContent =
@@ -2377,7 +2374,7 @@ createTransactionBody era txBodyContent =
       refTxIns = convReferenceInputs apiReferenceInputs
       returnCollateral = convReturnCollateral era apiReturnCollateral
       totalCollateral = convTotalCollateral apiTotalCollateral
-      certs = convCertificates (shelleyBasedEra @era) $ txCertificates txBodyContent
+      certs = convCertificates era $ txCertificates txBodyContent
       txAuxData = toAuxiliaryData era (txMetadata txBodyContent) (txAuxScripts txBodyContent)
       scripts = convScripts apiScriptWitnesses
       validityInterval = convValidityInterval $ txValidityRange txBodyContent
@@ -2390,7 +2387,7 @@ createTransactionBody era txBodyContent =
         -> TxBodyContent BuildTx era
         -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
         -> L.TxBody (ShelleyLedgerEra era)
-      mkTxBody era' bc =
+      mkTxBody era' bc = obtainEraCryptoConstraints era' $
         mkCommonTxBody
           era'
           (txIns bc)
@@ -3456,70 +3453,16 @@ convTxOuts
   => ShelleyBasedEra era -> [TxOut ctx era] -> Seq.StrictSeq (Ledger.TxOut ledgerera)
 convTxOuts era txOuts = Seq.fromList $ map (toShelleyTxOutAny era) txOuts
 
-convCertificates :: forall build era. ()
-  => IsShelleyBasedEra era
-  => Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => ShelleyBasedEra era
+
+convCertificates
+  :: ShelleyBasedEra era
   -> TxCertificates build era
   -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
-convCertificates = \case
-  ShelleyBasedEraShelley  -> convShelleyCertificates
-  ShelleyBasedEraAllegra  -> convShelleyCertificates
-  ShelleyBasedEraMary     -> convShelleyCertificates
-  ShelleyBasedEraAlonzo   -> convShelleyCertificates
-  ShelleyBasedEraBabbage  -> convShelleyCertificates
-  ShelleyBasedEraConway   -> convConwayCertificates
-
-convShelleyCertificates :: forall build era. ()
-  => IsShelleyBasedEra era
-  => Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Shelley.TxCert (ShelleyLedgerEra era) ~ Shelley.ShelleyTxCert (ShelleyLedgerEra era)
-  => Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
-  => TxCertificates build era
-  -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
-convShelleyCertificates txCertificates =
+convCertificates sbe txCertificates = obtainEraCryptoConstraints sbe $
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ -> Seq.fromList (map (toShelleyCertificate (shelleyBasedEra @era)) cs)
+    TxCertificates _ cs _ -> Seq.fromList (map (toShelleyCertificate sbe) cs)
 
--- convConwayCertificates :: ()
---   => Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
---   => Shelley.TxCert (ShelleyLedgerEra era) ~ Shelley.ShelleyTxCert (ShelleyLedgerEra era)
---   => TxCertificates build era
---   -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
-
-convConwayCertificates :: ()
-  => Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Conway.ConwayEraTxCert (ShelleyLedgerEra era)
-  => TxCertificates build era
-  -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
-convConwayCertificates txCertificates =
-  case txCertificates of
-    TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificateAtLeastConway cs)
-
--- convConwayCertificates
---   :: TxCertificates build era -> Seq.StrictSeq (Conway.ConwayDCert StandardCrypto)
--- convConwayCertificates txCertificates =
---   case txCertificates of
---     TxCertificatesNone    -> Seq.empty
---     TxCertificates _ cs _ ->
---       Seq.fromList (mapMaybe (fromShelleyDCertMaybe . toShelleyCertificate) cs)
-
--- fromShelleyDCertMaybe :: Shelley.DCert c -> Maybe (Conway.ConwayDCert c)
--- fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.RegKey sc)) =
---   Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
---   -- TODO when ledger is fixed, use ConwayReg sc
---   -- Note that ConwayUnDeleg is *blatantly* wrong
--- fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.DeRegKey sc)) =
---   Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
---   -- TODO when ledger is fixed, make zero coin a Nothing
--- fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.Delegate (Shelley.Delegation sc pool))) =
---   Just $ Conway.ConwayDCertDeleg (Conway.ConwayDeleg sc (Conway.DelegStake pool) (Ledger.Coin 0))
---   -- TODO when ledger is fixed, make zero coin a Nothing
--- fromShelleyDCertMaybe (Shelley.DCertPool pc) = Just $ Conway.ConwayDCertPool pc
--- fromShelleyDCertMaybe (Shelley.DCertGenesis gdc) = Just $ Conway.ConwayDCertConstitutional gdc
--- fromShelleyDCertMaybe Shelley.DCertMir {} = Nothing
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
@@ -4030,7 +3973,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
            & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
-           & L.certsTxBodyL               .~ convConwayCertificates txCertificates
+           & L.certsTxBodyL               .~ convCertificates era txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
