@@ -65,6 +65,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley as Shelley
 import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Data.ByteString (ByteString)
@@ -308,34 +309,28 @@ makeMIRCertificate _ =
 -- Internal conversion functions
 --
 
-toShelleyCertificate :: Certificate era -> Shelley.DCert StandardCrypto
+toShelleyCertificate :: Certificate era -> Shelley.TxCert (ShelleyLedgerEra era)
 toShelleyCertificate (StakeAddressRegistrationCertificate stakecred) =
-    Shelley.DCertDeleg $
-      Shelley.RegKey
+    Shelley.RegTxCert
         (toShelleyStakeCredential stakecred)
 
 toShelleyCertificate (StakeAddressDeregistrationCertificate stakecred) =
-    Shelley.DCertDeleg $
-      Shelley.DeRegKey
+    Shelley.UnRegTxCert
         (toShelleyStakeCredential stakecred)
 
 toShelleyCertificate (StakeAddressPoolDelegationCertificate
                         stakecred (StakePoolKeyHash poolid)) =
-    Shelley.DCertDeleg $
-    Shelley.Delegate $
-      Shelley.Delegation
+    Shelley.DelegStakeTxCert
         (toShelleyStakeCredential stakecred)
         poolid
 
 toShelleyCertificate (StakePoolRegistrationCertificate poolparams) =
-    Shelley.DCertPool $
-      Shelley.RegPool
+    Shelley.RegPoolTxCert
         (toShelleyPoolParams poolparams)
 
 toShelleyCertificate (StakePoolRetirementCertificate
                        (StakePoolKeyHash poolid) epochno) =
-    Shelley.DCertPool $
-      Shelley.RetirePool
+    Shelley.RetirePoolTxCert
         poolid
         epochno
 
@@ -343,8 +338,7 @@ toShelleyCertificate (GenesisKeyDelegationCertificate
                        (GenesisKeyHash         genesiskh)
                        (GenesisDelegateKeyHash delegatekh)
                        (VrfKeyHash             vrfkh)) =
-    Shelley.DCertGenesis $
-      Shelley.ConstitutionalDelegCert
+    Shelley.GenesisDelegTxCert
         genesiskh
         delegatekh
         vrfkh
@@ -354,15 +348,16 @@ toShelleyCertificate
     (CommitteeColdKeyHash _ckh)
     (CommitteeHotKeyHash  _hkh)
   ) = error "TODO CIP-1694 Need ledger types for CommitteeDelegationCertificate"
+  -- AuthCommitteeHotKeyTxCert
 
 toShelleyCertificate
   ( CommitteeHotKeyDeregistrationCertificate
     (CommitteeColdKeyHash _ckh)
   ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyDeregistrationCertificate"
+  -- ResignCommitteeColdTxCert
 
 toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
-    Shelley.DCertMir $
-      Shelley.MIRCert
+    Shelley.MirTxCert
         mirpot
         (Shelley.StakeAddressesMIR $ Map.fromListWith (<>)
            [ (toShelleyStakeCredential sc, Shelley.toDeltaCoin . toShelleyLovelace $ v)
@@ -371,8 +366,7 @@ toShelleyCertificate (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
 toShelleyCertificate (MIRCertificate mirPot (SendToReservesMIR amount)) =
     case mirPot of
       TreasuryMIR ->
-        Shelley.DCertMir $
-          Shelley.MIRCert
+        Shelley.MirTxCert
             TreasuryMIR
             (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
       ReservesMIR ->
@@ -381,40 +375,37 @@ toShelleyCertificate (MIRCertificate mirPot (SendToReservesMIR amount)) =
 toShelleyCertificate (MIRCertificate mirPot (SendToTreasuryMIR amount)) =
     case mirPot of
       ReservesMIR ->
-        Shelley.DCertMir $
-          Shelley.MIRCert
+        Shelley.MirTxCert
             ReservesMIR
             (Shelley.SendToOppositePotMIR $ toShelleyLovelace amount)
       TreasuryMIR ->
         error "toShelleyCertificate: Incorrect MIRPot specified. Expected ReservesMIR but got TreasuryMIR"
 
 
-fromShelleyCertificate :: Shelley.DCert StandardCrypto -> Certificate era
-fromShelleyCertificate (Shelley.DCertDeleg (Shelley.RegKey stakecred)) =
+fromShelleyCertificate :: Shelley.TxCert (ShelleyLedgerEra era) -> Certificate era
+fromShelleyCertificate (Shelley.RegTxCert stakecred) =
     StakeAddressRegistrationCertificate
       (fromShelleyStakeCredential stakecred)
 
-fromShelleyCertificate (Shelley.DCertDeleg (Shelley.DeRegKey stakecred)) =
+fromShelleyCertificate (Shelley.UnRegTxCert stakecred) =
     StakeAddressDeregistrationCertificate
       (fromShelleyStakeCredential stakecred)
 
-fromShelleyCertificate (Shelley.DCertDeleg
-                         (Shelley.Delegate (Shelley.Delegation stakecred poolid))) =
+fromShelleyCertificate (Shelley.DelegStakeTxCert stakecred poolid) =
     StakeAddressPoolDelegationCertificate
       (fromShelleyStakeCredential stakecred)
       (StakePoolKeyHash poolid)
 
-fromShelleyCertificate (Shelley.DCertPool (Shelley.RegPool poolparams)) =
+fromShelleyCertificate (Shelley.RegPoolTxCert poolparams) =
     StakePoolRegistrationCertificate
       (fromShelleyPoolParams poolparams)
 
-fromShelleyCertificate (Shelley.DCertPool (Shelley.RetirePool poolid epochno)) =
+fromShelleyCertificate (Shelley.RetirePoolTxCert poolid epochno) =
     StakePoolRetirementCertificate
       (StakePoolKeyHash poolid)
       epochno
 
-fromShelleyCertificate (Shelley.DCertGenesis
-                         (Shelley.ConstitutionalDelegCert genesiskh delegatekh vrfkh)) =
+fromShelleyCertificate (Shelley.GenesisDelegTxCert genesiskh delegatekh vrfkh) =
     GenesisKeyDelegationCertificate
       (GenesisKeyHash         genesiskh)
       (GenesisDelegateKeyHash delegatekh)
