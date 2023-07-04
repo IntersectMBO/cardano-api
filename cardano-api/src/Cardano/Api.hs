@@ -901,6 +901,8 @@ module Cardano.Api (
     -- ** Governance Committee
     makeCommitteeDelegationCertificate,
     makeCommitteeHotKeyUnregistrationCertificate,
+
+    ResolvablePointers(..),
   ) where
 
 import           Cardano.Api.Address

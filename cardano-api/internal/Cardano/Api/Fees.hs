@@ -39,6 +39,8 @@ module Cardano.Api.Fees (
 
     -- * Internal helpers
     mapTxScriptWitnesses,
+
+    ResolvablePointers(..),
   ) where
 
 import           Cardano.Api.Address
@@ -292,13 +294,21 @@ estimateTransactionKeyWitnessCount TxBodyContent {
 
 type PlutusScriptBytes = ShortByteString
 
-type ResolvablePointers =
-       Map
+data ResolvablePointers where
+  ResolvablePointers ::
+      ( Ledger.Era (ShelleyLedgerEra era)
+      , Show (Ledger.TxCert (ShelleyLedgerEra era))
+      )
+    => ShelleyBasedEra era
+    -> Map
          Alonzo.RdmrPtr
-         ( Alonzo.ScriptPurpose Ledger.StandardCrypto
+         ( Alonzo.ScriptPurpose (ShelleyLedgerEra era)
          , Maybe (PlutusScriptBytes, Alonzo.Language)
          , Ledger.ScriptHash Ledger.StandardCrypto
          )
+    -> ResolvablePointers
+
+deriving instance Show ResolvablePointers
 
 -- | The different possible reasons that executing a script can fail,
 -- as reported by 'evaluateTransactionExecutionUnits'.
@@ -457,9 +467,8 @@ instance Error TransactionValidityError where
 -- This works by running all the scripts and counting how many execution units
 -- are actually used.
 --
-evaluateTransactionExecutionUnits
-  :: forall era.
-     SystemStart
+evaluateTransactionExecutionUnits :: forall era. ()
+  => SystemStart
   -> LedgerEpochInfo
   -> BundledProtocolParameters era
   -> UTxO era
@@ -468,8 +477,25 @@ evaluateTransactionExecutionUnits
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
 evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
     case makeSignedTransaction [] txbody of
-      ByronTx {}                -> evalPreAlonzo
-      ShelleyTx sbe tx' ->
+      ByronTx {}        -> evalPreAlonzo
+      ShelleyTx sbe tx' -> evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo bpp utxo tx'
+  where
+    -- | Pre-Alonzo eras do not support languages with execution unit accounting.
+    evalPreAlonzo :: Either TransactionValidityError
+                            (Map ScriptWitnessIndex
+                                  (Either ScriptExecutionError ExecutionUnits))
+    evalPreAlonzo = Right Map.empty
+
+evaluateTransactionExecutionUnitsShelley :: forall era. ()
+  => ShelleyBasedEra era
+  -> SystemStart
+  -> LedgerEpochInfo
+  -> BundledProtocolParameters era
+  -> UTxO era
+  -> L.Tx (ShelleyLedgerEra era)
+  -> Either TransactionValidityError
+            (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
+evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo bpp utxo tx' =
         case sbe of
           ShelleyBasedEraShelley -> evalPreAlonzo
           ShelleyBasedEraAllegra -> evalPreAlonzo
@@ -546,7 +572,7 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     fromLedgerScriptExUnitsMap
-      :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure Ledger.StandardCrypto)
+      :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure (ShelleyLedgerEra era))
                                     Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap exmap =
@@ -555,9 +581,9 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
            bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
-    fromAlonzoScriptExecutionError :: L.TransactionScriptFailure Ledger.StandardCrypto
+    fromAlonzoScriptExecutionError :: L.TransactionScriptFailure (ShelleyLedgerEra era)
                                    -> ScriptExecutionError
-    fromAlonzoScriptExecutionError failure =
+    fromAlonzoScriptExecutionError failure = withShelleyBasedEraConstraintsForLedger sbe $
       case failure of
         L.UnknownTxIn     txin -> ScriptErrorMissingTxIn txin'
                                          where txin' = fromShelleyTxIn txin
@@ -584,7 +610,7 @@ evaluateTransactionExecutionUnits systemstart epochInfo bpp utxo txbody =
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
-        L.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr resolveable
+        L.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr (ResolvablePointers sbe resolveable)
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 

@@ -27,6 +27,7 @@ module Cardano.Api.Eras
   , anyCardanoEra
   , cardanoEraConstraints
   , InAnyCardanoEra(..)
+  , CardanoLedgerEra
 
     -- * Deprecated aliases
   , Byron
@@ -520,6 +521,14 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
   ShelleyLedgerEra ConwayEra  = Consensus.StandardConway
 
+type family CardanoLedgerEra era where
+  CardanoLedgerEra ByronEra   = L.ByronEra   L.StandardCrypto
+  CardanoLedgerEra ShelleyEra = L.ShelleyEra L.StandardCrypto
+  CardanoLedgerEra AllegraEra = L.AllegraEra L.StandardCrypto
+  CardanoLedgerEra MaryEra    = L.MaryEra    L.StandardCrypto
+  CardanoLedgerEra AlonzoEra  = L.AlonzoEra  L.StandardCrypto
+  CardanoLedgerEra BabbageEra = L.BabbageEra L.StandardCrypto
+  CardanoLedgerEra ConwayEra  = L.ConwayEra  L.StandardCrypto
 
 -- | Lookup the lower major protocol version for the shelley based era. In other words
 -- this is the major protocol version that the era has started in.
