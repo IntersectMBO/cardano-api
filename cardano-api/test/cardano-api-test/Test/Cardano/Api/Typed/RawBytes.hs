@@ -84,7 +84,7 @@ roundtrip_raw_bytes asType g =
     H.tripping v serialiseToRawBytes (deserialiseFromRawBytes asType)
 
 roundtrip_verification_key_hash_raw
-  :: (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole))
+  :: (Key keyrole, Eq (Hash keyrole), Show (Hash keyrole), HasTypeProxy keyrole)
   => AsType keyrole -> Property
 roundtrip_verification_key_hash_raw roletoken =
   H.property $ do
