@@ -242,6 +242,7 @@ module Cardano.Api.Shelley
     Proposal(..),
     TxGovernanceActions(..),
     TxVotes(..),
+    Vote(..),
     GovernancePoll (..),
     GovernancePollAnswer (..),
     GovernancePollError (..),
@@ -253,6 +254,7 @@ module Cardano.Api.Shelley
     makeGoveranceActionIdentifier,
     renderGovernancePollError,
     toVotingCredential,
+    fromProposalProcedure,
     hashGovernancePoll,
     verifyPollAnswer,
 
@@ -267,6 +269,7 @@ module Cardano.Api.Shelley
     fromAlonzoCostModels,
     --TODO: arrange not to export these
     toShelleyNetwork,
+    obtainEraConstraints,
     obtainEraPParamsConstraint,
 
   ) where

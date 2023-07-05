@@ -283,6 +283,8 @@ module Cardano.Api (
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
+    TxVotesSupportedInEra(..),
+    TxGovernanceActionSupportedInEra(..),
     FeatureInEra(..),
 
     -- ** Feature availability functions
@@ -300,6 +302,8 @@ module Cardano.Api (
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
+    votesSupportedInEra,
+    governanceActionsSupportedInEra,
 
     -- ** Era-dependent protocol features
     ProtocolUTxOCostPerByteFeature(..),
@@ -897,6 +901,8 @@ module Cardano.Api (
     -- ** Governance Committee
     makeCommitteeDelegationCertificate,
     makeCommitteeHotKeyUnregistrationCertificate,
+
+    ResolvablePointers(..),
   ) where
 
 import           Cardano.Api.Address

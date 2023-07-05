@@ -45,7 +45,7 @@ data TxVotes era where
 
   TxVotes
     :: TxVotesSupportedInEra era
-    -> [(VoteChoice, VoterType, GovernanceActionIdentifier (ShelleyLedgerEra era), VotingCredential era)]
+    -> [Vote era]
     -> TxVotes era
 
 deriving instance Show (TxVotes era)

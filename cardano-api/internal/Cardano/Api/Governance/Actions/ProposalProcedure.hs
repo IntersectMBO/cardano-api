@@ -38,6 +38,10 @@ data TxGovernanceActions era where
   TxGovernanceActions
     :: TxGovernanceActionSupportedInEra era
     -- (deposit, return address, governance action)
+    -- TODO: Conway era - This should be [Proposal era]
+    -- however when defining Eq and Show instances for Proposal era
+    -- There is a ledger class constraint that needs to be propagated
+    -- across several types which is unacceptable.
     -> [(Lovelace, Hash StakeKey, GovernanceAction)]
     -> TxGovernanceActions era
 
@@ -56,6 +60,14 @@ data TxGovernanceActionSupportedInEra era where
 
 deriving instance Show (TxGovernanceActionSupportedInEra era)
 deriving instance Eq (TxGovernanceActionSupportedInEra era)
+
+governanceActionsSupportedInEra :: ShelleyBasedEra  era -> Maybe (TxGovernanceActionSupportedInEra era)
+governanceActionsSupportedInEra ShelleyBasedEraShelley = Nothing
+governanceActionsSupportedInEra ShelleyBasedEraAllegra = Nothing
+governanceActionsSupportedInEra ShelleyBasedEraMary    = Nothing
+governanceActionsSupportedInEra ShelleyBasedEraAlonzo  = Nothing
+governanceActionsSupportedInEra ShelleyBasedEraBabbage = Nothing
+governanceActionsSupportedInEra ShelleyBasedEraConway  = Just GovernanceActionsSupportedInConwayEra
 
 
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovernanceAction era)
@@ -77,7 +89,19 @@ toGovernanceAction MotionOfNoConfidence = Gov.NoConfidence
 toGovernanceAction (ProposeNewConstitution bs) =
   Gov.NewConstitution $ toSafeHash bs
 
+fromGovernanceAction
+  :: ShelleyBasedEra era
+  -> Gov.GovernanceAction (ShelleyLedgerEra era)
+  -> GovernanceAction
+fromGovernanceAction _ Gov.NoConfidence = MotionOfNoConfidence
+fromGovernanceAction sbe (Gov.NewConstitution h) =
+  ProposeNewConstitution $ obtainSafeToHashConstraint sbe $ originalBytes h
+fromGovernanceAction _ _ = error "fromGovernanceAction Conway: not implemented yet "
+
 newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era) }
+
+deriving instance (Shelley.EraPParams (ShelleyLedgerEra era)) => Show (Proposal era)
+deriving instance (Shelley.EraPParams (ShelleyLedgerEra era)) => Eq (Proposal era)
 
 instance (IsShelleyBasedEra era, Shelley.EraPParams (ShelleyLedgerEra era)) => ToCBOR (Proposal era) where
   toCBOR (Proposal vp) = Shelley.toEraCBOR @Conway.Conway vp
@@ -119,3 +143,13 @@ createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
       , Gov.pProcGovernanceAction = toGovernanceAction govAct
       , Gov.pProcAnchor = SNothing -- TODO: Conway
       }
+
+fromProposalProcedure
+  :: ShelleyBasedEra era
+  -> Proposal era
+  -> (Lovelace, Hash StakeKey, GovernanceAction)
+fromProposalProcedure sbe (Proposal pp) =
+  ( fromShelleyLovelace $ Gov.pProcDeposit pp
+  , StakeKeyHash (obtainEraCryptoConstraints sbe (Gov.pProcReturnAddr pp))
+  , fromGovernanceAction sbe (Gov.pProcGovernanceAction pp)
+  )

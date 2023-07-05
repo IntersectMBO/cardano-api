@@ -224,7 +224,6 @@ import           Cardano.Ledger.Binary (Annotated (..), reAnnotate, recoverBytes
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
-import qualified Cardano.Ledger.Conway.Delegation.Certificates as Conway
 import qualified Cardano.Ledger.Conway.Governance as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
 import qualified Cardano.Ledger.Core as Core
@@ -235,8 +234,8 @@ import qualified Cardano.Ledger.Keys as Shelley
 import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Ledger
-import qualified Cardano.Ledger.Shelley.Delegation.Certificates as Shelley
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 import qualified Cardano.Ledger.TxIn as L
 import           Cardano.Ledger.Val as L (isZero)
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -262,7 +261,7 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
+import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -2375,21 +2374,20 @@ createTransactionBody era txBodyContent =
       refTxIns = convReferenceInputs apiReferenceInputs
       returnCollateral = convReturnCollateral era apiReturnCollateral
       totalCollateral = convTotalCollateral apiTotalCollateral
-      certs = convCertificates $ txCertificates txBodyContent
-      conwayCerts = convConwayCertificates $ txCertificates txBodyContent
+      certs = convCertificates era $ txCertificates txBodyContent
       txAuxData = toAuxiliaryData era (txMetadata txBodyContent) (txAuxScripts txBodyContent)
       scripts = convScripts apiScriptWitnesses
       validityInterval = convValidityInterval $ txValidityRange txBodyContent
       languages = convLanguages apiScriptWitnesses
 
-      mkTxBody :: ( L.EraTxBody (ShelleyLedgerEra era)
-                  , L.EraTxAuxData (ShelleyLedgerEra era)
-                  , L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-               => ShelleyBasedEra era
-               -> TxBodyContent BuildTx era
-               -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
-               -> L.TxBody (ShelleyLedgerEra era)
-      mkTxBody era' bc =
+      mkTxBody :: ()
+        => L.EraTxBody (ShelleyLedgerEra era)
+        => L.EraTxAuxData (ShelleyLedgerEra era)
+        => ShelleyBasedEra era
+        -> TxBodyContent BuildTx era
+        -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+        -> L.TxBody (ShelleyLedgerEra era)
+      mkTxBody era' bc = obtainEraCryptoConstraints era' $
         mkCommonTxBody
           era'
           (txIns bc)
@@ -2525,7 +2523,7 @@ createTransactionBody era txBodyContent =
                     datums
                     languages
         let ledgerTxBody = mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
-                           & L.conwayCertsTxBodyL         .~ conwayCerts
+                          --  & L.conwayCertsTxBodyL         .~ conwayCerts -- TODO CIP-1694
                            & L.vldtTxBodyL                .~ validityInterval
                            & L.collateralInputsTxBodyL    .~ collTxIns
                            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
@@ -3244,14 +3242,14 @@ fromLedgerTxCertificates
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxCertificates ViewTx era
-fromLedgerTxCertificates era body =
-  case era of
+fromLedgerTxCertificates sbe body =
+  case sbe of
     ShelleyBasedEraShelley
       | null certificates -> TxCertificatesNone
       | otherwise ->
           TxCertificates
             CertificatesInShelleyEra
-            (map fromShelleyCertificate $ toList certificates)
+            (map (fromShelleyCertificate sbe) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3261,7 +3259,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInAllegraEra
-            (map fromShelleyCertificate $ toList certificates)
+            (map (fromShelleyCertificate sbe) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3271,7 +3269,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInMaryEra
-            (map fromShelleyCertificate $ toList certificates)
+            (map (fromShelleyCertificate sbe) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3281,7 +3279,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInAlonzoEra
-            (map fromShelleyCertificate $ toList certificates)
+            (map (fromShelleyCertificate sbe) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3291,7 +3289,7 @@ fromLedgerTxCertificates era body =
       | otherwise ->
           TxCertificates
             CertificatesInBabbageEra
-            (map fromShelleyCertificate $ toList certificates)
+            (map (fromShelleyCertificate sbe) $ toList certificates)
             ViewTx
       where
         certificates = body ^. L.certsTxBodyL
@@ -3455,35 +3453,16 @@ convTxOuts
   => ShelleyBasedEra era -> [TxOut ctx era] -> Seq.StrictSeq (Ledger.TxOut ledgerera)
 convTxOuts era txOuts = Seq.fromList $ map (toShelleyTxOutAny era) txOuts
 
+
 convCertificates
-  :: TxCertificates build era -> Seq.StrictSeq (Shelley.DCert StandardCrypto)
-convCertificates txCertificates =
+  :: ShelleyBasedEra era
+  -> TxCertificates build era
+  -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
+convCertificates sbe txCertificates = obtainEraCryptoConstraints sbe $
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
+    TxCertificates _ cs _ -> Seq.fromList (map (toShelleyCertificate sbe) cs)
 
-convConwayCertificates
-  :: TxCertificates build era -> Seq.StrictSeq (Conway.ConwayDCert StandardCrypto)
-convConwayCertificates txCertificates =
-  case txCertificates of
-    TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ ->
-      Seq.fromList (mapMaybe (fromShelleyDCertMaybe . toShelleyCertificate) cs)
-
-fromShelleyDCertMaybe :: Shelley.DCert c -> Maybe (Conway.ConwayDCert c)
-fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.RegKey sc)) =
-  Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
-  -- TODO when ledger is fixed, use ConwayReg sc
-  -- Note that ConwayUnDeleg is *blatantly* wrong
-fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.DeRegKey sc)) =
-  Just $ Conway.ConwayDCertDeleg (Conway.ConwayUnDeleg sc (Ledger.Coin 0))
-  -- TODO when ledger is fixed, make zero coin a Nothing
-fromShelleyDCertMaybe (Shelley.DCertDeleg (Shelley.Delegate (Shelley.Delegation sc pool))) =
-  Just $ Conway.ConwayDCertDeleg (Conway.ConwayDeleg sc (Conway.DelegStake pool) (Ledger.Coin 0))
-  -- TODO when ledger is fixed, make zero coin a Nothing
-fromShelleyDCertMaybe (Shelley.DCertPool pc) = Just $ Conway.ConwayDCertPool pc
-fromShelleyDCertMaybe (Shelley.DCertGenesis gdc) = Just $ Conway.ConwayDCertConstitutional gdc
-fromShelleyDCertMaybe Shelley.DCertMir {} = Nothing
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
@@ -3629,11 +3608,7 @@ convGovActions sbe (TxGovernanceActions _ govActions) =
 
 convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
 convVotes _ TxVotesNone = Seq.empty
-convVotes sbe (TxVotes _ votes) =
-  Seq.fromList
-    [ unVote $ createVotingProcedure sbe voteChoice voterType govActionIdentifier votingCred
-    | (voteChoice, voterType, govActionIdentifier, votingCred) <- votes
-    ]
+convVotes _ (TxVotes _ votes) = Seq.fromList $ map unVote votes
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
@@ -3667,7 +3642,7 @@ makeShelleyTransactionBody
   :: ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
-makeShelleyTransactionBody era@ShelleyBasedEraShelley
+makeShelleyTransactionBody sbe@ShelleyBasedEraShelley
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -3679,12 +3654,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
                              txUpdateProposal
                            } = do
 
-    validateTxBodyContent era txbodycontent
-    update <- convTxUpdateProposal era txUpdateProposal
+    validateTxBodyContent sbe txbodycontent
+    update <- convTxUpdateProposal sbe txUpdateProposal
     return $
-      ShelleyTxBody era
-        (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
-           & L.certsTxBodyL  .~ convCertificates txCertificates
+      ShelleyTxBody sbe
+        (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
+           & L.certsTxBodyL  .~ convCertificates sbe txCertificates
            & L.updateTxBodyL .~ update
            & L.ttlTxBodyL    .~ case upperBound of
                                   TxValidityNoUpperBound era' -> case era' of {}
@@ -3703,9 +3678,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
       ]
 
     txAuxData :: Maybe (L.TxAuxData StandardShelley)
-    txAuxData = toAuxiliaryData era txMetadata TxAuxScriptsNone
+    txAuxData = toAuxiliaryData sbe txMetadata TxAuxScriptsNone
 
-makeShelleyTransactionBody era@ShelleyBasedEraAllegra
+makeShelleyTransactionBody sbe@ShelleyBasedEraAllegra
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -3718,12 +3693,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                              txUpdateProposal
                            } = do
 
-    validateTxBodyContent era txbodycontent
-    update <- convTxUpdateProposal era txUpdateProposal
+    validateTxBodyContent sbe txbodycontent
+    update <- convTxUpdateProposal sbe txUpdateProposal
     return $
-      ShelleyTxBody era
-        (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
-           & L.certsTxBodyL  .~ convCertificates txCertificates
+      ShelleyTxBody sbe
+        (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
+           & L.certsTxBodyL  .~ convCertificates sbe txCertificates
            & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL .~ update
         )
@@ -3740,9 +3715,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
       ]
 
     txAuxData :: Maybe (L.TxAuxData StandardAllegra)
-    txAuxData = toAuxiliaryData era txMetadata txAuxScripts
+    txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
 
-makeShelleyTransactionBody era@ShelleyBasedEraMary
+makeShelleyTransactionBody sbe@ShelleyBasedEraMary
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -3756,12 +3731,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
                              txMintValue
                            } = do
 
-    validateTxBodyContent era txbodycontent
-    update <- convTxUpdateProposal era txUpdateProposal
+    validateTxBodyContent sbe txbodycontent
+    update <- convTxUpdateProposal sbe txUpdateProposal
     return $
-      ShelleyTxBody era
-        (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
-           & L.certsTxBodyL  .~ convCertificates txCertificates
+      ShelleyTxBody sbe
+        (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
+           & L.certsTxBodyL  .~ convCertificates sbe txCertificates
            & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL .~ update
            & L.mintTxBodyL   .~ convMintValue txMintValue
@@ -3779,9 +3754,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
       ]
 
     txAuxData :: Maybe (L.TxAuxData StandardMary)
-    txAuxData = toAuxiliaryData era txMetadata txAuxScripts
+    txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
 
-makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
+makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
                            txbodycontent@TxBodyContent {
                              txIns,
                              txInsCollateral,
@@ -3799,14 +3774,14 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                              txScriptValidity
                            } = do
 
-    validateTxBodyContent era txbodycontent
-    update <- convTxUpdateProposal era txUpdateProposal
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash era txProtocolParams redeemers datums languages
+    validateTxBodyContent sbe txbodycontent
+    update <- convTxUpdateProposal sbe txUpdateProposal
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
     return $
-      ShelleyTxBody era
-        (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
+      ShelleyTxBody sbe
+        (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
            & L.collateralInputsTxBodyL    .~ convCollateralTxIns txInsCollateral
-           & L.certsTxBodyL               .~ convCertificates txCertificates
+           & L.certsTxBodyL               .~ convCertificates sbe txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
@@ -3862,9 +3837,9 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         ]
 
     txAuxData :: Maybe (L.TxAuxData StandardAlonzo)
-    txAuxData = toAuxiliaryData era txMetadata txAuxScripts
+    txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
 
-makeShelleyTransactionBody era@ShelleyBasedEraBabbage
+makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
                             txbodycontent@TxBodyContent {
                              txIns,
                              txInsCollateral,
@@ -3885,20 +3860,20 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                              txScriptValidity
                            } = do
 
-    validateTxBodyContent era txbodycontent
-    update <- convTxUpdateProposal era txUpdateProposal
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash era txProtocolParams redeemers datums languages
+    validateTxBodyContent sbe txbodycontent
+    update <- convTxUpdateProposal sbe txUpdateProposal
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
     return $
-      ShelleyTxBody era
-        (mkCommonTxBody era txIns txOuts txFee txWithdrawals txAuxData
+      ShelleyTxBody sbe
+        (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
            & L.collateralInputsTxBodyL .~
                case txInsCollateral of
                 TxInsCollateralNone     -> Set.empty
                 TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
-           & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
+           & L.collateralReturnTxBodyL    .~ convReturnCollateral sbe txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
-           & L.certsTxBodyL               .~ convCertificates txCertificates
+           & L.certsTxBodyL               .~ convCertificates sbe txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
@@ -3962,7 +3937,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
     getScriptLanguage SimpleScriptWitness{} = Nothing
 
     txAuxData :: Maybe (L.TxAuxData StandardBabbage)
-    txAuxData = toAuxiliaryData era txMetadata txAuxScripts
+    txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
 
 makeShelleyTransactionBody era@ShelleyBasedEraConway
                             txbodycontent@TxBodyContent {
@@ -3998,7 +3973,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
            & L.referenceInputsTxBodyL     .~ convReferenceInputs txInsReference
            & L.collateralReturnTxBodyL    .~ convReturnCollateral era txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
-           & L.conwayCertsTxBodyL         .~ convConwayCertificates txCertificates
+           & L.certsTxBodyL               .~ convCertificates era txCertificates
            & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue

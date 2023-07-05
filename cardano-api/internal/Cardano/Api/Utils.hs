@@ -30,17 +30,23 @@ module Cardano.Api.Utils
   , bounded
 
     -- ** Constraint solvers
+  , obtainCertificateConstraints
   , obtainCryptoConstraints
+  , obtainEraConstraints
   , obtainEraPParamsConstraint
   , obtainEraCryptoConstraints
+  , obtainSafeToHashConstraint
   ) where
 
 import           Cardano.Api.Eras
 
+import           Cardano.Crypto.Hash.Class (HashAlgorithm)
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import qualified Cardano.Ledger.Crypto as Ledger
 import           Cardano.Ledger.Shelley ()
+import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 
 import           Control.Exception (bracket)
 import           Control.Monad (when)
@@ -175,3 +181,38 @@ obtainEraPParamsConstraint ShelleyBasedEraAlonzo  f = f
 obtainEraPParamsConstraint ShelleyBasedEraBabbage f = f
 obtainEraPParamsConstraint ShelleyBasedEraConway  f = f
 
+obtainEraConstraints
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> ( (IsShelleyBasedEra era, Ledger.Era ledgerera) => a) -> a
+obtainEraConstraints ShelleyBasedEraShelley f = f
+obtainEraConstraints ShelleyBasedEraAllegra f = f
+obtainEraConstraints ShelleyBasedEraMary    f = f
+obtainEraConstraints ShelleyBasedEraAlonzo  f = f
+obtainEraConstraints ShelleyBasedEraBabbage f = f
+obtainEraConstraints ShelleyBasedEraConway  f = f
+
+
+obtainSafeToHashConstraint
+  :: ShelleyBasedEra era
+  -> (HashAlgorithm (Ledger.HASH (EraCrypto (ShelleyLedgerEra era))) => a)
+  -> a
+obtainSafeToHashConstraint ShelleyBasedEraShelley f = f
+obtainSafeToHashConstraint ShelleyBasedEraAllegra f = f
+obtainSafeToHashConstraint ShelleyBasedEraMary    f = f
+obtainSafeToHashConstraint ShelleyBasedEraAlonzo  f = f
+obtainSafeToHashConstraint ShelleyBasedEraBabbage f = f
+obtainSafeToHashConstraint ShelleyBasedEraConway  f = f
+obtainCertificateConstraints
+
+  :: ShelleyBasedEra era
+  -> (( Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
+      , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+      ) => a)
+  -> a
+obtainCertificateConstraints ShelleyBasedEraShelley f = f
+obtainCertificateConstraints ShelleyBasedEraAllegra f = f
+obtainCertificateConstraints ShelleyBasedEraMary    f = f
+obtainCertificateConstraints ShelleyBasedEraAlonzo  f = f
+obtainCertificateConstraints ShelleyBasedEraBabbage f = f
+obtainCertificateConstraints ShelleyBasedEraConway  f = f

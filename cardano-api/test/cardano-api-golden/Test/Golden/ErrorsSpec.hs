@@ -246,7 +246,7 @@ test_ScriptExecutionError =
     , ("ScriptErrorExecutionUnitsOverflow", ScriptErrorExecutionUnitsOverflow)
     , ("ScriptErrorNotPlutusWitnessedTxIn", ScriptErrorNotPlutusWitnessedTxIn (ScriptWitnessIndexTxIn 0) scriptHash)
     , ("ScriptErrorRedeemerPointsToUnknownScriptHash", ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0))
-    , ("ScriptErrorMissingScript", ScriptErrorMissingScript (Ledger.RdmrPtr Ledger.Mint 0) Map.empty)
+    , ("ScriptErrorMissingScript", ScriptErrorMissingScript (Ledger.RdmrPtr Ledger.Mint 0) (ResolvablePointers ShelleyBasedEraBabbage Map.empty)) -- TODO CIP-1694 make work in all eras
     , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Alonzo.PlutusV2)
     ]
 
