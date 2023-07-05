@@ -40,6 +40,7 @@ module Cardano.Api.Eras
   , IsShelleyBasedEra(..)
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
+  , shelleyBasedEraConstraints
   , shelleyBasedToCardanoEra
 
     -- ** Mapping to era types from the Shelley ledger library
@@ -579,3 +580,15 @@ cardanoEraConstraints = \case
   AlonzoEra  -> id
   BabbageEra -> id
   ConwayEra  -> id
+
+shelleyBasedEraConstraints :: ()
+  => ShelleyBasedEra era
+  -> (Typeable era => IsShelleyBasedEra era => a)
+  -> a
+shelleyBasedEraConstraints = \case
+  ShelleyBasedEraShelley -> id
+  ShelleyBasedEraAllegra -> id
+  ShelleyBasedEraMary    -> id
+  ShelleyBasedEraAlonzo  -> id
+  ShelleyBasedEraBabbage -> id
+  ShelleyBasedEraConway  -> id
