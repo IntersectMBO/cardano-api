@@ -21,7 +21,7 @@
   outputs = inputs: let
     supportedSystems = [
       "x86_64-linux"
-      "x86_64-darwin"
+      # "x86_64-darwin"
       # "aarch64-linux" - disable these temporarily because the build is broken
       # "aarch64-darwin" - disable these temporarily because the build is broken
     ];
