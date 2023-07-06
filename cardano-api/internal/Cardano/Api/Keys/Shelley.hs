@@ -1104,6 +1104,9 @@ instance CastSigningKeyRole GenesisDelegateKey StakePoolKey where
     castSigningKey (GenesisDelegateSigningKey skey) =
       StakePoolSigningKey skey
 
+instance CastVerificationKeyRole StakePoolKey StakeKey where
+    castVerificationKey (StakePoolVerificationKey (Shelley.VKey vkey)) =
+      StakeVerificationKey (Shelley.VKey vkey)
 
 --
 -- Shelley genesis delegate extended ed25519 keys
