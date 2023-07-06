@@ -102,7 +102,7 @@ import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (un
 import           Cardano.Api.SpecialByron as Byron
 import           Cardano.Api.Utils (textShow)
 
-import qualified DBSync as Legacy
+import qualified Legacy.Convert as Legacy
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Genesis
