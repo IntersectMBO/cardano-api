@@ -503,8 +503,8 @@ toShelleyCertificateAtLeastConway (MIRCertificate _ _) =
 
 fromShelleyCertificate :: ()
   => Shelley.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
-  => L.AtMostEra L.BabbageEra (CardanoLedgerEra era)
+  -- => Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
+  -- => L.AtMostEra L.BabbageEra (CardanoLedgerEra era)
   => ShelleyBasedEra era
   -> Shelley.TxCert (ShelleyLedgerEra era)
   -> Certificate era

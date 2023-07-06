@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 
 -- | Cardano eras, sometimes we have to distinguish them.
@@ -45,6 +47,7 @@ module Cardano.Api.Eras
 
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
+  , HasShelleyApiEra(..)
   , eraProtVerLow
 
     -- * Cardano eras, as Byron vs Shelley-based
@@ -521,6 +524,41 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra AlonzoEra  = Consensus.StandardAlonzo
   ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
   ShelleyLedgerEra ConwayEra  = Consensus.StandardConway
+
+class HasShelleyApiEra ledgerera where
+  type ShelleyApiEra ledgerera
+
+  shelleyBasedEraForLedgerEra :: Proxy ledgerera -> ShelleyApiEra ledgerera
+
+instance HasShelleyApiEra Consensus.StandardShelley where
+  type ShelleyApiEra Consensus.StandardShelley = ShelleyBasedEra ShelleyEra
+
+  shelleyBasedEraForLedgerEra _ = ShelleyBasedEraShelley
+
+instance HasShelleyApiEra Consensus.StandardAllegra where
+  type ShelleyApiEra Consensus.StandardAllegra = ShelleyBasedEra AllegraEra
+
+  shelleyBasedEraForLedgerEra _ = ShelleyBasedEraAllegra
+
+instance HasShelleyApiEra Consensus.StandardMary where
+  type ShelleyApiEra Consensus.StandardMary = ShelleyBasedEra MaryEra
+
+  shelleyBasedEraForLedgerEra _ = ShelleyBasedEraMary
+
+instance HasShelleyApiEra Consensus.StandardAlonzo where
+  type ShelleyApiEra Consensus.StandardAlonzo = ShelleyBasedEra AlonzoEra
+
+  shelleyBasedEraForLedgerEra _ = ShelleyBasedEraAlonzo
+
+instance HasShelleyApiEra Consensus.StandardBabbage where
+  type ShelleyApiEra Consensus.StandardBabbage = ShelleyBasedEra BabbageEra
+
+  shelleyBasedEraForLedgerEra _ = ShelleyBasedEraBabbage
+
+instance HasShelleyApiEra Consensus.StandardConway where
+  type ShelleyApiEra Consensus.StandardConway = ShelleyBasedEra ConwayEra
+
+  shelleyBasedEraForLedgerEra _ = ShelleyBasedEraConway
 
 type family CardanoLedgerEra era where
   CardanoLedgerEra ByronEra   = L.ByronEra   L.StandardCrypto

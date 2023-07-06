@@ -208,7 +208,7 @@ module Cardano.Api.Shelley
 
     -- ** Shelley based eras
     ShelleyLedgerEra,
-
+    HasShelleyApiEra(..),
 
     -- ** Local State Query
     DebugLedgerState(..),
