@@ -93,7 +93,12 @@
           shell.withHoogle = false;
           # Skip cross compilers for the shell
           shell.crossPlatforms = _: [];
-          shell.packages = p: [ p.cardano-api p.plutus-ledger-api p.ouroboros-consensus-cardano ];
+          shell.packages = p: [ 
+            # needed to work around shortcomings in sublib support.
+            p.cardano-api p.plutus-ledger-api
+            # needed to work around an apparent haskell.nix tracking defect
+            p.ouroboros-consensus-cardano
+          ];
 
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
