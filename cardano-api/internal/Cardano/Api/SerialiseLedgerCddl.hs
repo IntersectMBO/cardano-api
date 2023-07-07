@@ -328,7 +328,6 @@ readTextEnvelopeCddlFromFile
   -> IO (Either (FileError TextEnvelopeCddlError) TextEnvelopeCddl)
 readTextEnvelopeCddlFromFile path =
   runExceptT $ do
-    bs <- handleIOExceptT (FileIOError path) $
-            readFileBlocking path
+    bs <- fileIOExceptT path readFileBlocking
     firstExceptT (FileError path . TextEnvelopeCddlAesonDecodeError path)
       . hoistEither $ Aeson.eitherDecodeStrict' bs

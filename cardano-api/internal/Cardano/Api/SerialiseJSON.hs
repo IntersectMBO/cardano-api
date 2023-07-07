@@ -56,7 +56,7 @@ readFileJSON :: FromJSON a
              -> IO (Either (FileError JsonDecodeError) a)
 readFileJSON ttoken path =
     runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ BS.readFile path
+      content <- fileIOExceptT path BS.readFile
       firstExceptT (FileError path) $ hoistEither $
         deserialiseFromJSON ttoken content
 

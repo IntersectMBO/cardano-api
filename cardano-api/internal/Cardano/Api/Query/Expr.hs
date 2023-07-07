@@ -7,6 +7,7 @@ module Cardano.Api.Query.Expr
   , queryCurrentEra
   , queryDebugLedgerState
   , queryEpoch
+  , queryConstitutionHash
   , queryEraHistory
   , queryGenesisParameters
   , queryPoolDistribution
@@ -40,10 +41,13 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Value
 
+import           Cardano.Ledger.Api
+import           Cardano.Ledger.SafeHash
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import           Data.ByteString
 import           Data.Map (Map)
 import           Data.Set (Set)
 
@@ -125,6 +129,13 @@ queryProtocolParameters :: ()
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch ProtocolParameters))
 queryProtocolParameters eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+
+queryConstitutionHash :: ()
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) ByteString))))
+queryConstitutionHash eraInMode sbe =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitutionHash
 
 queryProtocolParametersUpdate :: ()
   => EraInMode era mode

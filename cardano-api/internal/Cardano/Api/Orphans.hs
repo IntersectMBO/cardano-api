@@ -16,7 +16,6 @@ import           Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Data (Data)
 
-
 deriving instance Data DecoderError
 deriving instance Data CBOR.DeserialiseFailure
 deriving instance Data Bech32.DecodingError

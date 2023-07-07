@@ -15,6 +15,7 @@ module Cardano.Api.Governance.Actions.VotingProcedure where
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR (FromCBOR (fromCBOR), SerialiseAsCBOR (..),
                    ToCBOR (toCBOR))
@@ -30,7 +31,8 @@ import qualified Cardano.Ledger.Conway.Governance as Gov
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Shelley
 import qualified Cardano.Ledger.Credential as Ledger
-import           Cardano.Ledger.Keys
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (Voting))
 import qualified Cardano.Ledger.TxIn as Ledger
 
 import           Data.ByteString.Lazy (ByteString)
@@ -88,13 +90,13 @@ makeGoveranceActionIdentifier sbe txin =
              , Gov.gaidGovActionIx = Gov.GovernanceActionIx txix
              }
 
--- toVotingCredential :: _ -> Ledger.Credential 'Voting (EraCrypto ledgerera)
--- toVotingCredential = undefined
 
-data VoterType
-  = CC -- ^ Constitutional committee
-  | DR -- ^ Delegated representative
-  | SP -- ^ Stake pool operator
+-- TODO: Conway era - These should be the different keys corresponding to the CC and DRs.
+-- We can then derive the StakeCredentials from them.
+data VoterType era
+  = CC (VotingCredential era) -- ^ Constitutional committee
+  | DR (VotingCredential era)-- ^ Delegated representative
+  | SP (Hash StakePoolKey) -- ^ Stake pool operator
   deriving (Show, Eq)
 
 data VoteChoice
@@ -103,10 +105,14 @@ data VoteChoice
   | Abst -- ^ Abstain
   deriving (Show, Eq)
 
-toVoterRole :: VoterType -> Gov.VoterRole
-toVoterRole CC = Gov.ConstitutionalCommittee
-toVoterRole DR = Gov.DRep
-toVoterRole SP = Gov.SPO
+toVoterRole
+  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => ShelleyBasedEra era
+  -> VoterType era
+  -> Gov.Voter (Shelley.EraCrypto (ShelleyLedgerEra era))
+toVoterRole _ (CC (VotingCredential cred)) = Gov.CommitteeVoter $ coerceKeyRole cred -- TODO: Conway era - Alexey realllllyyy doesn't like this. We need to fix it.
+toVoterRole _ (DR (VotingCredential cred)) = Gov.DRepVoter cred
+toVoterRole _ (SP (StakePoolKeyHash kh)) = Gov.StakePoolVoter kh
 
 toVote :: VoteChoice -> Gov.Vote
 toVote No = Gov.VoteNo
@@ -149,16 +155,14 @@ deriving instance Eq (VotingCredential crypto)
 createVotingProcedure
   :: ShelleyBasedEra era
   -> VoteChoice
-  -> VoterType
+  -> VoterType era
   -> GovernanceActionIdentifier (ShelleyLedgerEra era)
-  -> VotingCredential era -- ^ Governance witness credential (ledger checks that you are allowed to vote)
   -> Vote era
-createVotingProcedure sbe vChoice vt (GovernanceActionIdentifier govActId) (VotingCredential govWitnessCredential) =
+createVotingProcedure sbe vChoice vt (GovernanceActionIdentifier govActId) =
   obtainEraCryptoConstraints sbe
     $ Vote $ Gov.VotingProcedure
       { Gov.vProcGovActionId = govActId
-      , Gov.vProcRole = toVoterRole vt
-      , Gov.vProcRoleKeyHash = govWitnessCredential
+      , Gov.vProcVoter = toVoterRole sbe vt
       , Gov.vProcVote = toVote vChoice
       , Gov.vProcAnchor = SNothing -- TODO: Conway
       }
