@@ -133,7 +133,7 @@ queryProtocolParameters eraInMode sbe =
 queryConstitutionHash :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto era) ByteString))))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) ByteString))))
 queryConstitutionHash eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitutionHash
 

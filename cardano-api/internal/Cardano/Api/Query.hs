@@ -94,12 +94,11 @@ import           Cardano.Api.Value
 
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import           Cardano.Ledger.Binary
-import           Cardano.Ledger.SafeHash (SafeHash)
-import           Data.ByteString (ByteString)
-import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (Crypto)
+import           Cardano.Ledger.SafeHash (SafeHash)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -131,6 +130,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor (bimap, first)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either.Combinators (rightToMaybe)
 import qualified Data.HashMap.Strict as HMS
@@ -298,7 +298,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace)
 
   QueryConstitutionHash
-    :: QueryInShelleyBasedEra era (Maybe (SafeHash (EraCrypto era) ByteString))
+    :: QueryInShelleyBasedEra era (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) ByteString))
 
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
