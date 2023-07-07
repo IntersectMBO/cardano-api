@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 8.8.0.0
+
+- Add CastVerificationKeyRole StakePoolKey StakeKey instance
+  (feature; compatible)
+  [PR 101](https://github.com/input-output-hk/cardano-api/pull/101)
+
+- New `shelleyBasedEraConstraints` function
+  (feature; compatible)
+  [PR 103](https://github.com/input-output-hk/cardano-api/pull/103)
+
+- Propagate ledger's TxCert type family throughout the api
+  (feature; breaking)
+  [PR 97](https://github.com/input-output-hk/cardano-api/pull/97)
+
+- Parameterise `Certificate` with `era`
+  (feature; breaking)
+  [PR 84](https://github.com/input-output-hk/cardano-api/pull/84)
+
 ## 8.7.0.0
 
 - Update VotingCredential to be parameterized on cardano-api's era type
