@@ -19,11 +19,6 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           System.Directory (doesFileExist)
 import           System.IO (Handle)
-import Control.Monad.Trans.Except (ExceptT)
-import Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import Control.Monad.IO.Class (MonadIO)
-import System.Directory (doesFileExist)
-import Control.Monad.Except (throwError)
 
 class Show e => Error e where
 
