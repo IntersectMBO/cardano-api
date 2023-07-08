@@ -35,6 +35,7 @@ module Cardano.Api (
     cardanoEraStyle,
     shelleyBasedToCardanoEra,
     shelleyBasedEraConstraints,
+    withShelleyBasedEraConstraintsForLedger,
 
     -- * Assertions on era
     requireShelleyBasedEra,
