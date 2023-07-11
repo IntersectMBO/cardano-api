@@ -221,7 +221,7 @@ evaluateTransactionFee bpparams txbody keywitcount _byronwitcount =
       ByronTx{} -> case shelleyBasedEra :: ShelleyBasedEra era of {}
       --TODO: we could actually support Byron here, it'd be different but simpler
 
-      ShelleyTx era tx -> withShelleyBasedEraConstraintsForLedger era (evalShelleyBasedEra tx)
+      ShelleyTx sbe tx -> withShelleyBasedEraConstraintsForLedger sbe (evalShelleyBasedEra tx)
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
@@ -527,11 +527,11 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo bpp utxo tx' 
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
-    evalAlonzo era tx = do
+    evalAlonzo sbe' tx = do
       case L.evalTxExUnits
-             (unbundleLedgerShelleyBasedProtocolParams era bpp)
+             (unbundleLedgerShelleyBasedProtocolParams sbe' bpp)
              tx
-             (toLedgerUTxO era utxo)
+             (toLedgerUTxO sbe' utxo)
              ledgerEpochInfo
              systemstart
         of Left err -> Left (TransactionValidityTranslationError err)
@@ -544,11 +544,11 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo bpp utxo tx' 
                 -> Either TransactionValidityError
                           (Map ScriptWitnessIndex
                                (Either ScriptExecutionError ExecutionUnits))
-    evalBabbage era tx = do
+    evalBabbage sbe' tx = do
       case L.evalTxExUnits
-             (unbundleLedgerShelleyBasedProtocolParams era bpp)
+             (unbundleLedgerShelleyBasedProtocolParams sbe' bpp)
              tx
-             (toLedgerUTxO era utxo)
+             (toLedgerUTxO sbe' utxo)
              ledgerEpochInfo
              systemstart
         of Left err    -> Left (TransactionValidityTranslationError err)
@@ -563,11 +563,11 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo bpp utxo tx' 
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
-    evalConway era tx = do
+    evalConway sbe' tx = do
       case L.evalTxExUnits
-             (unbundleLedgerShelleyBasedProtocolParams era bpp)
+             (unbundleLedgerShelleyBasedProtocolParams sbe' bpp)
              tx
-             (toLedgerUTxO era utxo)
+             (toLedgerUTxO sbe' utxo)
              ledgerEpochInfo
              systemstart
         of Left err    -> Left (TransactionValidityTranslationError err)
@@ -648,11 +648,11 @@ evaluateTransactionBalance _ _ _ _ (ByronTxBody _) =
     --TODO: we could actually support Byron here, it'd be different but simpler
 
 evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
-                           (ShelleyTxBody era txbody _ _ _ _) =
+                           (ShelleyTxBody sbe txbody _ _ _ _) =
     withLedgerConstraints
-      era
-      (getShelleyEraTxBodyConstraint era evalAdaOnly)
-      (getShelleyEraTxBodyConstraint era evalMultiAsset)
+      sbe
+      (getShelleyEraTxBodyConstraint sbe evalAdaOnly)
+      (getShelleyEraTxBodyConstraint sbe evalMultiAsset)
   where
     getShelleyEraTxBodyConstraint
       :: forall era' a.
@@ -685,10 +685,10 @@ evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
          L.evalBalanceTxBody
-           (unbundleLedgerShelleyBasedProtocolParams era bpp)
+           (unbundleLedgerShelleyBasedProtocolParams sbe bpp)
            lookupDelegDeposit
            isRegPool
-           (toLedgerUTxO era utxo)
+           (toLedgerUTxO sbe utxo)
            txbody
 
     evalAdaOnly :: forall ledgerera.
@@ -701,10 +701,10 @@ evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
        $ L.evalBalanceTxBody
-           (unbundleLedgerShelleyBasedProtocolParams era bpp)
+           (unbundleLedgerShelleyBasedProtocolParams sbe bpp)
            lookupDelegDeposit
            isRegPool
-           (toLedgerUTxO era utxo)
+           (toLedgerUTxO sbe utxo)
            txbody
 
     -- Conjur up all the necessary class instances and evidence
@@ -1122,8 +1122,8 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
                   )
                 else (TxReturnCollateralNone, TxTotalCollateralNone)
 
-   era :: ShelleyBasedEra era
-   era = shelleyBasedEra
+   sbe :: ShelleyBasedEra era
+   sbe = shelleyBasedEra
 
    era' :: CardanoEra era
    era' = cardanoEra
@@ -1165,7 +1165,7 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
      -> BundledProtocolParameters era
      -> Either TxBodyErrorAutoBalance ()
    checkMinUTxOValue txout@(TxOut _ v _ _) bpp = do
-     let minUTxO = calculateMinimumUTxO era txout bpp
+     let minUTxO = calculateMinimumUTxO sbe txout bpp
      if txOutValueToLovelace v >= minUTxO
      then Right ()
      else Left $ TxBodyErrorMinUTxONotMet
@@ -1328,20 +1328,20 @@ calculateMinimumUTxO
   -> TxOut CtxTx era
   -> BundledProtocolParameters era
   -> Lovelace
-calculateMinimumUTxO era txout bpp =
-  case era of
+calculateMinimumUTxO sbe txout bpp =
+  case sbe of
     ShelleyBasedEraShelley ->
-      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams sbe bpp) (toShelleyTxOutAny sbe txout)
     ShelleyBasedEraAllegra ->
-      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams sbe bpp) (toShelleyTxOutAny sbe txout)
     ShelleyBasedEraMary ->
-      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams sbe bpp) (toShelleyTxOutAny sbe txout)
     ShelleyBasedEraAlonzo ->
-      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams sbe bpp) (toShelleyTxOutAny sbe txout)
     ShelleyBasedEraBabbage ->
-      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams sbe bpp) (toShelleyTxOutAny sbe txout)
     ShelleyBasedEraConway ->
-      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams era bpp) (toShelleyTxOutAny era txout)
+      calcMinUTxO (unbundleLedgerShelleyBasedProtocolParams sbe bpp) (toShelleyTxOutAny sbe txout)
  where
    calcMinUTxO :: L.EraTxOut ledgerera => L.PParams ledgerera -> L.TxOut ledgerera -> Lovelace
    calcMinUTxO pp txOut =

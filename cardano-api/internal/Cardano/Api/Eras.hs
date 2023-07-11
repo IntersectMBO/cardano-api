@@ -402,8 +402,8 @@ data AnyShelleyBasedEra where
 deriving instance Show AnyShelleyBasedEra
 
 instance Eq AnyShelleyBasedEra where
-    AnyShelleyBasedEra era == AnyShelleyBasedEra era' =
-      case testEquality era era' of
+    AnyShelleyBasedEra sbe == AnyShelleyBasedEra sbe' =
+      case testEquality sbe sbe' of
         Nothing   -> False
         Just Refl -> True -- since no constructors share types
 
@@ -435,7 +435,7 @@ instance Enum AnyShelleyBasedEra where
             <> " does not correspond to any known enumerated era."
 
 instance ToJSON AnyShelleyBasedEra where
-   toJSON (AnyShelleyBasedEra era) = toJSON era
+   toJSON (AnyShelleyBasedEra sbe) = toJSON sbe
 
 instance FromJSON AnyShelleyBasedEra where
    parseJSON = withText "AnyShelleyBasedEra"
@@ -534,14 +534,13 @@ type family CardanoLedgerEra era where
 -- | Lookup the lower major protocol version for the shelley based era. In other words
 -- this is the major protocol version that the era has started in.
 eraProtVerLow :: ShelleyBasedEra era -> L.Version
-eraProtVerLow era =
-  case era of
-    ShelleyBasedEraShelley -> L.eraProtVerLow @L.Shelley
-    ShelleyBasedEraAllegra -> L.eraProtVerLow @L.Allegra
-    ShelleyBasedEraMary    -> L.eraProtVerLow @L.Mary
-    ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
-    ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
-    ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
+eraProtVerLow = \case
+  ShelleyBasedEraShelley -> L.eraProtVerLow @L.Shelley
+  ShelleyBasedEraAllegra -> L.eraProtVerLow @L.Allegra
+  ShelleyBasedEraMary    -> L.eraProtVerLow @L.Mary
+  ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
+  ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
+  ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
 
 requireShelleyBasedEra :: ()
   => Applicative m
