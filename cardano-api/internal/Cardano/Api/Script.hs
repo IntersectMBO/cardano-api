@@ -1101,8 +1101,8 @@ toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV3
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
                         -> ScriptInEra era
-fromShelleyBasedScript era script =
-  case era of
+fromShelleyBasedScript sbe script =
+  case sbe of
     ShelleyBasedEraShelley ->
       ScriptInEra SimpleScriptInShelley
         . SimpleScript $ fromShelleyMultiSig script

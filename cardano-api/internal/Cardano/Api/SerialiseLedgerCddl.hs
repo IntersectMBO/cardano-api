@@ -198,7 +198,7 @@ deserialiseWitnessLedgerCddl
   :: ShelleyBasedEra era
   -> TextEnvelopeCddl
   -> Either TextEnvelopeCddlError (KeyWitness era)
-deserialiseWitnessLedgerCddl era TextEnvelopeCddl{teCddlRawCBOR,teCddlDescription} =
+deserialiseWitnessLedgerCddl sbe TextEnvelopeCddl{teCddlRawCBOR,teCddlDescription} =
   --TODO: Parse these into types because this will increase code readability and
   -- will make it easier to keep track of the different Cddl descriptions via
   -- a single sum data type.
@@ -206,13 +206,13 @@ deserialiseWitnessLedgerCddl era TextEnvelopeCddl{teCddlRawCBOR,teCddlDescriptio
     "Key BootstrapWitness ShelleyEra" -> do
       w <- first TextEnvelopeCddlErrCBORDecodingError
              $ CBOR.decodeFullAnnotator
-               (eraProtVerLow era) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
-      Right $ ShelleyBootstrapWitness era w
+               (eraProtVerLow sbe) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
+      Right $ ShelleyBootstrapWitness sbe w
     "Key Witness ShelleyEra" -> do
       w <- first TextEnvelopeCddlErrCBORDecodingError
              $ CBOR.decodeFullAnnotator
-               (eraProtVerLow era) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
-      Right $ ShelleyKeyWitness era w
+               (eraProtVerLow sbe) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
+      Right $ ShelleyKeyWitness sbe w
     _ -> Left TextEnvelopeCddlUnknownKeyWitness
 
 writeTxFileTextEnvelopeCddl

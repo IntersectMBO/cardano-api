@@ -928,8 +928,8 @@ toLedgerUpdate :: forall era ledgerera.
                => ShelleyBasedEra era
                -> UpdateProposal
                -> Either ProtocolParametersConversionError (Ledger.Update ledgerera)
-toLedgerUpdate era (UpdateProposal ppup epochno) =
-  (`Ledger.Update` epochno) <$> toLedgerProposedPPUpdates era ppup
+toLedgerUpdate sbe (UpdateProposal ppup epochno) =
+  (`Ledger.Update` epochno) <$> toLedgerProposedPPUpdates sbe ppup
 
 
 toLedgerProposedPPUpdates :: forall era ledgerera.
@@ -938,8 +938,8 @@ toLedgerProposedPPUpdates :: forall era ledgerera.
                           => ShelleyBasedEra era
                           -> Map (Hash GenesisKey) ProtocolParametersUpdate
                           -> Either ProtocolParametersConversionError (Ledger.ProposedPPUpdates ledgerera)
-toLedgerProposedPPUpdates era m =
-  Ledger.ProposedPPUpdates . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) <$> traverse (toLedgerPParamsUpdate era) m
+toLedgerProposedPPUpdates sbe m =
+  Ledger.ProposedPPUpdates . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) <$> traverse (toLedgerPParamsUpdate sbe) m
 
 toLedgerPParamsUpdate :: ShelleyBasedEra era
                       -> ProtocolParametersUpdate
@@ -1120,8 +1120,8 @@ fromLedgerUpdate :: forall era ledgerera.
                  => ShelleyBasedEra era
                  -> Ledger.Update ledgerera
                  -> UpdateProposal
-fromLedgerUpdate era (Ledger.Update ppup epochno) =
-    UpdateProposal (fromLedgerProposedPPUpdates era ppup) epochno
+fromLedgerUpdate sbe (Ledger.Update ppup epochno) =
+    UpdateProposal (fromLedgerProposedPPUpdates sbe ppup) epochno
 
 
 fromLedgerProposedPPUpdates :: forall era ledgerera.
@@ -1130,8 +1130,8 @@ fromLedgerProposedPPUpdates :: forall era ledgerera.
                             => ShelleyBasedEra era
                             -> Ledger.ProposedPPUpdates ledgerera
                             -> Map (Hash GenesisKey) ProtocolParametersUpdate
-fromLedgerProposedPPUpdates era =
-    Map.map (fromLedgerPParamsUpdate era)
+fromLedgerProposedPPUpdates sbe =
+    Map.map (fromLedgerPParamsUpdate sbe)
   . Map.mapKeysMonotonic GenesisKeyHash
   . (\(Ledger.ProposedPPUpdates ppup) -> ppup)
 
