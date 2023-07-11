@@ -3,7 +3,7 @@
 ```yaml
 - description: |
     <insert-changelog-description-here>
-  # no-changes: the API has not changed
+  # no-api-changes: the API has not changed
   # compatible: the API has changed but is non-breaking
   # breaking: the API has changed in a breaking way
   compatibility: <no-api-changes|compatible|breaking>
