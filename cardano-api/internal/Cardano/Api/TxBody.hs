@@ -224,7 +224,6 @@ import           Cardano.Ledger.Binary (Annotated (..), reAnnotate, recoverBytes
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
-import qualified Cardano.Ledger.Conway.Governance as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -3598,13 +3597,9 @@ convReferenceInputs txInsReference =
     TxInsReferenceNone -> mempty
     TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
 
-convGovActions :: ShelleyBasedEra era -> TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedure (ShelleyLedgerEra era))
-convGovActions _ TxGovernanceActionsNone = Seq.empty
-convGovActions sbe (TxGovernanceActions _ govActions) =
-  Seq.fromList
-    [ unProposal $ createProposalProcedure sbe deposit stakeCred action
-    | (deposit, stakeCred, action) <- govActions
-    ]
+convGovActions :: TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedure (ShelleyLedgerEra era))
+convGovActions TxGovernanceActionsNone = Seq.empty
+convGovActions (TxGovernanceActions _ govActions) = Seq.fromList $ fmap unProposal govActions
 
 convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
 convVotes _ TxVotesNone = Seq.empty
@@ -3979,7 +3974,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
            & L.votingProceduresTxBodyL    .~ convVotes sbe txVotes
-           & L.proposalProceduresTxBodyL  .~ convGovActions sbe txGovernanceActions
+           & L.proposalProceduresTxBodyL  .~ convGovActions txGovernanceActions
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )

@@ -2,6 +2,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -37,16 +38,11 @@ data TxGovernanceActions era where
 
   TxGovernanceActions
     :: TxGovernanceActionSupportedInEra era
-    -- (deposit, return address, governance action)
-    -- TODO: Conway era - This should be [Proposal era]
-    -- however when defining Eq and Show instances for Proposal era
-    -- There is a ledger class constraint that needs to be propagated
-    -- across several types which is unacceptable.
-    -> [(Lovelace, Hash StakeKey, GovernanceAction)]
+    -> [Proposal era]
     -> TxGovernanceActions era
 
-deriving instance Show (TxGovernanceActions era)
-deriving instance Eq (TxGovernanceActions era)
+deriving instance IsShelleyBasedEra era => Show (TxGovernanceActions era)
+deriving instance IsShelleyBasedEra era => Eq (TxGovernanceActions era)
 
 
 -- | A representation of whether the era supports transactions with governance
@@ -100,28 +96,25 @@ fromGovernanceAction _ _ = error "fromGovernanceAction Conway: not implemented y
 
 newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era) }
 
-deriving instance (Shelley.EraPParams (ShelleyLedgerEra era)) => Show (Proposal era)
-deriving instance (Shelley.EraPParams (ShelleyLedgerEra era)) => Eq (Proposal era)
+instance IsShelleyBasedEra era => Show (Proposal era) where
+  show (Proposal pp) = do
+    let ppStr = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ show pp
+    "Proposal {unProposal = " <> ppStr <> "}"
 
-instance (IsShelleyBasedEra era, Shelley.EraPParams (ShelleyLedgerEra era)) => ToCBOR (Proposal era) where
-  toCBOR (Proposal vp) = Shelley.toEraCBOR @Conway.Conway vp
+instance IsShelleyBasedEra era => Eq (Proposal era) where
+  (Proposal pp1) == (Proposal pp2) = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ pp1 == pp2
 
-instance ( IsShelleyBasedEra era
-         , Shelley.EraPParams (ShelleyLedgerEra era)
-         ) => FromCBOR (Proposal era) where
-  fromCBOR = Proposal <$> Shelley.fromEraCBOR @Conway.Conway
+instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
+  toCBOR (Proposal vp) = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
 
-instance ( IsShelleyBasedEra era
-         , Shelley.EraPParams (ShelleyLedgerEra era)
-         ) => SerialiseAsCBOR (Proposal era) where
+instance IsShelleyBasedEra era => FromCBOR (Proposal era) where
+  fromCBOR = Proposal <$> withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) (Shelley.fromEraCBOR @Conway.Conway)
 
-  serialiseToCBOR = CBOR.serialize'
-  deserialiseFromCBOR _proxy = CBOR.decodeFull'
+instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
+  serialiseToCBOR = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) CBOR.serialize'
+  deserialiseFromCBOR _proxy = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) CBOR.decodeFull'
 
-
-instance ( IsShelleyBasedEra era
-         , Shelley.EraPParams (ShelleyLedgerEra era)
-         ) => HasTextEnvelope (Proposal era) where
+instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
   textEnvelopeType _ = "Governance proposal"
 
 instance HasTypeProxy era => HasTypeProxy (Proposal era) where
