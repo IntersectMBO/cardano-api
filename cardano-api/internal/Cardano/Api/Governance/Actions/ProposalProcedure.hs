@@ -57,7 +57,7 @@ data TxGovernanceActionSupportedInEra era where
 deriving instance Show (TxGovernanceActionSupportedInEra era)
 deriving instance Eq (TxGovernanceActionSupportedInEra era)
 
-governanceActionsSupportedInEra :: ShelleyBasedEra  era -> Maybe (TxGovernanceActionSupportedInEra era)
+governanceActionsSupportedInEra :: ShelleyBasedEra era -> Maybe (TxGovernanceActionSupportedInEra era)
 governanceActionsSupportedInEra ShelleyBasedEraShelley = Nothing
 governanceActionsSupportedInEra ShelleyBasedEraAllegra = Nothing
 governanceActionsSupportedInEra ShelleyBasedEraMary    = Nothing

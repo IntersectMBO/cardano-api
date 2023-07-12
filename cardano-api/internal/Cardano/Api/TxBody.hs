@@ -2711,46 +2711,55 @@ fromLedgerTxBody
   -> TxBodyContent ViewTx era
 fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     TxBodyContent
-      { txIns              = fromLedgerTxIns               sbe body
-      , txInsCollateral    = fromLedgerTxInsCollateral     sbe body
-      , txInsReference     = fromLedgerTxInsReference      sbe body
-      , txOuts             = fromLedgerTxOuts              sbe body scriptdata
-      , txTotalCollateral  = fromLedgerTxTotalCollateral   sbe body
-      , txReturnCollateral = fromLedgerTxReturnCollateral  sbe body
-      , txFee              = fromLedgerTxFee               sbe body
-      , txValidityRange    = fromLedgerTxValidityRange     sbe body
-      , txWithdrawals      = fromLedgerTxWithdrawals       sbe body
-      , txCertificates     = fromLedgerTxCertificates      sbe body
-      , txUpdateProposal   = fromLedgerTxUpdateProposal    sbe body
-      , txMintValue        = fromLedgerTxMintValue         sbe body
-      , txExtraKeyWits     = fromLedgerTxExtraKeyWitnesses sbe body
-      , txProtocolParams   = ViewTx
+      { txIns               = fromLedgerTxIns               sbe body
+      , txInsCollateral     = fromLedgerTxInsCollateral     sbe body
+      , txInsReference      = fromLedgerTxInsReference      sbe body
+      , txOuts              = fromLedgerTxOuts              sbe body scriptdata
+      , txTotalCollateral   = fromLedgerTxTotalCollateral   sbe body
+      , txReturnCollateral  = fromLedgerTxReturnCollateral  sbe body
+      , txFee               = fromLedgerTxFee               sbe body
+      , txValidityRange     = fromLedgerTxValidityRange     sbe body
+      , txWithdrawals       = fromLedgerTxWithdrawals       sbe body
+      , txCertificates      = fromLedgerTxCertificates      sbe body
+      , txUpdateProposal    = fromLedgerTxUpdateProposal    sbe body
+      , txMintValue         = fromLedgerTxMintValue         sbe body
+      , txExtraKeyWits      = fromLedgerTxExtraKeyWitnesses sbe body
+      , txProtocolParams    = ViewTx
       , txMetadata
       , txAuxScripts
-      , txScriptValidity   = scriptValidity
+      , txScriptValidity    = scriptValidity
       , txGovernanceActions = fromLedgerProposalProcedure sbe body
-      , txVotes = error "fromLedgerTxBody.txVotes: TODO: Conway"
+      , txVotes             = fromLedgerTxVotes sbe body
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
 
--- TODO: Conway
+
 fromLedgerProposalProcedure
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxGovernanceActions era
-fromLedgerProposalProcedure _ _bdy = TxGovernanceActionsNone
- where
-   _proposalProcedures
-     :: ShelleyBasedEra era
-     -> Ledger.TxBody (ShelleyLedgerEra era)
-     -> Seq.StrictSeq (Conway.ProposalProcedure era)
-   _proposalProcedures ShelleyBasedEraShelley _bdy = mempty
-   _proposalProcedures ShelleyBasedEraAllegra _bdy = mempty
-   _proposalProcedures ShelleyBasedEraMary _bdy = mempty
-   _proposalProcedures ShelleyBasedEraAlonzo _bdy = mempty
-   _proposalProcedures ShelleyBasedEraBabbage _bdy = mempty
-   _proposalProcedures ShelleyBasedEraConway _bdy = mempty
+fromLedgerProposalProcedure sbe body =
+  case governanceActionsSupportedInEra sbe of
+    Nothing     -> TxGovernanceActionsNone
+    Just gasice -> TxGovernanceActions gasice (getProposals gasice body)
+  where
+    getProposals :: TxGovernanceActionSupportedInEra era
+                 -> Ledger.TxBody (ShelleyLedgerEra era)
+                 -> [Proposal era]
+    getProposals GovernanceActionsSupportedInConwayEra body_ = fmap Proposal . toList $ body_ ^. L.proposalProceduresTxBodyL
+
+
+fromLedgerTxVotes :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxVotes era
+fromLedgerTxVotes sbe body =
+  case votesSupportedInEra sbe of
+    Nothing    -> TxVotesNone
+    Just vsice -> TxVotes vsice (getVotes vsice body)
+  where
+    getVotes :: TxVotesSupportedInEra era
+             -> Ledger.TxBody (ShelleyLedgerEra era)
+             -> [Vote era]
+    getVotes VotesSupportedInConwayEra body_ = fmap Vote . toList $ body_ ^. L.votingProceduresTxBodyL
 
 fromLedgerTxIns
   :: forall era.
