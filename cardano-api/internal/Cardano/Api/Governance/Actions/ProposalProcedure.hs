@@ -87,7 +87,7 @@ data GovernanceAction
 
 
 toSafeHash :: ByteString -> SafeHash StandardCrypto ByteString
-toSafeHash = makeHashWithExplicitProxys (Proxy :: Proxy  StandardCrypto) (Proxy :: Proxy ByteString)
+toSafeHash = makeHashWithExplicitProxys (Proxy @StandardCrypto) (Proxy @ByteString)
 
 toGovernanceAction
   :: EraCrypto ledgerera ~ StandardCrypto
@@ -169,8 +169,8 @@ createProposalProcedure
   -> GovernanceAction
   -> Proposal era
 createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
-  Proposal $ obtainEraCryptoConstraints sbe $
-    Gov.ProposalProcedure
+  obtainEraConstraints sbe $ obtainEraCryptoConstraints sbe $
+    Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
       , Gov.pProcReturnAddr = retAddrh
       , Gov.pProcGovernanceAction = toGovernanceAction sbe govAct
@@ -186,3 +186,4 @@ fromProposalProcedure sbe (Proposal pp) =
   , StakeKeyHash (obtainEraCryptoConstraints sbe (Gov.pProcReturnAddr pp))
   , obtainEraCryptoConstraints sbe $ fromGovernanceAction sbe (Gov.pProcGovernanceAction pp)
   )
+

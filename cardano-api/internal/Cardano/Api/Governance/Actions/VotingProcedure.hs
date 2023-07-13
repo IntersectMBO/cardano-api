@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -28,7 +29,6 @@ import           Cardano.Api.Utils
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Shelley
@@ -61,7 +61,6 @@ deriving instance Eq (TxVotes era)
 -- The Conway and subsequent eras support governance actions.
 --
 data TxVotesSupportedInEra era where
-
      VotesSupportedInConwayEra  :: TxVotesSupportedInEra ConwayEra
 
 deriving instance Show (TxVotesSupportedInEra era)
@@ -171,7 +170,7 @@ createVotingProcedure
   -> GovernanceActionId (ShelleyLedgerEra era)
   -> VotingProcedure era
 createVotingProcedure sbe vChoice vt (GovernanceActionId govActId) =
-  obtainEraCryptoConstraints sbe
+  obtainEraConstraints sbe $ obtainEraCryptoConstraints sbe
     $ VotingProcedure $ Ledger.VotingProcedure
       { Ledger.vProcGovActionId = govActId
       , Ledger.vProcVoter = toVoterRole sbe vt
@@ -184,33 +183,21 @@ newtype VotingProcedure era = VotingProcedure
   }
   deriving (Show, Eq)
 
--- TODO: Conway - convert newtype VotingProcedure to a GADT with a ShelleyBasedEra era value
-instance
-  (Shelley.Era (ShelleyLedgerEra era)
-  , IsShelleyBasedEra era
-  ) => ToCBOR (VotingProcedure era) where
-  toCBOR (VotingProcedure vp) = Shelley.toEraCBOR @Conway.Conway vp
+instance IsShelleyBasedEra era => ToCBOR (VotingProcedure era) where
+  toCBOR (VotingProcedure vp) = obtainEraConstraints sbe $ Shelley.toEraCBOR @(ShelleyLedgerEra era) vp
+    where sbe = shelleyBasedEra @era
 
-instance
-  ( IsShelleyBasedEra era
-  , Shelley.Era (ShelleyLedgerEra era)
-  ) => FromCBOR (VotingProcedure era) where
-  fromCBOR = VotingProcedure <$> Shelley.fromEraCBOR @Conway.Conway
+instance IsShelleyBasedEra era => FromCBOR (VotingProcedure era) where
+  fromCBOR = obtainEraConstraints (shelleyBasedEra @era) $ VotingProcedure <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
 
-instance
-  ( IsShelleyBasedEra era
-  , Shelley.Era (ShelleyLedgerEra era)
-  ) => SerialiseAsCBOR (VotingProcedure era) where
-  serialiseToCBOR = CBOR.serialize'
-  deserialiseFromCBOR _proxy = CBOR.decodeFull'
+instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedure era) where
+  serialiseToCBOR = obtainEraConstraints (shelleyBasedEra @era) CBOR.serialize'
+  deserialiseFromCBOR _proxy = obtainEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
 
-
-instance
-  ( IsShelleyBasedEra era
-  , Shelley.Era (ShelleyLedgerEra era)
-  ) => HasTextEnvelope (VotingProcedure era) where
+instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedure era) where
   textEnvelopeType _ = "Governance vote"
 
 instance HasTypeProxy era => HasTypeProxy (VotingProcedure era) where
   data AsType (VotingProcedure era) = AsVote
   proxyToAsType _ = AsVote
+
