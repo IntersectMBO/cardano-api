@@ -1,5 +1,20 @@
 # Changelog for cardano-api
 
+## 8.8.1.0
+
+- Make it build with ghc-9.6
+  (feature; no-api-changes)
+  [PR 104](https://github.com/input-output-hk/cardano-api/pull/104)
+
+- Fix Show and Eq instances for Proposal type
+  (bugfix; no-api-changes)
+  [PR 115](https://github.com/input-output-hk/cardano-api/pull/115)
+
+- Export `withShelleyBasedEraConstraintsForLedger`
+  Use the ^>= version range operator for ledger and consensus libraries to avoid breaking changes affecting builds.
+  (feature; compatible)
+  [PR 108](https://github.com/input-output-hk/cardano-api/pull/108)
+
 ## 8.8.0.0
 
 - Add CastVerificationKeyRole StakePoolKey StakeKey instance
