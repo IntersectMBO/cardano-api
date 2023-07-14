@@ -277,20 +277,106 @@ data DRepMetadataReference =
 -- Constructor functions
 --
 
-makeStakeAddressRegistrationCertificate :: ()
-  => ShelleyBasedEra era
-  -> StakeCredential
-  -> Certificate era
-makeStakeAddressRegistrationCertificate _ =
-  StakeAddressRegistrationCertificate
+data ConwayEraOnwards era where
+  ConwayEraOnwardsConway :: ConwayEraOnwards ConwayEra
 
-makeStakeAddressDeregistrationCertificate :: ()
-  => ShelleyBasedEra era
-  -> StakeCredential
-  -> Certificate era
-makeStakeAddressDeregistrationCertificate _ =
-  StakeAddressDeregistrationCertificate
+deriving instance Show (ConwayEraOnwards era)
+deriving instance Eq (ConwayEraOnwards era)
 
+data AtMostBabbageEra era where
+  AtMostBabbageEraBabbage :: AtMostBabbageEra BabbageEra
+  AtMostBabbageEraAlonzo :: AtMostBabbageEra AlonzoEra
+  AtMostBabbageEraMary :: AtMostBabbageEra MaryEra
+  AtMostBabbageEraAllegra :: AtMostBabbageEra AllegraEra
+  AtMostBabbageEraShelley :: AtMostBabbageEra ShelleyEra
+
+deriving instance Show (AtMostBabbageEra era)
+deriving instance Eq (AtMostBabbageEra era)
+
+data StakeAddressRequirements era where
+  StakeAddrRegistrationConway
+    :: ConwayEraOnwards era
+    -> Lovelace
+    -> StakeCredential
+    -> StakeAddressRequirements era
+
+  StakeAddrRegistrationPreConway
+    :: AtMostBabbageEra era
+    -> StakeCredential
+    -> StakeAddressRequirements era
+
+
+makeStakeAddressRegistrationCertificate :: StakeAddressRequirements era -> Certificate era
+makeStakeAddressRegistrationCertificate req =
+  case req of
+    StakeAddrRegistrationPreConway atMostEra scred ->
+      shelleyCertificateConstraints atMostEra
+        $ makeStakeAddressRegistrationCertificatePreConway atMostEra scred
+    StakeAddrRegistrationConway cOnwards ll scred ->
+      conwayCertificateConstraints cOnwards
+        $ makeStakeAddressRegistrationCertificatePostConway cOnwards scred ll
+ where
+  makeStakeAddressRegistrationCertificatePreConway :: ()
+    => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+    => Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
+    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
+    => AtMostBabbageEra era
+    -> StakeCredential
+    -> Certificate era
+  makeStakeAddressRegistrationCertificatePreConway atMostBabbage scred =
+    ShelleyRelatedCertificate atMostBabbage $ Ledger.mkRegTxCert $ toShelleyStakeCredential scred
+
+  makeStakeAddressRegistrationCertificatePostConway :: ()
+    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
+    => Ledger.ConwayEraTxCert (ShelleyLedgerEra era)
+    => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+    => ConwayEraOnwards era
+    -> StakeCredential
+    -> Lovelace
+    -> Certificate era
+  makeStakeAddressRegistrationCertificatePostConway cWayEraOn scred deposit =
+    ConwayCertificate cWayEraOn
+        $ Ledger.mkRegDepositTxCert
+            (toShelleyStakeCredential scred)
+            (toShelleyLovelace deposit)
+
+makeStakeAddressUnregistrationCertificate :: StakeAddressRequirements era -> Certificate era
+makeStakeAddressUnregistrationCertificate req =
+  case req of
+    StakeAddrRegistrationConway cOnwards ll scred ->
+      conwayCertificateConstraints cOnwards
+        $ makeStakeAddressDeregistrationCertificatePostConway cOnwards scred ll
+
+    StakeAddrRegistrationPreConway atMostEra scred ->
+      shelleyCertificateConstraints atMostEra
+        $ makeStakeAddressDeregistrationCertificatePreConway atMostEra scred
+ where
+  makeStakeAddressDeregistrationCertificatePreConway
+    :: Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
+    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
+    => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+    => AtMostBabbageEra era
+    -> StakeCredential
+    -> Certificate era
+  makeStakeAddressDeregistrationCertificatePreConway aMostBab scred =
+    ShelleyRelatedCertificate aMostBab
+      $ Ledger.mkUnRegTxCert $ toShelleyStakeCredential scred
+
+  makeStakeAddressDeregistrationCertificatePostConway
+    :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
+    => Ledger.ConwayEraTxCert (ShelleyLedgerEra era)
+    => ConwayEraOnwards era
+    -> StakeCredential
+    -> Lovelace
+    -> Certificate era
+  makeStakeAddressDeregistrationCertificatePostConway cOn scred deposit  =
+    ConwayCertificate cOn
+      $ Ledger.mkUnRegDepositTxCert
+          (toShelleyStakeCredential scred)
+          (toShelleyLovelace deposit)
+
+{-# DEPRECATED makeStakeAddressPoolDelegationCertificate "This function is deprecated, please use 'makeStakeAddressDelegationCertificate' instead." #-}
 makeStakeAddressPoolDelegationCertificate :: ()
   => ShelleyBasedEra era
   -> StakeCredential
