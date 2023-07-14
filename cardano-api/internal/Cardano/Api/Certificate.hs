@@ -113,7 +113,7 @@ data Certificate era =
       (Hash CommitteeColdKey)
       (Hash CommitteeHotKey)
 
-   | CommitteeHotKeyDeregistrationCertificate
+   | CommitteeHotKeyUnregistrationCertificate
       (Hash CommitteeColdKey)
 
    | MIRCertificate MIRPot MIRTarget
@@ -178,7 +178,7 @@ instance
       StakePoolRetirementCertificate{}            -> "Pool retirement"
       GenesisKeyDelegationCertificate{}           -> "Genesis key delegation"
       CommitteeDelegationCertificate{}            -> "Constitution committee member key delegation"
-      CommitteeHotKeyDeregistrationCertificate{}  -> "Constitution committee member hot key deregistration"
+      CommitteeHotKeyUnregistrationCertificate{}  -> "Constitution committee member hot key deregistration"
       MIRCertificate{}                            -> "MIR"
 
 
@@ -198,8 +198,8 @@ instance EraCast Certificate where
       pure $ GenesisKeyDelegationCertificate genesisKH genesisDelegateKH vrfKH
     CommitteeDelegationCertificate coldKeyHash hotKeyHash ->
       pure $ CommitteeDelegationCertificate coldKeyHash hotKeyHash
-    CommitteeHotKeyDeregistrationCertificate coldKeyHash ->
-      pure $ CommitteeHotKeyDeregistrationCertificate coldKeyHash
+    CommitteeHotKeyUnregistrationCertificate coldKeyHash ->
+      pure $ CommitteeHotKeyUnregistrationCertificate coldKeyHash
     MIRCertificate mirPot mirTarget ->
       pure $ MIRCertificate mirPot mirTarget
 
@@ -339,7 +339,7 @@ makeCommitteeHotKeyUnregistrationCertificate :: ()
   -> Hash CommitteeColdKey
   -> Certificate era
 makeCommitteeHotKeyUnregistrationCertificate _ =
-  CommitteeHotKeyDeregistrationCertificate
+  CommitteeHotKeyUnregistrationCertificate
 
 makeMIRCertificate :: ()
   => ShelleyBasedEra era
@@ -420,9 +420,9 @@ toShelleyCertificateAtMostBabbage
   -- AuthCommitteeHotKeyTxCert
 
 toShelleyCertificateAtMostBabbage
-  ( CommitteeHotKeyDeregistrationCertificate
+  ( CommitteeHotKeyUnregistrationCertificate
     (CommitteeColdKeyHash _ckh)
-  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyDeregistrationCertificate"
+  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyUnregistrationCertificate"
   -- ResignCommitteeColdTxCert
 
 toShelleyCertificateAtMostBabbage (MIRCertificate mirpot (StakeAddressesMIR amounts)) =
@@ -493,9 +493,9 @@ toShelleyCertificateAtLeastConway
   ) = Conway.AuthCommitteeHotKeyTxCert (error "ckh") (error "hkh")
 
 toShelleyCertificateAtLeastConway
-  ( CommitteeHotKeyDeregistrationCertificate
+  ( CommitteeHotKeyUnregistrationCertificate
     (CommitteeColdKeyHash _ckh)
-  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyDeregistrationCertificate"
+  ) = error "TODO CIP-1694 Need ledger types for CommitteeHotKeyUnregistrationCertificate"
   -- ResignCommitteeColdTxCert
 
 toShelleyCertificateAtLeastConway (MIRCertificate _ _) =
