@@ -92,34 +92,31 @@ import           Network.Socket (PortNumber)
 -- Certificates embedded in transactions
 --
 
-data Certificate era =
+data Certificate era where
+     -- Pre-Conway
+     --   1. Stake registration
+     --   2. Stake unregistration
+     --   3. Stake delegation
+     --   4. Pool retirement
+     --   5. Pool registration
+     --   6. Genesis delegation
+     --   7. MIR certificates
+     ShelleyRelatedCertificate
+       :: AtMostBabbageEra era
+       -> Ledger.ShelleyTxCert (ShelleyLedgerEra era)
+       -> Certificate era
 
-     -- Stake address certificates
-     StakeAddressRegistrationCertificate   StakeCredential
-   | StakeAddressDeregistrationCertificate StakeCredential
-   | StakeAddressPoolDelegationCertificate StakeCredential PoolId
+     -- Conway onwards
+     -- TODO: Add comments about the new types of certificates
+     ConwayCertificate
+       :: ConwayEraOnwards era
+       -> Ledger.ConwayTxCert (ShelleyLedgerEra era)
+       -> Certificate era
 
-     -- Stake pool certificates
-   | StakePoolRegistrationCertificate StakePoolParameters
-   | StakePoolRetirementCertificate   PoolId EpochNo
-
-     -- Special certificates
-   | GenesisKeyDelegationCertificate
-      (Hash GenesisKey)
-      (Hash GenesisDelegateKey)
-      (Hash VrfKey)
-
-   | CommitteeDelegationCertificate
-      (Hash CommitteeColdKey)
-      (Hash CommitteeHotKey)
-
-   | CommitteeHotKeyDeregistrationCertificate
-      (Hash CommitteeColdKey)
-
-   | MIRCertificate MIRPot MIRTarget
-
-  deriving stock (Eq, Show)
   deriving anyclass SerialiseAsCBOR
+
+deriving instance Eq (Certificate era)
+deriving instance Show (Certificate era)
 
 instance Typeable era => HasTypeProxy (Certificate era) where
     data AsType (Certificate era) = AsCertificate
