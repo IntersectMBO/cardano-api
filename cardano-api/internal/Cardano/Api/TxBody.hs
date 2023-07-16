@@ -2759,8 +2759,8 @@ fromLedgerTxVotes sbe body =
   where
     getVotes :: TxVotesSupportedInEra era
              -> Ledger.TxBody (ShelleyLedgerEra era)
-             -> [Vote era]
-    getVotes VotesSupportedInConwayEra body_ = fmap Vote . toList $ body_ ^. L.votingProceduresTxBodyL
+             -> [VotingProcedure era]
+    getVotes VotesSupportedInConwayEra body_ = fmap VotingProcedure . toList $ body_ ^. L.votingProceduresTxBodyL
 
 fromLedgerTxIns
   :: forall era.
@@ -3612,8 +3612,9 @@ convGovActions TxGovernanceActionsNone = Seq.empty
 convGovActions (TxGovernanceActions _ govActions) = Seq.fromList $ fmap unProposal govActions
 
 convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
-convVotes _ TxVotesNone = Seq.empty
-convVotes _ (TxVotes _ votes) = Seq.fromList $ map unVote votes
+convVotes _ = \case
+  TxVotesNone -> Seq.empty
+  TxVotes _ votes -> Seq.fromList $ map unVotingProcedure votes
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
