@@ -747,26 +747,26 @@ genWitnesses era =
                           (genShelleyKeyWitness era)
       return $ bsWits ++ keyWits
 
-genVerificationKey ::
-#if __GLASGOW_HASKELL__ >= 902
--- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
--- present.
-    (Key keyrole, HasTypeProxy keyrole) =>
-#else
-    Key keyrole =>
+genVerificationKey :: ()
+#if MIN_VERSION_base(4,17,0)
+    -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
+    -- present.
+    => HasTypeProxy keyrole
 #endif
-    AsType keyrole -> Gen (VerificationKey keyrole)
+    => Key keyrole
+    => AsType keyrole
+    -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
-genVerificationKeyHash ::
-#if __GLASGOW_HASKELL__ >= 902
--- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
--- present.
-    (Key keyrole, HasTypeProxy keyrole) =>
-#else
-    Key keyrole =>
+genVerificationKeyHash :: ()
+#if MIN_VERSION_base(4,17,0)
+    -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
+    -- present.
+    => HasTypeProxy keyrole
 #endif
-    AsType keyrole -> Gen (Hash keyrole)
+    => Key keyrole
+    => AsType keyrole
+    -> Gen (Hash keyrole)
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken
 
