@@ -198,43 +198,53 @@ instance
 
 
 instance EraCast Certificate where
-  eraCast _ = \case
-    StakeAddressRegistrationCertificate c ->
-      pure $ StakeAddressRegistrationCertificate c
-    StakeAddressDeregistrationCertificate stakeCredential ->
-      pure $ StakeAddressDeregistrationCertificate stakeCredential
-    StakeAddressPoolDelegationCertificate stakeCredential poolId ->
-      pure $ StakeAddressPoolDelegationCertificate stakeCredential poolId
-    StakePoolRegistrationCertificate stakePoolParameters ->
-      pure $ StakePoolRegistrationCertificate stakePoolParameters
-    StakePoolRetirementCertificate poolId epochNo ->
-      pure $ StakePoolRetirementCertificate poolId epochNo
-    GenesisKeyDelegationCertificate genesisKH genesisDelegateKH vrfKH ->
-      pure $ GenesisKeyDelegationCertificate genesisKH genesisDelegateKH vrfKH
-    CommitteeDelegationCertificate coldKeyHash hotKeyHash ->
-      pure $ CommitteeDelegationCertificate coldKeyHash hotKeyHash
-    CommitteeHotKeyDeregistrationCertificate coldKeyHash ->
-      pure $ CommitteeHotKeyDeregistrationCertificate coldKeyHash
-    MIRCertificate mirPot mirTarget ->
-      pure $ MIRCertificate mirPot mirTarget
+  eraCast toEra cert =
+    case cert  of
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyRegCert{}) ->
+        eraCast toEra cert
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyUnRegCert{}) ->
+        eraCast toEra cert
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyDelegCert{}) ->
+        eraCast toEra cert
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RetirePool{}) ->
+        eraCast toEra cert
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RegPool{}) ->
+        eraCast toEra cert
 
--- | The 'MIRTarget' determines the target of a 'MIRCertificate'.
--- A 'MIRCertificate' moves lovelace from either the reserves or the treasury
--- to either a collection of stake credentials or to the other pot.
-data MIRTarget =
+      -- We cannot cast MIR and GenDeleg certs from Babbage to Conway era because they do not exist
+      ShelleyRelatedCertificate (_ :: AtMostBabbageEra fromEra) Ledger.ShelleyTxCertGenesisDeleg{} ->
+        case toEra of
+          ConwayEra -> Left $ EraCastError
+                                { originalValue = cert
+                                , fromEra = cardanoEra @fromEra
+                                , toEra = toEra
+                                }
+          BabbageEra -> eraCast toEra cert
+          AlonzoEra -> eraCast toEra cert
+          AllegraEra -> eraCast toEra cert
+          MaryEra ->  eraCast toEra cert
+          ShelleyEra ->  eraCast toEra cert
+          ByronEra ->  error "TODO: EraCast Certififcate - Byron era"
+            -- TODO: We need to modify the EraCast class to only allow casting to a future era.
+            -- I can't imagine a use case where we would want to cast to a previous era
 
-     -- | Use 'StakeAddressesMIR' to make the target of a 'MIRCertificate'
-     -- a mapping of stake credentials to lovelace.
-     StakeAddressesMIR [(StakeCredential, Lovelace)]
+      ShelleyRelatedCertificate (_ :: AtMostBabbageEra fromEra) Ledger.ShelleyTxCertMir{} ->
+        case toEra of
+          ConwayEra -> Left $ EraCastError
+                                { originalValue = cert
+                                , fromEra = cardanoEra @fromEra
+                                , toEra = toEra
+                                }
+          BabbageEra -> eraCast toEra cert
+          AlonzoEra -> eraCast toEra cert
+          AllegraEra -> eraCast toEra cert
+          MaryEra ->  eraCast toEra cert
+          ShelleyEra ->  eraCast toEra cert
+          ByronEra ->  error "TODO: EraCast Certififcate - Byron era"
+            -- TODO: We need to modify the EraCast class to only allow casting to a future era.
+            -- I can't imagine a use case where we would want to cast to a previous era
 
-     -- | Use 'SendToReservesMIR' to make the target of a 'MIRCertificate'
-     -- the reserves pot.
-   | SendToReservesMIR Lovelace
-
-     -- | Use 'SendToTreasuryMIR' to make the target of a 'MIRCertificate'
-     -- the treasury pot.
-   | SendToTreasuryMIR Lovelace
-  deriving stock (Eq, Show)
+      ConwayCertificate{} -> eraCast toEra cert
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
