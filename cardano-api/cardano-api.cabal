@@ -91,6 +91,7 @@ library internal
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Query.Expr
+                        Cardano.Api.ReexposeLedger
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
                         Cardano.Api.SerialiseBech32
@@ -193,6 +194,11 @@ library
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.Shelley
+                        -- TODO: Eliminate Cardano.Api.Ledger when 
+                        -- cardano-api only depends on modules 
+                        -- exposed by cardano-api-ledger  
+                        Cardano.Api.Ledger 
+ 
 
   build-depends:        bytestring
                       , cardano-api:internal

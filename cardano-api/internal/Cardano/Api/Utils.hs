@@ -31,7 +31,6 @@ module Cardano.Api.Utils
   , bounded
 
     -- ** Constraint solvers
-  , obtainCertificateConstraints
   , obtainCryptoConstraints
   , obtainEraConstraints
   , obtainEraPParamsConstraint
@@ -47,7 +46,6 @@ import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Ledger
 import           Cardano.Ledger.Shelley ()
-import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 
 import           Control.Exception (bracket)
 import           Control.Monad (when)
@@ -204,16 +202,5 @@ obtainSafeToHashConstraint ShelleyBasedEraMary    f = f
 obtainSafeToHashConstraint ShelleyBasedEraAlonzo  f = f
 obtainSafeToHashConstraint ShelleyBasedEraBabbage f = f
 obtainSafeToHashConstraint ShelleyBasedEraConway  f = f
-obtainCertificateConstraints
 
-  :: ShelleyBasedEra era
-  -> (( Shelley.ShelleyEraTxCert (ShelleyLedgerEra era)
-      , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-      ) => a)
-  -> a
-obtainCertificateConstraints ShelleyBasedEraShelley f = f
-obtainCertificateConstraints ShelleyBasedEraAllegra f = f
-obtainCertificateConstraints ShelleyBasedEraMary    f = f
-obtainCertificateConstraints ShelleyBasedEraAlonzo  f = f
-obtainCertificateConstraints ShelleyBasedEraBabbage f = f
-obtainCertificateConstraints ShelleyBasedEraConway  f = f
+

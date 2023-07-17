@@ -2359,7 +2359,7 @@ createTransactionBody
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe txBodyContent =
   let apiTxOuts = txOuts txBodyContent
-      apiScriptWitnesses = collectTxBodyScriptWitnesses txBodyContent
+      apiScriptWitnesses = collectTxBodyScriptWitnesses sbe txBodyContent
       apiScriptValidity = txScriptValidity txBodyContent
       apiMintValue = txMintValue txBodyContent
       apiProtocolParameters = txProtocolParams txBodyContent
@@ -2553,7 +2553,7 @@ validateTxBodyContent sbe txBodContent@TxBodyContent {
                              txProtocolParams,
                              txMintValue,
                              txMetadata} =
-  let witnesses = collectTxBodyScriptWitnesses txBodContent
+  let witnesses = collectTxBodyScriptWitnesses sbe txBodContent
       languages = Set.fromList
                     [ toAlonzoLanguage (AnyPlutusScriptVersion v)
                     | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
@@ -3679,7 +3679,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraShelley
     scripts_ = catMaybes
       [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
-          <- collectTxBodyScriptWitnesses txbodycontent
+          <- collectTxBodyScriptWitnesses sbe txbodycontent
       ]
 
     txAuxData :: Maybe (L.TxAuxData StandardShelley)
@@ -3716,7 +3716,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAllegra
     scripts_ = catMaybes
       [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
-          <- collectTxBodyScriptWitnesses txbodycontent
+          <- collectTxBodyScriptWitnesses sbe txbodycontent
       ]
 
     txAuxData :: Maybe (L.TxAuxData StandardAllegra)
@@ -3755,7 +3755,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraMary
     scripts = List.nub $ catMaybes
       [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
-          <- collectTxBodyScriptWitnesses txbodycontent
+          <- collectTxBodyScriptWitnesses sbe txbodycontent
       ]
 
     txAuxData :: Maybe (L.TxAuxData StandardMary)
@@ -3801,7 +3801,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
         txScriptValidity
   where
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
-    witnesses = collectTxBodyScriptWitnesses txbodycontent
+    witnesses = collectTxBodyScriptWitnesses sbe txbodycontent
 
     scripts :: [Ledger.Script StandardAlonzo]
     scripts = List.nub $ catMaybes
@@ -3894,7 +3894,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
         txScriptValidity
   where
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness BabbageEra)]
-    witnesses = collectTxBodyScriptWitnesses txbodycontent
+    witnesses = collectTxBodyScriptWitnesses sbe txbodycontent
 
     scripts :: [Ledger.Script StandardBabbage]
     scripts = List.nub $ catMaybes
@@ -3995,7 +3995,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
         txScriptValidity
   where
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness ConwayEra)]
-    witnesses = collectTxBodyScriptWitnesses txbodycontent
+    witnesses = collectTxBodyScriptWitnesses sbe txbodycontent
 
     scripts :: [Ledger.Script StandardConway]
     scripts = catMaybes
@@ -4181,10 +4181,10 @@ fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
       Alonzo.Cert  -> ScriptWitnessIndexCertificate (fromIntegral n)
       Alonzo.Rewrd -> ScriptWitnessIndexWithdrawal  (fromIntegral n)
 
-collectTxBodyScriptWitnesses :: forall era.
-                                TxBodyContent BuildTx era
+collectTxBodyScriptWitnesses :: forall era. ShelleyBasedEra era
+                             -> TxBodyContent BuildTx era
                              -> [(ScriptWitnessIndex, AnyScriptWitness era)]
-collectTxBodyScriptWitnesses TxBodyContent {
+collectTxBodyScriptWitnesses sbe TxBodyContent {
                                txIns,
                                txWithdrawals,
                                txCertificates,
@@ -4227,15 +4227,10 @@ collectTxBodyScriptWitnesses TxBodyContent {
           -- The certs are indexed in list order
         | (ix, cert) <- zip [0..] certs
         , ScriptWitness _ witness <- maybeToList $ do
-                                       stakecred <- selectStakeCredential cert
+                                       stakecred <- obtainEraCryptoConstraints sbe $ selectStakeCredential sbe cert
                                        Map.lookup stakecred witnesses
         ]
 
-    selectStakeCredential cert =
-      case cert of
-        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
-        StakeAddressPoolDelegationCertificate stakecred _ -> Just stakecred
-        _                                                 -> Nothing
 
     scriptWitnessesMinting
       :: TxMintValue BuildTx era

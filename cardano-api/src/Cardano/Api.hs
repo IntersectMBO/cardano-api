@@ -391,8 +391,9 @@ module Cardano.Api (
     -- | Certificates that are embedded in transactions for registering and
     -- unregistering stake address, and for setting the stake pool delegation
     -- choice for a stake address.
+    StakeAddressRequirements(..),
     makeStakeAddressRegistrationCertificate,
-    makeStakeAddressDeregistrationCertificate,
+    makeStakeAddressUnregistrationCertificate,
     makeStakeAddressPoolDelegationCertificate,
 
     -- ** Registering stake pools
@@ -792,6 +793,7 @@ module Cardano.Api (
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
     MIRTarget (..),
+    MIRPot(..),
 
     -- * Protocol parameter updates
     UpdateProposal(..),
@@ -894,7 +896,10 @@ module Cardano.Api (
     querySystemStart,
     queryUtxo,
     determineEraExpr,
-    -- * Governance
+
+    -- ** Conway related
+    AtMostBabbageEra(..),
+    ConwayEraOnwards(..),
 
     -- ** DReps
     DRepKey,
@@ -903,9 +908,11 @@ module Cardano.Api (
     DRepMetadataValidationError,
     validateAndHashDRepMetadata,
 
-    -- ** Governance Committee
-    makeCommitteeDelegationCertificate,
-    makeCommitteeHotKeyUnregistrationCertificate,
+    -- ** Governance related certificates
+    makeCommitteeColdkeyResignationCertificate,
+    makeCommitteeHotKeyAuthorizationCertificate,
+    makeDrepRegistrationCertificate,
+    makeDrepUnregistrationCertificate,
 
     ResolvablePointers(..),
   ) where
