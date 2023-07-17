@@ -590,21 +590,42 @@ genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates era =
   case certificatesSupportedInEra era of
     Nothing -> pure TxCertificatesNone
-    Just supported -> do
-      certs <- Gen.list (Range.constant 0 3) genCertificate
-      Gen.choice
-        [ pure TxCertificatesNone
-        , pure (TxCertificates supported certs $ BuildTxWith mempty)
-          -- TODO: Generate certificates
-        ]
+    Just supported ->
+      case cardanoEraStyle era of
+        LegacyByronEra -> pure TxCertificatesNone
+        ShelleyBasedEra sbe -> do
+          certs <- Gen.list (Range.constant 0 3) $ genCertificate sbe
+          Gen.choice
+            [ pure TxCertificatesNone
+            , pure (TxCertificates supported certs $ BuildTxWith mempty)
+              -- TODO: Generate certificates
+            ]
 
 -- TODO: Add remaining certificates
-genCertificate :: Gen (Certificate era)
-genCertificate =
+-- TODO: This should be parameterised on ShelleyBasedEra
+genCertificate :: ShelleyBasedEra era -> Gen (Certificate era)
+genCertificate sbe =
   Gen.choice
-    [ StakeAddressRegistrationCertificate <$> genStakeCredential
-    , StakeAddressDeregistrationCertificate <$> genStakeCredential
+    [ makeStakeAddressRegistrationCertificate <$> genStakeAddressRequirements sbe
+    , makeStakeAddressUnregistrationCertificate <$> genStakeAddressRequirements sbe
     ]
+
+genStakeAddressRequirements :: ShelleyBasedEra era -> Gen (StakeAddressRequirements era)
+genStakeAddressRequirements sbe =
+  case sbe of
+    ShelleyBasedEraShelley ->
+      StakeAddrRegistrationPreConway AtMostBabbageEraShelley <$> genStakeCredential
+    ShelleyBasedEraAllegra ->
+      StakeAddrRegistrationPreConway AtMostBabbageEraAllegra <$> genStakeCredential
+    ShelleyBasedEraMary ->
+      StakeAddrRegistrationPreConway AtMostBabbageEraMary <$> genStakeCredential
+    ShelleyBasedEraAlonzo ->
+      StakeAddrRegistrationPreConway AtMostBabbageEraAlonzo <$> genStakeCredential
+    ShelleyBasedEraBabbage ->
+      StakeAddrRegistrationPreConway AtMostBabbageEraBabbage <$> genStakeCredential
+    ShelleyBasedEraConway ->
+      StakeAddrRegistrationConway ConwayEraOnwardsConway <$> genLovelace <*> genStakeCredential
+
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal era =

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -88,9 +87,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   qeInMode <- pure (toEraInMode era CardanoMode)
     & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
 
-  let stakeCreds = Set.fromList $ flip mapMaybe certs $ \case
-        StakeAddressDeregistrationCertificate cred -> Just cred
-        _ -> Nothing
+  let stakeCreds = Set.fromList $ mapMaybe (filterUnRegCreds sbe) certs
 
   -- Query execution
   utxo <- lift (queryUtxo qeInMode sbe (QueryUTxOByTxIn (Set.fromList allTxIns)))

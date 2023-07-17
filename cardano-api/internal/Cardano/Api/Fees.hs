@@ -950,7 +950,7 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
             failures
             exUnitsMap'
 
-    txbodycontent1 <- substituteExecutionUnits exUnitsMap' txbodycontent
+    txbodycontent1 <- substituteExecutionUnits sbe exUnitsMap' txbodycontent
 
     explicitTxFees <- first (const TxBodyErrorByronEraNotSupported) $
                         txFeesExplicitInEra era'
@@ -1174,11 +1174,12 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
                    (txOutInAnyEra txout)
                    minUTxO
 
-substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
+substituteExecutionUnits :: ShelleyBasedEra era
+                         -> Map ScriptWitnessIndex ExecutionUnits
                          -> TxBodyContent BuildTx era
                          -> Either TxBodyErrorAutoBalance (TxBodyContent BuildTx era)
-substituteExecutionUnits exUnitsMap =
-    mapTxScriptWitnesses f
+substituteExecutionUnits sbe exUnitsMap =
+    mapTxScriptWitnesses f sbe
   where
     f :: ScriptWitnessIndex
       -> ScriptWitness witctx era
@@ -1195,9 +1196,10 @@ mapTxScriptWitnesses
       (forall witctx. ScriptWitnessIndex
                    -> ScriptWitness witctx era
                    -> Either TxBodyErrorAutoBalance (ScriptWitness witctx era))
+  -> ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyErrorAutoBalance (TxBodyContent BuildTx era)
-mapTxScriptWitnesses f txbodycontent@TxBodyContent {
+mapTxScriptWitnesses f sbe txbodycontent@TxBodyContent {
                          txIns,
                          txWithdrawals,
                          txCertificates,
@@ -1206,7 +1208,7 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
     mappedMintedVals <- mapScriptWitnessesMinting txMintValue
-    mappedTxCertificates <- mapScriptWitnessesCertificates txCertificates
+    mappedTxCertificates <- mapScriptWitnessesCertificates sbe txCertificates
 
     Right $ txbodycontent
       & setTxIns mappedTxIns
@@ -1271,10 +1273,11 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
         adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
 
     mapScriptWitnessesCertificates
-      :: TxCertificates BuildTx era
+      :: ShelleyBasedEra era
+      -> TxCertificates BuildTx era
       -> Either TxBodyErrorAutoBalance (TxCertificates BuildTx era)
-    mapScriptWitnessesCertificates  TxCertificatesNone = Right TxCertificatesNone
-    mapScriptWitnessesCertificates (TxCertificates supported certs
+    mapScriptWitnessesCertificates _ TxCertificatesNone = Right TxCertificatesNone
+    mapScriptWitnessesCertificates sbe' (TxCertificates supported certs
                                                    (BuildTxWith witnesses)) =
       let mappedScriptWitnesses
            :: [(StakeCredential, Either TxBodyErrorAutoBalance (Witness WitCtxStake era))]
@@ -1282,7 +1285,7 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
               [ (stakecred, ScriptWitness ctx <$> witness')
                 -- The certs are indexed in list order
               | (ix, cert) <- zip [0..] certs
-              , stakecred  <- maybeToList (selectStakeCredential cert)
+              , stakecred  <- maybeToList (selectStakeCredential sbe' cert)
               , ScriptWitness ctx witness
                            <- maybeToList (Map.lookup stakecred witnesses)
               , let witness' = f (ScriptWitnessIndexCertificate ix) witness
@@ -1293,12 +1296,6 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
                           Left e -> Left e
                           Right wit -> Right (sCred, wit)
                     ) mappedScriptWitnesses
-
-    selectStakeCredential cert =
-      case cert of
-        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
-        StakeAddressPoolDelegationCertificate stakecred _ -> Just stakecred
-        _                                                 -> Nothing
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era
