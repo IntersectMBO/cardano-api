@@ -382,55 +382,201 @@ makeStakeAddressPoolDelegationCertificate :: ()
   -> StakeCredential
   -> PoolId
   -> Certificate era
-makeStakeAddressPoolDelegationCertificate _ =
-  StakeAddressPoolDelegationCertificate
+makeStakeAddressPoolDelegationCertificate sbe scred poolId =
+  case sbe of
+    ShelleyBasedEraShelley ->
+      makeStakeAddressDelegationCertificate
+        (StakeDelegationRequirementsPreConway AtMostBabbageEraShelley scred poolId)
+    ShelleyBasedEraAllegra ->
+      makeStakeAddressDelegationCertificate
+        (StakeDelegationRequirementsPreConway AtMostBabbageEraAllegra scred poolId)
+    ShelleyBasedEraMary ->
+      makeStakeAddressDelegationCertificate
+        (StakeDelegationRequirementsPreConway AtMostBabbageEraMary scred poolId)
+    ShelleyBasedEraAlonzo ->
+      makeStakeAddressDelegationCertificate
+        (StakeDelegationRequirementsPreConway AtMostBabbageEraAlonzo scred poolId)
+    ShelleyBasedEraBabbage ->
+      makeStakeAddressDelegationCertificate
+        (StakeDelegationRequirementsPreConway AtMostBabbageEraBabbage scred poolId)
+    ShelleyBasedEraConway ->
+      makeStakeAddressDelegationCertificate
+        (StakeDelegationRequirementsConwayOnwards ConwayEraOnwardsConway scred (Ledger.DelegStake $ unStakePoolKeyHash poolId))
+
+data StakeDelegationRequirements era where
+  StakeDelegationRequirementsConwayOnwards
+    :: ConwayEraOnwards era
+    -> StakeCredential
+    -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
+    -> StakeDelegationRequirements era
+
+  StakeDelegationRequirementsPreConway
+    :: AtMostBabbageEra era
+    -> StakeCredential
+    -> PoolId
+    -> StakeDelegationRequirements era
+
+
+makeStakeAddressDelegationCertificate :: StakeDelegationRequirements era -> Certificate era
+makeStakeAddressDelegationCertificate req =
+  case req of
+    StakeDelegationRequirementsConwayOnwards cOnwards scred delegatee ->
+      conwayCertificateConstraints cOnwards
+        $ ConwayCertificate cOnwards
+        $ Ledger.mkDelegTxCert (toShelleyStakeCredential scred) delegatee
+
+    StakeDelegationRequirementsPreConway atMostBabbage scred pid ->
+      shelleyCertificateConstraints atMostBabbage
+        $ ShelleyRelatedCertificate atMostBabbage
+        $ Ledger.mkDelegStakeTxCert (toShelleyStakeCredential scred) (unStakePoolKeyHash pid)
+
+data StakePoolRegistrationRequirements era where
+  StakePoolRegistrationRequirementsConwayOnwards
+    :: ConwayEraOnwards era
+    -> Ledger.PoolParams (EraCrypto (ShelleyLedgerEra era))
+    -> StakePoolRegistrationRequirements era
+
+  StakePoolRegistrationRequirementsPreConway
+    :: AtMostBabbageEra era
+    -> Ledger.PoolParams (EraCrypto (ShelleyLedgerEra era))
+    -> StakePoolRegistrationRequirements era
 
 makeStakePoolRegistrationCertificate :: ()
-  => ShelleyBasedEra era
-  -> StakePoolParameters
+  => StakePoolRegistrationRequirements era
   -> Certificate era
-makeStakePoolRegistrationCertificate _ =
-  StakePoolRegistrationCertificate
+makeStakePoolRegistrationCertificate req =
+  case req of
+    StakePoolRegistrationRequirementsConwayOnwards cOnwards poolParams ->
+      conwayCertificateConstraints cOnwards
+        $ ConwayCertificate cOnwards
+        $ Ledger.mkRegPoolTxCert poolParams
+    StakePoolRegistrationRequirementsPreConway atMostBab poolParams ->
+      shelleyCertificateConstraints atMostBab
+        $ ShelleyRelatedCertificate atMostBab
+        $ Ledger.mkRegPoolTxCert poolParams
+
+data StakePoolRetirementRequirements era where
+  StakePoolRetirementRequirementsConwayOnwards
+    :: ConwayEraOnwards era
+    -> PoolId
+    -> Ledger.EpochNo
+    -> StakePoolRetirementRequirements era
+
+  StakePoolRetirementRequirementsPreConway
+    :: AtMostBabbageEra era
+    -> PoolId
+    -> Ledger.EpochNo
+    -> StakePoolRetirementRequirements era
 
 makeStakePoolRetirementCertificate :: ()
-  => ShelleyBasedEra era
-  -> PoolId
-  -> EpochNo
+  => StakePoolRetirementRequirements era
   -> Certificate era
-makeStakePoolRetirementCertificate _ =
-  StakePoolRetirementCertificate
+makeStakePoolRetirementCertificate req =
+  case req of
+    StakePoolRetirementRequirementsPreConway atMostBab poolId retirementEpoch ->
+      shelleyCertificateConstraints atMostBab
+        $ ShelleyRelatedCertificate atMostBab
+        $ Ledger.mkRetirePoolTxCert (unStakePoolKeyHash poolId) retirementEpoch
+    StakePoolRetirementRequirementsConwayOnwards atMostBab poolId retirementEpoch ->
+      conwayCertificateConstraints atMostBab
+        $ ConwayCertificate atMostBab
+        $ Ledger.mkRetirePoolTxCert (unStakePoolKeyHash poolId) retirementEpoch
 
-makeGenesisKeyDelegationCertificate :: ()
-  => ShelleyBasedEra era
-  -> Hash GenesisKey
-  -> Hash GenesisDelegateKey
-  -> Hash VrfKey
-  -> Certificate era
-makeGenesisKeyDelegationCertificate _ =
-  GenesisKeyDelegationCertificate
+data GenesisKeyDelegationRequirements ere where
 
-makeCommitteeDelegationCertificate :: ()
-  => ShelleyBasedEra era
-  -> Hash CommitteeColdKey
-  -> Hash CommitteeHotKey
-  -> Certificate era
-makeCommitteeDelegationCertificate _ =
-  CommitteeDelegationCertificate
+  GenesisKeyDelegationRequirements
+    :: AtMostBabbageEra era
+    -> Hash GenesisKey
+    -> Hash GenesisDelegateKey
+    -> Hash VrfKey
+    -> GenesisKeyDelegationRequirements era
 
-makeCommitteeHotKeyUnregistrationCertificate :: ()
-  => ShelleyBasedEra era
-  -> Hash CommitteeColdKey
-  -> Certificate era
-makeCommitteeHotKeyUnregistrationCertificate _ =
-  CommitteeHotKeyDeregistrationCertificate
+makeGenesisKeyDelegationCertificate :: GenesisKeyDelegationRequirements era -> Certificate era
+makeGenesisKeyDelegationCertificate (GenesisKeyDelegationRequirements atMostEra
+                                       (GenesisKeyHash hGenKey) (GenesisDelegateKeyHash hGenDelegKey) (VrfKeyHash hVrfKey)) =
+  ShelleyRelatedCertificate atMostEra
+    $ shelleyCertificateConstraints atMostEra
+    $ Ledger.ShelleyTxCertGenesisDeleg $ Ledger.GenesisDelegCert hGenKey hGenDelegKey hVrfKey
+
+data MirCertificateRequirements era where
+  MirCertificateRequirements
+    :: AtMostBabbageEra era
+    -> Ledger.MIRPot
+    -> Ledger.MIRTarget (EraCrypto (ShelleyLedgerEra era))
+    -> MirCertificateRequirements era
 
 makeMIRCertificate :: ()
-  => ShelleyBasedEra era
-  -> MIRPot
-  -> MIRTarget
+  => MirCertificateRequirements era
   -> Certificate era
-makeMIRCertificate _ =
-  MIRCertificate
+makeMIRCertificate (MirCertificateRequirements atMostEra mirPot mirTarget) =
+  ShelleyRelatedCertificate atMostEra
+    $ Ledger.ShelleyTxCertMir $ Ledger.MIRCert mirPot mirTarget
+
+data DRepRegistrationRequirements era where
+  DRepRegistrationRequirements
+    :: ConwayEraOnwards era
+    -> VotingCredential era
+    -> Lovelace
+    -> DRepRegistrationRequirements era
+
+
+makeDrepRegistrationCertificate :: ()
+  => DRepRegistrationRequirements era
+  -> Certificate era
+makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards (VotingCredential vcred) deposit) =
+  ConwayCertificate conwayOnwards
+    . Ledger.ConwayTxCertCommittee
+    . Ledger.ConwayRegDRep vcred
+    $ toShelleyLovelace deposit
+
+data CommitteeHotKeyAuthorizationRequirements era where
+  CommitteeHotKeyAuthorizationRequirements
+    :: ConwayEraOnwards era
+    -> Ledger.KeyHash Ledger.CommitteeColdKey (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.KeyHash Ledger.CommitteeHotKey (EraCrypto (ShelleyLedgerEra era))
+    -> CommitteeHotKeyAuthorizationRequirements era
+
+makeCommitteeHotKeyAuthorizationCertificate :: ()
+  => CommitteeHotKeyAuthorizationRequirements era
+  -> Certificate era
+makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequirements cOnwards coldKeyHash hotKeyHash) =
+  ConwayCertificate cOnwards
+    . Ledger.ConwayTxCertCommittee
+    $ Ledger.ConwayAuthCommitteeHotKey coldKeyHash hotKeyHash
+
+data CommitteeColdkeyResignationRequirements era where
+  CommitteeColdkeyResignationRequirements
+    :: ConwayEraOnwards era
+    -> Ledger.KeyHash Ledger.CommitteeColdKey (EraCrypto (ShelleyLedgerEra era))
+    -> CommitteeColdkeyResignationRequirements era
+
+makeCommitteeColdkeyResignationCertificate :: ()
+  => CommitteeColdkeyResignationRequirements era
+  -> Certificate era
+makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequirements cOnwards coldKeyHash) =
+  ConwayCertificate cOnwards
+    . Ledger.ConwayTxCertCommittee
+    $ Ledger.ConwayResignCommitteeColdKey coldKeyHash
+
+data DRepUnregistrationRequirements era where
+  DRepUnregistrationRequirements
+    :: ConwayEraOnwards era
+    -> VotingCredential era
+    -> Lovelace
+    -> DRepUnregistrationRequirements era
+
+makeDrepUnregistrationCertificate :: ()
+  => DRepUnregistrationRequirements era
+  -> Certificate era
+makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards (VotingCredential vcred) deposit) =
+  ConwayCertificate conwayOnwards
+    . Ledger.ConwayTxCertCommittee
+    . Ledger.ConwayUnRegDRep vcred
+    $ toShelleyLovelace deposit
+
+-- ----------------------------------------------------------------------------
+-- Helper functions
+--
 
 
 -- ----------------------------------------------------------------------------
