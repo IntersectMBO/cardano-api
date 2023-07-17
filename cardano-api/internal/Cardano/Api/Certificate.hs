@@ -168,15 +168,28 @@ instance
   ) => HasTextEnvelope (Certificate era) where
     textEnvelopeType _ = "CertificateShelley"
     textEnvelopeDefaultDescr cert = case cert of
-      StakeAddressRegistrationCertificate{}       -> "Stake address registration"
-      StakeAddressDeregistrationCertificate{}     -> "Stake address deregistration"
-      StakeAddressPoolDelegationCertificate{}     -> "Stake address stake pool delegation"
-      StakePoolRegistrationCertificate{}          -> "Pool registration"
-      StakePoolRetirementCertificate{}            -> "Pool retirement"
-      GenesisKeyDelegationCertificate{}           -> "Genesis key delegation"
-      CommitteeDelegationCertificate{}            -> "Constitution committee member key delegation"
-      CommitteeHotKeyDeregistrationCertificate{}  -> "Constitution committee member hot key deregistration"
-      MIRCertificate{}                            -> "MIR"
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyRegCert{}) -> "Stake address registration"
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyUnRegCert{}) -> "Stake address deregistration"
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyDelegCert{}) -> "Stake address delegation"
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
+      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RegPool{}) -> "Pool registration"
+      ShelleyRelatedCertificate _ Ledger.ShelleyTxCertGenesisDeleg{} -> "Genesis key delegation"
+      ShelleyRelatedCertificate _ Ledger.ShelleyTxCertMir{} -> "MIR"
+
+      -- Conway and onwards related
+      -- Constitutional Committee related
+      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayRegDRep{}) -> "Constitution committee member key registration"
+      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayUnRegDRep{}) -> "Constitution committee member key unregistration"
+      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayAuthCommitteeHotKey{}) -> "Constitution committee member hot key registration"
+      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayResignCommitteeColdKey{}) -> "Constitution committee member hot key resignation"
+
+      ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegCert{}) -> "Stake address registration"
+      ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayUnRegCert{}) -> "Stake address deregistration"
+      ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayDelegCert{}) ->  "Stake address delegation"
+      ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegDelegCert{}) -> "Stake address registration and delegation"
+      ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RegPool{}) -> "Pool registration"
+      ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
+
 
 
 instance EraCast Certificate where
@@ -578,6 +591,33 @@ makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards 
 -- Helper functions
 --
 
+selectStakeCredential
+  :: ShelleyBasedEra era -> Certificate era -> Maybe StakeCredential
+selectStakeCredential sbe cert =
+  case cert of
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert (Ledger.ShelleyDelegCert stakecred _))
+      -> Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential stakecred
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool (Ledger.RegPool poolParams))
+      -> let poolCred = Ledger.KeyHashObj $ Ledger.ppId poolParams
+         in Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
+
+    ConwayCertificate _ (Ledger.ConwayTxCertDeleg (Ledger.ConwayRegCert stakeCred _))
+      -> Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential stakeCred
+    ConwayCertificate _ (Ledger.ConwayTxCertPool (Ledger.RegPool poolParams))
+      -> let poolCred = Ledger.KeyHashObj $ Ledger.ppId poolParams
+         in Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
+
+    _                                                 -> Nothing
+
+filterUnRegCreds
+  :: ShelleyBasedEra era -> Certificate era -> Maybe StakeCredential
+filterUnRegCreds sbe cert =
+  case cert of
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert (Ledger.ShelleyUnRegCert cred)) ->
+      Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential cred
+    ConwayCertificate _ (Ledger.ConwayTxCertDeleg (Ledger.ConwayUnRegCert cred _)) ->
+      Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential cred
+    _  -> Nothing
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
