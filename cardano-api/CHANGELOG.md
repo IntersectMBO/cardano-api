@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.8.1.1
+
+- Add a HasTypeProxy constraint to getVerificationKey
+  (feature; compatible)
+  [PR 122](https://github.com/input-output-hk/cardano-api/pull/122)
+
 ## 8.8.1.0
 
 - Make it build with ghc-9.6
