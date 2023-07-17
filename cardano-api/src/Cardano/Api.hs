@@ -392,6 +392,8 @@ module Cardano.Api (
     -- unregistering stake address, and for setting the stake pool delegation
     -- choice for a stake address.
     StakeAddressRequirements(..),
+    StakeDelegationRequirements(..),
+    makeStakeAddressDelegationCertificate,
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressUnregistrationCertificate,
     makeStakeAddressPoolDelegationCertificate,
@@ -399,6 +401,8 @@ module Cardano.Api (
     -- ** Registering stake pools
     -- | Certificates that are embedded in transactions for registering and
     -- retiring stake pools. This includes updating the stake pool parameters.
+    StakePoolRegistrationRequirements(..),
+    StakePoolRetirementRequirements(..),
     makeStakePoolRegistrationCertificate,
     makeStakePoolRetirementCertificate,
     StakePoolParameters,
@@ -790,6 +794,8 @@ module Cardano.Api (
     -- * Special transactions
     -- | There are various additional things that can be embedded in a
     -- transaction for special operations.
+    GenesisKeyDelegationRequirements(..),
+    MirCertificateRequirements(..),
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
     MIRTarget (..),
@@ -909,6 +915,10 @@ module Cardano.Api (
     validateAndHashDRepMetadata,
 
     -- ** Governance related certificates
+    CommitteeColdkeyResignationRequirements(..),
+    CommitteeHotKeyAuthorizationRequirements(..),
+    DRepRegistrationRequirements(..),
+    DRepUnregistrationRequirements(..),
     makeCommitteeColdkeyResignationCertificate,
     makeCommitteeHotKeyAuthorizationCertificate,
     makeDrepRegistrationCertificate,

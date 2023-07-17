@@ -269,8 +269,11 @@ module Cardano.Api.Shelley
     fromAlonzoCostModels,
     --TODO: arrange not to export these
     toShelleyNetwork,
+    obtainCryptoConstraints,
     obtainEraConstraints,
     obtainEraPParamsConstraint,
+    obtainEraCryptoConstraints,
+    fromShelleyPoolParams,
 
   ) where
 
