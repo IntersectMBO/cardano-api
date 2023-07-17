@@ -1104,8 +1104,9 @@ makeTransactionBodyAutoBalance systemstart history pparams poolids stakeDelegDep
                 returnCollateral = fromShelleyLovelace . Ledger.rationalToCoinViaFloor $ amt % 100
 
             case (txReturnCollateral, txTotalCollateral) of
-#if __GLASGOW_HASKELL__ < 902
--- For ghc-9.2, this pattern match is redundant, but ghc-8.10 will complain if its missing.
+#if MIN_VERSION_base(4,16,0)
+#else
+              -- For ghc-9.2, this pattern match is redundant, but ghc-8.10 will complain if its missing.
               (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
                 (rc, tc)
 #endif

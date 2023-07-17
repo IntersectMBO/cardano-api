@@ -45,14 +45,15 @@ class (Eq (VerificationKey keyrole),
     data SigningKey keyrole :: Type
 
     -- | Get the corresponding verification key from a signing key.
-    getVerificationKey ::
-#if __GLASGOW_HASKELL__ >= 902
--- GHC 8.10 considers this constraint redundant but ghc-9.6 complains if its not present.
--- More annoyingly, absence of this constraint does not manifest in this repo, but in
--- `cardano-cli` :facepalm:.
-        HasTypeProxy keyrole =>
+    getVerificationKey :: ()
+#if MIN_VERSION_base(4,17,0)
+        -- GHC 8.10 considers this constraint redundant but ghc-9.6 complains if its not present.
+        -- More annoyingly, absence of this constraint does not manifest in this repo, but in
+        -- `cardano-cli` :facepalm:.
+        => HasTypeProxy keyrole
 #endif
-        SigningKey keyrole -> VerificationKey keyrole
+        => SigningKey keyrole
+        -> VerificationKey keyrole
 
     -- | Generate a 'SigningKey' deterministically, given a 'Crypto.Seed'. The
     -- required size of the seed is given by 'deterministicSigningKeySeedSize'.

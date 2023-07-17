@@ -90,15 +90,15 @@ prop_roundtrip_VrfSigningKey_envelope =
 
 -- -----------------------------------------------------------------------------
 
-roundtrip_VerificationKey_envelope ::
-#if __GLASGOW_HASKELL__ >= 902
--- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.2 and above complains if its
--- not present.
-    (Key keyrole, HasTypeProxy keyrole) =>
-#else
-    Key keyrole =>
+roundtrip_VerificationKey_envelope :: ()
+#if MIN_VERSION_base(4,17,0)
+    -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.2 and above complains if its
+    -- not present.
+    => HasTypeProxy keyrole
 #endif
-    AsType keyrole -> Property
+    => Key keyrole
+    => AsType keyrole
+    -> Property
 roundtrip_VerificationKey_envelope roletoken =
   H.property $ do
     vkey <- H.forAll (genVerificationKey roletoken)
