@@ -1,11 +1,14 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -16,8 +19,9 @@ module Cardano.Api.Certificate (
     Certificate(..),
 
     -- * Registering stake address and delegating
+    StakeAddressRequirements(..),
     makeStakeAddressRegistrationCertificate,
-    makeStakeAddressDeregistrationCertificate,
+    makeStakeAddressUnregistrationCertificate,
     makeStakeAddressPoolDelegationCertificate,
     PoolId,
 
@@ -28,8 +32,11 @@ module Cardano.Api.Certificate (
     StakePoolRelay(..),
     StakePoolMetadataReference(..),
 
-    makeCommitteeDelegationCertificate,
-    makeCommitteeHotKeyUnregistrationCertificate,
+    -- * Conway specific certificates
+    makeCommitteeColdkeyResignationCertificate,
+    makeCommitteeHotKeyAuthorizationCertificate,
+    makeDrepRegistrationCertificate,
+    makeDrepUnregistrationCertificate,
 
     -- * Registering DReps
     DRepMetadataReference(..),
@@ -37,7 +44,8 @@ module Cardano.Api.Certificate (
     -- * Special certificates
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
-    MIRTarget (..),
+    Ledger.MIRTarget (..),
+    Ledger.MIRPot(..),
 
     -- * Internal conversion functions
     toShelleyCertificate,
@@ -46,39 +54,36 @@ module Cardano.Api.Certificate (
     fromShelleyPoolParams,
 
     -- * Data family instances
-    AsType(..)
+    AsType(..),
+
+    -- * GADTs for Conway/Shelley differences
+    AtMostBabbageEra(..),
+    ConwayEraOnwards(..),
+
+    -- * Internal functions
+    filterUnRegCreds,
+    selectStakeCredential,
   ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
+import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.ReexposeLedger (EraCrypto, StandardCrypto)
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Api.Era as L
-import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
-import qualified Cardano.Ledger.Conway.TxCert as Conway
-import qualified Cardano.Ledger.Core as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import qualified Cardano.Ledger.Shelley.TxCert as Shelley
-import           Cardano.Slotting.Slot (EpochNo (..))
-
 import           Data.ByteString (ByteString)
 import qualified Data.Foldable as Foldable
 import           Data.IP (IPv4, IPv6)
-import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
