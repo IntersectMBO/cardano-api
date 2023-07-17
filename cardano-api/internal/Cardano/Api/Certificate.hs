@@ -135,17 +135,17 @@ instance
       -- TODO CIP-1694 clean this up
       case shelleyBasedEra @era of
         ShelleyBasedEraShelley  ->
-          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
         ShelleyBasedEraAllegra  ->
-          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
         ShelleyBasedEraMary     ->
-          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
         ShelleyBasedEraAlonzo   ->
-          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
         ShelleyBasedEraBabbage  ->
-          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
         ShelleyBasedEraConway   ->
-          Shelley.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
 
 
 
@@ -155,17 +155,17 @@ instance
     fromCBOR =
       case shelleyBasedEra @era of
         ShelleyBasedEraShelley  ->
-          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
         ShelleyBasedEraAllegra  ->
-          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
         ShelleyBasedEraMary     ->
-          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
         ShelleyBasedEraAlonzo   ->
-          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
         ShelleyBasedEraBabbage  ->
-          fromShelleyCertificate shelleyBasedEra <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
         ShelleyBasedEraConway   ->
-          fromShelleyCertificateAtLeastConway <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
 
 
 instance
@@ -680,7 +680,8 @@ fromShelleyCertificate = \case
   ShelleyBasedEraBabbage  -> ShelleyRelatedCertificate AtMostBabbageEraBabbage
   ShelleyBasedEraConway   -> ConwayCertificate ConwayEraOnwardsConway
 
-toShelleyPoolParams :: StakePoolParameters -> Shelley.PoolParams StandardCrypto
+
+toShelleyPoolParams :: StakePoolParameters -> Ledger.PoolParams StandardCrypto
 toShelleyPoolParams StakePoolParameters {
                       stakePoolId            = StakePoolKeyHash poolkh
                     , stakePoolVRF           = VrfKeyHash vrfkh
@@ -694,117 +695,140 @@ toShelleyPoolParams StakePoolParameters {
                     } =
     --TODO: validate pool parameters such as the PoolMargin below, but also
     -- do simple client-side sanity checks, e.g. on the pool metadata url
-    Shelley.PoolParams {
-      Shelley.ppId      = poolkh
-    , Shelley.ppVrf     = vrfkh
-    , Shelley.ppPledge  = toShelleyLovelace stakePoolPledge
-    , Shelley.ppCost    = toShelleyLovelace stakePoolCost
-    , Shelley.ppMargin  = fromMaybe
+    Ledger.PoolParams {
+      Ledger.ppId      = poolkh
+    , Ledger.ppVrf     = vrfkh
+    , Ledger.ppPledge  = toShelleyLovelace stakePoolPledge
+    , Ledger.ppCost    = toShelleyLovelace stakePoolCost
+    , Ledger.ppMargin  = fromMaybe
                                (error "toShelleyPoolParams: invalid PoolMargin")
-                               (Shelley.boundRational stakePoolMargin)
-    , Shelley.ppRewardAcnt   = toShelleyStakeAddr stakePoolRewardAccount
-    , Shelley.ppOwners  = Set.fromList
+                               (Ledger.boundRational stakePoolMargin)
+    , Ledger.ppRewardAcnt   = toShelleyStakeAddr stakePoolRewardAccount
+    , Ledger.ppOwners  = Set.fromList
                                [ kh | StakeKeyHash kh <- stakePoolOwners ]
-    , Shelley.ppRelays  = Seq.fromList
+    , Ledger.ppRelays  = Seq.fromList
                                (map toShelleyStakePoolRelay stakePoolRelays)
-    , Shelley.ppMetadata = toShelleyPoolMetadata <$>
-                              maybeToStrictMaybe stakePoolMetadata
+    , Ledger.ppMetadata = toShelleyPoolMetadata <$>
+                              Ledger.maybeToStrictMaybe stakePoolMetadata
     }
   where
-    toShelleyStakePoolRelay :: StakePoolRelay -> Shelley.StakePoolRelay
+    toShelleyStakePoolRelay :: StakePoolRelay -> Ledger.StakePoolRelay
     toShelleyStakePoolRelay (StakePoolRelayIp mipv4 mipv6 mport) =
-      Shelley.SingleHostAddr
-        (fromIntegral <$> maybeToStrictMaybe mport)
-        (maybeToStrictMaybe mipv4)
-        (maybeToStrictMaybe mipv6)
+      Ledger.SingleHostAddr
+        (fromIntegral <$> Ledger.maybeToStrictMaybe mport)
+        (Ledger.maybeToStrictMaybe mipv4)
+        (Ledger.maybeToStrictMaybe mipv6)
 
     toShelleyStakePoolRelay (StakePoolRelayDnsARecord dnsname mport) =
-      Shelley.SingleHostName
-        (fromIntegral <$> maybeToStrictMaybe mport)
+      Ledger.SingleHostName
+        (fromIntegral <$> Ledger.maybeToStrictMaybe mport)
         (toShelleyDnsName dnsname)
 
     toShelleyStakePoolRelay (StakePoolRelayDnsSrvRecord dnsname) =
-      Shelley.MultiHostName
+      Ledger.MultiHostName
         (toShelleyDnsName dnsname)
 
-    toShelleyPoolMetadata :: StakePoolMetadataReference -> Shelley.PoolMetadata
+    toShelleyPoolMetadata :: StakePoolMetadataReference -> Ledger.PoolMetadata
     toShelleyPoolMetadata StakePoolMetadataReference {
                             stakePoolMetadataURL
                           , stakePoolMetadataHash = StakePoolMetadataHash mdh
                           } =
-      Shelley.PoolMetadata {
-        Shelley.pmUrl  = toShelleyUrl stakePoolMetadataURL
-      , Shelley.pmHash = Crypto.hashToBytes mdh
+      Ledger.PoolMetadata {
+        Ledger.pmUrl  = toShelleyUrl stakePoolMetadataURL
+      , Ledger.pmHash = Ledger.hashToBytes mdh
       }
 
-    toShelleyDnsName :: ByteString -> Shelley.DnsName
+    toShelleyDnsName :: ByteString -> Ledger.DnsName
     toShelleyDnsName = fromMaybe (error "toShelleyDnsName: invalid dns name. TODO: proper validation")
-                     . Shelley.textToDns
+                     . Ledger.textToDns
                      . Text.decodeLatin1
 
-    toShelleyUrl :: Text -> Shelley.Url
+    toShelleyUrl :: Text -> Ledger.Url
     toShelleyUrl = fromMaybe (error "toShelleyUrl: invalid url. TODO: proper validation")
-                 . Shelley.textToUrl
+                 . Ledger.textToUrl
 
 
-fromShelleyPoolParams :: Shelley.PoolParams StandardCrypto
+fromShelleyPoolParams :: Ledger.PoolParams StandardCrypto
                       -> StakePoolParameters
 fromShelleyPoolParams
-    Shelley.PoolParams {
-      Shelley.ppId
-    , Shelley.ppVrf
-    , Shelley.ppPledge
-    , Shelley.ppCost
-    , Shelley.ppMargin
-    , Shelley.ppRewardAcnt
-    , Shelley.ppOwners
-    , Shelley.ppRelays
-    , Shelley.ppMetadata
+    Ledger.PoolParams {
+      Ledger.ppId
+    , Ledger.ppVrf
+    , Ledger.ppPledge
+    , Ledger.ppCost
+    , Ledger.ppMargin
+    , Ledger.ppRewardAcnt
+    , Ledger.ppOwners
+    , Ledger.ppRelays
+    , Ledger.ppMetadata
     } =
     StakePoolParameters {
       stakePoolId            = StakePoolKeyHash ppId
     , stakePoolVRF           = VrfKeyHash ppVrf
     , stakePoolCost          = fromShelleyLovelace ppCost
-    , stakePoolMargin        = Shelley.unboundRational ppMargin
+    , stakePoolMargin        = Ledger.unboundRational ppMargin
     , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAcnt
     , stakePoolPledge        = fromShelleyLovelace ppPledge
     , stakePoolOwners        = map StakeKeyHash (Set.toList ppOwners)
     , stakePoolRelays        = map fromShelleyStakePoolRelay
                                    (Foldable.toList ppRelays)
     , stakePoolMetadata      = fromShelleyPoolMetadata <$>
-                                 strictMaybeToMaybe ppMetadata
+                                 Ledger.strictMaybeToMaybe ppMetadata
     }
   where
-    fromShelleyStakePoolRelay :: Shelley.StakePoolRelay -> StakePoolRelay
-    fromShelleyStakePoolRelay (Shelley.SingleHostAddr mport mipv4 mipv6) =
+    fromShelleyStakePoolRelay :: Ledger.StakePoolRelay -> StakePoolRelay
+    fromShelleyStakePoolRelay (Ledger.SingleHostAddr mport mipv4 mipv6) =
       StakePoolRelayIp
-        (strictMaybeToMaybe mipv4)
-        (strictMaybeToMaybe mipv6)
-        (fromIntegral . Shelley.portToWord16 <$> strictMaybeToMaybe mport)
+        (Ledger.strictMaybeToMaybe mipv4)
+        (Ledger.strictMaybeToMaybe mipv6)
+        (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
 
-    fromShelleyStakePoolRelay (Shelley.SingleHostName mport dnsname) =
+    fromShelleyStakePoolRelay (Ledger.SingleHostName mport dnsname) =
       StakePoolRelayDnsARecord
         (fromShelleyDnsName dnsname)
-        (fromIntegral . Shelley.portToWord16 <$> strictMaybeToMaybe mport)
+        (fromIntegral . Ledger.portToWord16 <$> Ledger.strictMaybeToMaybe mport)
 
-    fromShelleyStakePoolRelay (Shelley.MultiHostName dnsname) =
+    fromShelleyStakePoolRelay (Ledger.MultiHostName dnsname) =
       StakePoolRelayDnsSrvRecord
         (fromShelleyDnsName dnsname)
 
-    fromShelleyPoolMetadata :: Shelley.PoolMetadata -> StakePoolMetadataReference
-    fromShelleyPoolMetadata Shelley.PoolMetadata {
-                              Shelley.pmUrl
-                            , Shelley.pmHash
+    fromShelleyPoolMetadata :: Ledger.PoolMetadata -> StakePoolMetadataReference
+    fromShelleyPoolMetadata Ledger.PoolMetadata {
+                              Ledger.pmUrl
+                            , Ledger.pmHash
                             } =
       StakePoolMetadataReference {
-        stakePoolMetadataURL  = Shelley.urlToText pmUrl
+        stakePoolMetadataURL  = Ledger.urlToText pmUrl
       , stakePoolMetadataHash = StakePoolMetadataHash
                               . fromMaybe (error "fromShelleyPoolMetadata: invalid hash. TODO: proper validation")
-                              . Crypto.hashFromBytes
+                              . Ledger.hashFromBytes
                               $ pmHash
       }
 
     --TODO: change the ledger rep of the DNS name to use ShortByteString
-    fromShelleyDnsName :: Shelley.DnsName -> ByteString
+    fromShelleyDnsName :: Ledger.DnsName -> ByteString
     fromShelleyDnsName = Text.encodeUtf8
-                       . Shelley.dnsToText
+                       . Ledger.dnsToText
+
+shelleyCertificateConstraints
+  :: AtMostBabbageEra era
+  -> (( Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
+      , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+      , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
+      ) => a)
+  -> a
+shelleyCertificateConstraints AtMostBabbageEraBabbage f = f
+shelleyCertificateConstraints AtMostBabbageEraAlonzo f = f
+shelleyCertificateConstraints AtMostBabbageEraMary    f = f
+shelleyCertificateConstraints AtMostBabbageEraAllegra  f = f
+shelleyCertificateConstraints AtMostBabbageEraShelley f = f
+
+conwayCertificateConstraints
+  :: ConwayEraOnwards era
+  -> (( Ledger.ConwayEraTxCert (ShelleyLedgerEra era)
+      , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+      , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
+      ) => a)
+  -> a
+conwayCertificateConstraints ConwayEraOnwardsConway f = f
+
