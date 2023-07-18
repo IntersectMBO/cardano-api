@@ -217,6 +217,7 @@ library gen
                         Test.Gen.Cardano.Api.Metadata
                         Test.Gen.Cardano.Api.Typed
                         Test.Gen.Cardano.Crypto.Seed
+                        Test.Hedgehog.Golden.ErrorMessage
                         Test.Hedgehog.Roundtrip.Bech32
                         Test.Hedgehog.Roundtrip.CBOR
 
@@ -234,7 +235,11 @@ library gen
                       , cardano-ledger-core >= 1.4
                       , cardano-ledger-shelley >= 1.4.1.0
                       , containers
+                      , filepath
                       , hedgehog >= 1.1
+                      , hedgehog-extras
+                      , tasty
+                      , tasty-hedgehog
                       , text
 
 test-suite cardano-api-test
