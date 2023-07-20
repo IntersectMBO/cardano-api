@@ -614,15 +614,15 @@ genStakeAddressRequirements :: ShelleyBasedEra era -> Gen (StakeAddressRequireme
 genStakeAddressRequirements sbe =
   case sbe of
     ShelleyBasedEraShelley ->
-      StakeAddrRegistrationPreConway AtMostBabbageEraShelley <$> genStakeCredential
+      StakeAddrRegistrationPreConway ShelleyToBabbageEraShelley <$> genStakeCredential
     ShelleyBasedEraAllegra ->
-      StakeAddrRegistrationPreConway AtMostBabbageEraAllegra <$> genStakeCredential
+      StakeAddrRegistrationPreConway ShelleyToBabbageEraAllegra <$> genStakeCredential
     ShelleyBasedEraMary ->
-      StakeAddrRegistrationPreConway AtMostBabbageEraMary <$> genStakeCredential
+      StakeAddrRegistrationPreConway ShelleyToBabbageEraMary <$> genStakeCredential
     ShelleyBasedEraAlonzo ->
-      StakeAddrRegistrationPreConway AtMostBabbageEraAlonzo <$> genStakeCredential
+      StakeAddrRegistrationPreConway ShelleyToBabbageEraAlonzo <$> genStakeCredential
     ShelleyBasedEraBabbage ->
-      StakeAddrRegistrationPreConway AtMostBabbageEraBabbage <$> genStakeCredential
+      StakeAddrRegistrationPreConway ShelleyToBabbageEraBabbage <$> genStakeCredential
     ShelleyBasedEraConway ->
       StakeAddrRegistrationConway ConwayEraOnwardsConway <$> genLovelace <*> genStakeCredential
 

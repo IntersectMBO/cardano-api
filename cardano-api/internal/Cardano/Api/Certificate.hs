@@ -57,7 +57,7 @@ module Cardano.Api.Certificate (
     AsType(..),
 
     -- * GADTs for Conway/Shelley differences
-    AtMostBabbageEra(..),
+    ShelleyToBabbageEra(..),
     ConwayEraOnwards(..),
 
     -- * Internal functions
@@ -69,6 +69,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
+import           Cardano.Api.Feature
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos
@@ -107,7 +108,7 @@ data Certificate era where
      --   6. Genesis delegation
      --   7. MIR certificates
      ShelleyRelatedCertificate
-       :: AtMostBabbageEra era
+       :: ShelleyToBabbageEra era
        -> Ledger.ShelleyTxCert (ShelleyLedgerEra era)
        -> Certificate era
 
@@ -212,7 +213,7 @@ instance EraCast Certificate where
         eraCast toEra cert
 
       -- We cannot cast MIR and GenDeleg certs from Babbage to Conway era because they do not exist
-      ShelleyRelatedCertificate (_ :: AtMostBabbageEra fromEra) Ledger.ShelleyTxCertGenesisDeleg{} ->
+      ShelleyRelatedCertificate (_ :: ShelleyToBabbageEra fromEra) Ledger.ShelleyTxCertGenesisDeleg{} ->
         case toEra of
           ConwayEra -> Left $ EraCastError
                                 { originalValue = cert
@@ -228,7 +229,7 @@ instance EraCast Certificate where
             -- TODO: We need to modify the EraCast class to only allow casting to a future era.
             -- I can't imagine a use case where we would want to cast to a previous era
 
-      ShelleyRelatedCertificate (_ :: AtMostBabbageEra fromEra) Ledger.ShelleyTxCertMir{} ->
+      ShelleyRelatedCertificate (_ :: ShelleyToBabbageEra fromEra) Ledger.ShelleyTxCertMir{} ->
         case toEra of
           ConwayEra -> Left $ EraCastError
                                 { originalValue = cert
@@ -311,15 +312,35 @@ data ConwayEraOnwards era where
 deriving instance Show (ConwayEraOnwards era)
 deriving instance Eq (ConwayEraOnwards era)
 
-data AtMostBabbageEra era where
-  AtMostBabbageEraBabbage :: AtMostBabbageEra BabbageEra
-  AtMostBabbageEraAlonzo :: AtMostBabbageEra AlonzoEra
-  AtMostBabbageEraMary :: AtMostBabbageEra MaryEra
-  AtMostBabbageEraAllegra :: AtMostBabbageEra AllegraEra
-  AtMostBabbageEraShelley :: AtMostBabbageEra ShelleyEra
+instance FeatureInEra ConwayEraOnwards where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> no
+    AllegraEra  -> no
+    MaryEra     -> no
+    AlonzoEra   -> no
+    BabbageEra  -> no
+    ConwayEra   -> yes ConwayEraOnwardsConway
 
-deriving instance Show (AtMostBabbageEra era)
-deriving instance Eq (AtMostBabbageEra era)
+data ShelleyToBabbageEra era where
+  ShelleyToBabbageEraShelley :: ShelleyToBabbageEra ShelleyEra
+  ShelleyToBabbageEraAllegra :: ShelleyToBabbageEra AllegraEra
+  ShelleyToBabbageEraMary :: ShelleyToBabbageEra MaryEra
+  ShelleyToBabbageEraAlonzo :: ShelleyToBabbageEra AlonzoEra
+  ShelleyToBabbageEraBabbage :: ShelleyToBabbageEra BabbageEra
+
+deriving instance Show (ShelleyToBabbageEra era)
+deriving instance Eq (ShelleyToBabbageEra era)
+
+instance FeatureInEra ShelleyToBabbageEra where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> yes ShelleyToBabbageEraShelley
+    AllegraEra  -> yes ShelleyToBabbageEraAllegra
+    MaryEra     -> yes ShelleyToBabbageEraMary
+    AlonzoEra   -> yes ShelleyToBabbageEraAlonzo
+    BabbageEra  -> yes ShelleyToBabbageEraBabbage
+    ConwayEra   -> no
 
 data StakeAddressRequirements era where
   StakeAddrRegistrationConway
@@ -329,7 +350,7 @@ data StakeAddressRequirements era where
     -> StakeAddressRequirements era
 
   StakeAddrRegistrationPreConway
-    :: AtMostBabbageEra era
+    :: ShelleyToBabbageEra era
     -> StakeCredential
     -> StakeAddressRequirements era
 
@@ -348,7 +369,7 @@ makeStakeAddressRegistrationCertificate req =
     => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
     => Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
     => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
-    => AtMostBabbageEra era
+    => ShelleyToBabbageEra era
     -> StakeCredential
     -> Certificate era
   makeStakeAddressRegistrationCertificatePreConway atMostBabbage scred =
@@ -383,7 +404,7 @@ makeStakeAddressUnregistrationCertificate req =
     :: Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
     => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
     => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-    => AtMostBabbageEra era
+    => ShelleyToBabbageEra era
     -> StakeCredential
     -> Certificate era
   makeStakeAddressDeregistrationCertificatePreConway aMostBab scred =
@@ -414,19 +435,19 @@ makeStakeAddressPoolDelegationCertificate sbe scred poolId =
   case sbe of
     ShelleyBasedEraShelley ->
       makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway AtMostBabbageEraShelley scred poolId)
+        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraShelley scred poolId)
     ShelleyBasedEraAllegra ->
       makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway AtMostBabbageEraAllegra scred poolId)
+        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraAllegra scred poolId)
     ShelleyBasedEraMary ->
       makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway AtMostBabbageEraMary scred poolId)
+        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraMary scred poolId)
     ShelleyBasedEraAlonzo ->
       makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway AtMostBabbageEraAlonzo scred poolId)
+        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraAlonzo scred poolId)
     ShelleyBasedEraBabbage ->
       makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway AtMostBabbageEraBabbage scred poolId)
+        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraBabbage scred poolId)
     ShelleyBasedEraConway ->
       makeStakeAddressDelegationCertificate
         (StakeDelegationRequirementsConwayOnwards ConwayEraOnwardsConway scred (Ledger.DelegStake $ unStakePoolKeyHash poolId))
@@ -439,7 +460,7 @@ data StakeDelegationRequirements era where
     -> StakeDelegationRequirements era
 
   StakeDelegationRequirementsPreConway
-    :: AtMostBabbageEra era
+    :: ShelleyToBabbageEra era
     -> StakeCredential
     -> PoolId
     -> StakeDelegationRequirements era
@@ -465,7 +486,7 @@ data StakePoolRegistrationRequirements era where
     -> StakePoolRegistrationRequirements era
 
   StakePoolRegistrationRequirementsPreConway
-    :: AtMostBabbageEra era
+    :: ShelleyToBabbageEra era
     -> Ledger.PoolParams (EraCrypto (ShelleyLedgerEra era))
     -> StakePoolRegistrationRequirements era
 
@@ -491,7 +512,7 @@ data StakePoolRetirementRequirements era where
     -> StakePoolRetirementRequirements era
 
   StakePoolRetirementRequirementsPreConway
-    :: AtMostBabbageEra era
+    :: ShelleyToBabbageEra era
     -> PoolId
     -> Ledger.EpochNo
     -> StakePoolRetirementRequirements era
@@ -513,7 +534,7 @@ makeStakePoolRetirementCertificate req =
 data GenesisKeyDelegationRequirements ere where
 
   GenesisKeyDelegationRequirements
-    :: AtMostBabbageEra era
+    :: ShelleyToBabbageEra era
     -> Hash GenesisKey
     -> Hash GenesisDelegateKey
     -> Hash VrfKey
@@ -528,7 +549,7 @@ makeGenesisKeyDelegationCertificate (GenesisKeyDelegationRequirements atMostEra
 
 data MirCertificateRequirements era where
   MirCertificateRequirements
-    :: AtMostBabbageEra era
+    :: ShelleyToBabbageEra era
     -> Ledger.MIRPot
     -> Ledger.MIRTarget (EraCrypto (ShelleyLedgerEra era))
     -> MirCertificateRequirements era
@@ -645,7 +666,7 @@ toShelleyCertificate :: ()
 toShelleyCertificate sbe cert =
   case cert of
     ShelleyRelatedCertificate aMostBab _ ->
-      toShelleyCertificateAtMostBabbage aMostBab cert
+      toShelleyCertificateShelleyToBabbage aMostBab cert
     ConwayCertificate cOn _ ->
       case sbe of
         ShelleyBasedEraShelley -> case cOn of {}
@@ -655,18 +676,18 @@ toShelleyCertificate sbe cert =
         ShelleyBasedEraBabbage -> case cOn of {}
         ShelleyBasedEraConway -> toShelleyCertificateAtLeastConway cOn cert
  where
-  toShelleyCertificateAtMostBabbage :: ()
-    => AtMostBabbageEra era
+  toShelleyCertificateShelleyToBabbage :: ()
+    => ShelleyToBabbageEra era
     -> Certificate era
     -> Ledger.TxCert (ShelleyLedgerEra era)
-  toShelleyCertificateAtMostBabbage aMostBabbage (ShelleyRelatedCertificate _ shelleyTxCert) =
+  toShelleyCertificateShelleyToBabbage aMostBabbage (ShelleyRelatedCertificate _ shelleyTxCert) =
     case aMostBabbage of
-      AtMostBabbageEraBabbage -> shelleyTxCert
-      AtMostBabbageEraAlonzo -> shelleyTxCert
-      AtMostBabbageEraMary -> shelleyTxCert
-      AtMostBabbageEraAllegra -> shelleyTxCert
-      AtMostBabbageEraShelley -> shelleyTxCert
-  toShelleyCertificateAtMostBabbage aMost (ConwayCertificate ConwayEraOnwardsConway _) =
+      ShelleyToBabbageEraBabbage -> shelleyTxCert
+      ShelleyToBabbageEraAlonzo -> shelleyTxCert
+      ShelleyToBabbageEraMary -> shelleyTxCert
+      ShelleyToBabbageEraAllegra -> shelleyTxCert
+      ShelleyToBabbageEraShelley -> shelleyTxCert
+  toShelleyCertificateShelleyToBabbage aMost (ConwayCertificate ConwayEraOnwardsConway _) =
     case aMost of {}
 
 
@@ -683,11 +704,11 @@ fromShelleyCertificate :: ()
   -> Ledger.TxCert (ShelleyLedgerEra era)
   -> Certificate era
 fromShelleyCertificate = \case
-  ShelleyBasedEraShelley  -> ShelleyRelatedCertificate AtMostBabbageEraShelley
-  ShelleyBasedEraAllegra  -> ShelleyRelatedCertificate AtMostBabbageEraAllegra
-  ShelleyBasedEraMary     -> ShelleyRelatedCertificate AtMostBabbageEraMary
-  ShelleyBasedEraAlonzo   -> ShelleyRelatedCertificate AtMostBabbageEraAlonzo
-  ShelleyBasedEraBabbage  -> ShelleyRelatedCertificate AtMostBabbageEraBabbage
+  ShelleyBasedEraShelley  -> ShelleyRelatedCertificate ShelleyToBabbageEraShelley
+  ShelleyBasedEraAllegra  -> ShelleyRelatedCertificate ShelleyToBabbageEraAllegra
+  ShelleyBasedEraMary     -> ShelleyRelatedCertificate ShelleyToBabbageEraMary
+  ShelleyBasedEraAlonzo   -> ShelleyRelatedCertificate ShelleyToBabbageEraAlonzo
+  ShelleyBasedEraBabbage  -> ShelleyRelatedCertificate ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway   -> ConwayCertificate ConwayEraOnwardsConway
 
 
@@ -821,17 +842,17 @@ fromShelleyPoolParams
                        . Ledger.dnsToText
 
 shelleyCertificateConstraints
-  :: AtMostBabbageEra era
+  :: ShelleyToBabbageEra era
   -> (( Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
       , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
       , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
       ) => a)
   -> a
-shelleyCertificateConstraints AtMostBabbageEraBabbage f = f
-shelleyCertificateConstraints AtMostBabbageEraAlonzo f = f
-shelleyCertificateConstraints AtMostBabbageEraMary    f = f
-shelleyCertificateConstraints AtMostBabbageEraAllegra  f = f
-shelleyCertificateConstraints AtMostBabbageEraShelley f = f
+shelleyCertificateConstraints ShelleyToBabbageEraBabbage f = f
+shelleyCertificateConstraints ShelleyToBabbageEraAlonzo f = f
+shelleyCertificateConstraints ShelleyToBabbageEraMary    f = f
+shelleyCertificateConstraints ShelleyToBabbageEraAllegra  f = f
+shelleyCertificateConstraints ShelleyToBabbageEraShelley f = f
 
 conwayCertificateConstraints
   :: ConwayEraOnwards era

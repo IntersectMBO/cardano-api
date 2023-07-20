@@ -898,7 +898,7 @@ module Cardano.Api (
     determineEraExpr,
 
     -- ** Conway related
-    AtMostBabbageEra(..),
+    ShelleyToBabbageEra(..),
     ConwayEraOnwards(..),
 
     -- ** DReps
