@@ -1,5 +1,27 @@
 # Changelog for cardano-api
 
+## 8.9.0.0
+
+- Expose more functionality from cardano-api
+  (feature; compatible)
+  [PR 130](https://github.com/input-output-hk/cardano-api/pull/130)
+
+- Rename `AtMostBabbageEra` to `ShelleyToBabbageEra` and add `FeatureInEra` instances to `ShelleyToBabbageEra` and `ConwayEraOnwards`.
+  (feature; breaking)
+  [PR 127](https://github.com/input-output-hk/cardano-api/pull/127)
+
+- Incorporate remaining conway certificate types into cardano-api
+  (feature; breaking)
+  [PR 119](https://github.com/input-output-hk/cardano-api/pull/119)
+
+- Wire up remaining Conway governance actions
+  (feature; compatible)
+  [PR 112](https://github.com/input-output-hk/cardano-api/pull/112)
+
+- Fix ghc version CPP
+  (bugfix; compatible)
+  [PR 123](https://github.com/input-output-hk/cardano-api/pull/123)
+
 ## 8.8.1.1
 
 - Add a HasTypeProxy constraint to getVerificationKey
@@ -20,6 +42,11 @@
   Use the ^>= version range operator for ledger and consensus libraries to avoid breaking changes affecting builds.
   (feature; compatible)
   [PR 108](https://github.com/input-output-hk/cardano-api/pull/108)
+
+- -  Update to the latest ledger and consensus
+  -  Introduce CommitteeKey
+  (feature; breaking)
+  [PR 99](https://github.com/input-output-hk/cardano-api/pull/99)
 
 ## 8.8.0.0
 
