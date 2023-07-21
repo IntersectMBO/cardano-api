@@ -28,9 +28,11 @@ module Cardano.Api (
 
     -- * Feature support
     FeatureInEra(..),
-    FeatureValue(..),
     maybeFeatureInEra,
     featureInShelleyBasedEra,
+    Featured(..),
+    asFeaturedInEra,
+    asFeaturedInShelleyBasedEra,
 
     -- * Features
     ShelleyToBabbageEra(..),
