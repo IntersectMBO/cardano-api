@@ -20,6 +20,7 @@ module Cardano.Api.Certificate (
 
     -- * Registering stake address and delegating
     StakeAddressRequirements(..),
+    StakeDelegationRequirements(..),
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressUnregistrationCertificate,
     makeStakeAddressPoolDelegationCertificate,

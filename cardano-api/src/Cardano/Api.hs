@@ -392,6 +392,7 @@ module Cardano.Api (
     -- unregistering stake address, and for setting the stake pool delegation
     -- choice for a stake address.
     StakeAddressRequirements(..),
+    StakeDelegationRequirements(..),
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressUnregistrationCertificate,
     makeStakeAddressPoolDelegationCertificate,
