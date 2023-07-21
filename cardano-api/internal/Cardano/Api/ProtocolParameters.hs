@@ -129,6 +129,8 @@ import           Lens.Micro
 import           Numeric.Natural
 import           Text.PrettyBy.Default (display)
 
+deriving instance Eq Alonzo.CostModelApplyError
+
 -- | The values of the set of /updatable/ protocol parameters. At any
 -- particular point on the chain there is a current set of parameters in use.
 --
