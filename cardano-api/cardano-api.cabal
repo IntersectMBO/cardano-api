@@ -164,7 +164,7 @@ library internal
                       , parsec
                       , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>= 1.5
                       , prettyprinter
-                      , prettyprinter-configurable ^>= 1.7
+                      , prettyprinter-configurable
                       , random
                       , scientific
                       , serialise
