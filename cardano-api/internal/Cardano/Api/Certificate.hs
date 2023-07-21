@@ -20,12 +20,16 @@ module Cardano.Api.Certificate (
 
     -- * Registering stake address and delegating
     StakeAddressRequirements(..),
+    StakeDelegationRequirements(..),
+    makeStakeAddressDelegationCertificate,
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressUnregistrationCertificate,
     makeStakeAddressPoolDelegationCertificate,
     PoolId,
 
     -- * Registering stake pools
+    StakePoolRegistrationRequirements(..),
+    StakePoolRetirementRequirements(..),
     makeStakePoolRegistrationCertificate,
     makeStakePoolRetirementCertificate,
     StakePoolParameters(..),
@@ -33,6 +37,10 @@ module Cardano.Api.Certificate (
     StakePoolMetadataReference(..),
 
     -- * Conway specific certificates
+    CommitteeColdkeyResignationRequirements(..),
+    CommitteeHotKeyAuthorizationRequirements(..),
+    DRepRegistrationRequirements(..),
+    DRepUnregistrationRequirements(..),
     makeCommitteeColdkeyResignationCertificate,
     makeCommitteeHotKeyAuthorizationCertificate,
     makeDrepRegistrationCertificate,
@@ -42,6 +50,8 @@ module Cardano.Api.Certificate (
     DRepMetadataReference(..),
 
     -- * Special certificates
+    GenesisKeyDelegationRequirements(..),
+    MirCertificateRequirements(..),
     makeMIRCertificate,
     makeGenesisKeyDelegationCertificate,
     Ledger.MIRTarget (..),
@@ -532,7 +542,6 @@ makeStakePoolRetirementCertificate req =
         $ Ledger.mkRetirePoolTxCert (unStakePoolKeyHash poolId) retirementEpoch
 
 data GenesisKeyDelegationRequirements ere where
-
   GenesisKeyDelegationRequirements
     :: ShelleyToBabbageEra era
     -> Hash GenesisKey
