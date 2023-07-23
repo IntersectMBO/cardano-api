@@ -29,6 +29,16 @@ class FeatureInEra (feature :: Type -> Type) where
     -> CardanoEra era       -- ^ Era to check
     -> a                    -- ^ The value to use
 
+instance FeatureInEra ShelleyBasedEra where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> yes ShelleyBasedEraShelley
+    AllegraEra  -> yes ShelleyBasedEraAllegra
+    MaryEra     -> yes ShelleyBasedEraMary
+    AlonzoEra   -> yes ShelleyBasedEraAlonzo
+    BabbageEra  -> yes ShelleyBasedEraBabbage
+    ConwayEra   -> yes ShelleyBasedEraConway
+
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 featureInShelleyBasedEra :: ()
   => FeatureInEra feature
