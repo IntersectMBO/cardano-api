@@ -268,6 +268,10 @@ module Cardano.Api (
     BuildTx,
     ViewTx,
 
+    -- ** Era-based transaction body features
+    ShelleyToBabbageEra(..),
+    ConwayEraOnwards(..),
+
     -- ** Era-dependent transaction body features
     CollateralSupportedInEra(..),
     MultiAssetSupportedInEra(..),
@@ -903,10 +907,6 @@ module Cardano.Api (
     queryUtxo,
     determineEraExpr,
 
-    -- ** Conway related
-    ShelleyToBabbageEra(..),
-    ConwayEraOnwards(..),
-
     -- ** DReps
     DRepKey,
     DRepMetadata,
@@ -939,6 +939,8 @@ import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
+import           Cardano.Api.Feature.ConwayEraOnwards
+import           Cardano.Api.Feature.ShelleyToBabbageEra
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
