@@ -11,7 +11,6 @@ module Cardano.Api.Feature.ShelleyToBabbageEra
   ) where
 
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature
 
 data ShelleyToBabbageEra era where
   ShelleyToBabbageEraShelley :: ShelleyToBabbageEra ShelleyEra

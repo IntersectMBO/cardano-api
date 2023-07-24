@@ -26,6 +26,16 @@ module Cardano.Api (
     cardanoEraConstraints,
     InAnyCardanoEra(..),
 
+    -- * Feature support
+    FeatureInEra(..),
+    FeatureValue(..),
+    maybeFeatureInEra,
+    featureInShelleyBasedEra,
+
+    -- * Features
+    ShelleyToBabbageEra(..),
+    ConwayEraOnwards(..),
+
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
@@ -268,10 +278,6 @@ module Cardano.Api (
     BuildTx,
     ViewTx,
 
-    -- ** Era-based transaction body features
-    ShelleyToBabbageEra(..),
-    ConwayEraOnwards(..),
-
     -- ** Era-dependent transaction body features
     CollateralSupportedInEra(..),
     MultiAssetSupportedInEra(..),
@@ -291,7 +297,6 @@ module Cardano.Api (
     TxTotalAndReturnCollateralSupportedInEra(..),
     TxVotesSupportedInEra(..),
     TxGovernanceActionSupportedInEra(..),
-    FeatureInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,

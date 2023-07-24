@@ -122,7 +122,6 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Feature
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
                    KESPeriod (KESPeriod),

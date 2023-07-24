@@ -11,7 +11,6 @@ module Cardano.Api.Feature.ConwayEraOnwards
   ) where
 
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature
 
 data ConwayEraOnwards era where
   ConwayEraOnwardsConway :: ConwayEraOnwards ConwayEra

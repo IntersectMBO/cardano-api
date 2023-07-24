@@ -82,7 +82,6 @@ module Cardano.Api.ProtocolParameters (
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.Feature
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Json (toRationalJSON)

@@ -30,6 +30,11 @@ module Cardano.Api.Eras
   , InAnyCardanoEra(..)
   , CardanoLedgerEra
 
+    -- * FeatureInEra
+  , FeatureInEra(..)
+  , maybeFeatureInEra
+  , featureInShelleyBasedEra
+
     -- * Deprecated aliases
   , Byron
   , Shelley
@@ -71,9 +76,13 @@ import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra,
 
 import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
+import           Data.Kind
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
+
+-- ----------------------------------------------------------------------------
+-- Eras
 
 -- | A type used as a tag to distinguish the Byron era.
 data ByronEra
@@ -123,6 +132,37 @@ instance HasTypeProxy BabbageEra where
 instance HasTypeProxy ConwayEra where
    data AsType ConwayEra = AsConwayEra
    proxyToAsType _ = AsConwayEra
+
+-- ----------------------------------------------------------------------------
+-- FeatureInEra
+
+-- | A class for producing values for features that are supported in some eras
+-- but not others.
+class FeatureInEra (feature :: Type -> Type) where
+  -- | Determine the value to use for a feature in a given 'CardanoEra'.
+  -- Note that the negative case is the first argument, and the positive case is the second as per
+  -- the 'either' function convention.
+  featureInEra :: ()
+    => a                    -- ^ Value to use if the feature is not supported in the era
+    -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+    -> CardanoEra era       -- ^ Era to check
+    -> a                    -- ^ The value to use
+
+maybeFeatureInEra :: ()
+  => FeatureInEra feature
+  => CardanoEra era       -- ^ Era to check
+  -> Maybe (feature era)  -- ^ The feature if supported in the era
+maybeFeatureInEra = featureInEra Nothing Just
+
+-- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
+featureInShelleyBasedEra :: ()
+  => FeatureInEra feature
+  => a
+  -> (feature era -> a)
+  -> ShelleyBasedEra era
+  -> a
+featureInShelleyBasedEra no yes =
+  featureInEra no yes . shelleyBasedToCardanoEra
 
 -- ----------------------------------------------------------------------------
 -- Deprecated aliases
