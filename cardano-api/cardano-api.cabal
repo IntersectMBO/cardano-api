@@ -59,6 +59,8 @@ library internal
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Feature
+                        Cardano.Api.Feature.ConwayEraOnwards
+                        Cardano.Api.Feature.ShelleyToBabbageEra
                         Cardano.Api.Fees
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters

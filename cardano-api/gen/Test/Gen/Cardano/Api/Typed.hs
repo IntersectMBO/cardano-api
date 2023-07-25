@@ -7,8 +7,11 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Test.Gen.Cardano.Api.Typed
-  ( genFeatureValueInEra
+  ( genFeaturedInEra
+  , genMaybeFeaturedInEra
 
   , genAddressByron
   , genAddressInEra
@@ -122,7 +125,6 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Feature
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
                    KESPeriod (KESPeriod),
@@ -732,16 +734,25 @@ genTxBody era = do
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
 
--- | Generate a 'FeatureValue' for the given 'CardanoEra' with the provided generator.
-genFeatureValueInEra :: ()
+-- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
+genFeaturedInEra :: ()
+  => Alternative f
+  => feature era
+  -> f a
+  -> f (Featured feature era a)
+genFeaturedInEra witness gen =
+  Featured witness <$> gen
+
+-- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
+genMaybeFeaturedInEra :: ()
   => FeatureInEra feature
   => Alternative f
   => f a
   -> CardanoEra era
-  -> f (FeatureValue feature era a)
-genFeatureValueInEra gen =
-  featureInEra (pure NoFeatureValue) $ \witness ->
-    pure NoFeatureValue <|> fmap (FeatureValue witness) gen
+  -> f (Maybe (Featured feature era a))
+genMaybeFeaturedInEra gen =
+  featureInEra (pure Nothing) $ \witness ->
+    pure Nothing <|> fmap Just (genFeaturedInEra witness gen)
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of

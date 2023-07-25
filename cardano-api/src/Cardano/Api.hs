@@ -26,6 +26,24 @@ module Cardano.Api (
     cardanoEraConstraints,
     InAnyCardanoEra(..),
 
+    -- * Feature support
+    FeatureInEra(..),
+    maybeFeatureInEra,
+    featureInShelleyBasedEra,
+    Featured(..),
+    asFeaturedInEra,
+    asFeaturedInShelleyBasedEra,
+
+    -- * Features
+    ShelleyToBabbageEra(..),
+    shelleyToBabbageEraConstraints,
+    shelleyToBabbageEraToCardanoEra,
+    shelleyToBabbageEraToShelleyBasedEra,
+    ConwayEraOnwards(..),
+    conwayEraOnwardsConstraints,
+    conwayEraOnwardsToCardanoEra,
+    conwayEraOnwardsToShelleyBasedEra,
+
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
@@ -287,7 +305,6 @@ module Cardano.Api (
     TxTotalAndReturnCollateralSupportedInEra(..),
     TxVotesSupportedInEra(..),
     TxGovernanceActionSupportedInEra(..),
-    FeatureInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -903,10 +920,6 @@ module Cardano.Api (
     queryUtxo,
     determineEraExpr,
 
-    -- ** Conway related
-    ShelleyToBabbageEra(..),
-    ConwayEraOnwards(..),
-
     -- ** DReps
     DRepKey,
     DRepMetadata,
@@ -939,6 +952,8 @@ import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
+import           Cardano.Api.Feature.ConwayEraOnwards
+import           Cardano.Api.Feature.ShelleyToBabbageEra
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters

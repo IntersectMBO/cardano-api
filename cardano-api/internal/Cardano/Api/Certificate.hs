@@ -66,10 +66,6 @@ module Cardano.Api.Certificate (
     -- * Data family instances
     AsType(..),
 
-    -- * GADTs for Conway/Shelley differences
-    ShelleyToBabbageEra(..),
-    ConwayEraOnwards(..),
-
     -- * Internal functions
     filterUnRegCreds,
     selectStakeCredential,
@@ -79,7 +75,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature
+import           Cardano.Api.Feature.ConwayEraOnwards
+import           Cardano.Api.Feature.ShelleyToBabbageEra
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos
@@ -315,42 +312,6 @@ data DRepMetadataReference =
 -- ----------------------------------------------------------------------------
 -- Constructor functions
 --
-
-data ConwayEraOnwards era where
-  ConwayEraOnwardsConway :: ConwayEraOnwards ConwayEra
-
-deriving instance Show (ConwayEraOnwards era)
-deriving instance Eq (ConwayEraOnwards era)
-
-instance FeatureInEra ConwayEraOnwards where
-  featureInEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> no
-    AllegraEra  -> no
-    MaryEra     -> no
-    AlonzoEra   -> no
-    BabbageEra  -> no
-    ConwayEra   -> yes ConwayEraOnwardsConway
-
-data ShelleyToBabbageEra era where
-  ShelleyToBabbageEraShelley :: ShelleyToBabbageEra ShelleyEra
-  ShelleyToBabbageEraAllegra :: ShelleyToBabbageEra AllegraEra
-  ShelleyToBabbageEraMary :: ShelleyToBabbageEra MaryEra
-  ShelleyToBabbageEraAlonzo :: ShelleyToBabbageEra AlonzoEra
-  ShelleyToBabbageEraBabbage :: ShelleyToBabbageEra BabbageEra
-
-deriving instance Show (ShelleyToBabbageEra era)
-deriving instance Eq (ShelleyToBabbageEra era)
-
-instance FeatureInEra ShelleyToBabbageEra where
-  featureInEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> yes ShelleyToBabbageEraShelley
-    AllegraEra  -> yes ShelleyToBabbageEraAllegra
-    MaryEra     -> yes ShelleyToBabbageEraMary
-    AlonzoEra   -> yes ShelleyToBabbageEraAlonzo
-    BabbageEra  -> yes ShelleyToBabbageEraBabbage
-    ConwayEra   -> no
 
 data StakeAddressRequirements era where
   StakeAddrRegistrationConway
