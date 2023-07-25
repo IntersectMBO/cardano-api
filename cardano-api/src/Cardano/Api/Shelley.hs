@@ -150,6 +150,7 @@ module Cardano.Api.Shelley
     Certificate (..),
     toShelleyCertificate,
     fromShelleyCertificate,
+    toShelleyPoolParams,
 
     -- ** Operational certificates
     OperationalCertificate(OperationalCertificate),
