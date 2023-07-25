@@ -9,6 +9,7 @@
 
 module Cardano.Api.Feature.ShelleyToBabbageEra
   ( ShelleyToBabbageEra(..)
+  , AnyShelleyToBabbageEra(..)
   , shelleyToBabbageEraConstraints
   , shelleyToBabbageEraToCardanoEra
   , shelleyToBabbageEraToShelleyBasedEra
@@ -51,6 +52,11 @@ type ShelleyToBabbageEraConstraints era =
   , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
   , ToJSON (DebugLedgerState era)
   )
+
+data AnyShelleyToBabbageEra where
+  AnyShelleyToBabbageEra :: ShelleyToBabbageEra era -> AnyShelleyToBabbageEra
+
+deriving instance Show AnyShelleyToBabbageEra
 
 shelleyToBabbageEraConstraints
   :: ShelleyToBabbageEra era

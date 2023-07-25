@@ -9,6 +9,7 @@
 
 module Cardano.Api.Feature.ConwayEraOnwards
   ( ConwayEraOnwards(..)
+  , AnyConwayEraOnwards(..)
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToCardanoEra
   , conwayEraOnwardsToShelleyBasedEra
@@ -38,6 +39,11 @@ instance FeatureInEra ConwayEraOnwards where
     AlonzoEra   -> no
     BabbageEra  -> no
     ConwayEra   -> yes ConwayEraOnwardsConway
+
+data AnyConwayEraOnwards where
+  AnyConwayEraOnwards :: ConwayEraOnwards era -> AnyConwayEraOnwards
+
+deriving instance Show AnyConwayEraOnwards
 
 type ConwayEraOnwardsConstraints era =
   ( FromCBOR (DebugLedgerState era)
