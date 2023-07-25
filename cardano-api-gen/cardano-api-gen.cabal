@@ -41,5 +41,6 @@ library
                         Test.Gen.Cardano.Api.Metadata,
                         Test.Gen.Cardano.Api.Typed,
                         Test.Gen.Cardano.Crypto.Seed,
+                        Test.Hedgehog.Golden.ErrorMessage,
                         Test.Hedgehog.Roundtrip.Bech32,
                         Test.Hedgehog.Roundtrip.CBOR,

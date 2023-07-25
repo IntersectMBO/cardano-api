@@ -52,14 +52,10 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import           Data.Text (Text)
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import           System.FilePath ((</>))
+import           GHC.Stack (HasCallStack)
 
-import           Hedgehog
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Test.Hedgehog.Golden.ErrorMessage as ErrorMessage
 import           Test.Tasty
-import           Test.Tasty.Hedgehog
 
 seed1 :: ByteString
 seed1 = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -343,47 +339,15 @@ test_TxMetadataRangeError =
     , TxMetadataNumberOutOfRange 0
     ]
 
+goldenFilesPath :: FilePath
+goldenFilesPath = "test/cardano-api-golden/files/golden/errors"
+
 testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a) => [a] -> TestTree
-testAllErrorMessages errs = withFrozenCallStack $ do
-  -- 'err' here is only needed for its 'Data' instance and it's never evaluated
-  -- it's equivalent of having @err = undefined :: a@
-  let err = head errs
-      typeName = show $ typeOf err
-      testedConstructors = map toConstr errs
-      allConstructors = dataTypeConstrs $ dataTypeOf err
-      notTestedConstructors = [ c | c <- allConstructors, c `notElem` testedConstructors]
-      testAllConstructors =
-        testProperty "check if all constructors are tested" . withTests 1 . property $ do
-          H.note_ $ "Untested constructors: " <> show notTestedConstructors
-          notTestedConstructors === []
+testAllErrorMessages = ErrorMessage.testAllErrorMessages goldenFilesPath
 
-  testGroup typeName $
-    testAllConstructors : map testErrorMessage errs
-
--- | Creates error messages for all values and tests them agains the golden files.
---
--- An escape hatch when adding of 'Data' instance gets impossible (like when we embed 'TypeRep' in our error data
--- types) or requires significant multi-package changes and outweights the benefits here.
 testAllErrorMessages_ :: forall a. (HasCallStack, Error a)
                       => String -- ^ module name
                       -> String -- ^ type name
                       -> [(String, a)]  -- ^ list of constructor names and values
                       -> TestTree
-testAllErrorMessages_ moduleName typeName errs = withFrozenCallStack $ do
-  testGroup typeName $
-    fmap (uncurry $ testErrorMessage_ moduleName typeName) errs
-
-testErrorMessage :: (HasCallStack, Data a, Error a) => a -> TestTree
-testErrorMessage err = withFrozenCallStack $ do
-  let errTypeRep = typeOf err
-      typeName = show errTypeRep
-      moduleName = tyConModule $ typeRepTyCon errTypeRep
-      constructorName = show $ toConstr err
-  testErrorMessage_ moduleName typeName constructorName err
-
-testErrorMessage_ :: (HasCallStack, Error a) => String -> String -> String -> a -> TestTree
-testErrorMessage_ moduleName typeName constructorName err = withFrozenCallStack $ do
-  let fqtn = moduleName <> "." <> typeName
-  testProperty constructorName . withTests 1 . property $ do
-    H.note_ "Incorrect error message in golden file"
-    displayError err `H.diffVsGoldenFile` ("test/cardano-api-golden/files/golden/errors" </> fqtn </> constructorName <> ".txt")
+testAllErrorMessages_ = ErrorMessage.testAllErrorMessages_ goldenFilesPath
