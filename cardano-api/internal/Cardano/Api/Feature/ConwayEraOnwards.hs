@@ -5,12 +5,19 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Feature.ConwayEraOnwards
   ( ConwayEraOnwards(..)
+  , conwayEraOnwardsConstraints
+  , conwayEraOnwardsToCardanoEra
+  , conwayEraOnwardsToShelleyBasedEra
   ) where
 
 import           Cardano.Api.Eras
+
+import           Cardano.Crypto.Hash.Class (HashAlgorithm)
+import qualified Cardano.Ledger.Api as L
 
 data ConwayEraOnwards era where
   ConwayEraOnwardsConway :: ConwayEraOnwards ConwayEra
@@ -27,3 +34,23 @@ instance FeatureInEra ConwayEraOnwards where
     AlonzoEra   -> no
     BabbageEra  -> no
     ConwayEra   -> yes ConwayEraOnwardsConway
+
+type ConwayEraOnwardsConstraints era =
+  ( L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , L.ConwayEraTxBody (ShelleyLedgerEra era)
+  )
+
+conwayEraOnwardsConstraints
+  :: ConwayEraOnwards era
+  -> (ConwayEraOnwardsConstraints era => a)
+  -> a
+conwayEraOnwardsConstraints = \case
+  ConwayEraOnwardsConway -> id
+
+conwayEraOnwardsToCardanoEra :: ConwayEraOnwards era -> CardanoEra era
+conwayEraOnwardsToCardanoEra = shelleyBasedToCardanoEra . conwayEraOnwardsToShelleyBasedEra
+
+conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
+conwayEraOnwardsToShelleyBasedEra = \case
+  ConwayEraOnwardsConway -> ShelleyBasedEraConway
