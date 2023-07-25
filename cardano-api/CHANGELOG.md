@@ -1,5 +1,37 @@
 # Changelog for cardano-api
 
+## 8.10.0.0
+
+- Improved feature ergonomics
+  New:
+  - `Featured`
+  - `asFeaturedInEra`
+  - `asFeaturedInShelleyBasedEra`
+  - `genFeaturedInEra`
+  - `genMaybeFeaturedInEra`
+  - `conwayEraOnwardsToCardanoEra`
+  - `conwayEraOnwardsToCardanoEra`
+  - `conwayEraOnwardsToShelleyBasedEra`
+  - `shelleyToBabbageEraConstraints`
+  - `shelleyToBabbageEraToCardanoEra`
+  - `shelleyToBabbageEraToShelleyBasedEra`
+  Deprecated:
+  - `FeatureValue` Use `Maybe Featured` instead
+  - `isFeatureValue`
+  - `valueOrDefault`
+  - `asFeatureValue`
+  - `asFeatureValueInShelleyBasedEra`
+  (feature; breaking)
+  [PR 128](https://github.com/input-output-hk/cardano-api/pull/128)
+
+- Expose `toShelleyPoolParams` for Conway integration
+  (feature; compatible)
+  [PR 134](https://github.com/input-output-hk/cardano-api/pull/134)
+
+- `FeatureInEra` instance for `ShelleyBasedEra`
+  (feature; compatible)
+  [PR 131](https://github.com/input-output-hk/cardano-api/pull/131)
+
 ## 8.9.0.0
 
 - Expose more functionality from cardano-api
