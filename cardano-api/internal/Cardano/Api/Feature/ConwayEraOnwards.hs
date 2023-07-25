@@ -15,9 +15,13 @@ module Cardano.Api.Feature.ConwayEraOnwards
   ) where
 
 import           Cardano.Api.Eras
+import           Cardano.Api.Query.Types
 
+import           Cardano.Binary
 import           Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Ledger.Api as L
+
+import           Data.Aeson
 
 data ConwayEraOnwards era where
   ConwayEraOnwardsConway :: ConwayEraOnwards ConwayEra
@@ -36,9 +40,13 @@ instance FeatureInEra ConwayEraOnwards where
     ConwayEra   -> yes ConwayEraOnwardsConway
 
 type ConwayEraOnwardsConstraints era =
-  ( L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  ( FromCBOR (DebugLedgerState era)
   , HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , IsShelleyBasedEra era
   , L.ConwayEraTxBody (ShelleyLedgerEra era)
+  , L.Era (ShelleyLedgerEra era)
+  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , ToJSON (DebugLedgerState era)
   )
 
 conwayEraOnwardsConstraints

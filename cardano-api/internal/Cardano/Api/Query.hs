@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
@@ -90,6 +89,7 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query.Types
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
@@ -126,7 +126,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 import           Control.Monad (forM)
 import           Control.Monad.Trans.Except
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), withObject)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Parser)
@@ -143,7 +143,6 @@ import qualified Data.Set as Set
 import           Data.SOP.Strict (SListI)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Typeable
 import           Data.Word (Word64)
 
 
@@ -392,46 +391,6 @@ decodeDebugLedgerState :: forall era. ()
   -> Either LBS.ByteString (DebugLedgerState era)
 decodeDebugLedgerState (SerialisedDebugLedgerState (Serialised ls)) =
   first (const ls) (Plain.decodeFull ls)
-
-data DebugLedgerState era where
-  DebugLedgerState :: ShelleyLedgerEra era ~ ledgerera => Shelley.NewEpochState ledgerera -> DebugLedgerState era
-
-instance
-    ( Typeable era
-    , Core.EraTxOut (ShelleyLedgerEra era)
-    , Core.EraGovernance (ShelleyLedgerEra era)
-    , DecCBOR (Shelley.StashedAVVMAddresses (ShelleyLedgerEra era))
-    ) => FromCBOR (DebugLedgerState era) where
-  fromCBOR = DebugLedgerState <$>
-    (fromCBOR :: Plain.Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
-
--- TODO: Shelley based era class!
-instance ( IsShelleyBasedEra era
-         , ShelleyLedgerEra era ~ ledgerera
-         , Consensus.ShelleyBasedEra ledgerera
-         ) => ToJSON (DebugLedgerState era) where
-  toJSON = object . toDebugLedgerStatePair
-  toEncoding = Aeson.pairs . mconcat . toDebugLedgerStatePair
-
-toDebugLedgerStatePair ::
-  ( ShelleyLedgerEra era ~ ledgerera
-  , Consensus.ShelleyBasedEra ledgerera
-  , Aeson.KeyValue a
-  ) => DebugLedgerState era -> [a]
-toDebugLedgerStatePair (DebugLedgerState newEpochS) =
-    let !nesEL = Shelley.nesEL newEpochS
-        !nesBprev = Shelley.nesBprev newEpochS
-        !nesBcur = Shelley.nesBcur newEpochS
-        !nesEs = Shelley.nesEs newEpochS
-        !nesRu = Shelley.nesRu newEpochS
-        !nesPd = Shelley.nesPd newEpochS
-    in  [ "lastEpoch" .= nesEL
-        , "blocksBefore" .= nesBprev
-        , "blocksCurrent" .= nesBcur
-        , "stateBefore" .= nesEs
-        , "possibleRewardUpdate" .= nesRu
-        , "stakeDistrib" .= nesPd
-        ]
 
 newtype ProtocolState era
   = ProtocolState (Serialised (Consensus.ChainDepState (ConsensusProtocol era)))

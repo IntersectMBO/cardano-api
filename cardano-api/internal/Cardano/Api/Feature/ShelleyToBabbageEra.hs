@@ -15,9 +15,13 @@ module Cardano.Api.Feature.ShelleyToBabbageEra
   ) where
 
 import           Cardano.Api.Eras
+import           Cardano.Api.Query.Types
 
+import           Cardano.Binary
 import           Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Ledger.Api as L
+
+import           Data.Aeson
 
 data ShelleyToBabbageEra era where
   ShelleyToBabbageEraShelley :: ShelleyToBabbageEra ShelleyEra
@@ -40,8 +44,12 @@ instance FeatureInEra ShelleyToBabbageEra where
     ConwayEra   -> no
 
 type ShelleyToBabbageEraConstraints era =
-  ( L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  ( FromCBOR (DebugLedgerState era)
   , HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , IsShelleyBasedEra era
+  , L.Era (ShelleyLedgerEra era)
+  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , ToJSON (DebugLedgerState era)
   )
 
 shelleyToBabbageEraConstraints
