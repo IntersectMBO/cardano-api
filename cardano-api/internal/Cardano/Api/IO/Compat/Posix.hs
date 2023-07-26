@@ -17,29 +17,24 @@ module Cardano.Api.IO.Compat.Posix
 
 #ifdef UNIX
 
-import           Cardano.Api.Error (FileError (..), fileIOExceptT)
+import           Cardano.Api.Error (FileError (..))
 import           Cardano.Api.IO.Base
 
 import           Control.Exception (IOException, bracket, bracketOnError, try)
 import           Control.Monad (forM_, when)
 import           Control.Monad.Except (ExceptT, runExceptT)
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except.Extra (left)
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
 import           System.Directory ()
 import           System.FilePath ((</>))
 import qualified System.IO as IO
 import           System.IO (Handle)
 import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
-                   nullFileMode, otherModes, ownerReadMode, setFdOwnerAndGroup, setFileMode,
-                   stdFileMode)
-# if MIN_VERSION_unix(2,8,0)
-import           System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags,
-                   fdToHandle, openFd)
-#else
+                   nullFileMode, otherModes, ownerModes, ownerReadMode, setFdOwnerAndGroup,
+                   setFileMode)
 import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
-#endif
-import           System.Posix.Types (Fd, FileMode)
+import           System.Posix.Types (FileMode)
 import           System.Posix.User (getRealUserID)
 import           Text.Printf (printf)
 
@@ -57,7 +52,7 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
     -- it will be immediately turned into a Handle (which will be closed when
     -- the Handle is closed)
     bracketOnError
-      (openFileDescriptor path WriteOnly)
+      (openFd path WriteOnly (Just ownerModes) defaultFileFlags)
       closeFd
       (\fd -> setFdOwnerAndGroup fd user (-1) >> pure fd)
   case ownedFile of
@@ -67,7 +62,7 @@ handleFileForWritingWithOwnerPermissionImpl path f = do
       bracket
         (fdToHandle fd)
         IO.hClose
-        (runExceptT . fileIOExceptT path . const . f)
+        (runExceptT . handleIOExceptT (FileIOError path) . f)
 
 writeSecretsImpl :: FilePath -> [Char] -> [Char] -> (a -> BS.ByteString) -> [a] -> IO ()
 writeSecretsImpl outDir prefix suffix secretOp xs =
@@ -99,38 +94,4 @@ checkVrfFilePermissionsImpl (File vrfPrivKey) = do
   hasGroupPermissions :: FileMode -> Bool
   hasGroupPermissions fm' = fm' `hasPermission` groupModes
 
--- | Opens a file from disk.
-openFileDescriptor :: FilePath -> OpenMode -> IO Fd
-# if MIN_VERSION_unix(2,8,0)
-openFileDescriptor fp openMode =
-    openFd fp openMode fileFlags
-  where
-    fileFlags =
-      case openMode of
-        ReadOnly ->
-          defaultFileFlags
-        ReadWrite ->
-          defaultFileFlags { creat = Just stdFileMode }
-        WriteOnly ->
-          defaultFileFlags { creat = Just stdFileMode }
-
-# else
-openFileDescriptor fp openMode =
-    openFd fp openMode fMode fileFlags
-  where
-    (fMode, fileFlags) =
-      case openMode of
-        ReadOnly ->
-          ( Nothing
-          , defaultFileFlags
-          )
-        ReadWrite ->
-          ( Just stdFileMode
-          , defaultFileFlags
-          )
-        WriteOnly ->
-          ( Just stdFileMode
-          , defaultFileFlags
-          )
-# endif
 #endif
