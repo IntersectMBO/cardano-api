@@ -255,7 +255,9 @@ test-suite cardano-api-test
                       , cardano-ledger-api >= 1.3
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.4
                       , containers
+                      , directory
                       , hedgehog >= 1.1
+                      , hedgehog-extras
                       , hedgehog-quickcheck
                       , mtl
                       , QuickCheck
@@ -265,6 +267,7 @@ test-suite cardano-api-test
 
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.Eras
+                        Test.Cardano.Api.IO
                         Test.Cardano.Api.Json
                         Test.Cardano.Api.KeysByron
                         Test.Cardano.Api.Ledger
