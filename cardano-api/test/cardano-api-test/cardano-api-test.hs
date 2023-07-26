@@ -6,6 +6,7 @@ import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncod
 
 import qualified Test.Cardano.Api.Crypto
 import qualified Test.Cardano.Api.Eras
+import qualified Test.Cardano.Api.IO
 import qualified Test.Cardano.Api.Json
 import qualified Test.Cardano.Api.KeysByron
 import qualified Test.Cardano.Api.Ledger
@@ -35,6 +36,7 @@ tests =
   testGroup "Cardano.Api"
     [ Test.Cardano.Api.Crypto.tests
     , Test.Cardano.Api.Eras.tests
+    , Test.Cardano.Api.IO.tests
     , Test.Cardano.Api.Json.tests
     , Test.Cardano.Api.KeysByron.tests
     , Test.Cardano.Api.Ledger.tests
