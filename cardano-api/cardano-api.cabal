@@ -93,6 +93,7 @@ library internal
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Query.Expr
+                        Cardano.Api.Query.Types
                         Cardano.Api.ReexposeLedger
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
