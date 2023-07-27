@@ -1,7 +1,7 @@
 cabal-version: 3.4
 
 name:                   cardano-api
-version:                8.10.0.0
+version:                8.10.1.0
 synopsis:               The cardano api
 description:            The cardano api.
 category:               Cardano,
@@ -197,11 +197,11 @@ library
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
                         Cardano.Api.Shelley
-                        -- TODO: Eliminate Cardano.Api.Ledger when 
-                        -- cardano-api only depends on modules 
-                        -- exposed by cardano-api-ledger  
-                        Cardano.Api.Ledger 
- 
+                        -- TODO: Eliminate Cardano.Api.Ledger when
+                        -- cardano-api only depends on modules
+                        -- exposed by cardano-api-ledger
+                        Cardano.Api.Ledger
+
 
   build-depends:        bytestring
                       , cardano-api:internal
@@ -269,7 +269,9 @@ test-suite cardano-api-test
                       , cardano-ledger-api >= 1.3
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.4
                       , containers
+                      , directory
                       , hedgehog >= 1.1
+                      , hedgehog-extras
                       , hedgehog-quickcheck
                       , mtl
                       , QuickCheck
@@ -279,6 +281,7 @@ test-suite cardano-api-test
 
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.Eras
+                        Test.Cardano.Api.IO
                         Test.Cardano.Api.Json
                         Test.Cardano.Api.KeysByron
                         Test.Cardano.Api.Ledger
