@@ -69,6 +69,7 @@ module Cardano.Api.Eras
 
 import           Cardano.Api.HasTypeProxy
 
+import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
@@ -623,7 +624,16 @@ cardanoEraConstraints = \case
 
 shelleyBasedEraConstraints :: ()
   => ShelleyBasedEra era
-  -> (Typeable era => IsShelleyBasedEra era => a)
+  -> (()
+      => Typeable era
+      => IsShelleyBasedEra era
+      => L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+      => L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+      => L.EraPParams (ShelleyLedgerEra era)
+      => IsShelleyBasedEra era
+      => L.Era (ShelleyLedgerEra era)
+      => C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+      => a)
   -> a
 shelleyBasedEraConstraints = \case
   ShelleyBasedEraShelley -> id
