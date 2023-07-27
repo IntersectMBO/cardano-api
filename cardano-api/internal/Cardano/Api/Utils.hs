@@ -146,61 +146,37 @@ bounded t = eitherReader $ \s -> do
   when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
   pure (fromIntegral i)
 
+-- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainEraCryptoConstraints
   :: ShelleyBasedEra era
   -> ((EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto) => a)
   -> a
-obtainEraCryptoConstraints ShelleyBasedEraShelley f = f
-obtainEraCryptoConstraints ShelleyBasedEraAllegra f = f
-obtainEraCryptoConstraints ShelleyBasedEraMary    f = f
-obtainEraCryptoConstraints ShelleyBasedEraAlonzo  f = f
-obtainEraCryptoConstraints ShelleyBasedEraBabbage f = f
-obtainEraCryptoConstraints ShelleyBasedEraConway  f = f
+obtainEraCryptoConstraints = shelleyBasedEraConstraints
 
+-- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainCryptoConstraints
   :: ShelleyBasedEra era
   -> ((Crypto (EraCrypto (ShelleyLedgerEra era))) => a)
   -> a
-obtainCryptoConstraints ShelleyBasedEraShelley f = f
-obtainCryptoConstraints ShelleyBasedEraAllegra f = f
-obtainCryptoConstraints ShelleyBasedEraMary    f = f
-obtainCryptoConstraints ShelleyBasedEraAlonzo  f = f
-obtainCryptoConstraints ShelleyBasedEraBabbage f = f
-obtainCryptoConstraints ShelleyBasedEraConway  f = f
+obtainCryptoConstraints = shelleyBasedEraConstraints
 
-
+-- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainEraPParamsConstraint
   :: ShelleyBasedEra era
   -> (Ledger.EraPParams (ShelleyLedgerEra era) => a)
   -> a
-obtainEraPParamsConstraint ShelleyBasedEraShelley f = f
-obtainEraPParamsConstraint ShelleyBasedEraAllegra f = f
-obtainEraPParamsConstraint ShelleyBasedEraMary    f = f
-obtainEraPParamsConstraint ShelleyBasedEraAlonzo  f = f
-obtainEraPParamsConstraint ShelleyBasedEraBabbage f = f
-obtainEraPParamsConstraint ShelleyBasedEraConway  f = f
+obtainEraPParamsConstraint = shelleyBasedEraConstraints
 
+-- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainEraConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> ( (IsShelleyBasedEra era, Ledger.Era ledgerera) => a) -> a
-obtainEraConstraints ShelleyBasedEraShelley f = f
-obtainEraConstraints ShelleyBasedEraAllegra f = f
-obtainEraConstraints ShelleyBasedEraMary    f = f
-obtainEraConstraints ShelleyBasedEraAlonzo  f = f
-obtainEraConstraints ShelleyBasedEraBabbage f = f
-obtainEraConstraints ShelleyBasedEraConway  f = f
+obtainEraConstraints = shelleyBasedEraConstraints
 
-
+-- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainSafeToHashConstraint
   :: ShelleyBasedEra era
   -> (HashAlgorithm (Ledger.HASH (EraCrypto (ShelleyLedgerEra era))) => a)
   -> a
-obtainSafeToHashConstraint ShelleyBasedEraShelley f = f
-obtainSafeToHashConstraint ShelleyBasedEraAllegra f = f
-obtainSafeToHashConstraint ShelleyBasedEraMary    f = f
-obtainSafeToHashConstraint ShelleyBasedEraAlonzo  f = f
-obtainSafeToHashConstraint ShelleyBasedEraBabbage f = f
-obtainSafeToHashConstraint ShelleyBasedEraConway  f = f
-
-
+obtainSafeToHashConstraint = shelleyBasedEraConstraints

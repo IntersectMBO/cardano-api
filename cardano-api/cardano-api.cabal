@@ -57,6 +57,8 @@ library internal
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
+                        Cardano.Api.Eras.Constraints
+                        Cardano.Api.Eras.Core
                         Cardano.Api.Error
                         Cardano.Api.Feature
                         Cardano.Api.Feature.ConwayEraOnwards
@@ -160,7 +162,7 @@ library internal
                       , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano >= 0.7
                       , ouroboros-consensus-diffusion >= 0.7
-                      , ouroboros-consensus-protocol >= 0.5
+                      , ouroboros-consensus-protocol >= 0.5.0.4
                       , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework

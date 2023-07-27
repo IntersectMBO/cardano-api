@@ -162,7 +162,8 @@ instance Show (Block era) where
         )
 
 getBlockTxs :: forall era . Block era -> [Tx era]
-getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
+getBlockTxs = \case
+  ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw } ->
     case byronBlockRaw of
       Byron.ABOBBoundary{} -> [] -- no txs in EBBs
       Byron.ABOBBlock Byron.ABlock {
@@ -171,9 +172,9 @@ getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
               Byron.bodyTxPayload = Byron.ATxPayload txs
             }
         } -> map ByronTx txs
-getBlockTxs (ShelleyBlock era Consensus.ShelleyBlock{Consensus.shelleyBlockRaw}) =
-    withShelleyBasedEraConstraintForConsensus era $
-      getShelleyBlockTxs era shelleyBlockRaw
+  ShelleyBlock sbe Consensus.ShelleyBlock{Consensus.shelleyBlockRaw} ->
+    shelleyBasedEraConstraints sbe $
+      getShelleyBlockTxs sbe shelleyBlockRaw
 
 
 getShelleyBlockTxs :: forall era ledgerera blockheader.
