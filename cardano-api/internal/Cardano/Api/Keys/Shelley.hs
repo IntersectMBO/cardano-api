@@ -1480,7 +1480,7 @@ instance HasTypeProxy DRepKey where
 instance Key DRepKey where
 
     newtype VerificationKey DRepKey =
-        DRepVerificationKey (Shelley.VKey {- TODO cip-1694: replace with Shelley.DRep -} Shelley.StakePool StandardCrypto)
+        DRepVerificationKey (Shelley.VKey Shelley.Voting StandardCrypto)
       deriving stock (Eq)
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey DRepKey)
       deriving newtype (ToCBOR, FromCBOR)
@@ -1539,7 +1539,7 @@ instance SerialiseAsBech32 (SigningKey DRepKey) where
     bech32PrefixesPermitted _ = ["drep_sk"]
 
 newtype instance Hash DRepKey =
-    DRepKeyHash { unDRepKeyHash :: Shelley.KeyHash {- TODO cip-1694: replace with Shelley.DRep -} Shelley.StakePool StandardCrypto }
+    DRepKeyHash { unDRepKeyHash :: Shelley.KeyHash Shelley.Voting StandardCrypto }
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)
