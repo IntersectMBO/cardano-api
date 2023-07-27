@@ -67,6 +67,8 @@ module Cardano.Api.Certificate (
     AsType(..),
 
     -- * Internal functions
+    shelleyCertificateConstraints,
+    conwayCertificateConstraints,
     filterUnRegCreds,
     selectStakeCredential,
   ) where
@@ -816,6 +818,7 @@ shelleyCertificateConstraints
   -> (( Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
       , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
       , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
+      , IsShelleyBasedEra era
       ) => a)
   -> a
 shelleyCertificateConstraints = \case
@@ -830,6 +833,7 @@ conwayCertificateConstraints
   -> (( Ledger.ConwayEraTxCert (ShelleyLedgerEra era)
       , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
       , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
+      , IsShelleyBasedEra era
       ) => a)
   -> a
 conwayCertificateConstraints = \case
