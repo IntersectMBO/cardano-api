@@ -268,13 +268,17 @@ module Cardano.Api.Shelley
     shelleyPayAddrToPlutusPubKHash,
     toConsensusGenTx,
     fromAlonzoCostModels,
-    --TODO: arrange not to export these
+    -- TODO: arrange not to export these
     toShelleyNetwork,
     obtainCryptoConstraints,
     obtainEraConstraints,
     obtainEraPParamsConstraint,
     obtainEraCryptoConstraints,
     fromShelleyPoolParams,
+
+    -- Era based
+    shelleyCertificateConstraints,
+    conwayCertificateConstraints,
 
   ) where
 
