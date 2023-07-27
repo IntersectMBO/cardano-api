@@ -120,6 +120,7 @@ import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+import qualified Ouroboros.Consensus.Util.Singletons as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
@@ -656,26 +657,27 @@ toConsensusQueryShelleyBased erainmode (QueryStakeDelegDeposits stakeCreds) =
     stakeCreds' = Set.map toShelleyStakeCredential stakeCreds
 
 consensusQueryInEraInMode
-  :: forall era mode erablock modeblock result result' xs.
+  :: forall era mode erablock modeblock result result' fp xs.
      ConsensusBlockForEra era   ~ erablock
   => ConsensusBlockForMode mode ~ modeblock
   => modeblock ~ Consensus.HardForkBlock xs
   => Consensus.HardForkQueryResult xs result ~ result'
+  => Consensus.SingI fp
   => EraInMode era mode
-  -> Consensus.BlockQuery erablock  result
+  -> Consensus.BlockQuery erablock fp result
   -> Consensus.Query modeblock result'
-consensusQueryInEraInMode erainmode =
-    Consensus.BlockQuery
-  . case erainmode of
-      ByronEraInByronMode     -> Consensus.DegenQuery
-      ShelleyEraInShelleyMode -> Consensus.DegenQuery
-      ByronEraInCardanoMode   -> Consensus.QueryIfCurrentByron
-      ShelleyEraInCardanoMode -> Consensus.QueryIfCurrentShelley
-      AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
-      MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
-      AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
-      BabbageEraInCardanoMode -> Consensus.QueryIfCurrentBabbage
-      ConwayEraInCardanoMode -> Consensus.QueryIfCurrentConway
+consensusQueryInEraInMode erainmode b =
+    Consensus.BlockQuery @fp
+  $ case erainmode of
+      ByronEraInByronMode     -> Consensus.DegenQuery b
+      ShelleyEraInShelleyMode -> Consensus.DegenQuery b
+      ByronEraInCardanoMode   -> Consensus.QueryIfCurrentByron b
+      ShelleyEraInCardanoMode -> Consensus.QueryIfCurrentShelley b
+      AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra b
+      MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary b
+      AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo b
+      BabbageEraInCardanoMode -> Consensus.QueryIfCurrentBabbage b
+      ConwayEraInCardanoMode  -> Consensus.QueryIfCurrentConway b
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
@@ -810,13 +812,13 @@ fromConsensusQueryResult (QueryInEra ConwayEraInCardanoMode
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased
-  :: forall era ledgerera protocol result result'.
+  :: forall era ledgerera protocol result fp result'.
      ShelleyLedgerEra era ~ ledgerera
   => Core.EraCrypto ledgerera ~ Consensus.StandardCrypto
   => ConsensusProtocol era ~ protocol
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
-  -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) result'
+  -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) fp result'
   -> result'
   -> result
 fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =

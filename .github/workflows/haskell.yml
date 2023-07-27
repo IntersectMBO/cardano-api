@@ -6,21 +6,37 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.sys.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["8.10.7", "9.2.7", "9.6.2"]
+        ghc: ["8.10.7", "9.2.8", "9.6.2"]
         cabal: ["3.10.1.0"]
         os: [ubuntu-latest, macos-latest, windows-latest]
+        sys:
+          - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
+          - { os: macos-latest, shell: bash }
+          - { os: ubuntu-latest, shell: bash }
         exclude:
-          - ghc: "9.2.7"
-            os: macos-latest
+          - ghc: "9.2.8"
+            sys.os: macos-latest
+
+    defaults:
+        run:
+          shell: ${{ matrix.sys.shell }}
 
     env:
+      MSYSTEM: MINGW64
+
+      # do not ever change to $HOME by yourself.
+      CHERE_INVOKING: 1
+
+      # do we want to inherit the path?
+      MSYS2_PATH_TYPE: inherit
+
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-12"
+      CABAL_CACHE_VERSION: "2023-08-01"
 
     concurrency:
       group: >
@@ -29,7 +45,7 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
+        f+${{ matrix.sys.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
 
@@ -42,25 +58,43 @@ jobs:
         c+${{ github.job }}
         d+${{ matrix.ghc }}
         e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
+        f+${{ matrix.sys.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
+    - name: Install Base libs
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false
+
     - name: Install Haskell
-      uses: input-output-hk/actions/haskell@latest
       id: setup-haskell
+      uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
-  
-    - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
-      with:
-        use-sodium-vrf: true # default is true
 
     - uses: actions/checkout@v3
-  
+
+    - name: Install lmdb
+      run: |
+        if [[ ${{ runner.os }} == "Windows" ]]; then
+          /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-lmdb
+        elif [[ ${{ runner.os }} == "macOS" ]]; then
+          brew install lmdb
+          sudo cp ./.github/workflows/lmdb.pc /usr/local/lib/pkgconfig
+        else
+          sudo apt install liblmdb-dev
+        fi
+
     - name: Cabal update
       run: cabal update
+
+    - name: Configure build
+      shell: bash
+      run: |
+        cp .github/workflows/cabal.project.local.ci cabal.project.local
+        echo "# cabal.project.local"
+        cat cabal.project.local
 
     - name: Build dry run
       run: cabal build all --dry-run --minimize-conflict-set
@@ -109,9 +143,6 @@ jobs:
 
     - name: Run tests
       env:
-        # these two are msys2 env vars, they have no effect on non-msys2 installs.
-        MSYS2_PATH_TYPE: inherit
-        MSYSTEM: MINGW64
         TMPDIR: ${{ runner.temp }}
         TMP: ${{ runner.temp }}
         KEEP_WORKSPACE: 1
@@ -137,7 +168,7 @@ jobs:
     - name: Save Artifact
       uses: actions/upload-artifact@v1
       with:
-        name: artifacts-${{ matrix.os }}-${{ matrix.ghc }}
+        name: artifacts-${{ matrix.sys.os }}-${{ matrix.ghc }}
         path: ./artifacts
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
