@@ -1,5 +1,24 @@
 # Changelog for cardano-api
 
+## 8.10.1.0
+
+- Fix permissions of file written using handleFileForWritingWithOwnerPermissionImpl
+  (bugfix; no-api-changes)
+  [PR 141](https://github.com/input-output-hk/cardano-api/pull/141)
+
+- Support more constraints for Conway witnesses
+  - `conwayEraOnwardsConstraints`
+  - `shelleyToBabbageEraConstraints`
+  New types:
+  - AnyConwayEraOnwards
+  - AnyShelleyToBabbageEra
+  (feature; compatible)
+  [PR 137](https://github.com/input-output-hk/cardano-api/pull/137)
+
+- Expose functions for errors messages testing in golden files
+  (feature; compatible)
+  [PR 126](https://github.com/input-output-hk/cardano-api/pull/126)
+
 ## 8.10.0.0
 
 - Improved feature ergonomics
