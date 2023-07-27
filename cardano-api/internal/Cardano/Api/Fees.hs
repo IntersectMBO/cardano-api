@@ -652,21 +652,9 @@ evaluateTransactionBalance bpp poolids stakeDelegDeposits utxo
                            (ShelleyTxBody sbe txbody _ _ _ _) =
     withLedgerConstraints
       sbe
-      (getShelleyEraTxBodyConstraint sbe evalAdaOnly)
-      (getShelleyEraTxBodyConstraint sbe evalMultiAsset)
+      (shelleyBasedEraConstraints sbe evalAdaOnly)
+      (shelleyBasedEraConstraints sbe evalMultiAsset)
   where
-    getShelleyEraTxBodyConstraint
-      :: forall era' a.
-         ShelleyBasedEra era'
-      -> (ShelleyEraTxBody (ShelleyLedgerEra era') => a)
-      -> a
-    getShelleyEraTxBodyConstraint ShelleyBasedEraShelley x = x
-    getShelleyEraTxBodyConstraint ShelleyBasedEraMary x = x
-    getShelleyEraTxBodyConstraint ShelleyBasedEraAllegra x = x
-    getShelleyEraTxBodyConstraint ShelleyBasedEraAlonzo x = x
-    getShelleyEraTxBodyConstraint ShelleyBasedEraBabbage x = x
-    getShelleyEraTxBodyConstraint ShelleyBasedEraConway x = x
-
     isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
