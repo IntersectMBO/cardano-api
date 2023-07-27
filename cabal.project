@@ -13,17 +13,14 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-07-10T22:41:49Z
-  , cardano-haskell-packages 2023-07-12T13:59:36Z
+  , hackage.haskell.org 2023-07-26T23:47:54Z
+  , cardano-haskell-packages 2023-08-02T11:20:00Z
 
 packages:
     cardano-api
     cardano-api-gen
 
-package cardano-api
-  ghc-options: -Werror
-
-package cardano-api-gen
+program-options
   ghc-options: -Werror
 
 package cryptonite
@@ -38,14 +35,19 @@ test-show-details: direct
 -- Always write GHC env files, because they are needed for ghci.
 write-ghc-environment-files: always
 
-if impl(ghc >= 9.6)
-  allow-newer:
-    -- Only really needed because `cardano-ledger-byron-test` has not yet been released to CHaP
-    -- and its not possible to specify `cardano-ledger-byron-test:base` because the dependencies
-    -- of `cardano-ledger-byron-test` also do not permit the version of `base` that `ghc-9.6`
-    -- provides.
-    , *:base
-
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- utxo-hd
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: 9f2132be9367f27de923df122a41ab7def116d6f
+  --sha256: 1jmn92hjl041wpy70a71mcnfnm7bqbgj6ayl7nz5cmv06j7hz8k1
+  subdir:
+   ouroboros-consensus
+   ouroboros-consensus-cardano
+   ouroboros-consensus-cardano-legacy-block
+   ouroboros-consensus-protocol
+   ouroboros-consensus-diffusion
