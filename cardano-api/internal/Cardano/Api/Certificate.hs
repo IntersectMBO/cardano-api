@@ -818,11 +818,12 @@ shelleyCertificateConstraints
       , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
       ) => a)
   -> a
-shelleyCertificateConstraints ShelleyToBabbageEraBabbage f = f
-shelleyCertificateConstraints ShelleyToBabbageEraAlonzo f = f
-shelleyCertificateConstraints ShelleyToBabbageEraMary    f = f
-shelleyCertificateConstraints ShelleyToBabbageEraAllegra  f = f
-shelleyCertificateConstraints ShelleyToBabbageEraShelley f = f
+shelleyCertificateConstraints = \case
+  ShelleyToBabbageEraBabbage  -> id
+  ShelleyToBabbageEraAlonzo   -> id
+  ShelleyToBabbageEraMary     -> id
+  ShelleyToBabbageEraAllegra  -> id
+  ShelleyToBabbageEraShelley  -> id
 
 conwayCertificateConstraints
   :: ConwayEraOnwards era
@@ -831,5 +832,5 @@ conwayCertificateConstraints
       , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
       ) => a)
   -> a
-conwayCertificateConstraints ConwayEraOnwardsConway f = f
-
+conwayCertificateConstraints = \case
+  ConwayEraOnwardsConway      -> id

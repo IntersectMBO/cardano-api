@@ -14,7 +14,7 @@ module Cardano.Api.Query.Types
   , toDebugLedgerStatePair
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 
 import           Cardano.Binary
 import           Cardano.Ledger.Binary
