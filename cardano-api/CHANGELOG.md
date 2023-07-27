@@ -1,5 +1,20 @@
 # Changelog for cardano-api
 
+## 8.10.2.0
+
+- Provide additional constraints in `shelleyBasedEraConstraints`.  This will obsolete the following:
+  - `obtainEraCryptoConstraints`
+  - `obtainCryptoConstraints`
+  - `obtainEraPParamsConstraint`
+  - `obtainSafeToHashConstraint`
+  Also provide additional constraints in `conwayEraOnwardsConstraints` and `shelleyToBabbageEraConstraints`
+  (feature; compatible)
+  [PR 143](https://github.com/input-output-hk/cardano-api/pull/143)
+
+- Expose `shelleyCertificateConstraints` and `conwayCertificateConstraints`
+  (feature; compatible)
+  [PR 147](https://github.com/input-output-hk/cardano-api/pull/147)
+
 ## 8.10.1.0
 
 - Fix permissions of file written using handleFileForWritingWithOwnerPermissionImpl
