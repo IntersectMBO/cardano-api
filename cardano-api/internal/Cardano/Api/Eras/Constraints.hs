@@ -16,6 +16,7 @@ module Cardano.Api.Eras.Constraints
 
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Query.Types
 
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
@@ -68,6 +69,7 @@ type ShelleyBasedEraConstraints era ledgerera =
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsShelleyBasedEra era
+  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )
