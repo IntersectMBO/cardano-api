@@ -190,6 +190,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
@@ -2741,14 +2742,14 @@ fromLedgerProposalProcedure
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxGovernanceActions era
 fromLedgerProposalProcedure sbe body =
-  case governanceActionsSupportedInEra sbe of
-    Nothing     -> TxGovernanceActionsNone
-    Just gasice -> TxGovernanceActions gasice (getProposals gasice body)
+  case featureInShelleyBasedEra Nothing Just sbe of
+    Nothing -> TxGovernanceActionsNone
+    Just w  -> TxGovernanceActions w (getProposals w body)
   where
-    getProposals :: TxGovernanceActionSupportedInEra era
+    getProposals :: ConwayEraOnwards era
                  -> Ledger.TxBody (ShelleyLedgerEra era)
                  -> [Proposal era]
-    getProposals GovernanceActionsSupportedInConwayEra body_ = fmap Proposal . toList $ body_ ^. L.proposalProceduresTxBodyL
+    getProposals ConwayEraOnwardsConway body_ = fmap Proposal . toList $ body_ ^. L.proposalProceduresTxBodyL
 
 
 fromLedgerTxVotes :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxVotes era
