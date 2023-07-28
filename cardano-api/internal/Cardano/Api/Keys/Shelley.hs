@@ -769,6 +769,13 @@ instance CastVerificationKeyRole CommitteeHotKey PaymentKey where
     castVerificationKey (CommitteeHotVerificationKey (Shelley.VKey vk)) =
       PaymentVerificationKey (Shelley.VKey vk)
 
+instance SerialiseAsBech32 (VerificationKey CommitteeHotKey) where
+    bech32PrefixFor         _ =  "drep_vk"
+    bech32PrefixesPermitted _ = ["drep_vk"]
+
+instance SerialiseAsBech32 (SigningKey CommitteeHotKey) where
+    bech32PrefixFor         _ =  "drep_sk"
+    bech32PrefixesPermitted _ = ["drep_sk"]
 
 --
 -- Constitutional Committee Cold Keys
@@ -867,6 +874,23 @@ instance HasTextEnvelope (SigningKey CommitteeColdKey) where
 instance CastVerificationKeyRole CommitteeColdKey PaymentKey where
     castVerificationKey (CommitteeColdVerificationKey (Shelley.VKey vk)) =
       PaymentVerificationKey (Shelley.VKey vk)
+
+instance SerialiseAsBech32 (Hash CommitteeColdKey) where
+    bech32PrefixFor         _ =  "committee_cold"
+    bech32PrefixesPermitted _ = ["committee_cold"]
+
+
+instance SerialiseAsBech32 (Hash StakePoolKey) where
+    bech32PrefixFor         _ =  "pool"
+    bech32PrefixesPermitted _ = ["pool"]
+
+instance SerialiseAsBech32 (VerificationKey CommitteeColdKey) where
+    bech32PrefixFor         _ =  "drep_vk"
+    bech32PrefixesPermitted _ = ["drep_vk"]
+
+instance SerialiseAsBech32 (SigningKey CommitteeColdKey) where
+    bech32PrefixFor         _ =  "drep_sk"
+    bech32PrefixesPermitted _ = ["drep_sk"]
 
 --
 -- Shelley genesis extended ed25519 keys
@@ -1672,10 +1696,6 @@ instance SerialiseAsRawBytes (Hash CommitteeKey) where
       maybeToRight
         (SerialiseAsRawBytesError "Unable to deserialise Hash CommitteeKey")
         (CommitteeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
-
-instance SerialiseAsBech32 (Hash CommitteeKey) where
-    bech32PrefixFor         _ =  "drep"
-    bech32PrefixesPermitted _ = ["drep"]
 
 instance ToJSON (Hash CommitteeKey) where
     toJSON = toJSON . serialiseToBech32
