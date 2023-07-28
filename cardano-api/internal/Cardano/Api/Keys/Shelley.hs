@@ -20,7 +20,6 @@ module Cardano.Api.Keys.Shelley (
     CommitteeColdKey,
     CommitteeHotKey,
     DRepKey,
-    CommitteeKey,
     PaymentKey,
     PaymentExtendedKey,
     StakeKey,
@@ -781,8 +780,6 @@ instance SerialiseAsBech32 (SigningKey CommitteeHotKey) where
 -- Constitutional Committee Cold Keys
 --
 
-type KeyRoleCommitteeColdKey = Shelley.Genesis -- TODO CIP-1694 this should be a newtype Shelley.CommitteeColdKey
-
 data CommitteeColdKey
 
 instance HasTypeProxy CommitteeColdKey where
@@ -792,7 +789,7 @@ instance HasTypeProxy CommitteeColdKey where
 instance Key CommitteeColdKey where
 
     newtype VerificationKey CommitteeColdKey =
-        CommitteeColdVerificationKey (Shelley.VKey KeyRoleCommitteeColdKey StandardCrypto)
+        CommitteeColdVerificationKey (Shelley.VKey Shelley.CommitteeColdKey StandardCrypto)
       deriving stock (Eq)
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeColdKey)
       deriving newtype (ToCBOR, FromCBOR)
@@ -843,7 +840,7 @@ instance SerialiseAsRawBytes (SigningKey CommitteeColdKey) where
 
 
 newtype instance Hash CommitteeColdKey =
-    CommitteeColdKeyHash (Shelley.KeyHash KeyRoleCommitteeColdKey StandardCrypto)
+    CommitteeColdKeyHash (Shelley.KeyHash Shelley.CommitteeColdKey StandardCrypto)
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeColdKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeColdKey)
@@ -878,11 +875,6 @@ instance CastVerificationKeyRole CommitteeColdKey PaymentKey where
 instance SerialiseAsBech32 (Hash CommitteeColdKey) where
     bech32PrefixFor         _ =  "committee_cold"
     bech32PrefixesPermitted _ = ["committee_cold"]
-
-
-instance SerialiseAsBech32 (Hash StakePoolKey) where
-    bech32PrefixFor         _ =  "pool"
-    bech32PrefixesPermitted _ = ["pool"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdKey) where
     bech32PrefixFor         _ =  "drep_vk"
@@ -1614,113 +1606,3 @@ instance HasTextEnvelope (SigningKey DRepKey) where
 -- Committee keys
 --
 
-data CommitteeKey
-
-instance HasTypeProxy CommitteeKey where
-    data AsType CommitteeKey = AsCommitteeKey
-    proxyToAsType _ = AsCommitteeKey
-
-instance Key CommitteeKey where
-
-    newtype VerificationKey CommitteeKey =
-        CommitteeVerificationKey (Shelley.VKey {- TODO cip-1694: replace with Shelley.Committee -} Shelley.CommitteeHotKey StandardCrypto)
-      deriving stock (Eq)
-      deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeKey)
-      deriving newtype (ToCBOR, FromCBOR)
-      deriving anyclass SerialiseAsCBOR
-
-    newtype SigningKey CommitteeKey =
-        CommitteeSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
-      deriving (Show, IsString) via UsingRawBytesHex (SigningKey CommitteeKey)
-      deriving newtype (ToCBOR, FromCBOR)
-      deriving anyclass SerialiseAsCBOR
-
-    deterministicSigningKey :: AsType CommitteeKey -> Crypto.Seed -> SigningKey CommitteeKey
-    deterministicSigningKey AsCommitteeKey seed =
-        CommitteeSigningKey (Crypto.genKeyDSIGN seed)
-
-    deterministicSigningKeySeedSize :: AsType CommitteeKey -> Word
-    deterministicSigningKeySeedSize AsCommitteeKey =
-        Crypto.seedSizeDSIGN proxy
-      where
-        proxy :: Proxy (Shelley.DSIGN StandardCrypto)
-        proxy = Proxy
-
-    getVerificationKey :: SigningKey CommitteeKey -> VerificationKey CommitteeKey
-    getVerificationKey (CommitteeSigningKey sk) =
-        CommitteeVerificationKey (Shelley.VKey (Crypto.deriveVerKeyDSIGN sk))
-
-    verificationKeyHash :: VerificationKey CommitteeKey -> Hash CommitteeKey
-    verificationKeyHash (CommitteeVerificationKey vkey) =
-        CommitteeKeyHash (Shelley.hashKey vkey)
-
-instance SerialiseAsRawBytes (VerificationKey CommitteeKey) where
-    serialiseToRawBytes (CommitteeVerificationKey (Shelley.VKey vk)) =
-      Crypto.rawSerialiseVerKeyDSIGN vk
-
-    deserialiseFromRawBytes (AsVerificationKey AsCommitteeKey) bs =
-      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey CommitteeKey") $
-        CommitteeVerificationKey . Shelley.VKey <$>
-          Crypto.rawDeserialiseVerKeyDSIGN bs
-
-instance SerialiseAsRawBytes (SigningKey CommitteeKey) where
-    serialiseToRawBytes (CommitteeSigningKey sk) =
-      Crypto.rawSerialiseSignKeyDSIGN sk
-
-    deserialiseFromRawBytes (AsSigningKey AsCommitteeKey) bs =
-      maybe
-        (Left (SerialiseAsRawBytesError "Unable to deserialise SigningKey CommitteeKey"))
-        (Right . CommitteeSigningKey)
-        (Crypto.rawDeserialiseSignKeyDSIGN bs)
-
-instance SerialiseAsBech32 (VerificationKey CommitteeKey) where
-    bech32PrefixFor         _ =  "drep_vk"
-    bech32PrefixesPermitted _ = ["drep_vk"]
-
-instance SerialiseAsBech32 (SigningKey CommitteeKey) where
-    bech32PrefixFor         _ =  "drep_sk"
-    bech32PrefixesPermitted _ = ["drep_sk"]
-
-newtype instance Hash CommitteeKey =
-    CommitteeKeyHash { unCommitteeKeyHash :: Shelley.KeyHash {- TODO cip-1694: replace with Shelley.Committee -} Shelley.CommitteeHotKey StandardCrypto }
-  deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeKey)
-  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeKey)
-  deriving anyclass SerialiseAsCBOR
-
-instance SerialiseAsRawBytes (Hash CommitteeKey) where
-    serialiseToRawBytes (CommitteeKeyHash (Shelley.KeyHash vkh)) =
-      Crypto.hashToBytes vkh
-
-    deserialiseFromRawBytes (AsHash AsCommitteeKey) bs =
-      maybeToRight
-        (SerialiseAsRawBytesError "Unable to deserialise Hash CommitteeKey")
-        (CommitteeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
-
-instance ToJSON (Hash CommitteeKey) where
-    toJSON = toJSON . serialiseToBech32
-
-instance ToJSONKey (Hash CommitteeKey) where
-  toJSONKey = toJSONKeyText serialiseToBech32
-
-instance FromJSON (Hash CommitteeKey) where
-  parseJSON = withText "CommitteeId" $ \str ->
-    case deserialiseFromBech32 (AsHash AsCommitteeKey) str of
-      Left err ->
-        fail $ "Error deserialising Hash CommitteeKey: " <> Text.unpack str <>
-               " Error: " <> displayError err
-      Right h -> pure h
-
-instance HasTextEnvelope (VerificationKey CommitteeKey) where
-    textEnvelopeType _ = "CommitteeVerificationKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
-      where
-        proxy :: Proxy (Shelley.DSIGN StandardCrypto)
-        proxy = Proxy
-
-instance HasTextEnvelope (SigningKey CommitteeKey) where
-    textEnvelopeType _ = "CommitteeSigningKey_"
-                      <> fromString (Crypto.algorithmNameDSIGN proxy)
-      where
-        proxy :: Proxy (Shelley.DSIGN StandardCrypto)
-        proxy = Proxy
