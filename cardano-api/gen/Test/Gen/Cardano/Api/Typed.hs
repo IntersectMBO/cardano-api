@@ -1,7 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -126,13 +128,7 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Script (scriptInEraToRefScript)
-import           Cardano.Api.Shelley (GovernancePoll (..), GovernancePollAnswer (..), Hash (..),
-                   KESPeriod (KESPeriod),
-                   OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
-                   PlutusScript (PlutusScriptSerialised), ProtocolParameters (..),
-                   ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
-                   StakeCredential (StakeCredentialByKey), StakePoolKey,
-                   refInsScriptsAndInlineDatsSupportedInEra)
+import           Cardano.Api.Shelley
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -144,12 +140,14 @@ import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 
 import           Control.Applicative (Alternative (..), optional)
+import           Control.Monad
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
+import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word64)
@@ -160,9 +158,12 @@ import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Plutus
+import           Test.Cardano.Ledger.Conway.Arbitrary ()
+import           Test.Cardano.Ledger.Core.Arbitrary ()
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
 
 {- HLINT ignore "Reduce duplication" -}
@@ -668,8 +669,8 @@ genTxBodyContent era = do
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
-  txGovernanceActions <- return TxGovernanceActionsNone -- TODO: Conway era
-  txVotes <- return TxVotesNone -- TODO: Conway era
+  txGovernanceActions <- genTxGovernanceActions era
+  txVotes <- genTxVotes era
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
@@ -1107,3 +1108,27 @@ genGovernancePollAnswer =
  where
    genGovernancePollHash =
      GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
+
+genTxGovernanceActions :: CardanoEra era -> Gen (TxGovernanceActions era)
+genTxGovernanceActions era = fromMaybe (pure TxGovernanceActionsNone) $ do
+  sbe <- join $ requireShelleyBasedEra era
+  supported <- governanceActionsSupportedInEra sbe
+  let proposals = Gen.list (Range.constant 0 10) $ genProposal sbe supported
+  pure $ TxGovernanceActions supported <$> proposals
+  where
+    genProposal :: ShelleyBasedEra era
+                -> TxGovernanceActionSupportedInEra era
+                -> Gen (Proposal era)
+    genProposal sbe = shelleyBasedEraConstraints sbe $ fmap Proposal . \case
+      GovernanceActionsSupportedInConwayEra -> Q.arbitrary
+
+genTxVotes :: CardanoEra era -> Gen (TxVotes era)
+genTxVotes era = fromMaybe (pure TxVotesNone) $ do
+  sbe <- join $ requireShelleyBasedEra era
+  supported <- votesSupportedInEra sbe
+  let votes = Gen.list (Range.constant 0 10) $ genVote sbe
+  pure $ TxVotes supported <$> votes
+  where
+    genVote :: ShelleyBasedEra era -> Gen (VotingProcedure era)
+    genVote sbe = obtainEraConstraints sbe $ VotingProcedure <$> Q.arbitrary
+
