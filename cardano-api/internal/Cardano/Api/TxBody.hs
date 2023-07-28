@@ -2387,7 +2387,7 @@ createTransactionBody sbe txBodyContent =
         -> TxBodyContent BuildTx era
         -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
         -> L.TxBody (ShelleyLedgerEra era)
-      mkTxBody sbe' bc = obtainEraCryptoConstraints sbe' $
+      mkTxBody sbe' bc = shelleyBasedEraConstraints sbe' $
         mkCommonTxBody
           sbe'
           (txIns bc)
@@ -3467,7 +3467,7 @@ convCertificates
   :: ShelleyBasedEra era
   -> TxCertificates build era
   -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
-convCertificates sbe txCertificates = obtainEraCryptoConstraints sbe $
+convCertificates sbe txCertificates = shelleyBasedEraConstraints sbe $
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
     TxCertificates _ cs _ -> Seq.fromList (map (toShelleyCertificate sbe) cs)
@@ -4228,7 +4228,7 @@ collectTxBodyScriptWitnesses sbe TxBodyContent {
           -- The certs are indexed in list order
         | (ix, cert) <- zip [0..] certs
         , ScriptWitness _ witness <- maybeToList $ do
-                                       stakecred <- obtainEraCryptoConstraints sbe $ selectStakeCredential sbe cert
+                                       stakecred <- shelleyBasedEraConstraints sbe $ selectStakeCredential sbe cert
                                        Map.lookup stakecred witnesses
         ]
 

@@ -146,37 +146,37 @@ bounded t = eitherReader $ \s -> do
   when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
   pure (fromIntegral i)
 
--- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainEraCryptoConstraints
   :: ShelleyBasedEra era
   -> ((EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto) => a)
   -> a
 obtainEraCryptoConstraints = shelleyBasedEraConstraints
+{-# DEPRECATED obtainEraCryptoConstraints "Use shelleyBasedEraConstraints instead" #-}
 
--- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainCryptoConstraints
   :: ShelleyBasedEra era
   -> ((Crypto (EraCrypto (ShelleyLedgerEra era))) => a)
   -> a
 obtainCryptoConstraints = shelleyBasedEraConstraints
+{-# DEPRECATED obtainCryptoConstraints "Use shelleyBasedEraConstraints instead" #-}
 
--- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainEraPParamsConstraint
   :: ShelleyBasedEra era
   -> (Ledger.EraPParams (ShelleyLedgerEra era) => a)
   -> a
 obtainEraPParamsConstraint = shelleyBasedEraConstraints
+{-# DEPRECATED obtainEraPParamsConstraint "Use shelleyBasedEraConstraints instead" #-}
 
--- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainEraConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> ( (IsShelleyBasedEra era, Ledger.Era ledgerera) => a) -> a
 obtainEraConstraints = shelleyBasedEraConstraints
+{-# DEPRECATED obtainEraConstraints "Use shelleyBasedEraConstraints instead" #-}
 
--- Deprecated: Use shelleyBasedEraConstraints instead.
 obtainSafeToHashConstraint
   :: ShelleyBasedEra era
   -> (HashAlgorithm (Ledger.HASH (EraCrypto (ShelleyLedgerEra era))) => a)
   -> a
 obtainSafeToHashConstraint = shelleyBasedEraConstraints
+{-# DEPRECATED obtainSafeToHashConstraint "Use shelleyBasedEraConstraints instead" #-}
