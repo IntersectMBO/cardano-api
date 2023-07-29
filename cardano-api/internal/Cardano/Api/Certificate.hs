@@ -88,7 +88,6 @@ import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 import           Data.ByteString (ByteString)
@@ -604,16 +603,16 @@ selectStakeCredential
 selectStakeCredential sbe cert =
   case cert of
     ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert (Ledger.ShelleyDelegCert stakecred _))
-      -> Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential stakecred
+      -> Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential stakecred
     ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool (Ledger.RegPool poolParams))
       -> let poolCred = Ledger.KeyHashObj $ Ledger.ppId poolParams
-         in Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
+         in Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
 
     ConwayCertificate _ (Ledger.ConwayTxCertDeleg (Ledger.ConwayRegCert stakeCred _))
-      -> Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential stakeCred
+      -> Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential stakeCred
     ConwayCertificate _ (Ledger.ConwayTxCertPool (Ledger.RegPool poolParams))
       -> let poolCred = Ledger.KeyHashObj $ Ledger.ppId poolParams
-         in Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
+         in Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
 
     _                                                 -> Nothing
 
@@ -622,9 +621,9 @@ filterUnRegCreds
 filterUnRegCreds sbe cert =
   case cert of
     ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert (Ledger.ShelleyUnRegCert cred)) ->
-      Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential cred
+      Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential cred
     ConwayCertificate _ (Ledger.ConwayTxCertDeleg (Ledger.ConwayUnRegCert cred _)) ->
-      Just $ obtainEraCryptoConstraints sbe $ fromShelleyStakeCredential cred
+      Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential cred
     _  -> Nothing
 
 -- ----------------------------------------------------------------------------

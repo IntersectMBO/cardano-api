@@ -2,6 +2,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -18,7 +19,6 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
@@ -117,22 +117,25 @@ fromGovernanceAction
   => ShelleyBasedEra era
   -> Gov.GovernanceAction (ShelleyLedgerEra era)
   -> GovernanceAction
-fromGovernanceAction _ Gov.NoConfidence = MotionOfNoConfidence
-fromGovernanceAction sbe (Gov.NewConstitution h) =
-  ProposeNewConstitution $ obtainSafeToHashConstraint sbe $ originalBytes h
-fromGovernanceAction sbe (Gov.ParameterChange pparams) =
-  UpdatePParams $ fromLedgerPParamsUpdate sbe pparams
-fromGovernanceAction _ (Gov.HardForkInitiation pVer) =
-  InitiateHardfork pVer
-fromGovernanceAction _ (Gov.TreasuryWithdrawals withdrawlMap) =
-  let res = [ (fromShelleyStakeCredential lScred , fromShelleyLovelace coin)
-            | (lScred, coin) <- Map.toList withdrawlMap
-            ]
-  in TreasuryWithdrawal res
-fromGovernanceAction _ (Gov.NewCommittee proposedMembers quor) =
-  let stakeCred = map (StakeKeyHash . coerceKeyRole) $ Set.toList proposedMembers
-  in ProposeNewCommittee stakeCred quor
-fromGovernanceAction _ Gov.InfoAction = InfoAct
+fromGovernanceAction sbe = \case
+  Gov.NoConfidence ->
+    MotionOfNoConfidence
+  Gov.NewConstitution h ->
+    ProposeNewConstitution $ shelleyBasedEraConstraints sbe $ originalBytes h
+  Gov.ParameterChange pparams ->
+    UpdatePParams $ fromLedgerPParamsUpdate sbe pparams
+  Gov.HardForkInitiation pVer ->
+    InitiateHardfork pVer
+  Gov.TreasuryWithdrawals withdrawlMap ->
+    let res = [ (fromShelleyStakeCredential lScred , fromShelleyLovelace coin)
+              | (lScred, coin) <- Map.toList withdrawlMap
+              ]
+    in TreasuryWithdrawal res
+  Gov.NewCommittee proposedMembers quor ->
+    let stakeCred = map (StakeKeyHash . coerceKeyRole) $ Set.toList proposedMembers
+    in ProposeNewCommittee stakeCred quor
+  Gov.InfoAction ->
+    InfoAct
 
 newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era) }
 
@@ -169,7 +172,7 @@ createProposalProcedure
   -> GovernanceAction
   -> Proposal era
 createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
-  obtainEraConstraints sbe $ obtainEraCryptoConstraints sbe $
+  shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
       , Gov.pProcReturnAddr = retAddrh
@@ -183,7 +186,7 @@ fromProposalProcedure
   -> (Lovelace, Hash StakeKey, GovernanceAction)
 fromProposalProcedure sbe (Proposal pp) =
   ( fromShelleyLovelace $ Gov.pProcDeposit pp
-  , StakeKeyHash (obtainEraCryptoConstraints sbe (Gov.pProcReturnAddr pp))
-  , obtainEraCryptoConstraints sbe $ fromGovernanceAction sbe (Gov.pProcGovernanceAction pp)
+  , StakeKeyHash (shelleyBasedEraConstraints sbe (Gov.pProcReturnAddr pp))
+  , shelleyBasedEraConstraints sbe $ fromGovernanceAction sbe (Gov.pProcGovernanceAction pp)
   )
 

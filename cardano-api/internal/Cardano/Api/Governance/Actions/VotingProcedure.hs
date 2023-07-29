@@ -24,7 +24,6 @@ import           Cardano.Api.SerialiseCBOR (FromCBOR (fromCBOR), SerialiseAsCBOR
                    ToCBOR (toCBOR))
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxIn
-import           Cardano.Api.Utils
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.BaseTypes as Ledger
@@ -87,7 +86,7 @@ makeGoveranceActionId
   -> GovernanceActionId (ShelleyLedgerEra era)
 makeGoveranceActionId sbe txin =
   let Ledger.TxIn txid (Ledger.TxIx txix) = toShelleyTxIn txin
-  in obtainEraCryptoConstraints sbe
+  in shelleyBasedEraConstraints sbe
       $ GovernanceActionId
       $ Ledger.GovernanceActionId
           { Ledger.gaidTxId = txid
@@ -151,7 +150,7 @@ eraDecodeVotingCredential
   -> ByteString
   -> Either Plain.DecoderError (VotingCredential era)
 eraDecodeVotingCredential sbe bs =
-  obtainCryptoConstraints sbe $
+  shelleyBasedEraConstraints sbe $
     case Plain.decodeFull bs of
       Left e -> Left e
       Right x -> Right $ VotingCredential x
@@ -170,7 +169,7 @@ createVotingProcedure
   -> GovernanceActionId (ShelleyLedgerEra era)
   -> VotingProcedure era
 createVotingProcedure sbe vChoice vt (GovernanceActionId govActId) =
-  obtainEraConstraints sbe $ obtainEraCryptoConstraints sbe
+  shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe
     $ VotingProcedure $ Ledger.VotingProcedure
       { Ledger.vProcGovActionId = govActId
       , Ledger.vProcVoter = toVoterRole sbe vt
@@ -184,15 +183,15 @@ newtype VotingProcedure era = VotingProcedure
   deriving (Show, Eq)
 
 instance IsShelleyBasedEra era => ToCBOR (VotingProcedure era) where
-  toCBOR (VotingProcedure vp) = obtainEraConstraints sbe $ Shelley.toEraCBOR @(ShelleyLedgerEra era) vp
+  toCBOR (VotingProcedure vp) = shelleyBasedEraConstraints sbe $ Shelley.toEraCBOR @(ShelleyLedgerEra era) vp
     where sbe = shelleyBasedEra @era
 
 instance IsShelleyBasedEra era => FromCBOR (VotingProcedure era) where
-  fromCBOR = obtainEraConstraints (shelleyBasedEra @era) $ VotingProcedure <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+  fromCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) $ VotingProcedure <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
 
 instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedure era) where
-  serialiseToCBOR = obtainEraConstraints (shelleyBasedEra @era) CBOR.serialize'
-  deserialiseFromCBOR _proxy = obtainEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
+  serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
+  deserialiseFromCBOR _proxy = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
 
 instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedure era) where
   textEnvelopeType _ = "Governance vote"
