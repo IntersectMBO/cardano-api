@@ -1124,11 +1124,10 @@ genTxGovernanceActions era = fromMaybe (pure TxGovernanceActionsNone) $ do
 
 genTxVotes :: CardanoEra era -> Gen (TxVotes era)
 genTxVotes era = fromMaybe (pure TxVotesNone) $ do
-  sbe <- join $ requireShelleyBasedEra era
-  supported <- votesSupportedInEra sbe
-  let votes = Gen.list (Range.constant 0 10) $ genVote sbe
-  pure $ TxVotes supported <$> votes
+  w <- featureInEra Nothing Just era
+  let votes = Gen.list (Range.constant 0 10) $ genVote w
+  pure $ TxVotes w <$> votes
   where
-    genVote :: ShelleyBasedEra era -> Gen (VotingProcedure era)
-    genVote sbe = obtainEraConstraints sbe $ VotingProcedure <$> Q.arbitrary
+    genVote :: ConwayEraOnwards era -> Gen (VotingProcedure era)
+    genVote w = conwayEraOnwardsConstraints w $ VotingProcedure <$> Q.arbitrary
 
