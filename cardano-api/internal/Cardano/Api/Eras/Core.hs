@@ -1,7 +1,10 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,7 +24,10 @@ module Cardano.Api.Eras.Core
   , BabbageEra
   , ConwayEra
   , CardanoEra(..)
-  , IsCardanoEra(..)
+  , IsCardanoEra
+  , cardanoEra
+  , Any(..)
+  , Is(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
   , InAnyCardanoEra(..)
@@ -74,6 +80,21 @@ import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Kind
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+
+-- ----------------------------------------------------------------------------
+-- Any
+
+data Any feature where
+  Any
+    :: Is feature era
+    => feature era
+    -> Any feature
+
+-- ----------------------------------------------------------------------------
+-- Is
+
+class HasTypeProxy era => Is feature era where
+  is :: feature era
 
 -- ----------------------------------------------------------------------------
 -- Eras
@@ -251,29 +272,31 @@ instance TestEquality CardanoEra where
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
 -- constructors, or the 'CardanoEraStyle' constructors via `cardanoEraStyle`.
 --
-class HasTypeProxy era => IsCardanoEra era where
-   cardanoEra      :: CardanoEra era
+instance Is CardanoEra ByronEra where
+   is = ByronEra
 
-instance IsCardanoEra ByronEra where
-   cardanoEra      = ByronEra
+instance Is CardanoEra ShelleyEra where
+   is = ShelleyEra
 
-instance IsCardanoEra ShelleyEra where
-   cardanoEra      = ShelleyEra
+instance Is CardanoEra AllegraEra where
+   is = AllegraEra
 
-instance IsCardanoEra AllegraEra where
-   cardanoEra      = AllegraEra
+instance Is CardanoEra MaryEra where
+   is = MaryEra
 
-instance IsCardanoEra MaryEra where
-   cardanoEra      = MaryEra
+instance Is CardanoEra AlonzoEra where
+   is = AlonzoEra
 
-instance IsCardanoEra AlonzoEra where
-   cardanoEra      = AlonzoEra
+instance Is CardanoEra BabbageEra where
+   is = BabbageEra
 
-instance IsCardanoEra BabbageEra where
-   cardanoEra      = BabbageEra
+instance Is CardanoEra ConwayEra where
+   is = ConwayEra
 
-instance IsCardanoEra ConwayEra where
-   cardanoEra      = ConwayEra
+type IsCardanoEra = Is CardanoEra
+
+cardanoEra :: Is CardanoEra era => CardanoEra era
+cardanoEra = is
 
 data AnyCardanoEra where
      AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint

@@ -23,7 +23,10 @@ module Cardano.Api.Eras
   , BabbageEra
   , ConwayEra
   , CardanoEra(..)
-  , IsCardanoEra(..)
+  , IsCardanoEra
+  , cardanoEra
+  , Any(..)
+  , Is(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
   , cardanoEraConstraints
