@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Certificates embedded in transactions
 --
@@ -127,7 +128,7 @@ data Certificate era where
        -> Ledger.ConwayTxCert (ShelleyLedgerEra era)
        -> Certificate era
 
-  deriving anyclass SerialiseAsCBOR
+deriving anyclass instance Is ShelleyBasedEra era => SerialiseAsCBOR (Certificate era)
 
 deriving instance Eq (Certificate era)
 deriving instance Show (Certificate era)

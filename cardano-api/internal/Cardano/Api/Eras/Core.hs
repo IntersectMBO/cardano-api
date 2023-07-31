@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -45,7 +46,8 @@ module Cardano.Api.Eras.Core
 
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
-  , IsShelleyBasedEra(..)
+  , IsShelleyBasedEra
+  , shelleyBasedEra
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , shelleyBasedToCardanoEra
@@ -309,6 +311,10 @@ instance Bounded AnyCardanoEra where
    minBound = AnyCardanoEra ByronEra
    maxBound = AnyCardanoEra ConwayEra
 
+instance Bounded (Any CardanoEra) where
+   minBound = Any ByronEra
+   maxBound = Any ConwayEra
+
 instance Enum AnyCardanoEra where
 
    -- [e..] = [e..maxBound]
@@ -336,8 +342,37 @@ instance Enum AnyCardanoEra where
             "AnyCardanoEra.toEnum: " <> show n
             <> " does not correspond to any known enumerated era."
 
+instance Enum (Any CardanoEra) where
+   -- [e..] = [e..maxBound]
+   enumFrom e = enumFromTo e maxBound
+
+   fromEnum = \case
+      Any ByronEra    -> 0
+      Any ShelleyEra  -> 1
+      Any AllegraEra  -> 2
+      Any MaryEra     -> 3
+      Any AlonzoEra   -> 4
+      Any BabbageEra  -> 5
+      Any ConwayEra   -> 6
+
+   toEnum = \case
+      0 -> Any ByronEra
+      1 -> Any ShelleyEra
+      2 -> Any AllegraEra
+      3 -> Any MaryEra
+      4 -> Any AlonzoEra
+      5 -> Any BabbageEra
+      6 -> Any ConwayEra
+      n ->
+         error $
+            "AnyCardanoEra.toEnum: " <> show n
+            <> " does not correspond to any known enumerated era."
+
 instance ToJSON AnyCardanoEra where
    toJSON (AnyCardanoEra era) = toJSON era
+
+instance ToJSON (Any CardanoEra) where
+   toJSON (Any era) = toJSON era
 
 instance FromJSON AnyCardanoEra where
    parseJSON = withText "AnyCardanoEra"
@@ -349,6 +384,18 @@ instance FromJSON AnyCardanoEra where
         "Alonzo" -> pure $ AnyCardanoEra AlonzoEra
         "Babbage" -> pure $ AnyCardanoEra BabbageEra
         "Conway" -> pure $ AnyCardanoEra ConwayEra
+        wrong -> fail $ "Failed to parse unknown era: " <> Text.unpack wrong
+
+instance FromJSON (Any CardanoEra) where
+   parseJSON = withText "AnyCardanoEra"
+     $ \case
+        "Byron" -> pure $ Any ByronEra
+        "Shelley" -> pure $ Any ShelleyEra
+        "Allegra" -> pure $ Any AllegraEra
+        "Mary" -> pure $ Any MaryEra
+        "Alonzo" -> pure $ Any AlonzoEra
+        "Babbage" -> pure $ Any BabbageEra
+        "Conway" -> pure $ Any ConwayEra
         wrong -> fail $ "Failed to parse unknown era: " <> Text.unpack wrong
 
 
@@ -424,26 +471,28 @@ instance TestEquality ShelleyBasedEra where
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
 -- the 'ShelleyBasedEra' constructors.
 --
-class IsCardanoEra era => IsShelleyBasedEra era where
-   shelleyBasedEra :: ShelleyBasedEra era
+type IsShelleyBasedEra era = Is ShelleyBasedEra era
 
-instance IsShelleyBasedEra ShelleyEra where
-   shelleyBasedEra = ShelleyBasedEraShelley
+shelleyBasedEra :: Is ShelleyBasedEra era => ShelleyBasedEra era
+shelleyBasedEra = featureEra
 
-instance IsShelleyBasedEra AllegraEra where
-   shelleyBasedEra = ShelleyBasedEraAllegra
+instance Is ShelleyBasedEra ShelleyEra where
+  featureEra = ShelleyBasedEraShelley
 
-instance IsShelleyBasedEra MaryEra where
-   shelleyBasedEra = ShelleyBasedEraMary
+instance Is ShelleyBasedEra AllegraEra where
+  featureEra = ShelleyBasedEraAllegra
 
-instance IsShelleyBasedEra AlonzoEra where
-   shelleyBasedEra = ShelleyBasedEraAlonzo
+instance Is ShelleyBasedEra MaryEra where
+  featureEra = ShelleyBasedEraMary
 
-instance IsShelleyBasedEra BabbageEra where
-   shelleyBasedEra = ShelleyBasedEraBabbage
+instance Is ShelleyBasedEra AlonzoEra where
+  featureEra = ShelleyBasedEraAlonzo
 
-instance IsShelleyBasedEra ConwayEra where
-   shelleyBasedEra = ShelleyBasedEraConway
+instance Is ShelleyBasedEra BabbageEra where
+  featureEra = ShelleyBasedEraBabbage
+
+instance Is ShelleyBasedEra ConwayEra where
+  featureEra = ShelleyBasedEraConway
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra
@@ -489,6 +538,9 @@ instance Enum AnyShelleyBasedEra where
 instance ToJSON AnyShelleyBasedEra where
    toJSON (AnyShelleyBasedEra sbe) = toJSON sbe
 
+instance ToJSON (Any ShelleyBasedEra) where
+   toJSON (Any sbe) = toJSON sbe
+
 instance FromJSON AnyShelleyBasedEra where
    parseJSON = withText "AnyShelleyBasedEra"
      $ \case
@@ -498,6 +550,17 @@ instance FromJSON AnyShelleyBasedEra where
         "Alonzo" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
         "Babbage" -> pure $ AnyShelleyBasedEra ShelleyBasedEraBabbage
         "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
+        wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
+
+instance FromJSON (Any ShelleyBasedEra) where
+   parseJSON = withText "AnyShelleyBasedEra"
+     $ \case
+        "Shelley" -> pure $ Any ShelleyBasedEraShelley
+        "Allegra" -> pure $ Any ShelleyBasedEraAllegra
+        "Mary" -> pure $ Any ShelleyBasedEraMary
+        "Alonzo" -> pure $ Any ShelleyBasedEraAlonzo
+        "Babbage" -> pure $ Any ShelleyBasedEraBabbage
+        "Conway" -> pure $ Any ShelleyBasedEraConway
         wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
 
 

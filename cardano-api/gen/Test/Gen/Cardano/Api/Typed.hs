@@ -772,14 +772,16 @@ genTx era =
 
 genWitnesses :: CardanoEra era -> Gen [KeyWitness era]
 genWitnesses era =
-  case cardanoEraStyle era of
-    LegacyByronEra    -> Gen.list (Range.constant 1 10) genByronKeyWitness
-    ShelleyBasedEra _ -> do
-      bsWits  <- Gen.list (Range.constant 0 10)
-                          (genShelleyBootstrapWitness era)
-      keyWits <- Gen.list (Range.constant 0 10)
-                          (genShelleyKeyWitness era)
-      return $ bsWits ++ keyWits
+  cardanoEraConstraints era $
+    case cardanoEraStyle era of
+      LegacyByronEra    -> Gen.list (Range.constant 1 10) genByronKeyWitness
+      ShelleyBasedEra sbe ->
+        shelleyBasedEraConstraints sbe $ do
+          bsWits  <- Gen.list (Range.constant 0 10)
+                              (genShelleyBootstrapWitness era)
+          keyWits <- Gen.list (Range.constant 0 10)
+                              (genShelleyKeyWitness era)
+          return $ bsWits ++ keyWits
 
 genVerificationKey :: ()
 #if MIN_VERSION_base(4,17,0)
@@ -818,7 +820,7 @@ genWitnessNetworkIdOrByronAddress =
     ]
 
 genShelleyBootstrapWitness
-  :: IsShelleyBasedEra era
+  :: (IsShelleyBasedEra era, IsCardanoEra era)
   => CardanoEra era
   -> Gen (KeyWitness era)
 genShelleyBootstrapWitness era =
@@ -828,7 +830,7 @@ genShelleyBootstrapWitness era =
    <*> genSigningKey AsByronKey
 
 genShelleyKeyWitness
-  :: IsShelleyBasedEra era
+  :: (IsShelleyBasedEra era, IsCardanoEra era)
   => CardanoEra era
   -> Gen (KeyWitness era)
 genShelleyKeyWitness era =
@@ -837,7 +839,7 @@ genShelleyKeyWitness era =
     <*> genShelleyWitnessSigningKey
 
 genShelleyWitness
-  :: IsShelleyBasedEra era
+  :: (IsShelleyBasedEra era, IsCardanoEra era)
   => CardanoEra era
   -> Gen (KeyWitness era)
 genShelleyWitness era =
@@ -859,9 +861,11 @@ genShelleyWitnessSigningKey =
 genCardanoKeyWitness
   :: CardanoEra era
   -> Gen (KeyWitness era)
-genCardanoKeyWitness era = case cardanoEraStyle era of
-  LegacyByronEra -> genByronKeyWitness
-  ShelleyBasedEra _ -> genShelleyWitness era
+genCardanoKeyWitness era =
+  cardanoEraConstraints era $
+    case cardanoEraStyle era of
+      LegacyByronEra -> genByronKeyWitness
+      ShelleyBasedEra sbe -> shelleyBasedEraConstraints sbe $ genShelleyWitness era
 
 genSeed :: Int -> Gen Crypto.Seed
 genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)

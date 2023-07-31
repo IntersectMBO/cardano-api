@@ -891,7 +891,7 @@ data BalancedTxBody era
 --
 makeTransactionBodyAutoBalance
   :: forall era.
-     IsShelleyBasedEra era
+     (IsShelleyBasedEra era, Is CardanoEra era)
   => SystemStart
   -> LedgerEpochInfo
   -> ProtocolParameters

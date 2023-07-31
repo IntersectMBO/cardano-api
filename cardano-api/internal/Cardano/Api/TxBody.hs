@@ -478,7 +478,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
        ReferenceScript _ s -> toJSON s
        ReferenceScriptNone -> Aeson.Null
 
-instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
+instance (IsShelleyBasedEra era, IsCardanoEra era) => FromJSON (TxOut CtxTx era) where
       parseJSON = withObject "TxOut" $ \o -> do
         case shelleyBasedEra :: ShelleyBasedEra era of
           ShelleyBasedEraShelley ->
@@ -611,7 +611,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
                        <*> return ReferenceScriptNone
                (Just _dVal, Nothing) -> fail "Only datum JSON was found, this should not be possible."
 
-instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
+instance (IsShelleyBasedEra era, Is CardanoEra era) => FromJSON (TxOut CtxUTxO era) where
       parseJSON = withObject "TxOut" $ \o -> do
         case shelleyBasedEra :: ShelleyBasedEra era of
           ShelleyBasedEraShelley ->
@@ -1760,7 +1760,9 @@ data TxBodyContent build era =
        txGovernanceActions :: TxGovernanceActions era,
        txVotes             :: TxVotes era
      }
-     deriving (Eq, Show)
+
+deriving instance Is ShelleyBasedEra era => Eq (TxBodyContent build era)
+deriving instance Is ShelleyBasedEra era => Show (TxBodyContent build era)
 
 defaultTxBodyContent :: IsCardanoEra era => TxBodyContent BuildTx era
 defaultTxBodyContent = TxBodyContent

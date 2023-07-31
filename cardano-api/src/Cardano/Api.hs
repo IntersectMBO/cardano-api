@@ -26,6 +26,9 @@ module Cardano.Api (
     cardanoEraConstraints,
     InAnyCardanoEra(..),
 
+    Is(..),
+    Any(..),
+
     -- * Feature support
     FeatureInEra(..),
     maybeFeatureInEra,
@@ -48,7 +51,7 @@ module Cardano.Api (
 
     -- ** Shelley-based eras
     ShelleyBasedEra(..),
-    IsShelleyBasedEra(..),
+    IsShelleyBasedEra,
     AnyShelleyBasedEra(..),
     InAnyShelleyBasedEra(..),
     CardanoEraStyle(..),

@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -- | Convenience transaction construction functions
 --
 module Cardano.Api.Convenience.Construction (
@@ -36,7 +38,7 @@ import qualified Data.Text as Text
 -- convenient way of querying the node to get the required arguements
 -- for constructBalancedTx.
 constructBalancedTx
-  :: IsShelleyBasedEra era
+  :: (IsShelleyBasedEra era, Is CardanoEra era)
   => TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses

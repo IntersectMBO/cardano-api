@@ -67,6 +67,7 @@ type ShelleyBasedEraConstraints era ledgerera =
   , L.ShelleyEraTxBody ledgerera
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
+  , IsCardanoEra era
   , IsShelleyBasedEra era
   , ToJSON (DebugLedgerState era)
   , Typeable era

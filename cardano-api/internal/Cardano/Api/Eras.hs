@@ -28,6 +28,8 @@ module Cardano.Api.Eras
   , InAnyCardanoEra(..)
   , CardanoLedgerEra
 
+  , Any(..)
+
     -- * FeatureInEra
   , FeatureInEra(..)
   , maybeFeatureInEra
@@ -41,7 +43,8 @@ module Cardano.Api.Eras
 
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
-  , IsShelleyBasedEra(..)
+  , IsShelleyBasedEra
+  , shelleyBasedEra
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , shelleyBasedEraConstraints

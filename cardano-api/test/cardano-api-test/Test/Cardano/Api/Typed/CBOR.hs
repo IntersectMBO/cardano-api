@@ -176,7 +176,9 @@ prop_roundtrip_Tx_Cddl = H.property $ do
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do
   AnyShelleyBasedEra sbe <- H.forAll $ Gen.element [minBound..maxBound]
-  x <- forAll $ genShelleyKeyWitness $ shelleyBasedToCardanoEra sbe
+  x <- forAll $ shelleyBasedEraConstraints sbe
+    $ genShelleyKeyWitness
+    $ shelleyBasedToCardanoEra sbe
   tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 
 prop_roundtrip_GovernancePoll_CBOR :: Property
