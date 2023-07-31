@@ -14,6 +14,7 @@ module Cardano.Api.Governance.Actions.ProposalProcedure where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
+import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
@@ -43,7 +44,7 @@ data TxGovernanceActions era where
   TxGovernanceActionsNone :: TxGovernanceActions era
 
   TxGovernanceActions
-    :: TxGovernanceActionSupportedInEra era
+    :: ConwayEraOnwards era
     -> [Proposal era]
     -> TxGovernanceActions era
 
@@ -59,6 +60,7 @@ deriving instance IsShelleyBasedEra era => Eq (TxGovernanceActions era)
 data TxGovernanceActionSupportedInEra era where
 
      GovernanceActionsSupportedInConwayEra  :: TxGovernanceActionSupportedInEra ConwayEra
+{-# DEPRECATED TxGovernanceActionSupportedInEra "Use ConwayEraOnwards instead" #-}
 
 deriving instance Show (TxGovernanceActionSupportedInEra era)
 deriving instance Eq (TxGovernanceActionSupportedInEra era)
@@ -70,7 +72,7 @@ governanceActionsSupportedInEra ShelleyBasedEraMary    = Nothing
 governanceActionsSupportedInEra ShelleyBasedEraAlonzo  = Nothing
 governanceActionsSupportedInEra ShelleyBasedEraBabbage = Nothing
 governanceActionsSupportedInEra ShelleyBasedEraConway  = Just GovernanceActionsSupportedInConwayEra
-
+{-# DEPRECATED governanceActionsSupportedInEra "Use featureInShelleyBasedEra Nothing Just instead" #-}
 
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovernanceAction era)
 
