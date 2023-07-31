@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -24,9 +25,10 @@ module Cardano.Api.Eras.Core
   , BabbageEra
   , ConwayEra
   , CardanoEra(..)
-  , IsCardanoEra(..)
+  , IsCardanoEra
   , AnyCardanoEra(..)
   , anyCardanoEra
+  , cardanoEra
   , InAnyCardanoEra(..)
   , CardanoLedgerEra
 
@@ -84,7 +86,7 @@ data Any feature where
     => feature era
     -> Any feature
 
-class Is feature era where
+class HasTypeProxy era => Is feature era where
   featureEra :: feature era
 
 -- ----------------------------------------------------------------------------
@@ -263,29 +265,32 @@ instance TestEquality CardanoEra where
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
 -- constructors, or the 'CardanoEraStyle' constructors via `cardanoEraStyle`.
 --
-class HasTypeProxy era => IsCardanoEra era where
-   cardanoEra      :: CardanoEra era
 
-instance IsCardanoEra ByronEra where
-   cardanoEra      = ByronEra
+instance Is CardanoEra ByronEra where
+   featureEra = ByronEra
 
-instance IsCardanoEra ShelleyEra where
-   cardanoEra      = ShelleyEra
+instance Is CardanoEra ShelleyEra where
+   featureEra = ShelleyEra
 
-instance IsCardanoEra AllegraEra where
-   cardanoEra      = AllegraEra
+instance Is CardanoEra AllegraEra where
+   featureEra = AllegraEra
 
-instance IsCardanoEra MaryEra where
-   cardanoEra      = MaryEra
+instance Is CardanoEra MaryEra where
+   featureEra = MaryEra
 
-instance IsCardanoEra AlonzoEra where
-   cardanoEra      = AlonzoEra
+instance Is CardanoEra AlonzoEra where
+   featureEra = AlonzoEra
 
-instance IsCardanoEra BabbageEra where
-   cardanoEra      = BabbageEra
+instance Is CardanoEra BabbageEra where
+   featureEra = BabbageEra
 
-instance IsCardanoEra ConwayEra where
-   cardanoEra      = ConwayEra
+instance Is CardanoEra ConwayEra where
+   featureEra = ConwayEra
+
+type IsCardanoEra era = Is CardanoEra era
+
+cardanoEra :: IsCardanoEra era => CardanoEra era
+cardanoEra = featureEra
 
 data AnyCardanoEra where
      AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint

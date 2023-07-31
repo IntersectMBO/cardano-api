@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -8,7 +9,7 @@ module Cardano.Api.Convenience.Constraints (
   ) where
 
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 
 getIsCardanoEraConstraint :: CardanoEra era -> (IsCardanoEra era => a) -> a
 getIsCardanoEraConstraint ByronEra f = f

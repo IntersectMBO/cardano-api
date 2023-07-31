@@ -5,11 +5,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE TypeOperators #-}
-
 
 -- | Cardano eras, sometimes we have to distinguish them.
 --
@@ -23,9 +19,11 @@ module Cardano.Api.Eras
   , BabbageEra
   , ConwayEra
   , CardanoEra(..)
-  , IsCardanoEra(..)
+  , Is(..)
+  , IsCardanoEra
   , AnyCardanoEra(..)
   , anyCardanoEra
+  , cardanoEra
   , cardanoEraConstraints
   , InAnyCardanoEra(..)
   , CardanoLedgerEra
