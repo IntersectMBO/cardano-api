@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,8 +13,10 @@
 -- | Cardano eras, sometimes we have to distinguish them.
 --
 module Cardano.Api.Eras.Core
-  ( -- * Eras
-    ByronEra
+  ( Any(..)
+  , Is(..)
+    -- * Eras
+  , ByronEra
   , ShelleyEra
   , AllegraEra
   , MaryEra
@@ -74,6 +77,15 @@ import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Kind
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+
+data Any feature where
+  Any
+    :: Is feature era
+    => feature era
+    -> Any feature
+
+class Is feature era where
+  featureEra :: feature era
 
 -- ----------------------------------------------------------------------------
 -- Eras

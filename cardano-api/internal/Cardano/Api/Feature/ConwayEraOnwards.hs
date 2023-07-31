@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,9 +14,10 @@ module Cardano.Api.Feature.ConwayEraOnwards
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToCardanoEra
   , conwayEraOnwardsToShelleyBasedEra
+  , IsConwayEraOnwards
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Query.Types
 
@@ -94,3 +96,8 @@ conwayEraOnwardsToCardanoEra = shelleyBasedToCardanoEra . conwayEraOnwardsToShel
 conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
 conwayEraOnwardsToShelleyBasedEra = \case
   ConwayEraOnwardsConway -> ShelleyBasedEraConway
+
+instance Is ConwayEraOnwards ConwayEra where
+  featureEra = ConwayEraOnwardsConway
+
+type IsConwayEraOnwards = Is ConwayEraOnwards

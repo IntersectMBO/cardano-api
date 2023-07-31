@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,9 +14,10 @@ module Cardano.Api.Feature.ShelleyToBabbageEra
   , shelleyToBabbageEraConstraints
   , shelleyToBabbageEraToCardanoEra
   , shelleyToBabbageEraToShelleyBasedEra
+  , IsShelleyToBabbageEra
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Query.Types
 
@@ -105,3 +107,20 @@ shelleyToBabbageEraToShelleyBasedEra = \case
   ShelleyToBabbageEraMary    -> ShelleyBasedEraMary
   ShelleyToBabbageEraAlonzo  -> ShelleyBasedEraAlonzo
   ShelleyToBabbageEraBabbage -> ShelleyBasedEraBabbage
+
+instance Is ShelleyToBabbageEra ShelleyEra where
+  featureEra = ShelleyToBabbageEraShelley
+
+instance Is ShelleyToBabbageEra AllegraEra where
+  featureEra = ShelleyToBabbageEraAllegra
+
+instance Is ShelleyToBabbageEra MaryEra where
+  featureEra = ShelleyToBabbageEraMary
+
+instance Is ShelleyToBabbageEra AlonzoEra where
+  featureEra = ShelleyToBabbageEraAlonzo
+
+instance Is ShelleyToBabbageEra BabbageEra where
+  featureEra = ShelleyToBabbageEraBabbage
+
+type IsShelleyToBabbageEra = Is ShelleyToBabbageEra
