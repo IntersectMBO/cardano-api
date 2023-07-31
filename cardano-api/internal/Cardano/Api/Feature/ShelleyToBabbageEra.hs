@@ -9,13 +9,14 @@
 
 module Cardano.Api.Feature.ShelleyToBabbageEra
   ( ShelleyToBabbageEra(..)
+  , IsShelleyToBabbageEra(..)
   , AnyShelleyToBabbageEra(..)
   , shelleyToBabbageEraConstraints
   , shelleyToBabbageEraToCardanoEra
   , shelleyToBabbageEraToShelleyBasedEra
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Query.Types
 
@@ -35,6 +36,9 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
+class IsShelleyBasedEra era => IsShelleyToBabbageEra era where
+  shelleyToBabbageEra :: ShelleyToBabbageEra era
+
 data ShelleyToBabbageEra era where
   ShelleyToBabbageEraShelley :: ShelleyToBabbageEra ShelleyEra
   ShelleyToBabbageEraAllegra :: ShelleyToBabbageEra AllegraEra
@@ -44,6 +48,21 @@ data ShelleyToBabbageEra era where
 
 deriving instance Show (ShelleyToBabbageEra era)
 deriving instance Eq (ShelleyToBabbageEra era)
+
+instance IsShelleyToBabbageEra ShelleyEra where
+  shelleyToBabbageEra = ShelleyToBabbageEraShelley
+
+instance IsShelleyToBabbageEra AllegraEra where
+  shelleyToBabbageEra = ShelleyToBabbageEraAllegra
+
+instance IsShelleyToBabbageEra MaryEra where
+  shelleyToBabbageEra = ShelleyToBabbageEraMary
+
+instance IsShelleyToBabbageEra AlonzoEra where
+  shelleyToBabbageEra = ShelleyToBabbageEraAlonzo
+
+instance IsShelleyToBabbageEra BabbageEra where
+  shelleyToBabbageEra = ShelleyToBabbageEraBabbage
 
 instance FeatureInEra ShelleyToBabbageEra where
   featureInEra no yes = \case
@@ -73,7 +92,9 @@ type ShelleyToBabbageEraConstraints era =
   , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
+  , IsCardanoEra era
   , IsShelleyBasedEra era
+  , IsShelleyToBabbageEra era
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )

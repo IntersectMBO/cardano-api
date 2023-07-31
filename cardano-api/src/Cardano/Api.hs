@@ -36,11 +36,14 @@ module Cardano.Api (
 
     -- * Features
     ShelleyToBabbageEra(..),
+    IsShelleyToBabbageEra(..),
     AnyShelleyToBabbageEra(..),
     shelleyToBabbageEraConstraints,
     shelleyToBabbageEraToCardanoEra,
     shelleyToBabbageEraToShelleyBasedEra,
+
     ConwayEraOnwards(..),
+    IsConwayEraOnwards(..),
     AnyConwayEraOnwards(..),
     conwayEraOnwardsConstraints,
     conwayEraOnwardsToCardanoEra,
