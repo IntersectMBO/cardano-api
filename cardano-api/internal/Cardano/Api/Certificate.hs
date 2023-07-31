@@ -331,10 +331,10 @@ makeStakeAddressRegistrationCertificate :: StakeAddressRequirements era -> Certi
 makeStakeAddressRegistrationCertificate req =
   case req of
     StakeAddrRegistrationPreConway atMostEra scred ->
-      shelleyCertificateConstraints atMostEra
+      shelleyToBabbageEraConstraints atMostEra
         $ makeStakeAddressRegistrationCertificatePreConway atMostEra scred
     StakeAddrRegistrationConway cOnwards ll scred ->
-      conwayCertificateConstraints cOnwards
+      conwayEraOnwardsConstraints cOnwards
         $ makeStakeAddressRegistrationCertificatePostConway cOnwards scred ll
  where
   makeStakeAddressRegistrationCertificatePreConway :: ()
@@ -365,11 +365,11 @@ makeStakeAddressUnregistrationCertificate :: StakeAddressRequirements era -> Cer
 makeStakeAddressUnregistrationCertificate req =
   case req of
     StakeAddrRegistrationConway cOnwards ll scred ->
-      conwayCertificateConstraints cOnwards
+      conwayEraOnwardsConstraints cOnwards
         $ makeStakeAddressDeregistrationCertificatePostConway cOnwards scred ll
 
     StakeAddrRegistrationPreConway atMostEra scred ->
-      shelleyCertificateConstraints atMostEra
+      shelleyToBabbageEraConstraints atMostEra
         $ makeStakeAddressDeregistrationCertificatePreConway atMostEra scred
  where
   makeStakeAddressDeregistrationCertificatePreConway
@@ -442,12 +442,12 @@ makeStakeAddressDelegationCertificate :: StakeDelegationRequirements era -> Cert
 makeStakeAddressDelegationCertificate req =
   case req of
     StakeDelegationRequirementsConwayOnwards cOnwards scred delegatee ->
-      conwayCertificateConstraints cOnwards
+      conwayEraOnwardsConstraints cOnwards
         $ ConwayCertificate cOnwards
         $ Ledger.mkDelegTxCert (toShelleyStakeCredential scred) delegatee
 
     StakeDelegationRequirementsPreConway atMostBabbage scred pid ->
-      shelleyCertificateConstraints atMostBabbage
+      shelleyToBabbageEraConstraints atMostBabbage
         $ ShelleyRelatedCertificate atMostBabbage
         $ Ledger.mkDelegStakeTxCert (toShelleyStakeCredential scred) (unStakePoolKeyHash pid)
 
@@ -468,11 +468,11 @@ makeStakePoolRegistrationCertificate :: ()
 makeStakePoolRegistrationCertificate req =
   case req of
     StakePoolRegistrationRequirementsConwayOnwards cOnwards poolParams ->
-      conwayCertificateConstraints cOnwards
+      conwayEraOnwardsConstraints cOnwards
         $ ConwayCertificate cOnwards
         $ Ledger.mkRegPoolTxCert poolParams
     StakePoolRegistrationRequirementsPreConway atMostBab poolParams ->
-      shelleyCertificateConstraints atMostBab
+      shelleyToBabbageEraConstraints atMostBab
         $ ShelleyRelatedCertificate atMostBab
         $ Ledger.mkRegPoolTxCert poolParams
 
@@ -495,11 +495,11 @@ makeStakePoolRetirementCertificate :: ()
 makeStakePoolRetirementCertificate req =
   case req of
     StakePoolRetirementRequirementsPreConway atMostBab poolId retirementEpoch ->
-      shelleyCertificateConstraints atMostBab
+      shelleyToBabbageEraConstraints atMostBab
         $ ShelleyRelatedCertificate atMostBab
         $ Ledger.mkRetirePoolTxCert (unStakePoolKeyHash poolId) retirementEpoch
     StakePoolRetirementRequirementsConwayOnwards atMostBab poolId retirementEpoch ->
-      conwayCertificateConstraints atMostBab
+      conwayEraOnwardsConstraints atMostBab
         $ ConwayCertificate atMostBab
         $ Ledger.mkRetirePoolTxCert (unStakePoolKeyHash poolId) retirementEpoch
 
@@ -515,7 +515,7 @@ makeGenesisKeyDelegationCertificate :: GenesisKeyDelegationRequirements era -> C
 makeGenesisKeyDelegationCertificate (GenesisKeyDelegationRequirements atMostEra
                                        (GenesisKeyHash hGenKey) (GenesisDelegateKeyHash hGenDelegKey) (VrfKeyHash hVrfKey)) =
   ShelleyRelatedCertificate atMostEra
-    $ shelleyCertificateConstraints atMostEra
+    $ shelleyToBabbageEraConstraints atMostEra
     $ Ledger.ShelleyTxCertGenesisDeleg $ Ledger.GenesisDelegCert hGenKey hGenDelegKey hVrfKey
 
 data MirCertificateRequirements era where
@@ -820,12 +820,8 @@ shelleyCertificateConstraints
       , IsShelleyBasedEra era
       ) => a)
   -> a
-shelleyCertificateConstraints = \case
-  ShelleyToBabbageEraBabbage  -> id
-  ShelleyToBabbageEraAlonzo   -> id
-  ShelleyToBabbageEraMary     -> id
-  ShelleyToBabbageEraAllegra  -> id
-  ShelleyToBabbageEraShelley  -> id
+shelleyCertificateConstraints w f = shelleyToBabbageEraConstraints w f {- HLINT ignore "Eta reduce" -}
+{-# DEPRECATED shelleyCertificateConstraints "Please use 'shelleyToBabbageEraConstraints' instead." #-}
 
 conwayCertificateConstraints
   :: ConwayEraOnwards era
@@ -835,5 +831,5 @@ conwayCertificateConstraints
       , IsShelleyBasedEra era
       ) => a)
   -> a
-conwayCertificateConstraints = \case
-  ConwayEraOnwardsConway      -> id
+conwayCertificateConstraints w f = conwayEraOnwardsConstraints w f {- HLINT ignore "Eta reduce" -}
+{-# DEPRECATED conwayCertificateConstraints "Please use 'conwayEraOnwardsConstraints' instead." #-}

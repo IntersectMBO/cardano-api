@@ -55,22 +55,22 @@ instance FeatureInEra ShelleyToBabbageEra where
     BabbageEra  -> yes ShelleyToBabbageEraBabbage
     ConwayEra   -> no
 
-type ShelleyToBabbageEraConstraints era ledgerera =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto ledgerera))
-  , C.Signable (L.VRF (L.EraCrypto ledgerera)) L.Seed
+type ShelleyToBabbageEraConstraints era =
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
-  , Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.Crypto (L.EraCrypto ledgerera)
-  , L.Era ledgerera
-  , L.EraCrypto ledgerera ~ L.StandardCrypto
-  , L.EraPParams ledgerera
-  , L.EraTx ledgerera
-  , L.EraTxBody ledgerera
-  , L.HashAnnotated (L.TxBody ledgerera) L.EraIndependentTxBody L.StandardCrypto
-  , L.ShelleyEraTxBody ledgerera
-  , L.ShelleyEraTxCert ledgerera
-  , L.TxCert ledgerera ~ L.ShelleyTxCert ledgerera
+  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+  , L.Era (ShelleyLedgerEra era)
+  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , L.EraPParams (ShelleyLedgerEra era)
+  , L.EraTx (ShelleyLedgerEra era)
+  , L.EraTxBody (ShelleyLedgerEra era)
+  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
+  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsShelleyBasedEra era
@@ -84,9 +84,8 @@ data AnyShelleyToBabbageEra where
 deriving instance Show AnyShelleyToBabbageEra
 
 shelleyToBabbageEraConstraints :: ()
-  => ShelleyLedgerEra era ~ ledgerera
   => ShelleyToBabbageEra era
-  -> (ShelleyToBabbageEraConstraints era ledgerera => a)
+  -> (ShelleyToBabbageEraConstraints era => a)
   -> a
 shelleyToBabbageEraConstraints = \case
   ShelleyToBabbageEraShelley -> id
