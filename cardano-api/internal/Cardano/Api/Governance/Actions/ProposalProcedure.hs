@@ -191,4 +191,3 @@ fromProposalProcedure sbe (Proposal pp) =
   , StakeKeyHash (shelleyBasedEraConstraints sbe (Gov.pProcReturnAddr pp))
   , shelleyBasedEraConstraints sbe $ fromGovernanceAction sbe (Gov.pProcGovernanceAction pp)
   )
-

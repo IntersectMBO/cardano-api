@@ -17,6 +17,7 @@ module Cardano.Api.Governance.Actions.VotingProcedure where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
+import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Script
@@ -47,7 +48,7 @@ data TxVotes era where
   TxVotesNone :: TxVotes era
 
   TxVotes
-    :: TxVotesSupportedInEra era
+    :: ConwayEraOnwards era
     -> [VotingProcedure era]
     -> TxVotes era
 
@@ -61,10 +62,10 @@ deriving instance Eq (TxVotes era)
 --
 data TxVotesSupportedInEra era where
      VotesSupportedInConwayEra  :: TxVotesSupportedInEra ConwayEra
+{-# DEPRECATED TxVotesSupportedInEra "Use ConwayEraOnwards instead" #-}
 
 deriving instance Show (TxVotesSupportedInEra era)
 deriving instance Eq (TxVotesSupportedInEra era)
-
 
 votesSupportedInEra :: ShelleyBasedEra  era -> Maybe (TxVotesSupportedInEra era)
 votesSupportedInEra ShelleyBasedEraShelley = Nothing
@@ -73,7 +74,7 @@ votesSupportedInEra ShelleyBasedEraMary    = Nothing
 votesSupportedInEra ShelleyBasedEraAlonzo  = Nothing
 votesSupportedInEra ShelleyBasedEraBabbage = Nothing
 votesSupportedInEra ShelleyBasedEraConway  = Just VotesSupportedInConwayEra
-
+{-# DEPRECATED votesSupportedInEra "Use conwayEraOnwardsConstraints instead" #-}
 
 newtype GovernanceActionId ledgerera = GovernanceActionId
   { unGovernanceActionId :: Ledger.GovernanceActionId (EraCrypto ledgerera)
