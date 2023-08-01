@@ -768,6 +768,10 @@ instance CastVerificationKeyRole CommitteeHotKey PaymentKey where
     castVerificationKey (CommitteeHotVerificationKey (Shelley.VKey vk)) =
       PaymentVerificationKey (Shelley.VKey vk)
 
+instance SerialiseAsBech32 (Hash CommitteeHotKey) where
+    bech32PrefixFor         _ =  "committee_hot"
+    bech32PrefixesPermitted _ = ["committee_hot"]
+
 instance SerialiseAsBech32 (VerificationKey CommitteeHotKey) where
     bech32PrefixFor         _ =  "drep_vk"
     bech32PrefixesPermitted _ = ["drep_vk"]
