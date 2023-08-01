@@ -9,6 +9,7 @@
 
 module Cardano.Api.Feature.ConwayEraOnwards
   ( ConwayEraOnwards(..)
+  , IsConwayEraOnwards(..)
   , AnyConwayEraOnwards(..)
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToCardanoEra
@@ -35,11 +36,17 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
+class IsShelleyBasedEra era => IsConwayEraOnwards era where
+  conwayEraOnwards :: ConwayEraOnwards era
+
 data ConwayEraOnwards era where
   ConwayEraOnwardsConway :: ConwayEraOnwards ConwayEra
 
 deriving instance Show (ConwayEraOnwards era)
 deriving instance Eq (ConwayEraOnwards era)
+
+instance IsConwayEraOnwards ConwayEra where
+  conwayEraOnwards = ConwayEraOnwardsConway
 
 instance FeatureInEra ConwayEraOnwards where
   featureInEra no yes = \case
@@ -75,7 +82,9 @@ type ConwayEraOnwardsConstraints era ledgerera =
   , L.TxCert ledgerera ~ L.ConwayTxCert ledgerera
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
+  , IsCardanoEra era
   , IsShelleyBasedEra era
+  , IsConwayEraOnwards era
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )
