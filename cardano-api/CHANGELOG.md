@@ -1,6 +1,45 @@
 # Changelog for cardano-api
 
+## 8.11.0.0
+
+- Add parent feature constraints. New `IsShelleyToBabbageEra` and `ConwayEraOnwards` type classes.
+  (feature; compatible)
+  [PR 159](https://github.com/input-output-hk/cardano-api/pull/159)
+
+- Deprecate `TxVotesSupportedInEra`
+  (feature; breaking)
+  [PR 154](https://github.com/input-output-hk/cardano-api/pull/154)
+
+- Deprecate `shelleyCertificateConstraints` and `conwayCertificateConstraints`
+  (feature; breaking)
+  [PR 155](https://github.com/input-output-hk/cardano-api/pull/155)
+
+- More shelleyBasedEraConstraint constraints
+  (feature; compatible)
+  [PR 149](https://github.com/input-output-hk/cardano-api/pull/149)
+
+- Deprecate `TxGovernanceActionSupportedInEra`
+  (feature; breaking)
+  [PR 150](https://github.com/input-output-hk/cardano-api/pull/150)
+
+- Deprecate some constraint functions
+  (feature; breaking)
+  [PR 151](https://github.com/input-output-hk/cardano-api/pull/151)
+
+- Add SerialiseAsBech32 instances for committee cold and hot keys
+  Remove CommitteeKey as it was redundant
+  (feature; breaking)
+  [PR 152](https://github.com/input-output-hk/cardano-api/pull/152)
+
+- Clean up constraints on Proposal and Vote instances, add their generators for tests
+  (bugfix; compatible)
+  [PR 118](https://github.com/input-output-hk/cardano-api/pull/118)
+
 ## 8.10.2.0
+
+- Expose shelleyCertificateConstraints and conwayCertificateConstraints
+  (feature; compatible)
+  [PR 147](https://github.com/input-output-hk/cardano-api/pull/147)
 
 - Provide additional constraints in `shelleyBasedEraConstraints`.  This will obsolete the following:
   - `obtainEraCryptoConstraints`
