@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.11.1.0
+
+- Fix typo: `Constitional` -> `Constitutional`
+  (bugfix; no-api-changes)
+  [PR 163](https://github.com/input-output-hk/cardano-api/pull/163)
+
 ## 8.11.0.0
 
 - Add parent feature constraints. New `IsShelleyToBabbageEra` and `ConwayEraOnwards` type classes.
