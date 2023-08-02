@@ -731,7 +731,7 @@ instance SerialiseAsRawBytes (SigningKey CommitteeHotKey) where
       Crypto.rawSerialiseSignKeyDSIGN sk
 
     deserialiseFromRawBytes (AsSigningKey AsCommitteeHotKey) bs =
-      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey Constitional Committee Hot Key") $
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey Constitutional Committee Hot Key") $
         CommitteeHotSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
 
@@ -747,18 +747,18 @@ instance SerialiseAsRawBytes (Hash CommitteeHotKey) where
       Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsCommitteeHotKey) bs =
-      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash Constitional Committee Hot Key") $
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash Constitutional Committee Hot Key") $
         CommitteeHotKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey CommitteeHotKey) where
-    textEnvelopeType _ = "ConstitionalCommitteeHotVerificationKey_"
+    textEnvelopeType _ = "ConstitutionalCommitteeHotVerificationKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey CommitteeHotKey) where
-    textEnvelopeType _ = "ConstitionalCommitteeHotSigningKey_"
+    textEnvelopeType _ = "ConstitutionalCommitteeHotSigningKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
@@ -835,7 +835,7 @@ instance SerialiseAsRawBytes (SigningKey CommitteeColdKey) where
       Crypto.rawSerialiseSignKeyDSIGN sk
 
     deserialiseFromRawBytes (AsSigningKey AsCommitteeColdKey) bs =
-      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey Constitional Committee Cold Key") $
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey Constitutional Committee Cold Key") $
         CommitteeColdSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
 
@@ -851,18 +851,18 @@ instance SerialiseAsRawBytes (Hash CommitteeColdKey) where
       Crypto.hashToBytes vkh
 
     deserialiseFromRawBytes (AsHash AsCommitteeColdKey) bs =
-      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash Constitional Committee Cold Key") $
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash Constitutional Committee Cold Key") $
         CommitteeColdKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
 instance HasTextEnvelope (VerificationKey CommitteeColdKey) where
-    textEnvelopeType _ = "ConstitionalCommitteeColdVerificationKey_"
+    textEnvelopeType _ = "ConstitutionalCommitteeColdVerificationKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
 
 instance HasTextEnvelope (SigningKey CommitteeColdKey) where
-    textEnvelopeType _ = "ConstitionalCommitteeColdSigningKey_"
+    textEnvelopeType _ = "ConstitutionalCommitteeColdSigningKey_"
                       <> fromString (Crypto.algorithmNameDSIGN proxy)
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
