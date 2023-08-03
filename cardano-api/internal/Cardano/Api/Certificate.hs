@@ -98,6 +98,7 @@ import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
+import           Data.Type.Equality
 import           Data.Typeable
 import           Network.Socket (PortNumber)
 
@@ -207,53 +208,27 @@ instance
 
 
 instance EraCast Certificate where
-  eraCast toEra cert =
+  eraCast toEra (cert :: Certificate fromEra) =
     case cert  of
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyRegCert{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyUnRegCert{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyDelegCert{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RetirePool{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RegPool{}) ->
-        eraCast toEra cert
-
-      -- We cannot cast MIR and GenDeleg certs from Babbage to Conway era because they do not exist
-      ShelleyRelatedCertificate (_ :: ShelleyToBabbageEra fromEra) Ledger.ShelleyTxCertGenesisDeleg{} ->
-        case toEra of
-          ConwayEra -> Left $ EraCastError
+      ShelleyRelatedCertificate sToBab _ ->
+         case testEquality (shelleyToBabbageEraToCardanoEra sToBab) toEra of
+            Nothing -> Left $ EraCastError
                                 { originalValue = cert
                                 , fromEra = cardanoEra @fromEra
                                 , toEra = toEra
                                 }
-          BabbageEra -> eraCast toEra cert
-          AlonzoEra -> eraCast toEra cert
-          AllegraEra -> eraCast toEra cert
-          MaryEra ->  eraCast toEra cert
-          ShelleyEra ->  eraCast toEra cert
-          ByronEra ->  error "TODO: EraCast Certififcate - Byron era"
-            -- TODO: We need to modify the EraCast class to only allow casting to a future era.
-            -- I can't imagine a use case where we would want to cast to a previous era
+            Just Refl -> Right cert
 
-      ShelleyRelatedCertificate (_ :: ShelleyToBabbageEra fromEra) Ledger.ShelleyTxCertMir{} ->
-        case toEra of
-          ConwayEra -> Left $ EraCastError
+
+      ConwayCertificate cOn _ ->
+         case testEquality (conwayEraOnwardsToCardanoEra cOn) toEra of
+            Nothing -> Left $ EraCastError
                                 { originalValue = cert
                                 , fromEra = cardanoEra @fromEra
                                 , toEra = toEra
                                 }
-          BabbageEra -> eraCast toEra cert
-          AlonzoEra -> eraCast toEra cert
-          AllegraEra -> eraCast toEra cert
-          MaryEra ->  eraCast toEra cert
-          ShelleyEra ->  eraCast toEra cert
-          ByronEra ->  error "TODO: EraCast Certififcate - Byron era"
-            -- TODO: We need to modify the EraCast class to only allow casting to a future era.
-            -- I can't imagine a use case where we would want to cast to a previous era
+            Just Refl -> Right cert
 
-      ConwayCertificate{} -> eraCast toEra cert
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
