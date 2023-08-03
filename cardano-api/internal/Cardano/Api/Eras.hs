@@ -32,8 +32,10 @@ module Cardano.Api.Eras
 
     -- * FeatureInEra
   , FeatureInEra(..)
+  , inEraFeature
   , maybeFeatureInEra
   , featureInShelleyBasedEra
+  , inShelleyBasedEraFeature
 
     -- * Deprecated aliases
   , Byron

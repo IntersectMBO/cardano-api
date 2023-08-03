@@ -29,8 +29,10 @@ module Cardano.Api.Eras.Core
 
     -- * FeatureInEra
   , FeatureInEra(..)
+  , inEraFeature
   , maybeFeatureInEra
   , featureInShelleyBasedEra
+  , inShelleyBasedEraFeature
 
     -- * Deprecated aliases
   , Byron
@@ -142,11 +144,21 @@ class FeatureInEra (feature :: Type -> Type) where
     -> CardanoEra era       -- ^ Era to check
     -> a                    -- ^ The value to use
 
+inEraFeature :: ()
+  => FeatureInEra feature
+  => CardanoEra era       -- ^ Era to check
+  -> a                    -- ^ Value to use if the feature is not supported in the era
+  -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> a                    -- ^ The value to use
+inEraFeature era no yes =
+  featureInEra no yes era
+
 maybeFeatureInEra :: ()
   => FeatureInEra feature
   => CardanoEra era       -- ^ Era to check
   -> Maybe (feature era)  -- ^ The feature if supported in the era
-maybeFeatureInEra = featureInEra Nothing Just
+maybeFeatureInEra =
+  featureInEra Nothing Just
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 featureInShelleyBasedEra :: ()
@@ -157,6 +169,15 @@ featureInShelleyBasedEra :: ()
   -> a
 featureInShelleyBasedEra no yes =
   featureInEra no yes . shelleyBasedToCardanoEra
+
+inShelleyBasedEraFeature :: ()
+  => FeatureInEra feature
+  => ShelleyBasedEra era
+  -> a
+  -> (feature era -> a)
+  -> a
+inShelleyBasedEraFeature era no yes =
+  featureInShelleyBasedEra no yes era
 
 -- ----------------------------------------------------------------------------
 -- Deprecated aliases
