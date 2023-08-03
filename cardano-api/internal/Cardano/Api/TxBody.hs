@@ -376,12 +376,12 @@ deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
 
 instance EraCast (TxOut ctx) where
-  eraCast toEra (TxOut addressInEra txOutValue txOutDatum referenceScript) =
+  eraCast toEra fromEra' (TxOut addressInEra txOutValue txOutDatum referenceScript) =
     TxOut
-      <$> eraCast toEra addressInEra
-      <*> eraCast toEra txOutValue
-      <*> eraCast toEra txOutDatum
-      <*> eraCast toEra referenceScript
+      <$> eraCast toEra fromEra' addressInEra
+      <*> eraCast toEra fromEra' txOutValue
+      <*> eraCast toEra fromEra' txOutDatum
+      <*> eraCast toEra fromEra' referenceScript
 
 data TxOutInAnyEra where
      TxOutInAnyEra :: CardanoEra era
@@ -1366,14 +1366,14 @@ data TxOutValue era where
      TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
 
 instance EraCast TxOutValue where
-  eraCast toEra v = case v of
+  eraCast toEra fromEra' v = case v of
     TxOutAdaOnly _previousEra lovelace ->
       case multiAssetSupportedInEra toEra of
         Left adaOnly -> Right $ TxOutAdaOnly adaOnly lovelace
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
     TxOutValue  (_ :: MultiAssetSupportedInEra fromEra) value  ->
       case multiAssetSupportedInEra toEra of
-        Left _adaOnly -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Left _adaOnly -> Left $ EraCastError v fromEra' toEra
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp value
 
 
@@ -1525,21 +1525,21 @@ deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
 
 instance EraCast (TxOutDatum ctx)  where
-  eraCast toEra v = case v of
+  eraCast toEra fromEra' v = case v of
     TxOutDatumNone -> pure TxOutDatumNone
     TxOutDatumHash (_ :: ScriptDataSupportedInEra fromEra) hash ->
       case scriptDataSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError v fromEra' toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumHash sDatumsSupported hash
     TxOutDatumInTx' (_ :: ScriptDataSupportedInEra fromEra) scriptData hash ->
       case scriptDataSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError v fromEra' toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
     TxOutDatumInline (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptData ->
       case refInsScriptsAndInlineDatsSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError v fromEra' toEra
         Just refInsAndInlineSupported ->
           Right $ TxOutDatumInline refInsAndInlineSupported scriptData
 

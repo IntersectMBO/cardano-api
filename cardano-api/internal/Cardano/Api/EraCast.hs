@@ -11,8 +11,7 @@ import           Cardano.Api.Eras (CardanoEra (..), IsCardanoEra)
 import           Data.Kind (Type)
 
 data EraCastError = forall fromEra toEra value.
-  ( IsCardanoEra fromEra
-  , IsCardanoEra toEra
+  ( IsCardanoEra toEra
   , Show value
   ) =>
     EraCastError
@@ -22,7 +21,8 @@ data EraCastError = forall fromEra toEra value.
     }
 
 class EraCast (f :: Type -> Type) where
-  eraCast :: (IsCardanoEra fromEra, IsCardanoEra toEra)
+  eraCast :: IsCardanoEra toEra
           => CardanoEra toEra
+          -> CardanoEra fromEra
           -> f fromEra
           -> Either EraCastError (f toEra)

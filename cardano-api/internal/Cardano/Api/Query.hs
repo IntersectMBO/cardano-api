@@ -357,7 +357,7 @@ newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
 
 instance EraCast UTxO where
-  eraCast toEra' (UTxO m) = UTxO <$> forM m (eraCast toEra')
+  eraCast toEra' fromEra' (UTxO m) = UTxO <$> forM m (eraCast toEra' fromEra')
 
 data UTxOInAnyEra where
   UTxOInAnyEra :: CardanoEra era

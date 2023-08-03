@@ -376,8 +376,8 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
     pure $ anyAddressInShelleyBasedEra addressAny
 
 instance EraCast AddressInEra where
-  eraCast toEra' (AddressInEra addressTypeInEra address) = AddressInEra
-    <$> eraCast toEra' addressTypeInEra
+  eraCast toEra' fromEra' (AddressInEra addressTypeInEra address) = AddressInEra
+    <$> eraCast toEra' fromEra' addressTypeInEra
     <*> pure address
 
 parseAddressAny :: Parsec.Parser AddressAny
@@ -467,7 +467,7 @@ instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
       rightToMaybe . anyAddressInEra cardanoEra =<< deserialiseAddress AsAddressAny t
 
 instance EraCast (AddressTypeInEra addrtype) where
-  eraCast toEra' v = case v of
+  eraCast toEra' _ v = case v of
     ByronAddressInAnyEra -> pure ByronAddressInAnyEra
     ShelleyAddressInEra previousEra ->
       case cardanoEraStyle toEra' of
