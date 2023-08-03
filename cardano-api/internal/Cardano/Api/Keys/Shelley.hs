@@ -674,8 +674,6 @@ instance CastVerificationKeyRole GenesisKey PaymentKey where
 -- Constitutional Committee Hot Keys
 --
 
-type KeyRoleCommitteeHotKey = Shelley.Genesis -- TODO CIP-1694 this should be a newtype Shelley.CommitteeHotKey
-
 data CommitteeHotKey
 
 instance HasTypeProxy CommitteeHotKey where
@@ -685,7 +683,7 @@ instance HasTypeProxy CommitteeHotKey where
 instance Key CommitteeHotKey where
 
     newtype VerificationKey CommitteeHotKey =
-        CommitteeHotVerificationKey (Shelley.VKey KeyRoleCommitteeHotKey StandardCrypto)
+        CommitteeHotVerificationKey (Shelley.VKey Shelley.CommitteeHotKey StandardCrypto)
       deriving stock (Eq)
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeHotKey)
       deriving newtype (ToCBOR, FromCBOR)
@@ -736,7 +734,7 @@ instance SerialiseAsRawBytes (SigningKey CommitteeHotKey) where
 
 
 newtype instance Hash CommitteeHotKey =
-    CommitteeHotKeyHash (Shelley.KeyHash KeyRoleCommitteeHotKey StandardCrypto)
+    CommitteeHotKeyHash (Shelley.KeyHash Shelley.CommitteeHotKey StandardCrypto)
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeHotKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeHotKey)
