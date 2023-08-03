@@ -1,5 +1,17 @@
-version: 
+version: 2
 main-branch: main
 release-branch:
   prefix: release/
   suffix: .x
+changelog:
+  # Determine which PR changelog options are available and which end up in the changelog
+  options:
+    compatibility:
+      breaking: add
+      compatible: add
+      no-api-changes: add
+    type:
+      feature: add
+      bugfix: add
+      test: skip
+      maintenance: skip
