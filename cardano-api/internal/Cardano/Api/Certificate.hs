@@ -260,95 +260,95 @@ castConwayToShelleyTxCert :: ()
   => Ledger.ConwayTxCert srcLedgerEra
   -> Maybe (Ledger.ShelleyTxCert tgtLedgerEra)
 castConwayToShelleyTxCert = \case
-  Ledger.ConwayTxCertDeleg c ->
+  Ledger.ConwayTxCertDeleg txCert ->
     fmap Ledger.ShelleyTxCertDelegCert
-      $ case c of
-          Ledger.ConwayRegCert sc mc ->
-            case mc of
+      $ case txCert of
+          Ledger.ConwayRegCert stakeCred mCoin ->
+            case mCoin of
               Ledger.SNothing ->
-                Just $ Ledger.ShelleyRegCert sc
+                Just $ Ledger.ShelleyRegCert stakeCred
               Ledger.SJust {} ->
                 Nothing
-          Ledger.ConwayUnRegCert sc mc ->
-            case mc of
+          Ledger.ConwayUnRegCert stakeCred mCoin ->
+            case mCoin of
               Ledger.SNothing ->
-                Just $ Ledger.ShelleyUnRegCert sc
+                Just $ Ledger.ShelleyUnRegCert stakeCred
               Ledger.SJust {} ->
                 Nothing
-          Ledger.ConwayDelegCert sc d ->
-            case d of
-              Ledger.DelegStake ph ->
-                Just $ Ledger.ShelleyDelegCert sc ph
+          Ledger.ConwayDelegCert stakeCred delegCert ->
+            case delegCert of
+              Ledger.DelegStake poolHash ->
+                Just $ Ledger.ShelleyDelegCert stakeCred poolHash
               Ledger.DelegVote {} ->
                 Nothing
               Ledger.DelegStakeVote {} ->
                 Nothing
           Ledger.ConwayRegDelegCert {} ->
             Nothing
-  Ledger.ConwayTxCertPool c ->
-    Just $ Ledger.ShelleyTxCertPool c
+  Ledger.ConwayTxCertPool poolCert ->
+    Just $ Ledger.ShelleyTxCertPool poolCert
   Ledger.ConwayTxCertCommittee {} ->
     Nothing
 
 instance EraCast Certificate where
-  eraCast tgte cert =
+  eraCast targetEra cert =
     case cert  of
-      ShelleyRelatedCertificate srcw lc ->
-        shelleyToBabbageEraConstraints srcw
-          $ inEraFeature tgte
-              ( inEraFeature tgte
+      ShelleyRelatedCertificate sourceWit sourceLedgerCert ->
+        shelleyToBabbageEraConstraints sourceWit
+          $ inEraFeature targetEra
+              ( inEraFeature targetEra
                   ( Left $ EraCastError
                       { originalValue = cert
-                      , fromEra = shelleyToBabbageEraToCardanoEra srcw
-                      , toEra = tgte
+                      , fromEra = shelleyToBabbageEraToCardanoEra sourceWit
+                      , toEra = targetEra
                       }
                   )
                   (\tgtw ->
                     conwayEraOnwardsConstraints tgtw
-                      $ case castShelleyToConwayTxCert lc of
-                          Just nlc -> Right $ ConwayCertificate tgtw nlc
+                      $ case castShelleyToConwayTxCert sourceLedgerCert of
+                          Just targetLedgerCert -> Right $ ConwayCertificate tgtw targetLedgerCert
                           Nothing ->
                             Left $ EraCastError
                               { originalValue = cert
-                              , fromEra = shelleyToBabbageEraToCardanoEra srcw
-                              , toEra = tgte
+                              , fromEra = shelleyToBabbageEraToCardanoEra sourceWit
+                              , toEra = targetEra
                               }
                   )
               )
-              (\tgtw ->
+              (\targetWit ->
                 Right
-                  $ ShelleyRelatedCertificate tgtw
-                  $ shelleyToBabbageEraConstraints tgtw
-                  $ castShelleyTxCert lc
+                  $ ShelleyRelatedCertificate targetWit
+                  $ shelleyToBabbageEraConstraints targetWit
+                  $ castShelleyTxCert sourceLedgerCert
               )
 
-      ConwayCertificate srcw lc ->
-        conwayEraOnwardsConstraints srcw
-          $ inEraFeature tgte
-              ( inEraFeature tgte
+      ConwayCertificate sourceWit sourceLedgerCert ->
+        conwayEraOnwardsConstraints sourceWit
+          $ inEraFeature targetEra
+              ( inEraFeature targetEra
                   ( Left $ EraCastError
                       { originalValue = cert
-                      , fromEra = conwayEraOnwardsToCardanoEra srcw
-                      , toEra = tgte
+                      , fromEra = conwayEraOnwardsToCardanoEra sourceWit
+                      , toEra = targetEra
                       }
                   )
-                  (\tgtw ->
-                    shelleyToBabbageEraConstraints tgtw
-                      $ case castConwayToShelleyTxCert lc of
-                          Just nlc -> Right $ ShelleyRelatedCertificate tgtw nlc
+                  (\targetWit ->
+                    shelleyToBabbageEraConstraints targetWit
+                      $ case castConwayToShelleyTxCert sourceLedgerCert of
+                          Just targetLedgerCert -> Right $ ShelleyRelatedCertificate targetWit targetLedgerCert
                           Nothing ->
                             Left $ EraCastError
                               { originalValue = cert
-                              , fromEra = conwayEraOnwardsToCardanoEra srcw
-                              , toEra = tgte
+                              , fromEra = conwayEraOnwardsToCardanoEra sourceWit
+                              , toEra = targetEra
                               }
                   )
               )
-              (\tgtw ->
+              (\targetWit ->
                 Right
-                  $ ConwayCertificate tgtw
-                  $ conwayEraOnwardsConstraints tgtw
-                  $ castConwayTxCert lc
+                  $ ConwayCertificate targetWit
+                  $ conwayEraOnwardsConstraints targetWit
+                  $ castConwayTxCert sourceLedgerCert
               )
 
 -- ----------------------------------------------------------------------------
