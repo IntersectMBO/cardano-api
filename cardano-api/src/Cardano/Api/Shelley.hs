@@ -279,16 +279,8 @@ module Cardano.Api.Shelley
     -- TODO: arrange not to export these
     toLedgerNonce,
     toShelleyNetwork,
-    obtainCryptoConstraints,
-    obtainEraConstraints,
-    obtainEraPParamsConstraint,
-    obtainEraCryptoConstraints,
     fromShelleyPoolParams,
     fromLedgerPParamsUpdate,
-
-    -- Era based
-    shelleyCertificateConstraints,
-    conwayCertificateConstraints,
 
   ) where
 
@@ -317,5 +309,4 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
-import           Cardano.Api.Utils
 import           Cardano.Api.Value

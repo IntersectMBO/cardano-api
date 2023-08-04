@@ -55,27 +55,6 @@ data TxVotes era where
 deriving instance Show (TxVotes era)
 deriving instance Eq (TxVotes era)
 
-
--- | A representation of whether the era supports transactions with votes.
---
--- The Conway and subsequent eras support governance actions.
---
-data TxVotesSupportedInEra era where
-     VotesSupportedInConwayEra  :: TxVotesSupportedInEra ConwayEra
-{-# DEPRECATED TxVotesSupportedInEra "Use ConwayEraOnwards instead" #-}
-
-deriving instance Show (TxVotesSupportedInEra era)
-deriving instance Eq (TxVotesSupportedInEra era)
-
-votesSupportedInEra :: ShelleyBasedEra  era -> Maybe (TxVotesSupportedInEra era)
-votesSupportedInEra ShelleyBasedEraShelley = Nothing
-votesSupportedInEra ShelleyBasedEraAllegra = Nothing
-votesSupportedInEra ShelleyBasedEraMary    = Nothing
-votesSupportedInEra ShelleyBasedEraAlonzo  = Nothing
-votesSupportedInEra ShelleyBasedEraBabbage = Nothing
-votesSupportedInEra ShelleyBasedEraConway  = Just VotesSupportedInConwayEra
-{-# DEPRECATED votesSupportedInEra "Use conwayEraOnwardsConstraints instead" #-}
-
 newtype GovernanceActionId ledgerera = GovernanceActionId
   { unGovernanceActionId :: Ledger.GovernanceActionId (EraCrypto ledgerera)
   }
