@@ -15,6 +15,7 @@ module Cardano.Api.ReexposeLedger
   , StakePoolRelay(..)
   , PoolMetadata(..)
   , EraTxCert(..)
+  , StrictMaybe(..)
 
   -- Core
   , Coin (..)
@@ -54,7 +55,7 @@ module Cardano.Api.ReexposeLedger
 
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Api
-import           Cardano.Ledger.BaseTypes (DnsName, Url, boundRational, dnsToText,
+import           Cardano.Ledger.BaseTypes (DnsName, StrictMaybe (..), Url, boundRational, dnsToText,
                    maybeToStrictMaybe, portToWord16, strictMaybeToMaybe, textToDns, textToUrl,
                    unboundRational, urlToText)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
