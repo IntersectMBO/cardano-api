@@ -1506,25 +1506,21 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp ^. Core.ppDG))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
+  let pp = unbundleLedgerShelleyBasedProtocolParams sbe bpp
+
   case sbe of
     ShelleyBasedEraShelley  ->
-      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraShelley bpp
-      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
     ShelleyBasedEraAllegra  ->
-      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraAllegra bpp
-      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
     ShelleyBasedEraMary     ->
-      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraMary bpp
-      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
     ShelleyBasedEraAlonzo   ->
-      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraAlonzo bpp
-      in isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
     ShelleyBasedEraBabbage  ->
-      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraBabbage bpp
-      in isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+      isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
     ShelleyBasedEraConway   ->
-      let pp = unbundleLedgerShelleyBasedProtocolParams ShelleyBasedEraConway bpp
-      in isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+      isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
  where
   globals = constructGlobals sGen eInfo (unbundleProtocolParams bpp)
 

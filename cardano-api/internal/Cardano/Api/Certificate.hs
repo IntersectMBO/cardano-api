@@ -141,40 +141,15 @@ instance
   ( IsShelleyBasedEra era
   ) => ToCBOR (Certificate era) where
     toCBOR =
-      -- TODO CIP-1694 clean this up
-      case shelleyBasedEra @era of
-        ShelleyBasedEraShelley  ->
-          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
-        ShelleyBasedEraAllegra  ->
-          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
-        ShelleyBasedEraMary     ->
-          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
-        ShelleyBasedEraAlonzo   ->
-          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
-        ShelleyBasedEraBabbage  ->
-          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
-        ShelleyBasedEraConway   ->
-          Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
-
-
+      shelleyBasedEraConstraints (shelleyBasedEra @era)
+        $ Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
 
 instance
   ( IsShelleyBasedEra era
   ) => FromCBOR (Certificate era) where
     fromCBOR =
-      case shelleyBasedEra @era of
-        ShelleyBasedEraShelley  ->
-          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
-        ShelleyBasedEraAllegra  ->
-          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
-        ShelleyBasedEraMary     ->
-          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
-        ShelleyBasedEraAlonzo   ->
-          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
-        ShelleyBasedEraBabbage  ->
-          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
-        ShelleyBasedEraConway   ->
-          fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
+      shelleyBasedEraConstraints (shelleyBasedEra @era)
+        $ fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
 
 
 instance
@@ -634,41 +609,12 @@ toShelleyCertificate :: ()
   => ShelleyBasedEra era
   -> Certificate era
   -> Ledger.TxCert (ShelleyLedgerEra era)
-toShelleyCertificate sbe cert =
+toShelleyCertificate _ cert =
   case cert of
-    ShelleyRelatedCertificate aMostBab _ ->
-      toShelleyCertificateShelleyToBabbage aMostBab cert
-    ConwayCertificate cOn _ ->
-      case sbe of
-        ShelleyBasedEraShelley -> case cOn of {}
-        ShelleyBasedEraAllegra -> case cOn of {}
-        ShelleyBasedEraMary -> case cOn of {}
-        ShelleyBasedEraAlonzo -> case cOn of {}
-        ShelleyBasedEraBabbage -> case cOn of {}
-        ShelleyBasedEraConway -> toShelleyCertificateAtLeastConway cOn cert
- where
-  toShelleyCertificateShelleyToBabbage :: ()
-    => ShelleyToBabbageEra era
-    -> Certificate era
-    -> Ledger.TxCert (ShelleyLedgerEra era)
-  toShelleyCertificateShelleyToBabbage aMostBabbage (ShelleyRelatedCertificate _ shelleyTxCert) =
-    case aMostBabbage of
-      ShelleyToBabbageEraBabbage -> shelleyTxCert
-      ShelleyToBabbageEraAlonzo -> shelleyTxCert
-      ShelleyToBabbageEraMary -> shelleyTxCert
-      ShelleyToBabbageEraAllegra -> shelleyTxCert
-      ShelleyToBabbageEraShelley -> shelleyTxCert
-  toShelleyCertificateShelleyToBabbage aMost (ConwayCertificate ConwayEraOnwardsConway _) =
-    case aMost of {}
-
-
-  toShelleyCertificateAtLeastConway :: ()
-    => ConwayEraOnwards era
-    -> Certificate era
-    -> Ledger.ConwayTxCert (ShelleyLedgerEra era)
-  toShelleyCertificateAtLeastConway _ (ConwayCertificate _ c) = c
-  toShelleyCertificateAtLeastConway ConwayEraOnwardsConway (ShelleyRelatedCertificate aMostBab _) =
-    case aMostBab of {}
+    ShelleyRelatedCertificate w c ->
+      shelleyToBabbageEraConstraints w c
+    ConwayCertificate w c ->
+      conwayEraOnwardsConstraints w c
 
 fromShelleyCertificate :: ()
   => ShelleyBasedEra era

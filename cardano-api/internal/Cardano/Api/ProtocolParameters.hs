@@ -1284,8 +1284,9 @@ unbundleLedgerShelleyBasedProtocolParams = \case
   ShelleyBasedEraConway -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
 
 unbundleProtocolParams :: BundledProtocolParameters era -> ProtocolParameters
-unbundleProtocolParams (BundleAsByronProtocolParameters pp) = pp
-unbundleProtocolParams (BundleAsShelleyBasedProtocolParameters _ pp _) = pp
+unbundleProtocolParams = \case
+  BundleAsByronProtocolParameters pp -> pp
+  BundleAsShelleyBasedProtocolParameters _ pp _ -> pp
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol parameters to ledger types

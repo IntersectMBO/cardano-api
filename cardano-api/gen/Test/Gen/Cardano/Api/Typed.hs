@@ -1113,14 +1113,13 @@ genTxGovernanceActions :: CardanoEra era -> Gen (TxGovernanceActions era)
 genTxGovernanceActions era = fromMaybe (pure TxGovernanceActionsNone) $ do
   sbe <- join $ requireShelleyBasedEra era
   supported <- featureInShelleyBasedEra Nothing Just sbe
-  let proposals = Gen.list (Range.constant 0 10) $ genProposal sbe supported
+  let proposals = Gen.list (Range.constant 0 10) $ genProposal supported
   pure $ TxGovernanceActions supported <$> proposals
   where
-    genProposal :: ShelleyBasedEra era
-                -> ConwayEraOnwards era
+    genProposal :: ConwayEraOnwards era
                 -> Gen (Proposal era)
-    genProposal sbe = shelleyBasedEraConstraints sbe $ fmap Proposal . \case
-      ConwayEraOnwardsConway -> Q.arbitrary
+    genProposal = \case
+      ConwayEraOnwardsConway -> fmap Proposal Q.arbitrary
 
 genTxVotes :: CardanoEra era -> Gen (TxVotes era)
 genTxVotes era = fromMaybe (pure TxVotesNone) $ do
@@ -1130,4 +1129,3 @@ genTxVotes era = fromMaybe (pure TxVotesNone) $ do
   where
     genVote :: ConwayEraOnwards era -> Gen (VotingProcedure era)
     genVote w = conwayEraOnwardsConstraints w $ VotingProcedure <$> Q.arbitrary
-
