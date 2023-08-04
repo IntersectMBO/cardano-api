@@ -412,15 +412,7 @@ decodeCurrentEpochState
   -> SerialisedCurrentEpochState era
   -> Either DecoderError (CurrentEpochState era)
 decodeCurrentEpochState sbe (SerialisedCurrentEpochState (Serialised ls)) =
-  CurrentEpochState <$>
-    case sbe of
-      ShelleyBasedEraShelley -> Plain.decodeFull ls
-      ShelleyBasedEraAllegra -> Plain.decodeFull ls
-      ShelleyBasedEraMary    -> Plain.decodeFull ls
-      ShelleyBasedEraAlonzo  -> Plain.decodeFull ls
-      ShelleyBasedEraBabbage -> Plain.decodeFull ls
-      ShelleyBasedEraConway  -> Plain.decodeFull ls
-
+  shelleyBasedEraConstraints sbe $ CurrentEpochState <$> Plain.decodeFull ls
 
 newtype SerialisedPoolState era
   = SerialisedPoolState (Serialised (Shelley.PState (ShelleyLedgerEra era)))

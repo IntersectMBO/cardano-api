@@ -2064,20 +2064,8 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
       recoverBytes txbody
 
     serialiseToCBOR (ShelleyTxBody sbe txbody txscripts redeemers txmetadata scriptValidity) =
-      case sbe of
-        -- Use the same serialisation impl, but at different types:
-        ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody
-                                    sbe txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody
-                                    sbe txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody
-                                    sbe txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTxBody
-                                    sbe txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraBabbage -> serialiseShelleyBasedTxBody
-                                    sbe txbody txscripts redeemers txmetadata scriptValidity
-        ShelleyBasedEraConway -> serialiseShelleyBasedTxBody
-                                    sbe txbody txscripts redeemers txmetadata scriptValidity
+      shelleyBasedEraConstraints sbe $
+        serialiseShelleyBasedTxBody sbe txbody txscripts redeemers txmetadata scriptValidity
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -2749,8 +2737,11 @@ fromLedgerProposalProcedure sbe body =
     getProposals :: ConwayEraOnwards era
                  -> Ledger.TxBody (ShelleyLedgerEra era)
                  -> [Proposal era]
-    getProposals ConwayEraOnwardsConway body_ = fmap Proposal . toList $ body_ ^. L.proposalProceduresTxBodyL
-
+    getProposals w body_ =
+      conwayEraOnwardsConstraints w
+        $ fmap Proposal
+        $ toList
+        $ body_ ^. L.proposalProceduresTxBodyL
 
 fromLedgerTxVotes :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxVotes era
 fromLedgerTxVotes sbe body =
@@ -2761,7 +2752,11 @@ fromLedgerTxVotes sbe body =
     getVotes :: ConwayEraOnwards era
              -> Ledger.TxBody (ShelleyLedgerEra era)
              -> [VotingProcedure era]
-    getVotes ConwayEraOnwardsConway body_ = fmap VotingProcedure . toList $ body_ ^. L.votingProceduresTxBodyL
+    getVotes w body_ =
+      conwayEraOnwardsConstraints w
+        $ fmap VotingProcedure
+        $ toList
+        $ body_ ^. L.votingProceduresTxBodyL
 
 fromLedgerTxIns
   :: forall era.

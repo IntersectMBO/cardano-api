@@ -122,13 +122,7 @@ instance Eq (Tx era) where
 
     (==) (ShelleyTx sbe txA)
          (ShelleyTx _   txB) =
-      case sbe of
-        ShelleyBasedEraShelley -> txA == txB
-        ShelleyBasedEraAllegra -> txA == txB
-        ShelleyBasedEraMary    -> txA == txB
-        ShelleyBasedEraAlonzo  -> txA == txB
-        ShelleyBasedEraBabbage -> txA == txB
-        ShelleyBasedEraConway  -> txA == txB
+      shelleyBasedEraConstraints sbe $ txA == txB
 
     (==) ByronTx{} (ShelleyTx sbe _) = case sbe of {}
     (==) (ShelleyTx sbe _) ByronTx{} = case sbe of {}
@@ -200,13 +194,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
     serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx
 
     serialiseToCBOR (ShelleyTx sbe tx) =
-      case sbe of
-        ShelleyBasedEraShelley -> serialiseShelleyBasedTx tx
-        ShelleyBasedEraAllegra -> serialiseShelleyBasedTx tx
-        ShelleyBasedEraMary    -> serialiseShelleyBasedTx tx
-        ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTx tx
-        ShelleyBasedEraBabbage -> serialiseShelleyBasedTx tx
-        ShelleyBasedEraConway  -> serialiseShelleyBasedTx tx
+      shelleyBasedEraConstraints sbe $ serialiseShelleyBasedTx tx
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -283,23 +271,11 @@ instance Eq (KeyWitness era) where
 
     (==) (ShelleyBootstrapWitness sbe wA)
          (ShelleyBootstrapWitness _   wB) =
-      case sbe of
-        ShelleyBasedEraShelley -> wA == wB
-        ShelleyBasedEraAllegra -> wA == wB
-        ShelleyBasedEraMary    -> wA == wB
-        ShelleyBasedEraAlonzo  -> wA == wB
-        ShelleyBasedEraBabbage -> wA == wB
-        ShelleyBasedEraConway -> wA == wB
+      shelleyBasedEraConstraints sbe $ wA == wB
 
     (==) (ShelleyKeyWitness sbe wA)
          (ShelleyKeyWitness _   wB) =
-      case sbe of
-        ShelleyBasedEraShelley -> wA == wB
-        ShelleyBasedEraAllegra -> wA == wB
-        ShelleyBasedEraMary    -> wA == wB
-        ShelleyBasedEraAlonzo  -> wA == wB
-        ShelleyBasedEraBabbage -> wA == wB
-        ShelleyBasedEraConway -> wA == wB
+      shelleyBasedEraConstraints sbe $ wA == wB
 
     (==) _ _ = False
 
@@ -673,20 +649,8 @@ makeShelleyBootstrapWitness _ ByronTxBody{} _ =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
 
 makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody sbe txbody _ _ _ _) sk =
-    case sbe of
-      ShelleyBasedEraShelley ->
-        makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
-      ShelleyBasedEraAllegra ->
-        makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
-      ShelleyBasedEraMary    ->
-        makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
-      ShelleyBasedEraAlonzo  ->
-        makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
-      ShelleyBasedEraBabbage ->
-        makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
-      ShelleyBasedEraConway ->
-        makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
-
+  shelleyBasedEraConstraints sbe $
+    makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
 
 makeShelleyBasedBootstrapWitness :: forall era.
                                     (Ledger.HashAnnotated
@@ -791,13 +755,7 @@ makeShelleyKeyWitness :: forall era
                       -> ShelleyWitnessSigningKey
                       -> KeyWitness era
 makeShelleyKeyWitness (ShelleyTxBody sbe txbody _ _ _ _) =
-    case sbe of
-      ShelleyBasedEraShelley -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraBabbage -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraConway  -> makeShelleyBasedKeyWitness txbody
+  shelleyBasedEraConstraints sbe $ makeShelleyBasedKeyWitness txbody
   where
     makeShelleyBasedKeyWitness :: Ledger.HashAnnotated (Ledger.TxBody (ShelleyLedgerEra era)) Ledger.EraIndependentTxBody StandardCrypto
                                => Ledger.TxBody (ShelleyLedgerEra era)

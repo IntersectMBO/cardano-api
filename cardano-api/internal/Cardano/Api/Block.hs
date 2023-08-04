@@ -303,35 +303,28 @@ instance HasTypeProxy BlockHeader where
 
 getBlockHeader
   :: forall era . Block era -> BlockHeader
-getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
-  ShelleyBasedEraShelley -> go
-  ShelleyBasedEraAllegra -> go
-  ShelleyBasedEraMary -> go
-  ShelleyBasedEraAlonzo -> go
-  ShelleyBasedEraBabbage -> go
-  ShelleyBasedEraConway -> go
-  where
-    go :: Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
-       => BlockHeader
-    go = BlockHeader headerFieldSlot (HeaderHash hashSBS) headerFieldBlockNo
-      where
-        Consensus.HeaderFields {
-            Consensus.headerFieldHash
-              = Consensus.ShelleyHash (Crypto.UnsafeHash hashSBS),
-            Consensus.headerFieldSlot,
-            Consensus.headerFieldBlockNo
-          } = Consensus.getHeaderFields block
-getBlockHeader (ByronBlock block)
-  = BlockHeader
+getBlockHeader = \case
+  ShelleyBlock sbe block ->
+    shelleyBasedEraConstraints sbe
+      $ let Consensus.HeaderFields {
+              Consensus.headerFieldHash
+                = Consensus.ShelleyHash (Crypto.UnsafeHash hashSBS),
+              Consensus.headerFieldSlot,
+              Consensus.headerFieldBlockNo
+            } = Consensus.getHeaderFields block
+        in BlockHeader headerFieldSlot (HeaderHash hashSBS) headerFieldBlockNo
+
+  ByronBlock block ->
+    BlockHeader
       headerFieldSlot
       (HeaderHash $ Cardano.Crypto.Hashing.abstractHashToShort byronHeaderHash)
       headerFieldBlockNo
-  where
-    Consensus.HeaderFields {
-      Consensus.headerFieldHash = Consensus.ByronHash byronHeaderHash,
-      Consensus.headerFieldSlot,
-      Consensus.headerFieldBlockNo
-    } = Consensus.getHeaderFields block
+    where
+      Consensus.HeaderFields {
+        Consensus.headerFieldHash = Consensus.ByronHash byronHeaderHash,
+        Consensus.headerFieldSlot,
+        Consensus.headerFieldBlockNo
+      } = Consensus.getHeaderFields block
 
 
 -- ----------------------------------------------------------------------------
