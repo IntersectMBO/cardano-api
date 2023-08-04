@@ -1,5 +1,0 @@
-version: 
-main-branch: main
-release-branch:
-  prefix: release/
-  suffix: .x

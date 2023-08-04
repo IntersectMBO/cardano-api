@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 8.12.0.0
+
+- Fix `EraCast Certificate`
+  (bugfix; no-api-changes)
+  [PR 170](https://github.com/input-output-hk/cardano-api/pull/170)
+
+- Fix committee hot keys
+  (feature; breaking)
+  [PR 167](https://github.com/input-output-hk/cardano-api/pull/167)
+
+- New `inEraFeature` and `inShelleyBasedEraFeature` functions
+  (feature; compatible)
+  [PR 162](https://github.com/input-output-hk/cardano-api/pull/162)
+
+- Add `SerialiseAsBech32 (Hash CommitteeHotKey)` instance
+  (feature; no-api-changes)
+  [PR 160](https://github.com/input-output-hk/cardano-api/pull/160)
+
 ## 8.11.1.0
 
 - Fix typo: `Constitional` -> `Constitutional`
