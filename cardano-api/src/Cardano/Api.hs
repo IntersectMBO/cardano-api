@@ -285,7 +285,6 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
-    TxVotes(..),
     TxGovernanceActions(..),
 
     -- ** Building vs viewing transactions
@@ -310,7 +309,6 @@ module Cardano.Api (
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
-    TxVotesSupportedInEra(..),
     TxGovernanceActionSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -328,7 +326,6 @@ module Cardano.Api (
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
-    votesSupportedInEra,
     governanceActionsSupportedInEra,
 
     -- ** Era-dependent protocol features
@@ -965,7 +962,6 @@ import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Governance.Actions.ProposalProcedure
-import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode

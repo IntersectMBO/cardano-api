@@ -13,7 +13,19 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Api.Governance.Actions.VotingProcedure where
+module Cardano.Api.Governance.Actions.VotingProcedure
+  ( GovernanceActionId(..)
+  , makeGoveranceActionId
+  , Voter(..)
+  , Vote(..)
+  , toVoterRole
+  , toVote
+  , toVotingCredential
+  , eraDecodeVotingCredential
+  , VotingCredential(..)
+  , createVotingProcedure
+  , VotingProcedure(..)
+  ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
@@ -40,22 +52,6 @@ import qualified Cardano.Ledger.TxIn as Ledger
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Maybe.Strict
 
--- | A representation of whether the era supports tx voting on governance actions.
---
--- The Conway and subsequent eras support tx voting on governance actions.
---
-data TxVotes era where
-  TxVotesNone :: TxVotes era
-
-  TxVotes
-    :: ConwayEraOnwards era
-    -> [VotingProcedure era]
-    -> TxVotes era
-
-deriving instance Show (TxVotes era)
-deriving instance Eq (TxVotes era)
-
-
 -- | A representation of whether the era supports transactions with votes.
 --
 -- The Conway and subsequent eras support governance actions.
@@ -67,27 +63,18 @@ data TxVotesSupportedInEra era where
 deriving instance Show (TxVotesSupportedInEra era)
 deriving instance Eq (TxVotesSupportedInEra era)
 
-votesSupportedInEra :: ShelleyBasedEra  era -> Maybe (TxVotesSupportedInEra era)
-votesSupportedInEra ShelleyBasedEraShelley = Nothing
-votesSupportedInEra ShelleyBasedEraAllegra = Nothing
-votesSupportedInEra ShelleyBasedEraMary    = Nothing
-votesSupportedInEra ShelleyBasedEraAlonzo  = Nothing
-votesSupportedInEra ShelleyBasedEraBabbage = Nothing
-votesSupportedInEra ShelleyBasedEraConway  = Just VotesSupportedInConwayEra
-{-# DEPRECATED votesSupportedInEra "Use conwayEraOnwardsConstraints instead" #-}
-
 newtype GovernanceActionId ledgerera = GovernanceActionId
   { unGovernanceActionId :: Ledger.GovernanceActionId (EraCrypto ledgerera)
   }
   deriving (Show, Eq)
 
 makeGoveranceActionId
-  :: ShelleyBasedEra era
+  :: ConwayEraOnwards era
   -> TxIn
   -> GovernanceActionId (ShelleyLedgerEra era)
-makeGoveranceActionId sbe txin =
+makeGoveranceActionId w txin =
   let Ledger.TxIn txid (Ledger.TxIx txix) = toShelleyTxIn txin
-  in shelleyBasedEraConstraints sbe
+  in conwayEraOnwardsConstraints w
       $ GovernanceActionId
       $ Ledger.GovernanceActionId
           { Ledger.gaidTxId = txid
@@ -112,7 +99,7 @@ data Vote
 
 toVoterRole
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> Voter era
   -> Ledger.Voter (Shelley.EraCrypto (ShelleyLedgerEra era))
 toVoterRole _ = \case
@@ -130,7 +117,7 @@ toVote = \case
   Abstain -> Ledger.Abstain
 
 toVotingCredential
-  :: ShelleyBasedEra era
+  :: ConwayEraOnwards era
   -> StakeCredential
   -> Either Plain.DecoderError (VotingCredential era)
 toVotingCredential sbe (StakeCredentialByKey (StakeKeyHash kh)) = do
@@ -147,11 +134,11 @@ toVotingCredential _sbe (StakeCredentialByScript (ScriptHash _sh)) =
 -- This is a hack. data StakeCredential in cardano-api is not parameterized by era, it defaults to StandardCrypto.
 -- However VotingProcedure is parameterized on era. We need to also parameterize StakeCredential on era.
 eraDecodeVotingCredential
-  :: ShelleyBasedEra era
+  :: ConwayEraOnwards era
   -> ByteString
   -> Either Plain.DecoderError (VotingCredential era)
-eraDecodeVotingCredential sbe bs =
-  shelleyBasedEraConstraints sbe $
+eraDecodeVotingCredential w bs =
+  conwayEraOnwardsConstraints w $
     case Plain.decodeFull bs of
       Left e -> Left e
       Right x -> Right $ VotingCredential x
@@ -164,16 +151,16 @@ deriving instance Show (VotingCredential crypto)
 deriving instance Eq (VotingCredential crypto)
 
 createVotingProcedure
-  :: ShelleyBasedEra era
+  :: ConwayEraOnwards era
   -> Vote
   -> Voter era
   -> GovernanceActionId (ShelleyLedgerEra era)
   -> VotingProcedure era
-createVotingProcedure sbe vChoice vt (GovernanceActionId govActId) =
-  shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe
+createVotingProcedure w vChoice vt (GovernanceActionId govActId) =
+  conwayEraOnwardsConstraints w
     $ VotingProcedure $ Ledger.VotingProcedure
       { Ledger.vProcGovActionId = govActId
-      , Ledger.vProcVoter = toVoterRole sbe vt
+      , Ledger.vProcVoter = toVoterRole w vt
       , Ledger.vProcVote = toVote vChoice
       , Ledger.vProcAnchor = SNothing -- TODO: Conway
       }

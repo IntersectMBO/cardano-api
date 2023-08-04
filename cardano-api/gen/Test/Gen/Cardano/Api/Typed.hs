@@ -670,7 +670,7 @@ genTxBodyContent era = do
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
   txGovernanceActions <- genTxGovernanceActions era
-  txVotes <- genTxVotes era
+  txVotes <- genMaybeFeaturedInEra (Gen.list (Range.constant 0 10) . genTxVotingProcedure) era
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
@@ -748,12 +748,12 @@ genFeaturedInEra witness gen =
 genMaybeFeaturedInEra :: ()
   => FeatureInEra feature
   => Alternative f
-  => f a
+  => (feature era -> f a)
   -> CardanoEra era
   -> f (Maybe (Featured feature era a))
 genMaybeFeaturedInEra gen =
   featureInEra (pure Nothing) $ \witness ->
-    pure Nothing <|> fmap Just (genFeaturedInEra witness gen)
+    pure Nothing <|> fmap Just (genFeaturedInEra witness (gen witness))
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
@@ -1121,11 +1121,8 @@ genTxGovernanceActions era = fromMaybe (pure TxGovernanceActionsNone) $ do
     genProposal = \case
       ConwayEraOnwardsConway -> fmap Proposal Q.arbitrary
 
-genTxVotes :: CardanoEra era -> Gen (TxVotes era)
-genTxVotes era = fromMaybe (pure TxVotesNone) $ do
-  w <- featureInEra Nothing Just era
-  let votes = Gen.list (Range.constant 0 10) $ genVote w
-  pure $ TxVotes w <$> votes
-  where
-    genVote :: ConwayEraOnwards era -> Gen (VotingProcedure era)
-    genVote w = conwayEraOnwardsConstraints w $ VotingProcedure <$> Q.arbitrary
+genTxVotingProcedure :: ()
+  => ConwayEraOnwards era
+  -> Gen (VotingProcedure era)
+genTxVotingProcedure w =
+  conwayEraOnwardsConstraints w $ VotingProcedure <$> Q.arbitrary

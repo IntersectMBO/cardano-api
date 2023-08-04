@@ -242,7 +242,6 @@ module Cardano.Api.Shelley
     GovernanceActionId(..),
     Proposal(..),
     TxGovernanceActions(..),
-    TxVotes(..),
     VotingProcedure(..),
     GovernancePoll(..),
     GovernancePollAnswer(..),

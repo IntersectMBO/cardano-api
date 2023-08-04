@@ -190,6 +190,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure
@@ -1758,7 +1759,7 @@ data TxBodyContent build era =
        txMintValue         :: TxMintValue    build era,
        txScriptValidity    :: TxScriptValidity era,
        txGovernanceActions :: TxGovernanceActions era,
-       txVotes             :: TxVotes era
+       txVotes             :: Maybe (Featured ConwayEraOnwards era [VotingProcedure era])
      }
      deriving (Eq, Show)
 
@@ -1782,7 +1783,7 @@ defaultTxBodyContent = TxBodyContent
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
     , txGovernanceActions = TxGovernanceActionsNone
-    , txVotes = TxVotesNone
+    , txVotes = Nothing
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -2719,7 +2720,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
       , txAuxScripts
       , txScriptValidity    = scriptValidity
       , txGovernanceActions = fromLedgerProposalProcedure sbe body
-      , txVotes             = fromLedgerTxVotes sbe body
+      , txVotes             = featureInShelleyBasedEra Nothing (\w -> Just (fromLedgerTxVotes w body)) sbe
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
@@ -2743,20 +2744,15 @@ fromLedgerProposalProcedure sbe body =
         $ toList
         $ body_ ^. L.proposalProceduresTxBodyL
 
-fromLedgerTxVotes :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxVotes era
-fromLedgerTxVotes sbe body =
-  case featureInShelleyBasedEra Nothing Just sbe of
-    Nothing -> TxVotesNone
-    Just w  -> TxVotes w (getVotes w body)
-  where
-    getVotes :: ConwayEraOnwards era
-             -> Ledger.TxBody (ShelleyLedgerEra era)
-             -> [VotingProcedure era]
-    getVotes w body_ =
-      conwayEraOnwardsConstraints w
-        $ fmap VotingProcedure
-        $ toList
-        $ body_ ^. L.votingProceduresTxBodyL
+fromLedgerTxVotes :: ()
+  => ConwayEraOnwards era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Featured ConwayEraOnwards era [VotingProcedure era]
+fromLedgerTxVotes w body =
+  conwayEraOnwardsConstraints w
+    $ Featured w
+    $ fmap VotingProcedure
+    $ toList $ body ^. L.votingProceduresTxBodyL
 
 fromLedgerTxIns
   :: forall era.
@@ -3426,7 +3422,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txMintValue         = TxMintNone
   , txScriptValidity    = TxScriptValidityNone
   , txGovernanceActions = TxGovernanceActionsNone
-  , txVotes             = TxVotesNone
+  , txVotes             = Nothing
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
@@ -3607,10 +3603,10 @@ convGovActions :: TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedur
 convGovActions TxGovernanceActionsNone = Seq.empty
 convGovActions (TxGovernanceActions _ govActions) = Seq.fromList $ fmap unProposal govActions
 
-convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
-convVotes _ = \case
-  TxVotesNone -> Seq.empty
-  TxVotes _ votes -> Seq.fromList $ map unVotingProcedure votes
+convVotes :: ()
+  => Featured ConwayEraOnwards era [VotingProcedure era]
+  -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
+convVotes (Featured _ v) = Seq.fromList $ map unVotingProcedure v
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
@@ -3980,7 +3976,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-           & L.votingProceduresTxBodyL    .~ convVotes sbe txVotes
+           & L.votingProceduresTxBodyL    .~ maybe mempty convVotes txVotes
            & L.proposalProceduresTxBodyL  .~ convGovActions txGovernanceActions
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing

@@ -10,7 +10,19 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Api.Governance.Actions.ProposalProcedure where
+module Cardano.Api.Governance.Actions.ProposalProcedure
+  ( TxGovernanceActions(..)
+  , TxGovernanceActionSupportedInEra(..)
+  , governanceActionsSupportedInEra
+  , AnyGovernanceAction(..)
+  , GovernanceAction(..)
+  , toSafeHash
+  , toGovernanceAction
+  , fromGovernanceAction
+  , Proposal(..)
+  , createProposalProcedure
+  , fromProposalProcedure
+  ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
@@ -94,38 +106,42 @@ toSafeHash = makeHashWithExplicitProxys (Proxy @StandardCrypto) (Proxy @ByteStri
 toGovernanceAction
   :: EraCrypto ledgerera ~ StandardCrypto
   => ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> GovernanceAction
   -> Gov.GovernanceAction ledgerera
-toGovernanceAction _ MotionOfNoConfidence = Gov.NoConfidence
-toGovernanceAction _ (ProposeNewConstitution bs) =
-  Gov.NewConstitution $ toSafeHash bs
-toGovernanceAction _ (ProposeNewCommittee stakeKeys quor) =
-  Gov.NewCommittee (Set.fromList $ map (\(StakeKeyHash sk) -> coerceKeyRole sk) stakeKeys) quor
-toGovernanceAction _ InfoAct = Gov.InfoAction
-toGovernanceAction _ (TreasuryWithdrawal withdrawals) =
-  let m = Map.fromList [(toShelleyStakeCredential sc, toShelleyLovelace l) | (sc,l) <- withdrawals]
-  in Gov.TreasuryWithdrawals m
-toGovernanceAction _ (InitiateHardfork pVer) = Gov.HardForkInitiation pVer
-toGovernanceAction sbe (UpdatePParams ppup) =
-  case toLedgerPParamsUpdate sbe ppup of
-    Left e -> error $ "toGovernanceAction: " <> show e
-    -- TODO: Conway era - remove use of error. Ideally we will use the ledger's PParams type
-    -- in place of ProtocolParametersUpdate
-    Right ppup' -> Gov.ParameterChange ppup'
+toGovernanceAction w = \case
+  MotionOfNoConfidence ->
+    Gov.NoConfidence
+  ProposeNewConstitution bs ->
+    Gov.NewConstitution $ toSafeHash bs
+  ProposeNewCommittee stakeKeys quor ->
+    Gov.NewCommittee (Set.fromList $ map (\(StakeKeyHash sk) -> coerceKeyRole sk) stakeKeys) quor
+  InfoAct ->
+    Gov.InfoAction
+  TreasuryWithdrawal withdrawals ->
+    let m = Map.fromList [(toShelleyStakeCredential sc, toShelleyLovelace l) | (sc,l) <- withdrawals]
+    in Gov.TreasuryWithdrawals m
+  InitiateHardfork pVer ->
+    Gov.HardForkInitiation pVer
+  UpdatePParams ppup ->
+    case toLedgerPParamsUpdate (conwayEraOnwardsToShelleyBasedEra w) ppup of
+      Left e -> error $ "toGovernanceAction: " <> show e
+      -- TODO: Conway era - remove use of error. Ideally we will use the ledger's PParams type
+      -- in place of ProtocolParametersUpdate
+      Right ppup' -> Gov.ParameterChange ppup'
 
 fromGovernanceAction
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> Gov.GovernanceAction (ShelleyLedgerEra era)
   -> GovernanceAction
-fromGovernanceAction sbe = \case
+fromGovernanceAction w = \case
   Gov.NoConfidence ->
     MotionOfNoConfidence
   Gov.NewConstitution h ->
-    ProposeNewConstitution $ shelleyBasedEraConstraints sbe $ originalBytes h
+    ProposeNewConstitution $ conwayEraOnwardsConstraints w $ originalBytes h
   Gov.ParameterChange pparams ->
-    UpdatePParams $ fromLedgerPParamsUpdate sbe pparams
+    UpdatePParams $ fromLedgerPParamsUpdate (conwayEraOnwardsToShelleyBasedEra w) pparams
   Gov.HardForkInitiation pVer ->
     InitiateHardfork pVer
   Gov.TreasuryWithdrawals withdrawlMap ->
@@ -168,26 +184,26 @@ instance HasTypeProxy era => HasTypeProxy (Proposal era) where
 
 
 createProposalProcedure
-  :: ShelleyBasedEra era
+  :: ConwayEraOnwards era
   -> Lovelace -- ^ Deposit
   -> Hash StakeKey -- ^ Return address
   -> GovernanceAction
   -> Proposal era
-createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
-  shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe $
+createProposalProcedure w dep (StakeKeyHash retAddrh) govAct =
+  conwayEraOnwardsConstraints w $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
       , Gov.pProcReturnAddr = retAddrh
-      , Gov.pProcGovernanceAction = toGovernanceAction sbe govAct
+      , Gov.pProcGovernanceAction = toGovernanceAction w govAct
       , Gov.pProcAnchor = SNothing -- TODO: Conway
       }
 
 fromProposalProcedure
-  :: ShelleyBasedEra era
+  :: ConwayEraOnwards era
   -> Proposal era
   -> (Lovelace, Hash StakeKey, GovernanceAction)
-fromProposalProcedure sbe (Proposal pp) =
+fromProposalProcedure w (Proposal pp) =
   ( fromShelleyLovelace $ Gov.pProcDeposit pp
-  , StakeKeyHash (shelleyBasedEraConstraints sbe (Gov.pProcReturnAddr pp))
-  , shelleyBasedEraConstraints sbe $ fromGovernanceAction sbe (Gov.pProcGovernanceAction pp)
+  , StakeKeyHash (conwayEraOnwardsConstraints w (Gov.pProcReturnAddr pp))
+  , conwayEraOnwardsConstraints w $ fromGovernanceAction w (Gov.pProcGovernanceAction pp)
   )
