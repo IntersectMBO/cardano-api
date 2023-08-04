@@ -245,13 +245,49 @@ castShelleyToConwayTxCert = \case
             Just $ Ledger.ConwayRegCert sc Ledger.SNothing
           Ledger.ShelleyUnRegCert sc ->
             Just $ Ledger.ConwayUnRegCert sc Ledger.SNothing
-          Ledger.ShelleyDelegCert sc pc ->
-            Just $ Ledger.ConwayDelegCert sc (Ledger.DelegStake pc)
+          Ledger.ShelleyDelegCert sc ph ->
+            Just $ Ledger.ConwayDelegCert sc (Ledger.DelegStake ph)
   Ledger.ShelleyTxCertPool c ->
     Just $ Ledger.ConwayTxCertPool c
   Ledger.ShelleyTxCertGenesisDeleg _ ->
     Nothing
   Ledger.ShelleyTxCertMir _ ->
+    Nothing
+
+castConwayToShelleyTxCert :: ()
+  => EraCrypto srcLedgerEra ~ StandardCrypto
+  => EraCrypto tgtLedgerEra ~ StandardCrypto
+  => Ledger.ConwayTxCert srcLedgerEra
+  -> Maybe (Ledger.ShelleyTxCert tgtLedgerEra)
+castConwayToShelleyTxCert = \case
+  Ledger.ConwayTxCertDeleg c ->
+    fmap Ledger.ShelleyTxCertDelegCert
+      $ case c of
+          Ledger.ConwayRegCert sc mc ->
+            case mc of
+              Ledger.SNothing ->
+                Just $ Ledger.ShelleyRegCert sc
+              Ledger.SJust {} ->
+                Nothing
+          Ledger.ConwayUnRegCert sc mc ->
+            case mc of
+              Ledger.SNothing ->
+                Just $ Ledger.ShelleyUnRegCert sc
+              Ledger.SJust {} ->
+                Nothing
+          Ledger.ConwayDelegCert sc d ->
+            case d of
+              Ledger.DelegStake ph ->
+                Just $ Ledger.ShelleyDelegCert sc ph
+              Ledger.DelegVote {} ->
+                Nothing
+              Ledger.DelegStakeVote {} ->
+                Nothing
+          Ledger.ConwayRegDelegCert {} ->
+            Nothing
+  Ledger.ConwayTxCertPool c ->
+    Just $ Ledger.ShelleyTxCertPool c
+  Ledger.ConwayTxCertCommittee {} ->
     Nothing
 
 instance EraCast Certificate where
@@ -287,20 +323,33 @@ instance EraCast Certificate where
               )
 
       ConwayCertificate srcw lc ->
-        inEraFeature tgte
-          ( Left $ EraCastError
-              { originalValue = cert
-              , fromEra = conwayEraOnwardsToCardanoEra srcw
-              , toEra = tgte
-              }
-          )
-          (\tgtw ->
-            Right
-              $ ConwayCertificate tgtw
-              $ conwayEraOnwardsConstraints srcw
-              $ conwayEraOnwardsConstraints tgtw
-              $ castConwayTxCert lc
-          )
+        conwayEraOnwardsConstraints srcw
+          $ inEraFeature tgte
+              ( inEraFeature tgte
+                  ( Left $ EraCastError
+                      { originalValue = cert
+                      , fromEra = conwayEraOnwardsToCardanoEra srcw
+                      , toEra = tgte
+                      }
+                  )
+                  (\tgtw ->
+                    shelleyToBabbageEraConstraints tgtw
+                      $ case castConwayToShelleyTxCert lc of
+                          Just nlc -> Right $ ShelleyRelatedCertificate tgtw nlc
+                          Nothing ->
+                            Left $ EraCastError
+                              { originalValue = cert
+                              , fromEra = conwayEraOnwardsToCardanoEra srcw
+                              , toEra = tgte
+                              }
+                  )
+              )
+              (\tgtw ->
+                Right
+                  $ ConwayCertificate tgtw
+                  $ conwayEraOnwardsConstraints tgtw
+                  $ castConwayTxCert lc
+              )
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
