@@ -204,56 +204,68 @@ instance
       ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RegPool{}) -> "Pool registration"
       ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
 
+castShelleyTxCert :: ()
+  => EraCrypto srcLedgerEra ~ StandardCrypto
+  => EraCrypto tgtLedgerEra ~ StandardCrypto
+  => Ledger.ShelleyTxCert srcLedgerEra
+  -> Ledger.ShelleyTxCert tgtLedgerEra
+castShelleyTxCert = \case
+  Ledger.ShelleyTxCertDelegCert c ->
+    Ledger.ShelleyTxCertDelegCert c
+  Ledger.ShelleyTxCertPool c ->
+    Ledger.ShelleyTxCertPool c
+  Ledger.ShelleyTxCertGenesisDeleg c ->
+    Ledger.ShelleyTxCertGenesisDeleg c
+  Ledger.ShelleyTxCertMir c ->
+    Ledger.ShelleyTxCertMir c
 
+castConwayTxCert :: ()
+  => EraCrypto srcLedgerEra ~ StandardCrypto
+  => EraCrypto tgtLedgerEra ~ StandardCrypto
+  => Ledger.ConwayTxCert srcLedgerEra
+  -> Ledger.ConwayTxCert tgtLedgerEra
+castConwayTxCert = \case
+  Ledger.ConwayTxCertDeleg c ->
+    Ledger.ConwayTxCertDeleg c
+  Ledger.ConwayTxCertPool c ->
+    Ledger.ConwayTxCertPool c
+  Ledger.ConwayTxCertCommittee c ->
+    Ledger.ConwayTxCertCommittee c
 
 instance EraCast Certificate where
-  eraCast toEra cert =
+  eraCast tgte cert =
     case cert  of
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyRegCert{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyUnRegCert{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyDelegCert{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RetirePool{}) ->
-        eraCast toEra cert
-      ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RegPool{}) ->
-        eraCast toEra cert
+      ShelleyRelatedCertificate srcw lc ->
+        inEraFeature tgte
+          ( Left $ EraCastError
+              { originalValue = cert
+              , fromEra = shelleyToBabbageEraToCardanoEra srcw
+              , toEra = tgte
+              }
+          )
+          (\tgtw ->
+            Right
+              $ ShelleyRelatedCertificate tgtw
+              $ shelleyToBabbageEraConstraints srcw
+              $ shelleyToBabbageEraConstraints tgtw
+              $ castShelleyTxCert lc
+          )
 
-      -- We cannot cast MIR and GenDeleg certs from Babbage to Conway era because they do not exist
-      ShelleyRelatedCertificate (_ :: ShelleyToBabbageEra fromEra) Ledger.ShelleyTxCertGenesisDeleg{} ->
-        case toEra of
-          ConwayEra -> Left $ EraCastError
-                                { originalValue = cert
-                                , fromEra = cardanoEra @fromEra
-                                , toEra = toEra
-                                }
-          BabbageEra -> eraCast toEra cert
-          AlonzoEra -> eraCast toEra cert
-          AllegraEra -> eraCast toEra cert
-          MaryEra ->  eraCast toEra cert
-          ShelleyEra ->  eraCast toEra cert
-          ByronEra ->  error "TODO: EraCast Certififcate - Byron era"
-            -- TODO: We need to modify the EraCast class to only allow casting to a future era.
-            -- I can't imagine a use case where we would want to cast to a previous era
-
-      ShelleyRelatedCertificate (_ :: ShelleyToBabbageEra fromEra) Ledger.ShelleyTxCertMir{} ->
-        case toEra of
-          ConwayEra -> Left $ EraCastError
-                                { originalValue = cert
-                                , fromEra = cardanoEra @fromEra
-                                , toEra = toEra
-                                }
-          BabbageEra -> eraCast toEra cert
-          AlonzoEra -> eraCast toEra cert
-          AllegraEra -> eraCast toEra cert
-          MaryEra ->  eraCast toEra cert
-          ShelleyEra ->  eraCast toEra cert
-          ByronEra ->  error "TODO: EraCast Certififcate - Byron era"
-            -- TODO: We need to modify the EraCast class to only allow casting to a future era.
-            -- I can't imagine a use case where we would want to cast to a previous era
-
-      ConwayCertificate{} -> eraCast toEra cert
+      ConwayCertificate srcw lc ->
+        inEraFeature tgte
+          ( Left $ EraCastError
+              { originalValue = cert
+              , fromEra = conwayEraOnwardsToCardanoEra srcw
+              , toEra = tgte
+              }
+          )
+          (\tgtw ->
+            Right
+              $ ConwayCertificate tgtw
+              $ conwayEraOnwardsConstraints srcw
+              $ conwayEraOnwardsConstraints tgtw
+              $ castConwayTxCert lc
+          )
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
