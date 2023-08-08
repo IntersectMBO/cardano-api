@@ -1,14 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE TypeOperators #-}
 
 
 -- | Cardano eras, sometimes we have to distinguish them.
@@ -66,6 +61,7 @@ module Cardano.Api.Eras
     -- * Assertions on era
   , requireShelleyBasedEra
 
+  , majorProtocolVersionToEra
   , withShelleyBasedEraConstraintsForLedger
   ) where
 

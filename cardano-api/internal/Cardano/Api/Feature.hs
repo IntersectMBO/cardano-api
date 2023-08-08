@@ -6,41 +6,72 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Api.Feature
-  ( Featured (..)
+  ( MaybeAvailable (..)
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
+  , isAvailable
+  , maybeToMaybeAvailable
   ) where
 
 import           Cardano.Api.Eras
 
+import           Data.Aeson
+import           Data.Kind
+import           Data.Type.Equality
+
 -- | A value only if the feature is supported in this era
-data Featured feature era a where
+data MaybeAvailable (feature :: Type -> Type) a where
   Featured
-    :: feature era
+    :: Show (feature era)
+    => feature era
     -- ^ The witness that the feature is supported in this era
     -> a
     -- ^ The value to use
-    -> Featured feature era a
+    -> MaybeAvailable feature a
 
-deriving instance (Eq a, Eq (feature era)) => Eq (Featured feature era a)
-deriving instance (Show a, Show (feature era)) => Show (Featured feature era a)
+  FeatureNotAvailable :: MaybeAvailable feature a
 
-instance Functor (Featured feature era) where
-  fmap f (Featured feature a) = Featured feature (f a)
+
+instance (Eq era, TestEquality feature) => Eq (MaybeAvailable feature era) where
+  Featured feature1 a1 == Featured feature2 a2 =
+    case testEquality feature1 feature2 of
+      Just Refl -> a1 == a2
+      Nothing   -> False
+  FeatureNotAvailable == FeatureNotAvailable = True
+  _ == _ = False
+
+deriving instance (Show a) => Show (MaybeAvailable feature a)
+
+instance ToJSON a => ToJSON (MaybeAvailable feature a) where
+  toJSON FeatureNotAvailable = Null
+  toJSON (Featured _feature a) = toJSON a
+
+isAvailable :: MaybeAvailable feature a -> Bool
+isAvailable FeatureNotAvailable = False
+isAvailable (Featured _ _) = True
+
+maybeToMaybeAvailable
+  :: FeatureInEra feature
+  => Show (feature era)
+  => CardanoEra era -> Maybe a -> MaybeAvailable feature a
+maybeToMaybeAvailable _ Nothing = FeatureNotAvailable
+maybeToMaybeAvailable era (Just a) = featureInEra FeatureNotAvailable (`Featured` a) era
 
 -- | Attempt to construct a 'FeatureValue' from a value and era.
 -- If the feature is not supported in the era, then 'NoFeatureValue' is returned.
 asFeaturedInEra :: ()
   => FeatureInEra feature
+  => Show (feature era)
   => a
   -> CardanoEra era
-  -> Maybe (Featured feature era a)
-asFeaturedInEra value = featureInEra Nothing (Just . flip Featured value)
+  -> MaybeAvailable feature a
+asFeaturedInEra value = featureInEra FeatureNotAvailable (`Featured` value)
 
 -- | Attempt to construct a 'FeatureValue' from a value and a shelley-based-era.
 asFeaturedInShelleyBasedEra :: ()
   => FeatureInEra feature
+  => Show (feature era)
   => a
   -> ShelleyBasedEra era
-  -> Maybe (Featured feature era a)
+  -> MaybeAvailable feature a
 asFeaturedInShelleyBasedEra value = asFeaturedInEra value . shelleyBasedToCardanoEra

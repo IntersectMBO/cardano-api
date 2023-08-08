@@ -62,6 +62,8 @@ module Cardano.Api.Eras.Core
     -- * Assertions on era
   , requireShelleyBasedEra
 
+    -- * Misc
+  , majorProtocolVersionToEra
   ) where
 
 import           Cardano.Api.HasTypeProxy
@@ -597,6 +599,23 @@ eraProtVerLow = \case
   ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
   ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
   ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
+
+
+majorProtocolVersionToEra :: MonadFail m => L.Version -> m AnyCardanoEra
+majorProtocolVersionToEra majProtocolVer
+  | L.eraProtVerHigh @(L.ByronEra L.StandardCrypto) == majProtocolVer = pure $ AnyCardanoEra ByronEra
+  | L.eraProtVerHigh @L.Shelley ==  majProtocolVer = pure $ AnyCardanoEra ShelleyEra
+  | L.eraProtVerHigh @L.Allegra ==  majProtocolVer = pure $ AnyCardanoEra AllegraEra
+  | L.eraProtVerHigh @L.Mary    ==  majProtocolVer = pure $ AnyCardanoEra MaryEra
+  | L.eraProtVerHigh @L.Alonzo  ==  majProtocolVer = pure $ AnyCardanoEra AlonzoEra
+  | L.eraProtVerHigh @L.Babbage ==  majProtocolVer = pure $ AnyCardanoEra BabbageEra
+  | L.eraProtVerHigh @L.Conway  ==  majProtocolVer = pure $ AnyCardanoEra ConwayEra
+  | otherwise = do
+      byronVer <- L.mkVersion (0 :: Integer)
+      if byronVer == majProtocolVer
+      then pure $ AnyCardanoEra ByronEra
+      else fail $ "majorProtocolVersionToEra: unknown major protocol version: " <> show majProtocolVer
+
 
 requireShelleyBasedEra :: ()
   => Applicative m

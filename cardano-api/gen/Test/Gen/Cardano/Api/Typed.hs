@@ -56,6 +56,7 @@ module Test.Gen.Cardano.Api.Typed
   , genExecutionUnits
   , genHashScriptData
   , genKESPeriod
+  , genMajorProtocolVersion
   , genNat
   , genNetworkId
   , genNetworkMagic
@@ -167,6 +168,7 @@ import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
 
 {- HLINT ignore "Reduce duplication" -}
+{- HLINT ignore "Avoid lambda using `infix`" -}
 {- HLINT ignore "Use let" -}
 
 genAddressByron :: Gen (Address ByronAddr)
@@ -738,9 +740,10 @@ genTxBody era = do
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
 genFeaturedInEra :: ()
   => Alternative f
+  => Show (feature era)
   => feature era
   -> f a
-  -> f (Featured feature era a)
+  -> f (MaybeAvailable feature a)
 genFeaturedInEra witness gen =
   Featured witness <$> gen
 
@@ -748,12 +751,13 @@ genFeaturedInEra witness gen =
 genMaybeFeaturedInEra :: ()
   => FeatureInEra feature
   => Alternative f
+  => Show (feature era)
   => f a
   -> CardanoEra era
-  -> f (Maybe (Featured feature era a))
+  -> f (MaybeAvailable feature a)
 genMaybeFeaturedInEra gen =
-  featureInEra (pure Nothing) $ \witness ->
-    pure Nothing <|> fmap Just (genFeaturedInEra witness gen)
+  featureInEra (pure FeatureNotAvailable) $ \witness ->
+    pure FeatureNotAvailable <|> genFeaturedInEra witness gen
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
@@ -868,6 +872,9 @@ genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 genNat :: Gen Natural
 genNat = Gen.integral (Range.linear 0 10)
 
+genMajorProtocolVersion :: Gen Natural
+genMajorProtocolVersion = Gen.integral (Range.linear 0 6)
+
 genRational :: Gen Rational
 genRational =
     (\d -> ratioToRational (1 % d)) <$> genDenominator
@@ -901,7 +908,7 @@ genMaybePraosNonce = Gen.maybe genPraosNonce
 
 genProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
 genProtocolParameters era = do
-  protocolParamProtocolVersion <- (,) <$> genNat <*> genNat
+  protocolParamProtocolVersion <- (,) <$> genMajorProtocolVersion <*> genNat
   protocolParamDecentralization <- Gen.maybe genRational
   protocolParamExtraPraosEntropy <- genMaybePraosNonce
   protocolParamMaxBlockHeaderSize <- genNat
@@ -928,7 +935,7 @@ genProtocolParameters era = do
   protocolParamMaxValueSize <- Gen.maybe genNat
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <- featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+  protocolParamUTxOCostPerByte <- genMaybeFeatureInEra genLovelace era
 
   pure ProtocolParameters {..}
 
@@ -965,7 +972,14 @@ genValidProtocolParameters era =
     <*> fmap Just genNat
     <*> fmap Just genNat
     <*> fmap Just genNat
-    <*> featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+    <*> genMaybeFeatureInEra genLovelace era
+
+genMaybeFeatureInEra
+  :: (Monad m, FeatureInEra feature, Show (feature era))
+  => m a -> CardanoEra era -> m (MaybeAvailable feature a)
+genMaybeFeatureInEra gen era = do
+  a <- gen
+  return $ featureInEra FeatureNotAvailable (\evidence ->  Featured evidence a) era
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do

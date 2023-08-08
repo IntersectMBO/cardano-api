@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -82,6 +83,7 @@ module Cardano.Api.ProtocolParameters (
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Json (toRationalJSON)
@@ -124,6 +126,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.String (IsString)
+import           Data.Type.Equality
 import           GHC.Generics
 import           Lens.Micro
 import           Numeric.Natural
@@ -298,18 +301,23 @@ data ProtocolParameters =
        -- | Cost in ada per byte of UTxO storage.
        --
        -- /Introduced in Babbage/
-       protocolParamUTxOCostPerByte :: Maybe Lovelace
+       protocolParamUTxOCostPerByte :: MaybeAvailable ProtocolUTxOCostPerByteFeature Lovelace
 
     }
   deriving (Eq, Generic, Show)
 
+
 instance FromJSON ProtocolParameters where
   parseJSON =
     withObject "ProtocolParameters" $ \o -> do
+
       v <- o .: "protocolVersion"
-      ProtocolParameters
-        <$> ((,) <$> v .: "major" <*> v .: "minor")
-        <*> o .:? "decentralization"
+      majMin@(maj,_) <- (,) <$> v .: "major" <*> v .: "minor"
+      ver <- Ledger.mkVersion maj
+      AnyCardanoEra era <- majorProtocolVersionToEra ver
+
+      ProtocolParameters majMin
+        <$> o .:? "decentralization"
         <*> o .: "extraPraosEntropy"
         <*> o .: "maxBlockHeaderSize"
         <*> o .: "maxBlockBodySize"
@@ -333,7 +341,8 @@ instance FromJSON ProtocolParameters where
         <*> o .:? "maxValueSize"
         <*> o .:? "collateralPercentage"
         <*> o .:? "maxCollateralInputs"
-        <*> o .:? "utxoCostPerByte"
+        <*> (maybeToMaybeAvailable era <$> o .: "utxoCostPerByte")
+
 
 instance ToJSON ProtocolParameters where
   toJSON ProtocolParameters{..} =
@@ -689,6 +698,11 @@ data ProtocolUTxOCostPerByteFeature era where
 
 deriving instance Eq   (ProtocolUTxOCostPerByteFeature era)
 deriving instance Show (ProtocolUTxOCostPerByteFeature era)
+
+instance TestEquality ProtocolUTxOCostPerByteFeature where
+  testEquality ProtocolUTxOCostPerByteInBabbageEra ProtocolUTxOCostPerByteInBabbageEra = Just Refl
+  testEquality ProtocolUTxOCostPerByteInConwayEra  ProtocolUTxOCostPerByteInConwayEra  = Just Refl
+  testEquality _ _ = Nothing
 
 instance FeatureInEra ProtocolUTxOCostPerByteFeature where
   featureInEra no yes = \case
@@ -1450,11 +1464,14 @@ toBabbagePParams
     } = do
   ppAlonzoCommon <- toAlonzoCommonPParams protocolParameters
   utxoCostPerByte <-
-    requireParam "protocolParamUTxOCostPerByte" Right protocolParamUTxOCostPerByte
+    case protocolParamUTxOCostPerByte of
+      FeatureNotAvailable -> Left $ PpceMissingParameter "protocolParamUTxOCostPerByte"
+      Featured _ ll -> return ll
   let ppBabbage =
         ppAlonzoCommon
         & ppCoinsPerUTxOByteL .~ CoinPerByte (toShelleyLovelace utxoCostPerByte)
   pure ppBabbage
+
 
 toConwayPParams :: BabbageEraPParams ledgerera
                 => ProtocolParameters
@@ -1505,7 +1522,7 @@ fromShelleyCommonPParams pp =
     , protocolParamMaxValueSize        = Nothing -- Only from Alonzo onwards
     , protocolParamCollateralPercent   = Nothing -- Only from Alonzo onwards
     , protocolParamMaxCollateralInputs = Nothing -- Only from Alonzo onwards
-    , protocolParamUTxOCostPerByte     = Nothing -- Only from Babbage onwards
+    , protocolParamUTxOCostPerByte     = FeatureNotAvailable -- Only from Babbage onwards
     , protocolParamDecentralization    = Nothing -- Obsolete from Babbage onwards
     , protocolParamExtraPraosEntropy   = Nothing -- Obsolete from Alonzo onwards
     , protocolParamMinUTxOValue        = Nothing -- Obsolete from Alonzo onwards
@@ -1552,11 +1569,14 @@ fromAlonzoPParams pp =
 fromBabbagePParams :: BabbageEraPParams ledgerera
                    => PParams ledgerera
                    -> ProtocolParameters
-fromBabbagePParams pp =
-  (fromAlonzoCommonPParams pp) {
-    protocolParamUTxOCostPerByte = Just . fromShelleyLovelace . unCoinPerByte $
-                                     pp ^. ppCoinsPerUTxOByteL
-    }
+fromBabbagePParams pp = do
+  let ppMajVer = Ledger.pvMajor $ pp ^. Ledger.ppProtocolVersionL
+  case  majorProtocolVersionToEra ppMajVer of
+    Nothing -> error $ "fromBabbagePParams: major protocol version not supported - " <> show ppMajVer
+    Just (AnyCardanoEra era) ->
+      (fromAlonzoCommonPParams pp)
+       { protocolParamUTxOCostPerByte = asFeaturedInEra (fromShelleyLovelace . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL) era
+       }
 
 fromConwayPParams :: BabbageEraPParams ledgerera
                   => PParams ledgerera
@@ -1588,7 +1608,7 @@ checkProtocolParameters sbe ProtocolParameters{..} =
    maxValueSize = isJust protocolParamMaxValueSize
    collateralPercent = isJust protocolParamCollateralPercent
    maxCollateralInputs = isJust protocolParamMaxCollateralInputs
-   costPerByte = isJust protocolParamUTxOCostPerByte
+   costPerByte = isAvailable protocolParamUTxOCostPerByte
    decentralization = isJust protocolParamDecentralization
    extraPraosEntropy = isJust protocolParamExtraPraosEntropy
 
@@ -1676,4 +1696,3 @@ instance Error ProtocolParametersConversionError where
     PpceVersionInvalid majorProtVer -> "Major protocol version is invalid: " <> show majorProtVer
     PpceInvalidCostModel cm err -> "Invalid cost model: " <> display err <> " Cost model: " <> show cm
     PpceMissingParameter name -> "Missing parameter: " <> name
-

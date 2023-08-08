@@ -32,7 +32,7 @@ module Cardano.Api (
     maybeFeatureInEra,
     featureInShelleyBasedEra,
     inShelleyBasedEraFeature,
-    Featured(..),
+    MaybeAvailable(..),
     asFeaturedInEra,
     asFeaturedInShelleyBasedEra,
 
