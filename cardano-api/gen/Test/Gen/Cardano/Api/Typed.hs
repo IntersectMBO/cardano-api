@@ -127,6 +127,7 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
+import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley
 
@@ -147,6 +148,7 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
@@ -1125,7 +1127,18 @@ genTxVotes :: CardanoEra era -> Gen (TxVotes era)
 genTxVotes era = fromMaybe (pure TxVotesNone) $ do
   w <- featureInEra Nothing Just era
   let votes = Gen.list (Range.constant 0 10) $ genVote w
-  pure $ TxVotes w <$> votes
+  pure $ TxVotes w . Map.fromList <$> votes
   where
-    genVote :: ConwayEraOnwards era -> Gen (VotingProcedure era)
-    genVote w = conwayEraOnwardsConstraints w $ VotingProcedure <$> Q.arbitrary
+    genVote
+      :: ConwayEraOnwards era
+      -> Gen ( (Voter era, GovernanceActionId (ShelleyLedgerEra era))
+             , VotingProcedure era
+             )
+    genVote w =
+        conwayEraOnwardsConstraints w $
+        (,)
+          <$> ((,)
+                 <$> (fromVoterRole (conwayEraOnwardsToShelleyBasedEra w) <$> Q.arbitrary)
+                 <*> (GovernanceActionId <$> Q.arbitrary)
+              )
+          <*> (VotingProcedure <$> Q.arbitrary)

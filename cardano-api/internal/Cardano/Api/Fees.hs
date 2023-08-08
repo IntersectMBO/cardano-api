@@ -72,7 +72,6 @@ import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import           Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionFee)
-import           Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import           Cardano.Ledger.UTxO as Ledger (EraUTxO)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
@@ -611,7 +610,16 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx' =
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
-        L.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr (ResolvablePointers sbe resolveable)
+        L.MissingScript rdmrPtr resolveable ->
+          let cnv1 Alonzo.Plutus
+                { Alonzo.plutusLanguage = lang
+                , Alonzo.plutusScript = Alonzo.BinaryPlutus bytes
+                } = (bytes, lang)
+              cnv2 (purpose, mbScript, scriptHash) = (purpose, fmap cnv1 mbScript, scriptHash)
+          in
+            ScriptErrorMissingScript rdmrPtr
+          $ ResolvablePointers sbe
+          $ fmap cnv2 resolveable
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 
@@ -664,7 +672,6 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits utxo
 
     evalMultiAsset :: forall ledgerera.
                       ShelleyLedgerEra era ~ ledgerera
-                   => ShelleyEraTxBody ledgerera
                    => LedgerEraConstraints ledgerera
                    => LedgerMultiAssetConstraints ledgerera
                    => MultiAssetSupportedInEra era
@@ -680,7 +687,6 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits utxo
 
     evalAdaOnly :: forall ledgerera.
                    ShelleyLedgerEra era ~ ledgerera
-                => ShelleyEraTxBody ledgerera
                 => LedgerEraConstraints ledgerera
                 => LedgerAdaOnlyConstraints ledgerera
                 => OnlyAdaSupportedInEra era

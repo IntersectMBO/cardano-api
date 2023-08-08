@@ -42,12 +42,12 @@ import           Cardano.Api.Query
 import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
+import           Cardano.Ledger.Core (EraCrypto)
 import           Cardano.Ledger.SafeHash
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-import           Data.ByteString
 import           Data.Map (Map)
 import           Data.Set (Set)
 
@@ -133,7 +133,7 @@ queryProtocolParameters eraInMode sbe =
 queryConstitutionHash :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (L.EraCrypto (ShelleyLedgerEra era)) ByteString))))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) (L.AnchorData (EraCrypto (ShelleyLedgerEra era)))))))
 queryConstitutionHash eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitutionHash
 

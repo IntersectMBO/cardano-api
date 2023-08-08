@@ -683,7 +683,7 @@ instance HasTypeProxy CommitteeHotKey where
 instance Key CommitteeHotKey where
 
     newtype VerificationKey CommitteeHotKey =
-        CommitteeHotVerificationKey (Shelley.VKey Shelley.CommitteeHotKey StandardCrypto)
+        CommitteeHotVerificationKey (Shelley.VKey Shelley.HotCommitteeRole StandardCrypto)
       deriving stock (Eq)
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeHotKey)
       deriving newtype (ToCBOR, FromCBOR)
@@ -734,7 +734,7 @@ instance SerialiseAsRawBytes (SigningKey CommitteeHotKey) where
 
 
 newtype instance Hash CommitteeHotKey =
-    CommitteeHotKeyHash (Shelley.KeyHash Shelley.CommitteeHotKey StandardCrypto)
+    CommitteeHotKeyHash (Shelley.KeyHash Shelley.HotCommitteeRole StandardCrypto)
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeHotKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeHotKey)
@@ -791,7 +791,7 @@ instance HasTypeProxy CommitteeColdKey where
 instance Key CommitteeColdKey where
 
     newtype VerificationKey CommitteeColdKey =
-        CommitteeColdVerificationKey (Shelley.VKey Shelley.CommitteeColdKey StandardCrypto)
+        CommitteeColdVerificationKey (Shelley.VKey Shelley.ColdCommitteeRole StandardCrypto)
       deriving stock (Eq)
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeColdKey)
       deriving newtype (ToCBOR, FromCBOR)
@@ -842,7 +842,7 @@ instance SerialiseAsRawBytes (SigningKey CommitteeColdKey) where
 
 
 newtype instance Hash CommitteeColdKey =
-    CommitteeColdKeyHash (Shelley.KeyHash Shelley.CommitteeColdKey StandardCrypto)
+    CommitteeColdKeyHash (Shelley.KeyHash Shelley.ColdCommitteeRole StandardCrypto)
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeColdKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeColdKey)
@@ -1498,7 +1498,7 @@ instance HasTypeProxy DRepKey where
 instance Key DRepKey where
 
     newtype VerificationKey DRepKey =
-        DRepVerificationKey (Shelley.VKey Shelley.Voting StandardCrypto)
+        DRepVerificationKey (Shelley.VKey Shelley.DRepRole StandardCrypto)
       deriving stock (Eq)
       deriving (Show, IsString) via UsingRawBytesHex (VerificationKey DRepKey)
       deriving newtype (ToCBOR, FromCBOR)
@@ -1557,7 +1557,7 @@ instance SerialiseAsBech32 (SigningKey DRepKey) where
     bech32PrefixesPermitted _ = ["drep_sk"]
 
 newtype instance Hash DRepKey =
-    DRepKeyHash { unDRepKeyHash :: Shelley.KeyHash Shelley.Voting StandardCrypto }
+    DRepKeyHash { unDRepKeyHash :: Shelley.KeyHash Shelley.DRepRole StandardCrypto }
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)

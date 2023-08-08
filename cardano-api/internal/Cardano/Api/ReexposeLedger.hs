@@ -19,6 +19,7 @@ module Cardano.Api.ReexposeLedger
 
   -- Core
   , Coin (..)
+  , EraCrypto
   , PoolCert(..)
   , addDeltaCoin
   , toDeltaCoin
@@ -28,9 +29,9 @@ module Cardano.Api.ReexposeLedger
   -- Conway
   , DRep(..)
   , ConwayTxCert(..)
-  , ConwayCommitteeCert(..)
   , ConwayDelegCert(..)
   , ConwayEraTxCert(..)
+  , ConwayGovCert(..)
 
   -- Base
   , boundRational
@@ -59,9 +60,9 @@ import           Cardano.Ledger.BaseTypes (DnsName, StrictMaybe (..), Url, bound
                    maybeToStrictMaybe, portToWord16, strictMaybeToMaybe, textToDns, textToUrl,
                    unboundRational, urlToText)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
-import           Cardano.Ledger.Conway.TxCert (ConwayCommitteeCert (..), ConwayDelegCert (..),
-                   ConwayEraTxCert (..), ConwayTxCert (..))
-import           Cardano.Ledger.Core (DRep (..), PoolCert (..), fromEraCBOR, toEraCBOR)
+import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
+                   ConwayGovCert (..), ConwayTxCert (..))
+import           Cardano.Ledger.Core (DRep (..), PoolCert (..), EraCrypto, fromEraCBOR, toEraCBOR)
 import           Cardano.Ledger.Credential (Credential (..))
 import           Cardano.Ledger.Keys (HasKeyRole (..), KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))

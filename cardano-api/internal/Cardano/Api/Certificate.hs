@@ -100,6 +100,14 @@ import           Data.Typeable
 import           Network.Socket (PortNumber)
 
 
+import           Cardano.Api.Governance.Actions.ProposalProcedure (unsafeBytesToSafeHash)   -- TODO avoid this import
+import qualified Cardano.Crypto.Hash.Class as Crypto   -- TODO avoid this import
+import           Cardano.Ledger.Crypto (HASH)   -- TODO avoid this import
+
+
+
+
+
 -- ----------------------------------------------------------------------------
 -- Certificates embedded in transactions
 --
@@ -165,10 +173,11 @@ instance
 
       -- Conway and onwards related
       -- Constitutional Committee related
-      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayRegDRep{}) -> "Constitution committee member key registration"
-      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayUnRegDRep{}) -> "Constitution committee member key unregistration"
-      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayAuthCommitteeHotKey{}) -> "Constitution committee member hot key registration"
-      ConwayCertificate _ (Ledger.ConwayTxCertCommittee Ledger.ConwayResignCommitteeColdKey{}) -> "Constitution committee member hot key resignation"
+      ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayRegDRep{}) -> "Constitution committee member key registration"
+      ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayUnRegDRep{}) -> "Constitution committee member key unregistration"
+      ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayUpdateDRep{}) -> "Constitution committee member key registration update"
+      ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayAuthCommitteeHotKey{}) -> "Constitution committee member hot key registration"
+      ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayResignCommitteeColdKey{}) -> "Constitution committee member hot key resignation"
 
       ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegCert{}) -> "Stake address registration"
       ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayUnRegCert{}) -> "Stake address deregistration"
@@ -202,8 +211,8 @@ castConwayTxCert = \case
     Ledger.ConwayTxCertDeleg c
   Ledger.ConwayTxCertPool c ->
     Ledger.ConwayTxCertPool c
-  Ledger.ConwayTxCertCommittee c ->
-    Ledger.ConwayTxCertCommittee c
+  Ledger.ConwayTxCertGov c ->
+    Ledger.ConwayTxCertGov c
 
 castShelleyToConwayTxCert :: ()
   => EraCrypto srcLedgerEra ~ StandardCrypto
@@ -260,7 +269,7 @@ castConwayToShelleyTxCert = \case
             Nothing
   Ledger.ConwayTxCertPool poolCert ->
     Just $ Ledger.ShelleyTxCertPool poolCert
-  Ledger.ConwayTxCertCommittee {} ->
+  Ledger.ConwayTxCertGov {} ->
     Nothing
 
 instance EraCast Certificate where
@@ -606,23 +615,32 @@ data DRepRegistrationRequirements era where
     :: ConwayEraOnwards era
     -> VotingCredential era
     -> Lovelace
+    -> Ledger.StrictMaybe (Ledger.Url, ByteString)
     -> DRepRegistrationRequirements era
 
 
 makeDrepRegistrationCertificate :: ()
+  => Crypto.HashAlgorithm (HASH (EraCrypto (ShelleyLedgerEra era)))
   => DRepRegistrationRequirements era
   -> Certificate era
-makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards (VotingCredential vcred) deposit) =
+makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards (VotingCredential vcred) deposit mbAnchor) =
   ConwayCertificate conwayOnwards
-    . Ledger.ConwayTxCertCommittee
-    . Ledger.ConwayRegDRep vcred
-    $ toShelleyLovelace deposit
+    $ Ledger.ConwayTxCertGov
+    $ Ledger.ConwayRegDRep
+        vcred
+        (toShelleyLovelace deposit)
+        (fmap toAnchor mbAnchor)
+  where
+    toAnchor (url, bytes) = Ledger.Anchor
+      { Ledger.anchorDataHash = unsafeBytesToSafeHash bytes
+      , Ledger.anchorUrl = url
+      }
 
 data CommitteeHotKeyAuthorizationRequirements era where
   CommitteeHotKeyAuthorizationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.KeyHash Ledger.CommitteeColdKey (EraCrypto (ShelleyLedgerEra era))
-    -> Ledger.KeyHash Ledger.CommitteeHotKey (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.HotCommitteeRole (EraCrypto (ShelleyLedgerEra era))
     -> CommitteeHotKeyAuthorizationRequirements era
 
 makeCommitteeHotKeyAuthorizationCertificate :: ()
@@ -630,13 +648,13 @@ makeCommitteeHotKeyAuthorizationCertificate :: ()
   -> Certificate era
 makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequirements cOnwards coldKeyHash hotKeyHash) =
   ConwayCertificate cOnwards
-    . Ledger.ConwayTxCertCommittee
+    . Ledger.ConwayTxCertGov
     $ Ledger.ConwayAuthCommitteeHotKey coldKeyHash hotKeyHash
 
 data CommitteeColdkeyResignationRequirements era where
   CommitteeColdkeyResignationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.KeyHash Ledger.CommitteeColdKey (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
     -> CommitteeColdkeyResignationRequirements era
 
 makeCommitteeColdkeyResignationCertificate :: ()
@@ -644,7 +662,7 @@ makeCommitteeColdkeyResignationCertificate :: ()
   -> Certificate era
 makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequirements cOnwards coldKeyHash) =
   ConwayCertificate cOnwards
-    . Ledger.ConwayTxCertCommittee
+    . Ledger.ConwayTxCertGov
     $ Ledger.ConwayResignCommitteeColdKey coldKeyHash
 
 data DRepUnregistrationRequirements era where
@@ -659,7 +677,7 @@ makeDrepUnregistrationCertificate :: ()
   -> Certificate era
 makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards (VotingCredential vcred) deposit) =
   ConwayCertificate conwayOnwards
-    . Ledger.ConwayTxCertCommittee
+    . Ledger.ConwayTxCertGov
     . Ledger.ConwayUnRegDRep vcred
     $ toShelleyLovelace deposit
 
