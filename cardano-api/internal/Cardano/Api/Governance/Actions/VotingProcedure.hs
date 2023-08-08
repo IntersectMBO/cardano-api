@@ -62,7 +62,7 @@ deriving instance Show (TxVotes era)
 deriving instance Eq (TxVotes era)
 
 newtype GovernanceActionId era = GovernanceActionId
-  { unGovernanceActionId :: Ledger.GovernanceActionId (EraCrypto (ShelleyLedgerEra era))
+  { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (ShelleyLedgerEra era))
   }
   deriving (Show, Eq, Ord)
 
@@ -84,9 +84,9 @@ makeGoveranceActionId
 makeGoveranceActionId sbe txid govix =
   shelleyBasedEraConstraints sbe
       $ GovernanceActionId
-      $ Ledger.GovernanceActionId
+      $ Ledger.GovActionId
           { Ledger.gaidTxId = toShelleyTxId txid
-          , Ledger.gaidGovActionIx = Ledger.GovernanceActionIx govix
+          , Ledger.gaidGovActionIx = Ledger.GovActionIx govix
           }
 
 -- TODO: Conway era -
