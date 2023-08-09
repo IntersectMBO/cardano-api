@@ -110,6 +110,15 @@ module Cardano.Api.Shelley
     fromShelleyMetadatum,
 
     -- * Protocol parameters
+    EraBasedProtocolParametersUpdate(..),
+    AlonzoOnwardsPParams(..),
+    CommonProtocolParameters(..),
+    DeprecatedAfterMaryPParams(..),
+    ShelleyToAlonzoPParams(..),
+    ShelleyToAlonzoPParams'(..),
+    IntroducedInBabbagePParams(..),
+    createEraBasedProtocolParamUpdate,
+
     ProtocolParameters(..),
     checkProtocolParameters,
     ProtocolParametersError(..),
@@ -269,12 +278,14 @@ module Cardano.Api.Shelley
     toConsensusGenTx,
     fromAlonzoCostModels,
     -- TODO: arrange not to export these
+    toLedgerNonce,
     toShelleyNetwork,
     obtainCryptoConstraints,
     obtainEraConstraints,
     obtainEraPParamsConstraint,
     obtainEraCryptoConstraints,
     fromShelleyPoolParams,
+    fromLedgerPParamsUpdate,
 
     -- Era based
     shelleyCertificateConstraints,
