@@ -19,6 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 {- HLINT ignore "Redundant ==" -}
+{- HLINT ignore "Use mapM" -}
 
 -- | The various Cardano protocol parameters, including:
 --
@@ -992,6 +993,11 @@ instance FeatureInEra ProtocolUTxOCostPerByteFeature where
     BabbageEra  -> yes ProtocolUTxOCostPerByteInBabbageEra
     ConwayEra   -> yes ProtocolUTxOCostPerByteInConwayEra
 
+instance ToCardanoEra ProtocolUTxOCostPerByteFeature where
+  toCardanoEra = \case
+    ProtocolUTxOCostPerByteInBabbageEra -> BabbageEra
+    ProtocolUTxOCostPerByteInConwayEra  -> ConwayEra
+
 -- | A representation of whether the era supports the 'UTxO Cost Per Word'
 -- protocol parameter.
 --
@@ -1012,6 +1018,10 @@ instance FeatureInEra ProtocolUTxOCostPerWordFeature where
     AlonzoEra   -> yes ProtocolUpdateUTxOCostPerWordInAlonzoEra
     BabbageEra  -> no
     ConwayEra   -> no
+
+instance ToCardanoEra ProtocolUTxOCostPerWordFeature where
+  toCardanoEra = \case
+    ProtocolUpdateUTxOCostPerWordInAlonzoEra -> AlonzoEra
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
@@ -1968,4 +1978,3 @@ instance Error ProtocolParametersConversionError where
     PpceVersionInvalid majorProtVer -> "Major protocol version is invalid: " <> show majorProtVer
     PpceInvalidCostModel cm err -> "Invalid cost model: " <> display err <> " Cost model: " <> show cm
     PpceMissingParameter name -> "Missing parameter: " <> name
-
