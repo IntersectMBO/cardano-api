@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 {- HLINT ignore "Redundant ==" -}
+{- HLINT ignore "Use mapM" -}
 
 -- | The various Cardano protocol parameters, including:
 --
@@ -80,6 +81,7 @@ module Cardano.Api.ProtocolParameters (
   ) where
 
 import           Cardano.Api.Address
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
@@ -369,6 +371,68 @@ instance ToJSON (ProtocolParameters era) where
       -- Babbage era:
       , "utxoCostPerByte"        .= protocolParamUTxOCostPerByte
       ]
+
+inEra :: CardanoEra era -> f era -> f era
+inEra _ = id
+
+instance EraCast ProtocolParameters where
+  eraCast era pp = do
+    newProtocolParamProtocolVersion     <- pp & protocolParamProtocolVersion      & pure
+    newProtocolParamDecentralization    <- pp & protocolParamDecentralization     & pure
+    newProtocolParamExtraPraosEntropy   <- pp & protocolParamExtraPraosEntropy    & pure
+    newProtocolParamMaxBlockHeaderSize  <- pp & protocolParamMaxBlockHeaderSize   & pure
+    newProtocolParamMaxBlockBodySize    <- pp & protocolParamMaxBlockBodySize     & pure
+    newProtocolParamMaxTxSize           <- pp & protocolParamMaxTxSize            & pure
+    newProtocolParamTxFeeFixed          <- pp & protocolParamTxFeeFixed           & pure
+    newProtocolParamTxFeePerByte        <- pp & protocolParamTxFeePerByte         & pure
+    newProtocolParamMinUTxOValue        <- pp & protocolParamMinUTxOValue         & pure
+    newProtocolParamStakeAddressDeposit <- pp & protocolParamStakeAddressDeposit  & pure
+    newProtocolParamStakePoolDeposit    <- pp & protocolParamStakePoolDeposit     & pure
+    newProtocolParamMinPoolCost         <- pp & protocolParamMinPoolCost          & pure
+    newProtocolParamPoolRetireMaxEpoch  <- pp & protocolParamPoolRetireMaxEpoch   & pure
+    newProtocolParamStakePoolTargetNum  <- pp & protocolParamStakePoolTargetNum   & pure
+    newProtocolParamPoolPledgeInfluence <- pp & protocolParamPoolPledgeInfluence  & pure
+    newProtocolParamMonetaryExpansion   <- pp & protocolParamMonetaryExpansion    & pure
+    newProtocolParamTreasuryCut         <- pp & protocolParamTreasuryCut          & pure
+    newProtocolParamUTxOCostPerWord     <- pp & protocolParamUTxOCostPerWord      & fmap (eraCastFeatured era) & sequence
+    newProtocolParamCostModels          <- pp & protocolParamCostModels           & pure
+    newProtocolParamPrices              <- pp & protocolParamPrices               & pure
+    newProtocolParamMaxTxExUnits        <- pp & protocolParamMaxTxExUnits         & pure
+    newProtocolParamMaxBlockExUnits     <- pp & protocolParamMaxBlockExUnits      & pure
+    newProtocolParamMaxValueSize        <- pp & protocolParamMaxValueSize         & pure
+    newProtocolParamCollateralPercent   <- pp & protocolParamCollateralPercent    & pure
+    newProtocolParamMaxCollateralInputs <- pp & protocolParamMaxCollateralInputs  & pure
+    newProtocolParamUTxOCostPerByte     <- pp & protocolParamUTxOCostPerByte      & fmap (eraCastFeatured era) & sequence
+
+    pure $ inEra era ProtocolParameters
+      { protocolParamProtocolVersion      = newProtocolParamProtocolVersion
+      , protocolParamDecentralization     = newProtocolParamDecentralization
+      , protocolParamExtraPraosEntropy    = newProtocolParamExtraPraosEntropy
+      , protocolParamMaxBlockHeaderSize   = newProtocolParamMaxBlockHeaderSize
+      , protocolParamMaxBlockBodySize     = newProtocolParamMaxBlockBodySize
+      , protocolParamMaxTxSize            = newProtocolParamMaxTxSize
+      , protocolParamTxFeeFixed           = newProtocolParamTxFeeFixed
+      , protocolParamTxFeePerByte         = newProtocolParamTxFeePerByte
+      , protocolParamMinUTxOValue         = newProtocolParamMinUTxOValue
+      , protocolParamStakeAddressDeposit  = newProtocolParamStakeAddressDeposit
+      , protocolParamStakePoolDeposit     = newProtocolParamStakePoolDeposit
+      , protocolParamMinPoolCost          = newProtocolParamMinPoolCost
+      , protocolParamPoolRetireMaxEpoch   = newProtocolParamPoolRetireMaxEpoch
+      , protocolParamStakePoolTargetNum   = newProtocolParamStakePoolTargetNum
+      , protocolParamPoolPledgeInfluence  = newProtocolParamPoolPledgeInfluence
+      , protocolParamMonetaryExpansion    = newProtocolParamMonetaryExpansion
+      , protocolParamTreasuryCut          = newProtocolParamTreasuryCut
+      , protocolParamUTxOCostPerWord      = newProtocolParamUTxOCostPerWord
+      , protocolParamCostModels           = newProtocolParamCostModels
+      , protocolParamPrices               = newProtocolParamPrices
+      , protocolParamMaxTxExUnits         = newProtocolParamMaxTxExUnits
+      , protocolParamMaxBlockExUnits      = newProtocolParamMaxBlockExUnits
+      , protocolParamMaxValueSize         = newProtocolParamMaxValueSize
+      , protocolParamCollateralPercent    = newProtocolParamCollateralPercent
+      , protocolParamMaxCollateralInputs  = newProtocolParamMaxCollateralInputs
+      , protocolParamUTxOCostPerByte      = newProtocolParamUTxOCostPerByte
+      }
+
 
 -- ----------------------------------------------------------------------------
 -- Updates to the protocol parameters
@@ -700,6 +764,11 @@ instance FeatureInEra ProtocolUTxOCostPerByteFeature where
     BabbageEra  -> yes ProtocolUTxOCostPerByteInBabbageEra
     ConwayEra   -> yes ProtocolUTxOCostPerByteInConwayEra
 
+instance ToCardanoEra ProtocolUTxOCostPerByteFeature where
+  toCardanoEra = \case
+    ProtocolUTxOCostPerByteInBabbageEra -> BabbageEra
+    ProtocolUTxOCostPerByteInConwayEra  -> ConwayEra
+
 -- | A representation of whether the era supports the 'UTxO Cost Per Word'
 -- protocol parameter.
 --
@@ -720,6 +789,10 @@ instance FeatureInEra ProtocolUTxOCostPerWordFeature where
     AlonzoEra   -> yes ProtocolUpdateUTxOCostPerWordInAlonzoEra
     BabbageEra  -> no
     ConwayEra   -> no
+
+instance ToCardanoEra ProtocolUTxOCostPerWordFeature where
+  toCardanoEra = \case
+    ProtocolUpdateUTxOCostPerWordInAlonzoEra -> AlonzoEra
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
@@ -1693,4 +1766,3 @@ instance Error ProtocolParametersConversionError where
     PpceVersionInvalid majorProtVer -> "Major protocol version is invalid: " <> show majorProtVer
     PpceInvalidCostModel cm err -> "Invalid cost model: " <> display err <> " Cost model: " <> show cm
     PpceMissingParameter name -> "Missing parameter: " <> name
-

@@ -121,6 +121,9 @@ module Test.Gen.Cardano.Api.Typed
 
   , genGovernancePoll
   , genGovernancePollAnswer
+
+  , genMaybeFeatured
+  , genValidFeatured
   ) where
 
 import           Cardano.Api hiding (txIns)
@@ -899,6 +902,17 @@ genPraosNonce = makePraosNonce <$> Gen.bytes (Range.linear 0 32)
 genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce = Gen.maybe genPraosNonce
 
+genValidFeatured :: ()
+  => FeatureInEra feature
+  => CardanoEra era
+  -> Gen a
+  -> Gen (Maybe (Featured feature era a))
+genValidFeatured era g =
+  featureInEra
+    (pure Nothing)
+    (\w -> Just . Featured w <$> g)
+    era
+
 genMaybeFeatured :: ()
   => FeatureInEra feature
   => CardanoEra era
@@ -965,7 +979,7 @@ genValidProtocolParameters era =
     <*> genRational
     <*> genRational
     -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
-    <*> genMaybeFeatured era genLovelace
+    <*> genValidFeatured era genLovelace
     <*> return mempty
     --TODO: Babbage figure out how to deal with
     -- asymmetric cost model JSON instances
@@ -976,7 +990,7 @@ genValidProtocolParameters era =
     <*> fmap Just genNat
     <*> fmap Just genNat
     <*> fmap Just genNat
-    <*> genMaybeFeatured era genLovelace
+    <*> genValidFeatured era genLovelace
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do

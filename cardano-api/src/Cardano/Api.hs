@@ -25,6 +25,7 @@ module Cardano.Api (
     anyCardanoEra,
     cardanoEraConstraints,
     InAnyCardanoEra(..),
+    ToCardanoEra(..),
 
     -- * Feature support
     FeatureInEra(..),
@@ -35,6 +36,7 @@ module Cardano.Api (
     Featured(..),
     asFeaturedInEra,
     asFeaturedInShelleyBasedEra,
+    InAnyEra(..),
 
     -- * Features
     ShelleyToBabbageEra(..),
@@ -874,6 +876,7 @@ module Cardano.Api (
     -- ** Cast functions
     EraCast (..),
     EraCastError (..),
+    eraCastFeatured,
 
     -- * Convenience functions
 

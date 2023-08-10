@@ -16,7 +16,7 @@ module Cardano.Api.Feature.ConwayEraOnwards
   , conwayEraOnwardsToShelleyBasedEra
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Query.Types
 
@@ -57,6 +57,10 @@ instance FeatureInEra ConwayEraOnwards where
     AlonzoEra   -> no
     BabbageEra  -> no
     ConwayEra   -> yes ConwayEraOnwardsConway
+
+instance ToCardanoEra ConwayEraOnwards where
+  toCardanoEra = \case
+    ConwayEraOnwardsConway -> ConwayEra
 
 data AnyConwayEraOnwards where
   AnyConwayEraOnwards :: ConwayEraOnwards era -> AnyConwayEraOnwards

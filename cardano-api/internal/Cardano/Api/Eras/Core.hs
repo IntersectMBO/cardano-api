@@ -20,12 +20,16 @@ module Cardano.Api.Eras.Core
   , AlonzoEra
   , BabbageEra
   , ConwayEra
+
+    -- * CardanoEra
   , CardanoEra(..)
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
   , InAnyCardanoEra(..)
+  , InAnyEra(..)
   , CardanoLedgerEra
+  , ToCardanoEra(..)
 
     -- * FeatureInEra
   , FeatureInEra(..)
@@ -178,6 +182,14 @@ inShelleyBasedEraFeature :: ()
   -> a
 inShelleyBasedEraFeature era no yes =
   featureInShelleyBasedEra no yes era
+
+-- ----------------------------------------------------------------------------
+-- ToCardanoEra
+
+class ToCardanoEra (feature :: Type -> Type) where
+  toCardanoEra :: ()
+    => feature era
+    -> CardanoEra era
 
 -- ----------------------------------------------------------------------------
 -- Deprecated aliases
@@ -378,6 +390,10 @@ data InAnyCardanoEra thing where
                      -> thing era
                      -> InAnyCardanoEra thing
 
+-- | This pairs up some era-dependent type with a 'feature' value that tells
+-- us what feature involves, but hides the era type.
+data InAnyEra (feature :: Type -> Type) (t :: Type -> Type) where
+  InAnyEra :: feature era -> t era -> InAnyEra feature t
 
 -- ----------------------------------------------------------------------------
 -- Shelley-based eras

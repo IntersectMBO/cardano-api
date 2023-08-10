@@ -7,10 +7,12 @@ module Cardano.Api.Feature
   ( Featured (..)
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
+  , eraCastFeatured
   , (.:?^)
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.EraCast
+import           Cardano.Api.Eras.Core
 
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -95,3 +97,24 @@ explicitParseFieldFeatureValue p obj key =
   -> Key
   -> Parser (Maybe (Featured feature era a))
 (.:?^) = explicitParseFieldFeatureValue parseJSON
+
+eraCastFeatured :: ()
+  => Show a
+  => ToCardanoEra feature
+  => IsCardanoEra sourceEra
+  => IsCardanoEra targetEra
+  => FeatureInEra feature
+  => CardanoEra targetEra
+  -> Featured feature sourceEra a
+  -> Either EraCastError (Featured feature targetEra a)
+eraCastFeatured targetEra (Featured feature a) =
+  featureInEra
+    (Left e)
+    (\w -> Right (Featured w a))
+    targetEra
+  where
+    e = EraCastError
+      { originalValue = a
+      , fromEra = toCardanoEra feature
+      , toEra = targetEra
+      }
