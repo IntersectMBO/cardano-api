@@ -74,6 +74,14 @@ instance FeatureInEra ShelleyToBabbageEra where
     BabbageEra  -> yes ShelleyToBabbageEraBabbage
     ConwayEra   -> no
 
+instance ToCardanoEra ShelleyToBabbageEra where
+  toCardanoEra = \case
+    ShelleyToBabbageEraShelley  -> ShelleyEra
+    ShelleyToBabbageEraAllegra  -> AllegraEra
+    ShelleyToBabbageEraMary     -> MaryEra
+    ShelleyToBabbageEraAlonzo   -> AlonzoEra
+    ShelleyToBabbageEraBabbage  -> BabbageEra
+
 type ShelleyToBabbageEraConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed

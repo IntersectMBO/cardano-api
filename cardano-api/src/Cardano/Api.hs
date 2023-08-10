@@ -25,6 +25,7 @@ module Cardano.Api (
     anyCardanoEra,
     cardanoEraConstraints,
     InAnyCardanoEra(..),
+    ToCardanoEra(..),
 
     -- * Feature support
     FeatureInEra(..),
