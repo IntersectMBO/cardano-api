@@ -41,7 +41,7 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Value
 
-import           Cardano.Ledger.Api
+import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.SafeHash
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
@@ -93,8 +93,8 @@ queryEraHistory =
   queryExpr $ QueryEraHistory CardanoModeIsMultiEra
 
 queryGenesisParameters :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => EraInMode ShelleyEra mode
+  -> ShelleyBasedEra ShelleyEra
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch GenesisParameters))
 queryGenesisParameters eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryGenesisParameters
@@ -133,7 +133,7 @@ queryProtocolParameters eraInMode sbe =
 queryConstitutionHash :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) ByteString))))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (L.EraCrypto (ShelleyLedgerEra era)) ByteString))))
 queryConstitutionHash eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitutionHash
 
