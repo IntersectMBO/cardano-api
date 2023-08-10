@@ -82,6 +82,7 @@ module Cardano.Api.ProtocolParameters (
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Json (toRationalJSON)
@@ -257,7 +258,7 @@ data ProtocolParameters era =
        -- | Cost in ada per word of UTxO storage.
        --
        -- /Introduced in Alonzo/
-       protocolParamUTxOCostPerWord :: Maybe Lovelace,
+       protocolParamUTxOCostPerWord :: Maybe (Featured ProtocolUTxOCostPerWordFeature era Lovelace),
 
        -- | Cost models for script languages that use them.
        --
@@ -298,12 +299,12 @@ data ProtocolParameters era =
        -- | Cost in ada per byte of UTxO storage.
        --
        -- /Introduced in Babbage/
-       protocolParamUTxOCostPerByte :: Maybe Lovelace
+       protocolParamUTxOCostPerByte :: Maybe (Featured ProtocolUTxOCostPerByteFeature era Lovelace)
 
     }
   deriving (Eq, Generic, Show)
 
-instance FromJSON (ProtocolParameters era) where
+instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
   parseJSON =
     withObject "ProtocolParameters" $ \o -> do
       v <- o .: "protocolVersion"
@@ -325,7 +326,7 @@ instance FromJSON (ProtocolParameters era) where
         <*> o .: "poolPledgeInfluence"
         <*> o .: "monetaryExpansion"
         <*> o .: "treasuryCut"
-        <*> o .:? "utxoCostPerWord"
+        <*> o .:?^ "utxoCostPerWord"
         <*> (fmap unCostModels <$> o .:? "costModels") .!= Map.empty
         <*> o .:? "executionUnitPrices"
         <*> o .:? "maxTxExecutionUnits"
@@ -333,7 +334,7 @@ instance FromJSON (ProtocolParameters era) where
         <*> o .:? "maxValueSize"
         <*> o .:? "collateralPercentage"
         <*> o .:? "maxCollateralInputs"
-        <*> o .:? "utxoCostPerByte"
+        <*> o .:?^ "utxoCostPerByte"
 
 instance ToJSON (ProtocolParameters era) where
   toJSON ProtocolParameters{..} =
@@ -368,7 +369,6 @@ instance ToJSON (ProtocolParameters era) where
       -- Babbage era:
       , "utxoCostPerByte"        .= protocolParamUTxOCostPerByte
       ]
-
 
 -- ----------------------------------------------------------------------------
 -- Updates to the protocol parameters
@@ -1091,8 +1091,21 @@ toBabbagePParamsUpdate
            noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
   pure ppuBabbage
 
-requireParam :: String -> (a -> Either ProtocolParametersConversionError b) -> Maybe a -> Either ProtocolParametersConversionError b
+requireParam :: ()
+  => String
+  -> (a -> Either ProtocolParametersConversionError b)
+  -> Maybe a
+  -> Either ProtocolParametersConversionError b
 requireParam paramName = maybe (Left $ PpceMissingParameter paramName)
+
+requireFeatureParam :: ()
+  => String
+  -> (a -> Either ProtocolParametersConversionError b)
+  -> Maybe (Featured feature era a)
+  -> Either ProtocolParametersConversionError b
+requireFeatureParam paramName f fv = case fv of
+  Nothing -> Left $ PpceMissingParameter paramName
+  Just (Featured _ v) -> f v
 
 mkProtVer :: (Natural, Natural) -> Either ProtocolParametersConversionError Ledger.ProtVer
 mkProtVer (majorProtVer, minorProtVer) = maybeToRight (PpceVersionInvalid majorProtVer) $
@@ -1433,7 +1446,7 @@ toAlonzoPParams
   --                   (boundRationalEither "D")
   --                   protocolParamDecentralization
   utxoCostPerWord <-
-    requireParam "protocolParamUTxOCostPerWord" Right protocolParamUTxOCostPerWord
+    requireFeatureParam "protocolParamUTxOCostPerWord" Right protocolParamUTxOCostPerWord
   let ppAlonzo =
         ppAlonzoCommon
         & ppDL .~ d
@@ -1450,7 +1463,7 @@ toBabbagePParams
     } = do
   ppAlonzoCommon <- toAlonzoCommonPParams protocolParameters
   utxoCostPerByte <-
-    requireParam "protocolParamUTxOCostPerByte" Right protocolParamUTxOCostPerByte
+    requireFeatureParam "protocolParamUTxOCostPerByte" Right protocolParamUTxOCostPerByte
   let ppBabbage =
         ppAlonzoCommon
         & ppCoinsPerUTxOByteL .~ CoinPerByte (toShelleyLovelace utxoCostPerByte)
@@ -1542,23 +1555,27 @@ fromAlonzoCommonPParams pp =
 
 fromAlonzoPParams :: Ledger.Crypto crypto
                   => PParams (Ledger.AlonzoEra crypto)
-                  -> ProtocolParameters era
+                  -> ProtocolParameters AlonzoEra
 fromAlonzoPParams pp =
   (fromAlonzoCommonPParams pp) {
-    protocolParamUTxOCostPerWord = Just . fromShelleyLovelace . unCoinPerWord $
-                                     pp ^. ppCoinsPerUTxOWordL
+    protocolParamUTxOCostPerWord = Just $ Featured ProtocolUpdateUTxOCostPerWordInAlonzoEra (fromShelleyLovelace . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL)
     }
 
 fromBabbagePParams :: BabbageEraPParams ledgerera
+                   => IsCardanoEra era
                    => PParams ledgerera
                    -> ProtocolParameters era
 fromBabbagePParams pp =
   (fromAlonzoCommonPParams pp) {
-    protocolParamUTxOCostPerByte = Just . fromShelleyLovelace . unCoinPerByte $
-                                     pp ^. ppCoinsPerUTxOByteL
+    protocolParamUTxOCostPerByte =
+      featureInEra
+        Nothing
+        (Just . flip Featured (fromShelleyLovelace . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL))
+        cardanoEra
     }
 
 fromConwayPParams :: BabbageEraPParams ledgerera
+                  => IsCardanoEra era
                   => PParams ledgerera
                   -> ProtocolParameters era
 fromConwayPParams = fromBabbagePParams

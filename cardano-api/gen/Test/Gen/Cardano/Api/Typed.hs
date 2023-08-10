@@ -899,6 +899,17 @@ genPraosNonce = makePraosNonce <$> Gen.bytes (Range.linear 0 32)
 genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce = Gen.maybe genPraosNonce
 
+genMaybeFeatured :: ()
+  => FeatureInEra feature
+  => CardanoEra era
+  -> Gen a
+  -> Gen (Maybe (Featured feature era a))
+genMaybeFeatured era g =
+  featureInEra
+    (pure Nothing)
+    (\w -> pure Nothing <|> Just . Featured w <$> g)
+    era
+
 genProtocolParameters :: CardanoEra era -> Gen (ProtocolParameters era)
 genProtocolParameters era = do
   protocolParamProtocolVersion <- (,) <$> genNat <*> genNat
@@ -918,7 +929,7 @@ genProtocolParameters era = do
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
-  protocolParamUTxOCostPerWord <- featureInEra @ProtocolUTxOCostPerWordFeature (pure Nothing) (const (Just <$> genLovelace)) era
+  protocolParamUTxOCostPerWord <- genMaybeFeatured era genLovelace
   protocolParamCostModels <- pure mempty
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
@@ -928,7 +939,7 @@ genProtocolParameters era = do
   protocolParamMaxValueSize <- Gen.maybe genNat
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <- featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+  protocolParamUTxOCostPerByte <- genMaybeFeatured era genLovelace
 
   pure ProtocolParameters {..}
 
@@ -954,7 +965,7 @@ genValidProtocolParameters era =
     <*> genRational
     <*> genRational
     -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
-    <*> featureInEra @ProtocolUTxOCostPerWordFeature (pure Nothing) (const (Just <$> genLovelace)) era
+    <*> genMaybeFeatured era genLovelace
     <*> return mempty
     --TODO: Babbage figure out how to deal with
     -- asymmetric cost model JSON instances
@@ -965,7 +976,7 @@ genValidProtocolParameters era =
     <*> fmap Just genNat
     <*> fmap Just genNat
     <*> fmap Just genNat
-    <*> featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+    <*> genMaybeFeatured era genLovelace
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do
