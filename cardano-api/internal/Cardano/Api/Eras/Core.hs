@@ -20,12 +20,15 @@ module Cardano.Api.Eras.Core
   , AlonzoEra
   , BabbageEra
   , ConwayEra
+
+    -- * CardanoEra
   , CardanoEra(..)
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
   , InAnyCardanoEra(..)
   , CardanoLedgerEra
+  , ToCardanoEra(..)
 
     -- * FeatureInEra
   , FeatureInEra(..)
@@ -180,6 +183,14 @@ inShelleyBasedEraFeature era no yes =
   featureInShelleyBasedEra no yes era
 
 -- ----------------------------------------------------------------------------
+-- ToCardanoEra
+
+class ToCardanoEra (feature :: Type -> Type) where
+  toCardanoEra :: ()
+    => feature era
+    -> CardanoEra era
+
+-- ----------------------------------------------------------------------------
 -- Deprecated aliases
 --
 
@@ -267,6 +278,8 @@ instance TestEquality CardanoEra where
     testEquality ConwayEra  ConwayEra  = Just Refl
     testEquality _          _          = Nothing
 
+instance ToCardanoEra CardanoEra where
+  toCardanoEra = id
 
 -- | The class of Cardano eras. This allows uniform handling of all Cardano
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
@@ -378,7 +391,6 @@ data InAnyCardanoEra thing where
                      -> thing era
                      -> InAnyCardanoEra thing
 
-
 -- ----------------------------------------------------------------------------
 -- Shelley-based eras
 --
@@ -423,6 +435,15 @@ instance TestEquality ShelleyBasedEra where
     testEquality ShelleyBasedEraBabbage ShelleyBasedEraBabbage = Just Refl
     testEquality ShelleyBasedEraConway  ShelleyBasedEraConway  = Just Refl
     testEquality _                      _                      = Nothing
+
+instance ToCardanoEra ShelleyBasedEra where
+  toCardanoEra = \case
+    ShelleyBasedEraShelley -> ShelleyEra
+    ShelleyBasedEraAllegra -> AllegraEra
+    ShelleyBasedEraMary    -> MaryEra
+    ShelleyBasedEraAlonzo  -> AlonzoEra
+    ShelleyBasedEraBabbage -> BabbageEra
+    ShelleyBasedEraConway  -> ConwayEra
 
 -- | The class of eras that are based on Shelley. This allows uniform handling
 -- of Shelley-based eras, but also non-uniform by making case distinctions on

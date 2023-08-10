@@ -22,6 +22,8 @@ module Cardano.Api.Eras
   , AlonzoEra
   , BabbageEra
   , ConwayEra
+
+    -- * CardanoEra
   , CardanoEra(..)
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
@@ -29,6 +31,7 @@ module Cardano.Api.Eras
   , cardanoEraConstraints
   , InAnyCardanoEra(..)
   , CardanoLedgerEra
+  , ToCardanoEra(..)
 
     -- * FeatureInEra
   , FeatureInEra(..)
