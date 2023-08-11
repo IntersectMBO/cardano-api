@@ -26,7 +26,6 @@ import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Tx
