@@ -63,6 +63,7 @@ library internal
                         Cardano.Api.Error
                         Cardano.Api.Feature
                         Cardano.Api.Feature.AlonzoEraOnwards
+                        Cardano.Api.Feature.BabbageEraOnwards
                         Cardano.Api.Feature.ConwayEraOnwards
                         Cardano.Api.Feature.ShelleyToAlonzoEra
                         Cardano.Api.Feature.ShelleyToBabbageEra
