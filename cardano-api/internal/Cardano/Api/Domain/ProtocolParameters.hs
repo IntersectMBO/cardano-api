@@ -33,6 +33,7 @@ module Cardano.Api.Domain.ProtocolParameters
   , protocolParamUTxOCostPerByteL
   ) where
 
+import           Cardano.Api.Domain.PraosNonce
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Feature.AlonzoEraOnly
@@ -80,8 +81,8 @@ protocolParamDecentralizationL w = shelleyToAlonzoEraConstraints w $ protocolPar
 -- randomly then this method can be used to show that the initial
 -- federated operators did not subtly bias the initial schedule so that
 -- they retain undue influence after decentralisation.
-protocolParamExtraPraosEntropyL :: ShelleyToAlonzoEra era -> Lens' (ProtocolParameters era) Ledger.Nonce
-protocolParamExtraPraosEntropyL w = shelleyToAlonzoEraConstraints w $ protocolParametersL . Ledger.ppExtraEntropyL
+protocolParamExtraPraosEntropyL :: ShelleyToAlonzoEra era -> Lens' (ProtocolParameters era) (Maybe PraosNonce)
+protocolParamExtraPraosEntropyL w = shelleyToAlonzoEraConstraints w $ protocolParametersL . Ledger.ppExtraEntropyL . unLedgerNonceL
 
 -- | The maximum permitted size of a block header.
 --
