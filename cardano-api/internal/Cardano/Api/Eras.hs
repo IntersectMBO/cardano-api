@@ -26,6 +26,7 @@ module Cardano.Api.Eras
   , maybeFeatureInEra
   , featureInShelleyBasedEra
   , inShelleyBasedEraFeature
+  , InAnyEra(..)
 
     -- * Deprecated aliases
   , Byron
@@ -61,3 +62,4 @@ module Cardano.Api.Eras
 
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
+import           Cardano.Api.Eras.InAnyEra

@@ -36,6 +36,7 @@ module Cardano.Api (
     Featured(..),
     asFeaturedInEra,
     asFeaturedInShelleyBasedEra,
+    InAnyEra(..),
 
     -- * Features
     ShelleyToBabbageEra(..),
@@ -961,6 +962,7 @@ import           Cardano.Api.DRepMetadata
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
+import           Cardano.Api.Eras.InAnyEra
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
 import           Cardano.Api.Feature.ConwayEraOnwards

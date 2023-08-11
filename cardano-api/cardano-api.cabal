@@ -59,6 +59,7 @@ library internal
                         Cardano.Api.Eras
                         Cardano.Api.Eras.Constraints
                         Cardano.Api.Eras.Core
+                        Cardano.Api.Eras.InAnyEra
                         Cardano.Api.Error
                         Cardano.Api.Feature
                         Cardano.Api.Feature.ConwayEraOnwards
