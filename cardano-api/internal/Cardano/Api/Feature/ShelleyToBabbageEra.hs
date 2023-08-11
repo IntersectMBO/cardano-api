@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -95,6 +96,7 @@ type ShelleyToBabbageEraConstraints era =
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ProtVerAtMost (ShelleyLedgerEra era) 7
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
