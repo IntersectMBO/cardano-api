@@ -65,6 +65,7 @@ library internal
                         Cardano.Api.Feature.ConwayEraOnwards
                         Cardano.Api.Feature.ShelleyToAlonzoEra
                         Cardano.Api.Feature.ShelleyToBabbageEra
+                        Cardano.Api.Feature.ShelleyToMaryEra
                         Cardano.Api.Fees
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters
