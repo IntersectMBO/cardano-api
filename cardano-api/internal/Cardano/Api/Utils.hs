@@ -5,7 +5,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -31,7 +30,7 @@ module Cardano.Api.Utils
   , bounded
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 
 import           Cardano.Ledger.Shelley ()
 

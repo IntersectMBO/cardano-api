@@ -16,7 +16,7 @@ module Cardano.Api.GenesisParameters (
 
   ) where
 
-import           Cardano.Api.Eras (ShelleyBasedEra (ShelleyBasedEraShelley))
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Value

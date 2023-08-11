@@ -15,7 +15,7 @@ module Cardano.Api.DRepMetadata (
     Hash(..),
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy

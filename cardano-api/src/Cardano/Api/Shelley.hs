@@ -294,7 +294,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.DRepMetadata
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Genesis
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure

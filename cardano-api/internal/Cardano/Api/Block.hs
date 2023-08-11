@@ -51,7 +51,8 @@ module Cardano.Api.Block (
     makeChainTip,
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley

@@ -18,7 +18,7 @@ module Cardano.Api.Governance.Actions.VotingProcedure where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature.ConwayEraOnwards (ConwayEraOnwards)
+import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
