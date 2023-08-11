@@ -63,6 +63,7 @@ library internal
                         Cardano.Api.Domain.Lovelace
                         Cardano.Api.Domain.PraosNonce
                         Cardano.Api.Domain.ProtocolParameters
+                        Cardano.Api.Domain.ProtocolParametersUpdate
                         Cardano.Api.Domain.ProtVer
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
