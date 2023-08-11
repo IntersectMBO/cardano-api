@@ -52,20 +52,20 @@ cardanoEraConstraints = \case
   BabbageEra -> id
   ConwayEra  -> id
 
-type ShelleyBasedEraConstraints era ledgerera =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto ledgerera))
-  , C.Signable (L.VRF (L.EraCrypto ledgerera)) L.Seed
+type ShelleyBasedEraConstraints era =
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
-  , Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.Crypto (L.EraCrypto ledgerera)
-  , L.Era ledgerera
-  , L.EraCrypto ledgerera ~ L.StandardCrypto
-  , L.EraPParams ledgerera
-  , L.EraTx ledgerera
-  , L.EraTxBody ledgerera
-  , L.HashAnnotated (L.TxBody ledgerera) L.EraIndependentTxBody L.StandardCrypto
-  , L.ShelleyEraTxBody ledgerera
+  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+  , L.Era (ShelleyLedgerEra era)
+  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , L.EraPParams (ShelleyLedgerEra era)
+  , L.EraTx (ShelleyLedgerEra era)
+  , L.EraTxBody (ShelleyLedgerEra era)
+  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
@@ -76,9 +76,8 @@ type ShelleyBasedEraConstraints era ledgerera =
   )
 
 shelleyBasedEraConstraints :: ()
-  => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
-  -> (ShelleyBasedEraConstraints era ledgerera => a)
+  -> (ShelleyBasedEraConstraints era => a)
   -> a
 shelleyBasedEraConstraints = \case
   ShelleyBasedEraShelley -> id
@@ -90,8 +89,7 @@ shelleyBasedEraConstraints = \case
 
 -- Deprecated: Use shelleyBasedEraConstraints instead.
 withShelleyBasedEraConstraintsForLedger :: ()
-  => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
-  -> (ShelleyBasedEraConstraints era ledgerera => a)
+  -> (ShelleyBasedEraConstraints era => a)
   -> a
 withShelleyBasedEraConstraintsForLedger = shelleyBasedEraConstraints
