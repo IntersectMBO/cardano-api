@@ -1,5 +1,13 @@
+
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
+-- This will be removed in the next commit
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+
+{- HLINT ignore "Redundant pure" -}
 
 module Cardano.Api.Domain.ProtocolParameters
   ( ProtocolParameters(..)
@@ -33,7 +41,9 @@ module Cardano.Api.Domain.ProtocolParameters
   , protocolParamUTxOCostPerByteL
   ) where
 
+import           Cardano.Api.Domain.Lovelace
 import           Cardano.Api.Domain.PraosNonce
+import           Cardano.Api.Domain.ProtVer
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Feature.AlonzoEraOnly
@@ -46,14 +56,103 @@ import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Babbage.Core as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Coin as Ledger
 
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import           Data.Function ((&))
 import           GHC.Natural (Natural)
-import           Lens.Micro (Lens', lens)
+import           Lens.Micro (Lens', lens, (.~), (^.))
 
 newtype ProtocolParameters era = ProtocolParameters
   { unProtocolParameters :: Ledger.PParams (ShelleyLedgerEra era)
   }
+
+instance IsCardanoEra era => ToJSON (ProtocolParameters era) where
+  toJSON pp =
+    case cardanoEra @era of
+      era ->
+        object
+          [ "extraPraosEntropy"       .= justInEraFeature era (\w -> pp ^. protocolParamExtraPraosEntropyL w)
+          , "stakePoolTargetNum"      .= justInEraFeature era (\w -> pp ^. protocolParamStakePoolTargetNumL w)
+          , "minUTxOValue"            .= justInEraFeature era (\w -> pp ^. protocolParamMinUTxOValueL w)
+          -- , "poolRetireMaxEpoch"  .= protocolParamPoolRetireMaxEpoch
+          -- , "decentralization"    .= (toRationalJSON <$> protocolParamDecentralization)
+          , "maxBlockHeaderSize"      .= justInEraFeature era (\w -> pp ^. protocolParamMaxBlockHeaderSizeL w)
+          , "maxBlockBodySize"        .= justInEraFeature era (\w -> pp ^. protocolParamMaxBlockBodySizeL w)
+          , "maxTxSize"               .= justInEraFeature era (\w -> pp ^. protocolParamMaxTxSizeL w)
+          -- , "treasuryCut"         .= toRationalJSON protocolParamTreasuryCut
+          , "minPoolCost"             .= justInEraFeature era (\w -> pp ^. protocolParamMinPoolCostL w)
+          -- , "monetaryExpansion"   .= toRationalJSON protocolParamMonetaryExpansion
+          , "stakeAddressDeposit"     .= justInEraFeature era (\w -> pp ^. protocolParamStakeAddressDepositL w)
+          -- , "poolPledgeInfluence" .= toRationalJSON protocolParamPoolPledgeInfluence
+          , "protocolVersion"         .= justInEraFeature era (\w -> pp ^. protocolParamProtocolVersionL w)
+          , "txFeeFixed"              .= justInEraFeature era (\w -> pp ^. protocolParamTxFeeFixedL w)
+          , "txFeePerByte"            .= justInEraFeature era (\w -> pp ^. protocolParamTxFeePerByteL w)
+          -- -- Alonzo era:
+          -- , "utxoCostPerWord"        .= protocolParamUTxOCostPerWord
+          -- , "costModels"             .= CostModels protocolParamCostModels
+          -- , "executionUnitPrices"    .= protocolParamPrices
+          -- , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
+          -- , "maxBlockExecutionUnits" .= protocolParamMaxBlockExUnits
+          , "maxValueSize"            .= justInEraFeature era (\w -> pp ^. protocolParamMaxValueSizeL w)
+          , "collateralPercentage"    .= justInEraFeature era (\w -> pp ^. protocolParamCollateralPercentL w)
+          , "maxCollateralInputs"     .= justInEraFeature era (\w -> pp ^. protocolParamMaxCollateralInputsL w)
+          -- -- Babbage era:
+          -- , "utxoCostPerByte"        .= protocolParamUTxOCostPerByte
+          ]
+
+instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
+  parseJSON =
+    case cardanoEra @era of
+      era ->
+        withObject "ProtocolParameters" $ \o -> do
+          pp <- inEraFeature era (fail ("Supported Era " <> show era)) (\w -> pure $ shelleyBasedEraConstraints w $ emptyProtocolParameters w)
+
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "protocolVersion"
+            pure (pp & protocolParamProtocolVersionL w .~ v)
+          -- decentralization <- o .:? "decentralization"
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "extraPraosEntropy"
+            pure (pp & protocolParamExtraPraosEntropyL w .~ v)
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "maxBlockHeaderSize"
+            pure (pp & protocolParamMaxBlockHeaderSizeL w .~ v)
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "maxBlockBodySize"
+            pure (pp & protocolParamMaxBlockBodySizeL w .~ v)
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "maxTxSize"
+            pure (pp & protocolParamMaxTxSizeL w .~ v)
+          -- txFeeFixed <- o .: "txFeeFixed"
+          -- txFeePerByte <- o .: "txFeePerByte"
+          -- minUTxOValue <- o .: "minUTxOValue"
+          -- stakeAddressDeposit <- o .: "stakeAddressDeposit"
+          -- stakePoolDeposit <- o .: "stakePoolDeposit"
+          -- minPoolCost <- o .: "minPoolCost"
+          -- poolRetireMaxEpoch <- o .: "poolRetireMaxEpoch"
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "stakePoolTargetNum"
+            pure (pp & protocolParamStakePoolTargetNumL w .~ v)
+          -- poolPledgeInfluence <- o .: "poolPledgeInfluence"
+          -- monetaryExpansion <- o .: "monetaryExpansion"
+          -- treasuryCut <- o .: "treasuryCut"
+          -- utxoCostPerWord <- o .:? "utxoCostPerWord"
+          -- costModels <- (fmap unCostModels <$> o .:? "costModels") .!= Map.empty
+          -- executionUnitPrices <- o .:? "executionUnitPrices"
+          -- maxTxExecutionUnits <- o .:? "maxTxExecutionUnits"
+          -- maxBlockExecutionUnits <- o .:? "maxBlockExecutionUnits"
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "maxValueSize"
+            pure (pp & protocolParamMaxValueSizeL w .~ v)
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "collateralPercentage"
+            pure (pp & protocolParamCollateralPercentL w .~ v)
+          pp <- inEraFeature era (pure pp) $ \w -> do
+            v <- o .: "maxCollateralInputs"
+            pure (pp & protocolParamMaxCollateralInputsL w .~ v)
+          -- utxoCostPerByte <- o .:? "utxoCostPerByte"
+
+          pure pp
 
 protocolParametersL :: Lens' (ProtocolParameters era) (Ledger.PParams (ShelleyLedgerEra era))
 protocolParametersL = lens unProtocolParameters (\_ pp -> ProtocolParameters pp)
@@ -63,8 +162,8 @@ emptyProtocolParameters w = shelleyBasedEraConstraints w $ ProtocolParameters Le
 
 -- | Protocol version, major and minor. Updating the major version is
 -- used to trigger hard forks.
-protocolParamProtocolVersionL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Ledger.ProtVer
-protocolParamProtocolVersionL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppProtocolVersionL
+protocolParamProtocolVersionL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) ProtVer
+protocolParamProtocolVersionL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppProtocolVersionL . unLedgerProtVerL
 
 -- | The decentralization parameter. This is fraction of slots that
 -- belong to the BFT overlay schedule, rather than the Praos schedule.
@@ -116,30 +215,30 @@ protocolParamMaxTxSizeL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era)
 protocolParamMaxTxSizeL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppMaxTxSizeL
 
 -- | The constant factor for the minimum fee calculation.
-protocolParamTxFeeFixedL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Ledger.Coin
-protocolParamTxFeeFixedL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppMinFeeBL
+protocolParamTxFeeFixedL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Lovelace
+protocolParamTxFeeFixedL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppMinFeeBL . unLedgerCoinL
 
 -- | Per byte linear factor for the minimum fee calculation.
-protocolParamTxFeePerByteL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Ledger.Coin
-protocolParamTxFeePerByteL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppMinFeeAL
+protocolParamTxFeePerByteL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Lovelace
+protocolParamTxFeePerByteL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppMinFeeAL . unLedgerCoinL
 
 -- | The minimum permitted value for new UTxO entries, ie for
 -- transaction outputs.
-protocolParamMinUTxOValueL :: ShelleyToAllegraEra era -> Lens' (ProtocolParameters era) Ledger.Coin
-protocolParamMinUTxOValueL w = shelleyToAllegraEraConstraints w $ protocolParametersL . Ledger.ppMinUTxOValueL
+protocolParamMinUTxOValueL :: ShelleyToAllegraEra era -> Lens' (ProtocolParameters era) Lovelace
+protocolParamMinUTxOValueL w = shelleyToAllegraEraConstraints w $ protocolParametersL . Ledger.ppMinUTxOValueL . unLedgerCoinL
 
 -- | The deposit required to register a stake address.
-protocolParamStakeAddressDepositL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Ledger.Coin
-protocolParamStakeAddressDepositL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppKeyDepositL
+protocolParamStakeAddressDepositL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Lovelace
+protocolParamStakeAddressDepositL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppKeyDepositL . unLedgerCoinL
 
 -- | The deposit required to register a stake pool.
-protocolParamStakePoolDepositL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Ledger.Coin
-protocolParamStakePoolDepositL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppPoolDepositL
+protocolParamStakePoolDepositL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Lovelace
+protocolParamStakePoolDepositL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppPoolDepositL . unLedgerCoinL
 
 -- | The minimum value that stake pools are permitted to declare for
 -- their cost parameter.
-protocolParamMinPoolCostL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Ledger.Coin
-protocolParamMinPoolCostL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppMinPoolCostL
+protocolParamMinPoolCostL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Lovelace
+protocolParamMinPoolCostL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppMinPoolCostL . unLedgerCoinL
 
 -- | The maximum number of epochs into the future that stake pools
 -- are permitted to schedule a retirement.
