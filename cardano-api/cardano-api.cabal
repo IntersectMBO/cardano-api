@@ -62,6 +62,7 @@ library internal
                         Cardano.Api.Eras.Core
                         Cardano.Api.Error
                         Cardano.Api.Feature
+                        Cardano.Api.Feature.AlonzoEraOnly
                         Cardano.Api.Feature.AlonzoEraOnwards
                         Cardano.Api.Feature.BabbageEraOnwards
                         Cardano.Api.Feature.ConwayEraOnwards
