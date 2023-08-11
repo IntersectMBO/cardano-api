@@ -56,6 +56,7 @@ library internal
                         Cardano.Api.DeserialiseAnyOf
                         Cardano.Api.Domain.Common
                         Cardano.Api.Domain.CostModel
+                        Cardano.Api.Domain.Errors.ProtocolParametersError
                         Cardano.Api.Domain.PraosNonce
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast

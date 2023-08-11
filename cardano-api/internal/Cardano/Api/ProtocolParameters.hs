@@ -95,9 +95,9 @@ module Cardano.Api.ProtocolParameters (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Domain.CostModel
+import           Cardano.Api.Domain.Errors.ProtocolParametersError
 import           Cardano.Api.Domain.PraosNonce
 import           Cardano.Api.Eras.Core
-import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Json (toRationalJSON)
@@ -1825,22 +1825,3 @@ checkProtocolParameters sbe ProtocolParameters{..} =
      then return ()
      else Left . PParamsErrorMissingMinUTxoValue
                $ AnyCardanoEra era
-
-
-data ProtocolParametersError
-  = PParamsErrorMissingMinUTxoValue !AnyCardanoEra
-  | PParamsErrorMissingAlonzoProtocolParameter
-  deriving (Show)
-
-instance Error ProtocolParametersError where
-  displayError (PParamsErrorMissingMinUTxoValue (AnyCardanoEra era)) = mconcat
-    [ "The " <> show era <> " protocol parameters value is missing the following "
-    , "field: MinUTxoValue. Did you intend to use a " <> show era <> " protocol "
-    , "parameters value?"
-    ]
-  displayError PParamsErrorMissingAlonzoProtocolParameter = mconcat
-    [ "The Alonzo era protocol parameters in use is missing one or more of the "
-    , "following fields: UTxOCostPerWord, CostModels, Prices, MaxTxExUnits, "
-    , "MaxBlockExUnits, MaxValueSize, CollateralPercent, MaxCollateralInputs. Did "
-    , "you intend to use an Alonzo era protocol parameters value?"
-    ]
