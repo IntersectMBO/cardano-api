@@ -96,6 +96,7 @@ module Cardano.Api.ProtocolParameters (
 import           Cardano.Api.Address
 import           Cardano.Api.Domain.CostModel
 import           Cardano.Api.Domain.Errors.ProtocolParametersError
+import           Cardano.Api.Domain.ExecutionUnitPrices
 import           Cardano.Api.Domain.PraosNonce
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Hash
@@ -1000,70 +1001,6 @@ instance ToCardanoEra ProtocolUTxOCostPerWordFeature where
     ProtocolUpdateUTxOCostPerWordInAlonzoEra -> AlonzoEra
 
 -- ----------------------------------------------------------------------------
--- Script execution unit prices and cost models
---
-
--- | The prices for 'ExecutionUnits' as a fraction of a 'Lovelace'.
---
--- These are used to determine the fee for the use of a script within a
--- transaction, based on the 'ExecutionUnits' needed by the use of the script.
---
-data ExecutionUnitPrices =
-     ExecutionUnitPrices {
-       priceExecutionSteps  :: Rational,
-       priceExecutionMemory :: Rational
-     }
-  deriving (Eq, Show)
-
-instance ToCBOR ExecutionUnitPrices where
-  toCBOR ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
-      CBOR.encodeListLen 2
-   <> toCBOR priceExecutionSteps
-   <> toCBOR priceExecutionMemory
-
-instance FromCBOR ExecutionUnitPrices where
-  fromCBOR = do
-    CBOR.enforceSize "ExecutionUnitPrices" 2
-    ExecutionUnitPrices
-      <$> fromCBOR
-      <*> fromCBOR
-
-instance ToJSON ExecutionUnitPrices where
-  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
-    object [ "priceSteps"  .= toRationalJSON priceExecutionSteps
-           , "priceMemory" .= toRationalJSON priceExecutionMemory
-           ]
-
-instance FromJSON ExecutionUnitPrices where
-  parseJSON =
-    withObject "ExecutionUnitPrices" $ \o ->
-      ExecutionUnitPrices
-        <$> o .: "priceSteps"
-        <*> o .: "priceMemory"
-
-
-toAlonzoPrices :: ExecutionUnitPrices -> Either ProtocolParametersConversionError Alonzo.Prices
-toAlonzoPrices ExecutionUnitPrices {
-                 priceExecutionSteps,
-                 priceExecutionMemory
-               } = do
-  prSteps <- boundRationalEither "Steps" priceExecutionSteps
-  prMem   <- boundRationalEither "Mem" priceExecutionMemory
-  return Alonzo.Prices {
-    Alonzo.prSteps,
-    Alonzo.prMem
-  }
-
-fromAlonzoPrices :: Alonzo.Prices -> ExecutionUnitPrices
-fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
-  ExecutionUnitPrices {
-    priceExecutionSteps  = Ledger.unboundRational prSteps,
-    priceExecutionMemory = Ledger.unboundRational prMem
-  }
-
-
-
--- ----------------------------------------------------------------------------
 -- Proposals embedded in transactions to update protocol parameters
 --
 
@@ -1284,12 +1221,6 @@ requireParam paramName = maybe (Left $ PpceMissingParameter paramName)
 mkProtVer :: (Natural, Natural) -> Either ProtocolParametersConversionError Ledger.ProtVer
 mkProtVer (majorProtVer, minorProtVer) = maybeToRight (PpceVersionInvalid majorProtVer) $
   (`Ledger.ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer
-
-boundRationalEither :: Ledger.BoundedRational b
-                    => String
-                    -> Rational
-                    -> Either ProtocolParametersConversionError b
-boundRationalEither name r = maybeToRight (PpceOutOfBounds name r) $ Ledger.boundRational r
 
 -- Conway uses the same PParams as Babbage for now.
 toConwayPParamsUpdate :: BabbageEraPParams ledgerera

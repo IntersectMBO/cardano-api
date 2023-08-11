@@ -16,6 +16,7 @@ module Cardano.Api.Domain.CostModel
   , fromAlonzoScriptLanguage
   , toAlonzoCostModel
   , fromAlonzoCostModel
+  , boundRationalEither
   ) where
 
 import           Cardano.Api.Domain.Common
@@ -26,10 +27,12 @@ import           Cardano.Api.SerialiseCBOR
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Ledger
 
 import           Data.Aeson (FromJSON (..), ToJSON (..))
 import           Data.Bifunctor (bimap, first)
 import           Data.Data (Data)
+import           Data.Either.Combinators (maybeToRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Text.PrettyBy.Default (display)
@@ -100,3 +103,9 @@ toAlonzoCostModel (CostModel m) l = first (PpceInvalidCostModel (CostModel m)) $
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
 fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
+
+boundRationalEither :: Ledger.BoundedRational b
+                    => String
+                    -> Rational
+                    -> Either ProtocolParametersConversionError b
+boundRationalEither name r = maybeToRight (PpceOutOfBounds name r) $ Ledger.boundRational r
