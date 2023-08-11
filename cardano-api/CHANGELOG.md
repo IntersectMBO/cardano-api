@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.13.0.0
+
+- Modify `queryGenesisParameters` so that its type advertises it only returns genesis parameters for the Shelley era
+  (breaking)
+  [PR 181](https://github.com/input-output-hk/cardano-api/pull/181)
+
 ## 8.12.0.0
 
 - Fix `EraCast Certificate`
