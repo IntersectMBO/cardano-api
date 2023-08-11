@@ -83,7 +83,8 @@ module Cardano.Api.LedgerState
 
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Genesis
 import           Cardano.Api.IO

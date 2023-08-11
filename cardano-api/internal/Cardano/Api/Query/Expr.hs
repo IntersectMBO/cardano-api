@@ -30,7 +30,7 @@ module Cardano.Api.Query.Expr
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad

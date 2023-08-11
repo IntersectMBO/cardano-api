@@ -36,7 +36,7 @@ module Cardano.Api.Governance.Poll(
     verifyPollAnswer,
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley

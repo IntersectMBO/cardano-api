@@ -34,7 +34,7 @@ module Cardano.Api.SerialiseTextEnvelope
   , AsType(..)
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IO

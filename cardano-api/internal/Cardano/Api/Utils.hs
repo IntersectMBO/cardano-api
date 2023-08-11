@@ -31,7 +31,8 @@ module Cardano.Api.Utils
   , bounded
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
 
 import           Cardano.Ledger.Shelley ()
 

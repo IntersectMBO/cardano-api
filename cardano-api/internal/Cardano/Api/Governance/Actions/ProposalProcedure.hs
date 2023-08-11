@@ -13,7 +13,8 @@
 module Cardano.Api.Governance.Actions.ProposalProcedure where
 
 import           Cardano.Api.Address
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley

@@ -25,7 +25,7 @@ module Cardano.Api.InMode (
     fromConsensusApplyTxErr,
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
