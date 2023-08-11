@@ -96,6 +96,7 @@ module Cardano.Api.ProtocolParameters (
   ) where
 
 import           Cardano.Api.Address
+import           Cardano.Api.Domain.PraosNonce
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
@@ -106,16 +107,13 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Ledger
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -125,7 +123,6 @@ import qualified Cardano.Ledger.Babbage.Core as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Cardano.Slotting.Slot (EpochNo)
 
@@ -133,14 +130,12 @@ import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
                    (.=))
 import           Data.Bifunctor (bimap, first)
-import           Data.ByteString (ByteString)
 import           Data.Data (Data)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
 import           Data.Maybe.Strict (StrictMaybe (..))
-import           Data.String (IsString)
 import           GHC.Generics
 import           Lens.Micro
 import           Numeric.Natural
@@ -1008,41 +1003,6 @@ instance FeatureInEra ProtocolUTxOCostPerWordFeature where
 instance ToCardanoEra ProtocolUTxOCostPerWordFeature where
   toCardanoEra = \case
     ProtocolUpdateUTxOCostPerWordInAlonzoEra -> AlonzoEra
-
--- ----------------------------------------------------------------------------
--- Praos nonce
---
-
-newtype PraosNonce = PraosNonce { unPraosNonce :: Ledger.Hash StandardCrypto ByteString }
-  deriving stock (Eq, Ord, Generic)
-  deriving (Show, IsString)   via UsingRawBytesHex PraosNonce
-  deriving (ToJSON, FromJSON) via UsingRawBytesHex PraosNonce
-  deriving (ToCBOR, FromCBOR) via UsingRawBytes    PraosNonce
-
-instance HasTypeProxy PraosNonce where
-    data AsType PraosNonce = AsPraosNonce
-    proxyToAsType _ = AsPraosNonce
-
-instance SerialiseAsRawBytes PraosNonce where
-    serialiseToRawBytes (PraosNonce h) =
-      Crypto.hashToBytes h
-
-    deserialiseFromRawBytes AsPraosNonce bs =
-      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise PraosNonce") $
-        PraosNonce <$> Crypto.hashFromBytes bs
-
-
-makePraosNonce :: ByteString -> PraosNonce
-makePraosNonce = PraosNonce . Crypto.hashWith id
-
-toLedgerNonce :: Maybe PraosNonce -> Ledger.Nonce
-toLedgerNonce Nothing               = Ledger.NeutralNonce
-toLedgerNonce (Just (PraosNonce h)) = Ledger.Nonce (Crypto.castHash h)
-
-fromLedgerNonce :: Ledger.Nonce -> Maybe PraosNonce
-fromLedgerNonce Ledger.NeutralNonce = Nothing
-fromLedgerNonce (Ledger.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
-
 
 -- ----------------------------------------------------------------------------
 -- Script execution unit prices and cost models

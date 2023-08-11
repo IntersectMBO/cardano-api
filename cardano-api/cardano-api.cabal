@@ -54,6 +54,7 @@ library internal
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
+                        Cardano.Api.Domain.PraosNonce
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
@@ -62,6 +63,7 @@ library internal
                         Cardano.Api.Eras.InAnyEra
                         Cardano.Api.Error
                         Cardano.Api.Feature
+                        Cardano.Api.Feature.AlonzoEraOnly
                         Cardano.Api.Feature.AlonzoEraOnwards
                         Cardano.Api.Feature.BabbageEraOnwards
                         Cardano.Api.Feature.ConwayEraOnwards
