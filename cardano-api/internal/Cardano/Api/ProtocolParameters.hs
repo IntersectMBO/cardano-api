@@ -96,6 +96,7 @@ module Cardano.Api.ProtocolParameters (
   ) where
 
 import           Cardano.Api.Address
+import           Cardano.Api.Domain.Common
 import           Cardano.Api.Domain.PraosNonce
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
@@ -1913,10 +1914,6 @@ data ProtocolParametersConversionError
   | PpceInvalidCostModel !CostModel !Alonzo.CostModelApplyError
   | PpceMissingParameter !ProtocolParameterName
   deriving (Eq, Show, Data)
-
-
-type ProtocolParameterName = String
-type ProtocolParameterVersion = Natural
 
 instance Error ProtocolParametersConversionError where
   displayError = \case
