@@ -55,6 +55,7 @@ library internal
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
                         Cardano.Api.Domain.Common
+                        Cardano.Api.Domain.CostModel
                         Cardano.Api.Domain.PraosNonce
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
