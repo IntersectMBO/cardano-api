@@ -16,6 +16,7 @@ module Cardano.Api.Query.Expr
   , queryProtocolParameters
   , queryProtocolParametersUpdate
   , queryProtocolState
+  , queryShelleyGenesisParameters
   , queryStakeAddresses
   , queryStakeDelegDeposits
   , queryStakeDistribution
@@ -92,12 +93,19 @@ queryEraHistory :: ()
 queryEraHistory =
   queryExpr $ QueryEraHistory CardanoModeIsMultiEra
 
+queryShelleyGenesisParameters :: ()
+  => ConsensusMode mode
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch GenesisParameters))
+queryShelleyGenesisParameters cMode = do
+  queryExpr $ QueryInEra ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryGenesisParameters
+
 queryGenesisParameters :: ()
   => EraInMode ShelleyEra mode
   -> ShelleyBasedEra ShelleyEra
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch GenesisParameters))
 queryGenesisParameters eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryGenesisParameters
+{-# DEPRECATED queryGenesisParameters "Use queryShelleyGenesisParameters instead" #-}
 
 queryPoolDistribution :: ()
   => EraInMode era mode
