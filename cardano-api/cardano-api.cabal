@@ -62,6 +62,7 @@ library internal
                         Cardano.Api.Domain.ExecutionUnitPrices
                         Cardano.Api.Domain.Lovelace
                         Cardano.Api.Domain.PraosNonce
+                        Cardano.Api.Domain.ProtVer
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
@@ -166,6 +167,7 @@ library internal
                       , deepseq
                       , directory
                       , either
+                      , FailT
                       , filepath
                       , formatting
                       , iproute
