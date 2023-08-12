@@ -31,6 +31,8 @@ module Cardano.Api (
     FeatureInEra(..),
     inEraFeature,
     inEraFeatureMaybe,
+    justFeatureInEra,
+    justInEraFeature,
     maybeFeatureInEra,
 
     featureInShelleyBasedEra,
@@ -1010,6 +1012,7 @@ import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
 import           Cardano.Api.Feature.AlonzoEraOnly

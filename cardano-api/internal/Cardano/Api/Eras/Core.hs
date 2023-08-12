@@ -35,6 +35,8 @@ module Cardano.Api.Eras.Core
   , inEraFeature
   , inEraFeatureMaybe
   , maybeFeatureInEra
+  , justFeatureInEra
+  , justInEraFeature
   , featureInShelleyBasedEra
   , inShelleyBasedEraFeature
   , inShelleyBasedEraFeatureMaybe
@@ -166,6 +168,20 @@ maybeFeatureInEra :: ()
   -> Maybe (feature era)  -- ^ The feature if supported in the era
 maybeFeatureInEra =
   featureInEra Nothing Just
+
+justFeatureInEra :: ()
+  => FeatureInEra feature
+  => (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> CardanoEra era       -- ^ Era to check
+  -> Maybe a              -- ^ The value to use
+justFeatureInEra f = featureInEra Nothing (Just . f)
+
+justInEraFeature :: ()
+  => FeatureInEra feature
+  => CardanoEra era       -- ^ Era to check
+  -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> Maybe a              -- ^ The value to use
+justInEraFeature era f = inEraFeature era Nothing (Just . f)
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 featureInShelleyBasedEra :: ()
