@@ -4,9 +4,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
--- This will be removed in the next commit
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 {- HLINT ignore "Redundant pure" -}
 
 module Cardano.Api.Domain.ProtocolParameters
@@ -41,6 +38,7 @@ module Cardano.Api.Domain.ProtocolParameters
   , protocolParamUTxOCostPerByteL
   ) where
 
+import           Cardano.Api.Domain.EpochNo
 import           Cardano.Api.Domain.Lovelace
 import           Cardano.Api.Domain.PraosNonce
 import           Cardano.Api.Domain.ProtVer
@@ -57,6 +55,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Babbage.Core as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
 
+import           Control.Applicative
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import           Data.Function ((&))
 import           GHC.Natural (Natural)
@@ -74,7 +73,7 @@ instance IsCardanoEra era => ToJSON (ProtocolParameters era) where
           [ "extraPraosEntropy"       .= justInEraFeature era (\w -> pp ^. protocolParamExtraPraosEntropyL w)
           , "stakePoolTargetNum"      .= justInEraFeature era (\w -> pp ^. protocolParamStakePoolTargetNumL w)
           , "minUTxOValue"            .= justInEraFeature era (\w -> pp ^. protocolParamMinUTxOValueL w)
-          -- , "poolRetireMaxEpoch"  .= protocolParamPoolRetireMaxEpoch
+          , "poolRetireMaxEpoch"      .= justInEraFeature era (\w -> pp ^. protocolParamPoolRetireMaxEpochL w)
           -- , "decentralization"    .= (toRationalJSON <$> protocolParamDecentralization)
           , "maxBlockHeaderSize"      .= justInEraFeature era (\w -> pp ^. protocolParamMaxBlockHeaderSizeL w)
           , "maxBlockBodySize"        .= justInEraFeature era (\w -> pp ^. protocolParamMaxBlockBodySizeL w)
@@ -105,54 +104,64 @@ instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
     case cardanoEra @era of
       era ->
         withObject "ProtocolParameters" $ \o -> do
-          pp <- inEraFeature era (fail ("Supported Era " <> show era)) (\w -> pure $ shelleyBasedEraConstraints w $ emptyProtocolParameters w)
+          inEraFeature era
+            (fail ("Supported Era " <> show era))
+            (\sbe ->
+              pure (emptyProtocolParameters sbe)
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "protocolVersion"
+                          pure (& protocolParamProtocolVersionL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "extraPraosEntropy"
+                          pure (& protocolParamExtraPraosEntropyL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "maxBlockHeaderSize"
+                          pure (& protocolParamMaxBlockHeaderSizeL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "maxBlockBodySize"
+                          pure (& protocolParamMaxBlockBodySizeL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "maxTxSize"
+                          pure (& protocolParamMaxTxSizeL w .~ v)
+                      )
+                --     -- txFeeFixed <- o .: "txFeeFixed"
+                --     -- txFeePerByte <- o .: "txFeePerByte"
+                --     -- minUTxOValue <- o .: "minUTxOValue"
+                --     -- stakeAddressDeposit <- o .: "stakeAddressDeposit"
+                --     -- stakePoolDeposit <- o .: "stakePoolDeposit"
+                --     -- minPoolCost <- o .: "minPoolCost"
+                --     -- poolRetireMaxEpoch <- o .: "poolRetireMaxEpoch"
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "stakePoolTargetNum"
+                          pure (& protocolParamStakePoolTargetNumL w .~ v)
+                      )
+                --     -- poolPledgeInfluence <- o .: "poolPledgeInfluence"
+                --     -- monetaryExpansion <- o .: "monetaryExpansion"
+                --     -- treasuryCut <- o .: "treasuryCut"
+                --     -- utxoCostPerWord <- o .:? "utxoCostPerWord"
+                --     -- costModels <- (fmap unCostModels <$> o .:? "costModels") .!= Map.empty
+                --     -- executionUnitPrices <- o .:? "executionUnitPrices"
+                --     -- maxTxExecutionUnits <- o .:? "maxTxExecutionUnits"
+                --     -- maxBlockExecutionUnits <- o .:? "maxBlockExecutionUnits"
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "maxValueSize"
+                          pure (& protocolParamMaxValueSizeL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "collateralPercentage"
+                          pure (& protocolParamCollateralPercentL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "maxCollateralInputs"
+                          pure (& protocolParamMaxCollateralInputsL w .~ v)
+                      )
+                --     -- utxoCostPerByte <- o .:? "utxoCostPerByte"\
+            )
 
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "protocolVersion"
-            pure (pp & protocolParamProtocolVersionL w .~ v)
-          -- decentralization <- o .:? "decentralization"
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "extraPraosEntropy"
-            pure (pp & protocolParamExtraPraosEntropyL w .~ v)
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "maxBlockHeaderSize"
-            pure (pp & protocolParamMaxBlockHeaderSizeL w .~ v)
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "maxBlockBodySize"
-            pure (pp & protocolParamMaxBlockBodySizeL w .~ v)
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "maxTxSize"
-            pure (pp & protocolParamMaxTxSizeL w .~ v)
-          -- txFeeFixed <- o .: "txFeeFixed"
-          -- txFeePerByte <- o .: "txFeePerByte"
-          -- minUTxOValue <- o .: "minUTxOValue"
-          -- stakeAddressDeposit <- o .: "stakeAddressDeposit"
-          -- stakePoolDeposit <- o .: "stakePoolDeposit"
-          -- minPoolCost <- o .: "minPoolCost"
-          -- poolRetireMaxEpoch <- o .: "poolRetireMaxEpoch"
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "stakePoolTargetNum"
-            pure (pp & protocolParamStakePoolTargetNumL w .~ v)
-          -- poolPledgeInfluence <- o .: "poolPledgeInfluence"
-          -- monetaryExpansion <- o .: "monetaryExpansion"
-          -- treasuryCut <- o .: "treasuryCut"
-          -- utxoCostPerWord <- o .:? "utxoCostPerWord"
-          -- costModels <- (fmap unCostModels <$> o .:? "costModels") .!= Map.empty
-          -- executionUnitPrices <- o .:? "executionUnitPrices"
-          -- maxTxExecutionUnits <- o .:? "maxTxExecutionUnits"
-          -- maxBlockExecutionUnits <- o .:? "maxBlockExecutionUnits"
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "maxValueSize"
-            pure (pp & protocolParamMaxValueSizeL w .~ v)
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "collateralPercentage"
-            pure (pp & protocolParamCollateralPercentL w .~ v)
-          pp <- inEraFeature era (pure pp) $ \w -> do
-            v <- o .: "maxCollateralInputs"
-            pure (pp & protocolParamMaxCollateralInputsL w .~ v)
-          -- utxoCostPerByte <- o .:? "utxoCostPerByte"
-
-          pure pp
 
 protocolParametersL :: Lens' (ProtocolParameters era) (Ledger.PParams (ShelleyLedgerEra era))
 protocolParametersL = lens unProtocolParameters (\_ pp -> ProtocolParameters pp)
@@ -242,7 +251,7 @@ protocolParamMinPoolCostL w = shelleyBasedEraConstraints w $ protocolParametersL
 
 -- | The maximum number of epochs into the future that stake pools
 -- are permitted to schedule a retirement.
-protocolParamPoolRetireMaxEpochL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) Ledger.EpochNo
+protocolParamPoolRetireMaxEpochL :: ShelleyBasedEra era -> Lens' (ProtocolParameters era) EpochNo
 protocolParamPoolRetireMaxEpochL w = shelleyBasedEraConstraints w $ protocolParametersL . Ledger.ppEMaxL
 
 -- | The equilibrium target number of stake pools.
