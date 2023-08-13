@@ -4,7 +4,7 @@ module Test.Cardano.Api.IO
   ( tests
   ) where
 
-import           Cardano.Api
+import           Cardano.Api.Error
 import           Cardano.Api.IO
 
 import           Control.Monad.Except (runExceptT)

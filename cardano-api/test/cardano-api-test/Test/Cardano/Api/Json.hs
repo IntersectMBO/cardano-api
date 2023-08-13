@@ -6,8 +6,10 @@ module Test.Cardano.Api.Json
   ( tests
   ) where
 
+import           Cardano.Api.Eras
+import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()
-import           Cardano.Api.Shelley
+import           Cardano.Api.ScriptData
 
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), eitherDecode, encode)
 import           Data.Aeson.Types (Parser, parseEither)

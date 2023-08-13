@@ -7,7 +7,7 @@ module Test.Cardano.Api.Metadata
   , genTxMetadataValue
   ) where
 
-import           Cardano.Api
+import           Cardano.Api.TxMetadata
 
 import qualified Data.Aeson as Aeson
 import           Data.ByteString (ByteString)

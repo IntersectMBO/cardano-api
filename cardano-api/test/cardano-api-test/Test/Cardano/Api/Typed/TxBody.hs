@@ -4,8 +4,10 @@ module Test.Cardano.Api.Typed.TxBody
   ( tests
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Script
+import           Cardano.Api.ScriptData
+import           Cardano.Api.TxBody
 
 import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))

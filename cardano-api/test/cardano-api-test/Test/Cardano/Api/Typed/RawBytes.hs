@@ -5,7 +5,12 @@ module Test.Cardano.Api.Typed.RawBytes
   ( tests
   ) where
 
-import           Cardano.Api
+import           Cardano.Api.Address
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseRaw
 
 import           Test.Gen.Cardano.Api.Typed
 
@@ -23,7 +28,6 @@ import           Test.Tasty.Hedgehog (testProperty)
 prop_roundtrip_shelley_address_raw :: Property
 prop_roundtrip_shelley_address_raw =
   roundtrip_raw_bytes AsShelleyAddress genAddressShelley
-
 
 prop_roundtrip_byron_address_raw :: Property
 prop_roundtrip_byron_address_raw =

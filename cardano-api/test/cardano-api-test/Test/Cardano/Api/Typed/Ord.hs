@@ -1,9 +1,14 @@
+{- HLINT ignore "Use camelCase" -}
+
 module Test.Cardano.Api.Typed.Ord
   ( tests
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
+import           Cardano.Api.Address
+import           Cardano.Api.Eras
+import           Cardano.Api.ScriptData
+import           Cardano.Api.TxIn
+import           Cardano.Api.TxMetadata
 
 import           Test.Gen.Cardano.Api.Typed
 
@@ -13,8 +18,6 @@ import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
-
-{- HLINT ignore "Use camelCase" -}
 
 ord_distributive :: (Show a, Ord a, Ord b)
                       => H.Gen a -> (a -> b) -> Property

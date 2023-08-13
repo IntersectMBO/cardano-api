@@ -2,8 +2,7 @@ module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
-import           Cardano.Api (ValueNestedBundle (..), ValueNestedRep (..), valueFromNestedRep,
-                   valueToNestedRep)
+import           Cardano.Api.Value
 
 import           Prelude
 

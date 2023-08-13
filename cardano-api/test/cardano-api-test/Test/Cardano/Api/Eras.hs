@@ -4,7 +4,7 @@ module Test.Cardano.Api.Eras
   ( tests
   ) where
 
-import           Cardano.Api
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Orphans ()
 
 import           Data.Aeson (ToJSON (..), decode, encode)

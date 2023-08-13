@@ -1,11 +1,17 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 
+{- HLINT ignore "Use camelCase" -}
+
 module Test.Cardano.Api.Typed.Envelope
   ( tests
   ) where
 
-import           Cardano.Api
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.SerialiseTextEnvelope
 
 import           Test.Gen.Cardano.Api.Typed
 
@@ -15,8 +21,6 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
-
-{- HLINT ignore "Use camelCase" -}
 
 prop_roundtrip_ByronVerificationKey_envelope :: Property
 prop_roundtrip_ByronVerificationKey_envelope =

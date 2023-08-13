@@ -1,10 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 
+{- HLINT ignore "Use camelCase" -}
+
 module Test.Cardano.Api.Typed.Address
   ( tests
   ) where
 
-import           Cardano.Api
+import           Cardano.Api.Address
 
 import qualified Data.Aeson as Aeson
 
@@ -16,8 +18,6 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
-
-{- HLINT ignore "Use camelCase" -}
 
 -- Address CBOR round trips
 

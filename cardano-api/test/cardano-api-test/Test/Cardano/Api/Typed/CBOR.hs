@@ -2,14 +2,22 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 
+{- HLINT ignore "Use camelCase" -}
+
 module Test.Cardano.Api.Typed.CBOR
   ( tests
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (AsType (..))
-
-import           Data.Proxy (Proxy (..))
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Governance.Poll
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseLedgerCddl
+import           Cardano.Api.Tx
 
 import           Test.Gen.Cardano.Api.Typed
 
@@ -22,8 +30,6 @@ import qualified Test.Hedgehog.Roundtrip.CBOR as H
 import           Test.Hedgehog.Roundtrip.CBOR
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
-
-{- HLINT ignore "Use camelCase" -}
 
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv

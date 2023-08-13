@@ -4,11 +4,13 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+{- HLINT ignore "Use camelCase" -}
+
 module Test.Cardano.Api.Typed.JSON
   ( tests
   ) where
 
-import           Cardano.Api
+import           Cardano.Api.Eras
 
 import           Data.Aeson (eitherDecode, encode)
 
@@ -21,8 +23,6 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
-
-{- HLINT ignore "Use camelCase" -}
 
 prop_roundtrip_praos_nonce_JSON :: Property
 prop_roundtrip_praos_nonce_JSON = H.property $ do

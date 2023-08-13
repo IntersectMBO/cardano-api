@@ -5,8 +5,7 @@ module Test.Cardano.Api.Ledger
   ( tests
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
+import           Cardano.Api.ScriptData
 
 import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
 import qualified Cardano.Ledger.Api as L

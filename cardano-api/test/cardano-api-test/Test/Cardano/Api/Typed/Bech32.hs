@@ -2,7 +2,7 @@ module Test.Cardano.Api.Typed.Bech32
   ( tests
   ) where
 
-import           Cardano.Api (AsType (AsShelleyAddress, AsStakeAddress))
+import           Cardano.Api.Address
 
 import           Test.Gen.Cardano.Api.Typed (genAddressShelley, genStakeAddress)
 
