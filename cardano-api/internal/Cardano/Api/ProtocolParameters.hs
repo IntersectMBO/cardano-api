@@ -59,7 +59,7 @@ module Cardano.Api.ProtocolParameters (
 
     -- * Execution units, prices and cost models,
     ExecutionUnits(..),
-    ExecutionUnitPrices(..),
+    LegacyExecutionUnitPrices(..),
     CostModel(..),
     fromAlonzoCostModels,
 
@@ -545,7 +545,7 @@ data ProtocolParameters =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolParamPrices :: Maybe ExecutionUnitPrices,
+       protocolParamPrices :: Maybe LegacyExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --
@@ -784,7 +784,7 @@ data ProtocolParametersUpdate =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolUpdatePrices :: Maybe ExecutionUnitPrices,
+       protocolUpdatePrices :: Maybe LegacyExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --
@@ -1043,42 +1043,42 @@ fromLedgerNonce (Ledger.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
 -- These are used to determine the fee for the use of a script within a
 -- transaction, based on the 'ExecutionUnits' needed by the use of the script.
 --
-data ExecutionUnitPrices =
-     ExecutionUnitPrices {
+data LegacyExecutionUnitPrices =
+     LegacyExecutionUnitPrices {
        priceExecutionSteps  :: Rational,
        priceExecutionMemory :: Rational
      }
   deriving (Eq, Show)
 
-instance ToCBOR ExecutionUnitPrices where
-  toCBOR ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+instance ToCBOR LegacyExecutionUnitPrices where
+  toCBOR LegacyExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
       CBOR.encodeListLen 2
    <> toCBOR priceExecutionSteps
    <> toCBOR priceExecutionMemory
 
-instance FromCBOR ExecutionUnitPrices where
+instance FromCBOR LegacyExecutionUnitPrices where
   fromCBOR = do
-    CBOR.enforceSize "ExecutionUnitPrices" 2
-    ExecutionUnitPrices
+    CBOR.enforceSize "LegacyExecutionUnitPrices" 2
+    LegacyExecutionUnitPrices
       <$> fromCBOR
       <*> fromCBOR
 
-instance ToJSON ExecutionUnitPrices where
-  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+instance ToJSON LegacyExecutionUnitPrices where
+  toJSON LegacyExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
     object [ "priceSteps"  .= toRationalJSON priceExecutionSteps
            , "priceMemory" .= toRationalJSON priceExecutionMemory
            ]
 
-instance FromJSON ExecutionUnitPrices where
+instance FromJSON LegacyExecutionUnitPrices where
   parseJSON =
-    withObject "ExecutionUnitPrices" $ \o ->
-      ExecutionUnitPrices
+    withObject "LegacyExecutionUnitPrices" $ \o ->
+      LegacyExecutionUnitPrices
         <$> o .: "priceSteps"
         <*> o .: "priceMemory"
 
 
-toAlonzoPrices :: ExecutionUnitPrices -> Either ProtocolParametersConversionError Alonzo.Prices
-toAlonzoPrices ExecutionUnitPrices {
+toAlonzoPrices :: LegacyExecutionUnitPrices -> Either ProtocolParametersConversionError Alonzo.Prices
+toAlonzoPrices LegacyExecutionUnitPrices {
                  priceExecutionSteps,
                  priceExecutionMemory
                } = do
@@ -1089,9 +1089,9 @@ toAlonzoPrices ExecutionUnitPrices {
     Alonzo.prMem
   }
 
-fromAlonzoPrices :: Alonzo.Prices -> ExecutionUnitPrices
+fromAlonzoPrices :: Alonzo.Prices -> LegacyExecutionUnitPrices
 fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
-  ExecutionUnitPrices {
+  LegacyExecutionUnitPrices {
     priceExecutionSteps  = Ledger.unboundRational prSteps,
     priceExecutionMemory = Ledger.unboundRational prMem
   }

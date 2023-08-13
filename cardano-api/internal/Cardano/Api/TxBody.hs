@@ -4326,7 +4326,7 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
 
-calculateExecutionUnitsLovelace :: ExecutionUnitPrices -> ExecutionUnits -> Maybe Lovelace
+calculateExecutionUnitsLovelace :: LegacyExecutionUnitPrices -> ExecutionUnits -> Maybe Lovelace
 calculateExecutionUnitsLovelace euPrices eUnits =
   case toAlonzoPrices euPrices of
     Left _ -> Nothing

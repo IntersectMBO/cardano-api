@@ -52,7 +52,7 @@ module Test.Gen.Cardano.Api.Typed
   , genAssetName
   , genAssetId
   , genEpochNo
-  , genExecutionUnitPrices
+  , genLegacyExecutionUnitPrices
   , genExecutionUnits
   , genHashScriptData
   , genKESPeriod
@@ -922,7 +922,7 @@ genProtocolParameters era = do
   protocolParamCostModels <- pure mempty
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
-  protocolParamPrices <- Gen.maybe genExecutionUnitPrices
+  protocolParamPrices <- Gen.maybe genLegacyExecutionUnitPrices
   protocolParamMaxTxExUnits <- Gen.maybe genExecutionUnits
   protocolParamMaxBlockExUnits <- Gen.maybe genExecutionUnits
   protocolParamMaxValueSize <- Gen.maybe genNat
@@ -959,7 +959,7 @@ genValidProtocolParameters era =
     --TODO: Babbage figure out how to deal with
     -- asymmetric cost model JSON instances
     -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
-    <*> fmap Just genExecutionUnitPrices
+    <*> fmap Just genLegacyExecutionUnitPrices
     <*> fmap Just genExecutionUnits
     <*> fmap Just genExecutionUnits
     <*> fmap Just genNat
@@ -990,7 +990,7 @@ genProtocolParametersUpdate era = do
   let protocolUpdateCostModels = mempty -- genCostModels
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
-  protocolUpdatePrices              <- Gen.maybe genExecutionUnitPrices
+  protocolUpdatePrices              <- Gen.maybe genLegacyExecutionUnitPrices
   protocolUpdateMaxTxExUnits        <- Gen.maybe genExecutionUnits
   protocolUpdateMaxBlockExUnits     <- Gen.maybe genExecutionUnits
   protocolUpdateMaxValueSize        <- Gen.maybe genNat
@@ -1036,8 +1036,8 @@ genExecutionUnits :: Gen ExecutionUnits
 genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
                                    <*> Gen.integral (Range.constant 0 1000)
 
-genExecutionUnitPrices :: Gen ExecutionUnitPrices
-genExecutionUnitPrices = ExecutionUnitPrices <$> genRational <*> genRational
+genLegacyExecutionUnitPrices :: Gen LegacyExecutionUnitPrices
+genLegacyExecutionUnitPrices = LegacyExecutionUnitPrices <$> genRational <*> genRational
 
 genTxOutDatumHashTxContext :: CardanoEra era -> Gen (TxOutDatum CtxTx era)
 genTxOutDatumHashTxContext era = case era of
