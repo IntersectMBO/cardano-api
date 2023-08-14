@@ -94,7 +94,7 @@ import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
-import           Cardano.Ledger.BaseTypes as Core
+import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import           Cardano.Ledger.Core (EraCrypto)
@@ -105,6 +105,7 @@ import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
@@ -297,7 +298,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace)
 
   QueryConstitutionHash
-    :: QueryInShelleyBasedEra era (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) (Core.AnchorData (EraCrypto (ShelleyLedgerEra era)))))
+    :: QueryInShelleyBasedEra era (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) (L.AnchorData (EraCrypto (ShelleyLedgerEra era)))))
 
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where

@@ -928,12 +928,12 @@ pattern AlonzoTimelockScript script = Alonzo.TimelockScript script
 -- | NOT EXPORTED
 --
 -- This exists solely to cause an pattern match checker warning if
--- 'Alonzo.AlonzoScript' gains a constructor, which would mean the following
--- @COMPLETE@ pramga needs to be updated.
+-- 'Alonzo.AlonzoScript' changes, which would mean the following @COMPLETE@
+-- pramga may need to be updated.
 _completenessProof :: Alonzo.AlonzoScript era -> ()
 _completenessProof = \case
     Alonzo.TimelockScript _ -> ()
-    Alonzo.PlutusScript (Alonzo.Plutus _ _) -> ()
+    Alonzo.PlutusScript (Alonzo.Plutus _ (Alonzo.BinaryPlutus _)) -> ()
 
 {-# COMPLETE AlonzoTimelockScript, AlonzoPlutusScript #-}
 

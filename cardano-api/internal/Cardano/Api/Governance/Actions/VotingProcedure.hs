@@ -42,11 +42,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
 import           Data.Word (Word32)
 
-
-
-
--- | A representation of whether the era supports tx voting on governance
--- actions.
+-- | A representation of whether the era supports tx voting on governance actions.
 --
 -- The Conway and subsequent eras support tx voting on governance actions.
 --
@@ -217,7 +213,7 @@ createVotingProcedure
   -> Voter era
   -> GovernanceActionId era
   -> VotingProcedure era
-createVotingProcedure sbe vChoice _vt (GovernanceActionId _govActId) =
+createVotingProcedure sbe vChoice _TODO1 (GovernanceActionId _TODO2) =
   shelleyBasedEraConstraints sbe
     $ VotingProcedure $ Ledger.VotingProcedure
       { Ledger.vProcVote = toVote vChoice

@@ -21,7 +21,6 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.Script
 import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
@@ -63,13 +62,19 @@ data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 -- TODO: Conway - fill in remaining actions
 data GovernanceAction
   = MotionOfNoConfidence
-  | ProposeNewConstitution ByteString   -- NB: This is the bytes of the hash, not the bytes that were hashed
-  | ProposeNewCommittee [StakeCredential] (Map StakeCredential EpochNo) Rational -- NB: This also includes stake pool keys
+  | ProposeNewConstitution ByteString   -- NB: This is the bytes of the hash, not the bytes to be hashed
+  | ProposeNewCommittee [Hash StakeKey] (Map (Hash StakeKey) EpochNo) Rational -- NB: This also includes stake pool keys
   | InfoAct
   | TreasuryWithdrawal [(StakeCredential, Lovelace)]
   | InitiateHardfork ProtVer
   | UpdatePParams ProtocolParametersUpdate
   deriving (Eq, Show)
+
+-- | The cardano-api:'GovernanceAction' interface does not yet include the id
+-- of the previous relevant governance action, but the `cardano-ledger`
+-- 'Gov.GovAction' does optionally include it.
+temporarilyOptOutOfPrevGovAction :: StrictMaybe (Gov.PrevGovActionId purpose c)   -- TODO
+temporarilyOptOutOfPrevGovAction = SNothing
 
 toGovernanceAction
   :: EraCrypto ledgerera ~ StandardCrypto
@@ -77,36 +82,36 @@ toGovernanceAction
   => ShelleyBasedEra era
   -> GovernanceAction
   -> Gov.GovAction ledgerera
-toGovernanceAction _ MotionOfNoConfidence = Gov.NoConfidence (SNothing {- TODO -})
+toGovernanceAction _ MotionOfNoConfidence = Gov.NoConfidence temporarilyOptOutOfPrevGovAction
 toGovernanceAction _ (ProposeNewConstitution bs) =
-  Gov.NewConstitution (SNothing {- TODO -}) Gov.Constitution
+  Gov.NewConstitution temporarilyOptOutOfPrevGovAction Gov.Constitution
     { Gov.constitutionAnchor = Gov.Anchor
-      { Gov.anchorUrl = error "new constitution anchorUrl"
-      , Gov.anchorDataHash = unsafeBytesToSafeHash bs
+      { Gov.anchorUrl = error "TODO new constitution anchorUrl"
+      , Gov.anchorDataHash = unsafeBytesToSafeHash bs   -- TODO "safe*" alternative?
       }
-    , Gov.constitutionScript = SNothing
+    , Gov.constitutionScript = SNothing   -- TODO
     }
 toGovernanceAction _ (ProposeNewCommittee oldCommitteeMembers newCommitteeMembers quor) =
   Gov.NewCommittee
-    (SNothing {- TODO -})
+    temporarilyOptOutOfPrevGovAction
     (Set.fromList $ map toCommitteeMember oldCommitteeMembers)
     Gov.Committee
       { Gov.committeeMembers = Map.mapKeys toCommitteeMember newCommitteeMembers
       , Gov.committeeQuorum =
-            fromMaybe (error "impossible!")
+            fromMaybe (error "the given quorum was outside of the unit interval!")
           $ boundRational @UnitInterval quor
        }
 toGovernanceAction _ InfoAct = Gov.InfoAction
 toGovernanceAction _ (TreasuryWithdrawal withdrawals) =
-  let m = Map.fromList [(L.mkRwdAcnt (error "which Network?" {- TODO -}) (toShelleyStakeCredential sc), toShelleyLovelace l) | (sc,l) <- withdrawals]
+  let m = Map.fromList [(L.mkRwdAcnt (error "TODO which Network?") (toShelleyStakeCredential sc), toShelleyLovelace l) | (sc,l) <- withdrawals]
   in Gov.TreasuryWithdrawals m
-toGovernanceAction _ (InitiateHardfork pVer) = Gov.HardForkInitiation (SNothing {- TODO -}) pVer
+toGovernanceAction _ (InitiateHardfork pVer) = Gov.HardForkInitiation temporarilyOptOutOfPrevGovAction pVer
 toGovernanceAction sbe (UpdatePParams ppup) =
   case toLedgerPParamsUpdate sbe ppup of
     Left e -> error $ "toGovernanceAction: " <> show e
     -- TODO: Conway era - remove use of error. Ideally we will use the ledger's PParams type
     -- in place of ProtocolParametersUpdate
-    Right ppup' -> Gov.ParameterChange (SNothing {- TODO -}) ppup'
+    Right ppup' -> Gov.ParameterChange temporarilyOptOutOfPrevGovAction ppup'
 
 fromGovernanceAction
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
@@ -117,13 +122,13 @@ fromGovernanceAction sbe = \case
   Gov.NoConfidence _TODO ->
     MotionOfNoConfidence
   Gov.NewConstitution _TODO constitution ->
-    ProposeNewConstitution $ Crypto.hashToBytes $ extractHash $ Gov.anchorDataHash $ Gov.constitutionAnchor constitution
+    ProposeNewConstitution $ originalBytes $ Gov.anchorDataHash $ Gov.constitutionAnchor constitution
   Gov.ParameterChange _TODO pparams ->
     UpdatePParams $ fromLedgerPParamsUpdate sbe pparams
   Gov.HardForkInitiation _TODO pVer ->
     InitiateHardfork pVer
   Gov.TreasuryWithdrawals withdrawlMap ->
-    let res = [ (fromShelleyStakeCredential (L.getRwdCred rwdAcnt) , fromShelleyLovelace coin)
+    let res = [ (fromShelleyStakeCredential (L.getRwdCred rwdAcnt), fromShelleyLovelace coin)
               | (rwdAcnt, coin) <- Map.toList withdrawlMap
               ]
     in TreasuryWithdrawal res
@@ -170,48 +175,42 @@ instance HasTypeProxy era => HasTypeProxy (Proposal era) where
 createProposalProcedure
   :: ShelleyBasedEra era
   -> Lovelace -- ^ Deposit
-  -> (Network, StakeCredential)
-  -> (Url, ByteString)
+  -> Hash StakeKey -- ^ Return address
   -> GovernanceAction
   -> Proposal era
-createProposalProcedure sbe dep (net, rwd) anchor govAct =
+createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
   shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
-      , Gov.pProcReturnAddr = L.mkRwdAcnt net (toShelleyStakeCredential rwd)
+      , Gov.pProcReturnAddr = L.mkRwdAcnt (error "TODO which network?") (L.KeyHashObj retAddrh)
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
-      , Gov.pProcAnchor = Gov.Anchor
-        { Gov.anchorDataHash = unsafeBytesToSafeHash (snd anchor)
-        , Gov.anchorUrl = fst anchor
-        }
+      , Gov.pProcAnchor = error "TODO which anchor?"
       }
 
 fromProposalProcedure
   :: ShelleyBasedEra era
   -> Proposal era
-  -> (Lovelace, (Network, StakeCredential), GovernanceAction, (Url, ByteString))
+  -> (Lovelace, Hash StakeKey, GovernanceAction)
 fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints sbe
     ( fromShelleyLovelace $ Gov.pProcDeposit pp
-    , (L.getRwdNetwork $ Gov.pProcReturnAddr pp, fromShelleyStakeCredential $ L.getRwdCred $ Gov.pProcReturnAddr pp)
+    , case fromShelleyStakeCredential (L.getRwdCred (Gov.pProcReturnAddr pp)) of
+          StakeCredentialByKey keyhash -> keyhash
+          StakeCredentialByScript _scripthash -> error "TODO reward addresses not yet supported"
     , fromGovernanceAction sbe (Gov.pProcGovAction pp)
-    , let anchor = Gov.pProcAnchor pp
-      in (Gov.anchorUrl anchor, Crypto.hashToBytes $ extractHash $ Gov.anchorDataHash anchor)
     )
 
 -- ----------------------------------------------------------------------------
 -- TODO conversions that likely need to live elsewhere and may even deserve
 -- additional wrapper types
 
-toCommitteeMember :: StakeCredential -> L.Credential ColdCommitteeRole StandardCrypto
-toCommitteeMember = coerceKeyRole . \case
-  StakeCredentialByKey (StakeKeyHash keyhash) -> L.KeyHashObj keyhash
-  StakeCredentialByScript scripthash -> L.ScriptHashObj (toShelleyScriptHash scripthash)
+toCommitteeMember :: Hash StakeKey -> L.Credential ColdCommitteeRole StandardCrypto
+toCommitteeMember (StakeKeyHash keyhash) = coerceKeyRole $ L.KeyHashObj keyhash
 
-fromCommitteeMember :: L.Credential ColdCommitteeRole StandardCrypto -> StakeCredential
+fromCommitteeMember :: L.Credential ColdCommitteeRole StandardCrypto -> Hash StakeKey
 fromCommitteeMember = (. coerceKeyRole) $ \case
-  L.KeyHashObj keyhash -> StakeCredentialByKey (StakeKeyHash keyhash)
-  L.ScriptHashObj scripthash -> StakeCredentialByScript (fromShelleyScriptHash scripthash)
+  L.KeyHashObj keyhash -> StakeKeyHash keyhash
+  L.ScriptHashObj _scripthash -> error "TODO script committee members not yet supported"
 
 -- | TODO: I'm very unsure whether it's correct to use 'unsafeMakeSafeHash'
 -- here? I've asked Alexey if maybe this doesn't need to actually be a

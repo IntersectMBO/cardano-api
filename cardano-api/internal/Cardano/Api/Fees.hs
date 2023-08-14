@@ -619,7 +619,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx' =
           in
             ScriptErrorMissingScript rdmrPtr
           $ ResolvablePointers sbe
-          $ fmap cnv2 resolveable
+          $ Map.map cnv2 resolveable
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 

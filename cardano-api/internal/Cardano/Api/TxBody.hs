@@ -3619,7 +3619,7 @@ convVotes
 convVotes sbe = Gov.VotingProcedures . \case
   TxVotesNone -> Map.empty
   TxVotes _ votes ->
-    let combine = error "impossible! votes contained the same (voter, govActId) key multiple times"
+    let combine = error "impossible! `votes' contained the same key multiple times"
     in
     Map.fromListWith (Map.unionWith combine)
       [ (toVoterRole sbe voter, unGovernanceActionId govActId `Map.singleton` unVotingProcedure vp)
