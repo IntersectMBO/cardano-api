@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.13.1.0
+
+- Implement `EraBasedProtocolParametersUpdate`
+  (feature)
+  [PR 180](https://github.com/input-output-hk/cardano-api/pull/180)
+
 ## 8.13.0.0
 
 - Modify `queryGenesisParameters` so that its type advertises it only returns genesis parameters for the Shelley era
