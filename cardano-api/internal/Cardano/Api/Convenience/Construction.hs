@@ -17,8 +17,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Fees
-import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
@@ -41,7 +41,7 @@ constructBalancedTx
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
-  -> ProtocolParameters
+  -> Ledger.PParams (ShelleyLedgerEra era)
   -> LedgerEpochInfo
   -> SystemStart
   -> Set PoolId       -- ^ The set of registered stake pools

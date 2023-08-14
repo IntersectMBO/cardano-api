@@ -1429,6 +1429,7 @@ instance Error LeadershipError where
     "Error while calculating the slot range: " <> Text.unpack e
   displayError LeaderErrCandidateNonceStillEvolving = "Candidate nonce is still evolving"
 
+-- TODO: Conway era - replace BundledProtocolParameters era with Ledger.PParams (ShelleyLedgerEra era)
 nextEpochEligibleLeadershipSlots
   :: forall era. ()
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
