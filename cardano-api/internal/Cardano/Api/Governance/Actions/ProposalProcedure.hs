@@ -70,6 +70,7 @@ data GovernanceAction
   | UpdatePParams ProtocolParametersUpdate
   deriving (Eq, Show)
 
+
 -- | The cardano-api:'GovernanceAction' interface does not yet include the id
 -- of the previous relevant governance action, but the `cardano-ledger`
 -- 'Gov.GovAction' does optionally include it.
