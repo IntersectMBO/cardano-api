@@ -51,29 +51,6 @@ data TxGovernanceActions era where
 deriving instance IsShelleyBasedEra era => Show (TxGovernanceActions era)
 deriving instance IsShelleyBasedEra era => Eq (TxGovernanceActions era)
 
-
--- | A representation of whether the era supports transactions with governance
--- actions.
---
--- The Conway and subsequent eras support governance actions.
---
-data TxGovernanceActionSupportedInEra era where
-
-     GovernanceActionsSupportedInConwayEra  :: TxGovernanceActionSupportedInEra ConwayEra
-{-# DEPRECATED TxGovernanceActionSupportedInEra "Use ConwayEraOnwards instead" #-}
-
-deriving instance Show (TxGovernanceActionSupportedInEra era)
-deriving instance Eq (TxGovernanceActionSupportedInEra era)
-
-governanceActionsSupportedInEra :: ShelleyBasedEra era -> Maybe (TxGovernanceActionSupportedInEra era)
-governanceActionsSupportedInEra ShelleyBasedEraShelley = Nothing
-governanceActionsSupportedInEra ShelleyBasedEraAllegra = Nothing
-governanceActionsSupportedInEra ShelleyBasedEraMary    = Nothing
-governanceActionsSupportedInEra ShelleyBasedEraAlonzo  = Nothing
-governanceActionsSupportedInEra ShelleyBasedEraBabbage = Nothing
-governanceActionsSupportedInEra ShelleyBasedEraConway  = Just GovernanceActionsSupportedInConwayEra
-{-# DEPRECATED governanceActionsSupportedInEra "Use featureInShelleyBasedEra Nothing Just instead" #-}
-
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovernanceAction era)
 
 -- TODO: Conway - fill in remaining actions

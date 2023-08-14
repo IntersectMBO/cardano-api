@@ -67,8 +67,6 @@ module Cardano.Api.Certificate (
     AsType(..),
 
     -- * Internal functions
-    shelleyCertificateConstraints,
-    conwayCertificateConstraints,
     filterUnRegCreds,
     selectStakeCredential,
   ) where
@@ -853,25 +851,3 @@ fromShelleyPoolParams
     fromShelleyDnsName :: Ledger.DnsName -> ByteString
     fromShelleyDnsName = Text.encodeUtf8
                        . Ledger.dnsToText
-
-shelleyCertificateConstraints
-  :: ShelleyToBabbageEra era
-  -> (( Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
-      , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-      , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
-      , IsShelleyBasedEra era
-      ) => a)
-  -> a
-shelleyCertificateConstraints w f = shelleyToBabbageEraConstraints w f {- HLINT ignore "Eta reduce" -}
-{-# DEPRECATED shelleyCertificateConstraints "Please use 'shelleyToBabbageEraConstraints' instead." #-}
-
-conwayCertificateConstraints
-  :: ConwayEraOnwards era
-  -> (( Ledger.ConwayEraTxCert (ShelleyLedgerEra era)
-      , EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-      , Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
-      , IsShelleyBasedEra era
-      ) => a)
-  -> a
-conwayCertificateConstraints w f = conwayEraOnwardsConstraints w f {- HLINT ignore "Eta reduce" -}
-{-# DEPRECATED conwayCertificateConstraints "Please use 'conwayEraOnwardsConstraints' instead." #-}

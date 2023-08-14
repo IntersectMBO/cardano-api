@@ -310,8 +310,6 @@ module Cardano.Api (
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
-    TxVotesSupportedInEra(..),
-    TxGovernanceActionSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -328,8 +326,6 @@ module Cardano.Api (
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
-    votesSupportedInEra,
-    governanceActionsSupportedInEra,
 
     -- ** Era-dependent protocol features
     ProtocolUTxOCostPerByteFeature(..),

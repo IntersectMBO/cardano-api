@@ -29,22 +29,10 @@ module Cardano.Api.Utils
 
     -- ** CLI option parsing
   , bounded
-
-    -- ** Constraint solvers
-  , obtainCryptoConstraints
-  , obtainEraConstraints
-  , obtainEraPParamsConstraint
-  , obtainEraCryptoConstraints
-  , obtainSafeToHashConstraint
   ) where
 
 import           Cardano.Api.Eras
 
-import           Cardano.Crypto.Hash.Class (HashAlgorithm)
-import           Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import qualified Cardano.Ledger.Crypto as Ledger
 import           Cardano.Ledger.Shelley ()
 
 import           Control.Exception (bracket)
@@ -145,38 +133,3 @@ bounded t = eitherReader $ \s -> do
   when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
   when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
   pure (fromIntegral i)
-
-obtainEraCryptoConstraints
-  :: ShelleyBasedEra era
-  -> ((EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto) => a)
-  -> a
-obtainEraCryptoConstraints = shelleyBasedEraConstraints
-{-# DEPRECATED obtainEraCryptoConstraints "Use shelleyBasedEraConstraints instead" #-}
-
-obtainCryptoConstraints
-  :: ShelleyBasedEra era
-  -> ((Crypto (EraCrypto (ShelleyLedgerEra era))) => a)
-  -> a
-obtainCryptoConstraints = shelleyBasedEraConstraints
-{-# DEPRECATED obtainCryptoConstraints "Use shelleyBasedEraConstraints instead" #-}
-
-obtainEraPParamsConstraint
-  :: ShelleyBasedEra era
-  -> (Ledger.EraPParams (ShelleyLedgerEra era) => a)
-  -> a
-obtainEraPParamsConstraint = shelleyBasedEraConstraints
-{-# DEPRECATED obtainEraPParamsConstraint "Use shelleyBasedEraConstraints instead" #-}
-
-obtainEraConstraints
-  :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
-  -> ( (IsShelleyBasedEra era, Ledger.Era ledgerera) => a) -> a
-obtainEraConstraints = shelleyBasedEraConstraints
-{-# DEPRECATED obtainEraConstraints "Use shelleyBasedEraConstraints instead" #-}
-
-obtainSafeToHashConstraint
-  :: ShelleyBasedEra era
-  -> (HashAlgorithm (Ledger.HASH (EraCrypto (ShelleyLedgerEra era))) => a)
-  -> a
-obtainSafeToHashConstraint = shelleyBasedEraConstraints
-{-# DEPRECATED obtainSafeToHashConstraint "Use shelleyBasedEraConstraints instead" #-}
