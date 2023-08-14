@@ -57,7 +57,9 @@ import qualified Cardano.Ledger.Babbage.Core as Ledger
 import qualified Cardano.Ledger.BaseTypes as Ledger
 
 import           Control.Applicative
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import           Data.Aeson (FromJSON (..), Object, ToJSON (..), object, withObject, (.:), (.=))
+import           Data.Aeson.Key (Key)
+import           Data.Aeson.Types (Parser)
 import           GHC.Natural (Natural)
 import           Lens.Micro (Lens', lens, (.~), (^.))
 
@@ -99,6 +101,19 @@ instance IsCardanoEra era => ToJSON (ProtocolParameters era) where
           -- , "utxoCostPerByte"        .= protocolParamUTxOCostPerByte
           ]
 
+parseJsonFieldByEra :: ()
+  => FeatureInEra feature
+  => FromJSON v
+  => CardanoEra era
+  -> Object
+  -> Key
+  -> (feature era -> v -> ProtocolParameters era -> ProtocolParameters era)
+  -> Parser (ProtocolParameters era -> ProtocolParameters era)
+parseJsonFieldByEra era o fieldName f =
+  inEraFeature era (pure id) $ \w -> do
+    v <- o .: fieldName
+    pure (f w v)
+
 instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
   parseJSON =
     case cardanoEra @era of
@@ -108,57 +123,19 @@ instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
             (fail ("Supported Era " <> show era))
             (\sbe ->
               pure (emptyProtocolParameters sbe)
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "protocolVersion"
-                          pure (protocolParamProtocolVersionL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "extraPraosEntropy"
-                          pure (protocolParamExtraPraosEntropyL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "maxBlockHeaderSize"
-                          pure (protocolParamMaxBlockHeaderSizeL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "maxBlockBodySize"
-                          pure (protocolParamMaxBlockBodySizeL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "maxTxSize"
-                          pure (protocolParamMaxTxSizeL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "txFeeFixed"
-                          pure (protocolParamTxFeeFixedL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "txFeePerByte"
-                          pure (protocolParamTxFeePerByteL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "minUTxOValue"
-                          pure (protocolParamMinUTxOValueL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "stakeAddressDeposit"
-                          pure (protocolParamStakeAddressDepositL w .~ v)
-                      )
+                <**>  parseJsonFieldByEra era o "protocolVersion"       (\w v -> protocolParamProtocolVersionL      w .~ v)
+                <**>  parseJsonFieldByEra era o "extraPraosEntropy"     (\w v -> protocolParamExtraPraosEntropyL    w .~ v)
+                <**>  parseJsonFieldByEra era o "maxBlockHeaderSize"    (\w v -> protocolParamMaxBlockHeaderSizeL   w .~ v)
+                <**>  parseJsonFieldByEra era o "maxBlockBodySize"      (\w v -> protocolParamMaxBlockBodySizeL     w .~ v)
+                <**>  parseJsonFieldByEra era o "maxTxSize"             (\w v -> protocolParamMaxTxSizeL            w .~ v)
+                <**>  parseJsonFieldByEra era o "txFeeFixed"            (\w v -> protocolParamTxFeeFixedL           w .~ v)
+                <**>  parseJsonFieldByEra era o "txFeePerByte"          (\w v -> protocolParamTxFeePerByteL         w .~ v)
+                <**>  parseJsonFieldByEra era o "minUTxOValue"          (\w v -> protocolParamMinUTxOValueL         w .~ v)
+                <**>  parseJsonFieldByEra era o "stakeAddressDeposit"   (\w v -> protocolParamStakeAddressDepositL  w .~ v)
                 --     -- stakePoolDeposit <- o .: "stakePoolDeposit"
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "minPoolCost"
-                          pure (protocolParamMinPoolCostL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "poolRetireMaxEpoch"
-                          pure (protocolParamPoolRetireMaxEpochL w .~ v)
-                      )
-
-
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "stakePoolTargetNum"
-                          pure (protocolParamStakePoolTargetNumL w .~ v)
-                      )
+                <**>  parseJsonFieldByEra era o "minPoolCost"           (\w v -> protocolParamMinPoolCostL          w .~ v)
+                <**>  parseJsonFieldByEra era o "poolRetireMaxEpoch"    (\w v -> protocolParamPoolRetireMaxEpochL   w .~ v)
+                <**>  parseJsonFieldByEra era o "stakePoolTargetNum"    (\w v -> protocolParamStakePoolTargetNumL   w .~ v)
                 --     -- poolPledgeInfluence <- o .: "poolPledgeInfluence"
                 --     -- monetaryExpansion <- o .: "monetaryExpansion"
                 --     -- treasuryCut <- o .: "treasuryCut"
@@ -167,19 +144,13 @@ instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
                 --     -- executionUnitPrices <- o .:? "executionUnitPrices"
                 --     -- maxTxExecutionUnits <- o .:? "maxTxExecutionUnits"
                 --     -- maxBlockExecutionUnits <- o .:? "maxBlockExecutionUnits"
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "maxValueSize"
-                          pure (protocolParamMaxValueSizeL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "collateralPercentage"
-                          pure (protocolParamCollateralPercentL w .~ v)
-                      )
-                <**>  ( inEraFeature era (pure id) $ \w -> do
-                          v <- o .: "maxCollateralInputs"
-                          pure (protocolParamMaxCollateralInputsL w .~ v)
-                      )
-                --     -- utxoCostPerByte <- o .:? "utxoCostPerByte"\
+                <**>  parseJsonFieldByEra era o "maxValueSize"          (\w v -> protocolParamMaxValueSizeL         w .~ v)
+                <**>  parseJsonFieldByEra era o "collateralPercentage"  (\w v -> protocolParamCollateralPercentL    w .~ v)
+                <**>  parseJsonFieldByEra era o "maxCollateralInputs"   (\w v -> protocolParamMaxCollateralInputsL  w .~ v)
+                <**>  parseJsonFieldByEra era o "maxValueSize"          (\w v -> protocolParamMaxValueSizeL         w .~ v)
+                <**>  parseJsonFieldByEra era o "collateralPercentage"  (\w v -> protocolParamCollateralPercentL    w .~ v)
+                <**>  parseJsonFieldByEra era o "maxCollateralInputs"   (\w v -> protocolParamMaxCollateralInputsL  w .~ v)
+                --     -- utxoCostPerByte <- o .:? "utxoCostPerByte"
             )
 
 
