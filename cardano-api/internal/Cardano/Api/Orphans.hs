@@ -20,6 +20,7 @@ import qualified Cardano.Ledger.Alonzo.PParams as Ledger
 import qualified Cardano.Ledger.Babbage.PParams as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -291,3 +292,37 @@ instance Semigroup (Ledger.BabbagePParams StrictMaybe era) where
          , Ledger.bppCollateralPercentage = fbppCollateralPercentage
          , Ledger.bppMaxCollateralInputs = fbppMaxCollateralInputs
          }
+
+instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
+  (<>) p1 p2 = Ledger.ConwayPParams
+    { Ledger.cppMinFeeA = Ledger.cppMinFeeA p1 `lastMappend` Ledger.cppMinFeeA p2
+    , Ledger.cppMinFeeB = Ledger.cppMinFeeB p1 `lastMappend` Ledger.cppMinFeeB p2
+    , Ledger.cppMaxBBSize = Ledger.cppMaxBBSize p1 `lastMappend` Ledger.cppMaxBBSize p2
+    , Ledger.cppMaxTxSize = Ledger.cppMaxTxSize p1 `lastMappend` Ledger.cppMaxTxSize p2
+    , Ledger.cppMaxBHSize = Ledger.cppMaxBHSize p1 `lastMappend` Ledger.cppMaxBHSize p2
+    , Ledger.cppKeyDeposit = Ledger.cppKeyDeposit p1 `lastMappend` Ledger.cppKeyDeposit p2
+    , Ledger.cppPoolDeposit = Ledger.cppPoolDeposit p1 `lastMappend` Ledger.cppPoolDeposit p2
+    , Ledger.cppEMax = Ledger.cppEMax p1 `lastMappend` Ledger.cppEMax p2
+    , Ledger.cppNOpt = Ledger.cppNOpt p1 `lastMappend` Ledger.cppNOpt p2
+    , Ledger.cppA0 = Ledger.cppA0 p1 `lastMappend` Ledger.cppA0 p2
+    , Ledger.cppRho = Ledger.cppRho p1 `lastMappend` Ledger.cppRho p2
+    , Ledger.cppTau = Ledger.cppTau p1 `lastMappend` Ledger.cppTau p2
+    , Ledger.cppProtocolVersion = Ledger.cppProtocolVersion p1 `lastMappend` Ledger.cppProtocolVersion p2
+    , Ledger.cppMinPoolCost = Ledger.cppMinPoolCost p1 `lastMappend` Ledger.cppMinPoolCost p2
+    , Ledger.cppCoinsPerUTxOByte = Ledger.cppCoinsPerUTxOByte p1 `lastMappend` Ledger.cppCoinsPerUTxOByte p2
+    , Ledger.cppCostModels = Ledger.cppCostModels p1 `lastMappend` Ledger.cppCostModels p2
+    , Ledger.cppPrices = Ledger.cppPrices p1 `lastMappend` Ledger.cppPrices p2
+    , Ledger.cppMaxTxExUnits = Ledger.cppMaxTxExUnits p1 `lastMappend` Ledger.cppMaxTxExUnits p2
+    , Ledger.cppMaxBlockExUnits = Ledger.cppMaxBlockExUnits p1 `lastMappend` Ledger.cppMaxBlockExUnits p2
+    , Ledger.cppMaxValSize = Ledger.cppMaxValSize p1 `lastMappend` Ledger.cppMaxValSize p2
+    , Ledger.cppCollateralPercentage = Ledger.cppCollateralPercentage p1 `lastMappend` Ledger.cppCollateralPercentage p2
+    , Ledger.cppMaxCollateralInputs = Ledger.cppMaxCollateralInputs p1 `lastMappend` Ledger.cppMaxCollateralInputs p2
+    , Ledger.cppPoolVotingThresholds = Ledger.cppPoolVotingThresholds p1 `lastMappend` Ledger.cppPoolVotingThresholds p2
+    , Ledger.cppDRepVotingThresholds = Ledger.cppDRepVotingThresholds p1 `lastMappend` Ledger.cppDRepVotingThresholds p2
+    , Ledger.cppMinCommitteeSize = Ledger.cppMinCommitteeSize p1 `lastMappend` Ledger.cppMinCommitteeSize p2
+    , Ledger.cppCommitteeTermLimit = Ledger.cppCommitteeTermLimit p1 `lastMappend` Ledger.cppCommitteeTermLimit p2
+    , Ledger.cppGovActionExpiration = Ledger.cppGovActionExpiration p1 `lastMappend` Ledger.cppGovActionExpiration p2
+    , Ledger.cppGovActionDeposit = Ledger.cppGovActionDeposit p1 `lastMappend` Ledger.cppGovActionDeposit p2
+    , Ledger.cppDRepDeposit = Ledger.cppDRepDeposit p1 `lastMappend` Ledger.cppDRepDeposit p2
+    , Ledger.cppDRepActivity = Ledger.cppDRepActivity p1 `lastMappend` Ledger.cppDRepActivity p2
+    }
