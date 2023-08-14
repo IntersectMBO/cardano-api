@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -36,7 +37,7 @@ module Cardano.Api.ProtocolParameters (
     unbundleProtocolParams,
     unbundleLedgerShelleyBasedProtocolParams,
 
-    -- * Updates to the protocol parameters
+    -- * The updatable protocol parameters
     EraBasedProtocolParametersUpdate(..),
     AlonzoOnwardsPParams(..),
     CommonProtocolParametersUpdate(..),
@@ -45,6 +46,7 @@ module Cardano.Api.ProtocolParameters (
     ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
     createEraBasedProtocolParamUpdate,
+    createPParams,
 
     -- * Deprecated
     ProtocolParametersUpdate(..),
@@ -147,6 +149,20 @@ import           Text.PrettyBy.Default (display)
 
 
 -- -----------------------------------------------------------------------------
+-- Era based ledger protocol parameters
+--
+
+
+createPParams
+  :: EraPParams (ShelleyLedgerEra era)
+  => ShelleyBasedEra era
+  -> EraBasedProtocolParametersUpdate era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+createPParams sbe ebPParamsUpdate =
+  let ppUp = createEraBasedProtocolParamUpdate sbe ebPParamsUpdate
+  in Ledger.applyPPUpdates emptyPParams ppUp
+
+-- -----------------------------------------------------------------------------
 -- Era based Ledger protocol parameters update
 --
 
@@ -155,39 +171,39 @@ import           Text.PrettyBy.Default (display)
 data EraBasedProtocolParametersUpdate era where
   ShelleyEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> DeprecatedAfterMaryPParams (ShelleyLedgerEra ShelleyEra)
-    -> ShelleyToAlonzoPParams' (ShelleyLedgerEra ShelleyEra)
+    -> DeprecatedAfterMaryPParams ShelleyEra
+    -> ShelleyToAlonzoPParams' ShelleyEra
     -> EraBasedProtocolParametersUpdate ShelleyEra
 
   AllegraEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> DeprecatedAfterMaryPParams (ShelleyLedgerEra AllegraEra)
-    -> ShelleyToAlonzoPParams' (ShelleyLedgerEra AllegraEra)
+    -> DeprecatedAfterMaryPParams AllegraEra
+    -> ShelleyToAlonzoPParams' AllegraEra
     -> EraBasedProtocolParametersUpdate AllegraEra
 
   MaryEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> DeprecatedAfterMaryPParams (ShelleyLedgerEra MaryEra)
-    -> ShelleyToAlonzoPParams' (ShelleyLedgerEra MaryEra)
+    -> DeprecatedAfterMaryPParams MaryEra
+    -> ShelleyToAlonzoPParams' MaryEra
     -> EraBasedProtocolParametersUpdate MaryEra
 
   AlonzoEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> ShelleyToAlonzoPParams' (ShelleyLedgerEra AlonzoEra)
-    -> AlonzoOnwardsPParams (ShelleyLedgerEra AlonzoEra)
-    -> ShelleyToAlonzoPParams (ShelleyLedgerEra AlonzoEra)
+    -> ShelleyToAlonzoPParams' AlonzoEra
+    -> AlonzoOnwardsPParams AlonzoEra
+    -> ShelleyToAlonzoPParams AlonzoEra
     -> EraBasedProtocolParametersUpdate AlonzoEra
 
   BabbageEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> AlonzoOnwardsPParams (ShelleyLedgerEra BabbageEra)
-    -> IntroducedInBabbagePParams (ShelleyLedgerEra BabbageEra)
+    -> AlonzoOnwardsPParams BabbageEra
+    -> IntroducedInBabbagePParams BabbageEra
     -> EraBasedProtocolParametersUpdate BabbageEra
 
   ConwayEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> AlonzoOnwardsPParams (ShelleyLedgerEra ConwayEra)
-    -> IntroducedInBabbagePParams (ShelleyLedgerEra ConwayEra)
+    -> AlonzoOnwardsPParams ConwayEra
+    -> IntroducedInBabbagePParams ConwayEra
   -- TODO: Conway era - need new ledger release
   -- -> IntroducedInConwayPParamsUpdate (ShelleyLedgerEra ConwayEra)
     -> EraBasedProtocolParametersUpdate ConwayEra
@@ -227,6 +243,7 @@ createIntroducedInConwayPParams IntroducedInConwayPParamsUpdate{..} =
       & Ledger.ppuGovActionDepositL .~ icGovActionDeposit
       & Ledger.ppuDRepDepositL .~ icDRepDeposit
       & Ledger.ppuDRepActivityL .~ icDRepActivity
+
 -}
 
 createEraBasedProtocolParamUpdate
@@ -234,51 +251,44 @@ createEraBasedProtocolParamUpdate
   -> EraBasedProtocolParametersUpdate era
   -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
 createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
-  case sbe of
-    ShelleyBasedEraShelley ->
-      case eraPParamsUpdate of
-        ShelleyEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
-          let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
-              Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams depAfterMary
-              Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' depAfterAlonzo
-          in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
-    ShelleyBasedEraAllegra ->
-      case eraPParamsUpdate of
-        AllegraEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
-          let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
-              Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams depAfterMary
-              Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' depAfterAlonzo
-          in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
-    ShelleyBasedEraMary ->
-      case eraPParamsUpdate of
-        MaryEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
-          let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
-              Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams depAfterMary
-              Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' depAfterAlonzo
-          in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
-    ShelleyBasedEraAlonzo ->
-      case eraPParamsUpdate of
-        AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon depAfterAlonzoB ->
-            let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
-                Ledger.PParamsUpdate preAl' = createPParamsUpdateIntroducedInAlonzo introInAlon
-                Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams' depAfterAlonzoA
-                Ledger.PParamsUpdate depAfterAlonzoB' = createDeprecatedAfterAlonzoPParams depAfterAlonzoB
-            in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA' <> depAfterAlonzoB'
-    ShelleyBasedEraBabbage ->
-      case eraPParamsUpdate of
-      BabbageEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage ->
-            let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
-                Ledger.PParamsUpdate inAlonzoPParams = createPParamsUpdateIntroducedInAlonzo introInAlonzo
-                Ledger.PParamsUpdate inBAb = createIntroducedInBabbagePParams introInBabbage
-            in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBAb
-    ShelleyBasedEraConway ->
-      case eraPParamsUpdate of
-        ConwayEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage  ->
-            let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
-                Ledger.PParamsUpdate inAlonzoPParams = createPParamsUpdateIntroducedInAlonzo introInAlonzo
-                Ledger.PParamsUpdate inBAb = createIntroducedInBabbagePParams introInBabbage
-                -- TODO: Conway era - need new ledger release for updated types
-            in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBAb
+  case eraPParamsUpdate  of
+    ShelleyEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
+      let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+          Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+      in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
+
+    AllegraEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
+      let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+          Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+      in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
+
+    MaryEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
+      let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+          Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+      in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
+
+    AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon depAfterAlonzoB ->
+        let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+            Ledger.PParamsUpdate preAl' = createPParamsUpdateIntroducedInAlonzo sbe introInAlon
+            Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzoA
+            Ledger.PParamsUpdate depAfterAlonzoB' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzoB
+        in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA' <> depAfterAlonzoB'
+
+    BabbageEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage ->
+        let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+            Ledger.PParamsUpdate inAlonzoPParams = createPParamsUpdateIntroducedInAlonzo sbe introInAlonzo
+            Ledger.PParamsUpdate inBAb = createIntroducedInBabbagePParams sbe introInBabbage
+        in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBAb
+
+    ConwayEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage  ->
+        let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+            Ledger.PParamsUpdate inAlonzoPParams = createPParamsUpdateIntroducedInAlonzo sbe introInAlonzo
+            Ledger.PParamsUpdate inBAb = createIntroducedInBabbagePParams sbe introInBabbage
+            -- TODO: Conway era - need new ledger release for updated types
+        in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBAb
 
 
 -- | Protocol parameters common to each era. This can only ever be reduced
@@ -328,10 +338,10 @@ newtype DeprecatedAfterMaryPParams ledgerera
 type MaxMaryEra ledgerera = Ledger.ProtVerAtMost ledgerera 4
 
 createDeprecatedAfterMaryPParams
-  :: EraPParams ledgerera
-  => MaxMaryEra ledgerera
-  => DeprecatedAfterMaryPParams ledgerera -> Ledger.PParamsUpdate ledgerera
-createDeprecatedAfterMaryPParams (DeprecatedAfterMaryPParams minUtxoVal) =
+  :: EraPParams (ShelleyLedgerEra era)
+  => MaxMaryEra (ShelleyLedgerEra era)
+  => ShelleyBasedEra era -> DeprecatedAfterMaryPParams era -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+createDeprecatedAfterMaryPParams _ (DeprecatedAfterMaryPParams minUtxoVal) =
   Ledger.emptyPParamsUpdate & Ledger.ppuMinUTxOValueL .~ minUtxoVal
 
 newtype ShelleyToAlonzoPParams ledgerera
@@ -341,11 +351,11 @@ newtype ShelleyToAlonzoPParams ledgerera
 -- We had to duplicate ShelleyToAlonzoPParams because
 -- of type class constraints.
 createDeprecatedAfterAlonzoPParams
-  :: AlonzoEraPParams ledgerera
-  => Ledger.ProtVerAtLeast ledgerera 5
-  => Ledger.ProtVerAtMost ledgerera 6
-  => ShelleyToAlonzoPParams ledgerera -> Ledger.PParamsUpdate ledgerera
-createDeprecatedAfterAlonzoPParams (ShelleyToAlonzoPParams alCoinsPerUTxOWord) =
+  :: AlonzoEraPParams (ShelleyLedgerEra era)
+  => Ledger.ProtVerAtLeast (ShelleyLedgerEra era) 5
+  => Ledger.ProtVerAtMost (ShelleyLedgerEra era) 6
+  => ShelleyBasedEra era -> ShelleyToAlonzoPParams era -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams alCoinsPerUTxOWord) =
    Ledger.emptyPParamsUpdate
       & Ledger.ppuCoinsPerUTxOWordL .~ alCoinsPerUTxOWord
 
@@ -359,11 +369,12 @@ data ShelleyToAlonzoPParams' ledgerera
 type MaxAlonzoEra ledgerera = Ledger.ProtVerAtMost ledgerera 6
 
 createDeprecatedAfterAlonzoPParams'
-  :: EraPParams ledgerera
-  => MaxAlonzoEra ledgerera
-  => ShelleyToAlonzoPParams' ledgerera
-  -> Ledger.PParamsUpdate ledgerera
-createDeprecatedAfterAlonzoPParams' (ShelleyToAlonzoPParams' extraEntropy decentralization) =
+  :: EraPParams (ShelleyLedgerEra era)
+  => MaxAlonzoEra (ShelleyLedgerEra era)
+  => ShelleyBasedEra era
+  -> ShelleyToAlonzoPParams' era
+  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+createDeprecatedAfterAlonzoPParams' _ (ShelleyToAlonzoPParams' extraEntropy decentralization) =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuExtraEntropyL .~ extraEntropy
     & Ledger.ppuDL .~ decentralization
@@ -382,9 +393,11 @@ data AlonzoOnwardsPParams ledgerera
     deriving Show
 
 createPParamsUpdateIntroducedInAlonzo
-  :: AlonzoEraPParams ledgerera
-  => AlonzoOnwardsPParams ledgerera -> Ledger.PParamsUpdate ledgerera
-createPParamsUpdateIntroducedInAlonzo (AlonzoOnwardsPParams {..})=
+  :: AlonzoEraPParams (ShelleyLedgerEra era)
+  => ShelleyBasedEra era
+  -> AlonzoOnwardsPParams era
+  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+createPParamsUpdateIntroducedInAlonzo _ (AlonzoOnwardsPParams {..})=
    Ledger.emptyPParamsUpdate
       & Ledger.ppuCostModelsL .~ alCostModels
       & Ledger.ppuPricesL .~ alPrices
@@ -400,10 +413,11 @@ newtype IntroducedInBabbagePParams era
   deriving Show
 
 createIntroducedInBabbagePParams
-  :: Ledger.BabbageEraPParams ledgerera
-  => IntroducedInBabbagePParams ledgerera
-  -> Ledger.PParamsUpdate ledgerera
-createIntroducedInBabbagePParams (IntroducedInBabbagePParams coinsPerUTxOByte) =
+  :: Ledger.BabbageEraPParams (ShelleyLedgerEra era)
+  => ShelleyBasedEra era
+  -> IntroducedInBabbagePParams era
+  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+createIntroducedInBabbagePParams _ (IntroducedInBabbagePParams coinsPerUTxOByte) =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuCoinsPerUTxOByteL .~ coinsPerUTxOByte
 
