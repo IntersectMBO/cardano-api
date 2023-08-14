@@ -87,7 +87,9 @@ toGovernanceAction _ MotionOfNoConfidence = Gov.NoConfidence temporarilyOptOutOf
 toGovernanceAction _ (ProposeNewConstitution bs) =
   Gov.NewConstitution temporarilyOptOutOfPrevGovAction Gov.Constitution
     { Gov.constitutionAnchor = Gov.Anchor
-      { Gov.anchorUrl = error "TODO new constitution anchorUrl"
+      { Gov.anchorUrl = case textToUrl "TODO constitution anchorUrl" of
+          Nothing -> error "impossible! How could 27 ASCII chars be more than 64 bytes?"
+          Just url -> url
       , Gov.anchorDataHash = unsafeBytesToSafeHash bs   -- TODO "safe*" alternative?
       }
     , Gov.constitutionScript = SNothing   -- TODO
@@ -197,7 +199,7 @@ fromProposalProcedure sbe (Proposal pp) =
     ( fromShelleyLovelace $ Gov.pProcDeposit pp
     , case fromShelleyStakeCredential (L.getRwdCred (Gov.pProcReturnAddr pp)) of
           StakeCredentialByKey keyhash -> keyhash
-          StakeCredentialByScript _scripthash -> error "TODO reward addresses not yet supported"
+          StakeCredentialByScript _scripthash -> error "TODO script reward addresses not yet supported"
     , fromGovernanceAction sbe (Gov.pProcGovAction pp)
     )
 
