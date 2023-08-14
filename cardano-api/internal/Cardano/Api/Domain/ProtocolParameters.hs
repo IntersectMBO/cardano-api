@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {- HLINT ignore "Redundant pure" -}
+{- HLINT ignore "Move brackets to avoid $" -}
 
 module Cardano.Api.Domain.ProtocolParameters
   ( ProtocolParameters(..)
@@ -57,7 +58,6 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 
 import           Control.Applicative
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
-import           Data.Function ((&))
 import           GHC.Natural (Natural)
 import           Lens.Micro (Lens', lens, (.~), (^.))
 
@@ -110,34 +110,54 @@ instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
               pure (emptyProtocolParameters sbe)
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "protocolVersion"
-                          pure (& protocolParamProtocolVersionL w .~ v)
+                          pure (protocolParamProtocolVersionL w .~ v)
                       )
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "extraPraosEntropy"
-                          pure (& protocolParamExtraPraosEntropyL w .~ v)
+                          pure (protocolParamExtraPraosEntropyL w .~ v)
                       )
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "maxBlockHeaderSize"
-                          pure (& protocolParamMaxBlockHeaderSizeL w .~ v)
+                          pure (protocolParamMaxBlockHeaderSizeL w .~ v)
                       )
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "maxBlockBodySize"
-                          pure (& protocolParamMaxBlockBodySizeL w .~ v)
+                          pure (protocolParamMaxBlockBodySizeL w .~ v)
                       )
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "maxTxSize"
-                          pure (& protocolParamMaxTxSizeL w .~ v)
+                          pure (protocolParamMaxTxSizeL w .~ v)
                       )
-                --     -- txFeeFixed <- o .: "txFeeFixed"
-                --     -- txFeePerByte <- o .: "txFeePerByte"
-                --     -- minUTxOValue <- o .: "minUTxOValue"
-                --     -- stakeAddressDeposit <- o .: "stakeAddressDeposit"
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "txFeeFixed"
+                          pure (protocolParamTxFeeFixedL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "txFeePerByte"
+                          pure (protocolParamTxFeePerByteL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "minUTxOValue"
+                          pure (protocolParamMinUTxOValueL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "stakeAddressDeposit"
+                          pure (protocolParamStakeAddressDepositL w .~ v)
+                      )
                 --     -- stakePoolDeposit <- o .: "stakePoolDeposit"
-                --     -- minPoolCost <- o .: "minPoolCost"
-                --     -- poolRetireMaxEpoch <- o .: "poolRetireMaxEpoch"
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "minPoolCost"
+                          pure (protocolParamMinPoolCostL w .~ v)
+                      )
+                <**>  ( inEraFeature era (pure id) $ \w -> do
+                          v <- o .: "poolRetireMaxEpoch"
+                          pure (protocolParamPoolRetireMaxEpochL w .~ v)
+                      )
+
+
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "stakePoolTargetNum"
-                          pure (& protocolParamStakePoolTargetNumL w .~ v)
+                          pure (protocolParamStakePoolTargetNumL w .~ v)
                       )
                 --     -- poolPledgeInfluence <- o .: "poolPledgeInfluence"
                 --     -- monetaryExpansion <- o .: "monetaryExpansion"
@@ -149,15 +169,15 @@ instance IsCardanoEra era => FromJSON (ProtocolParameters era) where
                 --     -- maxBlockExecutionUnits <- o .:? "maxBlockExecutionUnits"
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "maxValueSize"
-                          pure (& protocolParamMaxValueSizeL w .~ v)
+                          pure (protocolParamMaxValueSizeL w .~ v)
                       )
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "collateralPercentage"
-                          pure (& protocolParamCollateralPercentL w .~ v)
+                          pure (protocolParamCollateralPercentL w .~ v)
                       )
                 <**>  ( inEraFeature era (pure id) $ \w -> do
                           v <- o .: "maxCollateralInputs"
-                          pure (& protocolParamMaxCollateralInputsL w .~ v)
+                          pure (protocolParamMaxCollateralInputsL w .~ v)
                       )
                 --     -- utxoCostPerByte <- o .:? "utxoCostPerByte"\
             )

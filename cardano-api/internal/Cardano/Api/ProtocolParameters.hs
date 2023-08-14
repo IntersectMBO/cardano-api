@@ -58,7 +58,7 @@ module Cardano.Api.ProtocolParameters (
 
     -- * Execution units, prices and cost models,
     ExecutionUnits(..),
-    ExecutionUnitPrices(..),
+    LegacyExecutionUnitPrices(..),
     CostModel(..),
     fromAlonzoCostModels,
 
@@ -96,7 +96,7 @@ module Cardano.Api.ProtocolParameters (
 import           Cardano.Api.Address
 import           Cardano.Api.Domain.CostModel
 import           Cardano.Api.Domain.Errors.ProtocolParametersError
-import           Cardano.Api.Domain.ExecutionUnitPrices
+import           Cardano.Api.Domain.LegacyExecutionUnitPrices
 import           Cardano.Api.Domain.PraosNonce
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Hash
@@ -537,7 +537,7 @@ data ProtocolParameters =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolParamPrices :: Maybe ExecutionUnitPrices,
+       protocolParamPrices :: Maybe LegacyExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --
@@ -776,7 +776,7 @@ data ProtocolParametersUpdate =
        -- | Price of execution units for script languages that use them.
        --
        -- /Introduced in Alonzo/
-       protocolUpdatePrices :: Maybe ExecutionUnitPrices,
+       protocolUpdatePrices :: Maybe LegacyExecutionUnitPrices,
 
        -- | Max total script execution resources units allowed per tx
        --

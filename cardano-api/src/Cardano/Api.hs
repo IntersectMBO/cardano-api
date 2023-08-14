@@ -564,7 +564,7 @@ module Cardano.Api (
 
     -- ** Script execution units
     ExecutionUnits(..),
-    ExecutionUnitPrices(..),
+    LegacyExecutionUnitPrices(..),
     CostModel(..),
     toAlonzoCostModel,
     fromAlonzoCostModel,

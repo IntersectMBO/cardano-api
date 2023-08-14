@@ -58,7 +58,7 @@ library internal
                         Cardano.Api.Domain.CostModel
                         Cardano.Api.Domain.EpochNo
                         Cardano.Api.Domain.Errors.ProtocolParametersError
-                        Cardano.Api.Domain.ExecutionUnitPrices
+                        Cardano.Api.Domain.LegacyExecutionUnitPrices
                         Cardano.Api.Domain.ExecutionUnits
                         Cardano.Api.Domain.Lovelace
                         Cardano.Api.Domain.PraosNonce

@@ -5,8 +5,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Script execution unit prices and cost models
-module Cardano.Api.Domain.ExecutionUnitPrices
-  ( ExecutionUnitPrices(..)
+module Cardano.Api.Domain.LegacyExecutionUnitPrices
+  ( LegacyExecutionUnitPrices(..)
   , toAlonzoPrices
   , fromAlonzoPrices
   ) where
@@ -27,42 +27,47 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:
 --
 -- These are used to determine the fee for the use of a script within a
 -- transaction, based on the 'ExecutionUnits' needed by the use of the script.
-data ExecutionUnitPrices = ExecutionUnitPrices
+--
+-- This type is considered legacy because it does not directly wrap ledger
+-- version of this type, which is 'Alonzo.Prices' and is not isomorphic to it.
+--
+-- Conversion from the ledger type can fail.
+data LegacyExecutionUnitPrices = LegacyExecutionUnitPrices
   { priceExecutionSteps  :: Rational
   , priceExecutionMemory :: Rational
   }
   deriving (Eq, Show)
 
-instance ToCBOR ExecutionUnitPrices where
-  toCBOR ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+instance ToCBOR LegacyExecutionUnitPrices where
+  toCBOR LegacyExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
       CBOR.encodeListLen 2
    <> toCBOR priceExecutionSteps
    <> toCBOR priceExecutionMemory
 
-instance FromCBOR ExecutionUnitPrices where
+instance FromCBOR LegacyExecutionUnitPrices where
   fromCBOR = do
-    CBOR.enforceSize "ExecutionUnitPrices" 2
-    ExecutionUnitPrices
+    CBOR.enforceSize "LegacyExecutionUnitPrices" 2
+    LegacyExecutionUnitPrices
       <$> fromCBOR
       <*> fromCBOR
 
-instance ToJSON ExecutionUnitPrices where
-  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
+instance ToJSON LegacyExecutionUnitPrices where
+  toJSON LegacyExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
     object
       [ "priceSteps"  .= toRationalJSON priceExecutionSteps
       , "priceMemory" .= toRationalJSON priceExecutionMemory
       ]
 
-instance FromJSON ExecutionUnitPrices where
+instance FromJSON LegacyExecutionUnitPrices where
   parseJSON =
-    withObject "ExecutionUnitPrices" $ \o ->
-      ExecutionUnitPrices
+    withObject "LegacyExecutionUnitPrices" $ \o ->
+      LegacyExecutionUnitPrices
         <$> o .: "priceSteps"
         <*> o .: "priceMemory"
 
-toAlonzoPrices :: ExecutionUnitPrices -> Either ProtocolParametersConversionError Alonzo.Prices
+toAlonzoPrices :: LegacyExecutionUnitPrices -> Either ProtocolParametersConversionError Alonzo.Prices
 toAlonzoPrices
-    ExecutionUnitPrices
+    LegacyExecutionUnitPrices
     { priceExecutionSteps
     , priceExecutionMemory
     } = do
@@ -74,9 +79,9 @@ toAlonzoPrices
     , Alonzo.prMem
     }
 
-fromAlonzoPrices :: Alonzo.Prices -> ExecutionUnitPrices
+fromAlonzoPrices :: Alonzo.Prices -> LegacyExecutionUnitPrices
 fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
-  ExecutionUnitPrices
+  LegacyExecutionUnitPrices
   { priceExecutionSteps  = Ledger.unboundRational prSteps
   , priceExecutionMemory = Ledger.unboundRational prMem
   }
