@@ -298,7 +298,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace)
 
   QueryConstitutionHash
-    :: QueryInShelleyBasedEra era (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) (L.AnchorData (EraCrypto (ShelleyLedgerEra era)))))
+    :: QueryInShelleyBasedEra era (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))
 
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
