@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.14.0.0
+
+- Fix parameterisation of `GovernanceActionId`
+  (breaking)
+  [PR 192](https://github.com/input-output-hk/cardano-api/pull/192)
+
+- Implement createPParams and begin propagating Ledger.PParams in cardano-api
+  (feature)
+  [PR 190](https://github.com/input-output-hk/cardano-api/pull/190)
+
+- Delete deprecated functions and types
+  (improvement)
+  [PR 173](https://github.com/input-output-hk/cardano-api/pull/173)
+
 ## 8.13.1.0
 
 - Implement `EraBasedProtocolParametersUpdate`
