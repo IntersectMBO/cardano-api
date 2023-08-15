@@ -55,15 +55,15 @@ data TxVotes era where
 deriving instance Show (TxVotes era)
 deriving instance Eq (TxVotes era)
 
-newtype GovernanceActionId ledgerera = GovernanceActionId
-  { unGovernanceActionId :: Ledger.GovernanceActionId (EraCrypto ledgerera)
+newtype GovernanceActionId era = GovernanceActionId
+  { unGovernanceActionId :: Ledger.GovernanceActionId (EraCrypto (ShelleyLedgerEra era))
   }
   deriving (Show, Eq)
 
 makeGoveranceActionId
   :: ShelleyBasedEra era
   -> TxIn
-  -> GovernanceActionId (ShelleyLedgerEra era)
+  -> GovernanceActionId era
 makeGoveranceActionId sbe txin =
   let Ledger.TxIn txid (Ledger.TxIx txix) = toShelleyTxIn txin
   in shelleyBasedEraConstraints sbe
@@ -146,7 +146,7 @@ createVotingProcedure
   :: ShelleyBasedEra era
   -> Vote
   -> Voter era
-  -> GovernanceActionId (ShelleyLedgerEra era)
+  -> GovernanceActionId era
   -> VotingProcedure era
 createVotingProcedure sbe vChoice vt (GovernanceActionId govActId) =
   shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe
