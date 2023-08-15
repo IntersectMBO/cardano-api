@@ -54,6 +54,7 @@ library internal
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
+                        Cardano.Api.Domain.ProtocolParameters
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
