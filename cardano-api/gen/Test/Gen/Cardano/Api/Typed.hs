@@ -1131,7 +1131,7 @@ genTxVotes era = fromMaybe (pure TxVotesNone) $ do
   where
     genVote
       :: ConwayEraOnwards era
-      -> Gen ( (Voter era, GovernanceActionId (ShelleyLedgerEra era))
+      -> Gen ( (Voter era, GovernanceActionId era)
              , VotingProcedure era
              )
     genVote w =

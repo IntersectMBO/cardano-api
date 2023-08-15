@@ -51,11 +51,7 @@ data TxVotes era where
 
   TxVotes
     :: ConwayEraOnwards era
-    -> Map.Map
-         ( Voter era
-         , GovernanceActionId (ShelleyLedgerEra era)
-         )
-         (VotingProcedure era)
+    -> Map.Map (Voter era, GovernanceActionId era) (VotingProcedure era)
     -> TxVotes era
 
 deriving instance Show (TxVotes era)
