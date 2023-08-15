@@ -187,7 +187,12 @@ createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
       { Gov.pProcDeposit = toShelleyLovelace dep
       , Gov.pProcReturnAddr = L.mkRwdAcnt (error "TODO which network?") (L.KeyHashObj retAddrh)
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
-      , Gov.pProcAnchor = error "TODO which anchor?"
+      , Gov.pProcAnchor = Gov.Anchor
+        { Gov.anchorUrl = case textToUrl "TODO anchorUrl" of
+            Nothing -> error "impossible! How could 27 ASCII chars be more than 64 bytes?"
+            Just url -> url
+        , Gov.anchorDataHash = unsafeBytesToSafeHash "TODO"   -- TODO "safe*" alternative?
+        }
       }
 
 fromProposalProcedure
