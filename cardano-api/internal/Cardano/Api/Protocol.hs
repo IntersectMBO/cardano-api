@@ -21,6 +21,7 @@ module Cardano.Api.Protocol
 import           Cardano.Api.Modes
 
 import           Ouroboros.Consensus.Block.Forging (BlockForging)
+import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
@@ -33,7 +34,6 @@ import           Ouroboros.Consensus.Protocol.Praos.Translate ()
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
-import           Ouroboros.Consensus.Shelley.Node.Praos
 import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 import           Ouroboros.Consensus.Util.IOLike (IOLike)
 
@@ -57,7 +57,7 @@ class RunNode blk => ProtocolClient blk where
 
 -- | Run PBFT against the Byron ledger
 instance IOLike m => Protocol m ByronBlockHFC where
-  data ProtocolInfoArgs ByronBlockHFC = ProtocolInfoArgsByron ProtocolParamsByron
+  data ProtocolInfoArgs ByronBlockHFC = ProtocolInfoArgsByron (ProtocolParams Byron.ByronBlock)
   protocolInfo (ProtocolInfoArgsByron params) = ( inject $ protocolInfoByron params
                                                 , pure . map inject $ blockForgingByron params
                                                 )
@@ -65,51 +65,10 @@ instance IOLike m => Protocol m ByronBlockHFC where
 instance (CardanoHardForkConstraints StandardCrypto, IOLike m) => Protocol m (CardanoBlock StandardCrypto) where
   data ProtocolInfoArgs (CardanoBlock StandardCrypto) =
          ProtocolInfoArgsCardano
-           ProtocolParamsByron
-          (ProtocolParamsShelleyBased StandardShelley)
-          (ProtocolParamsShelley StandardCrypto)
-          (ProtocolParamsAllegra StandardCrypto)
-          (ProtocolParamsMary StandardCrypto)
-          (ProtocolParamsAlonzo StandardCrypto)
-          (ProtocolParamsBabbage StandardCrypto)
-          (ProtocolParamsConway StandardCrypto)
-          (ProtocolTransitionParamsShelleyBased StandardShelley)
-          (ProtocolTransitionParamsShelleyBased StandardAllegra)
-          (ProtocolTransitionParamsShelleyBased StandardMary)
-          (ProtocolTransitionParamsShelleyBased StandardAlonzo)
-          (ProtocolTransitionParamsShelleyBased StandardBabbage)
-          (ProtocolTransitionParamsShelleyBased StandardConway)
+          (CardanoProtocolParams StandardCrypto)
 
-  protocolInfo (ProtocolInfoArgsCardano
-               paramsByron
-               paramsShelleyBased
-               paramsShelley
-               paramsAllegra
-               paramsMary
-               paramsAlonzo
-               paramsBabbage
-               paramsConway
-               paramsByronShelley
-               paramsShelleyAllegra
-               paramsAllegraMary
-               paramsMaryAlonzo
-               paramsAlonzoBabbage
-               paramsBabbageConway) =
-    protocolInfoCardano
-      paramsByron
-      paramsShelleyBased
-      paramsShelley
-      paramsAllegra
-      paramsMary
-      paramsAlonzo
-      paramsBabbage
-      paramsConway
-      paramsByronShelley
-      paramsShelleyAllegra
-      paramsAllegraMary
-      paramsMaryAlonzo
-      paramsAlonzoBabbage
-      paramsBabbageConway
+  protocolInfo (ProtocolInfoArgsCardano paramsCardano) =
+    protocolInfoCardano paramsCardano
 
 instance ProtocolClient ByronBlockHFC where
   data ProtocolClientInfoArgs ByronBlockHFC =
@@ -131,9 +90,9 @@ instance ( IOLike m
   => Protocol m (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley) where
   data ProtocolInfoArgs (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley) = ProtocolInfoArgsShelley
     (ProtocolParamsShelleyBased StandardShelley)
-    (ProtocolParamsShelley StandardCrypto)
-  protocolInfo (ProtocolInfoArgsShelley paramsShelleyBased paramsShelley) =
-    bimap inject (fmap $ map inject) $ protocolInfoShelley paramsShelleyBased paramsShelley
+    (ProtocolParams (Consensus.ShelleyBlock (Consensus.TPraos StandardCrypto) StandardShelley))
+  protocolInfo (ProtocolInfoArgsShelley paramsShelleyBased_ paramsShelley_) =
+    bimap inject (fmap $ map inject) $ protocolInfoShelley paramsShelleyBased_ paramsShelley_
 
 instance Consensus.LedgerSupportsProtocol
           (Consensus.ShelleyBlock

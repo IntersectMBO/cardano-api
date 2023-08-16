@@ -97,10 +97,8 @@ import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (Crypto)
-import           Cardano.Ledger.SafeHash (SafeHash)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -297,8 +295,8 @@ data QueryInShelleyBasedEra era result where
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace)
 
-  QueryConstitutionHash
-    :: QueryInShelleyBasedEra era (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))
+  QueryConstitution
+    :: QueryInShelleyBasedEra era (Maybe (L.Constitution (ShelleyLedgerEra era)))
 
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
@@ -318,7 +316,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_15
-  nodeToClientVersionOf QueryConstitutionHash = NodeToClientV_15
+  nodeToClientVersionOf QueryConstitution = NodeToClientV_15
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -583,8 +581,8 @@ toConsensusQueryShelleyBased
 toConsensusQueryShelleyBased erainmode QueryEpoch =
     Some (consensusQueryInEraInMode erainmode Consensus.GetEpochNo)
 
-toConsensusQueryShelleyBased erainmode QueryConstitutionHash =
-    Some (consensusQueryInEraInMode erainmode Consensus.GetConstitutionHash)
+toConsensusQueryShelleyBased erainmode QueryConstitution =
+    Some (consensusQueryInEraInMode erainmode Consensus.GetConstitution)
 
 toConsensusQueryShelleyBased erainmode QueryGenesisParameters =
     Some (consensusQueryInEraInMode erainmode Consensus.GetGenesisConfig)
@@ -824,9 +822,9 @@ fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
       Consensus.GetEpochNo -> epoch
       _                    -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryConstitutionHash q' mCHash =
+fromConsensusQueryResultShelleyBased _ QueryConstitution q' mConstitution =
     case q' of
-      Consensus.GetConstitutionHash -> mCHash
+      Consensus.GetConstitution -> mConstitution
       _                    -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =

@@ -135,7 +135,8 @@ queryConstitutionHash :: ()
   -> ShelleyBasedEra era
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))))
 queryConstitutionHash eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitutionHash
+  (fmap . fmap . fmap . fmap) (L.anchorDataHash .  L.constitutionAnchor)
+    $ queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitution
 
 queryProtocolParametersUpdate :: ()
   => EraInMode era mode
