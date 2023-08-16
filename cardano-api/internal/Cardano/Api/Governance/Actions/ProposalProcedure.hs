@@ -65,7 +65,7 @@ data GovernanceAction
   | ProposeNewConstitution ByteString   -- NB: This is the bytes of the hash, not the bytes to be hashed
   | ProposeNewCommittee [Hash StakeKey] (Map (Hash StakeKey) EpochNo) Rational -- NB: This also includes stake pool keys
   | InfoAct
-  | TreasuryWithdrawal [(StakeCredential, Lovelace)]
+  | TreasuryWithdrawal [(Network, StakeCredential, Lovelace)]
   | InitiateHardfork ProtVer
   | UpdatePParams ProtocolParametersUpdate
   deriving (Eq, Show)
@@ -106,7 +106,7 @@ toGovernanceAction _ (ProposeNewCommittee oldCommitteeMembers newCommitteeMember
        }
 toGovernanceAction _ InfoAct = Gov.InfoAction
 toGovernanceAction _ (TreasuryWithdrawal withdrawals) =
-  let m = Map.fromList [(L.mkRwdAcnt (error "TODO which Network?") (toShelleyStakeCredential sc), toShelleyLovelace l) | (sc,l) <- withdrawals]
+  let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
   in Gov.TreasuryWithdrawals m
 toGovernanceAction _ (InitiateHardfork pVer) = Gov.HardForkInitiation temporarilyOptOutOfPrevGovAction pVer
 toGovernanceAction sbe (UpdatePParams ppup) =
@@ -131,7 +131,7 @@ fromGovernanceAction sbe = \case
   Gov.HardForkInitiation _TODO pVer ->
     InitiateHardfork pVer
   Gov.TreasuryWithdrawals withdrawlMap ->
-    let res = [ (fromShelleyStakeCredential (L.getRwdCred rwdAcnt), fromShelleyLovelace coin)
+    let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), fromShelleyLovelace coin)
               | (rwdAcnt, coin) <- Map.toList withdrawlMap
               ]
     in TreasuryWithdrawal res
