@@ -82,7 +82,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 0635e8df2cb9530c924b4b007c8dcc4db1c76738
+  tag: b2b7d4926e1183b72e5653bf40e64c226e0efb72
   subdir:
       ouroboros-consensus
       ouroboros-consensus-cardano
