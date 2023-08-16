@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -31,6 +32,7 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import           Cardano.Ledger.Core (EraCrypto)
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Core as Shelley
 import qualified Cardano.Ledger.Credential as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -60,6 +62,16 @@ newtype GovernanceActionId era = GovernanceActionId
   }
   deriving (Show, Eq)
 
+instance IsShelleyBasedEra era => ToCBOR (GovernanceActionId era) where
+  toCBOR = \case
+    GovernanceActionId v ->
+      shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(ShelleyLedgerEra era) v
+
+instance IsShelleyBasedEra era => FromCBOR (GovernanceActionId era) where
+  fromCBOR = do
+    !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
+    return $ GovernanceActionId v
+
 makeGoveranceActionId
   :: ShelleyBasedEra era
   -> TxIn
@@ -73,7 +85,6 @@ makeGoveranceActionId sbe txin =
           , Ledger.gaidGovActionIx = Ledger.GovernanceActionIx txix
           }
 
-
 -- TODO: Conway era -
 -- These should be the different keys corresponding to the Constitutional Committee and DReps.
 -- We can then derive the StakeCredentials from them.
@@ -82,6 +93,32 @@ data Voter era
   | VoterDRep (VotingCredential era) -- ^ Delegated representative
   | VoterSpo (Hash StakePoolKey) -- ^ Stake pool operator
   deriving (Show, Eq)
+
+instance IsShelleyBasedEra era => ToCBOR (Voter era) where
+  toCBOR = \case
+    VoterCommittee v ->
+      CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> toCBOR v
+    VoterDRep v ->
+      CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> toCBOR v
+    VoterSpo v ->
+      CBOR.encodeListLen 2 <> CBOR.encodeWord 2 <> toCBOR v
+
+instance IsShelleyBasedEra era => FromCBOR (Voter era) where
+  fromCBOR = do
+    CBOR.decodeListLenOf 2
+    t <- CBOR.decodeWord
+    case t of
+      0 -> do
+        !x <- fromCBOR
+        return $ VoterCommittee x
+      1 -> do
+        !x <- fromCBOR
+        return $ VoterDRep x
+      2 -> do
+        !x <- fromCBOR
+        return $ VoterSpo x
+      _ ->
+        CBOR.cborError $ CBOR.DecoderErrorUnknownTag "Voter era" (fromIntegral t)
 
 data Vote
   = No
@@ -142,6 +179,16 @@ newtype VotingCredential era = VotingCredential
 deriving instance Show (VotingCredential crypto)
 deriving instance Eq (VotingCredential crypto)
 
+instance IsShelleyBasedEra era => ToCBOR (VotingCredential era) where
+  toCBOR = \case
+    VotingCredential v ->
+      shelleyBasedEraConstraints (shelleyBasedEra @era) $ CBOR.toCBOR v
+
+instance IsShelleyBasedEra era => FromCBOR (VotingCredential era) where
+  fromCBOR = do
+    v <- shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.fromCBOR
+    return $ VotingCredential v
+
 createVotingProcedure
   :: ShelleyBasedEra era
   -> Vote
@@ -179,4 +226,3 @@ instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedure era) where
 instance HasTypeProxy era => HasTypeProxy (VotingProcedure era) where
   data AsType (VotingProcedure era) = AsVote
   proxyToAsType _ = AsVote
-
