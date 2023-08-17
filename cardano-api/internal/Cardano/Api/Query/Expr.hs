@@ -1,8 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
 module Cardano.Api.Query.Expr
   ( queryChainBlockNo
   , queryChainPoint
+  , queryConstitution
   , queryCurrentEpochState
   , queryCurrentEra
   , queryDebugLedgerState
@@ -25,6 +27,10 @@ module Cardano.Api.Query.Expr
   , querySystemStart
   , queryUtxo
   , determineEraExpr
+  , queryCommitteeState
+  , queryDRepStakeDistribution
+  , queryDRepState
+  , queryGovState
   ) where
 
 import           Cardano.Api.Address
@@ -42,8 +48,12 @@ import           Cardano.Api.Query
 import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.CertState as L
 import           Cardano.Ledger.Core (EraCrypto)
+import qualified Cardano.Ledger.Credential as L
+import qualified Cardano.Ledger.Keys as L
 import           Cardano.Ledger.SafeHash
+import qualified Cardano.Ledger.Shelley.Core as L
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
@@ -221,3 +231,40 @@ determineEraExpr cModeParams = runExceptT $
     ByronMode -> pure $ AnyCardanoEra ByronEra
     ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
     CardanoMode -> ExceptT queryCurrentEra
+
+queryConstitution :: ()
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.Constitution (ShelleyLedgerEra era)))))
+queryConstitution eraInMode sbe =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitution
+
+queryGovState :: ()
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.GovState (ShelleyLedgerEra era))))
+queryGovState eraInMode sbe =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryGovState
+
+queryDRepState :: ()
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> Set (L.Credential L.DRepRole L.StandardCrypto)
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto))))
+queryDRepState eraInMode sbe drepCreds =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
+
+queryDRepStakeDistribution :: ()
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> Set (L.DRep L.StandardCrypto)
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
+queryDRepStakeDistribution eraInMode sbe dreps =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
+
+queryCommitteeState :: ()
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.CommitteeState (ShelleyLedgerEra era))))
+queryCommitteeState eraInMode sbe =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryCommitteeState

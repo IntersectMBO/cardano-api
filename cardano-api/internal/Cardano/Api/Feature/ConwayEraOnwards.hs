@@ -74,6 +74,7 @@ type ConwayEraOnwardsConstraints era ledgerera =
   , L.Crypto (L.EraCrypto ledgerera)
   , L.Era ledgerera
   , L.EraCrypto ledgerera ~ L.StandardCrypto
+  , L.EraGov ledgerera
   , L.EraPParams ledgerera
   , L.EraTx ledgerera
   , L.EraTxBody ledgerera
