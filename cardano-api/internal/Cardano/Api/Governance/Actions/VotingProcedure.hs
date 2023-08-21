@@ -18,29 +18,27 @@ module Cardano.Api.Governance.Actions.VotingProcedure where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature.ConwayEraOnwards
+import           Cardano.Api.Feature.ConwayEraOnwards (ConwayEraOnwards)
+import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR (FromCBOR (fromCBOR), SerialiseAsCBOR (..),
                    ToCBOR (toCBOR))
 import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.TxIn
 
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Cardano.Ledger.Conway.Governance as Ledger
 import           Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Core as Shelley
-import qualified Cardano.Ledger.Credential as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (Voting))
-import qualified Cardano.Ledger.TxIn as Ledger
+import           Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (DRepRole))
 
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Maybe.Strict
+import qualified Data.Map.Strict as Map
+import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 
 -- | A representation of whether the era supports tx voting on governance actions.
 --
@@ -51,16 +49,16 @@ data TxVotes era where
 
   TxVotes
     :: ConwayEraOnwards era
-    -> [VotingProcedure era]
+    -> Map.Map (Voter era, GovernanceActionId era) (VotingProcedure era)
     -> TxVotes era
 
 deriving instance Show (TxVotes era)
 deriving instance Eq (TxVotes era)
 
 newtype GovernanceActionId era = GovernanceActionId
-  { unGovernanceActionId :: Ledger.GovernanceActionId (EraCrypto (ShelleyLedgerEra era))
+  { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (ShelleyLedgerEra era))
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 instance IsShelleyBasedEra era => ToCBOR (GovernanceActionId era) where
   toCBOR = \case
@@ -72,18 +70,6 @@ instance IsShelleyBasedEra era => FromCBOR (GovernanceActionId era) where
     !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
     return $ GovernanceActionId v
 
-makeGoveranceActionId
-  :: ShelleyBasedEra era
-  -> TxIn
-  -> GovernanceActionId era
-makeGoveranceActionId sbe txin =
-  let Ledger.TxIn txid (Ledger.TxIx txix) = toShelleyTxIn txin
-  in shelleyBasedEraConstraints sbe
-      $ GovernanceActionId
-      $ Ledger.GovernanceActionId
-          { Ledger.gaidTxId = txid
-          , Ledger.gaidGovActionIx = Ledger.GovernanceActionIx txix
-          }
 
 -- TODO: Conway era -
 -- These should be the different keys corresponding to the Constitutional Committee and DReps.
@@ -92,7 +78,7 @@ data Voter era
   = VoterCommittee (VotingCredential era) -- ^ Constitutional committee
   | VoterDRep (VotingCredential era) -- ^ Delegated representative
   | VoterSpo (Hash StakePoolKey) -- ^ Stake pool operator
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 instance IsShelleyBasedEra era => ToCBOR (Voter era) where
   toCBOR = \case
@@ -139,6 +125,19 @@ toVoterRole _ = \case
   VoterSpo (StakePoolKeyHash kh) ->
     Ledger.StakePoolVoter kh
 
+fromVoterRole
+  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => ShelleyBasedEra era
+  -> Ledger.Voter (Shelley.EraCrypto (ShelleyLedgerEra era))
+  -> Voter era
+fromVoterRole _ = \case
+  Ledger.CommitteeVoter cred ->
+    VoterCommittee (VotingCredential (coerceKeyRole cred))    -- TODO: Conway era - We shouldn't be using coerceKeyRole.
+  Ledger.DRepVoter cred ->
+    VoterDRep (VotingCredential cred)
+  Ledger.StakePoolVoter kh ->
+    VoterSpo (StakePoolKeyHash kh)
+
 toVote :: Vote -> Ledger.Vote
 toVote = \case
   No -> Ledger.VoteNo
@@ -173,11 +172,12 @@ eraDecodeVotingCredential sbe bs =
       Right x -> Right $ VotingCredential x
 
 newtype VotingCredential era = VotingCredential
-  { unVotingCredential :: Ledger.Credential 'Voting (EraCrypto (ShelleyLedgerEra era))
+  { unVotingCredential :: Ledger.Credential 'DRepRole (EraCrypto (ShelleyLedgerEra era))
   }
 
 deriving instance Show (VotingCredential crypto)
 deriving instance Eq (VotingCredential crypto)
+deriving instance Ord (VotingCredential crypto)
 
 instance IsShelleyBasedEra era => ToCBOR (VotingCredential era) where
   toCBOR = \case
@@ -192,22 +192,19 @@ instance IsShelleyBasedEra era => FromCBOR (VotingCredential era) where
 createVotingProcedure
   :: ShelleyBasedEra era
   -> Vote
-  -> Voter era
-  -> GovernanceActionId era
+  -> Maybe (Ledger.Url, Text) -- ^ Anchor
   -> VotingProcedure era
-createVotingProcedure sbe vChoice vt (GovernanceActionId govActId) =
-  shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe
-    $ VotingProcedure $ Ledger.VotingProcedure
-      { Ledger.vProcGovActionId = govActId
-      , Ledger.vProcVoter = toVoterRole sbe vt
-      , Ledger.vProcVote = toVote vChoice
-      , Ledger.vProcAnchor = SNothing -- TODO: Conway
-      }
+createVotingProcedure sbe vChoice mProposalAnchor =
+  let proposalAnchor = fmap Text.encodeUtf8 <$>  mProposalAnchor
+  in shelleyBasedEraConstraints sbe
+        $ VotingProcedure $ Ledger.VotingProcedure
+          { Ledger.vProcVote = toVote vChoice
+          , Ledger.vProcAnchor = Ledger.maybeToStrictMaybe $ uncurry createAnchor <$> proposalAnchor
+          }
 
 newtype VotingProcedure era = VotingProcedure
   { unVotingProcedure :: Ledger.VotingProcedure (ShelleyLedgerEra era)
-  }
-  deriving (Show, Eq)
+  } deriving (Show, Eq)
 
 instance IsShelleyBasedEra era => ToCBOR (VotingProcedure era) where
   toCBOR (VotingProcedure vp) = shelleyBasedEraConstraints sbe $ Shelley.toEraCBOR @(ShelleyLedgerEra era) vp

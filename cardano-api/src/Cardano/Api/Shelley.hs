@@ -192,6 +192,12 @@ module Cardano.Api.Shelley
       ),
     EpochNo(..),
 
+    -- * Governance Actions
+    createAnchor,
+    createPreviousGovernanceActionId,
+    createGovernanceActionId,
+    unsafeBytesToSafeHash,
+
     -- * DRep
     DRepMetadata(DRepMetadata),
     DRepMetadataReference(DRepMetadataReference),
@@ -261,7 +267,6 @@ module Cardano.Api.Shelley
     Voter(..),
     createProposalProcedure,
     createVotingProcedure,
-    makeGoveranceActionId,
     renderGovernancePollError,
     toVotingCredential,
     fromProposalProcedure,

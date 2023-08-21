@@ -38,7 +38,7 @@ data DebugLedgerState era where
 instance
     ( Typeable era
     , Core.EraTxOut (ShelleyLedgerEra era)
-    , Core.EraGovernance (ShelleyLedgerEra era)
+    , Core.EraGov (ShelleyLedgerEra era)
     , DecCBOR (Shelley.StashedAVVMAddresses (ShelleyLedgerEra era))
     ) => FromCBOR (DebugLedgerState era) where
   fromCBOR = DebugLedgerState <$>

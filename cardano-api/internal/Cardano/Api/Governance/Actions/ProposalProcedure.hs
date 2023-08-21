@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -20,21 +21,29 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.TxIn
 import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Address as L
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
+import qualified Cardano.Ledger.Conway.Governance as Ledger
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole))
+import qualified Cardano.Ledger.Credential as L
+import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
+import           Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyRole (ColdCommitteeRole))
 import           Cardano.Ledger.SafeHash
 
 import           Data.ByteString (ByteString)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
+import           Data.Word
 
 -- | A representation of whether the era supports tx governance actions.
 --
@@ -51,68 +60,97 @@ data TxGovernanceActions era where
 deriving instance IsShelleyBasedEra era => Show (TxGovernanceActions era)
 deriving instance IsShelleyBasedEra era => Eq (TxGovernanceActions era)
 
-data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovernanceAction era)
+data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 
--- TODO: Conway - fill in remaining actions
+-- TODO: Conway - Transitiion to Ledger.GovAction
 data GovernanceAction
   = MotionOfNoConfidence
-  | ProposeNewConstitution ByteString
-  | ProposeNewCommittee [Hash StakeKey] Rational -- NB: This also includes stake pool keys
+      (StrictMaybe (Ledger.PrevGovActionId Ledger.CommitteePurpose StandardCrypto))
+  | ProposeNewConstitution
+      (StrictMaybe (Ledger.PrevGovActionId Ledger.ConstitutionPurpose StandardCrypto))
+      (Ledger.Anchor StandardCrypto)
+  | ProposeNewCommittee
+      (StrictMaybe (Ledger.PrevGovActionId Ledger.CommitteePurpose StandardCrypto))
+      [Hash StakeKey] -- ^ Old constitutional committee
+      (Map (Hash StakeKey) EpochNo) -- ^ New committee members with epoch number when each of them expires
+      Rational -- ^ Quorum of the committee that is necessary for a successful vote
   | InfoAct
-  | TreasuryWithdrawal [(StakeCredential, Lovelace)]
-  | InitiateHardfork ProtVer
-  | UpdatePParams ProtocolParametersUpdate
+  | TreasuryWithdrawal [(Network, StakeCredential, Lovelace)]
+  | InitiateHardfork
+      (StrictMaybe (Ledger.PrevGovActionId Ledger.HardForkPurpose StandardCrypto))
+      ProtVer
+  | UpdatePParams
+      (StrictMaybe (Ledger.PrevGovActionId Ledger.PParamUpdatePurpose StandardCrypto))
+      ProtocolParametersUpdate
   deriving (Eq, Show)
 
-
-toSafeHash :: ByteString -> SafeHash StandardCrypto ByteString
-toSafeHash = makeHashWithExplicitProxys (Proxy @StandardCrypto) (Proxy @ByteString)
 
 toGovernanceAction
   :: EraCrypto ledgerera ~ StandardCrypto
   => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> GovernanceAction
-  -> Gov.GovernanceAction ledgerera
-toGovernanceAction _ MotionOfNoConfidence = Gov.NoConfidence
-toGovernanceAction _ (ProposeNewConstitution bs) =
-  Gov.NewConstitution $ toSafeHash bs
-toGovernanceAction _ (ProposeNewCommittee stakeKeys quor) =
-  Gov.NewCommittee (Set.fromList $ map (\(StakeKeyHash sk) -> coerceKeyRole sk) stakeKeys) quor
+  -> Gov.GovAction ledgerera
+toGovernanceAction _ (MotionOfNoConfidence prevGovId) = Gov.NoConfidence prevGovId
+toGovernanceAction _ (ProposeNewConstitution prevGovAction anchor) =
+  Gov.NewConstitution prevGovAction Gov.Constitution
+    { Gov.constitutionAnchor = anchor
+    , Gov.constitutionScript = SNothing   -- TODO: Conway era
+    }
+toGovernanceAction _ (ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor) =
+  Gov.NewCommittee
+    prevGovId
+    (Set.fromList $ map toCommitteeMember oldCommitteeMembers)
+    Gov.Committee
+      { Gov.committeeMembers = Map.mapKeys toCommitteeMember newCommitteeMembers
+      , Gov.committeeQuorum =
+            fromMaybe
+              (error $ mconcat ["toGovernanceAction: the given quorum "
+                               , show quor
+                               , " was outside of the unit interval!"
+                               ])
+          $ boundRational @UnitInterval quor
+       }
 toGovernanceAction _ InfoAct = Gov.InfoAction
 toGovernanceAction _ (TreasuryWithdrawal withdrawals) =
-  let m = Map.fromList [(toShelleyStakeCredential sc, toShelleyLovelace l) | (sc,l) <- withdrawals]
+  let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
   in Gov.TreasuryWithdrawals m
-toGovernanceAction _ (InitiateHardfork pVer) = Gov.HardForkInitiation pVer
-toGovernanceAction sbe (UpdatePParams ppup) =
+toGovernanceAction _ (InitiateHardfork prevGovId pVer) =
+  Gov.HardForkInitiation prevGovId pVer
+toGovernanceAction sbe (UpdatePParams preGovId ppup) =
   case toLedgerPParamsUpdate sbe ppup of
     Left e -> error $ "toGovernanceAction: " <> show e
-    -- TODO: Conway era - remove use of error. Ideally we will use the ledger's PParams type
-    -- in place of ProtocolParametersUpdate
-    Right ppup' -> Gov.ParameterChange ppup'
+    Right ppup' -> Gov.ParameterChange preGovId ppup'
 
 fromGovernanceAction
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
   => ShelleyBasedEra era
-  -> Gov.GovernanceAction (ShelleyLedgerEra era)
+  -> Gov.GovAction (ShelleyLedgerEra era)
   -> GovernanceAction
 fromGovernanceAction sbe = \case
-  Gov.NoConfidence ->
-    MotionOfNoConfidence
-  Gov.NewConstitution h ->
-    ProposeNewConstitution $ shelleyBasedEraConstraints sbe $ originalBytes h
-  Gov.ParameterChange pparams ->
-    UpdatePParams $ fromLedgerPParamsUpdate sbe pparams
-  Gov.HardForkInitiation pVer ->
-    InitiateHardfork pVer
+  Gov.NoConfidence prevGovId ->
+    MotionOfNoConfidence prevGovId
+  Gov.NewConstitution prevGovId constitution ->
+    ProposeNewConstitution prevGovId $ Gov.constitutionAnchor constitution
+  Gov.ParameterChange prevGovId pparams ->
+    UpdatePParams prevGovId $ fromLedgerPParamsUpdate sbe pparams
+  Gov.HardForkInitiation prevGovId pVer ->
+    InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap ->
-    let res = [ (fromShelleyStakeCredential lScred , fromShelleyLovelace coin)
-              | (lScred, coin) <- Map.toList withdrawlMap
+    let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), fromShelleyLovelace coin)
+              | (rwdAcnt, coin) <- Map.toList withdrawlMap
               ]
     in TreasuryWithdrawal res
-  Gov.NewCommittee proposedMembers quor ->
-    let stakeCred = map (StakeKeyHash . coerceKeyRole) $ Set.toList proposedMembers
-    in ProposeNewCommittee stakeCred quor
+  Gov.NewCommittee prevGovId oldCommitteeMembers newCommittee ->
+    let Gov.Committee
+          { Gov.committeeMembers = newCommitteeMembers
+          , Gov.committeeQuorum = quor
+          } = newCommittee
+    in ProposeNewCommittee
+         prevGovId
+         (map fromCommitteeMember $ Set.toList oldCommitteeMembers)
+         (Map.mapKeys fromCommitteeMember newCommitteeMembers)
+         (unboundRational quor)
   Gov.InfoAction ->
     InfoAct
 
@@ -146,17 +184,19 @@ instance HasTypeProxy era => HasTypeProxy (Proposal era) where
 
 createProposalProcedure
   :: ShelleyBasedEra era
+  -> Network
   -> Lovelace -- ^ Deposit
   -> Hash StakeKey -- ^ Return address
   -> GovernanceAction
+  -> Ledger.Anchor StandardCrypto
   -> Proposal era
-createProposalProcedure sbe dep (StakeKeyHash retAddrh) govAct =
+createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
   shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
-      , Gov.pProcReturnAddr = retAddrh
-      , Gov.pProcGovernanceAction = toGovernanceAction sbe govAct
-      , Gov.pProcAnchor = SNothing -- TODO: Conway
+      , Gov.pProcReturnAddr = L.mkRwdAcnt nw (L.KeyHashObj retAddrh)
+      , Gov.pProcGovAction = toGovernanceAction sbe govAct
+      , Gov.pProcAnchor = anchor
       }
 
 fromProposalProcedure
@@ -164,7 +204,59 @@ fromProposalProcedure
   -> Proposal era
   -> (Lovelace, Hash StakeKey, GovernanceAction)
 fromProposalProcedure sbe (Proposal pp) =
-  ( fromShelleyLovelace $ Gov.pProcDeposit pp
-  , StakeKeyHash (shelleyBasedEraConstraints sbe (Gov.pProcReturnAddr pp))
-  , shelleyBasedEraConstraints sbe $ fromGovernanceAction sbe (Gov.pProcGovernanceAction pp)
-  )
+  shelleyBasedEraConstraints sbe
+    ( fromShelleyLovelace $ Gov.pProcDeposit pp
+    , case fromShelleyStakeCredential (L.getRwdCred (Gov.pProcReturnAddr pp)) of
+          StakeCredentialByKey keyhash -> keyhash
+          StakeCredentialByScript _scripthash ->
+            error "fromProposalProcedure TODO: Conway era script reward addresses not yet supported"
+    , fromGovernanceAction sbe (Gov.pProcGovAction pp)
+    )
+
+
+createPreviousGovernanceActionId
+  :: TxId
+  -> Word32 -- ^ Governance action transation index
+  -> Ledger.PrevGovActionId  (r :: Ledger.GovActionPurpose) StandardCrypto
+createPreviousGovernanceActionId  txid index =
+   Ledger.PrevGovActionId $ createGovernanceActionId txid index
+
+
+createGovernanceActionId :: TxId -> Word32 -> Gov.GovActionId StandardCrypto
+createGovernanceActionId txid index =
+   Ledger.GovActionId
+     { Ledger.gaidTxId = toShelleyTxId txid
+     , Ledger.gaidGovActionIx = Ledger.GovActionIx index
+     }
+
+
+createAnchor :: Url -> ByteString -> Anchor StandardCrypto
+createAnchor url anchorData =
+  Ledger.Anchor
+    { anchorUrl = url
+    , anchorDataHash = unsafeBytesToSafeHash anchorData
+    }
+
+-- ----------------------------------------------------------------------------
+-- TODO conversions that likely need to live elsewhere and may even deserve
+-- additional wrapper types
+
+toCommitteeMember :: Hash StakeKey -> L.Credential ColdCommitteeRole StandardCrypto
+toCommitteeMember (StakeKeyHash keyhash) = coerceKeyRole $ L.KeyHashObj keyhash
+
+fromCommitteeMember :: L.Credential ColdCommitteeRole StandardCrypto -> Hash StakeKey
+fromCommitteeMember = (. coerceKeyRole) $ \case
+  L.KeyHashObj keyhash -> StakeKeyHash keyhash
+  L.ScriptHashObj _scripthash -> error "TODO script committee members not yet supported"
+
+-- | TODO: I'm very unsure whether it's correct to use 'unsafeMakeSafeHash'
+-- here? I've asked Alexey if maybe this doesn't need to actually be a
+-- 'SafeHash', which would let us remove it.
+unsafeBytesToSafeHash
+  :: Crypto.HashAlgorithm (HASH c)
+  => ByteString
+  -> SafeHash c a
+unsafeBytesToSafeHash bs = case Crypto.hashFromBytes bs of
+  Nothing ->
+    error "unsafeBytesToSafeHash: input data is not a valid hash"
+  Just h -> unsafeMakeSafeHash h

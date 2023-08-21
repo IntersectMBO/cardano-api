@@ -2747,15 +2747,19 @@ fromLedgerTxVotes :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era)
 fromLedgerTxVotes sbe body =
   case featureInShelleyBasedEra Nothing Just sbe of
     Nothing -> TxVotesNone
-    Just w  -> TxVotes w (getVotes w body)
+    Just w  -> getVotes w body
   where
     getVotes :: ConwayEraOnwards era
              -> Ledger.TxBody (ShelleyLedgerEra era)
-             -> [VotingProcedure era]
+             -> TxVotes era
     getVotes w body_ =
       conwayEraOnwardsConstraints w
-        $ fmap VotingProcedure
-        $ toList
+        $ TxVotes w
+        $ foldMap (\(voter, innerMap) ->
+              Map.mapKeys (\govActId -> (fromVoterRole (conwayEraOnwardsToShelleyBasedEra w) voter, GovernanceActionId govActId))
+            $ Map.map VotingProcedure innerMap
+          )
+        $ (Map.toList . Gov.unVotingProcedures)
         $ body_ ^. L.votingProceduresTxBodyL
 
 fromLedgerTxIns
@@ -3607,10 +3611,20 @@ convGovActions :: TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedur
 convGovActions TxGovernanceActionsNone = Seq.empty
 convGovActions (TxGovernanceActions _ govActions) = Seq.fromList $ fmap unProposal govActions
 
-convVotes :: ShelleyBasedEra era -> TxVotes era -> Seq.StrictSeq (Gov.VotingProcedure (ShelleyLedgerEra era))
-convVotes _ = \case
-  TxVotesNone -> Seq.empty
-  TxVotes _ votes -> Seq.fromList $ map unVotingProcedure votes
+convVotes
+  :: (Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
+  => ShelleyBasedEra era
+  -> TxVotes era
+  -> Gov.VotingProcedures (ShelleyLedgerEra era)
+convVotes sbe = Gov.VotingProcedures . \case
+  TxVotesNone -> Map.empty
+  TxVotes _ votes ->
+    let combine = error "convVotes: impossible! `votes' contained the same key multiple times"
+    in
+    Map.fromListWith (Map.unionWith combine)
+      [ (toVoterRole sbe voter, unGovernanceActionId govActId `Map.singleton` unVotingProcedure vp)
+      | ((voter, govActId), vp) <- Map.toList votes
+      ]
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
