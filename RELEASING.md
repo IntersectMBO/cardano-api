@@ -36,9 +36,12 @@ This part requires user to have the following tools installed on your local mach
 * https://jqlang.github.io/jq/
 * https://mikefarah.gitbook.io/yq/
 
+>[!NOTE]
+> Steps which are only required when performing this process for the first time are marked with :four_leaf_clover: .
+
 In order to generate changelog files in markdown format use the following steps:
 
-1. *When doing this guide for the first time:* Clone the `cardano-dev` repo at the same level as `cardano-api`:
+1. :four_leaf_clover: Clone the `cardano-dev` repo at the same level as `cardano-api`:
     ```bash
     git clone https://github.com/input-output-hk/cardano-dev
     ```
@@ -104,7 +107,7 @@ After the `cardano-api` version gets tagged, it needs to be pushed into `cardano
 Detailed description of the release process is described in [CHaP repository README](https://github.com/input-output-hk/cardano-haskell-packages#how-to-add-a-new-package-version).
 Briefly speaking, it requires executing of the following steps:
 
-1. Clone `cardano-haskell-packages`:
+1. :four_leaf_clover:  Clone `cardano-haskell-packages`:
     ```bash
     git clone git@github.com:input-output-hk/cardano-haskell-packages.git
     cd cardano-haskell-packages
@@ -130,3 +133,5 @@ After package gets released, you can check the released version at: https://inpu
 1. https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md
 1. https://input-output-hk.github.io/cardano-haskell-packages/index.html
 1. https://input-output-hk.github.io/cardano-engineering-handbook/policy/haskell/packaging/versioning.html
+
+<!-- vim: set spell textwidth=0: -->
