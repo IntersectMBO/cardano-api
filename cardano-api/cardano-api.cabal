@@ -57,11 +57,14 @@ library internal
                         Cardano.Api.DRepMetadata
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
+                        Cardano.Api.Eras.Complement
                         Cardano.Api.Eras.Constraints
                         Cardano.Api.Eras.Core
                         Cardano.Api.Eras.InAnyEra
+                        Cardano.Api.Eras.Mandatory
                         Cardano.Api.Error
                         Cardano.Api.Feature
+                        Cardano.Api.Feature.AlonzoEraOnly
                         Cardano.Api.Feature.AlonzoEraOnwards
                         Cardano.Api.Feature.BabbageEraOnwards
                         Cardano.Api.Feature.ConwayEraOnwards
