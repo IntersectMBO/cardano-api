@@ -1,5 +1,38 @@
 # Changelog for cardano-api
 
+## 8.15.0.0
+
+- Updating the ledger dependency to cardano-ledger-conway-1.7.0.0:
+    Many superficial renamings
+    TxVotes carries a map now
+    ResolvablePointers now has a different representation than does the ledger
+    ProposalNewCommitee requires the old committee's credentials
+    The ProposalNewConstitution case of toGovernanceAction was hashing the argument'ByteString, but it was already a hash.
+    See temporarilyOptOutOfPrevGovAction
+    makeGovernanceActionId was reusing the transaction id as the governance action id, but the types no longer allow that.
+    Semigroup oprhan was missing for ConwayPParams
+    QueryConstitutionHash phantom type is now more specific
+    Cardano.Ledger.Api no longer export EraCrypto
+    Introduced (internal) pattern synonyms for scripts to coverup a change in the corresponding ledger types.
+  (feature, breaking)
+  [PR 179](https://github.com/input-output-hk/cardano-api/pull/179)
+
+- New `VotingEntry` type
+  (compatible)
+  [PR 194](https://github.com/input-output-hk/cardano-api/pull/194)
+
+- Fix parameterisation of `GovernanceActionId`
+  (breaking)
+  [PR 192](https://github.com/input-output-hk/cardano-api/pull/192)
+
+- Implement createPParams and begin propagating Ledger.PParams in cardano-api
+  (feature)
+  [PR 190](https://github.com/input-output-hk/cardano-api/pull/190)
+
+- Delete deprecated functions and types
+  (improvement)
+  [PR 173](https://github.com/input-output-hk/cardano-api/pull/173)
+
 ## 8.14.0.0
 
 - Fix parameterisation of `GovernanceActionId`
