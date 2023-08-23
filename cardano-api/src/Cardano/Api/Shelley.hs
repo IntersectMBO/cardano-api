@@ -266,6 +266,7 @@ module Cardano.Api.Shelley
     Voter(..),
     createProposalProcedure,
     createVotingProcedure,
+    makeGovernanceActionId,
     renderGovernancePollError,
     toVotingCredential,
     fromProposalProcedure,
