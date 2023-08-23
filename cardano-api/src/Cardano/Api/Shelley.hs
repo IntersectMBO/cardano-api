@@ -196,7 +196,6 @@ module Cardano.Api.Shelley
     createAnchor,
     createPreviousGovernanceActionId,
     createGovernanceActionId,
-    unsafeBytesToSafeHash,
 
     -- * DRep
     DRepMetadata(DRepMetadata),

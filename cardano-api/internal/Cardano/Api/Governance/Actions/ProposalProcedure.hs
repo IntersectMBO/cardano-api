@@ -25,7 +25,6 @@ import           Cardano.Api.TxIn
 import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Address as L
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Conway as Conway
@@ -34,9 +33,8 @@ import qualified Cardano.Ledger.Conway.Governance as Ledger
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Shelley
 import qualified Cardano.Ledger.Credential as L
-import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyRole (ColdCommitteeRole))
-import           Cardano.Ledger.SafeHash
 
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
@@ -234,7 +232,7 @@ createAnchor :: Url -> ByteString -> Anchor StandardCrypto
 createAnchor url anchorData =
   Ledger.Anchor
     { anchorUrl = url
-    , anchorDataHash = unsafeBytesToSafeHash anchorData
+    , anchorDataHash = hashAnchorData $ Ledger.AnchorData anchorData
     }
 
 -- ----------------------------------------------------------------------------
@@ -249,14 +247,4 @@ fromCommitteeMember = (. coerceKeyRole) $ \case
   L.KeyHashObj keyhash -> StakeKeyHash keyhash
   L.ScriptHashObj _scripthash -> error "TODO script committee members not yet supported"
 
--- | TODO: I'm very unsure whether it's correct to use 'unsafeMakeSafeHash'
--- here? I've asked Alexey if maybe this doesn't need to actually be a
--- 'SafeHash', which would let us remove it.
-unsafeBytesToSafeHash
-  :: Crypto.HashAlgorithm (HASH c)
-  => ByteString
-  -> SafeHash c a
-unsafeBytesToSafeHash bs = case Crypto.hashFromBytes bs of
-  Nothing ->
-    error "unsafeBytesToSafeHash: input data is not a valid hash"
-  Just h -> unsafeMakeSafeHash h
+
