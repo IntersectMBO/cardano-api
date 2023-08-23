@@ -1,5 +1,20 @@
 # Changelog for cardano-api
 
+## 8.16.0.0
+
+- Expose following queries from consensus:
+    - GetGovState
+    - GetDRepState
+    - GetDRepStakeDistr
+    - GetCommitteeState
+    - GetConstitution
+  (feature, compatible)
+  [PR 196](https://github.com/input-output-hk/cardano-api/pull/196)
+
+- Update createAnchor to use hashAnchorData
+  (feature, breaking)
+  [PR 200](https://github.com/input-output-hk/cardano-api/pull/200)
+
 ## 8.15.0.0
 
 - Updating the ledger dependency to cardano-ledger-conway-1.7.0.0:
