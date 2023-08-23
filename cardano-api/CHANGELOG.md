@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.16.1.0
+
+- Add `VotingProcedures` type.
+  (feature, compatible)
+  [PR 204](https://github.com/input-output-hk/cardano-api/pull/204)
+
 ## 8.16.0.0
 
 - Expose following queries from consensus:
