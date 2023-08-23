@@ -97,6 +97,8 @@ import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import qualified Cardano.Ledger.CertState as L
+import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
@@ -298,6 +300,20 @@ data QueryInShelleyBasedEra era result where
   QueryConstitution
     :: QueryInShelleyBasedEra era (Maybe (L.Constitution (ShelleyLedgerEra era)))
 
+  QueryGovState
+    :: QueryInShelleyBasedEra era (L.GovState (ShelleyLedgerEra era))
+
+  QueryDRepState
+    :: Set (L.Credential Shelley.DRepRole StandardCrypto)
+    -> QueryInShelleyBasedEra era (Map (L.Credential Shelley.DRepRole StandardCrypto) (L.DRepState StandardCrypto))
+
+  QueryDRepStakeDistr
+    :: Set (Core.DRep StandardCrypto)
+    -> QueryInShelleyBasedEra era (Map (Core.DRep StandardCrypto) Lovelace)
+
+  QueryCommitteeState
+    :: QueryInShelleyBasedEra era (L.CommitteeState (ShelleyLedgerEra era))
+
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryEpoch = NodeToClientV_9
@@ -316,7 +332,11 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_15
-  nodeToClientVersionOf QueryConstitution = NodeToClientV_15
+  nodeToClientVersionOf QueryConstitution = NodeToClientV_16
+  nodeToClientVersionOf QueryGovState = NodeToClientV_16
+  nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
+  nodeToClientVersionOf QueryDRepStakeDistr{} = NodeToClientV_16
+  nodeToClientVersionOf QueryCommitteeState = NodeToClientV_16
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -573,6 +593,7 @@ toConsensusQueryShelleyBased
   :: forall era ledgerera mode protocol block xs result.
      ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol ledgerera
   => Core.EraCrypto ledgerera ~ Consensus.StandardCrypto
+  => ShelleyLedgerEra era ~ ledgerera
   => ConsensusBlockForMode mode ~ block
   => block ~ Consensus.HardForkBlock xs
   => EraInMode era mode
@@ -647,11 +668,24 @@ toConsensusQueryShelleyBased erainmode (QueryPoolDistribution poolIds) =
   where
     getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
     getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
-toConsensusQueryShelleyBased erainmode (QueryStakeDelegDeposits stakeCreds) =
-    Some (consensusQueryInEraInMode erainmode (Consensus.GetStakeDelegDeposits stakeCreds'))
+
+toConsensusQueryShelleyBased erainmode (QueryStakeDelegDeposits creds) =
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR $ Consensus.GetStakeDelegDeposits creds'))
   where
-    stakeCreds' :: Set (Shelley.StakeCredential Consensus.StandardCrypto)
-    stakeCreds' = Set.map toShelleyStakeCredential stakeCreds
+    creds' = Set.map toShelleyStakeCredential creds
+
+toConsensusQueryShelleyBased erainmode QueryGovState =
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.GetGovState))
+
+toConsensusQueryShelleyBased erainmode (QueryDRepState creds) =
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetDRepState creds)))
+
+
+toConsensusQueryShelleyBased erainmode (QueryDRepStakeDistr dreps) =
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR $ Consensus.GetDRepStakeDistr dreps))
+
+toConsensusQueryShelleyBased erainmode QueryCommitteeState =
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.GetCommitteeState))
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -920,6 +954,26 @@ fromConsensusQueryResultShelleyBased _ QueryStakeDelegDeposits{} q' stakeCreds' 
                                          . Map.mapKeysMonotonic fromShelleyStakeCredential
                                          $ stakeCreds'
       _                                 -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryGovState{} q' govState' =
+  case q' of
+    Consensus.GetGovState{} -> govState'
+    _                       -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryDRepState{} q' drepState'  =
+  case q' of
+    Consensus.GetDRepState{} -> drepState'
+    _                        -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryDRepStakeDistr{} q' stakeDistr' =
+  case q' of
+    Consensus.GetDRepStakeDistr{} -> Map.map fromShelleyLovelace stakeDistr'
+    _                             -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryCommitteeState{} q' committeeState' =
+  case q' of
+    Consensus.GetCommitteeState{} -> committeeState'
+    _                             -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.

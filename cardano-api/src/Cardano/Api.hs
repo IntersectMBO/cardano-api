@@ -923,6 +923,11 @@ module Cardano.Api (
     querySystemStart,
     queryUtxo,
     determineEraExpr,
+    queryConstitution,
+    queryGovState,
+    queryDRepState,
+    queryDRepStakeDistribution,
+    queryCommitteeState,
 
     -- ** DReps
     DRepKey,

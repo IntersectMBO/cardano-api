@@ -48,6 +48,7 @@ module Cardano.Api.ReexposeLedger
   , ConwayDelegCert(..)
   , ConwayEraTxCert(..)
   , ConwayGovCert(..)
+  , GovState
   , GovActionId(..)
   , Vote (..)
   , Voter (..)
@@ -93,8 +94,8 @@ import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (.
                    boundRational, dnsToText, maybeToStrictMaybe, portToWord16, strictMaybeToMaybe,
                    textToDns, textToUrl, unboundRational, urlToText)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
-import           Cardano.Ledger.Conway.Governance (GovActionId (..), Vote (..), Voter (..),
-                   VotingProcedure (..))
+import           Cardano.Ledger.Conway.Governance (GovActionId (..), GovState, Vote (..),
+                   Voter (..), VotingProcedure (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
                    ConwayGovCert (..), ConwayTxCert (..), Delegatee (..))
 import           Cardano.Ledger.Core (DRep (..), EraCrypto, PParams (..), PoolCert (..),
