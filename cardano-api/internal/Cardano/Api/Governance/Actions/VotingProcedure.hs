@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -17,21 +18,22 @@
 module Cardano.Api.Governance.Actions.VotingProcedure where
 
 import           Cardano.Api.Address
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Feature.ConwayEraOnwards (ConwayEraOnwards)
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseCBOR (FromCBOR (fromCBOR), SerialiseAsCBOR (..),
-                   ToCBOR (toCBOR))
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import           Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Core as Shelley
+import qualified Cardano.Ledger.Core as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (DRepRole))
 
@@ -39,6 +41,7 @@ import           Data.ByteString.Lazy (ByteString)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
+import           GHC.Generics
 
 -- | A representation of whether the era supports tx voting on governance actions.
 --
@@ -116,7 +119,7 @@ toVoterRole
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
   => ShelleyBasedEra era
   -> Voter era
-  -> Ledger.Voter (Shelley.EraCrypto (ShelleyLedgerEra era))
+  -> Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era))
 toVoterRole _ = \case
   VoterCommittee (VotingCredential cred) ->
     Ledger.CommitteeVoter $ coerceKeyRole cred -- TODO: Conway era - Alexey realllllyyy doesn't like this. We need to fix it.
@@ -128,7 +131,7 @@ toVoterRole _ = \case
 fromVoterRole
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
   => ShelleyBasedEra era
-  -> Ledger.Voter (Shelley.EraCrypto (ShelleyLedgerEra era))
+  -> Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era))
   -> Voter era
 fromVoterRole _ = \case
   Ledger.CommitteeVoter cred ->
@@ -207,11 +210,11 @@ newtype VotingProcedure era = VotingProcedure
   } deriving (Show, Eq)
 
 instance IsShelleyBasedEra era => ToCBOR (VotingProcedure era) where
-  toCBOR (VotingProcedure vp) = shelleyBasedEraConstraints sbe $ Shelley.toEraCBOR @(ShelleyLedgerEra era) vp
+  toCBOR (VotingProcedure vp) = shelleyBasedEraConstraints sbe $ L.toEraCBOR @(ShelleyLedgerEra era) vp
     where sbe = shelleyBasedEra @era
 
 instance IsShelleyBasedEra era => FromCBOR (VotingProcedure era) where
-  fromCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) $ VotingProcedure <$> Shelley.fromEraCBOR @(ShelleyLedgerEra era)
+  fromCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) $ VotingProcedure <$> L.fromEraCBOR @(ShelleyLedgerEra era)
 
 instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedure era) where
   serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
@@ -223,3 +226,33 @@ instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedure era) where
 instance HasTypeProxy era => HasTypeProxy (VotingProcedure era) where
   data AsType (VotingProcedure era) = AsVote
   proxyToAsType _ = AsVote
+
+newtype VotingProcedures era = VotingProcedures
+  { unVotingProcedures  :: L.VotingProcedures (ShelleyLedgerEra era)
+  }
+
+deriving instance Eq (VotingProcedures era)
+deriving instance Generic (VotingProcedures era)
+deriving instance Show (VotingProcedures era)
+
+instance IsShelleyBasedEra era => ToCBOR (VotingProcedures era) where
+  toCBOR = \case
+    VotingProcedures vp ->
+      shelleyBasedEraConstraints (shelleyBasedEra @era)
+        $ L.toEraCBOR @(ShelleyLedgerEra era) vp
+
+instance IsShelleyBasedEra era => FromCBOR (VotingProcedures era) where
+  fromCBOR =
+    shelleyBasedEraConstraints (shelleyBasedEra @era)
+      $ VotingProcedures <$> L.fromEraCBOR @(ShelleyLedgerEra era)
+
+instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedures era) where
+  serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
+  deserialiseFromCBOR _proxy = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
+
+instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedures era) where
+  textEnvelopeType _ = "Governance voting procedures"
+
+instance HasTypeProxy era => HasTypeProxy (VotingProcedures era) where
+  data AsType (VotingProcedures era) = AsVotingProcedures
+  proxyToAsType _ = AsVotingProcedures
