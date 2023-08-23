@@ -258,6 +258,7 @@ module Cardano.Api.Shelley
     TxGovernanceActions(..),
     TxVotes(..),
     VotingProcedure(..),
+    VotingProcedures(..),
     GovernancePoll(..),
     GovernancePollAnswer(..),
     GovernancePollError(..),
