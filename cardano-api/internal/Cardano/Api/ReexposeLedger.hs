@@ -44,6 +44,7 @@ module Cardano.Api.ReexposeLedger
   -- Conway
   , Delegatee(..)
   , DRep(..)
+  , DRepState
   , ConwayTxCert(..)
   , ConwayDelegCert(..)
   , ConwayEraTxCert(..)
@@ -53,6 +54,10 @@ module Cardano.Api.ReexposeLedger
   , Vote (..)
   , Voter (..)
   , VotingProcedure(..)
+  , drepExpiryL
+  , drepAnchorL
+  , drepDepositL
+  , csCommitteeCredsL
   -- Babbage
   , CoinPerByte (..)
 
@@ -93,6 +98,7 @@ import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (..), Url,
                    boundRational, dnsToText, maybeToStrictMaybe, portToWord16, strictMaybeToMaybe,
                    textToDns, textToUrl, unboundRational, urlToText)
+import           Cardano.Ledger.CertState (csCommitteeCredsL)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import           Cardano.Ledger.Conway.Governance (GovActionId (..), GovState, Vote (..),
                    Voter (..), VotingProcedure (..))
@@ -102,6 +108,7 @@ import           Cardano.Ledger.Core (DRep (..), EraCrypto, PParams (..), PoolCe
                    fromEraCBOR, toEraCBOR)
 import           Cardano.Ledger.Credential (Credential (..))
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import           Cardano.Ledger.DRepDistr (DRepState, drepAnchorL, drepDepositL, drepExpiryL)
 import           Cardano.Ledger.Keys (HasKeyRole (..), KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import           Cardano.Ledger.Shelley.TxCert (EraTxCert (..), GenesisDelegCert (..), MIRCert (..),
