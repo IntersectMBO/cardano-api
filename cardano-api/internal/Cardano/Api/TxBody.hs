@@ -190,6 +190,7 @@ import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure
@@ -1758,7 +1759,7 @@ data TxBodyContent build era =
        txMintValue         :: TxMintValue    build era,
        txScriptValidity    :: TxScriptValidity era,
        txGovernanceActions :: TxGovernanceActions era,
-       txVotes             :: TxVotes era
+       txVotes             :: Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
      }
      deriving (Eq, Show)
 
@@ -1782,7 +1783,7 @@ defaultTxBodyContent = TxBodyContent
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
     , txGovernanceActions = TxGovernanceActionsNone
-    , txVotes = TxVotesNone
+    , txVotes = Nothing
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -2718,8 +2719,8 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
       , txMetadata
       , txAuxScripts
       , txScriptValidity    = scriptValidity
-      , txGovernanceActions = fromLedgerProposalProcedure sbe body
-      , txVotes             = fromLedgerTxVotes sbe body
+      , txGovernanceActions = fromLedgerProposalProcedure   sbe body
+      , txVotes             = fromLedgerVotingProcedures    sbe body
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
@@ -2743,24 +2744,20 @@ fromLedgerProposalProcedure sbe body =
         $ toList
         $ body_ ^. L.proposalProceduresTxBodyL
 
-fromLedgerTxVotes :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxVotes era
-fromLedgerTxVotes sbe body =
-  case featureInShelleyBasedEra Nothing Just sbe of
-    Nothing -> TxVotesNone
-    Just w  -> getVotes w body
-  where
-    getVotes :: ConwayEraOnwards era
-             -> Ledger.TxBody (ShelleyLedgerEra era)
-             -> TxVotes era
-    getVotes w body_ =
+fromLedgerVotingProcedures :: ()
+  => ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
+fromLedgerVotingProcedures sbe body =
+  featureInShelleyBasedEra
+    Nothing
+    (\w ->
       conwayEraOnwardsConstraints w
-        $ TxVotes w
-        $ foldMap (\(voter, innerMap) ->
-              Map.mapKeys (\govActId -> (fromVoterRole (conwayEraOnwardsToShelleyBasedEra w) voter, GovernanceActionId govActId))
-            $ Map.map VotingProcedure innerMap
-          )
-        $ (Map.toList . Gov.unVotingProcedures)
-        $ body_ ^. L.votingProceduresTxBodyL
+        $ Just
+        $ Featured w
+        $ VotingProcedures
+        $ body ^. L.votingProceduresTxBodyL)
+    sbe
 
 fromLedgerTxIns
   :: forall era.
@@ -3430,7 +3427,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txMintValue         = TxMintNone
   , txScriptValidity    = TxScriptValidityNone
   , txGovernanceActions = TxGovernanceActionsNone
-  , txVotes             = TxVotesNone
+  , txVotes             = Nothing
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
@@ -3611,21 +3608,6 @@ convGovActions :: TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedur
 convGovActions TxGovernanceActionsNone = Seq.empty
 convGovActions (TxGovernanceActions _ govActions) = Seq.fromList $ fmap unProposal govActions
 
-convVotes
-  :: (Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => ShelleyBasedEra era
-  -> TxVotes era
-  -> Gov.VotingProcedures (ShelleyLedgerEra era)
-convVotes sbe = Gov.VotingProcedures . \case
-  TxVotesNone -> Map.empty
-  TxVotes _ votes ->
-    let combine = error "convVotes: impossible! `votes' contained the same key multiple times"
-    in
-    Map.fromListWith (Map.unionWith combine)
-      [ (toVoterRole sbe voter, unGovernanceActionId govActId `Map.singleton` unVotingProcedure vp)
-      | ((voter, govActId), vp) <- Map.toList votes
-      ]
-
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
     for_ txIns $ \txin@(TxIn _ (TxIx txix)) ->
@@ -3654,8 +3636,8 @@ mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
   & L.auxDataHashTxBodyL .~ maybe SNothing (SJust . Ledger.hashTxAuxData) txAuxData
 
 
-makeShelleyTransactionBody
-  :: ShelleyBasedEra era
+makeShelleyTransactionBody :: forall era. ()
+  => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 makeShelleyTransactionBody sbe@ShelleyBasedEraShelley
@@ -3994,7 +3976,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-           & L.votingProceduresTxBodyL    .~ convVotes sbe txVotes
+           & L.votingProceduresTxBodyL    .~ unVotingProcedures @era (maybe mempty unFeatured txVotes)
            & L.proposalProceduresTxBodyL  .~ convGovActions txGovernanceActions
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
