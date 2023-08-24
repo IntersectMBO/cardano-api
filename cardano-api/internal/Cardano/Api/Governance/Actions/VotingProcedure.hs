@@ -20,7 +20,6 @@ module Cardano.Api.Governance.Actions.VotingProcedure where
 import           Cardano.Api.Address
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
-import           Cardano.Api.Feature.ConwayEraOnwards (ConwayEraOnwards)
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
@@ -38,25 +37,10 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (DRepRole))
 
 import           Data.ByteString.Lazy (ByteString)
-import qualified Data.Map.Strict as Map
+import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           GHC.Generics
-
--- | A representation of whether the era supports tx voting on governance actions.
---
--- The Conway and subsequent eras support tx voting on governance actions.
---
-data TxVotes era where
-  TxVotesNone :: TxVotes era
-
-  TxVotes
-    :: ConwayEraOnwards era
-    -> Map.Map (Voter era, GovernanceActionId era) (VotingProcedure era)
-    -> TxVotes era
-
-deriving instance Show (TxVotes era)
-deriving instance Eq (TxVotes era)
 
 newtype GovernanceActionId era = GovernanceActionId
   { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (ShelleyLedgerEra era))
