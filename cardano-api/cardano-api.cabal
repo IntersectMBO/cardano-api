@@ -67,7 +67,6 @@ library internal
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters
                         Cardano.Api.Governance.Actions.ProposalProcedure
-                        Cardano.Api.Governance.Actions.VotingEntry
                         Cardano.Api.Governance.Actions.VotingProcedure
                         Cardano.Api.Governance.Poll
                         Cardano.Api.Hash
