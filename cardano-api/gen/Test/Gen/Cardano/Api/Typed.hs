@@ -937,37 +937,14 @@ genProtocolParameters era = do
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
 genValidProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
 genValidProtocolParameters era =
-  ProtocolParameters
-    <$> ((,) <$> genNat <*> genNat)
-    <*> Gen.maybe genRational
-    <*> genMaybePraosNonce
-    <*> genNat
-    <*> genNat
-    <*> genNat
-    <*> genLovelace
-    <*> genLovelace
-    <*> Gen.maybe genLovelace
-    <*> genLovelace
-    <*> genLovelace
-    <*> genLovelace
-    <*> genEpochNo
-    <*> genNat
-    <*> genRationalInt64
-    <*> genRational
-    <*> genRational
-    -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
-    <*> featureInEra @ProtocolUTxOCostPerWordFeature (pure Nothing) (const (Just <$> genLovelace)) era
-    <*> return mempty
-    --TODO: Babbage figure out how to deal with
-    -- asymmetric cost model JSON instances
-    -- 'Just' is required by checks in Cardano.Api.ProtocolParameters
-    <*> fmap Just genExecutionUnitPrices
-    <*> fmap Just genExecutionUnits
-    <*> fmap Just genExecutionUnits
-    <*> fmap Just genNat
-    <*> fmap Just genNat
-    <*> fmap Just genNat
-    <*> featureInEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+  case era of
+    ShelleyBasedEraShelley -> LedgerPParams era <$> Q.arbitrary
+    ShelleyBasedEraAllegra -> LedgerPParams era <$> Q.arbitrary
+    ShelleyBasedEraMary    -> LedgerPParams era <$> Q.arbitrary
+    ShelleyBasedEraAlonzo  -> LedgerPParams era <$> Q.arbitrary
+    ShelleyBasedEraBabbage -> LedgerPParams era <$> Q.arbitrary
+    ShelleyBasedEraConway  -> LedgerPParams era <$> Q.arbitrary
+
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do

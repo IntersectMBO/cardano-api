@@ -105,7 +105,7 @@ queryEraHistory =
 queryGenesisParameters :: ()
   => EraInMode ShelleyEra mode
   -> ShelleyBasedEra ShelleyEra
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch GenesisParameters))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (GenesisParameters ShelleyEra)))
 queryGenesisParameters eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryGenesisParameters
 

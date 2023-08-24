@@ -151,7 +151,33 @@ import           Text.PrettyBy.Default (display)
 -- -----------------------------------------------------------------------------
 -- Era based ledger protocol parameters
 --
+data LedgerProtocolParameters era where
+  LedgerPParams
+    :: EraPParams (ShelleyLedgerEra era)
+    => ShelleyBasedEra era
+    -> (Ledger.PParams (ShelleyLedgerEra era))
+    -> LedgerProtocolParameters era
 
+
+deriving instance Show (LedgerProtocolParameters era )
+deriving instance Eq (LedgerProtocolParameters era)
+
+createLedgerProtocolParameters
+  :: ShelleyBasedEra era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> LedgerProtocolParameters era
+createLedgerProtocolParameters sbe pp =
+  shelleyBasedEraConstraints sbe $ LedgerPParams sbe pp
+
+
+-- TODO: Conway era - remove me when we begin relying on the JSON
+-- instances of Ledger.PParams
+convertToLedgerProtocolParameters
+  :: ShelleyBasedEra era
+  -> ProtocolParameters
+  -> Either ProtocolParametersConversionError (LedgerProtocolParameters era)
+convertToLedgerProtocolParameters sbe pp =
+  createLedgerProtocolParameters sbe <$> toLedgerPParams sbe pp
 
 createPParams
   :: EraPParams (ShelleyLedgerEra era)
