@@ -285,7 +285,6 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
-    TxVotes(..),
     TxGovernanceActions(..),
     VotingEntry(..),
 
@@ -970,7 +969,6 @@ import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingEntry
-import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
