@@ -569,8 +569,7 @@ cardanoEraStyle ConwayEra  = ShelleyBasedEra ShelleyBasedEraConway
 -- ledger library which allows writing conversion functions in a more generic
 -- way.
 --
-type family ShelleyLedgerEra era where
-
+type family ShelleyLedgerEra era = ledgerera | ledgerera -> era where
   ShelleyLedgerEra ShelleyEra = Consensus.StandardShelley
   ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
   ShelleyLedgerEra MaryEra    = Consensus.StandardMary
@@ -578,7 +577,7 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
   ShelleyLedgerEra ConwayEra  = Consensus.StandardConway
 
-type family CardanoLedgerEra era where
+type family CardanoLedgerEra era = ledgerera | ledgerera -> era where
   CardanoLedgerEra ByronEra   = L.ByronEra   L.StandardCrypto
   CardanoLedgerEra ShelleyEra = L.ShelleyEra L.StandardCrypto
   CardanoLedgerEra AllegraEra = L.AllegraEra L.StandardCrypto
