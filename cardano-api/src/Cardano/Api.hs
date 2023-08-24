@@ -419,6 +419,8 @@ module Cardano.Api (
     makeStakeAddressUnregistrationCertificate,
     makeStakeAddressPoolDelegationCertificate,
 
+    makeStakeAddressAndDRepDelegationCertificate,
+
     -- ** Registering stake pools
     -- | Certificates that are embedded in transactions for registering and
     -- retiring stake pools. This includes updating the stake pool parameters.

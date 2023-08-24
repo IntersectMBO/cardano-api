@@ -45,6 +45,8 @@ module Cardano.Api.Certificate (
     makeDrepRegistrationCertificate,
     makeDrepUnregistrationCertificate,
 
+    makeStakeAddressAndDRepDelegationCertificate,
+
     -- * Registering DReps
     DRepMetadataReference(..),
 
@@ -667,6 +669,20 @@ makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards 
     . Ledger.ConwayTxCertGov
     . Ledger.ConwayUnRegDRep vcred
     $ toShelleyLovelace deposit
+
+makeStakeAddressAndDRepDelegationCertificate :: ()
+  => ConwayEraOnwards era
+  -> StakeCredential
+  -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
+  -> Lovelace
+  -> Certificate era
+makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
+  conwayEraOnwardsConstraints w
+    $ ConwayCertificate w
+    $ Ledger.mkRegDepositDelegTxCert
+        (toShelleyStakeCredential cred)
+        delegatee
+        (toShelleyLovelace deposit)
 
 -- ----------------------------------------------------------------------------
 -- Helper functions
