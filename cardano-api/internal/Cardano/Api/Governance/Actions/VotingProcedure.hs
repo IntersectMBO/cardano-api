@@ -256,3 +256,36 @@ instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedures era) where
 instance HasTypeProxy era => HasTypeProxy (VotingProcedures era) where
   data AsType (VotingProcedures era) = AsVotingProcedures
   proxyToAsType _ = AsVotingProcedures
+
+instance Semigroup (VotingProcedures era) where
+  (<>) = mergeVotingProcedures
+
+instance Monoid (VotingProcedures era) where
+  mempty = emptyVotingProcedures
+
+emptyVotingProcedures :: VotingProcedures era
+emptyVotingProcedures = VotingProcedures $ L.VotingProcedures Map.empty
+
+singletonVotingProcedures :: ()
+  => ShelleyBasedEra era
+  -> L.Voter (L.EraCrypto (ShelleyLedgerEra era))
+  -> L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))
+  -> L.VotingProcedure (ShelleyLedgerEra era)
+  -> VotingProcedures era
+singletonVotingProcedures _ voter govActionId votingProcedure =
+  VotingProcedures
+    $ L.VotingProcedures
+    $ Map.singleton voter
+    $ Map.singleton govActionId votingProcedure
+
+-- | Right biased merge of Voting procedures.
+mergeVotingProcedures :: ()
+  => VotingProcedures era
+  -> VotingProcedures era
+  -> VotingProcedures era
+mergeVotingProcedures vpsa vpsb =
+  VotingProcedures
+    $ L.VotingProcedures
+    $ Map.unionWith (Map.unionWith const)
+        (L.unVotingProcedures (unVotingProcedures vpsa))
+        (L.unVotingProcedures (unVotingProcedures vpsb))
