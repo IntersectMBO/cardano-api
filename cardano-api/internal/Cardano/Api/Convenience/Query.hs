@@ -22,9 +22,9 @@ import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
-import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Query.Expr
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
@@ -75,7 +75,7 @@ queryStateForBalancedTx :: ()
       ( Either
           QueryConvenienceError
           ( UTxO era
-          , ProtocolParameters
+          , Ledger.PParams (ShelleyLedgerEra era)
           , EraHistory CardanoMode
           , SystemStart
           , Set PoolId

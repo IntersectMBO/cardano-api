@@ -90,6 +90,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query.Types
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
@@ -243,7 +244,7 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra ShelleyEra (GenesisParameters ShelleyEra)
 
   QueryProtocolParameters
-    :: QueryInShelleyBasedEra era ProtocolParameters
+    :: QueryInShelleyBasedEra era (Ledger.PParams (ShelleyLedgerEra era))
 
   QueryProtocolParametersUpdate
     :: QueryInShelleyBasedEra era
@@ -867,9 +868,9 @@ fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
                                       (Consensus.getCompactGenesis r')
       _                          -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased sbe QueryProtocolParameters q' r' =
+fromConsensusQueryResultShelleyBased _ QueryProtocolParameters q' r' =
     case q' of
-      Consensus.GetCurrentPParams -> fromLedgerPParams sbe r'
+      Consensus.GetCurrentPParams -> r'
       _                           -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased sbe QueryProtocolParametersUpdate q' r' =
