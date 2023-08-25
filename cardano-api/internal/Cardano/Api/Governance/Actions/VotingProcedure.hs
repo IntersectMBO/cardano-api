@@ -256,3 +256,32 @@ instance IsShelleyBasedEra era => HasTextEnvelope (VotingProcedures era) where
 instance HasTypeProxy era => HasTypeProxy (VotingProcedures era) where
   data AsType (VotingProcedures era) = AsVotingProcedures
   proxyToAsType _ = AsVotingProcedures
+
+emptyVotingProcedures :: VotingProcedures era
+emptyVotingProcedures = VotingProcedures $ L.VotingProcedures Map.empty
+
+singletonVotingProcedures :: ()
+  => ShelleyBasedEra era
+  -> L.Voter (L.EraCrypto (ShelleyLedgerEra era))
+  -> L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))
+  -> L.VotingProcedure (ShelleyLedgerEra era)
+  -> VotingProcedures era
+singletonVotingProcedures _ voter govActionId votingProcedure =
+  VotingProcedures
+    $ L.VotingProcedures
+    $ Map.singleton voter
+    $ Map.singleton govActionId votingProcedure
+
+-- | Right biased merge of Voting procedures.
+-- TODO Conway we need an alternative version of this function that can report conflicts as it is
+-- not safe to just throw away votes.
+unsafeMergeVotingProcedures :: ()
+  => VotingProcedures era
+  -> VotingProcedures era
+  -> VotingProcedures era
+unsafeMergeVotingProcedures vpsa vpsb =
+  VotingProcedures
+    $ L.VotingProcedures
+    $ Map.unionWith (Map.unionWith const)
+        (L.unVotingProcedures (unVotingProcedures vpsa))
+        (L.unVotingProcedures (unVotingProcedures vpsb))
