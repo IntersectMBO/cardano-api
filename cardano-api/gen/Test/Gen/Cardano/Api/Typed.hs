@@ -148,7 +148,6 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
@@ -672,7 +671,7 @@ genTxBodyContent era = do
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
   txGovernanceActions <- genTxGovernanceActions era
-  txVotes <- genTxVotes era
+  txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
@@ -692,7 +691,7 @@ genTxBodyContent era = do
     , Api.txMintValue
     , Api.txScriptValidity
     , Api.txGovernanceActions
-    , Api.txVotes
+    , Api.txVotingProcedures
     }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
@@ -750,12 +749,12 @@ genFeaturedInEra witness gen =
 genMaybeFeaturedInEra :: ()
   => FeatureInEra feature
   => Alternative f
-  => f a
+  => (feature era -> f a)
   -> CardanoEra era
   -> f (Maybe (Featured feature era a))
-genMaybeFeaturedInEra gen =
-  featureInEra (pure Nothing) $ \witness ->
-    pure Nothing <|> fmap Just (genFeaturedInEra witness gen)
+genMaybeFeaturedInEra f =
+  featureInEra (pure Nothing) $ \w ->
+    pure Nothing <|> fmap Just (genFeaturedInEra w (f w))
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
@@ -1123,22 +1122,7 @@ genTxGovernanceActions era = fromMaybe (pure TxGovernanceActionsNone) $ do
     genProposal = \case
       ConwayEraOnwardsConway -> fmap Proposal Q.arbitrary
 
-genTxVotes :: CardanoEra era -> Gen (TxVotes era)
-genTxVotes era = fromMaybe (pure TxVotesNone) $ do
-  w <- featureInEra Nothing Just era
-  let votes = Gen.list (Range.constant 0 10) $ genVote w
-  pure $ TxVotes w . Map.fromList <$> votes
-  where
-    genVote
-      :: ConwayEraOnwards era
-      -> Gen ( (Voter era, GovernanceActionId era)
-             , VotingProcedure era
-             )
-    genVote w =
-        conwayEraOnwardsConstraints w $
-        (,)
-          <$> ((,)
-                 <$> (fromVoterRole (conwayEraOnwardsToShelleyBasedEra w) <$> Q.arbitrary)
-                 <*> (GovernanceActionId <$> Q.arbitrary)
-              )
-          <*> (VotingProcedure <$> Q.arbitrary)
+genVotingProcedures :: ConwayEraOnwards era -> Gen (VotingProcedures era)
+genVotingProcedures w =
+  conwayEraOnwardsConstraints w
+    $ VotingProcedures <$> Q.arbitrary

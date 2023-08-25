@@ -7,6 +7,7 @@
 
 module Cardano.Api.Feature
   ( Featured (..)
+  , unFeatured
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
   ) where
@@ -27,6 +28,9 @@ deriving instance (Show a, Show (feature era)) => Show (Featured feature era a)
 
 instance Functor (Featured feature era) where
   fmap f (Featured feature a) = Featured feature (f a)
+
+unFeatured :: Featured feature era a -> a
+unFeatured (Featured _ a) = a
 
 -- | Attempt to construct a 'FeatureValue' from a value and era.
 -- If the feature is not supported in the era, then 'NoFeatureValue' is returned.
