@@ -8,6 +8,7 @@ module Cardano.Api.Convenience.Query (
     determineEra,
     -- * Simplest query related
     executeQueryCardanoMode,
+    executeQueryAnyMode,
 
     queryStateForBalancedTx,
     renderQueryConvenienceError,
