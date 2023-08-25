@@ -671,7 +671,7 @@ genTxBodyContent era = do
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
   txGovernanceActions <- genTxGovernanceActions era
-  txVotes <- genMaybeFeaturedInEra genVotingProcedures era
+  txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
@@ -691,7 +691,7 @@ genTxBodyContent era = do
     , Api.txMintValue
     , Api.txScriptValidity
     , Api.txGovernanceActions
-    , Api.txVotes
+    , Api.txVotingProcedures
     }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)

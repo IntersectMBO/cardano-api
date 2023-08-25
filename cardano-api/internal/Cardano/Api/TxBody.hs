@@ -1759,7 +1759,7 @@ data TxBodyContent build era =
        txMintValue         :: TxMintValue    build era,
        txScriptValidity    :: TxScriptValidity era,
        txGovernanceActions :: TxGovernanceActions era,
-       txVotes             :: Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
+       txVotingProcedures  :: Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
      }
      deriving (Eq, Show)
 
@@ -1783,7 +1783,7 @@ defaultTxBodyContent = TxBodyContent
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
     , txGovernanceActions = TxGovernanceActionsNone
-    , txVotes = Nothing
+    , txVotingProcedures = Nothing
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -2720,7 +2720,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
       , txAuxScripts
       , txScriptValidity    = scriptValidity
       , txGovernanceActions = fromLedgerProposalProcedure   sbe body
-      , txVotes             = fromLedgerVotingProcedures    sbe body
+      , txVotingProcedures             = fromLedgerVotingProcedures    sbe body
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
@@ -3427,7 +3427,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txMintValue         = TxMintNone
   , txScriptValidity    = TxScriptValidityNone
   , txGovernanceActions = TxGovernanceActionsNone
-  , txVotes             = Nothing
+  , txVotingProcedures             = Nothing
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
@@ -3955,7 +3955,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                              txCertificates,
                              txMintValue,
                              txScriptValidity,
-                             txVotes,
+                             txVotingProcedures,
                              txGovernanceActions
                            } = do
 
@@ -3976,7 +3976,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-           & L.votingProceduresTxBodyL    .~ unVotingProcedures @era (maybe mempty unFeatured txVotes)
+           & L.votingProceduresTxBodyL    .~ unVotingProcedures @era (maybe emptyVotingProcedures unFeatured txVotingProcedures)
            & L.proposalProceduresTxBodyL  .~ convGovActions txGovernanceActions
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
