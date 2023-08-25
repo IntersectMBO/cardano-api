@@ -17,8 +17,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Fees
+import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
-import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
@@ -41,20 +41,21 @@ constructBalancedTx
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> LedgerProtocolParameters era
   -> LedgerEpochInfo
   -> SystemStart
   -> Set PoolId       -- ^ The set of registered stake pools
   -> Map.Map StakeCredential Lovelace
   -> [ShelleyWitnessSigningKey]
   -> Either TxBodyErrorAutoBalance (Tx era)
-constructBalancedTx txbodcontent changeAddr mOverrideWits utxo pparams
+constructBalancedTx txbodcontent changeAddr mOverrideWits utxo lpp
                     ledgerEpochInfo systemStart stakePools
                     stakeDelegDeposits shelleyWitSigningKeys = do
+
   BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
          systemStart ledgerEpochInfo
-         pparams stakePools stakeDelegDeposits utxo txbodcontent
+         lpp stakePools stakeDelegDeposits utxo txbodcontent
          changeAddr mOverrideWits
 
   let keyWits = map (makeShelleyKeyWitness txbody) shelleyWitSigningKeys

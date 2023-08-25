@@ -38,6 +38,7 @@ module Cardano.Api.ProtocolParameters (
     unbundleLedgerShelleyBasedProtocolParams,
 
     -- * The updatable protocol parameters
+    LedgerProtocolParameters(..),
     EraBasedProtocolParametersUpdate(..),
     AlonzoOnwardsPParams(..),
     CommonProtocolParametersUpdate(..),

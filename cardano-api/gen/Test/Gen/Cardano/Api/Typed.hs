@@ -665,7 +665,9 @@ genTxBodyContent era = do
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts era
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
-  txProtocolParams <- BuildTxWith <$> Gen.maybe (genValidProtocolParameters era)
+  txProtocolParams <- BuildTxWith <$> case cardanoEraStyle era of
+                                        LegacyByronEra -> return Nothing
+                                        ShelleyBasedEra sbe -> Gen.maybe $ genValidProtocolParameters sbe
   txWithdrawals <- genTxWithdrawals era
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
@@ -935,7 +937,7 @@ genProtocolParameters era = do
   pure ProtocolParameters {..}
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
-genValidProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
+genValidProtocolParameters :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
 genValidProtocolParameters era =
   case era of
     ShelleyBasedEraShelley -> LedgerPParams era <$> Q.arbitrary
