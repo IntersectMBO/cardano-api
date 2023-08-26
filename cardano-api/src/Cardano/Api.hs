@@ -290,7 +290,6 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
-    TxGovernanceActions(..),
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),

@@ -228,7 +228,6 @@ import           Cardano.Ledger.Binary (Annotated (..), reAnnotate, recoverBytes
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Conway.Core as L
-import qualified Cardano.Ledger.Conway.Governance as Gov
 import           Cardano.Ledger.Core ()
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -1760,7 +1759,7 @@ data TxBodyContent build era =
        txUpdateProposal    :: TxUpdateProposal era,
        txMintValue         :: TxMintValue    build era,
        txScriptValidity    :: TxScriptValidity era,
-       txGovernanceActions :: TxGovernanceActions era,
+       txGovernanceActions :: Maybe (Featured ConwayEraOnwards era [Proposal era]),
        txVotingProcedures  :: Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
      }
      deriving (Eq, Show)
@@ -1784,7 +1783,7 @@ defaultTxBodyContent = TxBodyContent
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
-    , txGovernanceActions = TxGovernanceActionsNone
+    , txGovernanceActions = Nothing
     , txVotingProcedures = Nothing
     }
 
@@ -2718,45 +2717,34 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
       , txMetadata
       , txAuxScripts
       , txScriptValidity    = scriptValidity
-      , txGovernanceActions = fromLedgerProposalProcedure   sbe body
+      , txGovernanceActions = fromLedgerProposalProcedures  sbe body
       , txVotingProcedures  = fromLedgerVotingProcedures    sbe body
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
 
-
-fromLedgerProposalProcedure
+fromLedgerProposalProcedures
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> TxGovernanceActions era
-fromLedgerProposalProcedure sbe body =
-  case featureInShelleyBasedEra Nothing Just sbe of
-    Nothing -> TxGovernanceActionsNone
-    Just w  -> TxGovernanceActions w (getProposals w body)
-  where
-    getProposals :: ConwayEraOnwards era
-                 -> Ledger.TxBody (ShelleyLedgerEra era)
-                 -> [Proposal era]
-    getProposals w body_ =
-      conwayEraOnwardsConstraints w
-        $ fmap Proposal
-        $ toList
-        $ body_ ^. L.proposalProceduresTxBodyL
+  -> Maybe (Featured ConwayEraOnwards era [Proposal era])
+fromLedgerProposalProcedures sbe body =
+  inShelleyBasedEraFeatureMaybe sbe $ \w ->
+    conwayEraOnwardsConstraints w
+      $ Featured w
+      $ fmap Proposal
+      $ toList
+      $ body ^. L.proposalProceduresTxBodyL
 
 fromLedgerVotingProcedures :: ()
   => ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
 fromLedgerVotingProcedures sbe body =
-  featureInShelleyBasedEra
-    Nothing
-    (\w ->
-      conwayEraOnwardsConstraints w
-        $ Just
-        $ Featured w
-        $ VotingProcedures
-        $ body ^. L.votingProceduresTxBodyL)
-    sbe
+  inShelleyBasedEraFeatureMaybe sbe $ \w ->
+    conwayEraOnwardsConstraints w
+      $ Featured w
+      $ VotingProcedures
+      $ body ^. L.votingProceduresTxBodyL
 
 fromLedgerTxIns
   :: forall era.
@@ -3425,7 +3413,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txUpdateProposal    = TxUpdateProposalNone
   , txMintValue         = TxMintNone
   , txScriptValidity    = TxScriptValidityNone
-  , txGovernanceActions = TxGovernanceActionsNone
+  , txGovernanceActions = Nothing
   , txVotingProcedures  = Nothing
   }
 
@@ -3617,10 +3605,6 @@ convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
     TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
-
-convGovActions :: TxGovernanceActions era -> Seq.StrictSeq (Gov.ProposalProcedure (ShelleyLedgerEra era))
-convGovActions TxGovernanceActionsNone = Seq.empty
-convGovActions (TxGovernanceActions _ govActions) = Seq.fromList $ fmap unProposal govActions
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
@@ -3991,7 +3975,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
            & L.votingProceduresTxBodyL    .~ unVotingProcedures @era (maybe emptyVotingProcedures unFeatured txVotingProcedures)
-           & L.proposalProceduresTxBodyL  .~ convGovActions txGovernanceActions
+           & L.proposalProceduresTxBodyL  .~ Seq.fromList (fmap unProposal (maybe [] unFeatured txGovernanceActions))
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )
