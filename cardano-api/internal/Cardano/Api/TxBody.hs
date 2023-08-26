@@ -2720,7 +2720,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
       , txAuxScripts
       , txScriptValidity    = scriptValidity
       , txGovernanceActions = fromLedgerProposalProcedure   sbe body
-      , txVotingProcedures             = fromLedgerVotingProcedures    sbe body
+      , txVotingProcedures  = fromLedgerVotingProcedures    sbe body
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
@@ -3427,7 +3427,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txMintValue         = TxMintNone
   , txScriptValidity    = TxScriptValidityNone
   , txGovernanceActions = TxGovernanceActionsNone
-  , txVotingProcedures             = Nothing
+  , txVotingProcedures  = Nothing
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
