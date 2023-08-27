@@ -225,6 +225,7 @@ library gen
   hs-source-dirs:       gen
 
   exposed-modules:      Test.Gen.Cardano.Api
+                        Test.Gen.Cardano.Api.Era
                         Test.Gen.Cardano.Api.Metadata
                         Test.Gen.Cardano.Api.Typed
                         Test.Gen.Cardano.Crypto.Seed
@@ -251,6 +252,7 @@ library gen
                       , hedgehog >= 1.1
                       , hedgehog-extras
                       , hedgehog-quickcheck
+                      , QuickCheck
                       , tasty
                       , tasty-hedgehog
                       , text
