@@ -675,7 +675,7 @@ genTxBodyContent era = do
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
-  txGovernanceActions <- genMaybeFeaturedInEra genProposals era
+  txProposalProcedures <- genMaybeFeaturedInEra genProposals era
   txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
   pure $ TxBodyContent
     { Api.txIns
@@ -695,7 +695,7 @@ genTxBodyContent era = do
     , Api.txUpdateProposal
     , Api.txMintValue
     , Api.txScriptValidity
-    , Api.txGovernanceActions
+    , Api.txProposalProcedures
     , Api.txVotingProcedures
     }
 
