@@ -43,6 +43,8 @@ module Cardano.Api.ProtocolParameters (
     ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
     createEraBasedProtocolParamUpdate,
+    createLedgerProtocolParameters,
+    convertToLedgerProtocolParameters,
     createPParams,
 
     -- * Deprecated

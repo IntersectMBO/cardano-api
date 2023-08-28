@@ -199,6 +199,7 @@ import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
@@ -4353,12 +4354,9 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
 
-calculateExecutionUnitsLovelace :: ExecutionUnitPrices -> ExecutionUnits -> Maybe Lovelace
-calculateExecutionUnitsLovelace euPrices eUnits =
-  case toAlonzoPrices euPrices of
-    Left _ -> Nothing
-    Right prices ->
-      return . fromShelleyLovelace $ Alonzo.txscriptfee prices (toAlonzoExUnits eUnits)
+calculateExecutionUnitsLovelace :: Ledger.Prices -> ExecutionUnits -> Maybe Lovelace
+calculateExecutionUnitsLovelace prices eUnits =
+  return . fromShelleyLovelace $ Alonzo.txscriptfee prices (toAlonzoExUnits eUnits)
 
 -- ----------------------------------------------------------------------------
 -- Inline data

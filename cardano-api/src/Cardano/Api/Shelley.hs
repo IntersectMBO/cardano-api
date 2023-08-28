@@ -119,6 +119,8 @@ module Cardano.Api.Shelley
     ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
     createEraBasedProtocolParamUpdate,
+    convertToLedgerProtocolParameters,
+    createLedgerProtocolParameters,
 
     ProtocolParameters(..),
     checkProtocolParameters,

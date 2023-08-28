@@ -23,9 +23,9 @@ import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
+import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Query.Expr
-import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
@@ -48,6 +48,7 @@ data QueryConvenienceError
   | ByronEraNotSupported
   | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
   | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
+  deriving Show
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
 renderQueryConvenienceError (AcqFailure e) =
@@ -76,7 +77,7 @@ queryStateForBalancedTx :: ()
       ( Either
           QueryConvenienceError
           ( UTxO era
-          , Ledger.PParams (ShelleyLedgerEra era)
+          , LedgerProtocolParameters era
           , EraHistory CardanoMode
           , SystemStart
           , Set PoolId
@@ -117,7 +118,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch)
 
-  pure (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
+  pure (utxo, createLedgerProtocolParameters sbe pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
 -- | Query the node to determine which era it is in.
 determineEra
