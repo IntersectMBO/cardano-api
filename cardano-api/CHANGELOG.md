@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 8.16.2.0
+
+- New functions `emptyVotingProcedures`, `singletonVotingProcedures` and `mergeVotingProcedures`
+  (feature, compatible)
+  [PR 208](https://github.com/input-output-hk/cardano-api/pull/208)
+
+- Expose ledger lenses for governance types: `drepExpiryL`, `drepAnchorL`, `drepDepositL`, `csCommitteeCredsL`
+  (feature, compatible)
+  [PR 206](https://github.com/input-output-hk/cardano-api/pull/206)
+
+- New `makeStakeAddressAndDRepDelegationCertificate` function
+  (feature, compatible)
+  [PR 207](https://github.com/input-output-hk/cardano-api/pull/207)
+
+- Use injective type families to improve type inference
+  (compatible)
+  [PR 210](https://github.com/input-output-hk/cardano-api/pull/210)
+
 ## 8.16.1.0
 
 - Add `VotingProcedures` type.
