@@ -32,12 +32,9 @@ module Cardano.Api.ProtocolParameters (
     ProtocolParameters(..),
     checkProtocolParameters,
     EpochNo,
-    BundledProtocolParameters(..),
-    bundleProtocolParams,
-    unbundleProtocolParams,
-    unbundleLedgerShelleyBasedProtocolParams,
 
     -- * The updatable protocol parameters
+    LedgerProtocolParameters(..),
     EraBasedProtocolParametersUpdate(..),
     AlonzoOnwardsPParams(..),
     CommonProtocolParametersUpdate(..),
@@ -46,6 +43,8 @@ module Cardano.Api.ProtocolParameters (
     ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
     createEraBasedProtocolParamUpdate,
+    createLedgerProtocolParameters,
+    convertToLedgerProtocolParameters,
     createPParams,
 
     -- * Deprecated
@@ -151,7 +150,33 @@ import           Text.PrettyBy.Default (display)
 -- -----------------------------------------------------------------------------
 -- Era based ledger protocol parameters
 --
+data LedgerProtocolParameters era where
+  LedgerPParams
+    :: EraPParams (ShelleyLedgerEra era)
+    => ShelleyBasedEra era
+    -> (Ledger.PParams (ShelleyLedgerEra era))
+    -> LedgerProtocolParameters era
 
+
+deriving instance Show (LedgerProtocolParameters era )
+deriving instance Eq (LedgerProtocolParameters era)
+
+createLedgerProtocolParameters
+  :: ShelleyBasedEra era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> LedgerProtocolParameters era
+createLedgerProtocolParameters sbe pp =
+  shelleyBasedEraConstraints sbe $ LedgerPParams sbe pp
+
+
+-- TODO: Conway era - remove me when we begin relying on the JSON
+-- instances of Ledger.PParams
+convertToLedgerProtocolParameters
+  :: ShelleyBasedEra era
+  -> ProtocolParameters
+  -> Either ProtocolParametersConversionError (LedgerProtocolParameters era)
+convertToLedgerProtocolParameters sbe pp =
+  createLedgerProtocolParameters sbe <$> toLedgerPParams sbe pp
 
 createPParams
   :: EraPParams (ShelleyLedgerEra era)
@@ -1541,44 +1566,6 @@ fromConwayPParamsUpdate :: BabbageEraPParams ledgerera
                         -> ProtocolParametersUpdate
 fromConwayPParamsUpdate = fromBabbagePParamsUpdate
 
--- | Bundle cardano-api representation and ledger representation of protocol parameters together so
--- they can be computed once and passed around rather than re-computed unecessarily.
---
--- The consructor arguments are intentionally lazy so that the values are not computed if not used
--- (which may be the case for some code paths).
-data BundledProtocolParameters era where
-  BundleAsByronProtocolParameters
-    :: ProtocolParameters
-    -> BundledProtocolParameters ByronEra
-  BundleAsShelleyBasedProtocolParameters
-    :: ShelleyBasedEra era
-    -> ProtocolParameters
-    -> Ledger.PParams (ShelleyLedgerEra era)
-    -> BundledProtocolParameters era
-
-bundleProtocolParams :: CardanoEra era
-                     -> ProtocolParameters
-                     -> Either ProtocolParametersConversionError (BundledProtocolParameters era)
-bundleProtocolParams cEra pp = case cardanoEraStyle cEra of
-  LegacyByronEra -> pure $ BundleAsByronProtocolParameters pp
-  ShelleyBasedEra sbe -> BundleAsShelleyBasedProtocolParameters sbe pp <$> toLedgerPParams sbe pp
-
-unbundleLedgerShelleyBasedProtocolParams
-  :: ShelleyBasedEra era
-  -> BundledProtocolParameters era
-  -> Ledger.PParams (ShelleyLedgerEra era)
-unbundleLedgerShelleyBasedProtocolParams = \case
-  ShelleyBasedEraShelley -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
-  ShelleyBasedEraAllegra -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
-  ShelleyBasedEraMary -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
-  ShelleyBasedEraAlonzo -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
-  ShelleyBasedEraBabbage -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
-  ShelleyBasedEraConway -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
-
-unbundleProtocolParams :: BundledProtocolParameters era -> ProtocolParameters
-unbundleProtocolParams = \case
-  BundleAsByronProtocolParameters pp -> pp
-  BundleAsShelleyBasedProtocolParameters _ pp _ -> pp
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol parameters to ledger types

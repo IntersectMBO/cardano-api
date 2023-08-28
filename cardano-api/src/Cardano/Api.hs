@@ -832,9 +832,6 @@ module Cardano.Api (
     NetworkMagic(..),
 
     -- * Protocol parameters
-    BundledProtocolParameters(..),
-    bundleProtocolParams,
-    unbundleProtocolParams,
     ProtocolParametersConversionError(..),
 
     -- ** Conversions
@@ -856,6 +853,8 @@ module Cardano.Api (
     SocketPath,
 
     NodeToClientVersion(..),
+    -- ** Queries
+    executeQueryAnyMode,
 
     -- ** Monadic queries
     LocalStateQueryExpr,

@@ -63,6 +63,7 @@ module Cardano.Api.ReexposeLedger
 
   -- Alonzo
   , CoinPerWord (..)
+  , Prices(..)
 
   -- Base
   , boundRational
@@ -89,6 +90,7 @@ module Cardano.Api.ReexposeLedger
 
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
+import           Cardano.Ledger.Alonzo.Scripts (Prices (..))
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert, pattern DelegTxCert,
                    pattern RegDRepTxCert, pattern RegDepositDelegTxCert, pattern RegDepositTxCert,
                    pattern RegPoolTxCert, pattern RegTxCert, pattern ResignCommitteeColdTxCert,

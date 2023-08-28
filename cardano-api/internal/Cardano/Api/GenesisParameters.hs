@@ -16,13 +16,11 @@ module Cardano.Api.GenesisParameters (
 
   ) where
 
-import           Cardano.Api.Eras (ShelleyBasedEra (ShelleyBasedEraShelley))
+import           Cardano.Api.Eras
 import           Cardano.Api.NetworkId
-import           Cardano.Api.ProtocolParameters
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Value
 
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import           Cardano.Slotting.Slot (EpochSize (..))
 
@@ -32,8 +30,8 @@ import           Data.Time (NominalDiffTime, UTCTime)
 -- ----------------------------------------------------------------------------
 -- Genesis parameters
 --
-
-data GenesisParameters =
+-- TODO: Conway era - remove GenesisParameters and use ledger types directly
+data GenesisParameters era =
      GenesisParameters {
 
        -- | The reference time the system started. The time of slot zero.
@@ -92,7 +90,7 @@ data GenesisParameters =
 
        -- | The initial values of the updateable 'ProtocolParameters'.
        --
-       protocolInitialUpdateableProtocolParameters :: ProtocolParameters
+       protocolInitialUpdateableProtocolParameters :: Ledger.PParams (ShelleyLedgerEra era)
      }
 
 
@@ -100,9 +98,9 @@ data GenesisParameters =
 -- Conversion functions
 --
 
-fromShelleyGenesis :: Shelley.ShelleyGenesis Ledger.StandardCrypto -> GenesisParameters
+fromShelleyGenesis :: Shelley.ShelleyGenesis Ledger.StandardCrypto -> GenesisParameters ShelleyEra
 fromShelleyGenesis
-    Shelley.ShelleyGenesis {
+    sg@Shelley.ShelleyGenesis {
       Shelley.sgSystemStart
     , Shelley.sgNetworkMagic
     , Shelley.sgNetworkId
@@ -114,7 +112,6 @@ fromShelleyGenesis
     , Shelley.sgSlotLength
     , Shelley.sgUpdateQuorum
     , Shelley.sgMaxLovelaceSupply
-    , Shelley.sgProtocolParams
     , Shelley.sgGenDelegs    = _  -- unused, might be of interest
     , Shelley.sgInitialFunds = _  -- unused, not retained by the node
     , Shelley.sgStaking      = _  -- unused, not retained by the node
@@ -133,7 +130,5 @@ fromShelleyGenesis
     , protocolParamUpdateQuorum           = fromIntegral sgUpdateQuorum
     , protocolParamMaxLovelaceSupply      = Lovelace
                                               (fromIntegral sgMaxLovelaceSupply)
-    , protocolInitialUpdateableProtocolParameters = fromLedgerPParams
-                                                      ShelleyBasedEraShelley
-                                                      sgProtocolParams
+    , protocolInitialUpdateableProtocolParameters = Shelley.sgProtocolParams sg
     }

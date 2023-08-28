@@ -45,6 +45,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
@@ -105,7 +106,7 @@ queryEraHistory =
 queryGenesisParameters :: ()
   => EraInMode ShelleyEra mode
   -> ShelleyBasedEra ShelleyEra
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch GenesisParameters))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (GenesisParameters ShelleyEra)))
 queryGenesisParameters eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryGenesisParameters
 
@@ -128,7 +129,7 @@ queryPoolState eraInMode sbe mPoolIds =
 queryPparams :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch ProtocolParameters))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.PParams (ShelleyLedgerEra era))))
 queryPparams eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 {-# DEPRECATED queryPparams "Use queryProtocolParameters instead" #-}
@@ -136,7 +137,7 @@ queryPparams eraInMode sbe =
 queryProtocolParameters :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch ProtocolParameters))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Ledger.PParams (ShelleyLedgerEra era))))
 queryProtocolParameters eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 

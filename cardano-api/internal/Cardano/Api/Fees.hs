@@ -470,7 +470,7 @@ instance Error TransactionValidityError where
 evaluateTransactionExecutionUnits :: forall era. ()
   => SystemStart
   -> LedgerEpochInfo
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> LedgerProtocolParameters era
   -> UTxO era
   -> TxBody era
   -> Either TransactionValidityError
@@ -490,12 +490,12 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
   => ShelleyBasedEra era
   -> SystemStart
   -> LedgerEpochInfo
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> LedgerProtocolParameters era
   -> UTxO era
   -> L.Tx (ShelleyLedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx' =
+evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerPParams _ pp) utxo tx' =
         case sbe of
           ShelleyBasedEraShelley -> evalPreAlonzo
           ShelleyBasedEraAllegra -> evalPreAlonzo
@@ -536,7 +536,6 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx' =
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     evalBabbage :: ShelleyLedgerEra era ~ L.Babbage
-                => Ledger.EraPParams L.Babbage
                 => ShelleyBasedEra era
                 -> Ledger.Tx L.Babbage
                 -> Either TransactionValidityError
@@ -555,7 +554,6 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx' =
     evalConway :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
                => ledgerera ~ Conway.ConwayEra Ledger.StandardCrypto
-               => Ledger.AlonzoEraPParams ledgerera
                => ShelleyBasedEra era
                -> Ledger.Tx ledgerera
                -> Either TransactionValidityError
@@ -900,7 +898,7 @@ makeTransactionBodyAutoBalance
      IsShelleyBasedEra era
   => SystemStart
   -> LedgerEpochInfo
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> LedgerProtocolParameters era
   -> Set PoolId       -- ^ The set of registered stake pools, that are being
                       --   unregistered in this transaction.
   -> Map StakeCredential Lovelace
@@ -911,7 +909,7 @@ makeTransactionBodyAutoBalance
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
-makeTransactionBodyAutoBalance systemstart history pp poolids stakeDelegDeposits
+makeTransactionBodyAutoBalance systemstart history lpp@(LedgerPParams _ pp) poolids stakeDelegDeposits
                             utxo txbodycontent changeaddr mnkeys = do
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
@@ -929,7 +927,7 @@ makeTransactionBodyAutoBalance systemstart history pp poolids stakeDelegDeposits
     exUnitsMap <- first TxBodyErrorValidityInterval $
                     evaluateTransactionExecutionUnits
                       systemstart history
-                      pp
+                      lpp
                       utxo
                       txbody0
 

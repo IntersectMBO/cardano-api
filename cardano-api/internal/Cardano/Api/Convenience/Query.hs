@@ -8,6 +8,7 @@ module Cardano.Api.Convenience.Query (
     determineEra,
     -- * Simplest query related
     executeQueryCardanoMode,
+    executeQueryAnyMode,
 
     queryStateForBalancedTx,
     renderQueryConvenienceError,
@@ -47,6 +48,7 @@ data QueryConvenienceError
   | ByronEraNotSupported
   | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
   | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
+  deriving Show
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
 renderQueryConvenienceError (AcqFailure e) =
@@ -75,7 +77,7 @@ queryStateForBalancedTx :: ()
       ( Either
           QueryConvenienceError
           ( UTxO era
-          , ProtocolParameters
+          , LedgerProtocolParameters era
           , EraHistory CardanoMode
           , SystemStart
           , Set PoolId
@@ -116,7 +118,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch)
 
-  pure (utxo, pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
+  pure (utxo, createLedgerProtocolParameters sbe pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
 -- | Query the node to determine which era it is in.
 determineEra
