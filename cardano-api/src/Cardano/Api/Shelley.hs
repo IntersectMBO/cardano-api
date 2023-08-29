@@ -110,7 +110,7 @@ module Cardano.Api.Shelley
     fromShelleyMetadatum,
 
     -- * Protocol parameters
-    LedgerProtocolParameters(..),
+    LedgerProtocolParameters,
     EraBasedProtocolParametersUpdate(..),
     CommonProtocolParametersUpdate(..),
     AlonzoOnwardsPParams(..),
@@ -120,7 +120,6 @@ module Cardano.Api.Shelley
     IntroducedInBabbagePParams(..),
     createEraBasedProtocolParamUpdate,
     convertToLedgerProtocolParameters,
-    createLedgerProtocolParameters,
 
     ProtocolParameters(..),
     checkProtocolParameters,

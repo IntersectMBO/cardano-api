@@ -939,12 +939,12 @@ genProtocolParameters era = do
 genValidProtocolParameters :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
 genValidProtocolParameters era =
   case era of
-    ShelleyBasedEraShelley -> LedgerPParams era <$> Q.arbitrary
-    ShelleyBasedEraAllegra -> LedgerPParams era <$> Q.arbitrary
-    ShelleyBasedEraMary    -> LedgerPParams era <$> Q.arbitrary
-    ShelleyBasedEraAlonzo  -> LedgerPParams era <$> Q.arbitrary
-    ShelleyBasedEraBabbage -> LedgerPParams era <$> Q.arbitrary
-    ShelleyBasedEraConway  -> LedgerPParams era <$> Q.arbitrary
+    ShelleyBasedEraShelley -> Q.arbitrary
+    ShelleyBasedEraAllegra -> Q.arbitrary
+    ShelleyBasedEraMary    -> Q.arbitrary
+    ShelleyBasedEraAlonzo  -> Q.arbitrary
+    ShelleyBasedEraBabbage -> Q.arbitrary
+    ShelleyBasedEraConway  -> Q.arbitrary
 
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate

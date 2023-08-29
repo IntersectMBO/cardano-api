@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
@@ -260,6 +261,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_, toList)
 import           Data.Function (on)
 import           Data.Functor (($>))
+import           Data.Functor.Identity
 import           Data.List (intercalate, sortBy)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
@@ -1763,7 +1765,9 @@ data TxBodyContent build era =
        txGovernanceActions :: TxGovernanceActions era,
        txVotingProcedures  :: Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
      }
-     deriving (Eq, Show)
+
+deriving instance (IsShelleyBasedEra era, Eq (Ledger.PParamsHKD Identity (ShelleyLedgerEra era))) => Eq (TxBodyContent build era)
+deriving instance (IsShelleyBasedEra era, Show (Ledger.PParamsHKD Identity (ShelleyLedgerEra era))) => Show (TxBodyContent build era)
 
 defaultTxBodyContent :: IsCardanoEra era => TxBodyContent BuildTx era
 defaultTxBodyContent = TxBodyContent
@@ -3570,16 +3574,17 @@ convScriptData era txOuts scriptWitnesses =
       in TxBodyScriptData scriptDataInEra datums redeemers
 
 convPParamsToScriptIntegrityHash
-  :: L.AlonzoEraPParams (ShelleyLedgerEra era)
+  :: forall era. (IsShelleyBasedEra era, L.AlonzoEraPParams (ShelleyLedgerEra era))
   => BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
   -> Alonzo.Redeemers (ShelleyLedgerEra era)
   -> Alonzo.TxDats (ShelleyLedgerEra era)
   -> Set Alonzo.Language
   -> Either TxBodyError (StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era))))
 convPParamsToScriptIntegrityHash txProtocolParams redeemers datums languages = do
+  let sbe = shelleyBasedEra @era
   lang <- case txProtocolParams of
                BuildTxWith Nothing -> return Nothing
-               BuildTxWith (Just (LedgerPParams sbe pp)) ->
+               BuildTxWith (Just pp) ->
                  case sbe of
                    ShelleyBasedEraShelley ->
                      return Nothing
