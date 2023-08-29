@@ -118,7 +118,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch)
 
-  pure (utxo, createLedgerProtocolParameters sbe pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
+  pure (utxo, LedgerProtocolParameters pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
 
 -- | Query the node to determine which era it is in.
 determineEra

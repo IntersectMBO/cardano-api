@@ -495,7 +495,7 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
   -> L.Tx (ShelleyLedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerPParams _ pp) utxo tx' =
+evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx' =
         case sbe of
           ShelleyBasedEraShelley -> evalPreAlonzo
           ShelleyBasedEraAllegra -> evalPreAlonzo
@@ -909,7 +909,7 @@ makeTransactionBodyAutoBalance
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
-makeTransactionBodyAutoBalance systemstart history lpp@(LedgerPParams _ pp) poolids stakeDelegDeposits
+makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters pp) poolids stakeDelegDeposits
                             utxo txbodycontent changeaddr mnkeys = do
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units

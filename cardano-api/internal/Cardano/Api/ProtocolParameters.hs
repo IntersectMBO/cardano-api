@@ -13,6 +13,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -43,7 +44,6 @@ module Cardano.Api.ProtocolParameters (
     ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
     createEraBasedProtocolParamUpdate,
-    createLedgerProtocolParameters,
     convertToLedgerProtocolParameters,
     createPParams,
 
@@ -150,24 +150,19 @@ import           Text.PrettyBy.Default (display)
 -- -----------------------------------------------------------------------------
 -- Era based ledger protocol parameters
 --
-data LedgerProtocolParameters era where
-  LedgerPParams
-    :: EraPParams (ShelleyLedgerEra era)
-    => ShelleyBasedEra era
-    -> (Ledger.PParams (ShelleyLedgerEra era))
-    -> LedgerProtocolParameters era
+newtype LedgerProtocolParameters era = LedgerProtocolParameters
+  { unLedgerProtocolParameters :: Ledger.PParams (ShelleyLedgerEra era)
+  }
 
+instance IsShelleyBasedEra era => Show (LedgerProtocolParameters era) where
+  show (LedgerProtocolParameters pp) =
+    shelleyBasedEraConstraints (shelleyBasedEra @era)
+      $ show pp
 
-deriving instance Show (LedgerProtocolParameters era )
-deriving instance Eq (LedgerProtocolParameters era)
-
-createLedgerProtocolParameters
-  :: ShelleyBasedEra era
-  -> Ledger.PParams (ShelleyLedgerEra era)
-  -> LedgerProtocolParameters era
-createLedgerProtocolParameters sbe pp =
-  shelleyBasedEraConstraints sbe $ LedgerPParams sbe pp
-
+instance IsShelleyBasedEra era => Eq (LedgerProtocolParameters era) where
+  LedgerProtocolParameters a == LedgerProtocolParameters b =
+    shelleyBasedEraConstraints (shelleyBasedEra @era)
+      $ a == b
 
 -- TODO: Conway era - remove me when we begin relying on the JSON
 -- instances of Ledger.PParams
@@ -176,7 +171,7 @@ convertToLedgerProtocolParameters
   -> ProtocolParameters
   -> Either ProtocolParametersConversionError (LedgerProtocolParameters era)
 convertToLedgerProtocolParameters sbe pp =
-  createLedgerProtocolParameters sbe <$> toLedgerPParams sbe pp
+  LedgerProtocolParameters <$> toLedgerPParams sbe pp
 
 createPParams
   :: EraPParams (ShelleyLedgerEra era)

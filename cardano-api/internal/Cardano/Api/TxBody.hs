@@ -2443,6 +2443,7 @@ createTransactionBody sbe txBodyContent =
             TxBodyNoScriptData -> pure SNothing
             TxBodyScriptData _ datums redeemers ->
               convPParamsToScriptIntegrityHash
+                sbe
                 apiProtocolParameters
                 redeemers
                 datums
@@ -2474,6 +2475,7 @@ createTransactionBody sbe txBodyContent =
             TxBodyScriptData _sDataSupported datums redeemers ->
               withShelleyBasedEraConstraintsForLedger sbe
                 $ convPParamsToScriptIntegrityHash
+                    sbe
                     apiProtocolParameters
                     redeemers
                     datums
@@ -2507,6 +2509,7 @@ createTransactionBody sbe txBodyContent =
             TxBodyScriptData _sDataSupported datums redeemers ->
               withShelleyBasedEraConstraintsForLedger sbe
                 $ convPParamsToScriptIntegrityHash
+                    sbe
                     apiProtocolParameters
                     redeemers
                     datums
@@ -3569,17 +3572,18 @@ convScriptData era txOuts scriptWitnesses =
                   ]
       in TxBodyScriptData scriptDataInEra datums redeemers
 
-convPParamsToScriptIntegrityHash
-  :: L.AlonzoEraPParams (ShelleyLedgerEra era)
+convPParamsToScriptIntegrityHash :: ()
+  => ShelleyBasedEra era
+  -> L.AlonzoEraPParams (ShelleyLedgerEra era)
   => BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
   -> Alonzo.Redeemers (ShelleyLedgerEra era)
   -> Alonzo.TxDats (ShelleyLedgerEra era)
   -> Set Alonzo.Language
   -> Either TxBodyError (StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era))))
-convPParamsToScriptIntegrityHash txProtocolParams redeemers datums languages = do
+convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages = do
   lang <- case txProtocolParams of
                BuildTxWith Nothing -> return Nothing
-               BuildTxWith (Just (LedgerPParams sbe pp)) ->
+               BuildTxWith (Just (LedgerProtocolParameters pp)) ->
                  case sbe of
                    ShelleyBasedEraShelley ->
                      return Nothing
@@ -3788,7 +3792,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
 
     validateTxBodyContent sbe txbodycontent
     update <- convTxUpdateProposal sbe txUpdateProposal
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash txProtocolParams redeemers datums languages
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
@@ -3874,7 +3878,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
 
     validateTxBodyContent sbe txbodycontent
     update <- convTxUpdateProposal sbe txUpdateProposal
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash txProtocolParams redeemers datums languages
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
@@ -3974,7 +3978,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                            } = do
 
     validateTxBodyContent sbe txbodycontent
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash txProtocolParams redeemers datums languages
+    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
