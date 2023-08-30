@@ -62,7 +62,8 @@ import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
 import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
-import           Data.SOP.Strict (K (K), NS (S, Z))
+import           Data.SOP (K (K))
+import           Data.SOP.Strict (NS (S, Z))
 import           Data.Text (Text)
 
 -- ----------------------------------------------------------------------------

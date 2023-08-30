@@ -175,7 +175,9 @@ library internal
                       , scientific
                       , serialise
                       , small-steps ^>= 1.0
+                      , sop-core
                       , stm
+                      , strict-sop-core
                       , text >= 2.0
                       , time
                       , transformers
