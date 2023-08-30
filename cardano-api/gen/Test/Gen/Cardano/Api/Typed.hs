@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -121,6 +121,10 @@ module Test.Gen.Cardano.Api.Typed
 
   , genGovernancePoll
   , genGovernancePollAnswer
+
+  , genProposals
+  , genProposal
+  , genVotingProcedures
   ) where
 
 import           Cardano.Api hiding (txIns)
@@ -137,23 +141,22 @@ import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import qualified Cardano.Crypto.Seed as Crypto
 import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 
 import           Control.Applicative (Alternative (..), optional)
-import           Control.Monad
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
-import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
+import           Test.Gen.Cardano.Api.Era
 import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
@@ -672,7 +675,7 @@ genTxBodyContent era = do
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
   txScriptValidity <- genTxScriptValidity era
-  txGovernanceActions <- genTxGovernanceActions era
+  txProposalProcedures <- genMaybeFeaturedInEra genProposals era
   txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
   pure $ TxBodyContent
     { Api.txIns
@@ -692,7 +695,7 @@ genTxBodyContent era = do
     , Api.txUpdateProposal
     , Api.txMintValue
     , Api.txScriptValidity
-    , Api.txGovernanceActions
+    , Api.txProposalProcedures
     , Api.txVotingProcedures
     }
 
@@ -1089,17 +1092,15 @@ genGovernancePollAnswer =
    genGovernancePollHash =
      GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
 
-genTxGovernanceActions :: CardanoEra era -> Gen (TxGovernanceActions era)
-genTxGovernanceActions era = fromMaybe (pure TxGovernanceActionsNone) $ do
-  sbe <- join $ requireShelleyBasedEra era
-  supported <- featureInShelleyBasedEra Nothing Just sbe
-  let proposals = Gen.list (Range.constant 0 10) $ genProposal supported
-  pure $ TxGovernanceActions supported <$> proposals
-  where
-    genProposal :: ConwayEraOnwards era
-                -> Gen (Proposal era)
-    genProposal = \case
-      ConwayEraOnwardsConway -> fmap Proposal Q.arbitrary
+genProposals :: forall era. ConwayEraOnwards era -> Gen [Proposal era]
+genProposals w =
+  conwayEraOnwardsTestConstraints w
+    $ Gen.list (Range.constant 1 10)
+    $ genProposal w
+
+genProposal :: ConwayEraOnwards era -> Gen (Proposal era)
+genProposal w =
+  conwayEraOnwardsTestConstraints w $ fmap Proposal Q.arbitrary
 
 genVotingProcedures :: ConwayEraOnwards era -> Gen (VotingProcedures era)
 genVotingProcedures w =

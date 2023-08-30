@@ -29,9 +29,14 @@ module Cardano.Api (
     -- * Feature support
     FeatureInEra(..),
     inEraFeature,
+    inEraFeatureMaybe,
     maybeFeatureInEra,
+
     featureInShelleyBasedEra,
     inShelleyBasedEraFeature,
+    inShelleyBasedEraFeatureMaybe,
+    maybeFeatureInShelleyBasedEra,
+
     Featured(..),
     asFeaturedInEra,
     asFeaturedInShelleyBasedEra,
@@ -285,7 +290,6 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
-    TxGovernanceActions(..),
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),

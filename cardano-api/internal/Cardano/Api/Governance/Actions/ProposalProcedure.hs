@@ -5,7 +5,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -15,7 +14,6 @@ module Cardano.Api.Governance.Actions.ProposalProcedure where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
@@ -42,21 +40,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import           Data.Word
-
--- | A representation of whether the era supports tx governance actions.
---
--- The Conway and subsequent eras support governance actions.
---
-data TxGovernanceActions era where
-  TxGovernanceActionsNone :: TxGovernanceActions era
-
-  TxGovernanceActions
-    :: ConwayEraOnwards era
-    -> [Proposal era]
-    -> TxGovernanceActions era
-
-deriving instance IsShelleyBasedEra era => Show (TxGovernanceActions era)
-deriving instance IsShelleyBasedEra era => Eq (TxGovernanceActions era)
 
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 
