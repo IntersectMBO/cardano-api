@@ -1,5 +1,27 @@
 # Changelog for cardano-api
 
+## 8.18.0.0
+
+- Fix exception when executing drep queries
+  (bugfix)
+  [PR 221](https://github.com/input-output-hk/cardano-api/pull/221)
+
+- Use `newtype` instead of `GADT` for `LedgerProtocolParameters`
+  (breaking, improvement)
+  [PR 218](https://github.com/input-output-hk/cardano-api/pull/218)
+
+- Changes:
+  * Deleted `TxGovernanceActions`
+  * New generators: `genProposals`, `genProposal`, `genVotingProcedures`
+  * New test constraints functions: `shelleyBasedEraTestConstraints`, `shelleyToBabbageEraTestConstraints`, `conwayEraOnwardsTestConstraints`
+  * New era functions: `inEraFeatureMaybe`, `inShelleyBasedEraFeatureMaybe`, `maybeFeatureInShelleyBasedEra`
+  (breaking, improvement)
+  [PR 217](https://github.com/input-output-hk/cardano-api/pull/217)
+
+- Replace ProtocolParameters usage with ledger's PParams
+  (breaking)
+  [PR 214](https://github.com/input-output-hk/cardano-api/pull/214)
+
 ## 8.17.0.0
 
 - Delete `TxVotes` and `VotingEntry` and use `VotingProcedures` instead
