@@ -675,17 +675,16 @@ toConsensusQueryShelleyBased erainmode (QueryStakeDelegDeposits creds) =
     creds' = Set.map toShelleyStakeCredential creds
 
 toConsensusQueryShelleyBased erainmode QueryGovState =
-  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.GetGovState))
+  Some (consensusQueryInEraInMode erainmode Consensus.GetGovState)
 
 toConsensusQueryShelleyBased erainmode (QueryDRepState creds) =
-  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetDRepState creds)))
-
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetDRepState creds))
 
 toConsensusQueryShelleyBased erainmode (QueryDRepStakeDistr dreps) =
-  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR $ Consensus.GetDRepStakeDistr dreps))
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetDRepStakeDistr dreps))
 
 toConsensusQueryShelleyBased erainmode QueryCommitteeState =
-  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.GetCommitteeState))
+  Some (consensusQueryInEraInMode erainmode Consensus.GetCommitteeState)
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -859,7 +858,7 @@ fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
 fromConsensusQueryResultShelleyBased _ QueryConstitution q' mConstitution =
     case q' of
       Consensus.GetConstitution -> mConstitution
-      _                    -> fromConsensusQueryResultMismatch
+      _                         -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
     case q' of
