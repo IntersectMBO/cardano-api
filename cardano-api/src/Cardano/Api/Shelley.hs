@@ -120,7 +120,6 @@ module Cardano.Api.Shelley
     IntroducedInBabbagePParams(..),
     createEraBasedProtocolParamUpdate,
     convertToLedgerProtocolParameters,
-    createLedgerProtocolParameters,
 
     ProtocolParameters(..),
     checkProtocolParameters,

@@ -1542,20 +1542,8 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
-
-  case sbe of
-    ShelleyBasedEraShelley  ->
-      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraAllegra  ->
-      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraMary     ->
-      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraAlonzo   ->
-      isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraBabbage  ->
-      isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
-    ShelleyBasedEraConway   ->
-      isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
+  shelleyBasedEraConstraints sbe
+    $ isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f
  where
   globals = shelleyBasedEraConstraints sbe
               $ constructGlobals sGen eInfo $ pp ^. Core.ppProtocolVersionL
