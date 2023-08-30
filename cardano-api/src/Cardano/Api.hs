@@ -164,6 +164,11 @@ module Cardano.Api (
     StakeKey,
     StakeExtendedKey,
 
+    -- * DRep addresses
+    DRepCredential,
+    fromShelleyDRepCredential,
+    toShelleyDRepCredential,
+
     -- * Currency values
     -- ** Ada \/ Lovelace
     Lovelace(..),

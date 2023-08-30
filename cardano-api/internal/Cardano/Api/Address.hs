@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -66,6 +67,11 @@ module Cardano.Api.Address (
     fromShelleyStakeCredential,
     fromShelleyStakeReference,
 
+    -- * DRep addresses
+    DRepCredential(..),
+    toShelleyDRepCredential,
+    fromShelleyDRepCredential,
+
     -- * Serialising addresses
     SerialiseAddress(..),
 
@@ -95,6 +101,7 @@ import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Keys as Shelley
 import qualified PlutusLedgerApi.V1 as Plutus
 
 import           Control.Applicative ((<|>))
@@ -551,6 +558,17 @@ instance ToJSON StakeCredential where
         StakeCredentialByScript scriptHash ->
           ["stakingScriptHash" .= serialiseToRawBytesHexText scriptHash]
 
+data DRepCredential
+    = DRepCredentialByKey    (Hash DRepKey)
+    | DRepCredentialByScript  ScriptHash
+  deriving (Eq, Ord, Show)
+
+instance ToJSON DRepCredential where
+    toJSON = toJSON . toShelleyDRepCredential
+
+instance FromJSON DRepCredential where
+    parseJSON = fmap fromShelleyDRepCredential . parseJSON
+
 data StakeAddressReference
        = StakeAddressByValue   StakeCredential
        | StakeAddressByPointer StakeAddressPointer
@@ -701,6 +719,23 @@ fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
     StakeCredentialByKey (StakeKeyHash kh)
 fromShelleyStakeCredential (Shelley.ScriptHashObj sh) =
     StakeCredentialByScript (fromShelleyScriptHash sh)
+
+fromShelleyDRepCredential
+  :: Shelley.Credential 'Shelley.DRepRole StandardCrypto
+  -> DRepCredential
+fromShelleyDRepCredential (Shelley.KeyHashObj kh) =
+    DRepCredentialByKey (DRepKeyHash kh)
+fromShelleyDRepCredential (Shelley.ScriptHashObj sh) =
+    DRepCredentialByScript (fromShelleyScriptHash sh)
+
+toShelleyDRepCredential 
+  :: DRepCredential
+  -> Shelley.Credential 'Shelley.DRepRole StandardCrypto
+toShelleyDRepCredential (DRepCredentialByKey (DRepKeyHash kh)) =
+    Shelley.KeyHashObj kh
+toShelleyDRepCredential (DRepCredentialByScript sh) =
+    Shelley.ScriptHashObj (toShelleyScriptHash sh)
+
 
 fromShelleyPaymentCredential :: Shelley.PaymentCredential StandardCrypto
                              -> PaymentCredential

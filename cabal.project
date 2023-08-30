@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-08-06T23:58:58Z
-  , cardano-haskell-packages 2023-08-21T16:55:07Z
+  , cardano-haskell-packages 2023-09-05T08:50:43Z
 
 packages:
     cardano-api
@@ -42,3 +42,15 @@ write-ghc-environment-files: always
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: a7bd270b157f7146db7fd2ea1a43cebe29fbfd64
+  --sha256: sha256-flWe2VnvvSjC/A47hSZiO7cp4uce46mZz0oCScBvXf8=
+  subdir:
+    sop-extras
+    strict-sop-core
+    ouroboros-consensus-cardano
+    ouroboros-consensus
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol

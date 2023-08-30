@@ -99,7 +99,6 @@ import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.CertState as L
-import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
@@ -141,7 +140,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.SOP.Strict (SListI)
+import           Data.SOP.Constraint (SListI)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
@@ -305,8 +304,8 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (L.GovState (ShelleyLedgerEra era))
 
   QueryDRepState
-    :: Set (L.Credential Shelley.DRepRole StandardCrypto)
-    -> QueryInShelleyBasedEra era (Map (L.Credential Shelley.DRepRole StandardCrypto) (L.DRepState StandardCrypto))
+    :: Set DRepCredential
+    -> QueryInShelleyBasedEra era (Map DRepCredential (L.DRepState StandardCrypto))
 
   QueryDRepStakeDistr
     :: Set (Core.DRep StandardCrypto)
@@ -679,7 +678,9 @@ toConsensusQueryShelleyBased erainmode QueryGovState =
   Some (consensusQueryInEraInMode erainmode Consensus.GetGovState)
 
 toConsensusQueryShelleyBased erainmode (QueryDRepState creds) =
-  Some (consensusQueryInEraInMode erainmode (Consensus.GetDRepState creds))
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetDRepState creds'))
+  where
+    creds' = Set.map toShelleyDRepCredential creds
 
 toConsensusQueryShelleyBased erainmode (QueryDRepStakeDistr dreps) =
   Some (consensusQueryInEraInMode erainmode (Consensus.GetDRepStakeDistr dreps))
@@ -962,7 +963,7 @@ fromConsensusQueryResultShelleyBased _ QueryGovState{} q' govState' =
 
 fromConsensusQueryResultShelleyBased _ QueryDRepState{} q' drepState'  =
   case q' of
-    Consensus.GetDRepState{} -> drepState'
+    Consensus.GetDRepState{} -> Map.mapKeysMonotonic fromShelleyDRepCredential drepState'
     _                        -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryDRepStakeDistr{} q' stakeDistr' =

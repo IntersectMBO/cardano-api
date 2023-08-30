@@ -51,8 +51,6 @@ import           Cardano.Api.Value
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.CertState as L
 import           Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Credential as L
-import qualified Cardano.Ledger.Keys as L
 import           Cardano.Ledger.SafeHash
 import qualified Cardano.Ledger.Shelley.Core as L
 import           Cardano.Slotting.Slot
@@ -250,10 +248,10 @@ queryGovState eraInMode sbe =
 queryDRepState :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> Set (L.Credential L.DRepRole L.StandardCrypto)
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto))))
+  -> Set DRepCredential
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map DRepCredential (L.DRepState L.StandardCrypto))))
 queryDRepState eraInMode sbe drepCreds =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
+    queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
 
 queryDRepStakeDistribution :: ()
   => EraInMode era mode

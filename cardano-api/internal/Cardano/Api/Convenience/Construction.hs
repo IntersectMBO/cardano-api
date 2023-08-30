@@ -46,16 +46,17 @@ constructBalancedTx
   -> SystemStart
   -> Set PoolId       -- ^ The set of registered stake pools
   -> Map.Map StakeCredential Lovelace
+  -> Map.Map DRepCredential Lovelace
   -> [ShelleyWitnessSigningKey]
   -> Either TxBodyErrorAutoBalance (Tx era)
 constructBalancedTx txbodcontent changeAddr mOverrideWits utxo lpp
                     ledgerEpochInfo systemStart stakePools
-                    stakeDelegDeposits shelleyWitSigningKeys = do
+                    stakeDelegDeposits drepDelegDeposits shelleyWitSigningKeys = do
 
   BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
          systemStart ledgerEpochInfo
-         lpp stakePools stakeDelegDeposits utxo txbodcontent
+         lpp stakePools stakeDelegDeposits drepDelegDeposits utxo txbodcontent
          changeAddr mOverrideWits
 
   let keyWits = map (makeShelleyKeyWitness txbody) shelleyWitSigningKeys

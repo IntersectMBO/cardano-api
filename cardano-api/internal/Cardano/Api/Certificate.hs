@@ -69,6 +69,7 @@ module Cardano.Api.Certificate (
 
     -- * Internal functions
     filterUnRegCreds,
+    filterUnRegDRepCreds,
     selectStakeCredential,
   ) where
 
@@ -715,6 +716,14 @@ filterUnRegCreds sbe cert =
     ConwayCertificate _ (Ledger.ConwayTxCertDeleg (Ledger.ConwayUnRegCert cred _)) ->
       Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential cred
     _  -> Nothing
+
+filterUnRegDRepCreds
+  :: ShelleyBasedEra era -> Certificate era -> Maybe DRepCredential
+filterUnRegDRepCreds sbe cert =
+  case (sbe, cert) of
+    (_, ShelleyRelatedCertificate {}) -> Nothing
+    (ShelleyBasedEraConway, ConwayCertificate _ (Ledger.UnRegDRepTxCert cred _)) -> Just (fromShelleyDRepCredential cred)
+    (_, ConwayCertificate {}) -> Nothing
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
