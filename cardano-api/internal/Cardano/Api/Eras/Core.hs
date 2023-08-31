@@ -34,6 +34,8 @@ module Cardano.Api.Eras.Core
   , FeatureInEra(..)
   , inEraFeature
   , inEraFeatureMaybe
+  , in2ErasFeature
+
   , maybeFeatureInEra
   , justFeatureInEra
   , justInEraFeature
@@ -161,6 +163,18 @@ inEraFeatureMaybe :: ()
   -> Maybe a              -- ^ The value to use
 inEraFeatureMaybe era yes =
   inEraFeature era Nothing (Just . yes)
+
+in2ErasFeature :: ()
+  => FeatureInEra feature
+  => CardanoEra era1                      -- ^ Era to check
+  -> CardanoEra era2                      -- ^ Era to check
+  -> a                                    -- ^ Value to use if the feature is not supported in the era
+  -> (feature era1 -> feature era2 -> a)  -- ^ Function to get thealue to use if the feature is supported in the era
+  -> a                                    -- ^ The value to use
+in2ErasFeature era1 era2 no yes =
+  inEraFeature era1 no $ \w1 ->
+    inEraFeature era2 no $ \w2 ->
+      yes w1 w2
 
 maybeFeatureInEra :: ()
   => FeatureInEra feature

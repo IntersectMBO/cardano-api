@@ -31,6 +31,8 @@ module Cardano.Api (
     FeatureInEra(..),
     inEraFeature,
     inEraFeatureMaybe,
+    in2ErasFeature,
+
     justFeatureInEra,
     justInEraFeature,
     maybeFeatureInEra,

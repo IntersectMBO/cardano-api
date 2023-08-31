@@ -24,6 +24,8 @@ module Cardano.Api.Eras
   , FeatureInEra(..)
   , inEraFeature
   , inEraFeatureMaybe
+  , in2ErasFeature
+
   , maybeFeatureInEra
 
   , featureInShelleyBasedEra
