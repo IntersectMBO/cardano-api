@@ -143,7 +143,7 @@ class FeatureInEra (feature :: Type -> Type) where
   -- the 'either' function convention.
   featureInEra :: ()
     => a                    -- ^ Value to use if the feature is not supported in the era
-    -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+    -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
     -> CardanoEra era       -- ^ Era to check
     -> a                    -- ^ The value to use
 
@@ -151,7 +151,7 @@ inEraFeature :: ()
   => FeatureInEra feature
   => CardanoEra era       -- ^ Era to check
   -> a                    -- ^ Value to use if the feature is not supported in the era
-  -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
   -> a                    -- ^ The value to use
 inEraFeature era no yes =
   featureInEra no yes era
@@ -159,7 +159,7 @@ inEraFeature era no yes =
 inEraFeatureMaybe :: ()
   => FeatureInEra feature
   => CardanoEra era       -- ^ Era to check
-  -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
   -> Maybe a              -- ^ The value to use
 inEraFeatureMaybe era yes =
   inEraFeature era Nothing (Just . yes)
@@ -169,7 +169,7 @@ in2ErasFeature :: ()
   => CardanoEra era1                      -- ^ Era to check
   -> CardanoEra era2                      -- ^ Era to check
   -> a                                    -- ^ Value to use if the feature is not supported in the era
-  -> (feature era1 -> feature era2 -> a)  -- ^ Function to get thealue to use if the feature is supported in the era
+  -> (feature era1 -> feature era2 -> a)  -- ^ Function to get the value to use if the feature is supported in the era
   -> a                                    -- ^ The value to use
 in2ErasFeature era1 era2 no yes =
   inEraFeature era1 no $ \w1 ->
@@ -185,7 +185,7 @@ maybeFeatureInEra =
 
 justFeatureInEra :: ()
   => FeatureInEra feature
-  => (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  => (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
   -> CardanoEra era       -- ^ Era to check
   -> Maybe a              -- ^ The value to use
 justFeatureInEra f = featureInEra Nothing (Just . f)
@@ -193,7 +193,7 @@ justFeatureInEra f = featureInEra Nothing (Just . f)
 justInEraFeature :: ()
   => FeatureInEra feature
   => CardanoEra era       -- ^ Era to check
-  -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
   -> Maybe a              -- ^ The value to use
 justInEraFeature era f = inEraFeature era Nothing (Just . f)
 
