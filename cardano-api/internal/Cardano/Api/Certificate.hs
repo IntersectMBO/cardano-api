@@ -273,8 +273,7 @@ instance EraCast Certificate where
           $ inEraFeature targetEra
               ( inEraFeature targetEra
                   ( Left $ EraCastError
-                      { originalValue = cert
-                      , fromEra = shelleyToBabbageEraToCardanoEra sourceWit
+                      { fromEra = shelleyToBabbageEraToCardanoEra sourceWit
                       , toEra = targetEra
                       }
                   )
@@ -284,8 +283,7 @@ instance EraCast Certificate where
                           Just targetLedgerCert -> Right $ ConwayCertificate tgtw targetLedgerCert
                           Nothing ->
                             Left $ EraCastError
-                              { originalValue = cert
-                              , fromEra = shelleyToBabbageEraToCardanoEra sourceWit
+                              { fromEra = shelleyToBabbageEraToCardanoEra sourceWit
                               , toEra = targetEra
                               }
                   )
@@ -302,8 +300,7 @@ instance EraCast Certificate where
           $ inEraFeature targetEra
               ( inEraFeature targetEra
                   ( Left $ EraCastError
-                      { originalValue = cert
-                      , fromEra = conwayEraOnwardsToCardanoEra sourceWit
+                      { fromEra = conwayEraOnwardsToCardanoEra sourceWit
                       , toEra = targetEra
                       }
                   )
@@ -313,8 +310,7 @@ instance EraCast Certificate where
                           Just targetLedgerCert -> Right $ ShelleyRelatedCertificate targetWit targetLedgerCert
                           Nothing ->
                             Left $ EraCastError
-                              { originalValue = cert
-                              , fromEra = conwayEraOnwardsToCardanoEra sourceWit
+                              { fromEra = conwayEraOnwardsToCardanoEra sourceWit
                               , toEra = targetEra
                               }
                   )

@@ -1374,7 +1374,7 @@ instance EraCast TxOutValue where
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
     TxOutValue  (_ :: MultiAssetSupportedInEra fromEra) value  ->
       case multiAssetSupportedInEra toEra of
-        Left _adaOnly -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Left _adaOnly -> Left $ EraCastError (cardanoEra @fromEra) toEra
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp value
 
 
@@ -1530,17 +1530,17 @@ instance EraCast (TxOutDatum ctx)  where
     TxOutDatumNone -> pure TxOutDatumNone
     TxOutDatumHash (_ :: ScriptDataSupportedInEra fromEra) hash ->
       case scriptDataSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError (cardanoEra @fromEra) toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumHash sDatumsSupported hash
     TxOutDatumInTx' (_ :: ScriptDataSupportedInEra fromEra) scriptData hash ->
       case scriptDataSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError (cardanoEra @fromEra) toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
     TxOutDatumInline (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptData ->
       case refInsScriptsAndInlineDatsSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError (cardanoEra @fromEra) toEra
         Just refInsAndInlineSupported ->
           Right $ TxOutDatumInline refInsAndInlineSupported scriptData
 

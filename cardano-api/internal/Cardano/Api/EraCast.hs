@@ -10,14 +10,12 @@ import           Cardano.Api.Eras (CardanoEra (..), IsCardanoEra)
 
 import           Data.Kind (Type)
 
-data EraCastError = forall fromEra toEra value.
+data EraCastError = forall fromEra toEra.
   ( IsCardanoEra fromEra
   , IsCardanoEra toEra
-  , Show value
   ) =>
     EraCastError
-    { originalValue :: value
-    , fromEra :: CardanoEra fromEra
+    { fromEra :: CardanoEra fromEra
     , toEra :: CardanoEra toEra
     }
 

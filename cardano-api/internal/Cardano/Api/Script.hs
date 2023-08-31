@@ -1402,9 +1402,9 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
 instance EraCast ReferenceScript where
   eraCast toEra = \case
     ReferenceScriptNone -> pure ReferenceScriptNone
-    v@(ReferenceScript (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptInAnyLang) ->
+    ReferenceScript (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptInAnyLang ->
       case refInsScriptsAndInlineDatsSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError (cardanoEra @fromEra) toEra
         Just supportedInEra -> Right $ ReferenceScript supportedInEra scriptInAnyLang
 
 data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where

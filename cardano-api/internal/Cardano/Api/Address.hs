@@ -473,7 +473,7 @@ instance EraCast (AddressTypeInEra addrtype) where
     ByronAddressInAnyEra -> pure ByronAddressInAnyEra
     ShelleyAddressInEra previousEra ->
       case cardanoEraStyle toEra' of
-        LegacyByronEra -> Left $ EraCastError v (shelleyBasedToCardanoEra previousEra) toEra'
+        LegacyByronEra -> Left $ EraCastError (shelleyBasedToCardanoEra previousEra) toEra'
         ShelleyBasedEra newSbe -> Right $ ShelleyAddressInEra newSbe
 
 byronAddressInEra :: Address ByronAddr -> AddressInEra era
