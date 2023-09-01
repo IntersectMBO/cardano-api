@@ -240,7 +240,7 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era EpochNo
 
   QueryGenesisParameters
-    :: QueryInShelleyBasedEra ShelleyEra GenesisParameters
+    :: QueryInShelleyBasedEra era GenesisParameters
 
   QueryProtocolParameters
     :: QueryInShelleyBasedEra era ProtocolParameters
