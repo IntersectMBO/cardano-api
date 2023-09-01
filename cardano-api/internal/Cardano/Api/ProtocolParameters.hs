@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -94,9 +95,12 @@ module Cardano.Api.ProtocolParameters (
     ProtocolUTxOCostPerByteFeature(..),
     ProtocolUTxOCostPerWordFeature(..),
 
+    unsafeEraCastLedgerProtocolParameters,
   ) where
 
 import           Cardano.Api.Address
+import qualified Cardano.Api.Domain.ProtocolParameters as Domain
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
@@ -130,6 +134,7 @@ import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Cardano.Slotting.Slot (EpochNo)
 
+import           Control.Applicative
 import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
                    (.=))
@@ -147,7 +152,6 @@ import           Lens.Micro
 import           Numeric.Natural
 import           Text.PrettyBy.Default (display)
 
-
 -- -----------------------------------------------------------------------------
 -- Era based ledger protocol parameters
 --
@@ -164,6 +168,55 @@ instance IsShelleyBasedEra era => Eq (LedgerProtocolParameters era) where
   LedgerProtocolParameters a == LedgerProtocolParameters b =
     shelleyBasedEraConstraints (shelleyBasedEra @era)
       $ a == b
+
+-- | This instance of era cast will not fail if the target era is a shelley based era.  If the
+-- event that a field that exists in the source era does not exist in the target era, then it
+-- will be silently ignored.  This is necessary because otherwise if any such cases exist the
+-- cast would always fail.
+--
+-- WARNING: The silent ignore of fields makes this function unsafe.  This function should be used
+-- with extreme caution.  There may be very specific cases where it is safe to use, but it is up
+-- to the caller to ensure that the cast is safe.
+unsafeEraCastLedgerProtocolParameters :: forall fromEra toEra. ()
+  => IsCardanoEra fromEra
+  => IsCardanoEra toEra
+  => CardanoEra toEra
+  -> LedgerProtocolParameters fromEra
+  -> Either EraCastError (LedgerProtocolParameters toEra)
+unsafeEraCastLedgerProtocolParameters tgt (LedgerProtocolParameters opp) = do
+  let src           = cardanoEra @fromEra
+  let eraCastError  = EraCastError src tgt
+
+  inEraFeature tgt (Left eraCastError) $ \tgtSbe -> do
+    npp <- pure (Domain.emptyProtocolParameters tgtSbe)
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamProtocolVersionL     wTgt  .~ (opp ^. Domain.protocolParamProtocolVersionL     wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamDecentralizationL    wTgt  .~ (opp ^. Domain.protocolParamDecentralizationL    wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamExtraPraosEntropyL   wTgt  .~ (opp ^. Domain.protocolParamExtraPraosEntropyL   wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMaxBlockHeaderSizeL  wTgt  .~ (opp ^. Domain.protocolParamMaxBlockHeaderSizeL  wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMaxBlockBodySizeL    wTgt  .~ (opp ^. Domain.protocolParamMaxBlockBodySizeL    wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMaxTxSizeL           wTgt  .~ (opp ^. Domain.protocolParamMaxTxSizeL           wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamTxFeeFixedL          wTgt  .~ (opp ^. Domain.protocolParamTxFeeFixedL          wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamTxFeePerByteL        wTgt  .~ (opp ^. Domain.protocolParamTxFeePerByteL        wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMinUTxOValueL        wTgt  .~ (opp ^. Domain.protocolParamMinUTxOValueL        wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamStakeAddressDepositL wTgt  .~ (opp ^. Domain.protocolParamStakeAddressDepositL wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamStakePoolDepositL    wTgt  .~ (opp ^. Domain.protocolParamStakePoolDepositL    wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMinPoolCostL         wTgt  .~ (opp ^. Domain.protocolParamMinPoolCostL         wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamPoolRetireMaxEpochL  wTgt  .~ (opp ^. Domain.protocolParamPoolRetireMaxEpochL  wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamStakePoolTargetNumL  wTgt  .~ (opp ^. Domain.protocolParamStakePoolTargetNumL  wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamPoolPledgeInfluenceL wTgt  .~ (opp ^. Domain.protocolParamPoolPledgeInfluenceL wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMonetaryExpansionL   wTgt  .~ (opp ^. Domain.protocolParamMonetaryExpansionL   wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamTreasuryCutL         wTgt  .~ (opp ^. Domain.protocolParamTreasuryCutL         wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamUTxOCostPerWordL     wTgt  .~ (opp ^. Domain.protocolParamUTxOCostPerWordL     wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamCostModelsL          wTgt  .~ (opp ^. Domain.protocolParamCostModelsL          wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamPricesL              wTgt  .~ (opp ^. Domain.protocolParamPricesL              wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMaxTxExUnitsL        wTgt  .~ (opp ^. Domain.protocolParamMaxTxExUnitsL        wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMaxBlockExUnitsL     wTgt  .~ (opp ^. Domain.protocolParamMaxBlockExUnitsL     wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMaxValueSizeL        wTgt  .~ (opp ^. Domain.protocolParamMaxValueSizeL        wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamCollateralPercentL   wTgt  .~ (opp ^. Domain.protocolParamCollateralPercentL   wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamMaxCollateralInputsL wTgt  .~ (opp ^. Domain.protocolParamMaxCollateralInputsL wSrc))
+      <**>  in2ErasFeature src tgt (pure id) (\wSrc wTgt -> pure $ \pp -> pp & Domain.protocolParamUTxOCostPerByteL     wTgt  .~ (opp ^. Domain.protocolParamUTxOCostPerByteL     wSrc))
+
+    pure $ LedgerProtocolParameters npp
 
 -- TODO: Conway era - remove me when we begin relying on the JSON
 -- instances of Ledger.PParams

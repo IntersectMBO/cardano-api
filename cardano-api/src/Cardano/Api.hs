@@ -1002,6 +1002,8 @@ module Cardano.Api (
     makeDrepUnregistrationCertificate,
 
     ResolvablePointers(..),
+
+    unsafeEraCastLedgerProtocolParameters,
   ) where
 
 import           Cardano.Api.Address
