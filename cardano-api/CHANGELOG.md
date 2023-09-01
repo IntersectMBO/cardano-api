@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 8.16.3.0
+
+- Fix genesis parameters query
+  (breaking)
+
 ## 8.16.1.0
 
 - Add `VotingProcedures` type.
