@@ -241,7 +241,7 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era EpochNo
 
   QueryGenesisParameters
-    :: QueryInShelleyBasedEra ShelleyEra (GenesisParameters ShelleyEra)
+    :: QueryInShelleyBasedEra era (GenesisParameters ShelleyEra)
 
   QueryProtocolParameters
     :: QueryInShelleyBasedEra era (Ledger.PParams (ShelleyLedgerEra era))
