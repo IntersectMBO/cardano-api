@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.19.0.0
+
+- New `foldSomeAddressVerification` key function
+  (feature, compatible)
+  [PR 225](https://github.com/input-output-hk/cardano-api/pull/225)
+
+- `FeatureInEra` instances for `CardanoEra` and `ShelleyBasedEra`
+  (feature, compatible)
+  [PR 226](https://github.com/input-output-hk/cardano-api/pull/226)
+
+- Fix type signature of `queryGenesisParameters` so that it can be queried in any era
+  (breaking, bugfix)
+  [PR 224](https://github.com/input-output-hk/cardano-api/pull/224)
+
 ## 8.18.0.0
 
 - Fix exception when executing drep queries
