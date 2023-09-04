@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Class of errors used in the Api.
@@ -17,6 +19,7 @@ module Cardano.Api.DeserialiseAnyOf
   , deserialiseAnyVerificationKeyBech32
   , deserialiseAnyVerificationKeyTextEnvelope
   , renderSomeAddressVerificationKey
+  , mapSomeAddressVerificationKey
   ) where
 
 import           Cardano.Api.Address
@@ -229,6 +232,7 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
 
         -- The input was valid Bech32, but some other error occurred.
         Left err -> DeserialiseInputError $ InputBech32DecodeError err
+
 data SomeAddressVerificationKey
   = AByronVerificationKey           (VerificationKey ByronKey)
   | APaymentVerificationKey         (VerificationKey PaymentKey)
@@ -263,6 +267,23 @@ renderSomeAddressVerificationKey (AKesVerificationKey vk) = serialiseToBech32 vk
 renderSomeAddressVerificationKey (AVrfVerificationKey vk) = serialiseToBech32 vk
 renderSomeAddressVerificationKey (AStakeVerificationKey vk) = serialiseToBech32 vk
 renderSomeAddressVerificationKey (AStakeExtendedVerificationKey vk) = serialiseToBech32 vk
+
+
+mapSomeAddressVerificationKey :: ()
+  => (forall keyrole. Key keyrole => VerificationKey keyrole -> a)
+  -> SomeAddressVerificationKey
+  -> a
+mapSomeAddressVerificationKey f = \case
+  AByronVerificationKey                     vk -> f vk
+  APaymentVerificationKey                   vk -> f vk
+  APaymentExtendedVerificationKey           vk -> f vk
+  AGenesisUTxOVerificationKey               vk -> f vk
+  AKesVerificationKey                       vk -> f vk
+  AGenesisDelegateExtendedVerificationKey   vk -> f vk
+  AGenesisExtendedVerificationKey           vk -> f vk
+  AVrfVerificationKey                       vk -> f vk
+  AStakeVerificationKey                     vk -> f vk
+  AStakeExtendedVerificationKey             vk -> f vk
 
 -- | Internal function to pretty render byron keys
 prettyByronVerificationKey :: VerificationKey ByronKey-> Text

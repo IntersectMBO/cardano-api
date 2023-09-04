@@ -547,6 +547,7 @@ module Cardano.Api (
     deserialiseAnyVerificationKeyBech32,
     deserialiseAnyVerificationKeyTextEnvelope,
     renderSomeAddressVerificationKey,
+    mapSomeAddressVerificationKey,
 
     -- ** CBOR
     SerialiseAsCBOR,
