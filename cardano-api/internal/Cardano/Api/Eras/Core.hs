@@ -293,6 +293,8 @@ instance TestEquality CardanoEra where
     testEquality ConwayEra  ConwayEra  = Just Refl
     testEquality _          _          = Nothing
 
+instance FeatureInEra CardanoEra where
+  featureInEra _ yes = yes
 
 -- | The class of Cardano eras. This allows uniform handling of all Cardano
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
@@ -449,6 +451,16 @@ instance TestEquality ShelleyBasedEra where
     testEquality ShelleyBasedEraBabbage ShelleyBasedEraBabbage = Just Refl
     testEquality ShelleyBasedEraConway  ShelleyBasedEraConway  = Just Refl
     testEquality _                      _                      = Nothing
+
+instance FeatureInEra ShelleyBasedEra where
+  featureInEra no yes = \case
+    ByronEra    -> no
+    ShelleyEra  -> yes ShelleyBasedEraShelley
+    AllegraEra  -> yes ShelleyBasedEraAllegra
+    MaryEra     -> yes ShelleyBasedEraMary
+    AlonzoEra   -> yes ShelleyBasedEraAlonzo
+    BabbageEra  -> yes ShelleyBasedEraBabbage
+    ConwayEra   -> yes ShelleyBasedEraConway
 
 -- | The class of eras that are based on Shelley. This allows uniform handling
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
