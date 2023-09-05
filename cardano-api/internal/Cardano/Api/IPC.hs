@@ -106,6 +106,7 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
+import qualified Ouroboros.Consensus.Util as Consensus
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
@@ -523,7 +524,7 @@ convLocalStateQueryClient
 convLocalStateQueryClient mode =
     Net.Query.mapLocalStateQueryClient
       (toConsensusPointInMode mode)
-      toConsensusQuery
+      ((\(Consensus.Some q) -> Net.Query.Some q) <$> toConsensusQuery)
       fromConsensusQueryResult
 
 
