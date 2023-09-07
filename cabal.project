@@ -44,13 +44,24 @@ write-ghc-environment-files: always
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: a7bd270b157f7146db7fd2ea1a43cebe29fbfd64
-  --sha256: sha256-flWe2VnvvSjC/A47hSZiO7cp4uce46mZz0oCScBvXf8=
-  subdir:
-    sop-extras
-    strict-sop-core
-    ouroboros-consensus-cardano
-    ouroboros-consensus
-    ouroboros-consensus-diffusion
-    ouroboros-consensus-protocol
+  location: https://github.com/input-output-hk/ouroboros-consensus/
+  tag: 1df1bfeab7d5c42d6055786ac8399a5ccf7da729
+  subdir: ouroboros-consensus
+          ouroboros-consensus-diffusion
+          ouroboros-consensus-cardano
+          ouroboros-consensus-protocol
+          strict-sop-core
+          sop-extras
+  --sha256: sha256-zi/atM8+/At8EYFLXo0h7vtV9XZ+Nb7HzLBSjFZvLqs=
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network/
+  tag: 7fc70cd780078cf14ae6eaa4d13ac6da607409f2
+  subdir: ouroboros-network
+          ouroboros-network-framework
+          ouroboros-network-protocols
+          ouroboros-network-api
+          cardano-ping
+          network-mux
+  --sha256: sha256-b7KHqtG7qyP6gQc4mfV2wwDn87maP/oCf9xVXBredJ4=
