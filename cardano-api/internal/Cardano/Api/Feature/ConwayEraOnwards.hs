@@ -16,7 +16,7 @@ module Cardano.Api.Feature.ConwayEraOnwards
   , conwayEraOnwardsToShelleyBasedEra
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Query.Types
 
