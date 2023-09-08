@@ -37,12 +37,6 @@ module Cardano.Api.Eras.Core
   , inShelleyBasedEraFeatureMaybe
   , maybeFeatureInShelleyBasedEra
 
-    -- * Deprecated aliases
-  , Byron
-  , Shelley
-  , Allegra
-  , Mary
-
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
   , IsShelleyBasedEra(..)
@@ -59,8 +53,7 @@ module Cardano.Api.Eras.Core
   , cardanoEraStyle
 
     -- * Data family instances
-  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra,
-           AsByron,    AsShelley,    AsAllegra,    AsMary,    AsAlonzo,    AsBabbage, AsConway)
+  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
 
     -- * Assertions on era
   , requireShelleyBasedEra
@@ -204,47 +197,6 @@ inShelleyBasedEraFeatureMaybe :: ()
   -> Maybe a
 inShelleyBasedEraFeatureMaybe era yes =
   inShelleyBasedEraFeature era Nothing (Just . yes)
-
--- ----------------------------------------------------------------------------
--- Deprecated aliases
---
-
-type Byron   = ByronEra
-type Shelley = ShelleyEra
-type Allegra = AllegraEra
-type Mary    = MaryEra
-
-{-# DEPRECATED Byron   "Use 'ByronEra' or 'ByronAddr' as appropriate" #-}
-{-# DEPRECATED Shelley "Use 'ShelleyEra' or 'ShelleyAddr' as appropriate" #-}
-{-# DEPRECATED Allegra "Use 'AllegraEra' instead" #-}
-{-# DEPRECATED Mary    "Use 'MaryEra' instead" #-}
-
-pattern AsByron   :: AsType ByronEra
-pattern AsByron    = AsByronEra
-
-pattern AsShelley :: AsType ShelleyEra
-pattern AsShelley  = AsShelleyEra
-
-pattern AsAllegra :: AsType AllegraEra
-pattern AsAllegra  = AsAllegraEra
-
-pattern AsMary    :: AsType MaryEra
-pattern AsMary     = AsMaryEra
-
-
-pattern AsAlonzo  :: AsType AlonzoEra
-pattern AsAlonzo   = AsAlonzoEra
-
-pattern AsBabbage :: AsType BabbageEra
-pattern AsBabbage  = AsBabbageEra
-
-pattern AsConway :: AsType ConwayEra
-pattern AsConway  = AsConwayEra
-
-{-# DEPRECATED AsByron   "Use 'AsByronEra' instead" #-}
-{-# DEPRECATED AsShelley "Use 'AsShelleyEra' instead" #-}
-{-# DEPRECATED AsAllegra "Use 'AsAllegraEra' instead" #-}
-{-# DEPRECATED AsMary    "Use 'AsMaryEra' instead" #-}
 
 -- ----------------------------------------------------------------------------
 -- Value level representation for Cardano eras

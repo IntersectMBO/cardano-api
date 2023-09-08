@@ -95,11 +95,6 @@ module Cardano.Api (
     writeTextFile,
     writeTextOutput,
 
-    -- ** Deprecated
-    Byron,
-    Shelley,
-    Allegra,
-    Mary,
     -- * Type tags
     HasTypeProxy(..),
     AsType(..),
@@ -220,7 +215,6 @@ module Cardano.Api (
     -- ** Transaction bodies
     TxBody(TxBody),
     createAndValidateTransactionBody,
-    makeTransactionBody, -- TODO: Remove
     TxBodyContent(..),
 
     -- ** Transaction body builders
@@ -419,7 +413,6 @@ module Cardano.Api (
     makeStakeAddressDelegationCertificate,
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressUnregistrationCertificate,
-    makeStakeAddressPoolDelegationCertificate,
 
     makeStakeAddressAndDRepDelegationCertificate,
 
@@ -506,7 +499,6 @@ module Cardano.Api (
     getScriptData,
     unsafeHashableScriptData,
     ScriptData(..),
-    hashScriptData,
 
     -- ** Validation
     ScriptDataRangeError (..),
@@ -586,7 +578,6 @@ module Cardano.Api (
     serialiseToRawBytes,
     deserialiseFromRawBytes,
     SerialiseAsRawBytesError(..),
-    eitherDeserialiseFromRawBytes,
     serialiseToRawBytesHex,
     deserialiseFromRawBytesHex,
     serialiseToRawBytesHexText,
@@ -914,7 +905,6 @@ module Cardano.Api (
     queryGenesisParameters,
     queryPoolDistribution,
     queryPoolState,
-    queryPparams,
     queryProtocolParameters,
     queryProtocolParametersUpdate,
     queryProtocolState,

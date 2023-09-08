@@ -9,7 +9,6 @@ module Cardano.Api.SerialiseRaw
   , SerialiseAsRawBytesError(..)
   , serialiseToRawBytesHex
   , deserialiseFromRawBytesHex
-  , eitherDeserialiseFromRawBytes
   , serialiseToRawBytesHexText
   ) where
 
@@ -36,10 +35,6 @@ class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
   serialiseToRawBytes :: a -> ByteString
 
   deserialiseFromRawBytes :: AsType a -> ByteString -> Either SerialiseAsRawBytesError a
-
-eitherDeserialiseFromRawBytes :: SerialiseAsRawBytes a => AsType a -> ByteString -> Either SerialiseAsRawBytesError a
-eitherDeserialiseFromRawBytes = deserialiseFromRawBytes
-{-# DEPRECATED eitherDeserialiseFromRawBytes "Use deserialiseFromRawBytes instead" #-}
 
 serialiseToRawBytesHex :: SerialiseAsRawBytes a => a -> ByteString
 serialiseToRawBytesHex = Base16.encode . serialiseToRawBytes
