@@ -243,9 +243,7 @@ connectToLocalNodeWithVersion LocalNodeConnectInfo {
           mkVersionedProtocols localNodeNetworkId ptcl clients'
 
 mkVersionedProtocols :: forall block.
-                        ( Consensus.ShowQuery (Consensus.Query block)
-                        , ProtocolClient block
-                        )
+                        ProtocolClient block
                      => NetworkId
                      -> ProtocolClientInfoArgs block
                      -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
@@ -297,7 +295,7 @@ mkVersionedProtocols networkid ptcl unversionedClients =
                 -> Net.mkMiniProtocolCbFromPeer $ const
                    (nullTracer, cChainSyncCodec, Net.Sync.chainSyncClientPeer client)
               LocalChainSyncClientPipelined clientPipelined
-                -> Net.mkMiniProtocolCbFromPeerPipelined $ const
+                -> Net.mkMiniProtocolCbFromPeer $ const
                    (nullTracer, cChainSyncCodec, Net.SyncP.chainSyncClientPeerPipelined clientPipelined)
 
         , localTxSubmissionProtocol =
@@ -312,9 +310,10 @@ mkVersionedProtocols networkid ptcl unversionedClients =
 
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
-              Net.mkMiniProtocolCbFromPeer $ const
+              Net.mkMiniProtocolCbFromPeerSt $ const
                 ( nullTracer
                 , cStateQueryCodec
+                , Net.Query.StateIdle
                 , maybe Net.localStateQueryPeerNull
                         Net.Query.localStateQueryClientPeer
                         localStateQueryClientForBlock

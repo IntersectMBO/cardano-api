@@ -21,15 +21,16 @@ module Cardano.Api.ChainSync.ClientPipelined (
     , pipelineDecisionLowHighMark
 
       -- * Type level natural numbers
+    , Queue (..)
+    , SingQueueF (..)
     , N (..)
-    , Nat (..)
     , natToInt
 
       -- * Utilities
     , mapChainSyncClientPipelined
     ) where
 
+import           Network.TypedProtocol.Core
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
-
-import           Network.TypedProtocol.Pipelined (N (..), Nat (..), natToInt)
+import           Data.Type.Nat

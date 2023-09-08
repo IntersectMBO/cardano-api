@@ -123,7 +123,7 @@ import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Codec (Some (..))
 
 import           Control.Monad (forM)
 import           Control.Monad.Trans.Except
