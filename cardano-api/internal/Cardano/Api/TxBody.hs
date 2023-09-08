@@ -27,7 +27,6 @@ module Cardano.Api.TxBody (
     parseTxId,
     -- * Transaction bodies
     TxBody(.., TxBody),
-    makeTransactionBody,
     createTransactionBody,
     createAndValidateTransactionBody,
     TxBodyContent(..),
@@ -2676,14 +2675,6 @@ createAndValidateTransactionBody =
     case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
       ShelleyBasedEra sbe -> makeShelleyTransactionBody sbe
-
-{-# DEPRECATED makeTransactionBody "Use createAndValidateTransactionBody." #-}
-makeTransactionBody :: forall era.
-     IsCardanoEra era
-  => TxBodyContent BuildTx era
-  -> Either TxBodyError (TxBody era)
-makeTransactionBody = createAndValidateTransactionBody
-
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
 pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)

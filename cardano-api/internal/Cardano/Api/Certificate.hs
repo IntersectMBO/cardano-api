@@ -23,7 +23,6 @@ module Cardano.Api.Certificate (
     makeStakeAddressDelegationCertificate,
     makeStakeAddressRegistrationCertificate,
     makeStakeAddressUnregistrationCertificate,
-    makeStakeAddressPoolDelegationCertificate,
     PoolId,
 
     -- * Registering stake pools
@@ -467,33 +466,6 @@ makeStakeAddressUnregistrationCertificate req =
       $ Ledger.mkUnRegDepositTxCert
           (toShelleyStakeCredential scred)
           (toShelleyLovelace deposit)
-
-{-# DEPRECATED makeStakeAddressPoolDelegationCertificate "This function is deprecated, please use 'makeStakeAddressDelegationCertificate' instead." #-}
-makeStakeAddressPoolDelegationCertificate :: ()
-  => ShelleyBasedEra era
-  -> StakeCredential
-  -> PoolId
-  -> Certificate era
-makeStakeAddressPoolDelegationCertificate sbe scred poolId =
-  case sbe of
-    ShelleyBasedEraShelley ->
-      makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraShelley scred poolId)
-    ShelleyBasedEraAllegra ->
-      makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraAllegra scred poolId)
-    ShelleyBasedEraMary ->
-      makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraMary scred poolId)
-    ShelleyBasedEraAlonzo ->
-      makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraAlonzo scred poolId)
-    ShelleyBasedEraBabbage ->
-      makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsPreConway ShelleyToBabbageEraBabbage scred poolId)
-    ShelleyBasedEraConway ->
-      makeStakeAddressDelegationCertificate
-        (StakeDelegationRequirementsConwayOnwards ConwayEraOnwardsConway scred (Ledger.DelegStake $ unStakePoolKeyHash poolId))
 
 data StakeDelegationRequirements era where
   StakeDelegationRequirementsConwayOnwards

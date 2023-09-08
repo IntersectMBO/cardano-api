@@ -15,9 +15,6 @@ module Cardano.Api.ScriptData (
     unsafeHashableScriptData,
     ScriptData(..),
 
-    -- * Script data hashes
-    hashScriptData,
-
     -- * Validating metadata
     validateScriptData,
     ScriptDataRangeError (..),
@@ -176,10 +173,6 @@ instance FromCBOR ScriptData where
 hashScriptDataBytes :: HashableScriptData -> Hash ScriptData
 hashScriptDataBytes  =
   ScriptDataHash . Alonzo.hashData . (toAlonzoData :: HashableScriptData  -> Alonzo.Data StandardAlonzo)
-
-{-# DEPRECATED hashScriptData "Use hashScriptDataBytes" #-}
-hashScriptData :: HashableScriptData -> Hash ScriptData
-hashScriptData = hashScriptDataBytes
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions

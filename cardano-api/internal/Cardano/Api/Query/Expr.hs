@@ -14,7 +14,6 @@ module Cardano.Api.Query.Expr
   , queryGenesisParameters
   , queryPoolDistribution
   , queryPoolState
-  , queryPparams
   , queryProtocolParameters
   , queryProtocolParametersUpdate
   , queryProtocolState
@@ -125,14 +124,6 @@ queryPoolState :: ()
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolState era)))
 queryPoolState eraInMode sbe mPoolIds =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryPoolState mPoolIds
-
-queryPparams :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.PParams (ShelleyLedgerEra era))))
-queryPparams eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
-{-# DEPRECATED queryPparams "Use queryProtocolParameters instead" #-}
 
 queryProtocolParameters :: ()
   => EraInMode era mode

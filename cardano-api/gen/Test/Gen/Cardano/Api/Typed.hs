@@ -253,7 +253,6 @@ genHashableScriptData = do
     Left e -> error $ "genHashableScriptData: " <> show e
     Right r -> return r
 
-
 {-# DEPRECATED genScriptData "Use genHashableScriptData" #-}
 genScriptData :: Gen ScriptData
 genScriptData =
@@ -297,7 +296,6 @@ genScriptData =
       Gen.sized $ \sz ->
         Gen.list (Range.linear 0 (fromIntegral sz)) $
           (,) <$> genScriptData <*> genScriptData
-
 
 -- ----------------------------------------------------------------------------
 -- Script generators for any language, or any language valid in a specific era

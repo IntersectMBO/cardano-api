@@ -93,10 +93,9 @@ import           Prettyprinter
 import           Prettyprinter.Render.String
 
 {- HLINT ignore "Redundant return" -}
-
--- ----------------------------------------------------------------------------
--- Transaction fees
---
+--- ----------------------------------------------------------------------------
+--- Transaction fees
+---
 
 -- | For a concrete fully-constructed transaction, determine the minimum fee
 -- that it needs to pay.
@@ -122,7 +121,6 @@ transactionFee txFeeFixed txFeePerByte tx =
        ByronTx _ -> case shelleyBasedEra @era of {}
 
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
-
 
 --TODO: in the Byron case the per-byte is non-integral, would need different
 -- parameters. e.g. a new data type for fee params, Byron vs Shelley

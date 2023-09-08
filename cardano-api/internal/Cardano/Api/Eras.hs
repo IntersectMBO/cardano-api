@@ -28,12 +28,6 @@ module Cardano.Api.Eras
   , inShelleyBasedEraFeatureMaybe
   , maybeFeatureInShelleyBasedEra
 
-    -- * Deprecated aliases
-  , Byron
-  , Shelley
-  , Allegra
-  , Mary
-
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
   , IsShelleyBasedEra(..)
@@ -51,8 +45,7 @@ module Cardano.Api.Eras
   , cardanoEraStyle
 
     -- * Data family instances
-  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra,
-           AsByron,    AsShelley,    AsAllegra,    AsMary,    AsAlonzo,    AsBabbage, AsConway)
+  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
 
     -- * Assertions on era
   , requireShelleyBasedEra
