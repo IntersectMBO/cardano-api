@@ -60,6 +60,7 @@ library internal
                         Cardano.Api.Eras.Case
                         Cardano.Api.Eras.Constraints
                         Cardano.Api.Eras.Core
+                        Cardano.Api.Eras.Core2
                         Cardano.Api.Error
                         Cardano.Api.Feature
                         Cardano.Api.Feature.AlonzoEraOnly
@@ -194,6 +195,8 @@ library internal
                       , unordered-containers >= 0.2.11
                       , vector
                       , yaml
+                      , some
+                      , world-peace
 
 library
   import:               project-config
