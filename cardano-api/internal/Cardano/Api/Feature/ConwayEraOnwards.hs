@@ -58,6 +58,10 @@ instance FeatureInEra ConwayEraOnwards where
     BabbageEra  -> no
     ConwayEra   -> yes ConwayEraOnwardsConway
 
+instance ToCardanoEra ConwayEraOnwards where
+  toCardanoEra = \case
+    ConwayEraOnwardsConway -> ConwayEra
+
 data AnyConwayEraOnwards where
   AnyConwayEraOnwards :: ConwayEraOnwards era -> AnyConwayEraOnwards
 

@@ -20,12 +20,15 @@ module Cardano.Api.Eras.Core
   , AlonzoEra
   , BabbageEra
   , ConwayEra
+
+    -- * CardanoEra
   , CardanoEra(..)
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
   , InAnyCardanoEra(..)
   , CardanoLedgerEra
+  , ToCardanoEra(..)
 
     -- * FeatureInEra
   , FeatureInEra(..)
@@ -199,6 +202,14 @@ inShelleyBasedEraFeatureMaybe era yes =
   inShelleyBasedEraFeature era Nothing (Just . yes)
 
 -- ----------------------------------------------------------------------------
+-- ToCardanoEra
+
+class ToCardanoEra (feature :: Type -> Type) where
+  toCardanoEra :: ()
+    => feature era
+    -> CardanoEra era
+
+-- ----------------------------------------------------------------------------
 -- Value level representation for Cardano eras
 --
 
@@ -247,6 +258,9 @@ instance TestEquality CardanoEra where
 
 instance FeatureInEra CardanoEra where
   featureInEra _ yes = yes
+
+instance ToCardanoEra CardanoEra where
+  toCardanoEra = id
 
 -- | The class of Cardano eras. This allows uniform handling of all Cardano
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
@@ -358,7 +372,6 @@ data InAnyCardanoEra thing where
                      -> thing era
                      -> InAnyCardanoEra thing
 
-
 -- ----------------------------------------------------------------------------
 -- Shelley-based eras
 --
@@ -413,6 +426,15 @@ instance FeatureInEra ShelleyBasedEra where
     AlonzoEra   -> yes ShelleyBasedEraAlonzo
     BabbageEra  -> yes ShelleyBasedEraBabbage
     ConwayEra   -> yes ShelleyBasedEraConway
+
+instance ToCardanoEra ShelleyBasedEra where
+  toCardanoEra = \case
+    ShelleyBasedEraShelley -> ShelleyEra
+    ShelleyBasedEraAllegra -> AllegraEra
+    ShelleyBasedEraMary    -> MaryEra
+    ShelleyBasedEraAlonzo  -> AlonzoEra
+    ShelleyBasedEraBabbage -> BabbageEra
+    ShelleyBasedEraConway  -> ConwayEra
 
 -- | The class of eras that are based on Shelley. This allows uniform handling
 -- of Shelley-based eras, but also non-uniform by making case distinctions on

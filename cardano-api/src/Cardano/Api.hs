@@ -25,6 +25,7 @@ module Cardano.Api (
     anyCardanoEra,
     cardanoEraConstraints,
     InAnyCardanoEra(..),
+    ToCardanoEra(..),
 
     -- * Feature support
     FeatureInEra(..),
@@ -48,6 +49,48 @@ module Cardano.Api (
     shelleyToBabbageEraConstraints,
     shelleyToBabbageEraToCardanoEra,
     shelleyToBabbageEraToShelleyBasedEra,
+
+    ShelleyToAllegraEra(..),
+    IsShelleyToAllegraEra(..),
+    AnyShelleyToAllegraEra(..),
+    shelleyToAllegraEraConstraints,
+    shelleyToAllegraEraToCardanoEra,
+    shelleyToAllegraEraToShelleyBasedEra,
+
+    ShelleyToAlonzoEra(..),
+    IsShelleyToAlonzoEra(..),
+    AnyShelleyToAlonzoEra(..),
+    shelleyToAlonzoEraConstraints,
+    shelleyToAlonzoEraToCardanoEra,
+    shelleyToAlonzoEraToShelleyBasedEra,
+
+    ShelleyToMaryEra(..),
+    IsShelleyToMaryEra(..),
+    AnyShelleyToMaryEra(..),
+    shelleyToMaryEraConstraints,
+    shelleyToMaryEraToCardanoEra,
+    shelleyToMaryEraToShelleyBasedEra,
+
+    AlonzoEraOnwards(..),
+    IsAlonzoEraOnwards(..),
+    AnyAlonzoEraOnwards(..),
+    alonzoEraOnwardsConstraints,
+    alonzoEraOnwardsToCardanoEra,
+    alonzoEraOnwardsToShelleyBasedEra,
+
+    AlonzoEraOnly(..),
+    IsAlonzoEraOnly(..),
+    AnyAlonzoEraOnly(..),
+    alonzoEraOnlyConstraints,
+    alonzoEraOnlyToCardanoEra,
+    alonzoEraOnlyToShelleyBasedEra,
+
+    BabbageEraOnwards(..),
+    IsBabbageEraOnwards(..),
+    AnyBabbageEraOnwards(..),
+    babbageEraOnwardsConstraints,
+    babbageEraOnwardsToCardanoEra,
+    babbageEraOnwardsToShelleyBasedEra,
 
     ConwayEraOnwards(..),
     IsConwayEraOnwards(..),
@@ -958,8 +1001,14 @@ import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
+import           Cardano.Api.Feature.AlonzoEraOnly
+import           Cardano.Api.Feature.AlonzoEraOnwards
+import           Cardano.Api.Feature.BabbageEraOnwards
 import           Cardano.Api.Feature.ConwayEraOnwards
+import           Cardano.Api.Feature.ShelleyToAllegraEra
+import           Cardano.Api.Feature.ShelleyToAlonzoEra
 import           Cardano.Api.Feature.ShelleyToBabbageEra
+import           Cardano.Api.Feature.ShelleyToMaryEra
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters

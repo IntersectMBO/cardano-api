@@ -12,7 +12,7 @@ module Cardano.Api.Feature
   , asFeaturedInShelleyBasedEra
   ) where
 
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
 
 -- | A value only if the feature is supported in this era
 data Featured feature era a where

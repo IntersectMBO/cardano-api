@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -74,6 +75,14 @@ instance FeatureInEra ShelleyToBabbageEra where
     BabbageEra  -> yes ShelleyToBabbageEraBabbage
     ConwayEra   -> no
 
+instance ToCardanoEra ShelleyToBabbageEra where
+  toCardanoEra = \case
+    ShelleyToBabbageEraShelley  -> ShelleyEra
+    ShelleyToBabbageEraAllegra  -> AllegraEra
+    ShelleyToBabbageEraMary     -> MaryEra
+    ShelleyToBabbageEraAlonzo   -> AlonzoEra
+    ShelleyToBabbageEraBabbage  -> BabbageEra
+
 type ShelleyToBabbageEraConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
@@ -87,6 +96,7 @@ type ShelleyToBabbageEraConstraints era =
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ProtVerAtMost (ShelleyLedgerEra era) 7
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
