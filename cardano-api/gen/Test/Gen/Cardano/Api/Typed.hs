@@ -616,20 +616,14 @@ genCertificate sbe =
     ]
 
 genStakeAddressRequirements :: ShelleyBasedEra era -> Gen (StakeAddressRequirements era)
-genStakeAddressRequirements sbe =
-  case sbe of
-    ShelleyBasedEraShelley ->
-      StakeAddrRegistrationPreConway ShelleyToBabbageEraShelley <$> genStakeCredential
-    ShelleyBasedEraAllegra ->
-      StakeAddrRegistrationPreConway ShelleyToBabbageEraAllegra <$> genStakeCredential
-    ShelleyBasedEraMary ->
-      StakeAddrRegistrationPreConway ShelleyToBabbageEraMary <$> genStakeCredential
-    ShelleyBasedEraAlonzo ->
-      StakeAddrRegistrationPreConway ShelleyToBabbageEraAlonzo <$> genStakeCredential
-    ShelleyBasedEraBabbage ->
-      StakeAddrRegistrationPreConway ShelleyToBabbageEraBabbage <$> genStakeCredential
-    ShelleyBasedEraConway ->
-      StakeAddrRegistrationConway ConwayEraOnwardsConway <$> genLovelace <*> genStakeCredential
+genStakeAddressRequirements =
+  caseShelleyToBabbageOrConwayEraOnwards
+    (\w ->
+      StakeAddrRegistrationPreConway w
+        <$> genStakeCredential)
+    (\w -> StakeAddrRegistrationConway w
+        <$> genLovelace
+        <*> genStakeCredential)
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal era =

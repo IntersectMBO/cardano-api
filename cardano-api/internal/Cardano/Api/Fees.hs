@@ -1316,19 +1316,8 @@ calculateMinimumUTxO
   -> Ledger.PParams (ShelleyLedgerEra era)
   -> Lovelace
 calculateMinimumUTxO sbe txout pp =
-  case sbe of
-    ShelleyBasedEraShelley ->
-      calcMinUTxO pp (toShelleyTxOutAny sbe txout)
-    ShelleyBasedEraAllegra ->
-      calcMinUTxO pp (toShelleyTxOutAny sbe txout)
-    ShelleyBasedEraMary ->
-      calcMinUTxO pp (toShelleyTxOutAny sbe txout)
-    ShelleyBasedEraAlonzo ->
-      calcMinUTxO pp (toShelleyTxOutAny sbe txout)
-    ShelleyBasedEraBabbage ->
-      calcMinUTxO pp (toShelleyTxOutAny sbe txout)
-    ShelleyBasedEraConway ->
-      calcMinUTxO pp (toShelleyTxOutAny sbe txout)
+  shelleyBasedEraConstraints sbe
+    $ calcMinUTxO pp (toShelleyTxOutAny sbe txout)
  where
    calcMinUTxO :: L.EraTxOut ledgerera => L.PParams ledgerera -> L.TxOut ledgerera -> Lovelace
    calcMinUTxO pp' txOut =
