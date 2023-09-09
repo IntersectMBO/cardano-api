@@ -67,6 +67,9 @@ module Cardano.Api (
     shelleyBasedEraConstraints,
     withShelleyBasedEraConstraintsForLedger,
 
+    -- * Era case handling
+    caseShelleyToBabbageAndConwayEraOnwards,
+
     -- * Assertions on era
     requireShelleyBasedEra,
 
