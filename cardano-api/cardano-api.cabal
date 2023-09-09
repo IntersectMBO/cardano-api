@@ -66,6 +66,7 @@ library internal
                         Cardano.Api.Feature.AlonzoEraOnwards
                         Cardano.Api.Feature.BabbageEraOnwards
                         Cardano.Api.Feature.ConwayEraOnwards
+                        Cardano.Api.Feature.MaryEraOnwards
                         Cardano.Api.Feature.ShelleyToAllegraEra
                         Cardano.Api.Feature.ShelleyToAlonzoEra
                         Cardano.Api.Feature.ShelleyToBabbageEra
