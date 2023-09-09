@@ -56,7 +56,14 @@ module Cardano.Api.Eras
   , withShelleyBasedEraConstraintsForLedger
 
     -- * Era case handling
-  , caseShelleyToBabbageAndConwayEraOnwards
+
+    -- ** Case on CardanoEra
+  , caseByronOrShelleyBasedEra
+
+    -- ** Case on ShelleyBasedEra
+  , caseShelleyToMaryOrAlonzoEraOnwards
+  , caseShelleyToAlonzoOrBabbageEraOnwards
+  , caseShelleyToBabbageOrConwayEraOnwards
   ) where
 
 import           Cardano.Api.Eras.Case

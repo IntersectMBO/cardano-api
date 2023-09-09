@@ -2,19 +2,69 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Cardano.Api.Eras.Case
-  ( caseShelleyToBabbageAndConwayEraOnwards
+  ( -- Case on CardanoEra
+    caseByronOrShelleyBasedEra
+
+    -- Case on ShelleyBasedEra
+  , caseShelleyToMaryOrAlonzoEraOnwards
+  , caseShelleyToAlonzoOrBabbageEraOnwards
+  , caseShelleyToBabbageOrConwayEraOnwards
   ) where
 
 import           Cardano.Api.Eras.Core
+import           Cardano.Api.Feature.AlonzoEraOnwards
+import           Cardano.Api.Feature.BabbageEraOnwards
 import           Cardano.Api.Feature.ConwayEraOnwards
+import           Cardano.Api.Feature.ShelleyToAlonzoEra
 import           Cardano.Api.Feature.ShelleyToBabbageEra
+import           Cardano.Api.Feature.ShelleyToMaryEra
 
-caseShelleyToBabbageAndConwayEraOnwards :: ()
+caseByronOrShelleyBasedEra :: ()
+  => (CardanoEra ByronEra -> a)
+  -> (ShelleyBasedEra era -> a)
+  -> CardanoEra era
+  -> a
+caseByronOrShelleyBasedEra l r = \case
+  ByronEra   -> l ByronEra
+  ShelleyEra -> r ShelleyBasedEraShelley
+  AllegraEra -> r ShelleyBasedEraAllegra
+  MaryEra    -> r ShelleyBasedEraMary
+  AlonzoEra  -> r ShelleyBasedEraAlonzo
+  BabbageEra -> r ShelleyBasedEraBabbage
+  ConwayEra  -> r ShelleyBasedEraConway
+
+caseShelleyToMaryOrAlonzoEraOnwards :: ()
+  => (ShelleyToMaryEra era -> a)
+  -> (AlonzoEraOnwards era -> a)
+  -> ShelleyBasedEra era
+  -> a
+caseShelleyToMaryOrAlonzoEraOnwards l r = \case
+  ShelleyBasedEraShelley  -> l ShelleyToMaryEraShelley
+  ShelleyBasedEraAllegra  -> l ShelleyToMaryEraAllegra
+  ShelleyBasedEraMary     -> l ShelleyToMaryEraMary
+  ShelleyBasedEraAlonzo   -> r AlonzoEraOnwardsAlonzo
+  ShelleyBasedEraBabbage  -> r AlonzoEraOnwardsBabbage
+  ShelleyBasedEraConway   -> r AlonzoEraOnwardsConway
+
+caseShelleyToAlonzoOrBabbageEraOnwards :: ()
+  => (ShelleyToAlonzoEra era -> a)
+  -> (BabbageEraOnwards era -> a)
+  -> ShelleyBasedEra era
+  -> a
+caseShelleyToAlonzoOrBabbageEraOnwards l r = \case
+  ShelleyBasedEraShelley -> l ShelleyToAlonzoEraShelley
+  ShelleyBasedEraAllegra -> l ShelleyToAlonzoEraAllegra
+  ShelleyBasedEraMary    -> l ShelleyToAlonzoEraMary
+  ShelleyBasedEraAlonzo  -> l ShelleyToAlonzoEraAlonzo
+  ShelleyBasedEraBabbage -> r BabbageEraOnwardsBabbage
+  ShelleyBasedEraConway  -> r BabbageEraOnwardsConway
+
+caseShelleyToBabbageOrConwayEraOnwards :: ()
   => (ShelleyToBabbageEra era -> a)
   -> (ConwayEraOnwards era -> a)
   -> ShelleyBasedEra era
   -> a
-caseShelleyToBabbageAndConwayEraOnwards l r = \case
+caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraShelley -> l ShelleyToBabbageEraShelley
   ShelleyBasedEraAllegra -> l ShelleyToBabbageEraAllegra
   ShelleyBasedEraMary    -> l ShelleyToBabbageEraMary

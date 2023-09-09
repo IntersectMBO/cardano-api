@@ -111,7 +111,14 @@ module Cardano.Api (
     withShelleyBasedEraConstraintsForLedger,
 
     -- * Era case handling
-    caseShelleyToBabbageAndConwayEraOnwards,
+
+    -- ** Case on CardanoEra
+    caseByronOrShelleyBasedEra,
+
+    -- ** Case on ShelleyBasedEra
+    caseShelleyToMaryOrAlonzoEraOnwards,
+    caseShelleyToAlonzoOrBabbageEraOnwards,
+    caseShelleyToBabbageOrConwayEraOnwards,
 
     -- * Assertions on era
     requireShelleyBasedEra,
