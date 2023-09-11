@@ -434,6 +434,10 @@ module Cardano.Api (
     StakePoolRelay,
     StakePoolMetadataReference,
 
+    -- * Rewards
+    DelegationsAndRewards(..),
+    mergeDelegsAndRewards,
+
     -- * Stake pool off-chain metadata
     StakePoolMetadata,
     validateAndHashStakePoolMetadata,
@@ -991,6 +995,7 @@ import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
 import           Cardano.Api.Query.Expr
+import           Cardano.Api.Rewards
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32

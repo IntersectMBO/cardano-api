@@ -97,6 +97,7 @@ library internal
                         Cardano.Api.Query.Expr
                         Cardano.Api.Query.Types
                         Cardano.Api.ReexposeLedger
+                        Cardano.Api.Rewards
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
                         Cardano.Api.SerialiseBech32
