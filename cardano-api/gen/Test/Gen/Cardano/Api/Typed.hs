@@ -631,7 +631,6 @@ genStakeAddressRequirements sbe =
     ShelleyBasedEraConway ->
       StakeAddrRegistrationConway ConwayEraOnwardsConway <$> genLovelace <*> genStakeCredential
 
-
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal era =
   case updateProposalSupportedInEra era of
@@ -938,14 +937,7 @@ genProtocolParameters era = do
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
 genValidProtocolParameters :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
-genValidProtocolParameters era =
-  case era of
-    ShelleyBasedEraShelley -> LedgerProtocolParameters <$> Q.arbitrary
-    ShelleyBasedEraAllegra -> LedgerProtocolParameters <$> Q.arbitrary
-    ShelleyBasedEraMary    -> LedgerProtocolParameters <$> Q.arbitrary
-    ShelleyBasedEraAlonzo  -> LedgerProtocolParameters <$> Q.arbitrary
-    ShelleyBasedEraBabbage -> LedgerProtocolParameters <$> Q.arbitrary
-    ShelleyBasedEraConway  -> LedgerProtocolParameters <$> Q.arbitrary
+genValidProtocolParameters sbe = shelleyBasedEraTestConstraints sbe $ LedgerProtocolParameters <$> Q.arbitrary
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do
