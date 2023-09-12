@@ -85,8 +85,6 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.Feature.BabbageEraOnwards
-import           Cardano.Api.Feature.ShelleyToAlonzoEra
 import           Cardano.Api.Genesis
 import           Cardano.Api.IO
 import           Cardano.Api.IPC (ConsensusModeParams (..),
@@ -1522,7 +1520,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
       extraEntropy :: Nonce
       extraEntropy =
         caseShelleyToAlonzoOrBabbageEraOnwards
-          (\w -> shelleyToAlonzoEraConstraints w $ pp ^. Core.ppExtraEntropyL)
+          (const (pp ^. Core.ppExtraEntropyL))
           (const Ledger.NeutralNonce)
           sbe
 
@@ -1639,8 +1637,8 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
         $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
   caseShelleyToAlonzoOrBabbageEraOnwards
-    (\w -> shelleyToAlonzoEraConstraints w $ isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f)
-    (\w -> babbageEraOnwardsConstraints  w $ isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f)
+    (const (isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f))
+    (const (isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f))
     sbe
 
  where

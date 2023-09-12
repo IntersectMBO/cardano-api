@@ -15,6 +15,8 @@ module Cardano.Api.Feature.ShelleyToMaryEra
   , shelleyToMaryEraConstraints
   , shelleyToMaryEraToCardanoEra
   , shelleyToMaryEraToShelleyBasedEra
+
+  , ShelleyToMaryEraConstraints
   ) where
 
 import           Cardano.Api.Eras.Core

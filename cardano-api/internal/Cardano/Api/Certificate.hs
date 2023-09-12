@@ -717,9 +717,7 @@ fromShelleyCertificate :: ()
   -> Ledger.TxCert (ShelleyLedgerEra era)
   -> Certificate era
 fromShelleyCertificate =
-  caseShelleyToBabbageOrConwayEraOnwards
-    (\w -> shelleyToBabbageEraConstraints w $ ShelleyRelatedCertificate w)
-    (\w -> conwayEraOnwardsConstraints w $ ConwayCertificate w)
+  caseShelleyToBabbageOrConwayEraOnwards ShelleyRelatedCertificate ConwayCertificate
 
 toShelleyPoolParams :: StakePoolParameters -> Ledger.PoolParams StandardCrypto
 toShelleyPoolParams StakePoolParameters {

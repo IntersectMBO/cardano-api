@@ -14,6 +14,8 @@ module Cardano.Api.Feature.AlonzoEraOnly
   , alonzoEraOnlyConstraints
   , alonzoEraOnlyToCardanoEra
   , alonzoEraOnlyToShelleyBasedEra
+
+  , AlonzoEraOnlyConstraints
   ) where
 
 import           Cardano.Api.Eras.Core

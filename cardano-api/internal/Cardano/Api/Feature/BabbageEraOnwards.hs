@@ -14,6 +14,8 @@ module Cardano.Api.Feature.BabbageEraOnwards
   , babbageEraOnwardsConstraints
   , babbageEraOnwardsToCardanoEra
   , babbageEraOnwardsToShelleyBasedEra
+
+  , BabbageEraOnwardsConstraints
   ) where
 
 import           Cardano.Api.Eras.Core
