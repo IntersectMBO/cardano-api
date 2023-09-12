@@ -51,6 +51,8 @@ module Cardano.Api.Tx (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Feature.AlonzoEraOnwards
+import           Cardano.Api.Feature.ShelleyToMaryEra
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
@@ -497,13 +499,10 @@ getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
   $ witnesses
 
 getTxWitnesses (ShelleyTx sbe tx') =
-    case sbe of
-      ShelleyBasedEraShelley -> getShelleyTxWitnesses tx'
-      ShelleyBasedEraAllegra -> getShelleyTxWitnesses tx'
-      ShelleyBasedEraMary    -> getShelleyTxWitnesses tx'
-      ShelleyBasedEraAlonzo  -> getAlonzoTxWitnesses  tx'
-      ShelleyBasedEraBabbage -> getAlonzoTxWitnesses  tx'
-      ShelleyBasedEraConway  -> getAlonzoTxWitnesses  tx'
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (\w -> shelleyToMaryEraConstraints w $ getShelleyTxWitnesses tx')
+    (\w -> alonzoEraOnwardsConstraints w $ getAlonzoTxWitnesses  tx')
+    sbe
   where
     getShelleyTxWitnesses :: forall ledgerera.
                              L.EraTx ledgerera
