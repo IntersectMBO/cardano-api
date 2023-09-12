@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -30,6 +31,10 @@ import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
+import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Credential as L
+import           Cardano.Ledger.DRepDistr (DRepState (..))
+import qualified Cardano.Ledger.Keys as L
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 
 import           Control.Monad.Trans (MonadTrans (..))
@@ -37,6 +42,7 @@ import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Control.Monad.Trans.Except.Extra (left, onLeft, onNothing)
 import           Data.Function ((&))
 import           Data.Map (Map)
+import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -81,7 +87,8 @@ queryStateForBalancedTx :: ()
           , EraHistory CardanoMode
           , SystemStart
           , Set PoolId
-          , Map StakeCredential Lovelace))
+          , Map StakeCredential Lovelace
+          , Map (L.Credential L.DRepRole L.StandardCrypto) Lovelace))
 queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   sbe <- requireShelleyBasedEra era
     & onNothing (left ByronEraNotSupported)
@@ -90,6 +97,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
 
   let stakeCreds = Set.fromList $ mapMaybe (filterUnRegCreds sbe) certs
+      drepCreds  = Set.fromList $ mapMaybe (filterUnRegDRepCreds sbe) certs
 
   -- Query execution
   utxo <- lift (queryUtxo qeInMode sbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
@@ -118,7 +126,13 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch)
 
-  pure (utxo, LedgerProtocolParameters pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits)
+  drepDelegDeposits <-
+    Map.map (fromShelleyLovelace . drepDeposit) <$>
+    (lift (queryDRepState qeInMode sbe drepCreds)
+        & onLeft (left . QceUnsupportedNtcVersion)
+        & onLeft (left . QueryEraMismatch))
+
+  pure (utxo, LedgerProtocolParameters pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits, drepDelegDeposits)
 
 -- | Query the node to determine which era it is in.
 determineEra

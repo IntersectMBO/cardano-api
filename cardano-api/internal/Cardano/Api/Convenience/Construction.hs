@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 -- | Convenience transaction construction functions
 --
 module Cardano.Api.Convenience.Construction (
@@ -24,6 +26,10 @@ import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
+import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Credential as L
+import qualified Cardano.Ledger.Keys as L
+
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -46,16 +52,17 @@ constructBalancedTx
   -> SystemStart
   -> Set PoolId       -- ^ The set of registered stake pools
   -> Map.Map StakeCredential Lovelace
+  -> Map.Map (L.Credential L.DRepRole L.StandardCrypto) Lovelace
   -> [ShelleyWitnessSigningKey]
   -> Either TxBodyErrorAutoBalance (Tx era)
 constructBalancedTx txbodcontent changeAddr mOverrideWits utxo lpp
                     ledgerEpochInfo systemStart stakePools
-                    stakeDelegDeposits shelleyWitSigningKeys = do
+                    stakeDelegDeposits drepDelegDeposits shelleyWitSigningKeys = do
 
   BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
          systemStart ledgerEpochInfo
-         lpp stakePools stakeDelegDeposits utxo txbodcontent
+         lpp stakePools stakeDelegDeposits drepDelegDeposits utxo txbodcontent
          changeAddr mOverrideWits
 
   let keyWits = map (makeShelleyKeyWitness txbody) shelleyWitSigningKeys

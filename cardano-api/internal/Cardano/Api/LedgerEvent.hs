@@ -55,7 +55,9 @@ import           Control.State.Transition (Event)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Proxy (Proxy (Proxy))
 import           Data.Set (Set)
+import           Data.SOP (All, K (K))
 import           Data.SOP.Strict
 
 data LedgerEvent

@@ -104,6 +104,7 @@ library internal
                         Cardano.Api.Query.Expr
                         Cardano.Api.Query.Types
                         Cardano.Api.ReexposeLedger
+                        Cardano.Api.Rewards
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
                         Cardano.Api.SerialiseBech32
@@ -182,7 +183,9 @@ library internal
                       , scientific
                       , serialise
                       , small-steps ^>= 1.0
+                      , sop-core
                       , stm
+                      , strict-sop-core
                       , text >= 2.0
                       , time
                       , transformers
