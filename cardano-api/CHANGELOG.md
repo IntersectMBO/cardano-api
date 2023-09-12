@@ -1,5 +1,60 @@
 # Changelog for cardano-api
 
+## 8.20.0.0
+
+- Expose constraints from casing functions
+  (feature, compatible)
+  [PR 237](https://github.com/input-output-hk/cardano-api/pull/237)
+
+- New functions:
+  * `caseByronOrShelleyBasedEra`
+  * `caseShelleyToMaryOrAlonzoEraOnwards`
+  * `caseShelleyToAlonzoOrBabbageEraOnwards`
+  Renamed `caseShelleyToBabbageAndConwayEraOnwards` to `caseShelleyToBabbageOrConwayEraOnwards`
+  (breaking)
+  [PR 232](https://github.com/input-output-hk/cardano-api/pull/232)
+
+- Fix existing test constraints functions.  Type signatures changed on:
+  * `shelleyBasedEraTestConstraints`
+  * `shelleyToBabbageEraTestConstraints`
+  * `conwayEraOnwardsTestConstraints`
+  (breaking, bugfix)
+  [PR 233](https://github.com/input-output-hk/cardano-api/pull/233)
+
+- Add the following features:
+  * `AlonzoEraOnly`
+  * `ShelleyToAllegraEra`
+  * `BabbageEraOnwards`
+  * `AlonzoEraOnwards`
+  * `ShelleyToMaryEra`
+  * `ShelleyToAlonzoEra`
+  (feature)
+  [PR 220](https://github.com/input-output-hk/cardano-api/pull/220)
+
+- New `caseShelleyToBabbageAndConwayEraOnwards` function
+  (feature, compatible)
+  [PR 231](https://github.com/input-output-hk/cardano-api/pull/231)
+
+- Delete deprecated functions and types:
+  * `Allegra`
+  * `AsAllegra`
+  * `AsByron`
+  * `AsMary`
+  * `AsShelley`
+  * `Byron`
+  * `Mary`
+  * `Shelley`
+  * `eitherDeserialiseFromRawBytes`
+  * `hashScriptData`
+  * `makeStakeAddressPoolDelegationCertificate`
+  * `makeTransactionBody`
+  * `queryPparams`
+  (breaking, improvement)
+  [PR 230](https://github.com/input-output-hk/cardano-api/pull/230)
+
+- Updated to `cardano-ledger-conway-1.18`.
+  [PR 227](https://github.com/input-output-hk/cardano-api/pull/227)
+
 ## 8.19.0.0
 
 - New `foldSomeAddressVerification` key function
