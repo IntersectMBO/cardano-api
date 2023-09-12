@@ -1,5 +1,7 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Cardano.Api.Eras.Case
   ( -- Case on CardanoEra
@@ -11,6 +13,7 @@ module Cardano.Api.Eras.Case
   , caseShelleyToBabbageOrConwayEraOnwards
   ) where
 
+import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Feature.AlonzoEraOnwards
 import           Cardano.Api.Feature.BabbageEraOnwards
@@ -21,7 +24,7 @@ import           Cardano.Api.Feature.ShelleyToMaryEra
 
 caseByronOrShelleyBasedEra :: ()
   => (CardanoEra ByronEra -> a)
-  -> (ShelleyBasedEra era -> a)
+  -> (ShelleyBasedEraConstraints era => ShelleyBasedEra era -> a)
   -> CardanoEra era
   -> a
 caseByronOrShelleyBasedEra l r = \case
@@ -34,8 +37,8 @@ caseByronOrShelleyBasedEra l r = \case
   ConwayEra  -> r ShelleyBasedEraConway
 
 caseShelleyToMaryOrAlonzoEraOnwards :: ()
-  => (ShelleyToMaryEra era -> a)
-  -> (AlonzoEraOnwards era -> a)
+  => (ShelleyToMaryEraConstraints era => ShelleyToMaryEra era -> a)
+  -> (AlonzoEraOnwardsConstraints era => AlonzoEraOnwards era -> a)
   -> ShelleyBasedEra era
   -> a
 caseShelleyToMaryOrAlonzoEraOnwards l r = \case
@@ -47,8 +50,8 @@ caseShelleyToMaryOrAlonzoEraOnwards l r = \case
   ShelleyBasedEraConway   -> r AlonzoEraOnwardsConway
 
 caseShelleyToAlonzoOrBabbageEraOnwards :: ()
-  => (ShelleyToAlonzoEra era -> a)
-  -> (BabbageEraOnwards era -> a)
+  => (ShelleyToAlonzoEraConstraints era => ShelleyToAlonzoEra era -> a)
+  -> (BabbageEraOnwardsConstraints  era => BabbageEraOnwards era  -> a)
   -> ShelleyBasedEra era
   -> a
 caseShelleyToAlonzoOrBabbageEraOnwards l r = \case
@@ -60,8 +63,8 @@ caseShelleyToAlonzoOrBabbageEraOnwards l r = \case
   ShelleyBasedEraConway  -> r BabbageEraOnwardsConway
 
 caseShelleyToBabbageOrConwayEraOnwards :: ()
-  => (ShelleyToBabbageEra era -> a)
-  -> (ConwayEraOnwards era -> a)
+  => (ShelleyToBabbageEraConstraints  era => ShelleyToBabbageEra era  -> a)
+  -> (ConwayEraOnwardsConstraints     era => ConwayEraOnwards era     -> a)
   -> ShelleyBasedEra era
   -> a
 caseShelleyToBabbageOrConwayEraOnwards l r = \case

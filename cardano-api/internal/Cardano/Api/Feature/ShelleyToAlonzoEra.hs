@@ -15,6 +15,8 @@ module Cardano.Api.Feature.ShelleyToAlonzoEra
   , shelleyToAlonzoEraConstraints
   , shelleyToAlonzoEraToCardanoEra
   , shelleyToAlonzoEraToShelleyBasedEra
+
+  , ShelleyToAlonzoEraConstraints
   ) where
 
 import           Cardano.Api.Eras.Core

@@ -14,6 +14,8 @@ module Cardano.Api.Feature.ConwayEraOnwards
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToCardanoEra
   , conwayEraOnwardsToShelleyBasedEra
+
+  , ConwayEraOnwardsConstraints
   ) where
 
 import           Cardano.Api.Eras.Core
@@ -67,24 +69,24 @@ data AnyConwayEraOnwards where
 
 deriving instance Show AnyConwayEraOnwards
 
-type ConwayEraOnwardsConstraints era ledgerera =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto ledgerera))
-  , C.Signable (L.VRF (L.EraCrypto ledgerera)) L.Seed
+type ConwayEraOnwardsConstraints era =
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
-  , Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.ConwayEraTxBody ledgerera
-  , L.ConwayEraTxCert ledgerera
-  , L.Crypto (L.EraCrypto ledgerera)
-  , L.Era ledgerera
-  , L.EraCrypto ledgerera ~ L.StandardCrypto
-  , L.EraGov ledgerera
-  , L.EraPParams ledgerera
-  , L.EraTx ledgerera
-  , L.EraTxBody ledgerera
-  , L.HashAnnotated (L.TxBody ledgerera) L.EraIndependentTxBody L.StandardCrypto
-  , L.ShelleyEraTxBody ledgerera
-  , L.TxCert ledgerera ~ L.ConwayTxCert ledgerera
+  , L.ConwayEraTxBody (ShelleyLedgerEra era)
+  , L.ConwayEraTxCert (ShelleyLedgerEra era)
+  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+  , L.Era (ShelleyLedgerEra era)
+  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , L.EraGov (ShelleyLedgerEra era)
+  , L.EraPParams (ShelleyLedgerEra era)
+  , L.EraTx (ShelleyLedgerEra era)
+  , L.EraTxBody (ShelleyLedgerEra era)
+  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
+  , L.TxCert (ShelleyLedgerEra era) ~ L.ConwayTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
@@ -95,9 +97,8 @@ type ConwayEraOnwardsConstraints era ledgerera =
   )
 
 conwayEraOnwardsConstraints :: ()
-  => ShelleyLedgerEra era ~ ledgerera
   => ConwayEraOnwards era
-  -> (ConwayEraOnwardsConstraints era ledgerera => a)
+  -> (ConwayEraOnwardsConstraints era => a)
   -> a
 conwayEraOnwardsConstraints = \case
   ConwayEraOnwardsConway -> id
