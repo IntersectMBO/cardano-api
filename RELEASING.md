@@ -127,6 +127,24 @@ Briefly speaking, it requires executing of the following steps:
 
 After package gets released, you can check the released version at: https://input-output-hk.github.io/cardano-haskell-packages/all-package-versions/ and update the version in the dependant packages, in their cabal files, for example: `cardano-api ^>= 8.3`
 
+## Troubleshooting
+
+### Build fails due to `installed package instance does not exist`
+If you notice that your build fails due to an error similar to the following one:
+```
+ Configuring library for cardano-ledger-conway-1.8.0.0..
+Error: cabal: The following package dependencies were requested
+--dependency='cardano-ledger-alonzo=cardano-ledger-alonzo-1.4.1.0-b1d2cdacf3fecf8f57f465701c6cc39a19521597ceee354f7a1ea4688dec9d9f'
+--dependency='cardano-ledger-babbage=cardano-ledger-babbage-1.4.4.0-3f75b69fa5a14215f31de708afe86d5d69fbecea8ff284dc3265e0701eada7b6'
+however the given installed package instance does not exist.
+```
+increase the cabal cache version number in [.github/workflows/haskell.yml](.github/workflows/haskell.yml):
+```yaml
+CABAL_CACHE_VERSION: "2023-08-22"
+```
+Usually setting this date to the current date is enough.
+If it is already set to the current date, you can add a suffix to it - the important part is to make it unique across all builds which occurred until now, for example `2023-08-22-1`.
+This issue happens due to frequent cache collisions in the [`cabal-cache`](https://github.com/haskell-works/cabal-cache).
 
 ## References
 1. https://github.com/input-output-hk/cardano-updates/tree/main/scripts
@@ -135,3 +153,4 @@ After package gets released, you can check the released version at: https://inpu
 1. https://input-output-hk.github.io/cardano-engineering-handbook/policy/haskell/packaging/versioning.html
 
 <!-- vim: set spell textwidth=0: -->
+
