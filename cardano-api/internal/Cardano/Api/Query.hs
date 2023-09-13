@@ -144,6 +144,7 @@ import           Data.SOP.Constraint (SListI)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Stack
 
 
 -- ----------------------------------------------------------------------------
@@ -670,7 +671,7 @@ toConsensusQueryShelleyBased erainmode (QueryPoolDistribution poolIds) =
     getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
 
 toConsensusQueryShelleyBased erainmode (QueryStakeDelegDeposits creds) =
-  Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR $ Consensus.GetStakeDelegDeposits creds'))
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetStakeDelegDeposits creds'))
   where
     creds' = Set.map toShelleyStakeCredential creds
 
@@ -712,7 +713,9 @@ consensusQueryInEraInMode erainmode =
 -- Conversions of query results from the consensus types.
 --
 
-fromConsensusQueryResult :: forall mode block result result'. ConsensusBlockForMode mode ~ block
+fromConsensusQueryResult :: forall mode block result result'.
+                            HasCallStack
+                         => ConsensusBlockForMode mode ~ block
                          => QueryInMode mode result
                          -> Consensus.Query block result'
                          -> result'
@@ -842,7 +845,8 @@ fromConsensusQueryResult (QueryInEra ConwayEraInCardanoMode
 
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera protocol result result'.
-     ShelleyLedgerEra era ~ ledgerera
+     HasCallStack
+  => ShelleyLedgerEra era ~ ledgerera
   => Core.EraCrypto ledgerera ~ Consensus.StandardCrypto
   => ConsensusProtocol era ~ protocol
   => ShelleyBasedEra era
@@ -988,8 +992,9 @@ fromConsensusQueryResultShelleyBased _ QueryCommitteeState{} q' committeeState' 
 --
 -- Such mismatches should be preventable with an appropriate property test.
 --
-fromConsensusQueryResultMismatch :: a
+fromConsensusQueryResultMismatch :: HasCallStack => a
 fromConsensusQueryResultMismatch =
+  withFrozenCallStack $
     error "fromConsensusQueryResult: internal query mismatch"
 
 
