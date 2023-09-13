@@ -1,5 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -14,8 +17,10 @@
 
 module Cardano.Api.Eras.Core2 where
 
+import           Data.Function
 import           Data.GADT.Show
-import           Data.WorldPeace
+import           Data.Kind
+import           Data.WorldPeace hiding (Z)
 -- import Data.Some
 
 
@@ -25,23 +30,67 @@ import           Data.WorldPeace
 -- sommeera :: Union CardanoEra '[ByronEra, ShelleyEra]
 -- sommeera  = unionLift ByronEra
 
--- Type level natural numbers enabling traversing over eras on a type level
-data EZero
-data ESucc a
+-- Type-level Peano-style natural numbers enabling traversing over eras on a type level
+
+data S a
+data Z
+
 
 -- Give each era a type-level number
 -- TODO: maybe we should get rid of Era suffixes?
-type ByronEra   = EZero
-type ShelleyEra = ESucc ByronEra
-type AllegraEra = ESucc ShelleyEra
-type MaryEra    = ESucc AllegraEra
-type AlonzoEra  = ESucc MaryEra
-type BabbageEra = ESucc AlonzoEra
-type ConwayEra  = ESucc BabbageEra
-type XEra = ESucc ConwayEra
 
+type ByronEra = Z
+type ShelleyEra = S ByronEra
+type AllegraEra = S ShelleyEra
+type MaryEra = S AllegraEra
+type AlonzoEra = S MaryEra
+type BabbageEra = S AlonzoEra
+type ConwayEra = S BabbageEra
 -- Represents indefinite future era - used as a type-level boundary - not meant to be used in 'CardanoEra'
-type FutureEra  = ESucc XEra
+type FutureEra = S ConwayEra
+
+-- type family ToPeano a
+-- type family FromPeano a
+--
+-- data ByronEra
+-- type ByronEraNat = Z
+-- type instance ToPeano ByronEra = ByronEraNat
+-- type instance FromPeano ByronEraNat = ByronEra
+--
+-- data ShelleyEra
+-- type ShelleyEraNat = S ByronEraNat
+-- type instance ToPeano ShelleyEra = ShelleyEraNat
+-- type instance FromPeano ShelleyEraNat = ShelleyEra
+--
+-- data AllegraEra
+-- type AllegraEraNat = S ShelleyEraNat
+-- type instance ToPeano AllegraEra = AllegraEraNat
+-- type instance FromPeano AllegraEraNat = AllegraEra
+--
+-- data MaryEra
+-- type MaryEraNat = S AllegraEraNat
+-- type instance ToPeano MaryEra = MaryEraNat
+-- type instance FromPeano MaryEraNat = MaryEra
+--
+-- data AlonzoEra
+-- type AlonzoEraNat = S MaryEraNat
+-- type instance ToPeano AlonzoEra = AlonzoEraNat
+-- type instance FromPeano AlonzoEraNat = AlonzoEra
+--
+-- data BabbageEra
+-- type BabbageEraNat = S AlonzoEraNat
+-- type instance ToPeano BabbageEra = BabbageEraNat
+-- type instance FromPeano BabbageEraNat = BabbageEra
+--
+-- data ConwayEra
+-- type ConwayEraNat = S BabbageEraNat
+-- type instance ToPeano ConwayEra = ConwayEraNat
+-- type instance FromPeano ConwayEraNat = ConwayEra
+--
+-- data FutureEra
+-- type FutureEraNat  = S ConwayEra
+-- type instance ToPeano FutureEra = FutureEraNat
+-- type instance FromPeano FutureEraNat = FutureEra
 
 -- This does not change
 data CardanoEra era where
@@ -99,19 +148,24 @@ deriving instance Ord (CardanoEra era)
 -- BabbageEra
 
 -- a replacement for ShelleyToMaryEra type
-shelleyToMaryAllegra :: CardanoEraFromTo' ShelleyEra MaryEra AllegraEra
-shelleyToMaryAllegra = unionLift AllegraEra
-
-shelleyToMaryAllegra1 :: CardanoEraFromTo' ShelleyEra MaryEra AllegraEra
-shelleyToMaryAllegra1 = unionLift MaryEra
+shelleyToMaryAllegra :: CardanoEraFromTo ShelleyEra MaryEra AllegraEra
+shelleyToMaryAllegra = eraToEraIn @ShelleyEra @MaryEra AllegraEra
 
 -- similar: shelley - alonzo range
-shelleyToAlonzoAlonzo :: CardanoEraFromTo' ShelleyEra AlonzoEra AlonzoEra
-shelleyToAlonzoAlonzo = unionLift AlonzoEra
+shelleyToAlonzoAlonzo :: CardanoEraFromTo ShelleyEra AlonzoEra AlonzoEra
+shelleyToAlonzoAlonzo = eraToEraIn @ShelleyEra @AlonzoEra AlonzoEra
 
 -- all eras from conway onwards
-conwayOnwardsConway :: CardanoEraOnwards' ConwayEra ConwayEra -- Union CardanoEra '[ConwayEra, XEra, FutureEra]
-conwayOnwardsConway = unionLift ConwayEra
+babbageToConway :: CardanoEraFromTo BabbageEra ConwayEra ConwayEra -- Union CardanoEra '[ConwayEra, XEra, FutureEra]
+babbageToConway = eraToEraIn @BabbageEra @ConwayEra ConwayEra
+
+-- all eras from conway onwards
+conwayToConway :: CardanoEraFromTo ConwayEra ConwayEra ConwayEra -- Union CardanoEra '[ConwayEra, XEra, FutureEra]
+conwayToConway = eraToEraIn @ConwayEra @ConwayEra ConwayEra
+
+-- all eras from conway onwards
+conwayOnwardsConway :: CardanoEraOnwards ConwayEra ConwayEra -- Union CardanoEra '[ConwayEra, XEra, FutureEra]
+conwayOnwardsConway = eraToEraIn @ConwayEra @FutureEra ConwayEra
 
 -- You can try to retrieve CardanoEra from an unionEra
 -- >>> unionMatch shelleyToAlonzoAlonzo :: Maybe (CardanoEra AlonzoEra)
@@ -124,33 +178,52 @@ conwayOnwardsConway = unionLift ConwayEra
 type family EraRange e1 e2 where
   -- TODO: there are no checks if e1 <= e2
   EraRange e e = '[e]
-  EraRange e1 (ESucc e2) = e1 ': EraRange (ESucc e1) (ESucc e2)
+  EraRange e1 e2 = e1 ': EraRange (S e1) e2
 
 -- * handy aliases
 -- denotes eras range between e1 and e2 (including e1 and e2)
-type CardanoEraFromTo e1 e2 = Union CardanoEra (EraRange e1 e2)
+type CardanoEraFromToOLD e1 e2 = Union CardanoEra (EraRange e1 e2)
 -- eras from e1 till infinity
-type CardanoEraOnwards e1 = Union CardanoEra (EraRange e1 FutureEra)
+type CardanoEraOnwardsOLD e1 = Union CardanoEra (EraRange e1 FutureEra)
 -- alias for a constraint telling that era is in range
-type EraIn e e1 e2 = IsMember e (EraRange e1 e2)
+type EraInRange e1 e2 e = IsMember e (EraRange e1 e2)
 
 
--- TODO: replace with newtype
-type CardanoEraFromTo' e1 e2 era = EraIn era e1 e2 => Union CardanoEra (EraRange e1 e2)
-type CardanoEraOnwards' e1 era = EraIn era e1 FutureEra => Union CardanoEra (EraRange e1 FutureEra)
+newtype CardanoEraIn es e = UnsafeCardanoEraIn { unCardanoEraIn :: IsMember e es => Union CardanoEra es}
+type CardanoEraFromTo eFrom eTo era = EraInRange eFrom eTo era => CardanoEraIn (EraRange eFrom eTo) era
+type CardanoEraOnwards e1 era = CardanoEraFromTo e1 FutureEra era
 
+eraToEraIn :: forall eFrom eTo era. CardanoEra era -> CardanoEraFromTo eFrom eTo era
+eraToEraIn = UnsafeCardanoEraIn . unionLift
+
+eraHandle :: ElemRemove e es
+          => IsMember era es
+          => (CardanoEraIn (Remove e es) era -> b)
+          -> (CardanoEra e -> b)
+          -> CardanoEraIn es era
+          -> b
+eraHandle hu fa (UnsafeCardanoEraIn u) = unionHandle (hu . UnsafeCardanoEraIn) fa u
+
+absurdEras :: CardanoEraIn '[] era -> b
+absurdEras _ = error "absurd"
 
 -- pattern matching on eras
 caseMatch :: String
 caseMatch = do
-  let printMary       = show :: CardanoEra MaryEra -> String
-      printShelly     = show :: CardanoEra ShelleyEra -> String
-      printAllegraEra = show :: CardanoEra AllegraEra -> String
-  absurdUnion -- this will raise compile error if you forget one era
-    `unionHandle` printShelly
-    `unionHandle` printMary
-    `unionHandle` printAllegraEra
-    $ shelleyToMaryAllegra
+  let printConway = show :: CardanoEra ConwayEra -> String
+      printBabbage = show :: CardanoEra BabbageEra -> String
+      hrest :: IsMember era '[BabbageEra] => CardanoEraIn '[BabbageEra] era -> String
+      hrest = eraHandle absurdEras printBabbage
+  eraHandle hrest printConway babbageToConway
+
+  -- let printShelley    = show :: CardanoEra ShelleyEra -> String
+  --     printAllegraEra = show :: CardanoEra AllegraEra -> String
+  --     printMary       = show :: CardanoEra MaryEra -> String
+  -- absurdEras
+  --   `eraHandle` printMary
+  --   `eraHandle` printAllegraEra
+  --   `eraHandle` printShelley
+  --   $ shelleyToMaryAllegra
 
 -- >>> caseMatch
 -- "AllegraEra"
@@ -158,7 +231,7 @@ caseMatch = do
 -- widen an union to include more eras
 widenUnion :: String
 widenUnion = do
-  let shelleyToBabbage = relaxUnion shelleyToAlonzoAlonzo :: CardanoEraFromTo ShelleyEra BabbageEra
+  let shelleyToBabbage = relaxUnion shelleyToAlonzoAlonzo :: CardanoEraFromToOLD ShelleyEra BabbageEra
   show shelleyToBabbage
 
 -- >>> widenUnion
@@ -184,10 +257,10 @@ instance
 
 
 -- shrink an era range into a narrower one
-doInConwayOnwards :: CardanoEraOnwards ShelleyEra -> Maybe String
+doInConwayOnwards :: CardanoEraOnwardsOLD ShelleyEra -> Maybe String
 doInConwayOnwards era = do
-  _ :: CardanoEraFromTo ShelleyEra BabbageEra <- unionShrink era
-  _ :: CardanoEraOnwards ConwayEra <- unionShrink era
+  _ :: CardanoEraFromToOLD ShelleyEra BabbageEra <- unionShrink era
+  _ :: CardanoEraOnwardsOLD ConwayEra <- unionShrink era
   pure "CONWAY!"
 
 -- >>> doInConwayOnwards (unionLift ShelleyEra :: CardanoEraOnwards ShelleyEra)
@@ -221,6 +294,7 @@ doInConwayOnwards era = do
 -- Remarks from John:
 
 -- 1. change representation of eras to avoid ESucc in the type errors
+--    - if we want to use type family to navigate between eras, that doesn't improve error messages much
 -- 2. add era type parameter to Union
 -- 3. Case matching on era ranges
 -- 4. Keep an eye out on compile time
