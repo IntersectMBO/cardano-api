@@ -245,19 +245,17 @@ queryDRepState :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
   -> Set (L.Credential L.DRepRole L.StandardCrypto)
+  -- ^ An empty credentials set means that states for all DReps will be returned
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto))))
-queryDRepState eraInMode sbe drepCreds
-  | S.null drepCreds  = pure . pure $ pure mempty
-  | otherwise         = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
+queryDRepState eraInMode sbe drepCreds = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
 
 queryDRepStakeDistribution :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
   -> Set (L.DRep L.StandardCrypto)
+  -- ^ An empty DRep set means that distributions for all DReps will be returned
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
-queryDRepStakeDistribution eraInMode sbe dreps
-  | S.null dreps = pure . pure $ pure mempty
-  | otherwise    = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
+queryDRepStakeDistribution eraInMode sbe dreps = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
 
 queryCommitteeState :: ()
   => EraInMode era mode
