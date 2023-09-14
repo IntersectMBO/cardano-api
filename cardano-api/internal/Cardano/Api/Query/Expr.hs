@@ -60,6 +60,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Data.Map (Map)
 import           Data.Set (Set)
+import qualified Data.Set as S
 
 queryChainBlockNo :: ()
   => LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (WithOrigin BlockNo))
@@ -168,8 +169,9 @@ queryStakeDelegDeposits :: ()
   -> ShelleyBasedEra era
   -> Set StakeCredential
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either Consensus.EraMismatch (Map StakeCredential Lovelace)))
-queryStakeDelegDeposits eraInMode sbe stakeCreds =
-  queryExpr $ QueryInEra eraInMode . QueryInShelleyBasedEra sbe $ QueryStakeDelegDeposits stakeCreds
+queryStakeDelegDeposits eraInMode sbe stakeCreds
+  | S.null stakeCreds = pure . pure $ pure mempty
+  | otherwise         = queryExpr $ QueryInEra eraInMode . QueryInShelleyBasedEra sbe $ QueryStakeDelegDeposits stakeCreds
 
 queryStakeDistribution :: ()
   => EraInMode era mode
@@ -183,8 +185,9 @@ queryStakePoolParameters :: ()
   -> ShelleyBasedEra era
   -> Set PoolId
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map PoolId StakePoolParameters)))
-queryStakePoolParameters eraInMode sbe poolIds =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryStakePoolParameters poolIds
+queryStakePoolParameters eraInMode sbe poolIds
+  | S.null poolIds  = pure . pure $ pure mempty
+  | otherwise       = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryStakePoolParameters poolIds
 
 queryStakePools :: ()
   => EraInMode era mode
@@ -243,16 +246,18 @@ queryDRepState :: ()
   -> ShelleyBasedEra era
   -> Set (L.Credential L.DRepRole L.StandardCrypto)
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto))))
-queryDRepState eraInMode sbe drepCreds =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
+queryDRepState eraInMode sbe drepCreds
+  | S.null drepCreds  = pure . pure $ pure mempty
+  | otherwise         = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
 
 queryDRepStakeDistribution :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
   -> Set (L.DRep L.StandardCrypto)
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
-queryDRepStakeDistribution eraInMode sbe dreps =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
+queryDRepStakeDistribution eraInMode sbe dreps
+  | S.null dreps = pure . pure $ pure mempty
+  | otherwise    = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
 
 queryCommitteeState :: ()
   => EraInMode era mode

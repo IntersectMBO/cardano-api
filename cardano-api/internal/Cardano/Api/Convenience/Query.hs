@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Convenience query functions
@@ -19,6 +20,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eras
+import           Cardano.Api.Feature.ConwayEraOnwards (ConwayEraOnwards)
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
@@ -119,18 +121,16 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     & onLeft (left . QueryEraMismatch)
 
   stakeDelegDeposits <-
-    if null stakeCreds
-      then pure mempty
-      else do
-        lift (queryStakeDelegDeposits qeInMode sbe stakeCreds)
-          & onLeft (left . QceUnsupportedNtcVersion)
-          & onLeft (left . QueryEraMismatch)
+    lift (queryStakeDelegDeposits qeInMode sbe stakeCreds)
+      & onLeft (left . QceUnsupportedNtcVersion)
+      & onLeft (left . QueryEraMismatch)
 
   drepDelegDeposits <-
-    Map.map (fromShelleyLovelace . drepDeposit) <$>
-    (lift (queryDRepState qeInMode sbe drepCreds)
-        & onLeft (left . QceUnsupportedNtcVersion)
-        & onLeft (left . QueryEraMismatch))
+    inEraFeature @ConwayEraOnwards era (pure mempty) $ \_ ->
+      Map.map (fromShelleyLovelace . drepDeposit) <$>
+      (lift (queryDRepState qeInMode sbe drepCreds)
+          & onLeft (left . QceUnsupportedNtcVersion)
+          & onLeft (left . QueryEraMismatch))
 
   pure (utxo, LedgerProtocolParameters pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits, drepDelegDeposits)
 
