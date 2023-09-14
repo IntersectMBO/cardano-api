@@ -1314,7 +1314,7 @@ instance SerialiseAsRawBytes (VerificationKey GenesisUTxOKey) where
       Crypto.rawSerialiseVerKeyDSIGN vk
 
     deserialiseFromRawBytes (AsVerificationKey AsGenesisUTxOKey) bs =
-      maybeToRight (SerialiseAsRawBytesError "Enable to deserialise VerificationKey GenesisUTxOKey") $
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise VerificationKey GenesisUTxOKey") $
         GenesisUTxOVerificationKey . Shelley.VKey <$> Crypto.rawDeserialiseVerKeyDSIGN bs
 
 instance SerialiseAsRawBytes (SigningKey GenesisUTxOKey) where
