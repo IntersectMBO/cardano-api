@@ -17,6 +17,7 @@ module Cardano.Api.Eras.Constraints
   , ShelleyBasedEraConstraints
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()

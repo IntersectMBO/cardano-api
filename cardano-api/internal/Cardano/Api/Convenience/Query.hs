@@ -20,6 +20,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eon.ConwayEraOnwards (ConwayEraOnwards)
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.IO
 import           Cardano.Api.IPC

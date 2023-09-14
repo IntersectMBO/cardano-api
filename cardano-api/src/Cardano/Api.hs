@@ -1012,12 +1012,14 @@ import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
 import           Cardano.Api.Fees

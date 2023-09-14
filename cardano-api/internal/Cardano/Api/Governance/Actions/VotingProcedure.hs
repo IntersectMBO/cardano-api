@@ -18,8 +18,8 @@
 module Cardano.Api.Governance.Actions.VotingProcedure where
 
 import           Cardano.Api.Address
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Constraints
-import           Cardano.Api.Eras.Core
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley

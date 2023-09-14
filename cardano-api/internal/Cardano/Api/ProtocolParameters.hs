@@ -97,7 +97,9 @@ module Cardano.Api.ProtocolParameters (
   ) where
 
 import           Cardano.Api.Address
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy

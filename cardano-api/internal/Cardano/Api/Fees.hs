@@ -46,8 +46,10 @@ module Cardano.Api.Fees (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query

@@ -59,6 +59,7 @@ library internal
                         Cardano.Api.Eon.AlonzoEraOnwards
                         Cardano.Api.Eon.BabbageEraOnwards
                         Cardano.Api.Eon.ConwayEraOnwards
+                        Cardano.Api.Eon.ShelleyBasedEra
                         Cardano.Api.Eon.ShelleyToAllegraEra
                         Cardano.Api.Eon.ShelleyToAlonzoEra
                         Cardano.Api.Eon.ShelleyToBabbageEra

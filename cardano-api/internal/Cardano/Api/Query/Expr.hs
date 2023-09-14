@@ -35,6 +35,7 @@ module Cardano.Api.Query.Expr
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.IPC

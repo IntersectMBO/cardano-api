@@ -16,6 +16,7 @@ module Cardano.Api.GenesisParameters (
 
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.NetworkId
 import qualified Cardano.Api.ReexposeLedger as Ledger

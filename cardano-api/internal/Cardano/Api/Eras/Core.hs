@@ -5,7 +5,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 
 -- | Cardano eras, sometimes we have to distinguish them.
@@ -34,42 +33,15 @@ module Cardano.Api.Eras.Core
   , forEraInEon
   , inEraEonMaybe
   , maybeEonInEra
-  , eonInShelleyBasedEra
-  , inShelleyBasedEraEon
-  , inShelleyBasedEraEonMaybe
-  , maybeEonInShelleyBasedEra
-
-    -- * Shelley-based eras
-  , ShelleyBasedEra(..)
-  , IsShelleyBasedEra(..)
-  , AnyShelleyBasedEra(..)
-  , InAnyShelleyBasedEra(..)
-  , shelleyBasedToCardanoEra
-
-    -- ** Mapping to era types from the Shelley ledger library
-  , ShelleyLedgerEra
-  , eraProtVerLow
-
-    -- * Cardano eras, as Byron vs Shelley-based
-  , CardanoEraStyle(..)
-  , cardanoEraStyle
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
-
-    -- * Assertions on era
-  , requireShelleyBasedEra
-
   ) where
 
 import           Cardano.Api.HasTypeProxy
 
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.BaseTypes as L
-import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
-                   StandardBabbage, StandardConway, StandardMary, StandardShelley)
 
-import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Kind
 import qualified Data.Text as Text
@@ -166,40 +138,6 @@ maybeEonInEra :: ()
   -> Maybe (eon era)  -- ^ The eon if supported in the era
 maybeEonInEra =
   inEonForEra Nothing Just
-
--- | Determine the value to use for a eon in a given 'ShelleyBasedEra'.
-eonInShelleyBasedEra :: ()
-  => Eon eon
-  => a
-  -> (eon era -> a)
-  -> ShelleyBasedEra era
-  -> a
-eonInShelleyBasedEra no yes =
-  inEonForEra no yes . shelleyBasedToCardanoEra
-
-maybeEonInShelleyBasedEra :: ()
-  => Eon eon
-  => ShelleyBasedEra era
-  -> Maybe (eon era)
-maybeEonInShelleyBasedEra =
-  inEonForEra Nothing Just . shelleyBasedToCardanoEra
-
-inShelleyBasedEraEon :: ()
-  => Eon eon
-  => ShelleyBasedEra era
-  -> a
-  -> (eon era -> a)
-  -> a
-inShelleyBasedEraEon era no yes =
-  eonInShelleyBasedEra no yes era
-
-inShelleyBasedEraEonMaybe :: ()
-  => Eon eon
-  => ShelleyBasedEra era
-  -> (eon era -> a)
-  -> Maybe a
-inShelleyBasedEraEonMaybe era yes =
-  inShelleyBasedEraEon era Nothing (Just . yes)
 
 -- ----------------------------------------------------------------------------
 -- ToCardanoEra
@@ -354,13 +292,14 @@ instance FromJSON AnyCardanoEra where
 -- class constraint.
 --
 anyCardanoEra :: CardanoEra era -> AnyCardanoEra
-anyCardanoEra ByronEra   = AnyCardanoEra ByronEra
-anyCardanoEra ShelleyEra = AnyCardanoEra ShelleyEra
-anyCardanoEra AllegraEra = AnyCardanoEra AllegraEra
-anyCardanoEra MaryEra    = AnyCardanoEra MaryEra
-anyCardanoEra AlonzoEra  = AnyCardanoEra AlonzoEra
-anyCardanoEra BabbageEra = AnyCardanoEra BabbageEra
-anyCardanoEra ConwayEra  = AnyCardanoEra ConwayEra
+anyCardanoEra = \case
+  ByronEra    -> AnyCardanoEra ByronEra
+  ShelleyEra  -> AnyCardanoEra ShelleyEra
+  AllegraEra  -> AnyCardanoEra AllegraEra
+  MaryEra     -> AnyCardanoEra MaryEra
+  AlonzoEra   -> AnyCardanoEra AlonzoEra
+  BabbageEra  -> AnyCardanoEra BabbageEra
+  ConwayEra   -> AnyCardanoEra ConwayEra
 
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
 -- us what era it is, but hides the era type. This is useful when the era is
@@ -373,221 +312,15 @@ data InAnyCardanoEra thing where
                      -> InAnyCardanoEra thing
 
 -- ----------------------------------------------------------------------------
--- Shelley-based eras
---
-
--- | While the Byron and Shelley eras are quite different, there are several
--- eras that are based on Shelley with only minor differences. It is useful
--- to be able to treat the Shelley-based eras in a mostly-uniform way.
---
--- Values of this type witness the fact that the era is Shelley-based. This
--- can be used to constrain the era to being a Shelley-based on. It allows
--- non-uniform handling making case distinctions on the constructor.
---
-data ShelleyBasedEra era where
-     ShelleyBasedEraShelley :: ShelleyBasedEra ShelleyEra
-     ShelleyBasedEraAllegra :: ShelleyBasedEra AllegraEra
-     ShelleyBasedEraMary    :: ShelleyBasedEra MaryEra
-     ShelleyBasedEraAlonzo  :: ShelleyBasedEra AlonzoEra
-     ShelleyBasedEraBabbage :: ShelleyBasedEra BabbageEra
-     ShelleyBasedEraConway  :: ShelleyBasedEra ConwayEra
-
-instance NFData (ShelleyBasedEra era) where
-  rnf = \case
-    ShelleyBasedEraShelley -> ()
-    ShelleyBasedEraAllegra -> ()
-    ShelleyBasedEraMary    -> ()
-    ShelleyBasedEraAlonzo  -> ()
-    ShelleyBasedEraBabbage -> ()
-    ShelleyBasedEraConway  -> ()
-
-deriving instance Eq   (ShelleyBasedEra era)
-deriving instance Ord  (ShelleyBasedEra era)
-deriving instance Show (ShelleyBasedEra era)
-
-instance ToJSON (ShelleyBasedEra era) where
-   toJSON = toJSON . shelleyBasedToCardanoEra
-
-instance TestEquality ShelleyBasedEra where
-    testEquality ShelleyBasedEraShelley ShelleyBasedEraShelley = Just Refl
-    testEquality ShelleyBasedEraAllegra ShelleyBasedEraAllegra = Just Refl
-    testEquality ShelleyBasedEraMary    ShelleyBasedEraMary    = Just Refl
-    testEquality ShelleyBasedEraAlonzo  ShelleyBasedEraAlonzo  = Just Refl
-    testEquality ShelleyBasedEraBabbage ShelleyBasedEraBabbage = Just Refl
-    testEquality ShelleyBasedEraConway  ShelleyBasedEraConway  = Just Refl
-    testEquality _                      _                      = Nothing
-
-instance Eon ShelleyBasedEra where
-  inEonForEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> yes ShelleyBasedEraShelley
-    AllegraEra  -> yes ShelleyBasedEraAllegra
-    MaryEra     -> yes ShelleyBasedEraMary
-    AlonzoEra   -> yes ShelleyBasedEraAlonzo
-    BabbageEra  -> yes ShelleyBasedEraBabbage
-    ConwayEra   -> yes ShelleyBasedEraConway
-
-instance ToCardanoEra ShelleyBasedEra where
-  toCardanoEra = \case
-    ShelleyBasedEraShelley -> ShelleyEra
-    ShelleyBasedEraAllegra -> AllegraEra
-    ShelleyBasedEraMary    -> MaryEra
-    ShelleyBasedEraAlonzo  -> AlonzoEra
-    ShelleyBasedEraBabbage -> BabbageEra
-    ShelleyBasedEraConway  -> ConwayEra
-
--- | The class of eras that are based on Shelley. This allows uniform handling
--- of Shelley-based eras, but also non-uniform by making case distinctions on
--- the 'ShelleyBasedEra' constructors.
---
-class IsCardanoEra era => IsShelleyBasedEra era where
-   shelleyBasedEra :: ShelleyBasedEra era
-
-instance IsShelleyBasedEra ShelleyEra where
-   shelleyBasedEra = ShelleyBasedEraShelley
-
-instance IsShelleyBasedEra AllegraEra where
-   shelleyBasedEra = ShelleyBasedEraAllegra
-
-instance IsShelleyBasedEra MaryEra where
-   shelleyBasedEra = ShelleyBasedEraMary
-
-instance IsShelleyBasedEra AlonzoEra where
-   shelleyBasedEra = ShelleyBasedEraAlonzo
-
-instance IsShelleyBasedEra BabbageEra where
-   shelleyBasedEra = ShelleyBasedEraBabbage
-
-instance IsShelleyBasedEra ConwayEra where
-   shelleyBasedEra = ShelleyBasedEraConway
-
-data AnyShelleyBasedEra where
-  AnyShelleyBasedEra
-    :: IsShelleyBasedEra era  -- Provide class constraint
-    => ShelleyBasedEra era    -- and explicit value.
-    -> AnyShelleyBasedEra
-
-deriving instance Show AnyShelleyBasedEra
-
-instance Eq AnyShelleyBasedEra where
-    AnyShelleyBasedEra sbe == AnyShelleyBasedEra sbe' =
-      case testEquality sbe sbe' of
-        Nothing   -> False
-        Just Refl -> True -- since no constructors share types
-
-instance Bounded AnyShelleyBasedEra where
-   minBound = AnyShelleyBasedEra ShelleyBasedEraShelley
-   maxBound = AnyShelleyBasedEra ShelleyBasedEraConway
-
-instance Enum AnyShelleyBasedEra where
-   enumFrom e = enumFromTo e maxBound
-
-   fromEnum = \case
-      AnyShelleyBasedEra ShelleyBasedEraShelley  -> 1
-      AnyShelleyBasedEra ShelleyBasedEraAllegra  -> 2
-      AnyShelleyBasedEra ShelleyBasedEraMary     -> 3
-      AnyShelleyBasedEra ShelleyBasedEraAlonzo   -> 4
-      AnyShelleyBasedEra ShelleyBasedEraBabbage  -> 5
-      AnyShelleyBasedEra ShelleyBasedEraConway   -> 6
-
-   toEnum = \case
-      1 -> AnyShelleyBasedEra ShelleyBasedEraShelley
-      2 -> AnyShelleyBasedEra ShelleyBasedEraAllegra
-      3 -> AnyShelleyBasedEra ShelleyBasedEraMary
-      4 -> AnyShelleyBasedEra ShelleyBasedEraAlonzo
-      5 -> AnyShelleyBasedEra ShelleyBasedEraBabbage
-      6 -> AnyShelleyBasedEra ShelleyBasedEraConway
-      n ->
-         error $
-            "AnyShelleyBasedEra.toEnum: " <> show n
-            <> " does not correspond to any known enumerated era."
-
-instance ToJSON AnyShelleyBasedEra where
-   toJSON (AnyShelleyBasedEra sbe) = toJSON sbe
-
-instance FromJSON AnyShelleyBasedEra where
-   parseJSON = withText "AnyShelleyBasedEra"
-     $ \case
-        "Shelley" -> pure $ AnyShelleyBasedEra ShelleyBasedEraShelley
-        "Allegra" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-        "Mary" -> pure $ AnyShelleyBasedEra ShelleyBasedEraMary
-        "Alonzo" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-        "Babbage" -> pure $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-        "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
-        wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
-
-
--- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
--- tells us what era it is, but hides the era type. This is useful when the era
--- is not statically known, for example when deserialising from a file.
---
-data InAnyShelleyBasedEra thing where
-     InAnyShelleyBasedEra :: IsShelleyBasedEra era -- Provide class constraint
-                          => ShelleyBasedEra era   -- and explicit value.
-                          -> thing era
-                          -> InAnyShelleyBasedEra thing
-
-
--- | Converts a 'ShelleyBasedEra' to the broader 'CardanoEra'.
-shelleyBasedToCardanoEra :: ShelleyBasedEra era -> CardanoEra era
-shelleyBasedToCardanoEra ShelleyBasedEraShelley = ShelleyEra
-shelleyBasedToCardanoEra ShelleyBasedEraAllegra = AllegraEra
-shelleyBasedToCardanoEra ShelleyBasedEraMary    = MaryEra
-shelleyBasedToCardanoEra ShelleyBasedEraAlonzo  = AlonzoEra
-shelleyBasedToCardanoEra ShelleyBasedEraBabbage = BabbageEra
-shelleyBasedToCardanoEra ShelleyBasedEraConway  = ConwayEra
-
--- ----------------------------------------------------------------------------
--- Cardano eras factored as Byron vs Shelley-based
---
-
--- | This is the same essential information as 'CardanoEra' but instead of a
--- flat set of alternative eras, it is factored into the legcy Byron era and
--- the current Shelley-based eras.
---
--- This way of factoring the eras is useful because in many cases the
--- major differences are between the Byron and Shelley-based eras, and
--- the Shelley-based eras can often be treated uniformly.
---
-data CardanoEraStyle era where
-     LegacyByronEra  :: CardanoEraStyle ByronEra
-     ShelleyBasedEra :: IsShelleyBasedEra era -- Also provide class constraint
-                     => ShelleyBasedEra era
-                     -> CardanoEraStyle era
-
-deriving instance Eq   (CardanoEraStyle era)
-deriving instance Ord  (CardanoEraStyle era)
-deriving instance Show (CardanoEraStyle era)
-
--- | The 'CardanoEraStyle' for a 'CardanoEra'.
---
-cardanoEraStyle :: CardanoEra era -> CardanoEraStyle era
-cardanoEraStyle ByronEra   = LegacyByronEra
-cardanoEraStyle ShelleyEra = ShelleyBasedEra ShelleyBasedEraShelley
-cardanoEraStyle AllegraEra = ShelleyBasedEra ShelleyBasedEraAllegra
-cardanoEraStyle MaryEra    = ShelleyBasedEra ShelleyBasedEraMary
-cardanoEraStyle AlonzoEra  = ShelleyBasedEra ShelleyBasedEraAlonzo
-cardanoEraStyle BabbageEra = ShelleyBasedEra ShelleyBasedEraBabbage
-cardanoEraStyle ConwayEra  = ShelleyBasedEra ShelleyBasedEraConway
-
--- ----------------------------------------------------------------------------
--- Conversion to Shelley ledger library types
+-- Conversion to ledger library types
 --
 
 -- | A type family that connects our era type tags to equivalent type tags used
--- in the Shelley ledger library.
+-- in the ledger library.
 --
--- This type mapping  connect types from this API with types in the Shelley
+-- This type mapping  connect types from this API with types in the
 -- ledger library which allows writing conversion functions in a more generic
 -- way.
---
-type family ShelleyLedgerEra era = ledgerera | ledgerera -> era where
-  ShelleyLedgerEra ShelleyEra = Consensus.StandardShelley
-  ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
-  ShelleyLedgerEra MaryEra    = Consensus.StandardMary
-  ShelleyLedgerEra AlonzoEra  = Consensus.StandardAlonzo
-  ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
-  ShelleyLedgerEra ConwayEra  = Consensus.StandardConway
 
 type family CardanoLedgerEra era = ledgerera | ledgerera -> era where
   CardanoLedgerEra ByronEra   = L.ByronEra   L.StandardCrypto
@@ -597,23 +330,3 @@ type family CardanoLedgerEra era = ledgerera | ledgerera -> era where
   CardanoLedgerEra AlonzoEra  = L.AlonzoEra  L.StandardCrypto
   CardanoLedgerEra BabbageEra = L.BabbageEra L.StandardCrypto
   CardanoLedgerEra ConwayEra  = L.ConwayEra  L.StandardCrypto
-
--- | Lookup the lower major protocol version for the shelley based era. In other words
--- this is the major protocol version that the era has started in.
-eraProtVerLow :: ShelleyBasedEra era -> L.Version
-eraProtVerLow = \case
-  ShelleyBasedEraShelley -> L.eraProtVerLow @L.Shelley
-  ShelleyBasedEraAllegra -> L.eraProtVerLow @L.Allegra
-  ShelleyBasedEraMary    -> L.eraProtVerLow @L.Mary
-  ShelleyBasedEraAlonzo  -> L.eraProtVerLow @L.Alonzo
-  ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
-  ShelleyBasedEraConway  -> L.eraProtVerLow @L.Conway
-
-requireShelleyBasedEra :: ()
-  => Applicative m
-  => CardanoEra era
-  -> m (Maybe (ShelleyBasedEra era))
-requireShelleyBasedEra era =
-  case cardanoEraStyle era of
-    LegacyByronEra -> pure Nothing
-    ShelleyBasedEra sbe -> pure (Just sbe)

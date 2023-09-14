@@ -25,32 +25,9 @@ module Cardano.Api.Eras
   , forEraInEon
   , inEraEonMaybe
   , maybeEonInEra
-  , eonInShelleyBasedEra
-  , inShelleyBasedEraEon
-  , inShelleyBasedEraEonMaybe
-  , maybeEonInShelleyBasedEra
-
-    -- * Shelley-based eras
-  , ShelleyBasedEra(..)
-  , IsShelleyBasedEra(..)
-  , AnyShelleyBasedEra(..)
-  , InAnyShelleyBasedEra(..)
-  , shelleyBasedEraConstraints
-  , shelleyBasedToCardanoEra
-
-    -- ** Mapping to era types from the Shelley ledger library
-  , ShelleyLedgerEra
-  , eraProtVerLow
-
-    -- * Cardano eras, as Byron vs Shelley-based
-  , CardanoEraStyle(..)
-  , cardanoEraStyle
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
-
-    -- * Assertions on era
-  , requireShelleyBasedEra
 
   , withShelleyBasedEraConstraintsForLedger
 

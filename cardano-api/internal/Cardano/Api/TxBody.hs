@@ -187,8 +187,10 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
 import           Cardano.Api.Governance.Actions.ProposalProcedure

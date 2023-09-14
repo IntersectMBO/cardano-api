@@ -12,6 +12,7 @@ module Cardano.Api.Feature
   , asFeaturedInShelleyBasedEra
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 
 -- | A value only if the eon includes era
