@@ -347,8 +347,6 @@ module Cardano.Api (
     CollateralSupportedInEra(..),
     MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
-    TxFeesExplicitInEra(..),
-    TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -364,7 +362,6 @@ module Cardano.Api (
     -- ** Feature availability functions
     collateralSupportedInEra,
     multiAssetSupportedInEra,
-    txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,

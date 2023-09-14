@@ -117,8 +117,6 @@ module Cardano.Api.TxBody (
     CollateralSupportedInEra(..),
     MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
-    TxFeesExplicitInEra(..),
-    TxFeesImplicitInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -134,7 +132,6 @@ module Cardano.Api.TxBody (
     -- ** Feature availability functions
     collateralSupportedInEra,
     multiAssetSupportedInEra,
-    txFeesExplicitInEra,
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,
@@ -186,10 +183,12 @@ module Cardano.Api.TxBody (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
@@ -989,46 +988,46 @@ multiAssetSupportedInEra BabbageEra = Right MultiAssetInBabbageEra
 multiAssetSupportedInEra ConwayEra = Right MultiAssetInConwayEra
 
 
--- | A representation of whether the era requires explicitly specified fees in
--- transactions.
---
--- The Byron era tx fees are implicit (as the difference bettween the sum of
--- outputs and sum of inputs), but all later eras the fees are specified in the
--- transaction explicitly.
---
-data TxFeesExplicitInEra era where
+-- -- | A representation of whether the era requires explicitly specified fees in
+-- -- transactions.
+-- --
+-- -- The Byron era tx fees are implicit (as the difference bettween the sum of
+-- -- outputs and sum of inputs), but all later eras the fees are specified in the
+-- -- transaction explicitly.
+-- --
+-- data TxFeesExplicitInEra era where
 
-     TxFeesExplicitInShelleyEra :: TxFeesExplicitInEra ShelleyEra
-     TxFeesExplicitInAllegraEra :: TxFeesExplicitInEra AllegraEra
-     TxFeesExplicitInMaryEra    :: TxFeesExplicitInEra MaryEra
-     TxFeesExplicitInAlonzoEra  :: TxFeesExplicitInEra AlonzoEra
-     TxFeesExplicitInBabbageEra :: TxFeesExplicitInEra BabbageEra
-     TxFeesExplicitInConwayEra  :: TxFeesExplicitInEra ConwayEra
+--      TxFeesExplicitInShelleyEra :: TxFeesExplicitInEra ShelleyEra
+--      TxFeesExplicitInAllegraEra :: TxFeesExplicitInEra AllegraEra
+--      TxFeesExplicitInMaryEra    :: TxFeesExplicitInEra MaryEra
+--      TxFeesExplicitInAlonzoEra  :: TxFeesExplicitInEra AlonzoEra
+--      TxFeesExplicitInBabbageEra :: TxFeesExplicitInEra BabbageEra
+--      TxFeesExplicitInConwayEra  :: TxFeesExplicitInEra ConwayEra
 
-deriving instance Eq   (TxFeesExplicitInEra era)
-deriving instance Show (TxFeesExplicitInEra era)
+-- deriving instance Eq   (TxFeesExplicitInEra era)
+-- deriving instance Show (TxFeesExplicitInEra era)
 
--- | A representation of whether the era requires implicitly specified fees in
--- transactions.
---
--- This is the negation of 'TxFeesExplicitInEra'.
---
-data TxFeesImplicitInEra era where
-     TxFeesImplicitInByronEra :: TxFeesImplicitInEra ByronEra
+-- -- | A representation of whether the era requires implicitly specified fees in
+-- -- transactions.
+-- --
+-- -- This is the negation of 'TxFeesExplicitInEra'.
+-- --
+-- data TxFeesImplicitInEra era where
+--      TxFeesImplicitInByronEra :: TxFeesImplicitInEra ByronEra
 
-deriving instance Eq   (TxFeesImplicitInEra era)
-deriving instance Show (TxFeesImplicitInEra era)
+-- deriving instance Eq   (TxFeesImplicitInEra era)
+-- deriving instance Show (TxFeesImplicitInEra era)
 
-txFeesExplicitInEra :: CardanoEra era
-                    -> Either (TxFeesImplicitInEra era)
-                              (TxFeesExplicitInEra era)
-txFeesExplicitInEra ByronEra   = Left  TxFeesImplicitInByronEra
-txFeesExplicitInEra ShelleyEra = Right TxFeesExplicitInShelleyEra
-txFeesExplicitInEra AllegraEra = Right TxFeesExplicitInAllegraEra
-txFeesExplicitInEra MaryEra    = Right TxFeesExplicitInMaryEra
-txFeesExplicitInEra AlonzoEra  = Right TxFeesExplicitInAlonzoEra
-txFeesExplicitInEra BabbageEra = Right TxFeesExplicitInBabbageEra
-txFeesExplicitInEra ConwayEra = Right TxFeesExplicitInConwayEra
+-- txFeesExplicitInEra :: CardanoEra era
+--                     -> Either (TxFeesImplicitInEra era)
+--                               (TxFeesExplicitInEra era)
+-- txFeesExplicitInEra ByronEra   = Left  TxFeesImplicitInByronEra
+-- txFeesExplicitInEra ShelleyEra = Right TxFeesExplicitInShelleyEra
+-- txFeesExplicitInEra AllegraEra = Right TxFeesExplicitInAllegraEra
+-- txFeesExplicitInEra MaryEra    = Right TxFeesExplicitInMaryEra
+-- txFeesExplicitInEra AlonzoEra  = Right TxFeesExplicitInAlonzoEra
+-- txFeesExplicitInEra BabbageEra = Right TxFeesExplicitInBabbageEra
+-- txFeesExplicitInEra ConwayEra = Right TxFeesExplicitInConwayEra
 
 
 -- | A representation of whether the era supports transactions with an upper
@@ -1568,24 +1567,19 @@ parseHash asType = do
 --
 
 data TxFee era where
+  TxFeeImplicit :: ByronEraOnly era -> TxFee era
 
-     TxFeeImplicit :: TxFeesImplicitInEra era -> TxFee era
-
-     TxFeeExplicit :: TxFeesExplicitInEra era -> Lovelace -> TxFee era
+  TxFeeExplicit :: ShelleyBasedEra era -> Lovelace -> TxFee era
 
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
 
 defaultTxFee :: forall era. IsCardanoEra era => TxFee era
-defaultTxFee = case cardanoEra @era of
-  ByronEra -> TxFeeImplicit TxFeesImplicitInByronEra
-  ShelleyEra -> TxFeeExplicit TxFeesExplicitInShelleyEra mempty
-  AllegraEra -> TxFeeExplicit TxFeesExplicitInAllegraEra mempty
-  MaryEra -> TxFeeExplicit TxFeesExplicitInMaryEra mempty
-  AlonzoEra -> TxFeeExplicit TxFeesExplicitInAlonzoEra mempty
-  BabbageEra -> TxFeeExplicit TxFeesExplicitInBabbageEra mempty
-  ConwayEra -> TxFeeExplicit TxFeesExplicitInConwayEra mempty
-
+defaultTxFee =
+  caseByronOrShelleyBasedEra
+    TxFeeImplicit
+    (\w -> TxFeeExplicit w mempty)
+    (cardanoEra @era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction validity range
@@ -2965,25 +2959,9 @@ fromLedgerTxReturnCollateral sbe txbody =
 fromLedgerTxFee
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxFee era
 fromLedgerTxFee sbe body =
-  case sbe of
-    ShelleyBasedEraShelley ->
-      TxFeeExplicit TxFeesExplicitInShelleyEra $
-      fromShelleyLovelace $ body ^. L.feeTxBodyL
-    ShelleyBasedEraAllegra ->
-      TxFeeExplicit TxFeesExplicitInAllegraEra $
-      fromShelleyLovelace $ body ^. L.feeTxBodyL
-    ShelleyBasedEraMary ->
-      TxFeeExplicit TxFeesExplicitInMaryEra $
-      fromShelleyLovelace $ body ^. L.feeTxBodyL
-    ShelleyBasedEraAlonzo ->
-      TxFeeExplicit TxFeesExplicitInAlonzoEra $
-      fromShelleyLovelace $ body ^. L.feeTxBodyL
-    ShelleyBasedEraBabbage ->
-      TxFeeExplicit TxFeesExplicitInBabbageEra $
-      fromShelleyLovelace $ body ^. L.feeTxBodyL
-    ShelleyBasedEraConway ->
-      TxFeeExplicit TxFeesExplicitInConwayEra $
-      fromShelleyLovelace $ body ^. L.feeTxBodyL
+  shelleyBasedEraConstraints sbe
+    $ TxFeeExplicit sbe
+    $ fromShelleyLovelace $ body ^. L.feeTxBodyL
 
 fromLedgerTxValidityRange
   :: ShelleyBasedEra era
@@ -3398,7 +3376,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txOuts              = fromByronTxOut <$> toList txOutputs
   , txReturnCollateral  = TxReturnCollateralNone
   , txTotalCollateral   = TxTotalCollateralNone
-  , txFee               = TxFeeImplicit TxFeesImplicitInByronEra
+  , txFee               = TxFeeImplicit ByronEraOnlyByron
   , txValidityRange     = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
   , txMetadata          = TxMetadataNone
   , txAuxScripts        = TxAuxScriptsNone
@@ -3460,11 +3438,9 @@ convWithdrawals txWithdrawals =
     TxWithdrawals _ ws -> toShelleyWithdrawal ws
 
 convTransactionFee :: ShelleyBasedEra era -> TxFee era -> Ledger.Coin
-convTransactionFee sbe txFee =
-  case txFee of
-    TxFeeImplicit TxFeesImplicitInByronEra  -> case sbe of {}
-    TxFeeExplicit _ fee -> toShelleyLovelace fee
-
+convTransactionFee sbe = \case
+  TxFeeImplicit w  -> noByronEraInShelleyBasedEra sbe w
+  TxFeeExplicit _ fee -> toShelleyLovelace fee
 
 convValidityInterval
   :: (TxValidityLowerBound era, TxValidityUpperBound era)
