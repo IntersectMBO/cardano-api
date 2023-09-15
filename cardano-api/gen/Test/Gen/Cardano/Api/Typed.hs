@@ -735,19 +735,19 @@ genTxBody era = do
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
 genFeaturedInEra :: ()
   => Alternative f
-  => feature era
+  => eon era
   -> f a
-  -> f (Featured feature era a)
+  -> f (Featured eon era a)
 genFeaturedInEra witness gen =
   Featured witness <$> gen
 
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
 genMaybeFeaturedInEra :: ()
-  => FeatureInEra feature
+  => Eon eon
   => Alternative f
-  => (feature era -> f a)
+  => (eon era -> f a)
   -> CardanoEra era
-  -> f (Maybe (Featured feature era a))
+  -> f (Maybe (Featured eon era a))
 genMaybeFeaturedInEra f =
   featureInEra (pure Nothing) $ \w ->
     pure Nothing <|> fmap Just (genFeaturedInEra w (f w))

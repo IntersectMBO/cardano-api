@@ -63,7 +63,7 @@ instance IsShelleyToAlonzoEra MaryEra where
 instance IsShelleyToAlonzoEra AlonzoEra where
   shelleyToAlonzoEra = ShelleyToAlonzoEraAlonzo
 
-instance FeatureInEra ShelleyToAlonzoEra where
+instance Eon ShelleyToAlonzoEra where
   featureInEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> yes ShelleyToAlonzoEraShelley

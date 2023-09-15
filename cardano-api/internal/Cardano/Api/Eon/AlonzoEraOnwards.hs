@@ -58,7 +58,7 @@ instance IsAlonzoEraOnwards BabbageEra where
 instance IsAlonzoEraOnwards ConwayEra where
   alonzoEraOnwards = AlonzoEraOnwardsConway
 
-instance FeatureInEra AlonzoEraOnwards where
+instance Eon AlonzoEraOnwards where
   featureInEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no

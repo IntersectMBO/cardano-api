@@ -20,8 +20,8 @@ module Cardano.Api.Eras
   , CardanoLedgerEra
   , ToCardanoEra(..)
 
-    -- * FeatureInEra
-  , FeatureInEra(..)
+    -- * IsEon
+  , Eon(..)
   , inEraFeature
   , inEraFeatureMaybe
   , maybeFeatureInEra

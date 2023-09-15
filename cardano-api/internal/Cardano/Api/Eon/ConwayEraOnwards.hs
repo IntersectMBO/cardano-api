@@ -52,7 +52,7 @@ deriving instance Eq (ConwayEraOnwards era)
 instance IsConwayEraOnwards ConwayEra where
   conwayEraOnwards = ConwayEraOnwardsConway
 
-instance FeatureInEra ConwayEraOnwards where
+instance Eon ConwayEraOnwards where
   featureInEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no

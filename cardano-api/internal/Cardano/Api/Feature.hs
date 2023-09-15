@@ -35,16 +35,16 @@ unFeatured (Featured _ a) = a
 -- | Attempt to construct a 'FeatureValue' from a value and era.
 -- If the feature is not supported in the era, then 'NoFeatureValue' is returned.
 asFeaturedInEra :: ()
-  => FeatureInEra feature
+  => Eon eon
   => a
   -> CardanoEra era
-  -> Maybe (Featured feature era a)
+  -> Maybe (Featured eon era a)
 asFeaturedInEra value = featureInEra Nothing (Just . flip Featured value)
 
 -- | Attempt to construct a 'FeatureValue' from a value and a shelley-based-era.
 asFeaturedInShelleyBasedEra :: ()
-  => FeatureInEra feature
+  => Eon eon
   => a
   -> ShelleyBasedEra era
-  -> Maybe (Featured feature era a)
+  -> Maybe (Featured eon era a)
 asFeaturedInShelleyBasedEra value = asFeaturedInEra value . shelleyBasedToCardanoEra

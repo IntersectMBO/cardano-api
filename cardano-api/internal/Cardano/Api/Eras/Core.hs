@@ -30,8 +30,8 @@ module Cardano.Api.Eras.Core
   , CardanoLedgerEra
   , ToCardanoEra(..)
 
-    -- * FeatureInEra
-  , FeatureInEra(..)
+    -- * IsEon
+  , Eon(..)
   , inEraFeature
   , inEraFeatureMaybe
   , maybeFeatureInEra
@@ -129,74 +129,75 @@ instance HasTypeProxy ConwayEra where
    proxyToAsType _ = AsConwayEra
 
 -- ----------------------------------------------------------------------------
--- FeatureInEra
+-- Eon
 
--- | A class for producing values for features that are supported in some eras
--- but not others.
-class FeatureInEra (feature :: Type -> Type) where
-  -- | Determine the value to use for a feature in a given 'CardanoEra'.
+-- | An Eon is a span of multiple eras.  Eons are used to scope functionality to
+-- particular eras such that it isn't possible construct code that uses functionality
+-- that is outside of given eras.
+class Eon (eon :: Type -> Type) where
+  -- | Determine the value to use in an eon (a span of multiple eras).
   -- Note that the negative case is the first argument, and the positive case is the second as per
   -- the 'either' function convention.
   featureInEra :: ()
-    => a                    -- ^ Value to use if the feature is not supported in the era
-    -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
-    -> CardanoEra era       -- ^ Era to check
-    -> a                    -- ^ The value to use
+    => a              -- ^ Value to use if the feature is not supported in the era
+    -> (eon era -> a) -- ^ Function to get the value to use if the feature is supported in the era
+    -> CardanoEra era -- ^ Era to check
+    -> a              -- ^ The value to use
 
 inEraFeature :: ()
-  => FeatureInEra feature
-  => CardanoEra era       -- ^ Era to check
-  -> a                    -- ^ Value to use if the feature is not supported in the era
-  -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
-  -> a                    -- ^ The value to use
+  => Eon eon
+  => CardanoEra era   -- ^ Era to check
+  -> a                -- ^ Value to use if the feature is not supported in the era
+  -> (eon era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
+  -> a                -- ^ The value to use
 inEraFeature era no yes =
   featureInEra no yes era
 
 inEraFeatureMaybe :: ()
-  => FeatureInEra feature
-  => CardanoEra era       -- ^ Era to check
-  -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
-  -> Maybe a              -- ^ The value to use
+  => Eon eon
+  => CardanoEra era   -- ^ Era to check
+  -> (eon era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
+  -> Maybe a          -- ^ The value to use
 inEraFeatureMaybe era yes =
   inEraFeature era Nothing (Just . yes)
 
 maybeFeatureInEra :: ()
-  => FeatureInEra feature
-  => CardanoEra era       -- ^ Era to check
-  -> Maybe (feature era)  -- ^ The feature if supported in the era
+  => Eon eon
+  => CardanoEra era   -- ^ Era to check
+  -> Maybe (eon era)  -- ^ The feature if supported in the era
 maybeFeatureInEra =
   featureInEra Nothing Just
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 featureInShelleyBasedEra :: ()
-  => FeatureInEra feature
+  => Eon eon
   => a
-  -> (feature era -> a)
+  -> (eon era -> a)
   -> ShelleyBasedEra era
   -> a
 featureInShelleyBasedEra no yes =
   featureInEra no yes . shelleyBasedToCardanoEra
 
 maybeFeatureInShelleyBasedEra :: ()
-  => FeatureInEra feature
+  => Eon eon
   => ShelleyBasedEra era
-  -> Maybe (feature era)
+  -> Maybe (eon era)
 maybeFeatureInShelleyBasedEra =
   featureInEra Nothing Just . shelleyBasedToCardanoEra
 
 inShelleyBasedEraFeature :: ()
-  => FeatureInEra feature
+  => Eon eon
   => ShelleyBasedEra era
   -> a
-  -> (feature era -> a)
+  -> (eon era -> a)
   -> a
 inShelleyBasedEraFeature era no yes =
   featureInShelleyBasedEra no yes era
 
 inShelleyBasedEraFeatureMaybe :: ()
-  => FeatureInEra feature
+  => Eon eon
   => ShelleyBasedEra era
-  -> (feature era -> a)
+  -> (eon era -> a)
   -> Maybe a
 inShelleyBasedEraFeatureMaybe era yes =
   inShelleyBasedEraFeature era Nothing (Just . yes)
@@ -204,9 +205,9 @@ inShelleyBasedEraFeatureMaybe era yes =
 -- ----------------------------------------------------------------------------
 -- ToCardanoEra
 
-class ToCardanoEra (feature :: Type -> Type) where
+class ToCardanoEra (eon :: Type -> Type) where
   toCardanoEra :: ()
-    => feature era
+    => eon era
     -> CardanoEra era
 
 -- ----------------------------------------------------------------------------
@@ -256,7 +257,7 @@ instance TestEquality CardanoEra where
     testEquality ConwayEra  ConwayEra  = Just Refl
     testEquality _          _          = Nothing
 
-instance FeatureInEra CardanoEra where
+instance Eon CardanoEra where
   featureInEra _ yes = yes
 
 instance ToCardanoEra CardanoEra where
@@ -417,7 +418,7 @@ instance TestEquality ShelleyBasedEra where
     testEquality ShelleyBasedEraConway  ShelleyBasedEraConway  = Just Refl
     testEquality _                      _                      = Nothing
 
-instance FeatureInEra ShelleyBasedEra where
+instance Eon ShelleyBasedEra where
   featureInEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> yes ShelleyBasedEraShelley

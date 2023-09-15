@@ -28,7 +28,7 @@ module Cardano.Api (
     ToCardanoEra(..),
 
     -- * Feature support
-    FeatureInEra(..),
+    Eon(..),
     inEraFeature,
     inEraFeatureMaybe,
     maybeFeatureInEra,

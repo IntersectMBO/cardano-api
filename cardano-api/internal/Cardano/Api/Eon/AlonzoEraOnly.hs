@@ -50,7 +50,7 @@ deriving instance Eq (AlonzoEraOnly era)
 instance IsAlonzoEraOnly AlonzoEra where
   alonzoEraOnly = AlonzoEraOnlyAlonzo
 
-instance FeatureInEra AlonzoEraOnly where
+instance Eon AlonzoEraOnly where
   featureInEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no
