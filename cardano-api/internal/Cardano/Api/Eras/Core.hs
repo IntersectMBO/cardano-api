@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -138,25 +137,25 @@ class Eon (eon :: Type -> Type) where
   -- | Determine the value to use in an eon (a span of multiple eras).
   -- Note that the negative case is the first argument, and the positive case is the second as per
   -- the 'either' function convention.
-  featureInEra :: ()
-    => a              -- ^ Value to use if the feature is not supported in the era
-    -> (eon era -> a) -- ^ Function to get the value to use if the feature is supported in the era
+  inEonForEra :: ()
+    => a              -- ^ Value to use if the eon does not include the era
+    -> (eon era -> a) -- ^ Function to get the value to use if the eon includes the era
     -> CardanoEra era -- ^ Era to check
     -> a              -- ^ The value to use
 
 inEraFeature :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
-  -> a                -- ^ Value to use if the feature is not supported in the era
-  -> (eon era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
+  -> a                -- ^ Value to use if the eon does not include the era
+  -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
   -> a                -- ^ The value to use
 inEraFeature era no yes =
-  featureInEra no yes era
+  inEonForEra no yes era
 
 inEraFeatureMaybe :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
-  -> (eon era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
+  -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
   -> Maybe a          -- ^ The value to use
 inEraFeatureMaybe era yes =
   inEraFeature era Nothing (Just . yes)
@@ -166,7 +165,7 @@ maybeFeatureInEra :: ()
   => CardanoEra era   -- ^ Era to check
   -> Maybe (eon era)  -- ^ The feature if supported in the era
 maybeFeatureInEra =
-  featureInEra Nothing Just
+  inEonForEra Nothing Just
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 featureInShelleyBasedEra :: ()
@@ -176,14 +175,14 @@ featureInShelleyBasedEra :: ()
   -> ShelleyBasedEra era
   -> a
 featureInShelleyBasedEra no yes =
-  featureInEra no yes . shelleyBasedToCardanoEra
+  inEonForEra no yes . shelleyBasedToCardanoEra
 
 maybeFeatureInShelleyBasedEra :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> Maybe (eon era)
 maybeFeatureInShelleyBasedEra =
-  featureInEra Nothing Just . shelleyBasedToCardanoEra
+  inEonForEra Nothing Just . shelleyBasedToCardanoEra
 
 inShelleyBasedEraFeature :: ()
   => Eon eon
@@ -258,7 +257,7 @@ instance TestEquality CardanoEra where
     testEquality _          _          = Nothing
 
 instance Eon CardanoEra where
-  featureInEra _ yes = yes
+  inEonForEra _ yes = yes
 
 instance ToCardanoEra CardanoEra where
   toCardanoEra = id
@@ -419,7 +418,7 @@ instance TestEquality ShelleyBasedEra where
     testEquality _                      _                      = Nothing
 
 instance Eon ShelleyBasedEra where
-  featureInEra no yes = \case
+  inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> yes ShelleyBasedEraShelley
     AllegraEra  -> yes ShelleyBasedEraAllegra

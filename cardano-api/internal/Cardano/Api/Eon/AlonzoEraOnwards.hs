@@ -59,7 +59,7 @@ instance IsAlonzoEraOnwards ConwayEra where
   alonzoEraOnwards = AlonzoEraOnwardsConway
 
 instance Eon AlonzoEraOnwards where
-  featureInEra no yes = \case
+  inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no
     AllegraEra  -> no

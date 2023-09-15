@@ -56,7 +56,7 @@ instance IsShelleyToAllegraEra AllegraEra where
   shelleyToAllegraEra = ShelleyToAllegraEraAllegra
 
 instance Eon ShelleyToAllegraEra where
-  featureInEra no yes = \case
+  inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> yes ShelleyToAllegraEraShelley
     AllegraEra  -> yes ShelleyToAllegraEraAllegra

@@ -51,7 +51,7 @@ instance IsAlonzoEraOnly AlonzoEra where
   alonzoEraOnly = AlonzoEraOnlyAlonzo
 
 instance Eon AlonzoEraOnly where
-  featureInEra no yes = \case
+  inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no
     AllegraEra  -> no

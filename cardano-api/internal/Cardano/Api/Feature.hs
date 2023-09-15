@@ -14,32 +14,32 @@ module Cardano.Api.Feature
 
 import           Cardano.Api.Eras.Core
 
--- | A value only if the feature is supported in this era
-data Featured feature era a where
+-- | A value only if the eon includes era
+data Featured eon era a where
   Featured
-    :: feature era
-    -- ^ The witness that the feature is supported in this era
+    :: eon era
+    -- ^ The witness that the eon includes era
     -> a
     -- ^ The value to use
-    -> Featured feature era a
+    -> Featured eon era a
 
-deriving instance (Eq a, Eq (feature era)) => Eq (Featured feature era a)
-deriving instance (Show a, Show (feature era)) => Show (Featured feature era a)
+deriving instance (Eq a, Eq (eon era)) => Eq (Featured eon era a)
+deriving instance (Show a, Show (eon era)) => Show (Featured eon era a)
 
-instance Functor (Featured feature era) where
-  fmap f (Featured feature a) = Featured feature (f a)
+instance Functor (Featured eon era) where
+  fmap f (Featured eon a) = Featured eon (f a)
 
-unFeatured :: Featured feature era a -> a
+unFeatured :: Featured eon era a -> a
 unFeatured (Featured _ a) = a
 
 -- | Attempt to construct a 'FeatureValue' from a value and era.
--- If the feature is not supported in the era, then 'NoFeatureValue' is returned.
+-- If the eon is not supported in the era, then 'NoFeatureValue' is returned.
 asFeaturedInEra :: ()
   => Eon eon
   => a
   -> CardanoEra era
   -> Maybe (Featured eon era a)
-asFeaturedInEra value = featureInEra Nothing (Just . flip Featured value)
+asFeaturedInEra value = inEonForEra Nothing (Just . flip Featured value)
 
 -- | Attempt to construct a 'FeatureValue' from a value and a shelley-based-era.
 asFeaturedInShelleyBasedEra :: ()
