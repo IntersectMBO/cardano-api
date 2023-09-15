@@ -55,6 +55,14 @@ library internal
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
                         Cardano.Api.DRepMetadata
+                        Cardano.Api.Eon.AlonzoEraOnly
+                        Cardano.Api.Eon.AlonzoEraOnwards
+                        Cardano.Api.Eon.BabbageEraOnwards
+                        Cardano.Api.Eon.ConwayEraOnwards
+                        Cardano.Api.Eon.ShelleyToAllegraEra
+                        Cardano.Api.Eon.ShelleyToAlonzoEra
+                        Cardano.Api.Eon.ShelleyToBabbageEra
+                        Cardano.Api.Eon.ShelleyToMaryEra
                         Cardano.Api.EraCast
                         Cardano.Api.Eras
                         Cardano.Api.Eras.Case
@@ -62,14 +70,6 @@ library internal
                         Cardano.Api.Eras.Core
                         Cardano.Api.Error
                         Cardano.Api.Feature
-                        Cardano.Api.Feature.AlonzoEraOnly
-                        Cardano.Api.Feature.AlonzoEraOnwards
-                        Cardano.Api.Feature.BabbageEraOnwards
-                        Cardano.Api.Feature.ConwayEraOnwards
-                        Cardano.Api.Feature.ShelleyToAllegraEra
-                        Cardano.Api.Feature.ShelleyToAlonzoEra
-                        Cardano.Api.Feature.ShelleyToBabbageEra
-                        Cardano.Api.Feature.ShelleyToMaryEra
                         Cardano.Api.Fees
                         Cardano.Api.Genesis
                         Cardano.Api.GenesisParameters

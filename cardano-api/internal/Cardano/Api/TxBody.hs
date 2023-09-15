@@ -186,11 +186,11 @@ module Cardano.Api.TxBody (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
-import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash

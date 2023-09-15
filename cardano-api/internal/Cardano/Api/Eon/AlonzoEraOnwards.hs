@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Api.Feature.AlonzoEraOnwards
+module Cardano.Api.Eon.AlonzoEraOnwards
   ( AlonzoEraOnwards(..)
   , IsAlonzoEraOnwards(..)
   , AnyAlonzoEraOnwards(..)

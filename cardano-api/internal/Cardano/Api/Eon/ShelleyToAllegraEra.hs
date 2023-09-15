@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Api.Feature.ShelleyToAllegraEra
+module Cardano.Api.Eon.ShelleyToAllegraEra
   ( ShelleyToAllegraEra(..)
   , IsShelleyToAllegraEra(..)
   , AnyShelleyToAllegraEra(..)

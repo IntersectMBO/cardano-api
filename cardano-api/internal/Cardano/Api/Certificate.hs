@@ -74,10 +74,10 @@ module Cardano.Api.Certificate (
 
 import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature.ConwayEraOnwards
-import           Cardano.Api.Feature.ShelleyToBabbageEra
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos

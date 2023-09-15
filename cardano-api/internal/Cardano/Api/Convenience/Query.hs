@@ -19,8 +19,8 @@ module Cardano.Api.Convenience.Query (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Eon.ConwayEraOnwards (ConwayEraOnwards)
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature.ConwayEraOnwards (ConwayEraOnwards)
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
