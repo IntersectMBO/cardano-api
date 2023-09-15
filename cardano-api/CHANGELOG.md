@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 8.20.1.0
+
+- Fix typos in some deserialization error messages
+  (bugfix)
+  [PR 243](https://github.com/input-output-hk/cardano-api/pull/243)
+
+- Fix DRep Stake and DRep Stake queries for empty lists
+  (bugfix)
+  [PR 245](https://github.com/input-output-hk/cardano-api/pull/245)
+
+- Fix querying for dreps in `transaction build` in eras before conway
+  (bugfix)
+  [PR 240](https://github.com/input-output-hk/cardano-api/pull/240)
+
+- Fix Query error in QueryStakeDelegDeposits when executing transaction build
+  (bugfix)
+  [PR 239](https://github.com/input-output-hk/cardano-api/pull/239)
+
 ## 8.20.0.0
 
 - Expose constraints from casing functions
