@@ -139,7 +139,7 @@ class FeatureInEra (feature :: Type -> Type) where
   -- the 'either' function convention.
   featureInEra :: ()
     => a                    -- ^ Value to use if the feature is not supported in the era
-    -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+    -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
     -> CardanoEra era       -- ^ Era to check
     -> a                    -- ^ The value to use
 
@@ -147,7 +147,7 @@ inEraFeature :: ()
   => FeatureInEra feature
   => CardanoEra era       -- ^ Era to check
   -> a                    -- ^ Value to use if the feature is not supported in the era
-  -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
   -> a                    -- ^ The value to use
 inEraFeature era no yes =
   featureInEra no yes era
@@ -155,7 +155,7 @@ inEraFeature era no yes =
 inEraFeatureMaybe :: ()
   => FeatureInEra feature
   => CardanoEra era       -- ^ Era to check
-  -> (feature era -> a)   -- ^ Function to get thealue to use if the feature is supported in the era
+  -> (feature era -> a)   -- ^ Function to get the value to use if the feature is supported in the era
   -> Maybe a              -- ^ The value to use
 inEraFeatureMaybe era yes =
   inEraFeature era Nothing (Just . yes)
