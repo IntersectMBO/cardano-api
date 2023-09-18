@@ -23,13 +23,12 @@ module Cardano.Api.Eras
     -- * IsEon
   , Eon(..)
   , forEraInEon
-  , inEraFeatureMaybe
-  , maybeFeatureInEra
-
-  , featureInShelleyBasedEra
-  , inShelleyBasedEraFeature
-  , inShelleyBasedEraFeatureMaybe
-  , maybeFeatureInShelleyBasedEra
+  , inEraEonMaybe
+  , maybeEonInEra
+  , eonInShelleyBasedEra
+  , inShelleyBasedEraEon
+  , inShelleyBasedEraEonMaybe
+  , maybeEonInShelleyBasedEra
 
     -- * Shelley-based eras
   , ShelleyBasedEra(..)

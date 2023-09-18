@@ -32,12 +32,12 @@ module Cardano.Api.Eras.Core
     -- * IsEon
   , Eon(..)
   , forEraInEon
-  , inEraFeatureMaybe
-  , maybeFeatureInEra
-  , featureInShelleyBasedEra
-  , inShelleyBasedEraFeature
-  , inShelleyBasedEraFeatureMaybe
-  , maybeFeatureInShelleyBasedEra
+  , inEraEonMaybe
+  , maybeEonInEra
+  , eonInShelleyBasedEra
+  , inShelleyBasedEraEon
+  , inShelleyBasedEraEonMaybe
+  , maybeEonInShelleyBasedEra
 
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
@@ -152,54 +152,54 @@ forEraInEon :: ()
 forEraInEon era no yes =
   inEonForEra no yes era
 
-inEraFeatureMaybe :: ()
+inEraEonMaybe :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
   -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
   -> Maybe a          -- ^ The value to use
-inEraFeatureMaybe era yes =
+inEraEonMaybe era yes =
   forEraInEon era Nothing (Just . yes)
 
-maybeFeatureInEra :: ()
+maybeEonInEra :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
-  -> Maybe (eon era)  -- ^ The feature if supported in the era
-maybeFeatureInEra =
+  -> Maybe (eon era)  -- ^ The eon if supported in the era
+maybeEonInEra =
   inEonForEra Nothing Just
 
--- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
-featureInShelleyBasedEra :: ()
+-- | Determine the value to use for a eon in a given 'ShelleyBasedEra'.
+eonInShelleyBasedEra :: ()
   => Eon eon
   => a
   -> (eon era -> a)
   -> ShelleyBasedEra era
   -> a
-featureInShelleyBasedEra no yes =
+eonInShelleyBasedEra no yes =
   inEonForEra no yes . shelleyBasedToCardanoEra
 
-maybeFeatureInShelleyBasedEra :: ()
+maybeEonInShelleyBasedEra :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> Maybe (eon era)
-maybeFeatureInShelleyBasedEra =
+maybeEonInShelleyBasedEra =
   inEonForEra Nothing Just . shelleyBasedToCardanoEra
 
-inShelleyBasedEraFeature :: ()
+inShelleyBasedEraEon :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> a
   -> (eon era -> a)
   -> a
-inShelleyBasedEraFeature era no yes =
-  featureInShelleyBasedEra no yes era
+inShelleyBasedEraEon era no yes =
+  eonInShelleyBasedEra no yes era
 
-inShelleyBasedEraFeatureMaybe :: ()
+inShelleyBasedEraEonMaybe :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> (eon era -> a)
   -> Maybe a
-inShelleyBasedEraFeatureMaybe era yes =
-  inShelleyBasedEraFeature era Nothing (Just . yes)
+inShelleyBasedEraEonMaybe era yes =
+  inShelleyBasedEraEon era Nothing (Just . yes)
 
 -- ----------------------------------------------------------------------------
 -- ToCardanoEra

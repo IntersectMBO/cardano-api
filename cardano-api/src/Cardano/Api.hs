@@ -30,13 +30,13 @@ module Cardano.Api (
     -- * Feature support
     Eon(..),
     forEraInEon,
-    inEraFeatureMaybe,
-    maybeFeatureInEra,
+    inEraEonMaybe,
+    maybeEonInEra,
 
-    featureInShelleyBasedEra,
-    inShelleyBasedEraFeature,
-    inShelleyBasedEraFeatureMaybe,
-    maybeFeatureInShelleyBasedEra,
+    eonInShelleyBasedEra,
+    inShelleyBasedEraEon,
+    inShelleyBasedEraEonMaybe,
+    maybeEonInShelleyBasedEra,
 
     Featured(..),
     asFeaturedInEra,
