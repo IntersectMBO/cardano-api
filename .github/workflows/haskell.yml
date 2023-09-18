@@ -45,13 +45,17 @@ jobs:
         f+${{ matrix.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
+    - name: Apt update
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt update
+
     - name: Install Haskell
       uses: input-output-hk/actions/haskell@latest
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
-  
+
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
       with:

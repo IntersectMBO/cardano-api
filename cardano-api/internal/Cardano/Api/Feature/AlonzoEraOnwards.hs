@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -85,6 +86,10 @@ type AlonzoEraOnwardsConstraints era =
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
   , L.AlonzoEraPParams (ShelleyLedgerEra era)
+  , L.AlonzoEraTx (ShelleyLedgerEra era)
+  , L.AlonzoEraTxBody (ShelleyLedgerEra era)
+  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
+  , L.AlonzoEraTxWits (ShelleyLedgerEra era)
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
   , L.Era (ShelleyLedgerEra era)
   , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
