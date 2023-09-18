@@ -270,8 +270,8 @@ instance EraCast Certificate where
     case cert  of
       ShelleyRelatedCertificate sourceWit sourceLedgerCert ->
         shelleyToBabbageEraConstraints sourceWit
-          $ inEraFeature targetEra
-              ( inEraFeature targetEra
+          $ forEraInEon targetEra
+              ( forEraInEon targetEra
                   ( Left $ EraCastError
                       { originalValue = cert
                       , fromEra = shelleyToBabbageEraToCardanoEra sourceWit
@@ -299,8 +299,8 @@ instance EraCast Certificate where
 
       ConwayCertificate sourceWit sourceLedgerCert ->
         conwayEraOnwardsConstraints sourceWit
-          $ inEraFeature targetEra
-              ( inEraFeature targetEra
+          $ forEraInEon targetEra
+              ( forEraInEon targetEra
                   ( Left $ EraCastError
                       { originalValue = cert
                       , fromEra = conwayEraOnwardsToCardanoEra sourceWit

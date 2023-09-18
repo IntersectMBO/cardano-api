@@ -29,7 +29,7 @@ module Cardano.Api (
 
     -- * Feature support
     Eon(..),
-    inEraFeature,
+    forEraInEon,
     inEraFeatureMaybe,
     maybeFeatureInEra,
 

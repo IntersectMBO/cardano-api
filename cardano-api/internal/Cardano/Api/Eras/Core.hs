@@ -31,7 +31,7 @@ module Cardano.Api.Eras.Core
 
     -- * IsEon
   , Eon(..)
-  , inEraFeature
+  , forEraInEon
   , inEraFeatureMaybe
   , maybeFeatureInEra
   , featureInShelleyBasedEra
@@ -143,13 +143,13 @@ class Eon (eon :: Type -> Type) where
     -> CardanoEra era -- ^ Era to check
     -> a              -- ^ The value to use
 
-inEraFeature :: ()
+forEraInEon :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
   -> a                -- ^ Value to use if the eon does not include the era
   -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
   -> a                -- ^ The value to use
-inEraFeature era no yes =
+forEraInEon era no yes =
   inEonForEra no yes era
 
 inEraFeatureMaybe :: ()
@@ -158,7 +158,7 @@ inEraFeatureMaybe :: ()
   -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
   -> Maybe a          -- ^ The value to use
 inEraFeatureMaybe era yes =
-  inEraFeature era Nothing (Just . yes)
+  forEraInEon era Nothing (Just . yes)
 
 maybeFeatureInEra :: ()
   => Eon eon
