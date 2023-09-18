@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -28,8 +29,9 @@ import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
+import qualified Cardano.Ledger.Conway.Core as L
+import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.TxCert as L
-import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
@@ -75,6 +77,8 @@ type ConwayEraOnwardsConstraints era =
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+  , L.ConwayEraGov (ShelleyLedgerEra era)
+  , L.ConwayEraPParams (ShelleyLedgerEra era)
   , L.ConwayEraTxBody (ShelleyLedgerEra era)
   , L.ConwayEraTxCert (ShelleyLedgerEra era)
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
@@ -86,7 +90,9 @@ type ConwayEraOnwardsConstraints era =
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
+  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ConwayTxCert (ShelleyLedgerEra era)
+
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era

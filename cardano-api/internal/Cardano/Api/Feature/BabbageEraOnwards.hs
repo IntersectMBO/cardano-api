@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -80,6 +81,8 @@ type BabbageEraOnwardsConstraints era =
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
   , L.BabbageEraPParams (ShelleyLedgerEra era)
+  , L.BabbageEraTxBody (ShelleyLedgerEra era)
+  , L.BabbageEraTxOut (ShelleyLedgerEra era)
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
   , L.Era (ShelleyLedgerEra era)
   , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto

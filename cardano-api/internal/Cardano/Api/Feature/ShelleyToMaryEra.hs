@@ -88,10 +88,13 @@ type ShelleyToMaryEraConstraints era =
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
-  , L.ProtVerAtMost (ShelleyLedgerEra era) 5
+  , L.ProtVerAtMost (ShelleyLedgerEra era) 4
+  , L.ProtVerAtMost (ShelleyLedgerEra era) 6
+  , L.ProtVerAtMost (ShelleyLedgerEra era) 8
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
+
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
