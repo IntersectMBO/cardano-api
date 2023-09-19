@@ -641,6 +641,7 @@ newtype instance Hash GenesisKey =
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisKey)
+  deriving (ToJSONKey, ToJSON, FromJSON) via UsingRawBytesHex (Hash GenesisKey)
   deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisKey) where
