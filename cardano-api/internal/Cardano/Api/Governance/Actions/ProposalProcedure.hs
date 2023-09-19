@@ -81,19 +81,15 @@ toGovernanceAction _ (ProposeNewConstitution prevGovAction anchor) =
     , Gov.constitutionScript = SNothing   -- TODO: Conway era
     }
 toGovernanceAction _ (ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor) =
-  Gov.NewCommittee
-    prevGovId
-    (Set.fromList $ map toCommitteeMember oldCommitteeMembers)
-    Gov.Committee
-      { Gov.committeeMembers = Map.mapKeys toCommitteeMember newCommitteeMembers
-      , Gov.committeeQuorum =
-            fromMaybe
-              (error $ mconcat ["toGovernanceAction: the given quorum "
+  Gov.UpdateCommittee
+    prevGovId -- previous governance action id
+    (Set.fromList $ map toCommitteeMember oldCommitteeMembers) -- members to remove
+    (Map.mapKeys toCommitteeMember newCommitteeMembers) -- members to add
+    (fromMaybe (error $ mconcat ["toGovernanceAction: the given quorum "
                                , show quor
                                , " was outside of the unit interval!"
                                ])
-          $ boundRational @UnitInterval quor
-       }
+          $ boundRational @UnitInterval quor)
 toGovernanceAction _ InfoAct = Gov.InfoAction
 toGovernanceAction _ (TreasuryWithdrawal withdrawals) =
   let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
@@ -124,16 +120,12 @@ fromGovernanceAction sbe = \case
               | (rwdAcnt, coin) <- Map.toList withdrawlMap
               ]
     in TreasuryWithdrawal res
-  Gov.NewCommittee prevGovId oldCommitteeMembers newCommittee ->
-    let Gov.Committee
-          { Gov.committeeMembers = newCommitteeMembers
-          , Gov.committeeQuorum = quor
-          } = newCommittee
-    in ProposeNewCommittee
-         prevGovId
-         (map fromCommitteeMember $ Set.toList oldCommitteeMembers)
-         (Map.mapKeys fromCommitteeMember newCommitteeMembers)
-         (unboundRational quor)
+  Gov.UpdateCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
+    ProposeNewCommittee
+      prevGovId
+      (map fromCommitteeMember $ Set.toList oldCommitteeMembers)
+      (Map.mapKeys fromCommitteeMember newCommitteeMembers)
+      (unboundRational quor)
   Gov.InfoAction ->
     InfoAct
 

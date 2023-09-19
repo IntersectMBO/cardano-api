@@ -31,6 +31,7 @@ import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.Governance as L
+import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Conway.TxCert as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
