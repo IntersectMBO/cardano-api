@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 8.20.2.0
+
+- Add JSON instance for `Hash GenesisKey`
+  (improvement)
+  [PR 249](https://github.com/input-output-hk/cardano-api/pull/249)
+
+- Support more ledger constraints
+  (feature, compatible)
+  [PR 248](https://github.com/input-output-hk/cardano-api/pull/248)
+
 ## 8.20.1.0
 
 - Fix typos in some deserialization error messages
