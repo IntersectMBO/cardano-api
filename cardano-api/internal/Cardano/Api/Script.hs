@@ -110,6 +110,7 @@ module Cardano.Api.Script (
     Hash(..),
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error

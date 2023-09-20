@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -11,11 +12,15 @@ module Cardano.Api.Eras.Case
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
+
+  , noByronEraInShelleyBasedEra
   ) where
 
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
@@ -23,12 +28,12 @@ import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 
 caseByronOrShelleyBasedEra :: ()
-  => (CardanoEra ByronEra -> a)
+  => (ByronEraOnly era -> a)
   -> (ShelleyBasedEraConstraints era => ShelleyBasedEra era -> a)
   -> CardanoEra era
   -> a
 caseByronOrShelleyBasedEra l r = \case
-  ByronEra   -> l ByronEra
+  ByronEra   -> l ByronEraOnlyByron
   ShelleyEra -> r ShelleyBasedEraShelley
   AllegraEra -> r ShelleyBasedEraAllegra
   MaryEra    -> r ShelleyBasedEraMary
@@ -74,3 +79,6 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraAlonzo  -> l ShelleyToBabbageEraAlonzo
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway  -> r ConwayEraOnwardsConway
+
+noByronEraInShelleyBasedEra :: ShelleyBasedEra era -> ByronEraOnly era -> a
+noByronEraInShelleyBasedEra sbe ByronEraOnlyByron = case sbe of {}

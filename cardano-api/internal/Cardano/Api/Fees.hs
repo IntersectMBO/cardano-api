@@ -46,8 +46,10 @@ module Cardano.Api.Fees (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -951,9 +953,6 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
 
     txbodycontent1 <- substituteExecutionUnits sbe exUnitsMap' txbodycontent
 
-    explicitTxFees <- first (const TxBodyErrorByronEraNotSupported) $
-                        txFeesExplicitInEra era'
-
     -- Make a txbody that we will use for calculating the fees. For the purpose
     -- of fees we just need to make a txbody of the right size in bytes. We do
     -- not need the right values for the fee or change output. We use
@@ -983,7 +982,7 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                createAndValidateTransactionBody txbodycontent1 {
-                 txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
+                 txFee  = TxFeeExplicit sbe $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
                                 changeTxOut
                                 TxOutDatumNone ReferenceScriptNone
@@ -1012,7 +1011,7 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
     -- we need to calculate.
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
                createAndValidateTransactionBody txbodycontent1 {
-                 txFee = TxFeeExplicit explicitTxFees fee,
+                 txFee = TxFeeExplicit sbe fee,
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
                }
@@ -1033,7 +1032,7 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
     -- Yes this could be an over-estimate by a few bytes if the fee or change
     -- would fit within 2^16-1. That's a possible optimisation.
     let finalTxBodyContent = txbodycontent1 {
-          txFee  = TxFeeExplicit explicitTxFees fee,
+          txFee  = TxFeeExplicit sbe fee,
           txOuts = accountForNoChange
                      (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
                      (txOuts txbodycontent),

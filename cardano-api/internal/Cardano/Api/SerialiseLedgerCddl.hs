@@ -30,6 +30,7 @@ module Cardano.Api.SerialiseLedgerCddl
   )
   where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy

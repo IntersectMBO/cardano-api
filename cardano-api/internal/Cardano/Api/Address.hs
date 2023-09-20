@@ -79,6 +79,7 @@ module Cardano.Api.Address (
     isKeyAddress
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash

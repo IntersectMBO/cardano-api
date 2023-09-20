@@ -25,6 +25,7 @@ module Cardano.Api.InMode (
     fromConsensusApplyTxErr,
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
 import           Cardano.Api.Tx

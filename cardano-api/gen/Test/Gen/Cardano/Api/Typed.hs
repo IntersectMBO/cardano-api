@@ -720,10 +720,10 @@ genTxTotalCollateral era =
       TxTotalCollateral supp <$> genPositiveLovelace
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)
-genTxFee era =
-  case txFeesExplicitInEra era of
-    Left  supported -> pure (TxFeeImplicit supported)
-    Right supported -> TxFeeExplicit supported <$> genLovelace
+genTxFee =
+  caseByronOrShelleyBasedEra
+    (pure . TxFeeImplicit)
+    (\w -> TxFeeExplicit w <$> genLovelace)
 
 genTxBody :: IsCardanoEra era => CardanoEra era -> Gen (TxBody era)
 genTxBody era = do

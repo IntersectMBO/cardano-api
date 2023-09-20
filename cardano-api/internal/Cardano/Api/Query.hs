@@ -81,8 +81,10 @@ module Cardano.Api.Query (
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.IPC.Version
 import           Cardano.Api.Keys.Shelley

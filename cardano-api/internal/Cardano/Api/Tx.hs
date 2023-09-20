@@ -50,7 +50,9 @@ module Cardano.Api.Tx (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class

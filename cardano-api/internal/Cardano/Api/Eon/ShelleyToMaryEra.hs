@@ -19,6 +19,7 @@ module Cardano.Api.Eon.ShelleyToMaryEra
   , ShelleyToMaryEraConstraints
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Query.Types
