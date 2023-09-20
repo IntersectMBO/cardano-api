@@ -1003,8 +1003,8 @@ data ProtocolUTxOCostPerByteFeature era where
 deriving instance Eq   (ProtocolUTxOCostPerByteFeature era)
 deriving instance Show (ProtocolUTxOCostPerByteFeature era)
 
-instance FeatureInEra ProtocolUTxOCostPerByteFeature where
-  featureInEra no yes = \case
+instance Eon ProtocolUTxOCostPerByteFeature where
+  inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no
     AllegraEra  -> no
@@ -1029,8 +1029,8 @@ data ProtocolUTxOCostPerWordFeature era where
 deriving instance Eq   (ProtocolUTxOCostPerWordFeature era)
 deriving instance Show (ProtocolUTxOCostPerWordFeature era)
 
-instance FeatureInEra ProtocolUTxOCostPerWordFeature where
-  featureInEra no yes = \case
+instance Eon ProtocolUTxOCostPerWordFeature where
+  inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no
     AllegraEra  -> no

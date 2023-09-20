@@ -20,16 +20,15 @@ module Cardano.Api.Eras
   , CardanoLedgerEra
   , ToCardanoEra(..)
 
-    -- * FeatureInEra
-  , FeatureInEra(..)
-  , inEraFeature
-  , inEraFeatureMaybe
-  , maybeFeatureInEra
-
-  , featureInShelleyBasedEra
-  , inShelleyBasedEraFeature
-  , inShelleyBasedEraFeatureMaybe
-  , maybeFeatureInShelleyBasedEra
+    -- * IsEon
+  , Eon(..)
+  , forEraInEon
+  , inEraEonMaybe
+  , maybeEonInEra
+  , eonInShelleyBasedEra
+  , inShelleyBasedEraEon
+  , inShelleyBasedEraEonMaybe
+  , maybeEonInShelleyBasedEra
 
     -- * Shelley-based eras
   , ShelleyBasedEra(..)

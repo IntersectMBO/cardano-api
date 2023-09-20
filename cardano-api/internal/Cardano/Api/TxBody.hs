@@ -186,11 +186,11 @@ module Cardano.Api.TxBody (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
-import           Cardano.Api.Feature.ConwayEraOnwards
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
@@ -2722,7 +2722,7 @@ fromLedgerProposalProcedures
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era [Proposal era])
 fromLedgerProposalProcedures sbe body =
-  inShelleyBasedEraFeatureMaybe sbe $ \w ->
+  inShelleyBasedEraEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
       $ fmap Proposal
@@ -2734,7 +2734,7 @@ fromLedgerVotingProcedures :: ()
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
 fromLedgerVotingProcedures sbe body =
-  inShelleyBasedEraFeatureMaybe sbe $ \w ->
+  inShelleyBasedEraEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
       $ VotingProcedures

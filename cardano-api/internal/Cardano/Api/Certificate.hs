@@ -74,10 +74,10 @@ module Cardano.Api.Certificate (
 
 import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
-import           Cardano.Api.Feature.ConwayEraOnwards
-import           Cardano.Api.Feature.ShelleyToBabbageEra
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos
@@ -270,8 +270,8 @@ instance EraCast Certificate where
     case cert  of
       ShelleyRelatedCertificate sourceWit sourceLedgerCert ->
         shelleyToBabbageEraConstraints sourceWit
-          $ inEraFeature targetEra
-              ( inEraFeature targetEra
+          $ forEraInEon targetEra
+              ( forEraInEon targetEra
                   ( Left $ EraCastError
                       { originalValue = cert
                       , fromEra = shelleyToBabbageEraToCardanoEra sourceWit
@@ -299,8 +299,8 @@ instance EraCast Certificate where
 
       ConwayCertificate sourceWit sourceLedgerCert ->
         conwayEraOnwardsConstraints sourceWit
-          $ inEraFeature targetEra
-              ( inEraFeature targetEra
+          $ forEraInEon targetEra
+              ( forEraInEon targetEra
                   ( Left $ EraCastError
                       { originalValue = cert
                       , fromEra = conwayEraOnwardsToCardanoEra sourceWit

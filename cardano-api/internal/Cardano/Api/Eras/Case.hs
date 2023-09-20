@@ -13,14 +13,14 @@ module Cardano.Api.Eras.Case
   , caseShelleyToBabbageOrConwayEraOnwards
   ) where
 
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyToAlonzoEra
+import           Cardano.Api.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Eon.ShelleyToMaryEra
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
-import           Cardano.Api.Feature.AlonzoEraOnwards
-import           Cardano.Api.Feature.BabbageEraOnwards
-import           Cardano.Api.Feature.ConwayEraOnwards
-import           Cardano.Api.Feature.ShelleyToAlonzoEra
-import           Cardano.Api.Feature.ShelleyToBabbageEra
-import           Cardano.Api.Feature.ShelleyToMaryEra
 
 caseByronOrShelleyBasedEra :: ()
   => (CardanoEra ByronEra -> a)

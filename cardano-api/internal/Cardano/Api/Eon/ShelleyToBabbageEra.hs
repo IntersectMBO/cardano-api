@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Api.Feature.ShelleyToBabbageEra
+module Cardano.Api.Eon.ShelleyToBabbageEra
   ( ShelleyToBabbageEra(..)
   , IsShelleyToBabbageEra(..)
   , AnyShelleyToBabbageEra(..)
@@ -67,8 +67,8 @@ instance IsShelleyToBabbageEra AlonzoEra where
 instance IsShelleyToBabbageEra BabbageEra where
   shelleyToBabbageEra = ShelleyToBabbageEraBabbage
 
-instance FeatureInEra ShelleyToBabbageEra where
-  featureInEra no yes = \case
+instance Eon ShelleyToBabbageEra where
+  inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> yes ShelleyToBabbageEraShelley
     AllegraEra  -> yes ShelleyToBabbageEraAllegra

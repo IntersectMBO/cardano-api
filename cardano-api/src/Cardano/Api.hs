@@ -28,15 +28,15 @@ module Cardano.Api (
     ToCardanoEra(..),
 
     -- * Feature support
-    FeatureInEra(..),
-    inEraFeature,
-    inEraFeatureMaybe,
-    maybeFeatureInEra,
+    Eon(..),
+    forEraInEon,
+    inEraEonMaybe,
+    maybeEonInEra,
 
-    featureInShelleyBasedEra,
-    inShelleyBasedEraFeature,
-    inShelleyBasedEraFeatureMaybe,
-    maybeFeatureInShelleyBasedEra,
+    eonInShelleyBasedEra,
+    inShelleyBasedEraEon,
+    inShelleyBasedEraEonMaybe,
+    maybeEonInShelleyBasedEra,
 
     Featured(..),
     asFeaturedInEra,
@@ -1008,18 +1008,18 @@ import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Eon.AlonzoEraOnly
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyToAllegraEra
+import           Cardano.Api.Eon.ShelleyToAlonzoEra
+import           Cardano.Api.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Eon.ShelleyToMaryEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
-import           Cardano.Api.Feature.AlonzoEraOnly
-import           Cardano.Api.Feature.AlonzoEraOnwards
-import           Cardano.Api.Feature.BabbageEraOnwards
-import           Cardano.Api.Feature.ConwayEraOnwards
-import           Cardano.Api.Feature.ShelleyToAllegraEra
-import           Cardano.Api.Feature.ShelleyToAlonzoEra
-import           Cardano.Api.Feature.ShelleyToBabbageEra
-import           Cardano.Api.Feature.ShelleyToMaryEra
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters

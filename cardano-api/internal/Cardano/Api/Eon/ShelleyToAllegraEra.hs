@@ -8,15 +8,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Api.Feature.AlonzoEraOnly
-  ( AlonzoEraOnly(..)
-  , IsAlonzoEraOnly(..)
-  , AnyAlonzoEraOnly(..)
-  , alonzoEraOnlyConstraints
-  , alonzoEraOnlyToCardanoEra
-  , alonzoEraOnlyToShelleyBasedEra
+module Cardano.Api.Eon.ShelleyToAllegraEra
+  ( ShelleyToAllegraEra(..)
+  , IsShelleyToAllegraEra(..)
+  , AnyShelleyToAllegraEra(..)
+  , shelleyToAllegraEraConstraints
+  , shelleyToAllegraEraToCardanoEra
+  , shelleyToAllegraEraToShelleyBasedEra
 
-  , AlonzoEraOnlyConstraints
+  , ShelleyToAllegraEraConstraints
   ) where
 
 import           Cardano.Api.Eras.Core
@@ -31,6 +31,7 @@ import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.SafeHash as L
+import qualified Cardano.Ledger.Shelley.TxCert as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
@@ -38,80 +39,83 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
-class IsShelleyBasedEra era => IsAlonzoEraOnly era where
-  alonzoEraOnly :: AlonzoEraOnly era
+class IsShelleyBasedEra era => IsShelleyToAllegraEra era where
+  shelleyToAllegraEra :: ShelleyToAllegraEra era
 
-data AlonzoEraOnly era where
-  AlonzoEraOnlyAlonzo  :: AlonzoEraOnly AlonzoEra
+data ShelleyToAllegraEra era where
+  ShelleyToAllegraEraShelley :: ShelleyToAllegraEra ShelleyEra
+  ShelleyToAllegraEraAllegra :: ShelleyToAllegraEra AllegraEra
 
-deriving instance Show (AlonzoEraOnly era)
-deriving instance Eq (AlonzoEraOnly era)
+deriving instance Show (ShelleyToAllegraEra era)
+deriving instance Eq (ShelleyToAllegraEra era)
 
-instance IsAlonzoEraOnly AlonzoEra where
-  alonzoEraOnly = AlonzoEraOnlyAlonzo
+instance IsShelleyToAllegraEra ShelleyEra where
+  shelleyToAllegraEra = ShelleyToAllegraEraShelley
 
-instance FeatureInEra AlonzoEraOnly where
-  featureInEra no yes = \case
+instance IsShelleyToAllegraEra AllegraEra where
+  shelleyToAllegraEra = ShelleyToAllegraEraAllegra
+
+instance Eon ShelleyToAllegraEra where
+  inEonForEra no yes = \case
     ByronEra    -> no
-    ShelleyEra  -> no
-    AllegraEra  -> no
+    ShelleyEra  -> yes ShelleyToAllegraEraShelley
+    AllegraEra  -> yes ShelleyToAllegraEraAllegra
     MaryEra     -> no
-    AlonzoEra   -> yes AlonzoEraOnlyAlonzo
+    AlonzoEra   -> no
     BabbageEra  -> no
     ConwayEra   -> no
 
-instance ToCardanoEra AlonzoEraOnly where
+instance ToCardanoEra ShelleyToAllegraEra where
   toCardanoEra = \case
-    AlonzoEraOnlyAlonzo  -> AlonzoEra
+    ShelleyToAllegraEraShelley  -> ShelleyEra
+    ShelleyToAllegraEraAllegra  -> AllegraEra
 
-data AnyAlonzoEraOnly where
-  AnyAlonzoEraOnly :: AlonzoEraOnly era -> AnyAlonzoEraOnly
-
-deriving instance Show AnyAlonzoEraOnly
-
-type AlonzoEraOnlyConstraints era =
+type ShelleyToAllegraEraConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.AlonzoEraPParams (ShelleyLedgerEra era)
-  , L.AlonzoEraTx (ShelleyLedgerEra era)
-  , L.AlonzoEraTxBody (ShelleyLedgerEra era)
-  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
-  , L.AlonzoEraTxWits (ShelleyLedgerEra era)
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
   , L.Era (ShelleyLedgerEra era)
   , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
-  , L.ExactEra L.AlonzoEra (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ProtVerAtMost (ShelleyLedgerEra era) 4
   , L.ProtVerAtMost (ShelleyLedgerEra era) 6
   , L.ProtVerAtMost (ShelleyLedgerEra era) 8
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
-  , IsAlonzoEraOnly era
   , IsCardanoEra era
   , IsShelleyBasedEra era
+  , IsShelleyToAllegraEra era
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )
 
-alonzoEraOnlyConstraints :: ()
-  => AlonzoEraOnly era
-  -> (AlonzoEraOnlyConstraints era => a)
+data AnyShelleyToAllegraEra where
+  AnyShelleyToAllegraEra :: ShelleyToAllegraEra era -> AnyShelleyToAllegraEra
+
+deriving instance Show AnyShelleyToAllegraEra
+
+shelleyToAllegraEraConstraints :: ()
+  => ShelleyToAllegraEra era
+  -> (ShelleyToAllegraEraConstraints era => a)
   -> a
-alonzoEraOnlyConstraints = \case
-  AlonzoEraOnlyAlonzo  -> id
+shelleyToAllegraEraConstraints = \case
+  ShelleyToAllegraEraShelley -> id
+  ShelleyToAllegraEraAllegra -> id
 
-alonzoEraOnlyToCardanoEra :: AlonzoEraOnly era -> CardanoEra era
-alonzoEraOnlyToCardanoEra = shelleyBasedToCardanoEra . alonzoEraOnlyToShelleyBasedEra
+shelleyToAllegraEraToCardanoEra :: ShelleyToAllegraEra era -> CardanoEra era
+shelleyToAllegraEraToCardanoEra = shelleyBasedToCardanoEra . shelleyToAllegraEraToShelleyBasedEra
 
-alonzoEraOnlyToShelleyBasedEra :: AlonzoEraOnly era -> ShelleyBasedEra era
-alonzoEraOnlyToShelleyBasedEra = \case
-  AlonzoEraOnlyAlonzo  -> ShelleyBasedEraAlonzo
+shelleyToAllegraEraToShelleyBasedEra :: ShelleyToAllegraEra era -> ShelleyBasedEra era
+shelleyToAllegraEraToShelleyBasedEra = \case
+  ShelleyToAllegraEraShelley -> ShelleyBasedEraShelley
+  ShelleyToAllegraEraAllegra -> ShelleyBasedEraAllegra
