@@ -10,11 +10,15 @@ module Cardano.Api.Eras.Case
   , caseByronToAllegraOrMaryEraOnwards
 
     -- Case on ShelleyBasedEra
+  , caseShelleyToAllegraOrMaryEraOnwards
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
 
   , noByronEraInShelleyBasedEra
+
+    -- Conversions
+  , shelleyToAllegraEraToByronToAllegraEra
   ) where
 
 import           Cardano.Api.Eon.AlonzoEraOnwards
@@ -24,6 +28,7 @@ import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
@@ -57,6 +62,19 @@ caseByronToAllegraOrMaryEraOnwards l r = \case
   AlonzoEra  -> r MaryEraOnwardsAlonzo
   BabbageEra -> r MaryEraOnwardsBabbage
   ConwayEra  -> r MaryEraOnwardsConway
+
+caseShelleyToAllegraOrMaryEraOnwards :: ()
+  => (ShelleyToAllegraEraConstraints era => ShelleyToAllegraEra era -> a)
+  -> (MaryEraOnwardsConstraints era => MaryEraOnwards era -> a)
+  -> ShelleyBasedEra era
+  -> a
+caseShelleyToAllegraOrMaryEraOnwards l r = \case
+  ShelleyBasedEraShelley  -> l ShelleyToAllegraEraShelley
+  ShelleyBasedEraAllegra  -> l ShelleyToAllegraEraAllegra
+  ShelleyBasedEraMary     -> r MaryEraOnwardsMary
+  ShelleyBasedEraAlonzo   -> r MaryEraOnwardsAlonzo
+  ShelleyBasedEraBabbage  -> r MaryEraOnwardsBabbage
+  ShelleyBasedEraConway   -> r MaryEraOnwardsConway
 
 caseShelleyToMaryOrAlonzoEraOnwards :: ()
   => (ShelleyToMaryEraConstraints era => ShelleyToMaryEra era -> a)
@@ -99,3 +117,8 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
 
 noByronEraInShelleyBasedEra :: ShelleyBasedEra era -> ByronEraOnly era -> a
 noByronEraInShelleyBasedEra sbe ByronEraOnlyByron = case sbe of {}
+
+shelleyToAllegraEraToByronToAllegraEra :: ShelleyToAllegraEra era -> ByronToAllegraEra era
+shelleyToAllegraEraToByronToAllegraEra = \case
+  ShelleyToAllegraEraShelley -> ByronToAllegraEraShelley
+  ShelleyToAllegraEraAllegra -> ByronToAllegraEraAllegra
