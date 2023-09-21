@@ -180,6 +180,7 @@ module Cardano.Api.TxBody (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
@@ -514,7 +515,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
                     Right hashableData -> do
                       if hashScriptDataBytes hashableData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra hashableData
+                      else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -537,7 +538,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
                     Right sData ->
                       if hashScriptDataBytes sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra sData
+                      else return $ TxOutDatumInline BabbageEraOnwardsConway sData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -563,7 +564,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
              finalRefScript <- case mBabRefScript of
                                  Nothing -> return r
                                  Just anyScript ->
-                                   return $ ReferenceScript ReferenceTxInsScriptsInlineDatumsInBabbageEra anyScript
+                                   return $ ReferenceScript BabbageEraOnwardsBabbage anyScript
              return $ TxOut addr v finalDat finalRefScript
 
            reconcileConway
@@ -584,7 +585,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
              finalRefScript <- case mBabRefScript of
                                  Nothing -> return r
                                  Just anyScript ->
-                                   return $ ReferenceScript ReferenceTxInsScriptsInlineDatumsInConwayEra anyScript
+                                   return $ ReferenceScript BabbageEraOnwardsConway anyScript
              return $ TxOut addr v finalDat finalRefScript
 
            alonzoTxOutParser
@@ -647,7 +648,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
                         Right hashableData -> do
                           if hashScriptDataBytes hashableData /= h
                           then fail "Inline datum not equivalent to inline datum hash"
-                          else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra hashableData
+                          else return $ TxOutDatumInline BabbageEraOnwardsBabbage hashableData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -671,7 +672,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
                     Right sData ->
                       if hashScriptDataBytes sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra sData
+                      else return $ TxOutDatumInline BabbageEraOnwardsConway sData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -694,7 +695,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
              finalRefScript <- case mBabRefScript of
                                  Nothing -> return r
                                  Just anyScript ->
-                                   return $ ReferenceScript ReferenceTxInsScriptsInlineDatumsInBabbageEra anyScript
+                                   return $ ReferenceScript BabbageEraOnwardsBabbage anyScript
 
              return $ TxOut addr v finalDat finalRefScript
 
@@ -712,7 +713,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
              finalRefScript <- case mBabRefScript of
                                  Nothing -> return r
                                  Just anyScript ->
-                                   return $ ReferenceScript ReferenceTxInsScriptsInlineDatumsInConwayEra anyScript
+                                   return $ ReferenceScript BabbageEraOnwardsConway anyScript
 
              return $ TxOut addr v finalDat finalRefScript
 
@@ -822,7 +823,7 @@ fromShelleyTxOut sbe ledgerTxOut = do
              txOutValue
              (fromBabbageTxOutDatum
                ScriptDataInBabbageEra
-               ReferenceTxInsScriptsInlineDatumsInBabbageEra
+               BabbageEraOnwardsBabbage
                datum)
              (case mRefScript of
                 SNothing -> ReferenceScriptNone
@@ -837,7 +838,7 @@ fromShelleyTxOut sbe ledgerTxOut = do
              txOutValue
              (fromBabbageTxOutDatum
                ScriptDataInConwayEra
-               ReferenceTxInsScriptsInlineDatumsInConwayEra
+               BabbageEraOnwardsConway
                datum)
              (case mRefScript of
                 SNothing -> ReferenceScriptNone
@@ -856,7 +857,7 @@ toAlonzoTxOutDataHash
 toAlonzoTxOutDataHash  TxOutDatumNone                        = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDataHash (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: ReferenceTxInsScriptsInlineDatumsSupportedInEra AlonzoEra of {}
+  case inlineDatumSupp :: BabbageEraOnwards AlonzoEra of {}
 
 fromAlonzoTxOutDataHash :: ScriptDataSupportedInEra era
                         -> StrictMaybe (L.DataHash StandardCrypto)
@@ -876,7 +877,7 @@ toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
   => ScriptDataSupportedInEra era
-  -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+  -> BabbageEraOnwards era
   -> Babbage.Datum ledgerera
   -> TxOutDatum ctx era
 fromBabbageTxOutDatum _ _ Babbage.NoDatum = TxOutDatumNone
@@ -1268,7 +1269,7 @@ data TxInsReference build era where
 
      TxInsReferenceNone :: TxInsReference build era
 
-     TxInsReference     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+     TxInsReference     :: BabbageEraOnwards era
                         -> [TxIn]
                         -> TxInsReference build era
 
@@ -1442,7 +1443,7 @@ data TxOutDatum ctx era where
      -- datum hash. Note that the datum map will not be updated with this datum,
      -- it only exists at the transaction output.
      --
-     TxOutDatumInline :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+     TxOutDatumInline :: BabbageEraOnwards era
                       -> HashableScriptData
                       -> TxOutDatum ctx era
 
@@ -1462,7 +1463,7 @@ instance EraCast (TxOutDatum ctx)  where
         Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
-    TxOutDatumInline (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptData ->
+    TxOutDatumInline (_ :: BabbageEraOnwards fromEra) scriptData ->
       case refInsScriptsAndInlineDatsSupportedInEra toEra of
         Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
         Just refInsAndInlineSupported ->
@@ -2711,11 +2712,11 @@ fromLedgerTxInsReference sbe txBody =
            $ map fromShelleyTxIn . Set.toList $ ledgerRefInputs
  where
   obtainReferenceInputsHasFieldConstraint
-    :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+    :: BabbageEraOnwards era
     -> ((L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto, L.BabbageEraTxBody (ShelleyLedgerEra era)) => a)
     -> a
-  obtainReferenceInputsHasFieldConstraint ReferenceTxInsScriptsInlineDatumsInBabbageEra f = f
-  obtainReferenceInputsHasFieldConstraint ReferenceTxInsScriptsInlineDatumsInConwayEra f = f
+  obtainReferenceInputsHasFieldConstraint BabbageEraOnwardsBabbage f = f
+  obtainReferenceInputsHasFieldConstraint BabbageEraOnwardsConway f = f
 
 fromLedgerTxOuts
   :: forall era.
@@ -2747,7 +2748,7 @@ fromLedgerTxOuts sbe body scriptdata =
       [ fromBabbageTxOut
           MaryEraOnwardsBabbage
           ScriptDataInBabbageEra
-          ReferenceTxInsScriptsInlineDatumsInBabbageEra
+          BabbageEraOnwardsBabbage
           txdatums
           txouts
       | let txdatums = selectTxDatums scriptdata
@@ -2758,7 +2759,7 @@ fromLedgerTxOuts sbe body scriptdata =
       [ fromBabbageTxOut
           MaryEraOnwardsConway
           ScriptDataInConwayEra
-          ReferenceTxInsScriptsInlineDatumsInConwayEra
+          BabbageEraOnwardsConway
           txdatums
           txouts
       | let txdatums = selectTxDatums scriptdata
@@ -2804,7 +2805,7 @@ fromBabbageTxOut
   => Ledger.Value ledgerera ~ MaryValue StandardCrypto
   => MaryEraOnwards era
   -> ScriptDataSupportedInEra era
-  -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+  -> BabbageEraOnwards era
   -> Map (L.DataHash StandardCrypto)
          (L.Data ledgerera)
   -> L.TxOut ledgerera
@@ -3976,7 +3977,7 @@ toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
 toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
 toAlonzoTxOutDataHash' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
 toAlonzoTxOutDataHash' (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: ReferenceTxInsScriptsInlineDatumsSupportedInEra AlonzoEra of {}
+  case inlineDatumSupp :: BabbageEraOnwards AlonzoEra of {}
 
 -- TODO: Consolidate with alonzo function and rename
 toBabbageTxOutDatum'
@@ -4233,9 +4234,9 @@ scriptDataToInlineDatum d =
 
 binaryDataToScriptData
   :: L.Era ledgerera
-  => ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+  => BabbageEraOnwards era
   -> L.BinaryData ledgerera -> HashableScriptData
-binaryDataToScriptData ReferenceTxInsScriptsInlineDatumsInBabbageEra d =
+binaryDataToScriptData BabbageEraOnwardsBabbage d =
   fromAlonzoData $ L.binaryDataToData d
-binaryDataToScriptData ReferenceTxInsScriptsInlineDatumsInConwayEra  d =
+binaryDataToScriptData BabbageEraOnwardsConway  d =
   fromAlonzoData $ L.binaryDataToData d

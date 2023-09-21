@@ -1021,13 +1021,13 @@ genTxOutDatumHashTxContext era = case era of
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
                     , TxOutDatumInTx ScriptDataInBabbageEra <$> genHashableScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
+                    , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
                     ]
     ConwayEra -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
                     , TxOutDatumInTx ScriptDataInConwayEra <$> genHashableScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genHashableScriptData
+                    , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
                     ]
 
 genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
@@ -1043,12 +1043,12 @@ genTxOutDatumHashUTxOContext era = case era of
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
+                    , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
                     ]
     ConwayEra -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genHashableScriptData
+                    , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
                     ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
