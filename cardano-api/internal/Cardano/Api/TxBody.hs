@@ -783,54 +783,43 @@ toShelleyTxOut sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata
        & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
-fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
-                 => ShelleyBasedEra era
-                 -> Core.TxOut ledgerera
-                 -> TxOut ctx era
-fromShelleyTxOut sbe ledgerTxOut =
+fromShelleyTxOut :: forall era ledgerera ctx. ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> Core.TxOut ledgerera
+  -> TxOut ctx era
+fromShelleyTxOut sbe ledgerTxOut = do
+  let txOutValue :: TxOutValue era
+      txOutValue =
+        caseShelleyToAllegraOrMaryEraOnwards
+          (\w -> TxOutAdaOnly (shelleyToAllegraEraToByronToAllegraEra w) (fromShelleyLovelace (ledgerTxOut ^. L.valueTxOutL)))
+          (\w -> TxOutValue w (fromMaryValue (ledgerTxOut ^. L.valueTxOutL)))
+          sbe
+
+  let addressInEra :: AddressInEra era
+      addressInEra = shelleyBasedEraConstraints sbe $ fromShelleyAddr sbe $ ledgerTxOut ^. L.addrTxOutL
+
   case sbe of
     ShelleyBasedEraShelley ->
-        TxOut (fromShelleyAddr sbe addr)
-              (TxOutAdaOnly ByronToAllegraEraShelley
-                            (fromShelleyLovelace value))
-               TxOutDatumNone ReferenceScriptNone
-      where
-        addr = ledgerTxOut ^. L.addrTxOutL
-        value = ledgerTxOut ^. L.valueTxOutL
+      TxOut addressInEra txOutValue TxOutDatumNone ReferenceScriptNone
 
     ShelleyBasedEraAllegra ->
-        TxOut (fromShelleyAddr sbe addr)
-              (TxOutAdaOnly ByronToAllegraEraAllegra
-                            (fromShelleyLovelace value))
-               TxOutDatumNone ReferenceScriptNone
-      where
-        addr = ledgerTxOut ^. L.addrTxOutL
-        value = ledgerTxOut ^. L.valueTxOutL
+      TxOut addressInEra txOutValue TxOutDatumNone ReferenceScriptNone
 
     ShelleyBasedEraMary ->
-        TxOut (fromShelleyAddr sbe addr)
-              (TxOutValue MaryEraOnwardsMary
-                          (fromMaryValue value))
-               TxOutDatumNone ReferenceScriptNone
-      where
-        addr = ledgerTxOut ^. L.addrTxOutL
-        value = ledgerTxOut ^. L.valueTxOutL
+      TxOut addressInEra txOutValue TxOutDatumNone ReferenceScriptNone
 
     ShelleyBasedEraAlonzo ->
-       TxOut (fromShelleyAddr sbe addr)
-             (TxOutValue MaryEraOnwardsAlonzo
-                         (fromMaryValue value))
+       TxOut addressInEra
+             txOutValue
              (fromAlonzoTxOutDataHash ScriptDataInAlonzoEra datahash)
              ReferenceScriptNone
       where
-        addr = ledgerTxOut ^. L.addrTxOutL
-        value = ledgerTxOut ^. L.valueTxOutL
         datahash = ledgerTxOut ^. L.dataHashTxOutL
 
     ShelleyBasedEraBabbage ->
-       TxOut (fromShelleyAddr sbe addr)
-             (TxOutValue MaryEraOnwardsBabbage
-                         (fromMaryValue value))
+       TxOut addressInEra
+             txOutValue
              (fromBabbageTxOutDatum
                ScriptDataInBabbageEra
                ReferenceTxInsScriptsInlineDatumsInBabbageEra
@@ -840,15 +829,12 @@ fromShelleyTxOut sbe ledgerTxOut =
                 SJust refScript ->
                   fromShelleyScriptToReferenceScript ShelleyBasedEraBabbage refScript)
       where
-        addr = ledgerTxOut ^. L.addrTxOutL
-        value = ledgerTxOut ^. L.valueTxOutL
         datum = ledgerTxOut ^. L.datumTxOutL
         mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
 
     ShelleyBasedEraConway ->
-       TxOut (fromShelleyAddr sbe addr)
-             (TxOutValue MaryEraOnwardsConway
-                         (fromMaryValue value))
+       TxOut addressInEra
+             txOutValue
              (fromBabbageTxOutDatum
                ScriptDataInConwayEra
                ReferenceTxInsScriptsInlineDatumsInConwayEra
@@ -858,8 +844,6 @@ fromShelleyTxOut sbe ledgerTxOut =
                 SJust refScript ->
                   fromShelleyScriptToReferenceScript ShelleyBasedEraConway refScript)
       where
-        addr = ledgerTxOut ^. L.addrTxOutL
-        value = ledgerTxOut ^. L.valueTxOutL
         datum = ledgerTxOut ^. L.datumTxOutL
         mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
 
