@@ -115,7 +115,6 @@ module Cardano.Api.TxBody (
 
     -- * Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    MultiAssetSupportedInEra(..),
     OnlyAdaSupportedInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
@@ -185,6 +184,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
@@ -765,20 +765,20 @@ toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
 toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
     & L.dataHashTxOutL .~ toAlonzoTxOutDataHash txoutdata
 
-toShelleyTxOut sbe (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
+toShelleyTxOut sbe (TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
-toShelleyTxOut sbe (TxOut addr (TxOutValue MultiAssetInConwayEra value) txoutdata refScript) =
+toShelleyTxOut sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
@@ -810,7 +810,7 @@ fromShelleyTxOut sbe ledgerTxOut =
 
     ShelleyBasedEraMary ->
         TxOut (fromShelleyAddr sbe addr)
-              (TxOutValue MultiAssetInMaryEra
+              (TxOutValue MaryEraOnwardsMary
                           (fromMaryValue value))
                TxOutDatumNone ReferenceScriptNone
       where
@@ -819,7 +819,7 @@ fromShelleyTxOut sbe ledgerTxOut =
 
     ShelleyBasedEraAlonzo ->
        TxOut (fromShelleyAddr sbe addr)
-             (TxOutValue MultiAssetInAlonzoEra
+             (TxOutValue MaryEraOnwardsAlonzo
                          (fromMaryValue value))
              (fromAlonzoTxOutDataHash ScriptDataInAlonzoEra datahash)
              ReferenceScriptNone
@@ -830,7 +830,7 @@ fromShelleyTxOut sbe ledgerTxOut =
 
     ShelleyBasedEraBabbage ->
        TxOut (fromShelleyAddr sbe addr)
-             (TxOutValue MultiAssetInBabbageEra
+             (TxOutValue MaryEraOnwardsBabbage
                          (fromMaryValue value))
              (fromBabbageTxOutDatum
                ScriptDataInBabbageEra
@@ -848,7 +848,7 @@ fromShelleyTxOut sbe ledgerTxOut =
 
     ShelleyBasedEraConway ->
        TxOut (fromShelleyAddr sbe addr)
-             (TxOutValue MultiAssetInConwayEra
+             (TxOutValue MaryEraOnwardsConway
                          (fromMaryValue value))
              (fromBabbageTxOutDatum
                ScriptDataInConwayEra
@@ -932,39 +932,12 @@ collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
 collateralSupportedInEra BabbageEra = Just CollateralInBabbageEra
 collateralSupportedInEra ConwayEra = Just CollateralInConwayEra
 
-
--- | A representation of whether the era supports multi-asset transactions.
---
--- The Mary and subsequent eras support multi-asset transactions.
---
--- The negation of this is 'OnlyAdaSupportedInEra'.
---
-data MultiAssetSupportedInEra era where
-
-     -- | Multi-asset transactions are supported in the 'Mary' era.
-     MultiAssetInMaryEra :: MultiAssetSupportedInEra MaryEra
-
-     -- | Multi-asset transactions are supported in the 'Alonzo' era.
-     MultiAssetInAlonzoEra :: MultiAssetSupportedInEra AlonzoEra
-
-     -- | Multi-asset transactions are supported in the 'Babbage' era.
-     MultiAssetInBabbageEra :: MultiAssetSupportedInEra BabbageEra
-
-     -- | Multi-asset transactions are supported in the 'Conway' era.
-     MultiAssetInConwayEra :: MultiAssetSupportedInEra ConwayEra
-
-deriving instance Eq   (MultiAssetSupportedInEra era)
-deriving instance Show (MultiAssetSupportedInEra era)
-
-instance ToJSON (MultiAssetSupportedInEra era) where
-  toJSON = Aeson.String . Text.pack . show
-
 -- | A representation of whether the era supports only ada transactions.
 --
 -- Prior to the Mary era only ada transactions are supported. Multi-assets are
 -- supported from the Mary era onwards.
 --
--- This is the negation of 'MultiAssetSupportedInEra'. It exists since we need
+-- This is the negation of 'MaryEraOnwards'. It exists since we need
 -- evidence to be positive.
 --
 data OnlyAdaSupportedInEra era where
@@ -978,14 +951,14 @@ deriving instance Show (OnlyAdaSupportedInEra era)
 
 multiAssetSupportedInEra :: CardanoEra era
                          -> Either (OnlyAdaSupportedInEra era)
-                                   (MultiAssetSupportedInEra era)
+                                   (MaryEraOnwards era)
 multiAssetSupportedInEra ByronEra   = Left AdaOnlyInByronEra
 multiAssetSupportedInEra ShelleyEra = Left AdaOnlyInShelleyEra
 multiAssetSupportedInEra AllegraEra = Left AdaOnlyInAllegraEra
-multiAssetSupportedInEra MaryEra    = Right MultiAssetInMaryEra
-multiAssetSupportedInEra AlonzoEra  = Right MultiAssetInAlonzoEra
-multiAssetSupportedInEra BabbageEra = Right MultiAssetInBabbageEra
-multiAssetSupportedInEra ConwayEra = Right MultiAssetInConwayEra
+multiAssetSupportedInEra MaryEra    = Right MaryEraOnwardsMary
+multiAssetSupportedInEra AlonzoEra  = Right MaryEraOnwardsAlonzo
+multiAssetSupportedInEra BabbageEra = Right MaryEraOnwardsBabbage
+multiAssetSupportedInEra ConwayEra  = Right MaryEraOnwardsConway
 
 
 -- -- | A representation of whether the era requires explicitly specified fees in
@@ -1363,9 +1336,9 @@ deriving instance Show (TxInsReference build era)
 
 data TxOutValue era where
 
-     TxOutAdaOnly :: OnlyAdaSupportedInEra era -> Lovelace -> TxOutValue era
+  TxOutAdaOnly :: OnlyAdaSupportedInEra era -> Lovelace -> TxOutValue era
 
-     TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
+  TxOutValue   :: MaryEraOnwards era -> Value -> TxOutValue era
 
 instance EraCast TxOutValue where
   eraCast toEra v = case v of
@@ -1373,7 +1346,7 @@ instance EraCast TxOutValue where
       case multiAssetSupportedInEra toEra of
         Left adaOnly -> Right $ TxOutAdaOnly adaOnly lovelace
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
-    TxOutValue  (_ :: MultiAssetSupportedInEra fromEra) value  ->
+    TxOutValue  (_ :: MaryEraOnwards fromEra) value  ->
       case multiAssetSupportedInEra toEra of
         Left _adaOnly -> Left $ EraCastError v (cardanoEra @fromEra) toEra
         Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp value
@@ -1721,7 +1694,7 @@ data TxMintValue build era where
 
      TxMintNone  :: TxMintValue build era
 
-     TxMintValue :: MultiAssetSupportedInEra era
+     TxMintValue :: MaryEraOnwards era
                  -> Value
                  -> BuildTxWith build
                       (Map PolicyId (ScriptWitness WitCtxMint era))
@@ -2813,7 +2786,7 @@ fromLedgerTxOuts sbe body scriptdata =
 
     ShelleyBasedEraAlonzo ->
       [ fromAlonzoTxOut
-          MultiAssetInAlonzoEra
+          MaryEraOnwardsAlonzo
           ScriptDataInAlonzoEra
           txdatums
           txout
@@ -2822,7 +2795,7 @@ fromLedgerTxOuts sbe body scriptdata =
 
     ShelleyBasedEraBabbage ->
       [ fromBabbageTxOut
-          MultiAssetInBabbageEra
+          MaryEraOnwardsBabbage
           ScriptDataInBabbageEra
           ReferenceTxInsScriptsInlineDatumsInBabbageEra
           txdatums
@@ -2833,7 +2806,7 @@ fromLedgerTxOuts sbe body scriptdata =
 
     ShelleyBasedEraConway ->
       [ fromBabbageTxOut
-          MultiAssetInConwayEra
+          MaryEraOnwardsConway
           ScriptDataInConwayEra
           ReferenceTxInsScriptsInlineDatumsInConwayEra
           txdatums
@@ -2850,7 +2823,7 @@ fromAlonzoTxOut :: forall era ledgerera.
                 => L.AlonzoEraTxOut ledgerera
                 => Ledger.EraCrypto ledgerera ~ StandardCrypto
                 => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-                => MultiAssetSupportedInEra era
+                => MaryEraOnwards era
                 -> ScriptDataSupportedInEra era
                 -> Map (L.DataHash StandardCrypto)
                        (L.Data ledgerera)
@@ -2879,7 +2852,7 @@ fromBabbageTxOut
   => ShelleyLedgerEra era ~ ledgerera
   => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-  => MultiAssetSupportedInEra era
+  => MaryEraOnwards era
   -> ScriptDataSupportedInEra era
   -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
   -> Map (L.DataHash StandardCrypto)
@@ -3315,10 +3288,10 @@ fromLedgerTxMintValue sbe body =
   case sbe of
     ShelleyBasedEraShelley -> TxMintNone
     ShelleyBasedEraAllegra -> TxMintNone
-    ShelleyBasedEraMary    -> toMintValue body MultiAssetInMaryEra
-    ShelleyBasedEraAlonzo  -> toMintValue body MultiAssetInAlonzoEra
-    ShelleyBasedEraBabbage -> toMintValue body MultiAssetInBabbageEra
-    ShelleyBasedEraConway  -> toMintValue body MultiAssetInConwayEra
+    ShelleyBasedEraMary    -> toMintValue body MaryEraOnwardsMary
+    ShelleyBasedEraAlonzo  -> toMintValue body MaryEraOnwardsAlonzo
+    ShelleyBasedEraBabbage -> toMintValue body MaryEraOnwardsBabbage
+    ShelleyBasedEraConway  -> toMintValue body MaryEraOnwardsConway
   where
     toMintValue txBody maInEra
       | L.isZero mint = TxMintNone
@@ -4028,20 +4001,20 @@ toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
 toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
     & L.dataHashTxOutL .~ toAlonzoTxOutDataHash' txoutdata
 
-toShelleyTxOutAny sbe (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
+toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
-toShelleyTxOutAny sbe (TxOut addr (TxOutValue MultiAssetInConwayEra value) txoutdata refScript) =
+toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata

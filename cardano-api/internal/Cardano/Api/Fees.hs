@@ -48,6 +48,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Error
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.NetworkId
@@ -679,7 +680,7 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
                       ShelleyLedgerEra era ~ ledgerera
                    => LedgerEraConstraints ledgerera
                    => LedgerMultiAssetConstraints ledgerera
-                   => MultiAssetSupportedInEra era
+                   => MaryEraOnwards era
                    -> TxOutValue era
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
@@ -721,15 +722,15 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
           => LedgerMultiAssetConstraints ledgerera
           => LedgerPParamsConstraints ledgerera
           => LedgerTxBodyConstraints ledgerera
-          => MultiAssetSupportedInEra era
+          => MaryEraOnwards era
           -> a)
       -> a
     withLedgerConstraints ShelleyBasedEraShelley f _ = f AdaOnlyInShelleyEra
     withLedgerConstraints ShelleyBasedEraAllegra f _ = f AdaOnlyInAllegraEra
-    withLedgerConstraints ShelleyBasedEraMary    _ f = f MultiAssetInMaryEra
-    withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MultiAssetInAlonzoEra
-    withLedgerConstraints ShelleyBasedEraBabbage _ f = f MultiAssetInBabbageEra
-    withLedgerConstraints ShelleyBasedEraConway  _ f = f MultiAssetInConwayEra
+    withLedgerConstraints ShelleyBasedEraMary    _ f = f MaryEraOnwardsMary
+    withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MaryEraOnwardsAlonzo
+    withLedgerConstraints ShelleyBasedEraBabbage _ f = f MaryEraOnwardsBabbage
+    withLedgerConstraints ShelleyBasedEraConway  _ f = f MaryEraOnwardsConway
 
 type LedgerEraConstraints ledgerera =
        ( Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto
