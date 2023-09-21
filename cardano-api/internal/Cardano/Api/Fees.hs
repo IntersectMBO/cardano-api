@@ -46,12 +46,13 @@ module Cardano.Api.Fees (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eras.Core
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.MaryEraOnwards
-import           Cardano.Api.Error
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Error
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -977,9 +978,10 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
           , negateValue outgoingNonAda
           ]
 
-    let changeTxOut = case multiAssetSupportedInEra cardanoEra of
-          Left _ -> lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1
-          Right multiAsset -> TxOutValue multiAsset (lovelaceToValue (Lovelace (2^(64 :: Integer)) - 1) <> nonAdaChange)
+    let changeTxOut = caseByronToAllegraOrMaryEraOnwards
+          (const (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1))
+          (\w -> TxOutValue w (lovelaceToValue (Lovelace (2^(64 :: Integer)) - 1) <> nonAdaChange))
+          (cardanoEra @era)
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now

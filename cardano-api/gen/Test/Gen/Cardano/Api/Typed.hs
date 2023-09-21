@@ -500,10 +500,10 @@ genTxIndex :: Gen TxIx
 genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
-genTxOutValue era =
-  case multiAssetSupportedInEra era of
-    Left adaOnlyInEra     -> TxOutAdaOnly adaOnlyInEra <$> genPositiveLovelace
-    Right multiAssetInEra -> TxOutValue multiAssetInEra <$> genValueForTxOut
+genTxOutValue =
+  caseByronToAllegraOrMaryEraOnwards
+    (\w -> TxOutAdaOnly w <$> genPositiveLovelace)
+    (\w -> TxOutValue w <$> genValueForTxOut)
 
 genTxOutTxContext :: CardanoEra era -> Gen (TxOut CtxTx era)
 genTxOutTxContext era =
@@ -636,14 +636,15 @@ genTxUpdateProposal era =
         ]
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
-genTxMintValue era =
-  case multiAssetSupportedInEra era of
-    Left _ -> pure TxMintNone
-    Right supported ->
+genTxMintValue =
+  caseByronToAllegraOrMaryEraOnwards
+    (const (pure TxMintNone))
+    (\supported ->
       Gen.choice
         [ pure TxMintNone
         , TxMintValue supported <$> genValueForMinting <*> return (BuildTxWith mempty)
         ]
+    )
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do

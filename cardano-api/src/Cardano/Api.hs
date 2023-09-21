@@ -119,6 +119,7 @@ module Cardano.Api (
     caseByronOrShelleyBasedEra,
 
     -- ** Case on ShelleyBasedEra
+    caseByronToAllegraOrMaryEraOnwards,
     caseShelleyToMaryOrAlonzoEraOnwards,
     caseShelleyToAlonzoOrBabbageEraOnwards,
     caseShelleyToBabbageOrConwayEraOnwards,
@@ -362,7 +363,6 @@ module Cardano.Api (
 
     -- ** Feature availability functions
     collateralSupportedInEra,
-    multiAssetSupportedInEra,
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,

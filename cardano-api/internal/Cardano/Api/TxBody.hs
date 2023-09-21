@@ -129,7 +129,6 @@ module Cardano.Api.TxBody (
 
     -- ** Feature availability functions
     collateralSupportedInEra,
-    multiAssetSupportedInEra,
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,
@@ -932,27 +931,6 @@ collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
 collateralSupportedInEra BabbageEra = Just CollateralInBabbageEra
 collateralSupportedInEra ConwayEra = Just CollateralInConwayEra
 
-multiAssetSupportedInEra :: ()
-  => CardanoEra era
-  -> Either (ByronToAllegraEra era) (MaryEraOnwards era)
-multiAssetSupportedInEra ByronEra   = Left ByronToAllegraEraByron
-multiAssetSupportedInEra ShelleyEra = Left ByronToAllegraEraShelley
-multiAssetSupportedInEra AllegraEra = Left ByronToAllegraEraAllegra
-multiAssetSupportedInEra MaryEra    = Right MaryEraOnwardsMary
-multiAssetSupportedInEra AlonzoEra  = Right MaryEraOnwardsAlonzo
-multiAssetSupportedInEra BabbageEra = Right MaryEraOnwardsBabbage
-multiAssetSupportedInEra ConwayEra  = Right MaryEraOnwardsConway
-
-
--- -- | A representation of whether the era requires explicitly specified fees in
--- -- transactions.
--- --
--- -- The Byron era tx fees are implicit (as the difference bettween the sum of
--- -- outputs and sum of inputs), but all later eras the fees are specified in the
--- -- transaction explicitly.
--- --
--- data TxFeesExplicitInEra era where
-
 --      TxFeesExplicitInShelleyEra :: TxFeesExplicitInEra ShelleyEra
 --      TxFeesExplicitInAllegraEra :: TxFeesExplicitInEra AllegraEra
 --      TxFeesExplicitInMaryEra    :: TxFeesExplicitInEra MaryEra
@@ -1326,14 +1304,15 @@ data TxOutValue era where
 instance EraCast TxOutValue where
   eraCast toEra v = case v of
     TxOutAdaOnly _previousEra lovelace ->
-      case multiAssetSupportedInEra toEra of
-        Left adaOnly -> Right $ TxOutAdaOnly adaOnly lovelace
-        Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
+      caseByronToAllegraOrMaryEraOnwards
+        (\w -> Right $ TxOutAdaOnly w lovelace)
+        (\w -> Right $ TxOutValue w $ lovelaceToValue lovelace)
+        toEra
     TxOutValue  (_ :: MaryEraOnwards fromEra) value  ->
-      case multiAssetSupportedInEra toEra of
-        Left _adaOnly -> Left $ EraCastError v (cardanoEra @fromEra) toEra
-        Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp value
-
+      caseByronToAllegraOrMaryEraOnwards
+        (const (Left $ EraCastError v (cardanoEra @fromEra) toEra))
+        (\w -> Right $ TxOutValue w value)
+        toEra
 
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
@@ -1344,15 +1323,18 @@ instance ToJSON (TxOutValue era) where
   toJSON (TxOutValue _ val) = toJSON val
 
 instance IsCardanoEra era => FromJSON (TxOutValue era) where
-  parseJSON = withObject "TxOutValue" $ \o -> do
-    case multiAssetSupportedInEra cardanoEra of
-      Left onlyAda -> do
+  parseJSON = withObject "TxOutValue" $ \o ->
+    caseByronToAllegraOrMaryEraOnwards
+      (\w -> do
         ll <- o .: "lovelace"
-        pure $ TxOutAdaOnly onlyAda $ selectLovelace ll
-      Right maSupported -> do
+        pure $ TxOutAdaOnly w $ selectLovelace ll
+      )
+      (\w -> do
         let l = KeyMap.toList o
         vals <- mapM decodeAssetId l
-        pure $ TxOutValue maSupported $ mconcat vals
+        pure $ TxOutValue w $ mconcat vals
+      )
+      cardanoEra
     where
      decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
      decodeAssetId (polid, Aeson.Object assetNameHm) = do
@@ -1386,9 +1368,10 @@ instance IsCardanoEra era => FromJSON (TxOutValue era) where
 
 lovelaceToTxOutValue :: IsCardanoEra era => Lovelace -> TxOutValue era
 lovelaceToTxOutValue l =
-    case multiAssetSupportedInEra cardanoEra of
-      Left adaOnly     -> TxOutAdaOnly adaOnly  l
-      Right multiAsset -> TxOutValue multiAsset (lovelaceToValue l)
+  caseByronToAllegraOrMaryEraOnwards
+    (\w -> TxOutAdaOnly w l)
+    (\w -> TxOutValue w (lovelaceToValue l))
+    cardanoEra
 
 txOutValueToLovelace :: TxOutValue era -> Lovelace
 txOutValueToLovelace tv =
