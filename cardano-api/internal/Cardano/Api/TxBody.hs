@@ -917,39 +917,6 @@ collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
 collateralSupportedInEra BabbageEra = Just CollateralInBabbageEra
 collateralSupportedInEra ConwayEra = Just CollateralInConwayEra
 
---      TxFeesExplicitInShelleyEra :: TxFeesExplicitInEra ShelleyEra
---      TxFeesExplicitInAllegraEra :: TxFeesExplicitInEra AllegraEra
---      TxFeesExplicitInMaryEra    :: TxFeesExplicitInEra MaryEra
---      TxFeesExplicitInAlonzoEra  :: TxFeesExplicitInEra AlonzoEra
---      TxFeesExplicitInBabbageEra :: TxFeesExplicitInEra BabbageEra
---      TxFeesExplicitInConwayEra  :: TxFeesExplicitInEra ConwayEra
-
--- deriving instance Eq   (TxFeesExplicitInEra era)
--- deriving instance Show (TxFeesExplicitInEra era)
-
--- -- | A representation of whether the era requires implicitly specified fees in
--- -- transactions.
--- --
--- -- This is the negation of 'TxFeesExplicitInEra'.
--- --
--- data TxFeesImplicitInEra era where
---      TxFeesImplicitInByronEra :: TxFeesImplicitInEra ByronEra
-
--- deriving instance Eq   (TxFeesImplicitInEra era)
--- deriving instance Show (TxFeesImplicitInEra era)
-
--- txFeesExplicitInEra :: CardanoEra era
---                     -> Either (TxFeesImplicitInEra era)
---                               (TxFeesExplicitInEra era)
--- txFeesExplicitInEra ByronEra   = Left  TxFeesImplicitInByronEra
--- txFeesExplicitInEra ShelleyEra = Right TxFeesExplicitInShelleyEra
--- txFeesExplicitInEra AllegraEra = Right TxFeesExplicitInAllegraEra
--- txFeesExplicitInEra MaryEra    = Right TxFeesExplicitInMaryEra
--- txFeesExplicitInEra AlonzoEra  = Right TxFeesExplicitInAlonzoEra
--- txFeesExplicitInEra BabbageEra = Right TxFeesExplicitInBabbageEra
--- txFeesExplicitInEra ConwayEra = Right TxFeesExplicitInConwayEra
-
-
 -- | A representation of whether the era supports transactions with an upper
 -- bound on the range of slots in which they are valid.
 --
