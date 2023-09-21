@@ -1463,11 +1463,11 @@ instance EraCast (TxOutDatum ctx)  where
         Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
-    TxOutDatumInline (_ :: BabbageEraOnwards fromEra) scriptData ->
-      case refInsScriptsAndInlineDatsSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
-        Just refInsAndInlineSupported ->
-          Right $ TxOutDatumInline refInsAndInlineSupported scriptData
+    TxOutDatumInline ws scriptData ->
+      caseByronToAlonzoOrBabbageEraOnwards
+        (const (Left $ EraCastError v (babbageEraOnwardsToCardanoEra ws) toEra))
+        (\wt -> Right $ TxOutDatumInline wt scriptData)
+        toEra
 
 pattern TxOutDatumInTx
   :: ScriptDataSupportedInEra era
@@ -2703,20 +2703,10 @@ fromLedgerTxInsCollateral sbe body =
 fromLedgerTxInsReference
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
 fromLedgerTxInsReference sbe txBody =
-  case refInsScriptsAndInlineDatsSupportedInEra $ shelleyBasedToCardanoEra sbe of
-    Nothing -> TxInsReferenceNone
-    Just suppInEra ->
-      let ledgerRefInputs =
-            obtainReferenceInputsHasFieldConstraint suppInEra $ txBody ^. L.referenceInputsTxBodyL
-      in TxInsReference suppInEra
-           $ map fromShelleyTxIn . Set.toList $ ledgerRefInputs
- where
-  obtainReferenceInputsHasFieldConstraint
-    :: BabbageEraOnwards era
-    -> ((L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto, L.BabbageEraTxBody (ShelleyLedgerEra era)) => a)
-    -> a
-  obtainReferenceInputsHasFieldConstraint BabbageEraOnwardsBabbage f = f
-  obtainReferenceInputsHasFieldConstraint BabbageEraOnwardsConway f = f
+  caseShelleyToAlonzoOrBabbageEraOnwards
+    (const TxInsReferenceNone)
+    (\w -> TxInsReference w $ map fromShelleyTxIn . Set.toList $ txBody ^. L.referenceInputsTxBodyL)
+    sbe
 
 fromLedgerTxOuts
   :: forall era.

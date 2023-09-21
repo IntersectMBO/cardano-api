@@ -120,6 +120,7 @@ module Cardano.Api (
 
     -- ** Case on ShelleyBasedEra
     caseByronToAllegraOrMaryEraOnwards,
+    caseByronToAlonzoOrBabbageEraOnwards,
     caseShelleyToAllegraOrMaryEraOnwards,
     caseShelleyToMaryOrAlonzoEraOnwards,
     caseShelleyToAlonzoOrBabbageEraOnwards,

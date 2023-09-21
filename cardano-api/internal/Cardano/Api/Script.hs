@@ -43,7 +43,6 @@ module Cardano.Api.Script (
 
     -- * Reference scripts
     ReferenceScript(..),
-    refInsScriptsAndInlineDatsSupportedInEra,
     refScriptToShelleyScript,
 
     -- * Use of a script in an era as a witness
@@ -112,7 +111,8 @@ module Cardano.Api.Script (
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
-import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
@@ -1395,28 +1395,19 @@ instance IsCardanoEra era => ToJSON (ReferenceScript era) where
 
 instance IsCardanoEra era => FromJSON (ReferenceScript era) where
   parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
-    case refInsScriptsAndInlineDatsSupportedInEra (cardanoEra :: CardanoEra era) of
-      Nothing -> pure ReferenceScriptNone
-      Just refSupInEra ->
-        ReferenceScript refSupInEra <$> o .: "referenceScript"
+    caseByronToAlonzoOrBabbageEraOnwards
+      (const (pure ReferenceScriptNone))
+      (\w -> ReferenceScript w <$> o .: "referenceScript")
+      (cardanoEra :: CardanoEra era)
 
 instance EraCast ReferenceScript where
   eraCast toEra = \case
     ReferenceScriptNone -> pure ReferenceScriptNone
-    v@(ReferenceScript (_ :: BabbageEraOnwards fromEra) scriptInAnyLang) ->
-      case refInsScriptsAndInlineDatsSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
-        Just supportedInEra -> Right $ ReferenceScript supportedInEra scriptInAnyLang
-
-refInsScriptsAndInlineDatsSupportedInEra
-  :: CardanoEra era -> Maybe (BabbageEraOnwards era)
-refInsScriptsAndInlineDatsSupportedInEra ByronEra   = Nothing
-refInsScriptsAndInlineDatsSupportedInEra ShelleyEra = Nothing
-refInsScriptsAndInlineDatsSupportedInEra AllegraEra = Nothing
-refInsScriptsAndInlineDatsSupportedInEra MaryEra    = Nothing
-refInsScriptsAndInlineDatsSupportedInEra AlonzoEra  = Nothing
-refInsScriptsAndInlineDatsSupportedInEra BabbageEra = Just BabbageEraOnwardsBabbage
-refInsScriptsAndInlineDatsSupportedInEra ConwayEra  = Just BabbageEraOnwardsConway
+    v@(ReferenceScript ws scriptInAnyLang) ->
+      caseByronToAlonzoOrBabbageEraOnwards
+        (const (Left $ EraCastError v (babbageEraOnwardsToCardanoEra ws) toEra))
+        (\wt -> Right $ ReferenceScript wt scriptInAnyLang)
+        toEra
 
 refScriptToShelleyScript
   :: CardanoEra era
@@ -1435,13 +1426,10 @@ fromShelleyScriptToReferenceScript sbe script =
 
 scriptInEraToRefScript :: ScriptInEra era -> ReferenceScript era
 scriptInEraToRefScript sIne@(ScriptInEra _ s) =
-  case refInsScriptsAndInlineDatsSupportedInEra era of
-    Nothing -> ReferenceScriptNone
-    Just supp ->
-      -- Any script can be a reference script
-      ReferenceScript supp $ toScriptInAnyLang s
- where
-  era = shelleyBasedToCardanoEra $ eraOfScriptInEra sIne
+  caseShelleyToAlonzoOrBabbageEraOnwards
+    (const ReferenceScriptNone)
+    (\w -> ReferenceScript w $ toScriptInAnyLang s) -- Any script can be a reference script
+    (eraOfScriptInEra sIne)
 
 -- Helpers
 

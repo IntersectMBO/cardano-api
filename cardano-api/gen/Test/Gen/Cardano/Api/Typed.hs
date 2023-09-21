@@ -521,9 +521,10 @@ genTxOutUTxOContext era =
 
 genReferenceScript :: CardanoEra era -> Gen (ReferenceScript era)
 genReferenceScript era =
-  case refInsScriptsAndInlineDatsSupportedInEra era of
-    Nothing -> return ReferenceScriptNone
-    Just _ -> scriptInEraToRefScript <$> genScriptInEra era
+  caseByronToAlonzoOrBabbageEraOnwards
+    (const (return ReferenceScriptNone))
+    (const (scriptInEraToRefScript <$> genScriptInEra era))
+    era
 
 genUTxO :: CardanoEra era -> Gen (UTxO era)
 genUTxO era =
@@ -701,10 +702,10 @@ genTxInsCollateral era =
                           ]
 
 genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)
-genTxInsReference era =
-    case refInsScriptsAndInlineDatsSupportedInEra era of
-      Nothing        -> pure TxInsReferenceNone
-      Just supported -> TxInsReference supported <$> Gen.list (Range.linear 0 10) genTxIn
+genTxInsReference =
+  caseByronToAlonzoOrBabbageEraOnwards
+    (const (pure TxInsReferenceNone))
+    (\w -> TxInsReference w <$> Gen.list (Range.linear 0 10) genTxIn)
 
 genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
