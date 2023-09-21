@@ -54,6 +54,18 @@ module Cardano.Api (
     byronToAllegraEraConstraints,
     byronToAllegraEraToCardanoEra,
 
+    ByronToMaryEra(..),
+    IsByronToMaryEra(..),
+    AnyByronToMaryEra(..),
+    byronToMaryEraConstraints,
+    byronToMaryEraToCardanoEra,
+
+    ByronToAlonzoEra(..),
+    IsByronToAlonzoEra(..),
+    AnyByronToAlonzoEra(..),
+    byronToAlonzoEraConstraints,
+    byronToAlonzoEraToCardanoEra,
+
     ShelleyToBabbageEra(..),
     AnyShelleyToBabbageEra(..),
     shelleyToBabbageEraConstraints,
@@ -1012,6 +1024,8 @@ import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
+import           Cardano.Api.Eon.ByronToAlonzoEra
+import           Cardano.Api.Eon.ByronToMaryEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra
