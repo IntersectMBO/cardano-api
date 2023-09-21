@@ -98,7 +98,6 @@ module Test.Gen.Cardano.Api.Typed
   , genVerificationKeyHash
   , genUpdateProposal
   , genProtocolParametersUpdate
-  , genScriptDataSupportedInAlonzoEra
   , genTxOutDatumHashTxContext
   , genTxOutDatumHashUTxOContext
   , genTxOutValue
@@ -1015,19 +1014,19 @@ genTxOutDatumHashTxContext era = case era of
     MaryEra    -> pure TxOutDatumNone
     AlonzoEra  -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInAlonzoEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
+                    , TxOutDatumInTx AlonzoEraOnwardsAlonzo <$> genHashableScriptData
                     ]
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInBabbageEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
+                    , TxOutDatumInTx AlonzoEraOnwardsBabbage <$> genHashableScriptData
                     , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
                     ]
     ConwayEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInConwayEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
+                    , TxOutDatumInTx AlonzoEraOnwardsConway <$> genHashableScriptData
                     , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
                     ]
 
@@ -1039,16 +1038,16 @@ genTxOutDatumHashUTxOContext era = case era of
     MaryEra    -> pure TxOutDatumNone
     AlonzoEra  -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
                     ]
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
                     , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
                     ]
     ConwayEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
                     , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
                     ]
 
@@ -1057,9 +1056,6 @@ mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR
 
 genHashScriptData :: Gen (Cardano.Api.Hash ScriptData)
 genHashScriptData = ScriptDataHash . unsafeMakeSafeHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
-
-genScriptDataSupportedInAlonzoEra :: Gen (ScriptDataSupportedInEra AlonzoEra)
-genScriptDataSupportedInAlonzoEra = pure ScriptDataInAlonzoEra
 
 genGovernancePoll :: Gen GovernancePoll
 genGovernancePoll =
