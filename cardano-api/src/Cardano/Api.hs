@@ -132,6 +132,7 @@ module Cardano.Api (
 
     -- ** Case on ShelleyBasedEra
     caseByronToAllegraOrMaryEraOnwards,
+    caseByronToMaryOrAlonzoEraOnwards,
     caseByronToAlonzoOrBabbageEraOnwards,
     caseShelleyToAllegraOrMaryEraOnwards,
     caseShelleyToMaryOrAlonzoEraOnwards,
@@ -385,7 +386,6 @@ module Cardano.Api (
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
-    scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
     -- ** Era-dependent protocol features

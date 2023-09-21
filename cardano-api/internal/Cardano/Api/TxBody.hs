@@ -135,7 +135,6 @@ module Cardano.Api.TxBody (
     txMetadataSupportedInEra,
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
-    scriptDataSupportedInEra,
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
@@ -188,9 +187,9 @@ import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.EraCast
-import           Cardano.Api.Eras
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
 import           Cardano.Api.Governance.Actions.ProposalProcedure
@@ -1088,15 +1087,6 @@ extraKeyWitnessesSupportedInEra AlonzoEra  = Just ExtraKeyWitnessesInAlonzoEra
 extraKeyWitnessesSupportedInEra BabbageEra = Just ExtraKeyWitnessesInBabbageEra
 extraKeyWitnessesSupportedInEra ConwayEra  = Just ExtraKeyWitnessesInConwayEra
 
-scriptDataSupportedInEra :: CardanoEra era -> Maybe (AlonzoEraOnwards era)
-scriptDataSupportedInEra ByronEra   = Nothing
-scriptDataSupportedInEra ShelleyEra = Nothing
-scriptDataSupportedInEra AllegraEra = Nothing
-scriptDataSupportedInEra MaryEra    = Nothing
-scriptDataSupportedInEra AlonzoEra  = Just AlonzoEraOnwardsAlonzo
-scriptDataSupportedInEra BabbageEra = Just AlonzoEraOnwardsBabbage
-scriptDataSupportedInEra ConwayEra  = Just AlonzoEraOnwardsConway
-
 
 -- | A representation of whether the era supports withdrawals from reward
 -- accounts.
@@ -1408,16 +1398,16 @@ deriving instance Show (TxOutDatum ctx era)
 instance EraCast (TxOutDatum ctx)  where
   eraCast toEra v = case v of
     TxOutDatumNone -> pure TxOutDatumNone
-    TxOutDatumHash (_ :: AlonzoEraOnwards fromEra) hash ->
-      case scriptDataSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
-        Just sDatumsSupported ->
-          Right $ TxOutDatumHash sDatumsSupported hash
-    TxOutDatumInTx' (_ :: AlonzoEraOnwards fromEra) scriptData hash ->
-      case scriptDataSupportedInEra toEra of
-        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
-        Just sDatumsSupported ->
-          Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
+    TxOutDatumHash ws hash ->
+      caseByronToMaryOrAlonzoEraOnwards
+        (const (Left $ EraCastError v (alonzoEraOnwardsToCardanoEra ws) toEra))
+        (\wt -> Right $ TxOutDatumHash wt hash)
+        toEra
+    TxOutDatumInTx' ws scriptData hash ->
+      caseByronToMaryOrAlonzoEraOnwards
+        (const (Left $ EraCastError v (alonzoEraOnwardsToCardanoEra ws) toEra))
+        (\wt -> Right $ TxOutDatumInTx' wt scriptData hash)
+        toEra
     TxOutDatumInline ws scriptData ->
       caseByronToAlonzoOrBabbageEraOnwards
         (const (Left $ EraCastError v (babbageEraOnwardsToCardanoEra ws) toEra))
@@ -2095,13 +2085,14 @@ deserialiseShelleyBasedTxBody sbe bs =
               (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
         6 -> do
           sDataSupported <-
-            case scriptDataSupportedInEra (shelleyBasedToCardanoEra sbe) of
-              Nothing -> fail $ mconcat
-                [ "deserialiseShelleyBasedTxBody: Expected an era that supports script"
-                , " data but got: "
-                , show sbe
-                ]
-              Just supported -> return supported
+            forEraInEon (shelleyBasedToCardanoEra sbe)
+              ( fail $ mconcat
+                  [ "deserialiseShelleyBasedTxBody: Expected an era that supports script"
+                  , " data but got: "
+                  , show sbe
+                  ]
+              )
+              pure
 
           sValiditySupported <-
             case txScriptValiditySupportedInShelleyBasedEra sbe of
@@ -3369,9 +3360,9 @@ convScriptData
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
   -> TxBodyScriptData era
 convScriptData era txOuts scriptWitnesses =
-  case scriptDataSupportedInEra era of
-    Nothing -> TxBodyNoScriptData
-    Just scriptDataInEra ->
+  forEraInEon era
+    TxBodyNoScriptData
+    (\w ->
       let redeemers =
             Alonzo.Redeemers $
               Map.fromList
@@ -3394,7 +3385,8 @@ convScriptData era txOuts scriptWitnesses =
                           (PlutusScriptWitness
                              _ _ _ (ScriptDatumForTxIn d) _ _)) <- scriptWitnesses
                   ]
-      in TxBodyScriptData scriptDataInEra datums redeemers
+      in TxBodyScriptData w datums redeemers
+    )
 
 convPParamsToScriptIntegrityHash :: ()
   => ShelleyBasedEra era
