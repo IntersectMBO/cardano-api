@@ -115,7 +115,6 @@ module Cardano.Api.TxBody (
 
     -- * Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    OnlyAdaSupportedInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -183,6 +182,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eon.ByronEraOnly
+import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -735,13 +735,13 @@ fromByronTxOut :: Byron.TxOut -> TxOut ctx ByronEra
 fromByronTxOut (Byron.TxOut addr value) =
   TxOut
     (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-    (TxOutAdaOnly AdaOnlyInByronEra (fromByronLovelace value))
+    (TxOutAdaOnly ByronToAllegraEraByron (fromByronLovelace value))
      TxOutDatumNone ReferenceScriptNone
 
 
 toByronTxOut :: TxOut ctx ByronEra -> Maybe Byron.TxOut
 toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-                    (TxOutAdaOnly AdaOnlyInByronEra value) _ _) =
+                    (TxOutAdaOnly ByronToAllegraEraByron value) _ _) =
     Byron.TxOut addr <$> toByronLovelace value
 
 toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
@@ -756,13 +756,13 @@ toShelleyTxOut :: forall era ledgerera.
                => ShelleyBasedEra era
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
-toShelleyTxOut sbe (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
+toShelleyTxOut sbe (TxOut _ (TxOutAdaOnly ByronToAllegraEraByron _) _ _) =
     case sbe of {}
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraShelley value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraAllegra value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOut _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
@@ -792,7 +792,7 @@ fromShelleyTxOut sbe ledgerTxOut =
   case sbe of
     ShelleyBasedEraShelley ->
         TxOut (fromShelleyAddr sbe addr)
-              (TxOutAdaOnly AdaOnlyInShelleyEra
+              (TxOutAdaOnly ByronToAllegraEraShelley
                             (fromShelleyLovelace value))
                TxOutDatumNone ReferenceScriptNone
       where
@@ -801,7 +801,7 @@ fromShelleyTxOut sbe ledgerTxOut =
 
     ShelleyBasedEraAllegra ->
         TxOut (fromShelleyAddr sbe addr)
-              (TxOutAdaOnly AdaOnlyInAllegraEra
+              (TxOutAdaOnly ByronToAllegraEraAllegra
                             (fromShelleyLovelace value))
                TxOutDatumNone ReferenceScriptNone
       where
@@ -932,29 +932,12 @@ collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
 collateralSupportedInEra BabbageEra = Just CollateralInBabbageEra
 collateralSupportedInEra ConwayEra = Just CollateralInConwayEra
 
--- | A representation of whether the era supports only ada transactions.
---
--- Prior to the Mary era only ada transactions are supported. Multi-assets are
--- supported from the Mary era onwards.
---
--- This is the negation of 'MaryEraOnwards'. It exists since we need
--- evidence to be positive.
---
-data OnlyAdaSupportedInEra era where
-
-     AdaOnlyInByronEra   :: OnlyAdaSupportedInEra ByronEra
-     AdaOnlyInShelleyEra :: OnlyAdaSupportedInEra ShelleyEra
-     AdaOnlyInAllegraEra :: OnlyAdaSupportedInEra AllegraEra
-
-deriving instance Eq   (OnlyAdaSupportedInEra era)
-deriving instance Show (OnlyAdaSupportedInEra era)
-
-multiAssetSupportedInEra :: CardanoEra era
-                         -> Either (OnlyAdaSupportedInEra era)
-                                   (MaryEraOnwards era)
-multiAssetSupportedInEra ByronEra   = Left AdaOnlyInByronEra
-multiAssetSupportedInEra ShelleyEra = Left AdaOnlyInShelleyEra
-multiAssetSupportedInEra AllegraEra = Left AdaOnlyInAllegraEra
+multiAssetSupportedInEra :: ()
+  => CardanoEra era
+  -> Either (ByronToAllegraEra era) (MaryEraOnwards era)
+multiAssetSupportedInEra ByronEra   = Left ByronToAllegraEraByron
+multiAssetSupportedInEra ShelleyEra = Left ByronToAllegraEraShelley
+multiAssetSupportedInEra AllegraEra = Left ByronToAllegraEraAllegra
 multiAssetSupportedInEra MaryEra    = Right MaryEraOnwardsMary
 multiAssetSupportedInEra AlonzoEra  = Right MaryEraOnwardsAlonzo
 multiAssetSupportedInEra BabbageEra = Right MaryEraOnwardsBabbage
@@ -1336,7 +1319,7 @@ deriving instance Show (TxInsReference build era)
 
 data TxOutValue era where
 
-  TxOutAdaOnly :: OnlyAdaSupportedInEra era -> Lovelace -> TxOutValue era
+  TxOutAdaOnly :: ByronToAllegraEra era -> Lovelace -> TxOutValue era
 
   TxOutValue   :: MaryEraOnwards era -> Value -> TxOutValue era
 
@@ -3325,7 +3308,7 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
     classifyRangeError :: TxOut CtxTx ByronEra -> TxBodyError
     classifyRangeError
       txout@(TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{})
-                   (TxOutAdaOnly AdaOnlyInByronEra value) _ _)
+                   (TxOutAdaOnly ByronToAllegraEraByron value) _ _)
       | value < 0        = TxBodyOutputNegative (lovelaceToQuantity value)
                                                 (txOutInAnyEra txout)
       | otherwise        = TxBodyOutputOverflow (lovelaceToQuantity value)
@@ -3992,13 +3975,13 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 => ShelleyBasedEra era
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
-toShelleyTxOutAny sbe (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
+toShelleyTxOutAny sbe (TxOut _ (TxOutAdaOnly ByronToAllegraEraByron _) _ _) =
     case sbe of {}
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraShelley value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraAllegra value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =

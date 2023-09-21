@@ -48,6 +48,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Error
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -696,7 +697,7 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
                    ShelleyLedgerEra era ~ ledgerera
                 => LedgerEraConstraints ledgerera
                 => LedgerAdaOnlyConstraints ledgerera
-                => OnlyAdaSupportedInEra era
+                => ByronToAllegraEra era
                 -> TxOutValue era
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
@@ -716,7 +717,7 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
           => LedgerAdaOnlyConstraints ledgerera
           => LedgerPParamsConstraints ledgerera
           => LedgerTxBodyConstraints ledgerera
-          => OnlyAdaSupportedInEra era
+          => ByronToAllegraEra era
           -> a)
       -> (   LedgerEraConstraints ledgerera
           => LedgerMultiAssetConstraints ledgerera
@@ -725,8 +726,8 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
           => MaryEraOnwards era
           -> a)
       -> a
-    withLedgerConstraints ShelleyBasedEraShelley f _ = f AdaOnlyInShelleyEra
-    withLedgerConstraints ShelleyBasedEraAllegra f _ = f AdaOnlyInAllegraEra
+    withLedgerConstraints ShelleyBasedEraShelley f _ = f ByronToAllegraEraShelley
+    withLedgerConstraints ShelleyBasedEraAllegra f _ = f ByronToAllegraEraAllegra
     withLedgerConstraints ShelleyBasedEraMary    _ f = f MaryEraOnwardsMary
     withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MaryEraOnwardsAlonzo
     withLedgerConstraints ShelleyBasedEraBabbage _ f = f MaryEraOnwardsBabbage

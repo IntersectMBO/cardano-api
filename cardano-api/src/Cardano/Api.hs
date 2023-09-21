@@ -48,6 +48,12 @@ module Cardano.Api (
     byronEraOnlyConstraints,
     byronEraOnlyToCardanoEra,
 
+    ByronToAllegraEra(..),
+    IsByronToAllegraEra(..),
+    AnyByronToAllegraEra(..),
+    byronToAllegraEraConstraints,
+    byronToAllegraEraToCardanoEra,
+
     ShelleyToBabbageEra(..),
     AnyShelleyToBabbageEra(..),
     shelleyToBabbageEraConstraints,
@@ -342,7 +348,6 @@ module Cardano.Api (
 
     -- ** Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    OnlyAdaSupportedInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
@@ -1005,6 +1010,7 @@ import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
+import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra
