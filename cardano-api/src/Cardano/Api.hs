@@ -43,6 +43,12 @@ module Cardano.Api (
     asFeaturedInShelleyBasedEra,
 
     -- * Features
+    ByronEraOnly(..),
+    IsByronEraOnly(..),
+    AnyByronEraOnly(..),
+    byronEraOnlyConstraints,
+    byronEraOnlyToCardanoEra,
+
     ShelleyToBabbageEra(..),
     IsShelleyToBabbageEra(..),
     AnyShelleyToBabbageEra(..),
@@ -1008,6 +1014,7 @@ import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra
