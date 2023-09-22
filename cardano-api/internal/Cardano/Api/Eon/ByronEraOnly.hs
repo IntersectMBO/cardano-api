@@ -8,7 +8,6 @@
 
 module Cardano.Api.Eon.ByronEraOnly
   ( ByronEraOnly(..)
-  , IsByronEraOnly(..)
   , AnyByronEraOnly(..)
   , byronEraOnlyConstraints
   , byronEraOnlyToCardanoEra
@@ -20,17 +19,11 @@ import           Cardano.Api.Eras.Core
 
 import           Data.Typeable (Typeable)
 
-class IsByronEraOnly era where
-  byronEraOnly :: ByronEraOnly era
-
 data ByronEraOnly era where
   ByronEraOnlyByron  :: ByronEraOnly ByronEra
 
 deriving instance Show (ByronEraOnly era)
 deriving instance Eq (ByronEraOnly era)
-
-instance IsByronEraOnly ByronEra where
-  byronEraOnly = ByronEraOnlyByron
 
 instance Eon ByronEraOnly where
   inEonForEra no yes = \case
@@ -52,8 +45,7 @@ data AnyByronEraOnly where
 deriving instance Show AnyByronEraOnly
 
 type ByronEraOnlyConstraints era =
-  ( IsByronEraOnly era
-  , IsCardanoEra era
+  ( IsCardanoEra era
   , Typeable era
   )
 

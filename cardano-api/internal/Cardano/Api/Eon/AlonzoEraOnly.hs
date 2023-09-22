@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.AlonzoEraOnly
   ( AlonzoEraOnly(..)
-  , IsAlonzoEraOnly(..)
   , AnyAlonzoEraOnly(..)
   , alonzoEraOnlyConstraints
   , alonzoEraOnlyToCardanoEra
@@ -39,17 +38,11 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
-class IsShelleyBasedEra era => IsAlonzoEraOnly era where
-  alonzoEraOnly :: AlonzoEraOnly era
-
 data AlonzoEraOnly era where
   AlonzoEraOnlyAlonzo  :: AlonzoEraOnly AlonzoEra
 
 deriving instance Show (AlonzoEraOnly era)
 deriving instance Eq (AlonzoEraOnly era)
-
-instance IsAlonzoEraOnly AlonzoEra where
-  alonzoEraOnly = AlonzoEraOnlyAlonzo
 
 instance Eon AlonzoEraOnly where
   inEonForEra no yes = \case
@@ -96,7 +89,6 @@ type AlonzoEraOnlyConstraints era =
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
-  , IsAlonzoEraOnly era
   , IsCardanoEra era
   , IsShelleyBasedEra era
   , ToJSON (DebugLedgerState era)

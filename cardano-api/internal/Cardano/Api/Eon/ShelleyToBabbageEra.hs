@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.ShelleyToBabbageEra
   ( ShelleyToBabbageEra(..)
-  , IsShelleyToBabbageEra(..)
   , AnyShelleyToBabbageEra(..)
   , shelleyToBabbageEraConstraints
   , shelleyToBabbageEraToCardanoEra
@@ -40,9 +39,6 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
-class IsShelleyBasedEra era => IsShelleyToBabbageEra era where
-  shelleyToBabbageEra :: ShelleyToBabbageEra era
-
 data ShelleyToBabbageEra era where
   ShelleyToBabbageEraShelley :: ShelleyToBabbageEra ShelleyEra
   ShelleyToBabbageEraAllegra :: ShelleyToBabbageEra AllegraEra
@@ -52,21 +48,6 @@ data ShelleyToBabbageEra era where
 
 deriving instance Show (ShelleyToBabbageEra era)
 deriving instance Eq (ShelleyToBabbageEra era)
-
-instance IsShelleyToBabbageEra ShelleyEra where
-  shelleyToBabbageEra = ShelleyToBabbageEraShelley
-
-instance IsShelleyToBabbageEra AllegraEra where
-  shelleyToBabbageEra = ShelleyToBabbageEraAllegra
-
-instance IsShelleyToBabbageEra MaryEra where
-  shelleyToBabbageEra = ShelleyToBabbageEraMary
-
-instance IsShelleyToBabbageEra AlonzoEra where
-  shelleyToBabbageEra = ShelleyToBabbageEraAlonzo
-
-instance IsShelleyToBabbageEra BabbageEra where
-  shelleyToBabbageEra = ShelleyToBabbageEraBabbage
 
 instance Eon ShelleyToBabbageEra where
   inEonForEra no yes = \case
@@ -108,7 +89,6 @@ type ShelleyToBabbageEraConstraints era =
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
   , IsShelleyBasedEra era
-  , IsShelleyToBabbageEra era
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )
