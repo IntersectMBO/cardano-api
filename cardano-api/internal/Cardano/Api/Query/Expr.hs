@@ -66,6 +66,11 @@ queryCurrentEra :: ()
 queryCurrentEra =
   queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
 
+queryCurrentEra' :: ()
+  => LocalStateQueryExpr block point (QueryInMode LegacyCardanoMode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
+queryCurrentEra' =
+  queryExpr $ QueryCurrentEra LegacyCardanoModeIsMultiEra
+
 queryCurrentEpochState :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
@@ -220,3 +225,4 @@ determineEraExpr cModeParams = runExceptT $
     ByronMode -> pure $ AnyCardanoEra ByronEra
     ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
     CardanoMode -> ExceptT queryCurrentEra
+    LegacyCardanoMode -> ExceptT queryCurrentEra'

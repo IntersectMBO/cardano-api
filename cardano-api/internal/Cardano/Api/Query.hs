@@ -569,8 +569,10 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra sbe q)) =
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
       AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
       BabbageEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
-      ConwayEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
+      ConwayEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
+      _ -> undefined -- TODO
 
+toConsensusQuery _ = undefined -- TODO
 
 toConsensusQueryShelleyBased
   :: forall era ledgerera mode protocol block xs result.
@@ -810,6 +812,8 @@ fromConsensusQueryResult (QueryInEra ConwayEraInCardanoMode
                     ShelleyBasedEraConway q q'')
                  r'
       _ -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResult _ _ _ = undefined -- TODO
 
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera protocol result fp result'.

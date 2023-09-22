@@ -134,6 +134,7 @@ import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import           Data.Void (Void)
+import Legacy.Cardano (LegacyCardanoHardForkConstraints)
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
@@ -195,7 +196,7 @@ consensusModeOnly :: ConsensusModeParams mode
 consensusModeOnly ByronModeParams{}   = ByronMode
 consensusModeOnly ShelleyModeParams{} = ShelleyMode
 consensusModeOnly CardanoModeParams{} = CardanoMode
-
+consensusModeOnly LegacyCardanoModeParams{} = LegacyCardanoMode
 
 -- ----------------------------------------------------------------------------
 -- Actually connect to the node
@@ -241,6 +242,9 @@ connectToLocalNodeWithVersion LocalNodeConnectInfo {
           mkVersionedProtocols localNodeNetworkId ptcl clients'
         LocalNodeClientParamsCardano ptcl clients' ->
           mkVersionedProtocols localNodeNetworkId ptcl clients'
+        LegacyLocalNodeClientParamsCardano ptcl clients' ->
+          mkVersionedProtocols localNodeNetworkId ptcl clients'
+
 
 mkVersionedProtocols :: forall block.
                         ( Consensus.ShowQuery (Consensus.Query block)
@@ -372,6 +376,12 @@ data LocalNodeClientParams where
       -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
       -> LocalNodeClientParams
 
+     LegacyLocalNodeClientParamsCardano
+      :: (ProtocolClient block, LegacyCardanoHardForkConstraints (ConsensusCryptoForBlock block))
+      => ProtocolClientInfoArgs block
+      -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
+      -> LocalNodeClientParams
+
 data LocalNodeClientProtocolsForBlock block =
      LocalNodeClientProtocolsForBlock {
        localChainSyncClientForBlock
@@ -432,6 +442,10 @@ mkLocalNodeClientParams modeparams clients =
          (ProtocolClientInfoArgsCardano epochSlots)
          (convLocalNodeClientProtocols CardanoMode . clients)
 
+      LegacyCardanoModeParams epochSlots ->
+       LegacyLocalNodeClientParamsCardano
+         (ProtocolClientInfoArgsLegacyCardano epochSlots)
+         (convLocalNodeClientProtocols LegacyCardanoMode . clients)
 
 convLocalNodeClientProtocols :: forall mode block.
                                 ConsensusBlockForMode mode ~ block

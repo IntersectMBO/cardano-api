@@ -130,6 +130,9 @@ determineEra cModeParams localNodeConnInfo =
     CardanoMode ->
       queryNodeLocalState localNodeConnInfo Nothing
         $ QueryCurrentEra CardanoModeIsMultiEra
+    LegacyCardanoMode ->
+      queryNodeLocalState localNodeConnInfo Nothing
+        $ QueryCurrentEra LegacyCardanoModeIsMultiEra
 
 -- | Execute a query against the local node. The local
 -- node must be in CardanoMode.

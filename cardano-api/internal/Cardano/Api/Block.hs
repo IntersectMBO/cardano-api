@@ -89,6 +89,8 @@ import           Data.Foldable (Foldable (toList))
 import           Data.String (IsString)
 import           Data.Text (Text)
 
+import qualified Legacy.Cardano.Block as Consensus
+
 {- HLINT ignore "Use lambda" -}
 {- HLINT ignore "Use lambda-case" -}
 
@@ -248,6 +250,35 @@ fromConsensusBlock CardanoMode =
         BlockInMode (ShelleyBlock ShelleyBasedEraConway b')
                      ConwayEraInCardanoMode
 
+fromConsensusBlock LegacyCardanoMode =
+    \(Consensus.LegacyCardanoBlock b) -> case b of
+      Consensus.BlockByron b' ->
+        BlockInMode (ByronBlock b') ByronEraInLegacyCardanoMode
+
+      Consensus.BlockShelley b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraShelley b')
+                     ShelleyEraInLegacyCardanoMode
+
+      Consensus.BlockAllegra b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraAllegra b')
+                     AllegraEraInLegacyCardanoMode
+
+      Consensus.BlockMary b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraMary b')
+                     MaryEraInLegacyCardanoMode
+
+      Consensus.BlockAlonzo b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b')
+                     AlonzoEraInLegacyCardanoMode
+
+      Consensus.BlockBabbage b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraBabbage b')
+                     BabbageEraInLegacyCardanoMode
+
+      Consensus.BlockConway b' ->
+        BlockInMode (ShelleyBlock ShelleyBasedEraConway b')
+                     ConwayEraInLegacyCardanoMode
+
 toConsensusBlock
   :: ConsensusBlockForMode mode ~ block
   => Consensus.LedgerSupportsProtocol
@@ -271,6 +302,15 @@ toConsensusBlock bInMode =
     BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
     BlockInMode (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
     BlockInMode (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
+
+    -- Legacy cardano mode
+    BlockInMode (ByronBlock b') ByronEraInLegacyCardanoMode -> Consensus.LegacyCardanoBlock $ Consensus.BlockByron b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInLegacyCardanoMode -> Consensus.LegacyCardanoBlock $ Consensus.BlockShelley b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInLegacyCardanoMode -> Consensus.LegacyCardanoBlock $ Consensus.BlockAllegra b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraMary b') MaryEraInLegacyCardanoMode -> Consensus.LegacyCardanoBlock $ Consensus.BlockMary b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInLegacyCardanoMode -> Consensus.LegacyCardanoBlock $ Consensus.BlockAlonzo b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInLegacyCardanoMode -> Consensus.LegacyCardanoBlock $ Consensus.BlockBabbage b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInLegacyCardanoMode -> Consensus.LegacyCardanoBlock $ Consensus.BlockConway b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers
@@ -368,6 +408,7 @@ toConsensusPointInMode :: ConsensusMode mode
 toConsensusPointInMode ByronMode   = toConsensusPointHF
 toConsensusPointInMode ShelleyMode = toConsensusPointHF
 toConsensusPointInMode CardanoMode = toConsensusPointHF
+toConsensusPointInMode LegacyCardanoMode = toConsensusPointHF
 
 fromConsensusPointInMode :: ConsensusMode mode
                          -> Consensus.Point (ConsensusBlockForMode mode)
@@ -375,6 +416,7 @@ fromConsensusPointInMode :: ConsensusMode mode
 fromConsensusPointInMode ByronMode   = fromConsensusPointHF
 fromConsensusPointInMode ShelleyMode = fromConsensusPointHF
 fromConsensusPointInMode CardanoMode = fromConsensusPointHF
+fromConsensusPointInMode LegacyCardanoMode = fromConsensusPointHF
 
 
 -- | Convert a 'Consensus.Point' for multi-era block type
@@ -482,6 +524,14 @@ fromConsensusTip ShelleyMode = conv
 fromConsensusTip CardanoMode = conv
   where
     conv :: Consensus.Tip (Consensus.CardanoBlock Consensus.StandardCrypto)
+         -> ChainTip
+    conv Consensus.TipGenesis = ChainTipAtGenesis
+    conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =
+      ChainTip slot (HeaderHash h) block
+
+fromConsensusTip LegacyCardanoMode = conv
+  where
+    conv :: Consensus.Tip (Consensus.LegacyCardanoBlock Consensus.StandardCrypto)
          -> ChainTip
     conv Consensus.TipGenesis = ChainTipAtGenesis
     conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =

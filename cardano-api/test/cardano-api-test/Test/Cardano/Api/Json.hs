@@ -63,6 +63,13 @@ prop_json_roundtrip_eraInMode = H.property $ do
   H.assert $ parseEither rountripEraInModeParser AlonzoEraInCardanoMode == Right AlonzoEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser BabbageEraInCardanoMode == Right BabbageEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser ConwayEraInCardanoMode == Right ConwayEraInCardanoMode
+  H.assert $ parseEither rountripEraInModeParser ByronEraInLegacyCardanoMode == Right ByronEraInLegacyCardanoMode
+  H.assert $ parseEither rountripEraInModeParser ShelleyEraInLegacyCardanoMode == Right ShelleyEraInLegacyCardanoMode
+  H.assert $ parseEither rountripEraInModeParser AllegraEraInLegacyCardanoMode == Right AllegraEraInLegacyCardanoMode
+  H.assert $ parseEither rountripEraInModeParser MaryEraInLegacyCardanoMode == Right MaryEraInLegacyCardanoMode
+  H.assert $ parseEither rountripEraInModeParser AlonzoEraInLegacyCardanoMode == Right AlonzoEraInLegacyCardanoMode
+  H.assert $ parseEither rountripEraInModeParser BabbageEraInLegacyCardanoMode == Right BabbageEraInLegacyCardanoMode
+  H.assert $ parseEither rountripEraInModeParser ConwayEraInLegacyCardanoMode == Right ConwayEraInLegacyCardanoMode
 
   where
     -- Defined this way instead of using 'tripping' in order to warn the
@@ -79,6 +86,13 @@ prop_json_roundtrip_eraInMode = H.property $ do
       AlonzoEraInCardanoMode -> parseJSON $ toJSON AlonzoEraInCardanoMode
       BabbageEraInCardanoMode -> parseJSON $ toJSON BabbageEraInCardanoMode
       ConwayEraInCardanoMode -> parseJSON $ toJSON ConwayEraInCardanoMode
+      ByronEraInLegacyCardanoMode -> parseJSON $ toJSON ByronEraInLegacyCardanoMode
+      ShelleyEraInLegacyCardanoMode -> parseJSON $ toJSON ShelleyEraInLegacyCardanoMode
+      AllegraEraInLegacyCardanoMode -> parseJSON $ toJSON AllegraEraInLegacyCardanoMode
+      MaryEraInLegacyCardanoMode -> parseJSON $ toJSON MaryEraInLegacyCardanoMode
+      AlonzoEraInLegacyCardanoMode -> parseJSON $ toJSON AlonzoEraInLegacyCardanoMode
+      BabbageEraInLegacyCardanoMode -> parseJSON $ toJSON BabbageEraInLegacyCardanoMode
+      ConwayEraInLegacyCardanoMode -> parseJSON $ toJSON ConwayEraInLegacyCardanoMode
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
