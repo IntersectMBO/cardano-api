@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.BabbageEraOnwards
   ( BabbageEraOnwards(..)
-  , IsBabbageEraOnwards(..)
   , AnyBabbageEraOnwards(..)
   , babbageEraOnwardsConstraints
   , babbageEraOnwardsToCardanoEra
@@ -39,21 +38,12 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
-class IsShelleyBasedEra era => IsBabbageEraOnwards era where
-  babbageEraOnwards :: BabbageEraOnwards era
-
 data BabbageEraOnwards era where
   BabbageEraOnwardsBabbage :: BabbageEraOnwards BabbageEra
   BabbageEraOnwardsConway  :: BabbageEraOnwards ConwayEra
 
 deriving instance Show (BabbageEraOnwards era)
 deriving instance Eq (BabbageEraOnwards era)
-
-instance IsBabbageEraOnwards BabbageEra where
-  babbageEraOnwards = BabbageEraOnwardsBabbage
-
-instance IsBabbageEraOnwards ConwayEra where
-  babbageEraOnwards = BabbageEraOnwardsConway
 
 instance Eon BabbageEraOnwards where
   inEonForEra no yes = \case
@@ -96,7 +86,6 @@ type BabbageEraOnwardsConstraints era =
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
-  , IsBabbageEraOnwards era
   , IsCardanoEra era
   , IsShelleyBasedEra era
   , ToJSON (DebugLedgerState era)

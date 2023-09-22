@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.ShelleyToMaryEra
   ( ShelleyToMaryEra(..)
-  , IsShelleyToMaryEra(..)
   , AnyShelleyToMaryEra(..)
   , shelleyToMaryEraConstraints
   , shelleyToMaryEraToCardanoEra
@@ -40,9 +39,6 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
-class IsShelleyBasedEra era => IsShelleyToMaryEra era where
-  shelleyToMaryEra :: ShelleyToMaryEra era
-
 data ShelleyToMaryEra era where
   ShelleyToMaryEraShelley :: ShelleyToMaryEra ShelleyEra
   ShelleyToMaryEraAllegra :: ShelleyToMaryEra AllegraEra
@@ -50,15 +46,6 @@ data ShelleyToMaryEra era where
 
 deriving instance Show (ShelleyToMaryEra era)
 deriving instance Eq (ShelleyToMaryEra era)
-
-instance IsShelleyToMaryEra ShelleyEra where
-  shelleyToMaryEra = ShelleyToMaryEraShelley
-
-instance IsShelleyToMaryEra AllegraEra where
-  shelleyToMaryEra = ShelleyToMaryEraAllegra
-
-instance IsShelleyToMaryEra MaryEra where
-  shelleyToMaryEra = ShelleyToMaryEraMary
 
 instance Eon ShelleyToMaryEra where
   inEonForEra no yes = \case
@@ -100,7 +87,6 @@ type ShelleyToMaryEraConstraints era =
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
   , IsShelleyBasedEra era
-  , IsShelleyToMaryEra era
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )
