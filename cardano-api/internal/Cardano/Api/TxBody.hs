@@ -120,7 +120,6 @@ module Cardano.Api.TxBody (
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
-    TxMetadataSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
     ScriptDataSupportedInEra(..),
@@ -135,7 +134,6 @@ module Cardano.Api.TxBody (
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,
-    txMetadataSupportedInEra,
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
     scriptDataSupportedInEra,
@@ -1121,32 +1119,6 @@ validityLowerBoundSupportedInEra AlonzoEra  = Just ValidityLowerBoundInAlonzoEra
 validityLowerBoundSupportedInEra BabbageEra = Just ValidityLowerBoundInBabbageEra
 validityLowerBoundSupportedInEra ConwayEra  = Just ValidityLowerBoundInConwayEra
 
--- | A representation of whether the era supports transaction metadata.
---
--- Transaction metadata is supported from the Shelley era onwards.
---
-data TxMetadataSupportedInEra era where
-
-     TxMetadataInShelleyEra :: TxMetadataSupportedInEra ShelleyEra
-     TxMetadataInAllegraEra :: TxMetadataSupportedInEra AllegraEra
-     TxMetadataInMaryEra    :: TxMetadataSupportedInEra MaryEra
-     TxMetadataInAlonzoEra  :: TxMetadataSupportedInEra AlonzoEra
-     TxMetadataInBabbageEra :: TxMetadataSupportedInEra BabbageEra
-     TxMetadataInConwayEra  :: TxMetadataSupportedInEra ConwayEra
-
-deriving instance Eq   (TxMetadataSupportedInEra era)
-deriving instance Show (TxMetadataSupportedInEra era)
-
-txMetadataSupportedInEra :: CardanoEra era
-                         -> Maybe (TxMetadataSupportedInEra era)
-txMetadataSupportedInEra ByronEra   = Nothing
-txMetadataSupportedInEra ShelleyEra = Just TxMetadataInShelleyEra
-txMetadataSupportedInEra AllegraEra = Just TxMetadataInAllegraEra
-txMetadataSupportedInEra MaryEra    = Just TxMetadataInMaryEra
-txMetadataSupportedInEra AlonzoEra  = Just TxMetadataInAlonzoEra
-txMetadataSupportedInEra BabbageEra = Just TxMetadataInBabbageEra
-txMetadataSupportedInEra ConwayEra  = Just TxMetadataInConwayEra
-
 
 -- | A representation of whether the era supports auxiliary scripts in
 -- transactions.
@@ -1626,11 +1598,13 @@ deriving instance Show (TxValidityLowerBound era)
 
 data TxMetadataInEra era where
 
-     TxMetadataNone  :: TxMetadataInEra era
+  TxMetadataNone
+    :: TxMetadataInEra era
 
-     TxMetadataInEra :: TxMetadataSupportedInEra era
-                     -> TxMetadata
-                     -> TxMetadataInEra era
+  TxMetadataInEra
+    :: ShelleyBasedEra era
+    -> TxMetadata
+    -> TxMetadataInEra era
 
 deriving instance Eq   (TxMetadataInEra era)
 deriving instance Show (TxMetadataInEra era)
@@ -3065,60 +3039,36 @@ fromLedgerTxAuxiliaryData
   -> (TxMetadataInEra era, TxAuxScripts era)
 fromLedgerTxAuxiliaryData _ Nothing = (TxMetadataNone, TxAuxScriptsNone)
 fromLedgerTxAuxiliaryData sbe (Just auxData) =
-  case sbe of
-    ShelleyBasedEraShelley ->
-      ( if null ms then
-          TxMetadataNone
-        else
-          TxMetadataInEra TxMetadataInShelleyEra $ TxMetadata ms
-      , TxAuxScriptsNone
-      )
-    ShelleyBasedEraAllegra ->
-      ( if null ms then
-          TxMetadataNone
-        else
-          TxMetadataInEra TxMetadataInAllegraEra $ TxMetadata ms
-      , case ss of
-          [] -> TxAuxScriptsNone
-          _  -> TxAuxScripts AuxScriptsInAllegraEra ss
-      )
-    ShelleyBasedEraMary ->
-      ( if null ms then
-          TxMetadataNone
-        else
-          TxMetadataInEra TxMetadataInMaryEra $ TxMetadata ms
-      , case ss of
-          [] -> TxAuxScriptsNone
-          _  -> TxAuxScripts AuxScriptsInMaryEra ss
-      )
-    ShelleyBasedEraAlonzo ->
-      ( if null ms then
-          TxMetadataNone
-        else
-          TxMetadataInEra TxMetadataInAlonzoEra $ TxMetadata ms
-      , case ss of
-          [] -> TxAuxScriptsNone
-          _  -> TxAuxScripts AuxScriptsInAlonzoEra ss
-      )
-    ShelleyBasedEraBabbage ->
-      ( if null ms then
-          TxMetadataNone
-        else
-          TxMetadataInEra TxMetadataInBabbageEra $ TxMetadata ms
-      , case ss of
-          [] -> TxAuxScriptsNone
-          _  -> TxAuxScripts AuxScriptsInBabbageEra ss
-      )
-    ShelleyBasedEraConway ->
-      ( if null ms then
-          TxMetadataNone
-        else
-          TxMetadataInEra TxMetadataInConwayEra $ TxMetadata ms
-      , case ss of
-          [] -> TxAuxScriptsNone
-          _  -> TxAuxScripts AuxScriptsInConwayEra ss
-      )
+  (metadata, auxdata)
+
   where
+    metadata = if null ms then TxMetadataNone else TxMetadataInEra sbe $ TxMetadata ms
+
+    auxdata =
+      case sbe of
+        ShelleyBasedEraShelley ->
+          TxAuxScriptsNone
+        ShelleyBasedEraAllegra ->
+          case ss of
+              [] -> TxAuxScriptsNone
+              _  -> TxAuxScripts AuxScriptsInAllegraEra ss
+        ShelleyBasedEraMary ->
+          case ss of
+              [] -> TxAuxScriptsNone
+              _  -> TxAuxScripts AuxScriptsInMaryEra ss
+        ShelleyBasedEraAlonzo ->
+          case ss of
+              [] -> TxAuxScriptsNone
+              _  -> TxAuxScripts AuxScriptsInAlonzoEra ss
+        ShelleyBasedEraBabbage ->
+          case ss of
+              [] -> TxAuxScriptsNone
+              _  -> TxAuxScripts AuxScriptsInBabbageEra ss
+        ShelleyBasedEraConway ->
+          case ss of
+              [] -> TxAuxScriptsNone
+              _  -> TxAuxScripts AuxScriptsInConwayEra ss
+
     (ms, ss) = fromLedgerAuxiliaryData sbe auxData
 
 

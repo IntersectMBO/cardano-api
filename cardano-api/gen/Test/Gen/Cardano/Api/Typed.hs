@@ -562,14 +562,15 @@ genTxValidityRange era =
     <*> genTxValidityUpperBound era
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
-genTxMetadataInEra era =
-  case txMetadataSupportedInEra era of
-    Nothing -> pure TxMetadataNone
-    Just supported ->
+genTxMetadataInEra =
+  inEonForEra
+    (pure TxMetadataNone)
+    (\w ->
       Gen.choice
         [ pure TxMetadataNone
-        , TxMetadataInEra supported <$> genTxMetadata
+        , TxMetadataInEra w <$> genTxMetadata
         ]
+    )
 
 genTxAuxScripts :: CardanoEra era -> Gen (TxAuxScripts era)
 genTxAuxScripts era =
