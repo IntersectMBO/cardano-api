@@ -2496,19 +2496,19 @@ fromLedgerTxBody
   -> TxBodyContent ViewTx era
 fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     TxBodyContent
-      { txIns                 = fromLedgerTxIns               sbe body
-      , txInsCollateral       = fromLedgerTxInsCollateral     sbe body
-      , txInsReference        = fromLedgerTxInsReference      sbe body
-      , txOuts                = fromLedgerTxOuts              sbe body scriptdata
-      , txTotalCollateral     = fromLedgerTxTotalCollateral   sbe body
-      , txReturnCollateral    = fromLedgerTxReturnCollateral  sbe body
-      , txFee                 = fromLedgerTxFee               sbe body
-      , txValidityRange       = fromLedgerTxValidityRange     sbe body
-      , txWithdrawals         = fromLedgerTxWithdrawals       sbe body
-      , txCertificates        = fromLedgerTxCertificates      sbe body
-      , txUpdateProposal      = fromLedgerTxUpdateProposal    sbe body
-      , txMintValue           = fromLedgerTxMintValue         sbe body
-      , txExtraKeyWits        = fromLedgerTxExtraKeyWitnesses sbe body
+      { txIns                 = fromLedgerTxIns                 sbe body
+      , txInsCollateral       = fromLedgerTxInsCollateral       sbe body
+      , txInsReference        = fromLedgerTxInsReference        sbe body
+      , txOuts                = fromLedgerTxOuts                sbe body scriptdata
+      , txTotalCollateral     = fromLedgerTxTotalCollateral     sbe body
+      , txReturnCollateral    = fromLedgerTxReturnCollateral    sbe body
+      , txFee                 = fromLedgerTxFee                 sbe body
+      , txValidityRange       = fromLedgerTxValidityRange       sbe body
+      , txWithdrawals         = fromLedgerTxWithdrawals         sbe body
+      , txCertificates        = fromLedgerTxCertificates        sbe body
+      , txUpdateProposal      = maybeFromLedgerTxUpdateProposal sbe body
+      , txMintValue           = fromLedgerTxMintValue           sbe body
+      , txExtraKeyWits        = fromLedgerTxExtraKeyWitnesses   sbe body
       , txProtocolParams      = ViewTx
       , txMetadata
       , txAuxScripts
@@ -3010,11 +3010,11 @@ fromLedgerTxCertificates sbe body =
       then TxCertificatesNone
       else TxCertificates sbe (map (fromShelleyCertificate sbe) $ toList certificates) ViewTx
 
-fromLedgerTxUpdateProposal :: ()
+maybeFromLedgerTxUpdateProposal :: ()
   => ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxUpdateProposal era
-fromLedgerTxUpdateProposal sbe body =
+maybeFromLedgerTxUpdateProposal sbe body =
   caseShelleyToBabbageOrConwayEraOnwards
     (\w ->
       case body ^. L.updateTxBodyL of
