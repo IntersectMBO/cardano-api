@@ -29,6 +29,7 @@ import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.Shelley.TxCert as L
@@ -80,6 +81,7 @@ type ShelleyToAllegraEraConstraints era =
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
+  , L.Value (ShelleyLedgerEra era) ~ L.Coin
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)

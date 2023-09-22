@@ -46,10 +46,13 @@ module Cardano.Api.Fees (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eras.Core
-import           Cardano.Api.Eras.Constraints
-import           Cardano.Api.Error
+import           Cardano.Api.Eon.ByronToAllegraEra
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Error
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -679,7 +682,7 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
                       ShelleyLedgerEra era ~ ledgerera
                    => LedgerEraConstraints ledgerera
                    => LedgerMultiAssetConstraints ledgerera
-                   => MultiAssetSupportedInEra era
+                   => MaryEraOnwards era
                    -> TxOutValue era
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
@@ -695,7 +698,7 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
                    ShelleyLedgerEra era ~ ledgerera
                 => LedgerEraConstraints ledgerera
                 => LedgerAdaOnlyConstraints ledgerera
-                => OnlyAdaSupportedInEra era
+                => ByronToAllegraEra era
                 -> TxOutValue era
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
@@ -715,21 +718,21 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
           => LedgerAdaOnlyConstraints ledgerera
           => LedgerPParamsConstraints ledgerera
           => LedgerTxBodyConstraints ledgerera
-          => OnlyAdaSupportedInEra era
+          => ByronToAllegraEra era
           -> a)
       -> (   LedgerEraConstraints ledgerera
           => LedgerMultiAssetConstraints ledgerera
           => LedgerPParamsConstraints ledgerera
           => LedgerTxBodyConstraints ledgerera
-          => MultiAssetSupportedInEra era
+          => MaryEraOnwards era
           -> a)
       -> a
-    withLedgerConstraints ShelleyBasedEraShelley f _ = f AdaOnlyInShelleyEra
-    withLedgerConstraints ShelleyBasedEraAllegra f _ = f AdaOnlyInAllegraEra
-    withLedgerConstraints ShelleyBasedEraMary    _ f = f MultiAssetInMaryEra
-    withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MultiAssetInAlonzoEra
-    withLedgerConstraints ShelleyBasedEraBabbage _ f = f MultiAssetInBabbageEra
-    withLedgerConstraints ShelleyBasedEraConway  _ f = f MultiAssetInConwayEra
+    withLedgerConstraints ShelleyBasedEraShelley f _ = f ByronToAllegraEraShelley
+    withLedgerConstraints ShelleyBasedEraAllegra f _ = f ByronToAllegraEraAllegra
+    withLedgerConstraints ShelleyBasedEraMary    _ f = f MaryEraOnwardsMary
+    withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MaryEraOnwardsAlonzo
+    withLedgerConstraints ShelleyBasedEraBabbage _ f = f MaryEraOnwardsBabbage
+    withLedgerConstraints ShelleyBasedEraConway  _ f = f MaryEraOnwardsConway
 
 type LedgerEraConstraints ledgerera =
        ( Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto
@@ -975,9 +978,10 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
           , negateValue outgoingNonAda
           ]
 
-    let changeTxOut = case multiAssetSupportedInEra cardanoEra of
-          Left _ -> lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1
-          Right multiAsset -> TxOutValue multiAsset (lovelaceToValue (Lovelace (2^(64 :: Integer)) - 1) <> nonAdaChange)
+    let changeTxOut = caseByronToAllegraOrMaryEraOnwards
+          (const (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1))
+          (\w -> TxOutValue w (lovelaceToValue (Lovelace (2^(64 :: Integer)) - 1) <> nonAdaChange))
+          (cardanoEra @era)
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now

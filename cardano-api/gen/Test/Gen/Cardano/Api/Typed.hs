@@ -98,7 +98,6 @@ module Test.Gen.Cardano.Api.Typed
   , genVerificationKeyHash
   , genUpdateProposal
   , genProtocolParametersUpdate
-  , genScriptDataSupportedInAlonzoEra
   , genTxOutDatumHashTxContext
   , genTxOutDatumHashUTxOContext
   , genTxOutValue
@@ -500,10 +499,10 @@ genTxIndex :: Gen TxIx
 genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
-genTxOutValue era =
-  case multiAssetSupportedInEra era of
-    Left adaOnlyInEra     -> TxOutAdaOnly adaOnlyInEra <$> genPositiveLovelace
-    Right multiAssetInEra -> TxOutValue multiAssetInEra <$> genValueForTxOut
+genTxOutValue =
+  caseByronToAllegraOrMaryEraOnwards
+    (\w -> TxOutAdaOnly w <$> genPositiveLovelace)
+    (\w -> TxOutValue w <$> genValueForTxOut)
 
 genTxOutTxContext :: CardanoEra era -> Gen (TxOut CtxTx era)
 genTxOutTxContext era =
@@ -521,9 +520,10 @@ genTxOutUTxOContext era =
 
 genReferenceScript :: CardanoEra era -> Gen (ReferenceScript era)
 genReferenceScript era =
-  case refInsScriptsAndInlineDatsSupportedInEra era of
-    Nothing -> return ReferenceScriptNone
-    Just _ -> scriptInEraToRefScript <$> genScriptInEra era
+  caseByronToAlonzoOrBabbageEraOnwards
+    (const (return ReferenceScriptNone))
+    (const (scriptInEraToRefScript <$> genScriptInEra era))
+    era
 
 genUTxO :: CardanoEra era -> Gen (UTxO era)
 genUTxO era =
@@ -636,14 +636,15 @@ genTxUpdateProposal era =
         ]
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
-genTxMintValue era =
-  case multiAssetSupportedInEra era of
-    Left _ -> pure TxMintNone
-    Right supported ->
+genTxMintValue =
+  caseByronToAllegraOrMaryEraOnwards
+    (const (pure TxMintNone))
+    (\supported ->
       Gen.choice
         [ pure TxMintNone
         , TxMintValue supported <$> genValueForMinting <*> return (BuildTxWith mempty)
         ]
+    )
 
 genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
@@ -700,10 +701,10 @@ genTxInsCollateral era =
                           ]
 
 genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)
-genTxInsReference era =
-    case refInsScriptsAndInlineDatsSupportedInEra era of
-      Nothing        -> pure TxInsReferenceNone
-      Just supported -> TxInsReference supported <$> Gen.list (Range.linear 0 10) genTxIn
+genTxInsReference =
+  caseByronToAlonzoOrBabbageEraOnwards
+    (const (pure TxInsReferenceNone))
+    (\w -> TxInsReference w <$> Gen.list (Range.linear 0 10) genTxIn)
 
 genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
@@ -1013,20 +1014,20 @@ genTxOutDatumHashTxContext era = case era of
     MaryEra    -> pure TxOutDatumNone
     AlonzoEra  -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInAlonzoEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
+                    , TxOutDatumInTx AlonzoEraOnwardsAlonzo <$> genHashableScriptData
                     ]
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInBabbageEra <$> genHashableScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
+                    , TxOutDatumInTx AlonzoEraOnwardsBabbage <$> genHashableScriptData
+                    , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
                     ]
     ConwayEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
-                    , TxOutDatumInTx ScriptDataInConwayEra <$> genHashableScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
+                    , TxOutDatumInTx AlonzoEraOnwardsConway <$> genHashableScriptData
+                    , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
                     ]
 
 genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
@@ -1037,17 +1038,17 @@ genTxOutDatumHashUTxOContext era = case era of
     MaryEra    -> pure TxOutDatumNone
     AlonzoEra  -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
                     ]
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
+                    , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
                     ]
     ConwayEra -> Gen.choice
                     [ pure TxOutDatumNone
-                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
-                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genHashableScriptData
+                    , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
+                    , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
                     ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
@@ -1055,9 +1056,6 @@ mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR
 
 genHashScriptData :: Gen (Cardano.Api.Hash ScriptData)
 genHashScriptData = ScriptDataHash . unsafeMakeSafeHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
-
-genScriptDataSupportedInAlonzoEra :: Gen (ScriptDataSupportedInEra AlonzoEra)
-genScriptDataSupportedInAlonzoEra = pure ScriptDataInAlonzoEra
 
 genGovernancePoll :: Gen GovernancePoll
 genGovernancePoll =

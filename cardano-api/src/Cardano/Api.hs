@@ -48,6 +48,24 @@ module Cardano.Api (
     byronEraOnlyConstraints,
     byronEraOnlyToCardanoEra,
 
+    ByronToAllegraEra(..),
+    IsByronToAllegraEra(..),
+    AnyByronToAllegraEra(..),
+    byronToAllegraEraConstraints,
+    byronToAllegraEraToCardanoEra,
+
+    ByronToMaryEra(..),
+    IsByronToMaryEra(..),
+    AnyByronToMaryEra(..),
+    byronToMaryEraConstraints,
+    byronToMaryEraToCardanoEra,
+
+    ByronToAlonzoEra(..),
+    IsByronToAlonzoEra(..),
+    AnyByronToAlonzoEra(..),
+    byronToAlonzoEraConstraints,
+    byronToAlonzoEraToCardanoEra,
+
     ShelleyToBabbageEra(..),
     AnyShelleyToBabbageEra(..),
     shelleyToBabbageEraConstraints,
@@ -113,6 +131,10 @@ module Cardano.Api (
     caseByronOrShelleyBasedEra,
 
     -- ** Case on ShelleyBasedEra
+    caseByronToAllegraOrMaryEraOnwards,
+    caseByronToMaryOrAlonzoEraOnwards,
+    caseByronToAlonzoOrBabbageEraOnwards,
+    caseShelleyToAllegraOrMaryEraOnwards,
     caseShelleyToMaryOrAlonzoEraOnwards,
     caseShelleyToAlonzoOrBabbageEraOnwards,
     caseShelleyToBabbageOrConwayEraOnwards,
@@ -342,15 +364,12 @@ module Cardano.Api (
 
     -- ** Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    MultiAssetSupportedInEra(..),
-    OnlyAdaSupportedInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
     TxMetadataSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
-    ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
@@ -358,7 +377,6 @@ module Cardano.Api (
 
     -- ** Feature availability functions
     collateralSupportedInEra,
-    multiAssetSupportedInEra,
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,
@@ -368,7 +386,6 @@ module Cardano.Api (
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
-    scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
     -- ** Era-dependent protocol features
@@ -1006,6 +1023,9 @@ import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
+import           Cardano.Api.Eon.ByronToAllegraEra
+import           Cardano.Api.Eon.ByronToAlonzoEra
+import           Cardano.Api.Eon.ByronToMaryEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra

@@ -449,12 +449,9 @@ getTxBody (ShelleyTx sbe tx') =
       ShelleyBasedEraShelley -> getShelleyTxBody tx'
       ShelleyBasedEraAllegra -> getShelleyTxBody tx'
       ShelleyBasedEraMary    -> getShelleyTxBody tx'
-      ShelleyBasedEraAlonzo  ->
-        getAlonzoTxBody ScriptDataInAlonzoEra TxScriptValiditySupportedInAlonzoEra tx'
-      ShelleyBasedEraBabbage ->
-        getAlonzoTxBody ScriptDataInBabbageEra TxScriptValiditySupportedInBabbageEra tx'
-      ShelleyBasedEraConway ->
-        getAlonzoTxBody ScriptDataInConwayEra TxScriptValiditySupportedInConwayEra tx'
+      ShelleyBasedEraAlonzo  -> getAlonzoTxBody AlonzoEraOnwardsAlonzo TxScriptValiditySupportedInAlonzoEra tx'
+      ShelleyBasedEraBabbage -> getAlonzoTxBody AlonzoEraOnwardsBabbage TxScriptValiditySupportedInBabbageEra tx'
+      ShelleyBasedEraConway  -> getAlonzoTxBody AlonzoEraOnwardsConway TxScriptValiditySupportedInConwayEra tx'
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
@@ -474,11 +471,11 @@ getTxBody (ShelleyTx sbe tx') =
     getAlonzoTxBody :: forall ledgerera.
                        ShelleyLedgerEra era ~ ledgerera
                     => L.AlonzoEraTx ledgerera
-                    => ScriptDataSupportedInEra era
+                    => AlonzoEraOnwards era
                     -> TxScriptValiditySupportedInEra era
                     -> L.Tx ledgerera
                     -> TxBody era
-    getAlonzoTxBody scriptDataInEra txScriptValidityInEra tx =
+    getAlonzoTxBody w txScriptValidityInEra tx =
       let txBody       = tx ^. L.bodyTxL
           txAuxData    = tx ^. L.auxDataTxL
           scriptWits   = tx ^. L.witsTxL . L.scriptTxWitsL
@@ -487,7 +484,7 @@ getTxBody (ShelleyTx sbe tx') =
           isValid      = tx ^. L.isValidTxL
       in ShelleyTxBody sbe txBody
                     (Map.elems scriptWits)
-                    (TxBodyScriptData scriptDataInEra datsWits redeemerWits)
+                    (TxBodyScriptData w datsWits redeemerWits)
                     (strictMaybeToMaybe txAuxData)
                     (TxScriptValidity txScriptValidityInEra (isValidToScriptValidity isValid))
 

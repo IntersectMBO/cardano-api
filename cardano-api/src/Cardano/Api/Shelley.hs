@@ -153,8 +153,6 @@ module Cardano.Api.Shelley
 
     -- * Reference Scripts
     ReferenceScript(..),
-    ReferenceTxInsScriptsInlineDatumsSupportedInEra(..),
-    refInsScriptsAndInlineDatsSupportedInEra,
     refScriptToShelleyScript,
 
     -- * Certificates
