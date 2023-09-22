@@ -353,7 +353,6 @@ module Cardano.Api (
     ScriptDataSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
-    UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -367,7 +366,6 @@ module Cardano.Api (
     extraKeyWitnessesSupportedInEra,
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
-    updateProposalSupportedInEra,
     scriptDataSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
