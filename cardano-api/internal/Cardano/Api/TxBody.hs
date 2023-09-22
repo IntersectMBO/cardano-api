@@ -58,7 +58,6 @@ module Cardano.Api.TxBody (
     TxBodyError(..),
     TxBodyScriptData(..),
     TxScriptValidity(..),
-    TxScriptValiditySupportedInEra(..),
 
     ScriptValidity(..),
     scriptValidityToIsValid,
@@ -124,8 +123,6 @@ module Cardano.Api.TxBody (
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
     auxScriptsSupportedInEra,
-    txScriptValiditySupportedInShelleyBasedEra,
-    txScriptValiditySupportedInCardanoEra,
 
     -- * Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),
@@ -300,50 +297,25 @@ isValidToScriptValidity (L.IsValid True) = ScriptValid
 -- The Alonzo and subsequent eras support script validity.
 --
 data TxScriptValidity era where
-  TxScriptValidityNone :: TxScriptValidity era
+  TxScriptValidityNone
+    :: TxScriptValidity era
 
   -- | Tx script validity is supported in transactions in the 'Alonzo' era onwards.
   TxScriptValidity
-    :: TxScriptValiditySupportedInEra era
+    :: AlonzoEraOnwards era
     -> ScriptValidity
     -> TxScriptValidity era
 
-deriving instance Eq   (TxScriptValiditySupportedInEra era)
-deriving instance Show (TxScriptValiditySupportedInEra era)
-
-data TxScriptValiditySupportedInEra era where
-  TxScriptValiditySupportedInAlonzoEra  :: TxScriptValiditySupportedInEra AlonzoEra
-  TxScriptValiditySupportedInBabbageEra :: TxScriptValiditySupportedInEra BabbageEra
-  TxScriptValiditySupportedInConwayEra  :: TxScriptValiditySupportedInEra ConwayEra
-
 deriving instance Eq   (TxScriptValidity era)
 deriving instance Show (TxScriptValidity era)
-
-txScriptValiditySupportedInCardanoEra :: CardanoEra era -> Maybe (TxScriptValiditySupportedInEra era)
-txScriptValiditySupportedInCardanoEra ByronEra   = Nothing
-txScriptValiditySupportedInCardanoEra ShelleyEra = Nothing
-txScriptValiditySupportedInCardanoEra AllegraEra = Nothing
-txScriptValiditySupportedInCardanoEra MaryEra    = Nothing
-txScriptValiditySupportedInCardanoEra AlonzoEra  = Just TxScriptValiditySupportedInAlonzoEra
-txScriptValiditySupportedInCardanoEra BabbageEra = Just TxScriptValiditySupportedInBabbageEra
-txScriptValiditySupportedInCardanoEra ConwayEra = Just TxScriptValiditySupportedInConwayEra
-
-txScriptValiditySupportedInShelleyBasedEra :: ShelleyBasedEra era -> Maybe (TxScriptValiditySupportedInEra era)
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraShelley = Nothing
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAllegra = Nothing
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraMary    = Nothing
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAlonzo  = Just TxScriptValiditySupportedInAlonzoEra
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraBabbage = Just TxScriptValiditySupportedInBabbageEra
-txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraConway = Just TxScriptValiditySupportedInConwayEra
 
 txScriptValidityToScriptValidity :: TxScriptValidity era -> ScriptValidity
 txScriptValidityToScriptValidity TxScriptValidityNone = ScriptValid
 txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptValidity
 
 scriptValidityToTxScriptValidity :: ShelleyBasedEra era -> ScriptValidity -> TxScriptValidity era
-scriptValidityToTxScriptValidity sbe scriptValidity = case txScriptValiditySupportedInShelleyBasedEra sbe of
-  Nothing -> TxScriptValidityNone
-  Just witness -> TxScriptValidity witness scriptValidity
+scriptValidityToTxScriptValidity sbe scriptValidity =
+  inShelleyBasedEraEon sbe TxScriptValidityNone $ \w -> TxScriptValidity w scriptValidity
 
 txScriptValidityToIsValid :: TxScriptValidity era -> L.IsValid
 txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
@@ -1873,13 +1845,14 @@ deserialiseShelleyBasedTxBody sbe bs =
               (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
         4 -> do
           sValiditySupported <-
-            case txScriptValiditySupportedInShelleyBasedEra sbe of
-              Nothing -> fail $ mconcat
-                [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
-                , "script validity flag but got: "
-                , show sbe
-                ]
-              Just supported -> return supported
+            inShelleyBasedEraEon sbe
+              ( fail $ mconcat
+                  [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
+                  , "script validity flag but got: "
+                  , show sbe
+                  ]
+              )
+              pure
 
           txbody     <- CBOR.decCBOR
           txscripts  <- CBOR.decCBOR
@@ -1904,13 +1877,14 @@ deserialiseShelleyBasedTxBody sbe bs =
               pure
 
           sValiditySupported <-
-            case txScriptValiditySupportedInShelleyBasedEra sbe of
-              Nothing -> fail $ mconcat
-                [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
-                , "script validity flag but got: "
-                , show sbe
-                ]
-              Just supported -> return supported
+            inShelleyBasedEraEon sbe
+              ( fail $ mconcat
+                  [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
+                  , "script validity flag but got: "
+                  , show sbe
+                  ]
+              )
+              pure
 
           txbody    <- CBOR.decCBOR
           txscripts <- CBOR.decCBOR

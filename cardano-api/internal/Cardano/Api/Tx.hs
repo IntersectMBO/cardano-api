@@ -14,6 +14,8 @@
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
+{- HLINT ignore "Avoid lambda using `infix`" -}
+
 -- | Complete, signed transactions
 --
 module Cardano.Api.Tx (
@@ -50,7 +52,6 @@ module Cardano.Api.Tx (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Eras.Constraints
@@ -445,38 +446,19 @@ getTxBody :: forall era. Tx era -> TxBody era
 getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
     ByronTxBody txbody
 
-getTxBody (ShelleyTx sbe tx') =
-    case sbe of
-      ShelleyBasedEraShelley -> getShelleyTxBody tx'
-      ShelleyBasedEraAllegra -> getShelleyTxBody tx'
-      ShelleyBasedEraMary    -> getShelleyTxBody tx'
-      ShelleyBasedEraAlonzo  -> getAlonzoTxBody AlonzoEraOnwardsAlonzo TxScriptValiditySupportedInAlonzoEra tx'
-      ShelleyBasedEraBabbage -> getAlonzoTxBody AlonzoEraOnwardsBabbage TxScriptValiditySupportedInBabbageEra tx'
-      ShelleyBasedEraConway  -> getAlonzoTxBody AlonzoEraOnwardsConway TxScriptValiditySupportedInConwayEra tx'
-  where
-    getShelleyTxBody :: forall ledgerera.
-                        ShelleyLedgerEra era ~ ledgerera
-                     => Ledger.EraTx ledgerera
-                     => L.Tx ledgerera
-                     -> TxBody era
-    getShelleyTxBody tx =
-      let txBody     = tx ^. L.bodyTxL
-          txAuxData  = tx ^. L.auxDataTxL
-          scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
-      in ShelleyTxBody sbe txBody
-                    (Map.elems scriptWits)
-                    TxBodyNoScriptData
-                    (strictMaybeToMaybe txAuxData)
-                    TxScriptValidityNone
-
-    getAlonzoTxBody :: forall ledgerera.
-                       ShelleyLedgerEra era ~ ledgerera
-                    => L.AlonzoEraTx ledgerera
-                    => AlonzoEraOnwards era
-                    -> TxScriptValiditySupportedInEra era
-                    -> L.Tx ledgerera
-                    -> TxBody era
-    getAlonzoTxBody w txScriptValidityInEra tx =
+getTxBody (ShelleyTx sbe tx) =
+  caseShelleyToMaryOrAlonzoEraOnwards
+    ( const $
+        let txBody     = tx ^. L.bodyTxL
+            txAuxData  = tx ^. L.auxDataTxL
+            scriptWits = tx ^. L.witsTxL . L.scriptTxWitsL
+        in ShelleyTxBody sbe txBody
+            (Map.elems scriptWits)
+            TxBodyNoScriptData
+            (strictMaybeToMaybe txAuxData)
+            TxScriptValidityNone
+    )
+    (\w ->
       let txBody       = tx ^. L.bodyTxL
           txAuxData    = tx ^. L.auxDataTxL
           scriptWits   = tx ^. L.witsTxL . L.scriptTxWitsL
@@ -484,10 +466,13 @@ getTxBody (ShelleyTx sbe tx') =
           redeemerWits = tx ^. L.witsTxL . L.rdmrsTxWitsL
           isValid      = tx ^. L.isValidTxL
       in ShelleyTxBody sbe txBody
-                    (Map.elems scriptWits)
-                    (TxBodyScriptData w datsWits redeemerWits)
-                    (strictMaybeToMaybe txAuxData)
-                    (TxScriptValidity txScriptValidityInEra (isValidToScriptValidity isValid))
+          (Map.elems scriptWits)
+          (TxBodyScriptData w datsWits redeemerWits)
+          (strictMaybeToMaybe txAuxData)
+          (TxScriptValidity w (isValidToScriptValidity isValid))
+    )
+    sbe
+
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
 getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
