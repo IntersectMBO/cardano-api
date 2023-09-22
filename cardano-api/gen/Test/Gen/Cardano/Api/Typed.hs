@@ -150,6 +150,7 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
+import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word64)
@@ -624,14 +625,12 @@ genStakeAddressRequirements =
         <*> genStakeCredential)
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
-genTxUpdateProposal era =
-  case updateProposalSupportedInEra era of
-    Nothing -> pure TxUpdateProposalNone
-    Just supported ->
-      Gen.choice
-        [ pure TxUpdateProposalNone
-        , TxUpdateProposal supported <$> genUpdateProposal era
-        ]
+genTxUpdateProposal sbe =
+  Gen.choice $ catMaybes
+    [ Just $ pure TxUpdateProposalNone
+    , forEraInEon sbe Nothing $ \w ->
+        Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
+    ]
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue =
