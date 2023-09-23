@@ -108,6 +108,11 @@ module Cardano.Api (
     -- ** From Allegra
 
     -- ** From Mary
+    MaryEraOnwards(..),
+    AnyMaryEraOnwards(..),
+    maryEraOnwardsConstraints,
+    maryEraOnwardsToCardanoEra,
+    maryEraOnwardsToShelleyBasedEra,
 
     -- ** From Alonzo
 
@@ -1041,6 +1046,7 @@ import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ByronToAlonzoEra
 import           Cardano.Api.Eon.ByronToMaryEra
 import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
