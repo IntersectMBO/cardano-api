@@ -139,6 +139,10 @@ module Cardano.Api (
     caseShelleyToAlonzoOrBabbageEraOnwards,
     caseShelleyToBabbageOrConwayEraOnwards,
 
+    -- ** Eon relaxation
+    shelleyToAllegraEraToByronToAllegraEra,
+    alonzoEraOnwardsToMaryEraOnwards,
+
     -- * Assertions on era
     requireShelleyBasedEra,
 
@@ -1034,6 +1038,7 @@ import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
