@@ -21,6 +21,7 @@ module Cardano.Api.Eras.Case
 
     -- Conversions
   , shelleyToAllegraEraToByronToAllegraEra
+  , alonzoEraOnwardsToMaryEraOnwards
   ) where
 
 import           Cardano.Api.Eon.AlonzoEraOnwards
@@ -154,3 +155,11 @@ shelleyToAllegraEraToByronToAllegraEra :: ShelleyToAllegraEra era -> ByronToAlle
 shelleyToAllegraEraToByronToAllegraEra = \case
   ShelleyToAllegraEraShelley -> ByronToAllegraEraShelley
   ShelleyToAllegraEraAllegra -> ByronToAllegraEraAllegra
+
+alonzoEraOnwardsToMaryEraOnwards :: ()
+  => AlonzoEraOnwards era
+  -> MaryEraOnwards era
+alonzoEraOnwardsToMaryEraOnwards = \case
+  AlonzoEraOnwardsAlonzo  -> MaryEraOnwardsAlonzo
+  AlonzoEraOnwardsBabbage -> MaryEraOnwardsBabbage
+  AlonzoEraOnwardsConway  -> MaryEraOnwardsConway
