@@ -307,6 +307,7 @@ module Cardano.Api (
     TxBody(TxBody),
     createAndValidateTransactionBody,
     TxBodyContent(..),
+    getTxBodyContent,
 
     -- ** Transaction body builders
     defaultTxBodyContent,
