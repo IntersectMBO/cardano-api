@@ -1,5 +1,80 @@
 # Changelog for cardano-api
 
+## 8.21.0.0
+
+- Make ProposeNewCommittee use the appropriate type of key
+  (breaking, improvement)
+  [PR 264](https://github.com/input-output-hk/cardano-api/pull/264)
+
+- - Organise eon re-exports from `Cardano.Api`.
+  - Export `MaryEraOnwards`
+  (feature, compatible)
+  [PR 265](https://github.com/input-output-hk/cardano-api/pull/265)
+
+- - Delete `AdaSupportedInEra`.  Use `ByronToAllegraEra` instead.
+  - Delete `MultiAssetSupportedInEra`.  Use `MaryEraOnwards` instead.
+  - Delete function `multiAssetSupportedInEra`.  Use `caseByronToAllegraOrMaryEraOnwards` instead.
+  - New `ByronToAllegraEra` eon.
+  - New `MaryEraOnwards` eon.
+  - New functions:
+    - `caseByronToAllegraOrMaryEraOnwards`
+    - `caseShelleyToAllegraOrMaryEraOnwards`
+    - `caseShelleyToMaryOrAlonzoEraOnwards`
+    - `shelleyToAllegraEraToByronToAllegraEra`
+  (breaking, improvement)
+  [PR 254](https://github.com/input-output-hk/cardano-api/pull/254)
+
+- Delete unused eon type classes:
+  - `IsAlonzoEraOnly`
+  - `IsAlonzoEraOnwards`
+  - `IsBabbageEraOnwards`
+  - `IsByronEraOnly`
+  - `IsCardanoEra`
+  - `IsConwayEraOnwards`
+  - `IsShelleyToAllegraEra`
+  - `IsShelleyToAlonzoEra`
+  - `IsShelleyToBabbageEra`
+  - `IsShelleyToMaryEra`
+  (breaking)
+  [PR 256](https://github.com/input-output-hk/cardano-api/pull/256)
+
+- Export `ByronEraOnly`
+  (feature)
+  [PR 255](https://github.com/input-output-hk/cardano-api/pull/255)
+
+- Update to the pre-commit script, so that it fails on hlint errors
+  (improvement)
+  [PR 253](https://github.com/input-output-hk/cardano-api/pull/253)
+
+- Delete `TxFeesExplicitInEra` and `TxFeesImplicitInEra`
+  New `ByronEraOnly` feature
+  Move `ShelleyBasedEra` into its own module as it is a legitimate feature
+  (breaking, improvement)
+  [PR 244](https://github.com/input-output-hk/cardano-api/pull/244)
+
+- - Rename `FeatureInEra` to `Eon`
+  - Rename the following modules:
+    - `Cardano.Api.Feature.AlonzoEraOnly -> Cardano.Api.Eon.AlonzoEraOnly`
+    - `Cardano.Api.Feature.AlonzoEraOnwards -> Cardano.Api.Eon.AlonzoEraOnwards`
+    - `Cardano.Api.Feature.BabbageEraOnwards -> Cardano.Api.Eon.BabbageEraOnwards`
+    - `Cardano.Api.Feature.ConwayEraOnwards -> Cardano.Api.Eon.ConwayEraOnwards`
+    - `Cardano.Api.Feature.ShelleyToAllegraEra -> Cardano.Api.Eon.ShelleyToAllegraEra`
+    - `Cardano.Api.Feature.ShelleyToAlonzoEra -> Cardano.Api.Eon.ShelleyToAlonzoEra`
+    - `Cardano.Api.Feature.ShelleyToBabbageEra -> Cardano.Api.Eon.ShelleyToBabbageEra`
+    - `Cardano.Api.Feature.ShelleyToMaryEra -> Cardano.Api.Eon.ShelleyToMaryEra`
+  - Rename the following functions:
+    - `inEraFeature` to `inEonEra`
+    - `inEraFeature` to `eraInEon`
+  - Rename the following functions (conservatively replacing "feature" with "eon" until we have a better naming convention):
+    - `inEraFeatureMaybe -> inEraEonMaybe`
+    - `maybeFeatureInEra -> maybeEonInEra`
+    - `featureInShelleyBasedEra -> eonInShelleyBasedEra`
+    - `inShelleyBasedEraFeature -> inShelleyBasedEraEon`
+    - `inShelleyBasedEraFeatureMaybe -> inShelleyBasedEraEonMaybe`
+    - `maybeFeatureInShelleyBasedEra -> maybeEonInShelleyBasedEra`
+  (breaking, improvement)
+  [PR 247](https://github.com/input-output-hk/cardano-api/pull/247)
+
 ## 8.20.2.0
 
 - Add JSON instance for `Hash GenesisKey`
