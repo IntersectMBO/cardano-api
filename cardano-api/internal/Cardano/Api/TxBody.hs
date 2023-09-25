@@ -274,6 +274,7 @@ import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
+
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
   = ScriptInvalid -- ^ Script is expected to fail validation.
@@ -3508,6 +3509,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
     txAuxData :: Maybe (L.TxAuxData StandardBabbage)
     txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
 
+
 makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                             txbodycontent@TxBodyContent {
                              txIns,
@@ -3609,7 +3611,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
     txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
 
 
-
 -- | A variant of 'toShelleyTxOutAny that is used only internally to this module
 -- that works with a 'TxOut' in any context (including CtxTx) by ignoring
 -- embedded datums (taking only their hash).
@@ -3674,6 +3675,8 @@ toBabbageTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
 --
 data AnyScriptWitness era where
      AnyScriptWitness :: ScriptWitness witctx era -> AnyScriptWitness era
+
+deriving instance Show (AnyScriptWitness era)
 
 -- | Identify the location of a 'ScriptWitness' within the context of a
 -- 'TxBody'. These are indexes of the objects within the transaction that
@@ -3791,10 +3794,9 @@ collectTxBodyScriptWitnesses sbe TxBodyContent {
           -- The certs are indexed in list order
         | (ix, cert) <- zip [0..] certs
         , ScriptWitness _ witness <- maybeToList $ do
-                                       stakecred <- shelleyBasedEraConstraints sbe $ selectStakeCredential sbe cert
+                                       stakecred <- shelleyBasedEraConstraints sbe $ selectStakeCredential cert
                                        Map.lookup stakecred witnesses
         ]
-
 
     scriptWitnessesMinting
       :: TxMintValue BuildTx era

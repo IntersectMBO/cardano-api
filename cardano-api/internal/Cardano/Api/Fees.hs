@@ -954,7 +954,7 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
             failures
             exUnitsMap'
 
-    txbodycontent1 <- substituteExecutionUnits sbe exUnitsMap' txbodycontent
+    txbodycontent1 <- substituteExecutionUnits exUnitsMap' txbodycontent
 
     -- Make a txbody that we will use for calculating the fees. For the purpose
     -- of fees we just need to make a txbody of the right size in bytes. We do
@@ -1177,12 +1177,11 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
                    (txOutInAnyEra txout)
                    minUTxO
 
-substituteExecutionUnits :: ShelleyBasedEra era
-                         -> Map ScriptWitnessIndex ExecutionUnits
+substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
                          -> TxBodyContent BuildTx era
                          -> Either TxBodyErrorAutoBalance (TxBodyContent BuildTx era)
-substituteExecutionUnits sbe exUnitsMap =
-    mapTxScriptWitnesses f sbe
+substituteExecutionUnits exUnitsMap =
+    mapTxScriptWitnesses f
   where
     f :: ScriptWitnessIndex
       -> ScriptWitness witctx era
@@ -1199,10 +1198,9 @@ mapTxScriptWitnesses
       (forall witctx. ScriptWitnessIndex
                    -> ScriptWitness witctx era
                    -> Either TxBodyErrorAutoBalance (ScriptWitness witctx era))
-  -> ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyErrorAutoBalance (TxBodyContent BuildTx era)
-mapTxScriptWitnesses f sbe txbodycontent@TxBodyContent {
+mapTxScriptWitnesses f txbodycontent@TxBodyContent {
                          txIns,
                          txWithdrawals,
                          txCertificates,
@@ -1211,7 +1209,7 @@ mapTxScriptWitnesses f sbe txbodycontent@TxBodyContent {
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
     mappedMintedVals <- mapScriptWitnessesMinting txMintValue
-    mappedTxCertificates <- mapScriptWitnessesCertificates sbe txCertificates
+    mappedTxCertificates <- mapScriptWitnessesCertificates txCertificates
 
     Right $ txbodycontent
       & setTxIns mappedTxIns
@@ -1276,11 +1274,10 @@ mapTxScriptWitnesses f sbe txbodycontent@TxBodyContent {
         adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
 
     mapScriptWitnessesCertificates
-      :: ShelleyBasedEra era
-      -> TxCertificates BuildTx era
+      :: TxCertificates BuildTx era
       -> Either TxBodyErrorAutoBalance (TxCertificates BuildTx era)
-    mapScriptWitnessesCertificates _ TxCertificatesNone = Right TxCertificatesNone
-    mapScriptWitnessesCertificates sbe' (TxCertificates supported certs
+    mapScriptWitnessesCertificates TxCertificatesNone = Right TxCertificatesNone
+    mapScriptWitnessesCertificates (TxCertificates supported certs
                                                    (BuildTxWith witnesses)) =
       let mappedScriptWitnesses
            :: [(StakeCredential, Either TxBodyErrorAutoBalance (Witness WitCtxStake era))]
@@ -1288,7 +1285,7 @@ mapTxScriptWitnesses f sbe txbodycontent@TxBodyContent {
               [ (stakecred, ScriptWitness ctx <$> witness')
                 -- The certs are indexed in list order
               | (ix, cert) <- zip [0..] certs
-              , stakecred  <- maybeToList (selectStakeCredential sbe' cert)
+              , stakecred  <- maybeToList (selectStakeCredential cert)
               , ScriptWitness ctx witness
                            <- maybeToList (Map.lookup stakecred witnesses)
               , let witness' = f (ScriptWitnessIndexCertificate ix) witness
