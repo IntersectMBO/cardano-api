@@ -34,7 +34,7 @@ import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Shelley
 import qualified Cardano.Ledger.Credential as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyRole (ColdCommitteeRole))
+import           Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
 
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
@@ -54,8 +54,8 @@ data GovernanceAction
       (Ledger.Anchor StandardCrypto)
   | ProposeNewCommittee
       (StrictMaybe (Ledger.PrevGovActionId Ledger.CommitteePurpose StandardCrypto))
-      [Hash StakeKey] -- ^ Old constitutional committee
-      (Map (Hash StakeKey) EpochNo) -- ^ New committee members with epoch number when each of them expires
+      [Hash CommitteeColdKey] -- ^ Old constitutional committee
+      (Map (Hash CommitteeColdKey) EpochNo) -- ^ New committee members with epoch number when each of them expires
       Rational -- ^ Quorum of the committee that is necessary for a successful vote
   | InfoAct
   | TreasuryWithdrawal [(Network, StakeCredential, Lovelace)]
@@ -224,12 +224,12 @@ createAnchor url anchorData =
 -- TODO conversions that likely need to live elsewhere and may even deserve
 -- additional wrapper types
 
-toCommitteeMember :: Hash StakeKey -> L.Credential ColdCommitteeRole StandardCrypto
-toCommitteeMember (StakeKeyHash keyhash) = coerceKeyRole $ L.KeyHashObj keyhash
+toCommitteeMember :: Hash CommitteeColdKey -> L.Credential ColdCommitteeRole StandardCrypto
+toCommitteeMember (CommitteeColdKeyHash keyhash) = L.KeyHashObj keyhash
 
-fromCommitteeMember :: L.Credential ColdCommitteeRole StandardCrypto -> Hash StakeKey
-fromCommitteeMember = (. coerceKeyRole) $ \case
-  L.KeyHashObj keyhash -> StakeKeyHash keyhash
+fromCommitteeMember :: L.Credential ColdCommitteeRole StandardCrypto -> Hash CommitteeColdKey
+fromCommitteeMember = \case
+  L.KeyHashObj keyhash -> CommitteeColdKeyHash keyhash
   L.ScriptHashObj _scripthash -> error "TODO script committee members not yet supported"
 
 
