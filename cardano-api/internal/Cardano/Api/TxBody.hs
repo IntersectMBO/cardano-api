@@ -122,7 +122,6 @@ module Cardano.Api.TxBody (
     TxExtraKeyWitnessesSupportedInEra(..),
     AlonzoEraOnwards(..),
     WithdrawalsSupportedInEra(..),
-    UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -133,7 +132,6 @@ module Cardano.Api.TxBody (
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
     withdrawalsSupportedInEra,
-    updateProposalSupportedInEra,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
     totalAndReturnCollateralSupportedInEra,
@@ -183,6 +181,7 @@ import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Constraints
@@ -1087,35 +1086,6 @@ withdrawalsSupportedInEra AlonzoEra  = Just WithdrawalsInAlonzoEra
 withdrawalsSupportedInEra BabbageEra = Just WithdrawalsInBabbageEra
 withdrawalsSupportedInEra ConwayEra  = Just WithdrawalsInConwayEra
 
--- | A representation of whether the era supports 'UpdateProposal's embedded in
--- transactions.
---
--- The Shelley and subsequent eras support such update proposals. They Byron
--- era has a notion of an update proposal, but it is a standalone chain object
--- and not embedded in a transaction.
---
-data UpdateProposalSupportedInEra era where
-
-     UpdateProposalInShelleyEra :: UpdateProposalSupportedInEra ShelleyEra
-     UpdateProposalInAllegraEra :: UpdateProposalSupportedInEra AllegraEra
-     UpdateProposalInMaryEra    :: UpdateProposalSupportedInEra MaryEra
-     UpdateProposalInAlonzoEra  :: UpdateProposalSupportedInEra AlonzoEra
-     UpdateProposalInBabbageEra :: UpdateProposalSupportedInEra BabbageEra
-     UpdateProposalInConwayEra  :: UpdateProposalSupportedInEra ConwayEra
-
-deriving instance Eq   (UpdateProposalSupportedInEra era)
-deriving instance Show (UpdateProposalSupportedInEra era)
-
-updateProposalSupportedInEra :: CardanoEra era
-                             -> Maybe (UpdateProposalSupportedInEra era)
-updateProposalSupportedInEra ByronEra   = Nothing
-updateProposalSupportedInEra ShelleyEra = Just UpdateProposalInShelleyEra
-updateProposalSupportedInEra AllegraEra = Just UpdateProposalInAllegraEra
-updateProposalSupportedInEra MaryEra    = Just UpdateProposalInMaryEra
-updateProposalSupportedInEra AlonzoEra  = Just UpdateProposalInAlonzoEra
-updateProposalSupportedInEra BabbageEra = Just UpdateProposalInBabbageEra
-updateProposalSupportedInEra ConwayEra  = Just UpdateProposalInConwayEra
-
 -- ----------------------------------------------------------------------------
 -- Building vs viewing transactions
 --
@@ -1517,12 +1487,8 @@ deriving instance Show (TxCertificates build era)
 --
 
 data TxUpdateProposal era where
-
-     TxUpdateProposalNone :: TxUpdateProposal era
-
-     TxUpdateProposal     :: UpdateProposalSupportedInEra era
-                          -> UpdateProposal
-                          -> TxUpdateProposal era
+  TxUpdateProposalNone :: TxUpdateProposal era
+  TxUpdateProposal :: ShelleyToBabbageEra era -> UpdateProposal -> TxUpdateProposal era
 
 deriving instance Eq   (TxUpdateProposal era)
 deriving instance Show (TxUpdateProposal era)
@@ -2505,19 +2471,19 @@ fromLedgerTxBody
   -> TxBodyContent ViewTx era
 fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     TxBodyContent
-      { txIns                 = fromLedgerTxIns               sbe body
-      , txInsCollateral       = fromLedgerTxInsCollateral     sbe body
-      , txInsReference        = fromLedgerTxInsReference      sbe body
-      , txOuts                = fromLedgerTxOuts              sbe body scriptdata
-      , txTotalCollateral     = fromLedgerTxTotalCollateral   sbe body
-      , txReturnCollateral    = fromLedgerTxReturnCollateral  sbe body
-      , txFee                 = fromLedgerTxFee               sbe body
-      , txValidityRange       = fromLedgerTxValidityRange     sbe body
-      , txWithdrawals         = fromLedgerTxWithdrawals       sbe body
-      , txCertificates        = fromLedgerTxCertificates      sbe body
-      , txUpdateProposal      = fromLedgerTxUpdateProposal    sbe body
-      , txMintValue           = fromLedgerTxMintValue         sbe body
-      , txExtraKeyWits        = fromLedgerTxExtraKeyWitnesses sbe body
+      { txIns                 = fromLedgerTxIns                 sbe body
+      , txInsCollateral       = fromLedgerTxInsCollateral       sbe body
+      , txInsReference        = fromLedgerTxInsReference        sbe body
+      , txOuts                = fromLedgerTxOuts                sbe body scriptdata
+      , txTotalCollateral     = fromLedgerTxTotalCollateral     sbe body
+      , txReturnCollateral    = fromLedgerTxReturnCollateral    sbe body
+      , txFee                 = fromLedgerTxFee                 sbe body
+      , txValidityRange       = fromLedgerTxValidityRange       sbe body
+      , txWithdrawals         = fromLedgerTxWithdrawals         sbe body
+      , txCertificates        = fromLedgerTxCertificates        sbe body
+      , txUpdateProposal      = maybeFromLedgerTxUpdateProposal sbe body
+      , txMintValue           = fromLedgerTxMintValue           sbe body
+      , txExtraKeyWits        = fromLedgerTxExtraKeyWitnesses   sbe body
       , txProtocolParams      = ViewTx
       , txMetadata
       , txAuxScripts
@@ -2995,48 +2961,19 @@ fromLedgerTxCertificates sbe body =
       then TxCertificatesNone
       else TxCertificates sbe (map (fromShelleyCertificate sbe) $ toList certificates) ViewTx
 
-fromLedgerTxUpdateProposal
-  :: ShelleyBasedEra era
+maybeFromLedgerTxUpdateProposal :: ()
+  => ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxUpdateProposal era
-fromLedgerTxUpdateProposal sbe body =
-  case sbe of
-    ShelleyBasedEraShelley ->
+maybeFromLedgerTxUpdateProposal sbe body =
+  caseShelleyToBabbageOrConwayEraOnwards
+    (\w ->
       case body ^. L.updateTxBodyL of
         SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInShelleyEra
-                           (fromLedgerUpdate sbe p)
-
-    ShelleyBasedEraAllegra ->
-      case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInAllegraEra
-                           (fromLedgerUpdate sbe p)
-
-    ShelleyBasedEraMary ->
-      case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInMaryEra
-                           (fromLedgerUpdate sbe p)
-
-    ShelleyBasedEraAlonzo ->
-      case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInAlonzoEra
-                           (fromLedgerUpdate sbe p)
-
-    ShelleyBasedEraBabbage ->
-      case body ^. L.updateTxBodyL of
-        SNothing -> TxUpdateProposalNone
-        SJust p ->
-          TxUpdateProposal UpdateProposalInBabbageEra
-                           (fromLedgerUpdate sbe p)
-
-    ShelleyBasedEraConway -> TxUpdateProposalNone
+        SJust p -> TxUpdateProposal w (fromLedgerUpdate sbe p)
+    )
+    (const TxUpdateProposalNone)
+    sbe
 
 fromLedgerTxMintValue
   :: ShelleyBasedEra era

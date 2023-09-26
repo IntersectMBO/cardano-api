@@ -394,7 +394,6 @@ module Cardano.Api (
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
-    UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -405,7 +404,6 @@ module Cardano.Api (
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
     withdrawalsSupportedInEra,
-    updateProposalSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
     -- ** Era-dependent protocol features
