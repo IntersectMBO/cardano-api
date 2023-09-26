@@ -115,8 +115,6 @@ module Cardano.Api.TxBody (
 
     -- * Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    ValidityUpperBoundSupportedInEra(..),
-    ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
@@ -124,8 +122,6 @@ module Cardano.Api.TxBody (
 
     -- ** Feature availability functions
     collateralSupportedInEra,
-    validityUpperBoundSupportedInEra,
-    validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
@@ -173,11 +169,13 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras.Case
@@ -909,75 +907,12 @@ collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
 collateralSupportedInEra BabbageEra = Just CollateralInBabbageEra
 collateralSupportedInEra ConwayEra = Just CollateralInConwayEra
 
--- | A representation of whether the era supports transactions with an upper
--- bound on the range of slots in which they are valid.
---
--- The Shelley and subsequent eras support an upper bound on the validity
--- range. In the Shelley era specifically it is actually required. It is
--- optional in later eras.
---
-data ValidityUpperBoundSupportedInEra era where
-
-     ValidityUpperBoundInShelleyEra :: ValidityUpperBoundSupportedInEra ShelleyEra
-     ValidityUpperBoundInAllegraEra :: ValidityUpperBoundSupportedInEra AllegraEra
-     ValidityUpperBoundInMaryEra    :: ValidityUpperBoundSupportedInEra MaryEra
-     ValidityUpperBoundInAlonzoEra  :: ValidityUpperBoundSupportedInEra AlonzoEra
-     ValidityUpperBoundInBabbageEra :: ValidityUpperBoundSupportedInEra BabbageEra
-     ValidityUpperBoundInConwayEra :: ValidityUpperBoundSupportedInEra ConwayEra
-
-deriving instance Eq   (ValidityUpperBoundSupportedInEra era)
-deriving instance Show (ValidityUpperBoundSupportedInEra era)
-
-validityUpperBoundSupportedInEra :: CardanoEra era
-                                 -> Maybe (ValidityUpperBoundSupportedInEra era)
-validityUpperBoundSupportedInEra ByronEra   = Nothing
-validityUpperBoundSupportedInEra ShelleyEra = Just ValidityUpperBoundInShelleyEra
-validityUpperBoundSupportedInEra AllegraEra = Just ValidityUpperBoundInAllegraEra
-validityUpperBoundSupportedInEra MaryEra    = Just ValidityUpperBoundInMaryEra
-validityUpperBoundSupportedInEra AlonzoEra  = Just ValidityUpperBoundInAlonzoEra
-validityUpperBoundSupportedInEra BabbageEra = Just ValidityUpperBoundInBabbageEra
-validityUpperBoundSupportedInEra ConwayEra = Just ValidityUpperBoundInConwayEra
-
-
--- | A representation of whether the era supports transactions having /no/
--- upper bound on the range of slots in which they are valid.
---
--- Note that the 'ShelleyEra' /does not support/ omitting a validity upper
--- bound. It was introduced as a /required/ field in Shelley and then made
--- optional in Allegra and subsequent eras.
---
--- The Byron era supports this by virtue of the fact that it does not support
--- validity ranges at all.
---
-data ValidityNoUpperBoundSupportedInEra era where
-
-     ValidityNoUpperBoundInByronEra   :: ValidityNoUpperBoundSupportedInEra ByronEra
-     ValidityNoUpperBoundInAllegraEra :: ValidityNoUpperBoundSupportedInEra AllegraEra
-     ValidityNoUpperBoundInMaryEra    :: ValidityNoUpperBoundSupportedInEra MaryEra
-     ValidityNoUpperBoundInAlonzoEra  :: ValidityNoUpperBoundSupportedInEra AlonzoEra
-     ValidityNoUpperBoundInBabbageEra :: ValidityNoUpperBoundSupportedInEra BabbageEra
-     ValidityNoUpperBoundInConwayEra  :: ValidityNoUpperBoundSupportedInEra ConwayEra
-
-deriving instance Eq   (ValidityNoUpperBoundSupportedInEra era)
-deriving instance Show (ValidityNoUpperBoundSupportedInEra era)
-
-validityNoUpperBoundSupportedInEra :: CardanoEra era
-                                   -> Maybe (ValidityNoUpperBoundSupportedInEra era)
-validityNoUpperBoundSupportedInEra ByronEra   = Just ValidityNoUpperBoundInByronEra
-validityNoUpperBoundSupportedInEra ShelleyEra = Nothing
-validityNoUpperBoundSupportedInEra AllegraEra = Just ValidityNoUpperBoundInAllegraEra
-validityNoUpperBoundSupportedInEra MaryEra    = Just ValidityNoUpperBoundInMaryEra
-validityNoUpperBoundSupportedInEra AlonzoEra  = Just ValidityNoUpperBoundInAlonzoEra
-validityNoUpperBoundSupportedInEra BabbageEra = Just ValidityNoUpperBoundInBabbageEra
-validityNoUpperBoundSupportedInEra ConwayEra = Just ValidityNoUpperBoundInConwayEra
-
 
 -- | A representation of whether the era supports transactions with a lower
 -- bound on the range of slots in which they are valid.
 --
 -- The Allegra and subsequent eras support an optional lower bound on the
--- validity range. No equivalent of 'ValidityNoUpperBoundSupportedInEra' is
--- needed since all eras support having no lower bound.
+-- validity range.
 --
 data ValidityLowerBoundSupportedInEra era where
 
@@ -1338,26 +1273,24 @@ defaultTxFee =
 -- | This was formerly known as the TTL.
 --
 data TxValidityUpperBound era where
+  TxValidityNoUpperBound
+    :: ByronAndAllegraEraOnwards era
+    -> TxValidityUpperBound era
 
-     TxValidityNoUpperBound :: ValidityNoUpperBoundSupportedInEra era
-                            -> TxValidityUpperBound era
-
-     TxValidityUpperBound   :: ValidityUpperBoundSupportedInEra era
-                            -> SlotNo
-                            -> TxValidityUpperBound era
+  TxValidityUpperBound
+    :: ShelleyBasedEra era
+    -> SlotNo
+    -> TxValidityUpperBound era
 
 deriving instance Eq   (TxValidityUpperBound era)
 deriving instance Show (TxValidityUpperBound era)
 
 defaultTxValidityUpperBound :: forall era. IsCardanoEra era => TxValidityUpperBound era
-defaultTxValidityUpperBound = case cardanoEra @era of
-    ByronEra -> TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
-    ShelleyEra -> TxValidityUpperBound ValidityUpperBoundInShelleyEra maxBound
-    AllegraEra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
-    MaryEra -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
-    AlonzoEra -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
-    BabbageEra -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
-    ConwayEra -> TxValidityNoUpperBound ValidityNoUpperBoundInConwayEra
+defaultTxValidityUpperBound =
+  caseByronAndAllegraEraOnwardsOrShelleyEraOnly
+    TxValidityNoUpperBound
+    (\w -> TxValidityUpperBound (shelleyEraOnlyToShelleyBasedEra w) maxBound)
+    (cardanoEra @era)
 
 data TxValidityLowerBound era where
 
@@ -2710,7 +2643,7 @@ fromLedgerTxValidityRange sbe body =
   case sbe of
     ShelleyBasedEraShelley ->
       ( TxValidityNoLowerBound
-      , TxValidityUpperBound ValidityUpperBoundInShelleyEra $ body ^. L.ttlTxBodyL
+      , TxValidityUpperBound sbe $ body ^. L.ttlTxBodyL
       )
 
     ShelleyBasedEraAllegra ->
@@ -2718,8 +2651,8 @@ fromLedgerTxValidityRange sbe body =
           SNothing -> TxValidityNoLowerBound
           SJust s  -> TxValidityLowerBound ValidityLowerBoundInAllegraEra s
       , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
-          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInAllegraEra s
+          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsAllegra
+          SJust s  -> TxValidityUpperBound sbe s
       )
       where
         L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
@@ -2729,8 +2662,8 @@ fromLedgerTxValidityRange sbe body =
           SNothing -> TxValidityNoLowerBound
           SJust s  -> TxValidityLowerBound ValidityLowerBoundInMaryEra s
       , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
-          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInMaryEra s
+          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsMary
+          SJust s  -> TxValidityUpperBound sbe s
       )
       where
         L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
@@ -2740,8 +2673,8 @@ fromLedgerTxValidityRange sbe body =
           SNothing -> TxValidityNoLowerBound
           SJust s  -> TxValidityLowerBound ValidityLowerBoundInAlonzoEra s
       , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
-          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInAlonzoEra s
+          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsAlonzo
+          SJust s  -> TxValidityUpperBound sbe s
       )
       where
         L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
@@ -2751,8 +2684,8 @@ fromLedgerTxValidityRange sbe body =
           SNothing -> TxValidityNoLowerBound
           SJust s  -> TxValidityLowerBound ValidityLowerBoundInBabbageEra s
       , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
-          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInBabbageEra s
+          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsBabbage
+          SJust s  -> TxValidityUpperBound sbe s
       )
       where
         L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
@@ -2762,8 +2695,8 @@ fromLedgerTxValidityRange sbe body =
           SNothing -> TxValidityNoLowerBound
           SJust s  -> TxValidityLowerBound ValidityLowerBoundInConwayEra s
       , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInConwayEra
-          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInConwayEra s
+          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsConway
+          SJust s  -> TxValidityUpperBound sbe s
       )
       where
         L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
@@ -2976,7 +2909,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txReturnCollateral  = TxReturnCollateralNone
   , txTotalCollateral   = TxTotalCollateralNone
   , txFee               = TxFeeImplicit ByronEraOnlyByron
-  , txValidityRange     = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInByronEra)
+  , txValidityRange     = (TxValidityNoLowerBound, TxValidityNoUpperBound ByronAndAllegraEraOnwardsByron)
   , txMetadata          = TxMetadataNone
   , txAuxScripts        = TxAuxScriptsNone
   , txExtraKeyWits      = TxExtraKeyWitnessesNone

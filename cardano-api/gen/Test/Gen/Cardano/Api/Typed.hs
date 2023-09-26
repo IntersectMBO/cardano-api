@@ -543,16 +543,12 @@ genTxValidityLowerBound era =
 -- TODO: Accept a range for generating ttl.
 genTxValidityUpperBound :: CardanoEra era -> Gen (TxValidityUpperBound era)
 genTxValidityUpperBound era =
-  case (validityUpperBoundSupportedInEra era,
-       validityNoUpperBoundSupportedInEra era) of
-    (Just supported, _) ->
-      TxValidityUpperBound supported <$> genTtl
-
-    (Nothing, Just supported) ->
-      pure (TxValidityNoUpperBound supported)
-
-    (Nothing, Nothing) ->
-      error "genTxValidityUpperBound: unexpected era support combination"
+  forEraInEon era
+    ( forEraInEon era
+        (error "genTxValidityUpperBound: unexpected era support combination")
+        (pure . TxValidityNoUpperBound)
+    )
+    (\w -> TxValidityUpperBound w <$> genTtl)
 
 genTxValidityRange
   :: CardanoEra era
