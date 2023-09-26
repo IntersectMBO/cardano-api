@@ -664,22 +664,32 @@ makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
 --
 
 selectStakeCredential
-  :: ShelleyBasedEra era -> Certificate era -> Maybe StakeCredential
-selectStakeCredential sbe cert =
-  case cert of
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert (Ledger.ShelleyDelegCert stakecred _))
-      -> Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential stakecred
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool (Ledger.RegPool poolParams))
-      -> let poolCred = Ledger.KeyHashObj $ Ledger.ppId poolParams
-         in Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
+  :: Certificate era -> Maybe StakeCredential
+selectStakeCredential = fmap fromShelleyStakeCredential . \case
+  ShelleyRelatedCertificate stbEra shelleyCert -> shelleyToBabbageEraConstraints stbEra $
+    case shelleyCert of
+      Ledger.RegTxCert sCred           -> Just sCred
+      Ledger.UnRegTxCert sCred         -> Just sCred
+      Ledger.DelegStakeTxCert sCred _  -> Just sCred
+      Ledger.RegPoolTxCert poolParams  ->
+        Just . Ledger.coerceKeyRole . Ledger.KeyHashObj $ Ledger.ppId poolParams
+      Ledger.RetirePoolTxCert poolId _ ->
+        Just . Ledger.coerceKeyRole $ Ledger.KeyHashObj poolId
+      _                                -> Nothing
 
-    ConwayCertificate _ (Ledger.ConwayTxCertDeleg (Ledger.ConwayRegCert stakeCred _))
-      -> Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential stakeCred
-    ConwayCertificate _ (Ledger.ConwayTxCertPool (Ledger.RegPool poolParams))
-      -> let poolCred = Ledger.KeyHashObj $ Ledger.ppId poolParams
-         in Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential $ Ledger.coerceKeyRole poolCred
-
-    _                                                 -> Nothing
+  ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
+    case conwayCert of
+      Ledger.RegPoolTxCert poolParams        ->
+        Just . Ledger.coerceKeyRole . Ledger.KeyHashObj $ Ledger.ppId poolParams
+      Ledger.RetirePoolTxCert kh _           ->
+        Just . Ledger.coerceKeyRole $ Ledger.KeyHashObj kh
+      Ledger.RegTxCert sCred                 -> Just sCred
+      Ledger.UnRegTxCert sCred               -> Just sCred
+      Ledger.RegDepositTxCert sCred _        -> Just sCred
+      Ledger.UnRegDepositTxCert sCred _      -> Just sCred
+      Ledger.DelegTxCert sCred _             -> Just sCred
+      Ledger.RegDepositDelegTxCert sCred _ _ -> Just sCred
+      _                                      -> Nothing
 
 filterUnRegCreds
   :: ShelleyBasedEra era -> Certificate era -> Maybe StakeCredential

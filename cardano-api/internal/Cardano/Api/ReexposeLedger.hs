@@ -27,6 +27,7 @@ module Cardano.Api.ReexposeLedger
   , pattern ResignCommitteeColdTxCert
   , pattern RegTxCert
   , pattern UnRegTxCert
+  , pattern DelegStakeTxCert
   , pattern RegDepositDelegTxCert
   , pattern RegDRepTxCert
 
@@ -91,11 +92,11 @@ module Cardano.Api.ReexposeLedger
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 import           Cardano.Ledger.Alonzo.Scripts (Prices (..))
-import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert, pattern DelegTxCert,
-                   pattern RegDRepTxCert, pattern RegDepositDelegTxCert, pattern RegDepositTxCert,
-                   pattern RegPoolTxCert, pattern RegTxCert, pattern ResignCommitteeColdTxCert,
-                   pattern RetirePoolTxCert, pattern UnRegDRepTxCert, pattern UnRegDepositTxCert,
-                   pattern UnRegTxCert)
+import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
+                   pattern DelegStakeTxCert, pattern DelegTxCert, pattern RegDRepTxCert,
+                   pattern RegDepositDelegTxCert, pattern RegDepositTxCert, pattern RegPoolTxCert,
+                   pattern RegTxCert, pattern ResignCommitteeColdTxCert, pattern RetirePoolTxCert,
+                   pattern UnRegDRepTxCert, pattern UnRegDepositTxCert, pattern UnRegTxCert)
 import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (..), Url,
                    boundRational, dnsToText, maybeToStrictMaybe, portToWord16, strictMaybeToMaybe,
