@@ -123,7 +123,6 @@ module Cardano.Api.TxBody (
     TxExtraKeyWitnessesSupportedInEra(..),
     AlonzoEraOnwards(..),
     WithdrawalsSupportedInEra(..),
-    CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
@@ -136,7 +135,6 @@ module Cardano.Api.TxBody (
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
     withdrawalsSupportedInEra,
-    certificatesSupportedInEra,
     updateProposalSupportedInEra,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
@@ -1116,35 +1114,6 @@ withdrawalsSupportedInEra AlonzoEra  = Just WithdrawalsInAlonzoEra
 withdrawalsSupportedInEra BabbageEra = Just WithdrawalsInBabbageEra
 withdrawalsSupportedInEra ConwayEra  = Just WithdrawalsInConwayEra
 
-
--- | A representation of whether the era supports 'Certificate's embedded in
--- transactions.
---
--- The Shelley and subsequent eras support such certificates.
---
-data CertificatesSupportedInEra era where
-
-     CertificatesInShelleyEra :: CertificatesSupportedInEra ShelleyEra
-     CertificatesInAllegraEra :: CertificatesSupportedInEra AllegraEra
-     CertificatesInMaryEra    :: CertificatesSupportedInEra MaryEra
-     CertificatesInAlonzoEra  :: CertificatesSupportedInEra AlonzoEra
-     CertificatesInBabbageEra :: CertificatesSupportedInEra BabbageEra
-     CertificatesInConwayEra  :: CertificatesSupportedInEra ConwayEra
-
-deriving instance Eq   (CertificatesSupportedInEra era)
-deriving instance Show (CertificatesSupportedInEra era)
-
-certificatesSupportedInEra :: CardanoEra era
-                           -> Maybe (CertificatesSupportedInEra era)
-certificatesSupportedInEra ByronEra   = Nothing
-certificatesSupportedInEra ShelleyEra = Just CertificatesInShelleyEra
-certificatesSupportedInEra AllegraEra = Just CertificatesInAllegraEra
-certificatesSupportedInEra MaryEra    = Just CertificatesInMaryEra
-certificatesSupportedInEra AlonzoEra  = Just CertificatesInAlonzoEra
-certificatesSupportedInEra BabbageEra = Just CertificatesInBabbageEra
-certificatesSupportedInEra ConwayEra  = Just CertificatesInConwayEra
-
-
 -- | A representation of whether the era supports 'UpdateProposal's embedded in
 -- transactions.
 --
@@ -1556,13 +1525,14 @@ deriving instance Show (TxWithdrawals build era)
 
 data TxCertificates build era where
 
-     TxCertificatesNone :: TxCertificates build era
+  TxCertificatesNone
+    :: TxCertificates build era
 
-     TxCertificates     :: CertificatesSupportedInEra era
-                        -> [Certificate era]
-                        -> BuildTxWith build
-                             (Map StakeCredential (Witness WitCtxStake era))
-                        -> TxCertificates build era
+  TxCertificates
+    :: ShelleyBasedEra era
+    -> [Certificate era]
+    -> BuildTxWith build (Map StakeCredential (Witness WitCtxStake era))
+    -> TxCertificates build era
 
 deriving instance Eq   (TxCertificates build era)
 deriving instance Show (TxCertificates build era)
@@ -3068,59 +3038,11 @@ fromLedgerTxCertificates
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxCertificates ViewTx era
 fromLedgerTxCertificates sbe body =
-  case sbe of
-    ShelleyBasedEraShelley
-      | null certificates -> TxCertificatesNone
-      | otherwise ->
-          TxCertificates
-            CertificatesInShelleyEra
-            (map (fromShelleyCertificate sbe) $ toList certificates)
-            ViewTx
-      where
-        certificates = body ^. L.certsTxBodyL
-
-    ShelleyBasedEraAllegra
-      | null certificates -> TxCertificatesNone
-      | otherwise ->
-          TxCertificates
-            CertificatesInAllegraEra
-            (map (fromShelleyCertificate sbe) $ toList certificates)
-            ViewTx
-      where
-        certificates = body ^. L.certsTxBodyL
-
-    ShelleyBasedEraMary
-      | null certificates -> TxCertificatesNone
-      | otherwise ->
-          TxCertificates
-            CertificatesInMaryEra
-            (map (fromShelleyCertificate sbe) $ toList certificates)
-            ViewTx
-      where
-        certificates = body ^. L.certsTxBodyL
-
-    ShelleyBasedEraAlonzo
-      | null certificates -> TxCertificatesNone
-      | otherwise ->
-          TxCertificates
-            CertificatesInAlonzoEra
-            (map (fromShelleyCertificate sbe) $ toList certificates)
-            ViewTx
-      where
-        certificates = body ^. L.certsTxBodyL
-
-    ShelleyBasedEraBabbage
-      | null certificates -> TxCertificatesNone
-      | otherwise ->
-          TxCertificates
-            CertificatesInBabbageEra
-            (map (fromShelleyCertificate sbe) $ toList certificates)
-            ViewTx
-      where
-        certificates = body ^. L.certsTxBodyL
-
-    -- TODO: Implement once certificates are done in Conway.
-    ShelleyBasedEraConway -> TxCertificatesNone
+  shelleyBasedEraConstraints sbe $
+    let certificates = body ^. L.certsTxBodyL in
+    if null certificates
+      then TxCertificatesNone
+      else TxCertificates sbe (map (fromShelleyCertificate sbe) $ toList certificates) ViewTx
 
 fromLedgerTxUpdateProposal
   :: ShelleyBasedEra era

@@ -592,19 +592,17 @@ genTxWithdrawals era =
         ]
 
 genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
-genTxCertificates era =
-  case certificatesSupportedInEra era of
-    Nothing -> pure TxCertificatesNone
-    Just supported ->
-      case cardanoEraStyle era of
-        LegacyByronEra -> pure TxCertificatesNone
-        ShelleyBasedEra sbe -> do
-          certs <- Gen.list (Range.constant 0 3) $ genCertificate sbe
-          Gen.choice
-            [ pure TxCertificatesNone
-            , pure (TxCertificates supported certs $ BuildTxWith mempty)
-              -- TODO: Generate certificates
-            ]
+genTxCertificates =
+  inEonForEra
+    (pure TxCertificatesNone)
+    (\w -> do
+      certs <- Gen.list (Range.constant 0 3) $ genCertificate w
+      Gen.choice
+        [ pure TxCertificatesNone
+        , pure (TxCertificates w certs $ BuildTxWith mempty)
+          -- TODO: Generate certificates
+        ]
+    )
 
 -- TODO: Add remaining certificates
 -- TODO: This should be parameterised on ShelleyBasedEra

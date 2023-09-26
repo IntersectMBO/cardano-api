@@ -390,7 +390,6 @@ module Cardano.Api (
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
     WithdrawalsSupportedInEra(..),
-    CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
@@ -403,7 +402,6 @@ module Cardano.Api (
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
     withdrawalsSupportedInEra,
-    certificatesSupportedInEra,
     updateProposalSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
