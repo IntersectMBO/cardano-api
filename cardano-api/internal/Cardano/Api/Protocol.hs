@@ -89,10 +89,11 @@ instance ( IOLike m
          )
   => Protocol m (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley) where
   data ProtocolInfoArgs (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley) = ProtocolInfoArgsShelley
-    (ProtocolParamsShelleyBased StandardShelley)
+    (ShelleyGenesis StandardCrypto)
+    (ProtocolParamsShelleyBased StandardCrypto)
     (ProtocolParams (Consensus.ShelleyBlock (Consensus.TPraos StandardCrypto) StandardShelley))
-  protocolInfo (ProtocolInfoArgsShelley paramsShelleyBased_ paramsShelley_) =
-    bimap inject (fmap $ map inject) $ protocolInfoShelley paramsShelleyBased_ paramsShelley_
+  protocolInfo (ProtocolInfoArgsShelley genesis paramsShelleyBased_ paramsShelley_) =
+    bimap inject (fmap $ map inject) $ protocolInfoShelley genesis paramsShelleyBased_ paramsShelley_
 
 instance Consensus.LedgerSupportsProtocol
           (Consensus.ShelleyBlock
