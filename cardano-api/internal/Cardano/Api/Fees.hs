@@ -72,7 +72,6 @@ import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as Ledger
-import qualified Cardano.Ledger.Conway as Conway
 import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
@@ -499,73 +498,17 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
   -> L.Tx (ShelleyLedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx' =
-        case sbe of
-          ShelleyBasedEraShelley  -> evalPreAlonzo
-          ShelleyBasedEraAllegra  -> evalPreAlonzo
-          ShelleyBasedEraMary     -> evalPreAlonzo
-          ShelleyBasedEraAlonzo   -> evalAlonzo sbe tx'
-          ShelleyBasedEraBabbage  -> evalBabbage sbe tx'
-          ShelleyBasedEraConway   -> evalConway sbe tx'
+evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (const (Right Map.empty))
+    (\_ ->
+      case L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
+        Left err    -> Left (TransactionValidityTranslationError err)
+        Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+    )
+    sbe
   where
     LedgerEpochInfo ledgerEpochInfo = epochInfo
-
-    -- | Pre-Alonzo eras do not support languages with execution unit accounting.
-    evalPreAlonzo :: Either TransactionValidityError
-                            (Map ScriptWitnessIndex
-                                  (Either ScriptExecutionError ExecutionUnits))
-    evalPreAlonzo = Right Map.empty
-
-
-    evalAlonzo :: ShelleyLedgerEra era ~ L.Alonzo
-               => ShelleyBasedEra era
-               -> Ledger.Tx L.Alonzo
-               -> Either TransactionValidityError
-                         (Map ScriptWitnessIndex
-                              (Either ScriptExecutionError ExecutionUnits))
-    evalAlonzo sbe' tx = do
-      case L.evalTxExUnits
-             pp
-             tx
-             (toLedgerUTxO sbe' utxo)
-             ledgerEpochInfo
-             systemstart
-        of Left err -> Left (TransactionValidityTranslationError err)
-           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
-
-    evalBabbage :: ShelleyLedgerEra era ~ L.Babbage
-                => ShelleyBasedEra era
-                -> Ledger.Tx L.Babbage
-                -> Either TransactionValidityError
-                          (Map ScriptWitnessIndex
-                               (Either ScriptExecutionError ExecutionUnits))
-    evalBabbage sbe' tx = do
-      case L.evalTxExUnits
-             pp
-             tx
-             (toLedgerUTxO sbe' utxo)
-             ledgerEpochInfo
-             systemstart
-        of Left err    -> Left (TransactionValidityTranslationError err)
-           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
-
-    evalConway :: forall ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
-               => ledgerera ~ Conway.ConwayEra Ledger.StandardCrypto
-               => ShelleyBasedEra era
-               -> Ledger.Tx ledgerera
-               -> Either TransactionValidityError
-                         (Map ScriptWitnessIndex
-                              (Either ScriptExecutionError ExecutionUnits))
-    evalConway sbe' tx = do
-      case L.evalTxExUnits
-             pp
-             tx
-             (toLedgerUTxO sbe' utxo)
-             ledgerEpochInfo
-             systemstart
-        of Left err    -> Left (TransactionValidityTranslationError err)
-           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     fromLedgerScriptExUnitsMap
       :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure (ShelleyLedgerEra era))
