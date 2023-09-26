@@ -54,6 +54,7 @@ library internal
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
                         Cardano.Api.DRepMetadata
+                        Cardano.Api.Eon.AllegraEraOnwards
                         Cardano.Api.Eon.AlonzoEraOnly
                         Cardano.Api.Eon.AlonzoEraOnwards
                         Cardano.Api.Eon.BabbageEraOnwards
