@@ -380,9 +380,6 @@ module Cardano.Api (
     BuildTx,
     ViewTx,
 
-    -- ** Era-dependent transaction body features
-    auxScriptsSupportedInEra,
-
     -- ** Era-dependent protocol features
     ProtocolUTxOCostPerByteFeature(..),
     ProtocolUTxOCostPerWordFeature(..),

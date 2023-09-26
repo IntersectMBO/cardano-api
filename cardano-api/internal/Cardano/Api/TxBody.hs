@@ -112,9 +112,6 @@ module Cardano.Api.TxBody (
     BuildTx,
     ViewTx,
 
-    -- * Era-dependent transaction body features
-    auxScriptsSupportedInEra,
-
     -- * Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),
     ScriptWitnessIndex(..),
@@ -840,38 +837,6 @@ fromBabbageTxOutDatum _ w (Babbage.Datum binData) =
   TxOutDatumInline w $ binaryDataToScriptData w binData
 
 
-
--- ----------------------------------------------------------------------------
--- Era-dependent transaction body features
---
-
--- | A representation of whether the era supports auxiliary scripts in
--- transactions.
---
--- Auxiliary scripts are supported from the Allegra era onwards.
---
-data AuxScriptsSupportedInEra era where
-
-     AuxScriptsInAllegraEra :: AuxScriptsSupportedInEra AllegraEra
-     AuxScriptsInMaryEra    :: AuxScriptsSupportedInEra MaryEra
-     AuxScriptsInAlonzoEra  :: AuxScriptsSupportedInEra AlonzoEra
-     AuxScriptsInBabbageEra :: AuxScriptsSupportedInEra BabbageEra
-     AuxScriptsInConwayEra  :: AuxScriptsSupportedInEra ConwayEra
-
-deriving instance Eq   (AuxScriptsSupportedInEra era)
-deriving instance Show (AuxScriptsSupportedInEra era)
-
-auxScriptsSupportedInEra :: CardanoEra era
-                         -> Maybe (AuxScriptsSupportedInEra era)
-auxScriptsSupportedInEra ByronEra   = Nothing
-auxScriptsSupportedInEra ShelleyEra = Nothing
-auxScriptsSupportedInEra AllegraEra = Just AuxScriptsInAllegraEra
-auxScriptsSupportedInEra MaryEra    = Just AuxScriptsInMaryEra
-auxScriptsSupportedInEra AlonzoEra  = Just AuxScriptsInAlonzoEra
-auxScriptsSupportedInEra BabbageEra = Just AuxScriptsInBabbageEra
-auxScriptsSupportedInEra ConwayEra  = Just AuxScriptsInConwayEra
-
-
 -- ----------------------------------------------------------------------------
 -- Building vs viewing transactions
 --
@@ -1197,11 +1162,13 @@ deriving instance Show (TxMetadataInEra era)
 
 data TxAuxScripts era where
 
-     TxAuxScriptsNone :: TxAuxScripts era
+  TxAuxScriptsNone
+    :: TxAuxScripts era
 
-     TxAuxScripts     :: AuxScriptsSupportedInEra era
-                      -> [ScriptInEra era]
-                      -> TxAuxScripts era
+  TxAuxScripts
+    :: AllegraEraOnwards era
+    -> [ScriptInEra era]
+    -> TxAuxScripts era
 
 deriving instance Eq   (TxAuxScripts era)
 deriving instance Show (TxAuxScripts era)
@@ -2602,23 +2569,23 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
         ShelleyBasedEraAllegra ->
           case ss of
               [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AuxScriptsInAllegraEra ss
+              _  -> TxAuxScripts AllegraEraOnwardsAllegra ss
         ShelleyBasedEraMary ->
           case ss of
               [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AuxScriptsInMaryEra ss
+              _  -> TxAuxScripts AllegraEraOnwardsMary ss
         ShelleyBasedEraAlonzo ->
           case ss of
               [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AuxScriptsInAlonzoEra ss
+              _  -> TxAuxScripts AllegraEraOnwardsAlonzo ss
         ShelleyBasedEraBabbage ->
           case ss of
               [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AuxScriptsInBabbageEra ss
+              _  -> TxAuxScripts AllegraEraOnwardsBabbage ss
         ShelleyBasedEraConway ->
           case ss of
               [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AuxScriptsInConwayEra ss
+              _  -> TxAuxScripts AllegraEraOnwardsConway ss
 
     (ms, ss) = fromLedgerAuxiliaryData sbe auxData
 
