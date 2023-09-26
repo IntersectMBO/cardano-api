@@ -2563,29 +2563,14 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
     metadata = if null ms then TxMetadataNone else TxMetadataInEra sbe $ TxMetadata ms
 
     auxdata =
-      case sbe of
-        ShelleyBasedEraShelley ->
-          TxAuxScriptsNone
-        ShelleyBasedEraAllegra ->
+      caseShelleyEraOnlyOrAllegraEraOnwards
+        (const TxAuxScriptsNone)
+        (\w ->
           case ss of
               [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AllegraEraOnwardsAllegra ss
-        ShelleyBasedEraMary ->
-          case ss of
-              [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AllegraEraOnwardsMary ss
-        ShelleyBasedEraAlonzo ->
-          case ss of
-              [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AllegraEraOnwardsAlonzo ss
-        ShelleyBasedEraBabbage ->
-          case ss of
-              [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AllegraEraOnwardsBabbage ss
-        ShelleyBasedEraConway ->
-          case ss of
-              [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts AllegraEraOnwardsConway ss
+              _  -> TxAuxScripts w ss
+        )
+        sbe
 
     (ms, ss) = fromLedgerAuxiliaryData sbe auxData
 
