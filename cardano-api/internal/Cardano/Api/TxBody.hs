@@ -120,8 +120,6 @@ module Cardano.Api.TxBody (
     ValidityLowerBoundSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
-    AlonzoEraOnwards(..),
-    WithdrawalsSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -131,7 +129,6 @@ module Cardano.Api.TxBody (
     validityLowerBoundSupportedInEra,
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
-    withdrawalsSupportedInEra,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
     totalAndReturnCollateralSupportedInEra,
@@ -1058,34 +1055,6 @@ extraKeyWitnessesSupportedInEra BabbageEra = Just ExtraKeyWitnessesInBabbageEra
 extraKeyWitnessesSupportedInEra ConwayEra  = Just ExtraKeyWitnessesInConwayEra
 
 
--- | A representation of whether the era supports withdrawals from reward
--- accounts.
---
--- The Shelley and subsequent eras support stake addresses, their associated
--- reward accounts and support for withdrawals from them.
---
-data WithdrawalsSupportedInEra era where
-
-     WithdrawalsInShelleyEra :: WithdrawalsSupportedInEra ShelleyEra
-     WithdrawalsInAllegraEra :: WithdrawalsSupportedInEra AllegraEra
-     WithdrawalsInMaryEra    :: WithdrawalsSupportedInEra MaryEra
-     WithdrawalsInAlonzoEra  :: WithdrawalsSupportedInEra AlonzoEra
-     WithdrawalsInBabbageEra :: WithdrawalsSupportedInEra BabbageEra
-     WithdrawalsInConwayEra :: WithdrawalsSupportedInEra ConwayEra
-
-deriving instance Eq   (WithdrawalsSupportedInEra era)
-deriving instance Show (WithdrawalsSupportedInEra era)
-
-withdrawalsSupportedInEra :: CardanoEra era
-                          -> Maybe (WithdrawalsSupportedInEra era)
-withdrawalsSupportedInEra ByronEra   = Nothing
-withdrawalsSupportedInEra ShelleyEra = Just WithdrawalsInShelleyEra
-withdrawalsSupportedInEra AllegraEra = Just WithdrawalsInAllegraEra
-withdrawalsSupportedInEra MaryEra    = Just WithdrawalsInMaryEra
-withdrawalsSupportedInEra AlonzoEra  = Just WithdrawalsInAlonzoEra
-withdrawalsSupportedInEra BabbageEra = Just WithdrawalsInBabbageEra
-withdrawalsSupportedInEra ConwayEra  = Just WithdrawalsInConwayEra
-
 -- ----------------------------------------------------------------------------
 -- Building vs viewing transactions
 --
@@ -1454,12 +1423,13 @@ deriving instance Show (TxExtraKeyWitnesses era)
 
 data TxWithdrawals build era where
 
-     TxWithdrawalsNone :: TxWithdrawals build era
+  TxWithdrawalsNone
+    :: TxWithdrawals build era
 
-     TxWithdrawals     :: WithdrawalsSupportedInEra era
-                       -> [(StakeAddress, Lovelace,
-                            BuildTxWith build (Witness WitCtxStake era))]
-                       -> TxWithdrawals build era
+  TxWithdrawals
+    :: ShelleyBasedEra era
+    -> [(StakeAddress, Lovelace, BuildTxWith build (Witness WitCtxStake era))]
+    -> TxWithdrawals build era
 
 deriving instance Eq   (TxWithdrawals build era)
 deriving instance Show (TxWithdrawals build era)
@@ -2905,50 +2875,11 @@ fromLedgerTxWithdrawals
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxWithdrawals ViewTx era
 fromLedgerTxWithdrawals sbe body =
-  case sbe of
-    ShelleyBasedEraShelley
-      | null (L.unWithdrawals withdrawals) -> TxWithdrawalsNone
-      | otherwise ->
-          TxWithdrawals WithdrawalsInShelleyEra $
-          fromShelleyWithdrawal withdrawals
-      where
-        withdrawals = body ^. L.withdrawalsTxBodyL
-
-    ShelleyBasedEraAllegra
-      | null (L.unWithdrawals withdrawals) -> TxWithdrawalsNone
-      | otherwise ->
-          TxWithdrawals WithdrawalsInAllegraEra $
-          fromShelleyWithdrawal withdrawals
-      where
-        withdrawals = body ^. L.withdrawalsTxBodyL
-
-    ShelleyBasedEraMary
-      | null (L.unWithdrawals withdrawals) -> TxWithdrawalsNone
-      | otherwise ->
-          TxWithdrawals WithdrawalsInMaryEra $ fromShelleyWithdrawal withdrawals
-      where
-        withdrawals = body ^. L.withdrawalsTxBodyL
-
-    ShelleyBasedEraAlonzo
-      | null (L.unWithdrawals withdrawals) -> TxWithdrawalsNone
-      | otherwise ->
-          TxWithdrawals WithdrawalsInAlonzoEra $ fromShelleyWithdrawal withdrawals
-      where
-        withdrawals = body ^. L.withdrawalsTxBodyL
-
-    ShelleyBasedEraBabbage
-      | null (L.unWithdrawals withdrawals) -> TxWithdrawalsNone
-      | otherwise ->
-          TxWithdrawals WithdrawalsInBabbageEra $ fromShelleyWithdrawal withdrawals
-      where
-        withdrawals = body ^. L.withdrawalsTxBodyL
-
-    ShelleyBasedEraConway
-      | null (L.unWithdrawals withdrawals) -> TxWithdrawalsNone
-      | otherwise ->
-          TxWithdrawals WithdrawalsInConwayEra $ fromShelleyWithdrawal withdrawals
-      where
-        withdrawals = body ^. L.withdrawalsTxBodyL
+  shelleyBasedEraConstraints sbe $
+    let withdrawals = body ^. L.withdrawalsTxBodyL in
+    if null (L.unWithdrawals withdrawals)
+      then TxWithdrawalsNone
+      else TxWithdrawals sbe $ fromShelleyWithdrawal withdrawals
 
 fromLedgerTxCertificates
   :: ShelleyBasedEra era

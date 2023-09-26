@@ -583,15 +583,16 @@ genTxAuxScripts era =
                  (genScriptInEra era)
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
-genTxWithdrawals era =
-  case withdrawalsSupportedInEra era of
-    Nothing -> pure TxWithdrawalsNone
-    Just supported ->
+genTxWithdrawals =
+  inEonForEra
+    (pure TxWithdrawalsNone)
+    (\w ->
       Gen.choice
         [ pure TxWithdrawalsNone
-        , pure (TxWithdrawals supported mempty)
+        , pure (TxWithdrawals w mempty)
           -- TODO: Generate withdrawals
         ]
+    )
 
 genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates =
