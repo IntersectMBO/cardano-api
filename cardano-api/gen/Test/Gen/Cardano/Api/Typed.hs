@@ -687,13 +687,14 @@ genTxBodyContent era = do
     }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
-genTxInsCollateral era =
-    case collateralSupportedInEra era of
-      Nothing        -> pure TxInsCollateralNone
-      Just supported -> Gen.choice
-                          [ pure TxInsCollateralNone
-                          , TxInsCollateral supported <$> Gen.list (Range.linear 0 10) genTxIn
-                          ]
+genTxInsCollateral =
+  inEonForEra
+    (pure TxInsCollateralNone)
+    (\w -> Gen.choice
+      [ pure TxInsCollateralNone
+      , TxInsCollateral w <$> Gen.list (Range.linear 0 10) genTxIn
+      ]
+    )
 
 genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)
 genTxInsReference =

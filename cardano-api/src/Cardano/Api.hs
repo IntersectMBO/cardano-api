@@ -381,11 +381,6 @@ module Cardano.Api (
     ViewTx,
 
     -- ** Era-dependent transaction body features
-    CollateralSupportedInEra(..),
-    AuxScriptsSupportedInEra(..),
-
-    -- ** Feature availability functions
-    collateralSupportedInEra,
     auxScriptsSupportedInEra,
 
     -- ** Era-dependent protocol features

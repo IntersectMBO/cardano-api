@@ -501,18 +501,12 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx' =
         case sbe of
-          ShelleyBasedEraShelley -> evalPreAlonzo
-          ShelleyBasedEraAllegra -> evalPreAlonzo
-          ShelleyBasedEraMary    -> evalPreAlonzo
-          ShelleyBasedEraAlonzo  -> evalAlonzo sbe tx'
-          ShelleyBasedEraBabbage ->
-            case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
-              Just supp -> obtainBabbageEraPParams supp $ evalBabbage sbe tx'
-              Nothing -> return mempty
-          ShelleyBasedEraConway ->
-            case collateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
-              Just supp -> obtainBabbageEraPParams supp $ evalConway sbe tx'
-              Nothing -> return mempty
+          ShelleyBasedEraShelley  -> evalPreAlonzo
+          ShelleyBasedEraAllegra  -> evalPreAlonzo
+          ShelleyBasedEraMary     -> evalPreAlonzo
+          ShelleyBasedEraAlonzo   -> evalAlonzo sbe tx'
+          ShelleyBasedEraBabbage  -> evalBabbage sbe tx'
+          ShelleyBasedEraConway   -> evalConway sbe tx'
   where
     LedgerEpochInfo ledgerEpochInfo = epochInfo
 
@@ -624,15 +618,6 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
           $ Map.map cnv2 resolveable
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
-
-
-    obtainBabbageEraPParams
-      :: ShelleyLedgerEra era ~ ledgerera
-      => CollateralSupportedInEra era
-      -> (Ledger.EraPParams ledgerera => a) ->  a
-    obtainBabbageEraPParams CollateralInAlonzoEra f =  f
-    obtainBabbageEraPParams CollateralInBabbageEra f =  f
-    obtainBabbageEraPParams CollateralInConwayEra f =  f
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance

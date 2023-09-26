@@ -113,11 +113,6 @@ module Cardano.Api.TxBody (
     ViewTx,
 
     -- * Era-dependent transaction body features
-    CollateralSupportedInEra(..),
-    AuxScriptsSupportedInEra(..),
-
-    -- ** Feature availability functions
-    collateralSupportedInEra,
     auxScriptsSupportedInEra,
 
     -- * Inspecting 'ScriptWitness'es
@@ -850,30 +845,6 @@ fromBabbageTxOutDatum _ w (Babbage.Datum binData) =
 -- Era-dependent transaction body features
 --
 
--- | A representation of whether the era supports transactions with inputs used
--- only for collateral for script fees.
---
--- The Alonzo and subsequent eras support collateral inputs.
---
-data CollateralSupportedInEra era where
-
-     CollateralInAlonzoEra  :: CollateralSupportedInEra AlonzoEra
-     CollateralInBabbageEra :: CollateralSupportedInEra BabbageEra
-     CollateralInConwayEra  :: CollateralSupportedInEra ConwayEra
-
-deriving instance Eq   (CollateralSupportedInEra era)
-deriving instance Show (CollateralSupportedInEra era)
-
-collateralSupportedInEra :: CardanoEra era
-                         -> Maybe (CollateralSupportedInEra era)
-collateralSupportedInEra ByronEra   = Nothing
-collateralSupportedInEra ShelleyEra = Nothing
-collateralSupportedInEra AllegraEra = Nothing
-collateralSupportedInEra MaryEra    = Nothing
-collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
-collateralSupportedInEra BabbageEra = Just CollateralInBabbageEra
-collateralSupportedInEra ConwayEra = Just CollateralInConwayEra
-
 -- | A representation of whether the era supports auxiliary scripts in
 -- transactions.
 --
@@ -927,12 +898,13 @@ deriving instance Show a => Show (BuildTxWith build a)
 type TxIns build era = [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))]
 
 data TxInsCollateral era where
+  TxInsCollateralNone
+    :: TxInsCollateral era
 
-     TxInsCollateralNone :: TxInsCollateral era
-
-     TxInsCollateral     :: CollateralSupportedInEra era
-                         -> [TxIn] -- Only key witnesses, no scripts.
-                         -> TxInsCollateral era
+  TxInsCollateral
+    :: AlonzoEraOnwards era
+    -> [TxIn] -- Only key witnesses, no scripts.
+    -> TxInsCollateral era
 
 deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
@@ -2350,19 +2322,10 @@ fromLedgerTxInsCollateral
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxInsCollateral era
 fromLedgerTxInsCollateral sbe body =
-    case collateralSupportedInEra (shelleyBasedToCardanoEra sbe) of
-      Nothing        -> TxInsCollateralNone
-      Just supported ->
-        TxInsCollateral supported $ map fromShelleyTxIn collateral_
-  where
-    collateral_ :: [Ledger.TxIn StandardCrypto]
-    collateral_ = case sbe of
-      ShelleyBasedEraShelley -> []
-      ShelleyBasedEraAllegra -> []
-      ShelleyBasedEraMary    -> []
-      ShelleyBasedEraAlonzo  -> toList $ body ^. L.collateralInputsTxBodyL
-      ShelleyBasedEraBabbage -> toList $ body ^. L.collateralInputsTxBodyL
-      ShelleyBasedEraConway  -> toList $ body ^. L.collateralInputsTxBodyL
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (const TxInsCollateralNone)
+    (\w -> TxInsCollateral w $ map fromShelleyTxIn $ toList $ body ^. L.collateralInputsTxBodyL)
+    sbe
 
 fromLedgerTxInsReference
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
