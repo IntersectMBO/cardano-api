@@ -56,17 +56,14 @@ module Cardano.Api (
     byronAndAllegraEraOnwardsToCardanoEra,
 
     ByronToAllegraEra(..),
-    IsByronToAllegraEra(..),
     byronToAllegraEraConstraints,
     byronToAllegraEraToCardanoEra,
 
     ByronToMaryEra(..),
-    IsByronToMaryEra(..),
     byronToMaryEraConstraints,
     byronToMaryEraToCardanoEra,
 
     ByronToAlonzoEra(..),
-    IsByronToAlonzoEra(..),
     byronToAlonzoEraConstraints,
     byronToAlonzoEraToCardanoEra,
 

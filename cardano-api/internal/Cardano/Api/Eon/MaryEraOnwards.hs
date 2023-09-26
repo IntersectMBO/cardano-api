@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.MaryEraOnwards
   ( MaryEraOnwards(..)
-  , IsMaryEraOnwards(..)
   , maryEraOnwardsConstraints
   , maryEraOnwardsToCardanoEra
   , maryEraOnwardsToShelleyBasedEra
@@ -39,9 +38,6 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Data.Aeson
 import           Data.Typeable (Typeable)
 
-class IsShelleyBasedEra era => IsMaryEraOnwards era where
-  maryEraOnwards :: MaryEraOnwards era
-
 data MaryEraOnwards era where
   MaryEraOnwardsMary  :: MaryEraOnwards MaryEra
   MaryEraOnwardsAlonzo  :: MaryEraOnwards AlonzoEra
@@ -50,18 +46,6 @@ data MaryEraOnwards era where
 
 deriving instance Show (MaryEraOnwards era)
 deriving instance Eq (MaryEraOnwards era)
-
-instance IsMaryEraOnwards MaryEra where
-  maryEraOnwards = MaryEraOnwardsMary
-
-instance IsMaryEraOnwards AlonzoEra where
-  maryEraOnwards = MaryEraOnwardsAlonzo
-
-instance IsMaryEraOnwards BabbageEra where
-  maryEraOnwards = MaryEraOnwardsBabbage
-
-instance IsMaryEraOnwards ConwayEra where
-  maryEraOnwards = MaryEraOnwardsConway
 
 instance Eon MaryEraOnwards where
   inEonForEra no yes = \case
@@ -100,7 +84,6 @@ type MaryEraOnwardsConstraints era =
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
-  , IsMaryEraOnwards era
   , IsCardanoEra era
   , IsShelleyBasedEra era
   , ToJSON (DebugLedgerState era)
