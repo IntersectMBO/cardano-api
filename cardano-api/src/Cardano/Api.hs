@@ -961,9 +961,6 @@ module Cardano.Api (
     queryStateForBalancedTx,
     renderQueryConvenienceError,
 
-    -- ** Constraint satisfaction functions
-    getIsCardanoEraConstraint,
-
     -- ** Misc
     ScriptLockedTxInsError(..),
     TxInsExistError(..),
@@ -1030,7 +1027,6 @@ module Cardano.Api (
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
-import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf

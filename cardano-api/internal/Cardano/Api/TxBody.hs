@@ -170,7 +170,6 @@ module Cardano.Api.TxBody (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
@@ -2371,12 +2370,13 @@ validateTxInsCollateral txInsCollateral languages =
       guardShelleyTxInsOverflow collateralTxIns
 
 validateTxOuts :: ShelleyBasedEra era -> [TxOut CtxTx era] -> Either TxBodyError ()
-validateTxOuts era txOuts =
+validateTxOuts era txOuts = do
   let cEra = shelleyBasedToCardanoEra era
-  in sequence_ [ do getIsCardanoEraConstraint cEra $ positiveOutput (txOutValueToValue v) txout
-                    getIsCardanoEraConstraint cEra $ outputDoesNotExceedMax (txOutValueToValue v) txout
-               | txout@(TxOut _ v _ _) <- txOuts
-               ]
+  cardanoEraConstraints cEra $
+    sequence_ [ do positiveOutput (txOutValueToValue v) txout
+                   outputDoesNotExceedMax (txOutValueToValue v) txout
+                 | txout@(TxOut _ v _ _) <- txOuts
+                 ]
 
 validateMintValue :: TxMintValue build era -> Either TxBodyError ()
 validateMintValue txMintValue =
@@ -3028,7 +3028,7 @@ convCertificates
 convCertificates sbe txCertificates = shelleyBasedEraConstraints sbe $
   case txCertificates of
     TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ -> Seq.fromList (map (toShelleyCertificate sbe) cs)
+    TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
 
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto

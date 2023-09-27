@@ -143,7 +143,7 @@ instance
   ) => ToCBOR (Certificate era) where
     toCBOR =
       shelleyBasedEraConstraints (shelleyBasedEra @era)
-        $ Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate shelleyBasedEra
+        $ Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate
 
 instance
   ( IsShelleyBasedEra era
@@ -675,7 +675,8 @@ selectStakeCredential = fmap fromShelleyStakeCredential . \case
         Just . Ledger.coerceKeyRole . Ledger.KeyHashObj $ Ledger.ppId poolParams
       Ledger.RetirePoolTxCert poolId _ ->
         Just . Ledger.coerceKeyRole $ Ledger.KeyHashObj poolId
-      _                                -> Nothing
+      Ledger.MirTxCert _               -> Nothing
+      Ledger.GenesisDelegTxCert{}      -> Nothing
 
   ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
     case conwayCert of
@@ -689,40 +690,74 @@ selectStakeCredential = fmap fromShelleyStakeCredential . \case
       Ledger.UnRegDepositTxCert sCred _      -> Just sCred
       Ledger.DelegTxCert sCred _             -> Just sCred
       Ledger.RegDepositDelegTxCert sCred _ _ -> Just sCred
-      _                                      -> Nothing
+      Ledger.AuthCommitteeHotKeyTxCert{}     -> Nothing
+      Ledger.ResignCommitteeColdTxCert _     -> Nothing
+      Ledger.RegDRepTxCert{}                 -> Nothing
+      Ledger.UnRegDRepTxCert{}               -> Nothing
+      Ledger.UpdateDRepTxCert{}              -> Nothing
 
 filterUnRegCreds
-  :: ShelleyBasedEra era -> Certificate era -> Maybe StakeCredential
-filterUnRegCreds sbe cert =
-  case cert of
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert (Ledger.ShelleyUnRegCert cred)) ->
-      Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential cred
-    ConwayCertificate _ (Ledger.ConwayTxCertDeleg (Ledger.ConwayUnRegCert cred _)) ->
-      Just $ shelleyBasedEraConstraints sbe $ fromShelleyStakeCredential cred
-    _  -> Nothing
+  :: Certificate era -> Maybe StakeCredential
+filterUnRegCreds = fmap fromShelleyStakeCredential . \case
+  ShelleyRelatedCertificate stbEra shelleyCert -> shelleyToBabbageEraConstraints stbEra $
+    case shelleyCert of
+      Ledger.RegTxCert _          -> Nothing
+      Ledger.UnRegTxCert cred     -> Just cred
+      Ledger.DelegStakeTxCert _ _ -> Nothing
+      Ledger.RegPoolTxCert _      -> Nothing
+      Ledger.RetirePoolTxCert _ _ -> Nothing
+      Ledger.MirTxCert _          -> Nothing
+      Ledger.GenesisDelegTxCert{} -> Nothing
+
+  ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
+    case conwayCert of
+      Ledger.RegTxCert _                 -> Nothing
+      Ledger.UnRegTxCert cred            -> Just cred
+      Ledger.RegPoolTxCert _             -> Nothing
+      Ledger.RetirePoolTxCert _ _        -> Nothing
+      Ledger.RegDepositTxCert _ _        -> Nothing
+      Ledger.UnRegDepositTxCert _ _      -> Nothing
+      Ledger.DelegTxCert _ _             -> Nothing
+      Ledger.RegDepositDelegTxCert{}     -> Nothing
+      Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
+      Ledger.ResignCommitteeColdTxCert _ -> Nothing
+      Ledger.RegDRepTxCert{}             -> Nothing
+      Ledger.UnRegDRepTxCert{}           -> Nothing
+      Ledger.UpdateDRepTxCert{}          -> Nothing
+
 
 filterUnRegDRepCreds
-  :: ShelleyBasedEra era -> Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto)
-filterUnRegDRepCreds sbe cert =
-  case (sbe, cert) of
-    (_, ShelleyRelatedCertificate {}) -> Nothing
-    (ShelleyBasedEraConway, ConwayCertificate _ (Ledger.UnRegDRepTxCert cred _)) -> Just cred
-    (_, ConwayCertificate {}) -> Nothing
+  :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto)
+filterUnRegDRepCreds = \case
+  ShelleyRelatedCertificate _ _ -> Nothing
+  ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
+    case conwayCert of
+      Ledger.RegTxCert _                 -> Nothing
+      Ledger.UnRegTxCert _               -> Nothing
+      Ledger.RegPoolTxCert _             -> Nothing
+      Ledger.RetirePoolTxCert _ _        -> Nothing
+      Ledger.RegDepositTxCert _ _        -> Nothing
+      Ledger.UnRegDepositTxCert _ _      -> Nothing
+      Ledger.DelegTxCert _ _             -> Nothing
+      Ledger.RegDepositDelegTxCert{}     -> Nothing
+      Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
+      Ledger.ResignCommitteeColdTxCert _ -> Nothing
+      Ledger.RegDRepTxCert{}             -> Nothing
+      Ledger.UnRegDRepTxCert cred _      -> Just cred
+      Ledger.UpdateDRepTxCert{}          -> Nothing
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
 --
 
 toShelleyCertificate :: ()
-  => ShelleyBasedEra era
-  -> Certificate era
+  => Certificate era
   -> Ledger.TxCert (ShelleyLedgerEra era)
-toShelleyCertificate _ cert =
-  case cert of
-    ShelleyRelatedCertificate w c ->
-      shelleyToBabbageEraConstraints w c
-    ConwayCertificate w c ->
-      conwayEraOnwardsConstraints w c
+toShelleyCertificate = \case
+  ShelleyRelatedCertificate w c ->
+    shelleyToBabbageEraConstraints w c
+  ConwayCertificate w c ->
+    conwayEraOnwardsConstraints w c
 
 fromShelleyCertificate :: ()
   => ShelleyBasedEra era

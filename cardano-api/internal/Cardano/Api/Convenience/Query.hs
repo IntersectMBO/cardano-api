@@ -18,7 +18,6 @@ module Cardano.Api.Convenience.Query (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Convenience.Constraints
 import           Cardano.Api.Eon.ConwayEraOnwards (ConwayEraOnwards)
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
@@ -97,10 +96,10 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     & onNothing (left ByronEraNotSupported)
 
   qeInMode <- pure (toEraInMode era CardanoMode)
-    & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (getIsCardanoEraConstraint era $ AnyCardanoEra era)))
+    & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (cardanoEraConstraints era $ AnyCardanoEra era)))
 
-  let stakeCreds = Set.fromList $ mapMaybe (filterUnRegCreds sbe) certs
-      drepCreds  = Set.fromList $ mapMaybe (filterUnRegDRepCreds sbe) certs
+  let stakeCreds = Set.fromList $ mapMaybe filterUnRegCreds certs
+      drepCreds  = Set.fromList $ mapMaybe filterUnRegDRepCreds certs
 
   -- Query execution
   utxo <- lift (queryUtxo qeInMode sbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
@@ -178,7 +177,7 @@ executeQueryAnyMode era localNodeConnInfo q = runExceptT $ do
   eraInMode <- pure (toEraInMode era cMode)
     & onNothing (left $ EraConsensusModeMismatch
         (AnyConsensusMode CardanoMode)
-        (getIsCardanoEraConstraint era $ AnyCardanoEra era))
+        (cardanoEraConstraints era $ AnyCardanoEra era))
 
   case eraInMode of
     ByronEraInByronMode -> left ByronEraNotSupported

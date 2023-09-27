@@ -50,7 +50,6 @@ library internal
   exposed-modules:      Cardano.Api.Address
                         Cardano.Api.Block
                         Cardano.Api.Certificate
-                        Cardano.Api.Convenience.Constraints
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
