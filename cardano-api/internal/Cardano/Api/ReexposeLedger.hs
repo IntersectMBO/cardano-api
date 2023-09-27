@@ -30,6 +30,9 @@ module Cardano.Api.ReexposeLedger
   , pattern DelegStakeTxCert
   , pattern RegDepositDelegTxCert
   , pattern RegDRepTxCert
+  , pattern MirTxCert
+  , pattern GenesisDelegTxCert
+  , pattern UpdateDRepTxCert
 
   -- Core
   , Coin (..)
@@ -93,9 +96,10 @@ import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 import           Cardano.Ledger.Alonzo.Scripts (Prices (..))
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
-                   pattern DelegStakeTxCert, pattern DelegTxCert, pattern RegDRepTxCert,
-                   pattern RegDepositDelegTxCert, pattern RegDepositTxCert, pattern RegPoolTxCert,
-                   pattern RegTxCert, pattern ResignCommitteeColdTxCert, pattern RetirePoolTxCert,
+                   pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,
+                   pattern MirTxCert, pattern RegDRepTxCert, pattern RegDepositDelegTxCert,
+                   pattern RegDepositTxCert, pattern RegPoolTxCert, pattern RegTxCert,
+                   pattern ResignCommitteeColdTxCert, pattern RetirePoolTxCert,
                    pattern UnRegDRepTxCert, pattern UnRegDepositTxCert, pattern UnRegTxCert)
 import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (..), Url,
@@ -106,7 +110,7 @@ import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import           Cardano.Ledger.Conway.Governance (GovActionId (..), GovState, Vote (..),
                    Voter (..), VotingProcedure (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
-                   ConwayGovCert (..), ConwayTxCert (..), Delegatee (..))
+                   ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
 import           Cardano.Ledger.Core (DRep (..), EraCrypto, PParams (..), PoolCert (..),
                    fromEraCBOR, toEraCBOR)
 import           Cardano.Ledger.Credential (Credential (..))
