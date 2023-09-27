@@ -1,5 +1,42 @@
 # Changelog for cardano-api
 
+## 8.22.0.0
+
+- A prior refactor accidentally defaulted to `isLeadingSlotsTPraos` regardless of the era
+  (compatible, bugfix)
+  [PR 274](https://github.com/input-output-hk/cardano-api/pull/274)
+
+- Fix missing redeemers in certificate deregistration
+  (bugfix)
+  [PR 268](https://github.com/input-output-hk/cardano-api/pull/268)
+
+- Delete `WithdrawalsSupportedInEra`.  Use `ShelleyBasedEra` instead.
+  Delete `withdrawalsSupportedInEra`.  Use `inEonForEra` instead.
+  (breaking, improvement)
+  [PR 260](https://github.com/input-output-hk/cardano-api/pull/260)
+
+- Replace `UpdateproposalSupportedInEra` with `ShelleyToBabbageEra`
+  (breaking)
+  [PR 258](https://github.com/input-output-hk/cardano-api/pull/258)
+
+- Delete `TxMetadataSupportedInEra`. Use `ShelleyBasedEra` instead.
+  Delete `txMetadataSupportedInEra`.  Use `inEonForEra` instead.
+  (breaking, improvement)
+  [PR 263](https://github.com/input-output-hk/cardano-api/pull/263)
+
+- New functions `alonzoEraOnwardsToMaryEraOnwards` and `shelleyToAllegraEraToByronToAllegraEra`
+  (feature, compatible)
+  [PR 266](https://github.com/input-output-hk/cardano-api/pull/266)
+
+- Export `getTxBodyContent`
+  (feature, compatible)
+  [PR 267](https://github.com/input-output-hk/cardano-api/pull/267)
+
+- Delete `CertificatesSupportedInEra`.  Use `ShelleyBasedEra` instead.
+  Delete `certificatesSupportedInEra`.  Use `inEonForEra` instead.
+  (breaking)
+  [PR 259](https://github.com/input-output-hk/cardano-api/pull/259)
+
 ## 8.21.0.0
 
 - Make ProposeNewCommittee use the appropriate type of key
