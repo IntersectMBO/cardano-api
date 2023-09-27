@@ -119,7 +119,6 @@ module Cardano.Api.TxBody (
     ValidityNoUpperBoundSupportedInEra(..),
     ValidityLowerBoundSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
-    TxExtraKeyWitnessesSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -127,7 +126,6 @@ module Cardano.Api.TxBody (
     validityNoUpperBoundSupportedInEra,
     validityLowerBoundSupportedInEra,
     auxScriptsSupportedInEra,
-    extraKeyWitnessesSupportedInEra,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
 
@@ -1026,33 +1024,6 @@ auxScriptsSupportedInEra BabbageEra = Just AuxScriptsInBabbageEra
 auxScriptsSupportedInEra ConwayEra  = Just AuxScriptsInConwayEra
 
 
--- | A representation of whether the era supports transactions that specify
--- in the body that they need extra key witnesses, and where this fact is
--- visible to scripts.
---
--- Extra key witnesses visible to scripts are supported from the Alonzo era
--- onwards.
---
-data TxExtraKeyWitnessesSupportedInEra era where
-
-     ExtraKeyWitnessesInAlonzoEra  :: TxExtraKeyWitnessesSupportedInEra AlonzoEra
-     ExtraKeyWitnessesInBabbageEra :: TxExtraKeyWitnessesSupportedInEra BabbageEra
-     ExtraKeyWitnessesInConwayEra  :: TxExtraKeyWitnessesSupportedInEra ConwayEra
-
-deriving instance Eq   (TxExtraKeyWitnessesSupportedInEra era)
-deriving instance Show (TxExtraKeyWitnessesSupportedInEra era)
-
-extraKeyWitnessesSupportedInEra :: CardanoEra era
-                                -> Maybe (TxExtraKeyWitnessesSupportedInEra era)
-extraKeyWitnessesSupportedInEra ByronEra   = Nothing
-extraKeyWitnessesSupportedInEra ShelleyEra = Nothing
-extraKeyWitnessesSupportedInEra AllegraEra = Nothing
-extraKeyWitnessesSupportedInEra MaryEra    = Nothing
-extraKeyWitnessesSupportedInEra AlonzoEra  = Just ExtraKeyWitnessesInAlonzoEra
-extraKeyWitnessesSupportedInEra BabbageEra = Just ExtraKeyWitnessesInBabbageEra
-extraKeyWitnessesSupportedInEra ConwayEra  = Just ExtraKeyWitnessesInConwayEra
-
-
 -- ----------------------------------------------------------------------------
 -- Building vs viewing transactions
 --
@@ -1392,11 +1363,13 @@ deriving instance Show (TxAuxScripts era)
 
 data TxExtraKeyWitnesses era where
 
-  TxExtraKeyWitnessesNone :: TxExtraKeyWitnesses era
+  TxExtraKeyWitnessesNone
+    :: TxExtraKeyWitnesses era
 
-  TxExtraKeyWitnesses     :: TxExtraKeyWitnessesSupportedInEra era
-                          -> [Hash PaymentKey]
-                          -> TxExtraKeyWitnesses era
+  TxExtraKeyWitnesses
+    :: AlonzoEraOnwards era
+    -> [Hash PaymentKey]
+    -> TxExtraKeyWitnesses era
 
 deriving instance Eq   (TxExtraKeyWitnesses era)
 deriving instance Show (TxExtraKeyWitnesses era)
@@ -2812,34 +2785,19 @@ fromLedgerTxExtraKeyWitnesses :: ShelleyBasedEra era
                               -> Ledger.TxBody (ShelleyLedgerEra era)
                               -> TxExtraKeyWitnesses era
 fromLedgerTxExtraKeyWitnesses sbe body =
-  case sbe of
-    ShelleyBasedEraShelley -> TxExtraKeyWitnessesNone
-    ShelleyBasedEraAllegra -> TxExtraKeyWitnessesNone
-    ShelleyBasedEraMary    -> TxExtraKeyWitnessesNone
-    ShelleyBasedEraAlonzo
-      | Set.null keyhashes -> TxExtraKeyWitnessesNone
-      | otherwise          -> TxExtraKeyWitnesses
-                                ExtraKeyWitnessesInAlonzoEra
-                                [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
-                                | keyhash <- Set.toList keyhashes ]
-      where
-        keyhashes = body ^. L.reqSignerHashesTxBodyL
-    ShelleyBasedEraBabbage
-      | Set.null keyhashes -> TxExtraKeyWitnessesNone
-      | otherwise          -> TxExtraKeyWitnesses
-                                ExtraKeyWitnessesInBabbageEra
-                                [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
-                                | keyhash <- Set.toList keyhashes ]
-      where
-        keyhashes = body ^. L.reqSignerHashesTxBodyL
-    ShelleyBasedEraConway
-      | Set.null keyhashes -> TxExtraKeyWitnessesNone
-      | otherwise          -> TxExtraKeyWitnesses
-                                ExtraKeyWitnessesInConwayEra
-                                [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
-                                | keyhash <- Set.toList keyhashes ]
-      where
-        keyhashes = body ^. L.reqSignerHashesTxBodyL
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (const TxExtraKeyWitnessesNone)
+    (\w ->
+      let keyhashes = body ^. L.reqSignerHashesTxBodyL in
+      if Set.null keyhashes
+        then TxExtraKeyWitnessesNone
+        else
+          TxExtraKeyWitnesses w
+            [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
+            | keyhash <- Set.toList $ body ^. L.reqSignerHashesTxBodyL
+            ]
+    )
+    sbe
 
 fromLedgerTxWithdrawals
   :: ShelleyBasedEra era
