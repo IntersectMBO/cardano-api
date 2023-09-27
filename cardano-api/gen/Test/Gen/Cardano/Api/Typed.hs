@@ -535,10 +535,10 @@ genTtl = genSlotNo
 
 -- TODO: Accept a range for generating ttl.
 genTxValidityLowerBound :: CardanoEra era -> Gen (TxValidityLowerBound era)
-genTxValidityLowerBound era =
-  case validityLowerBoundSupportedInEra era of
-    Nothing        -> pure TxValidityNoLowerBound
-    Just supported -> TxValidityLowerBound supported <$> genTtl
+genTxValidityLowerBound =
+  inEonForEra
+    (pure TxValidityNoLowerBound)
+    (\w -> TxValidityLowerBound w <$> genTtl)
 
 -- TODO: Accept a range for generating ttl.
 genTxValidityUpperBound :: CardanoEra era -> Gen (TxValidityUpperBound era)

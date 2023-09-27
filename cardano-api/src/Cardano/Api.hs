@@ -390,14 +390,12 @@ module Cardano.Api (
     CollateralSupportedInEra(..),
     ValidityUpperBoundSupportedInEra(..),
     ValidityNoUpperBoundSupportedInEra(..),
-    ValidityLowerBoundSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
     validityUpperBoundSupportedInEra,
     validityNoUpperBoundSupportedInEra,
-    validityLowerBoundSupportedInEra,
     auxScriptsSupportedInEra,
 
     -- ** Era-dependent protocol features
