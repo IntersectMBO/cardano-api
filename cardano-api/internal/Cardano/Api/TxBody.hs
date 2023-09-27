@@ -120,7 +120,6 @@ module Cardano.Api.TxBody (
     ValidityLowerBoundSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
-    TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -131,7 +130,6 @@ module Cardano.Api.TxBody (
     extraKeyWitnessesSupportedInEra,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
-    totalAndReturnCollateralSupportedInEra,
 
     -- * Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),
@@ -1204,43 +1202,29 @@ prettyRenderTxOut (TxOutInAnyEra _ (TxOut (AddressInEra _ addr) txOutVal _ _)) =
 
 data TxReturnCollateral ctx era where
 
-     TxReturnCollateralNone :: TxReturnCollateral ctx era
+  TxReturnCollateralNone
+    :: TxReturnCollateral ctx era
 
-     TxReturnCollateral     :: TxTotalAndReturnCollateralSupportedInEra era
-                            -> TxOut ctx era
-                            -> TxReturnCollateral ctx era
+  TxReturnCollateral
+    :: BabbageEraOnwards era
+    -> TxOut ctx era
+    -> TxReturnCollateral ctx era
 
 deriving instance Eq   (TxReturnCollateral ctx era)
 deriving instance Show (TxReturnCollateral ctx era)
 
 data TxTotalCollateral era where
 
-     TxTotalCollateralNone :: TxTotalCollateral era
+  TxTotalCollateralNone
+    :: TxTotalCollateral era
 
-     TxTotalCollateral     :: TxTotalAndReturnCollateralSupportedInEra era
-                           -> Lovelace
-                           -> TxTotalCollateral era
+  TxTotalCollateral
+    :: BabbageEraOnwards era
+    -> Lovelace
+    -> TxTotalCollateral era
 
 deriving instance Eq   (TxTotalCollateral era)
 deriving instance Show (TxTotalCollateral era)
-
-data TxTotalAndReturnCollateralSupportedInEra era where
-
-     TxTotalAndReturnCollateralInBabbageEra :: TxTotalAndReturnCollateralSupportedInEra BabbageEra
-     TxTotalAndReturnCollateralInConwayEra :: TxTotalAndReturnCollateralSupportedInEra ConwayEra
-
-deriving instance Eq   (TxTotalAndReturnCollateralSupportedInEra era)
-deriving instance Show (TxTotalAndReturnCollateralSupportedInEra era)
-
-totalAndReturnCollateralSupportedInEra
-  :: CardanoEra era -> Maybe (TxTotalAndReturnCollateralSupportedInEra era)
-totalAndReturnCollateralSupportedInEra ByronEra = Nothing
-totalAndReturnCollateralSupportedInEra ShelleyEra = Nothing
-totalAndReturnCollateralSupportedInEra AllegraEra = Nothing
-totalAndReturnCollateralSupportedInEra MaryEra = Nothing
-totalAndReturnCollateralSupportedInEra AlonzoEra = Nothing
-totalAndReturnCollateralSupportedInEra BabbageEra = Just TxTotalAndReturnCollateralInBabbageEra
-totalAndReturnCollateralSupportedInEra ConwayEra = Just TxTotalAndReturnCollateralInConwayEra
 
 -- ----------------------------------------------------------------------------
 -- Transaction output datum (era-dependent)
@@ -2659,42 +2643,28 @@ fromLedgerTxTotalCollateral
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxTotalCollateral era
 fromLedgerTxTotalCollateral sbe txbody =
-  case totalAndReturnCollateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
-    Nothing -> TxTotalCollateralNone
-    Just supp ->
-      case obtainTotalCollateralHasFieldConstraint supp $ txbody ^. L.totalCollateralTxBodyL of
+  caseShelleyToAlonzoOrBabbageEraOnwards
+    (const TxTotalCollateralNone)
+    (\w ->
+      case txbody ^. L.totalCollateralTxBodyL of
         SNothing -> TxTotalCollateralNone
-        SJust totColl -> TxTotalCollateral supp $ fromShelleyLovelace totColl
- where
-  obtainTotalCollateralHasFieldConstraint
-    :: TxTotalAndReturnCollateralSupportedInEra era
-    -> (L.BabbageEraTxBody (ShelleyLedgerEra era) => a)
-    -> a
-  obtainTotalCollateralHasFieldConstraint TxTotalAndReturnCollateralInBabbageEra f = f
-  obtainTotalCollateralHasFieldConstraint TxTotalAndReturnCollateralInConwayEra f = f
+        SJust totColl -> TxTotalCollateral w $ fromShelleyLovelace totColl
+    )
+    sbe
 
 fromLedgerTxReturnCollateral
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxReturnCollateral CtxTx era
 fromLedgerTxReturnCollateral sbe txbody =
-  case totalAndReturnCollateralSupportedInEra $ shelleyBasedToCardanoEra sbe of
-    Nothing -> TxReturnCollateralNone
-    Just supp ->
-      case obtainBabbageEraTxOutConstraint supp $ txbody ^. L.collateralReturnTxBodyL of
+  caseShelleyToAlonzoOrBabbageEraOnwards
+    (const TxReturnCollateralNone)
+    (\w ->
+      case txbody ^. L.collateralReturnTxBodyL of
         SNothing -> TxReturnCollateralNone
-        SJust collReturnOut ->
-          TxReturnCollateral supp $ fromShelleyTxOut sbe collReturnOut
- where
-  obtainBabbageEraTxOutConstraint
-    :: TxTotalAndReturnCollateralSupportedInEra era
-    -> ((L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-        , L.BabbageEraTxBody (ShelleyLedgerEra era)
-        ) => a)
-    -> a
-  obtainBabbageEraTxOutConstraint TxTotalAndReturnCollateralInBabbageEra f = f
-  obtainBabbageEraTxOutConstraint TxTotalAndReturnCollateralInConwayEra f = f
-
+        SJust collReturnOut -> TxReturnCollateral w $ fromShelleyTxOut sbe collReturnOut
+    )
+    sbe
 
 fromLedgerTxFee
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxFee era

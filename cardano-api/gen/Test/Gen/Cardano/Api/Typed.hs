@@ -707,17 +707,15 @@ genTxInsReference =
 
 genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
-  case totalAndReturnCollateralSupportedInEra  era of
-    Nothing -> return TxReturnCollateralNone
-    Just supp ->
-      TxReturnCollateral supp <$>  genTxOutTxContext era
+  forEraInEon era
+    (pure TxReturnCollateralNone)
+    (\w -> TxReturnCollateral w <$>  genTxOutTxContext era)
 
 genTxTotalCollateral :: CardanoEra era -> Gen (TxTotalCollateral era)
-genTxTotalCollateral era =
-  case totalAndReturnCollateralSupportedInEra  era of
-    Nothing -> return TxTotalCollateralNone
-    Just supp ->
-      TxTotalCollateral supp <$> genPositiveLovelace
+genTxTotalCollateral =
+  inEonForEra
+    (pure TxTotalCollateralNone)
+    (\w -> TxTotalCollateral w <$> genPositiveLovelace)
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)
 genTxFee =
