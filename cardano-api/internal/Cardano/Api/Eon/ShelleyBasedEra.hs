@@ -17,7 +17,7 @@ module Cardano.Api.Eon.ShelleyBasedEra
   , shelleyBasedToCardanoEra
   , inEonForShelleyBasedEra
   , forShelleyBasedEraInEon
-  , inShelleyBasedEraEonMaybe
+  , forShelleyBasedEraInEonMaybe
   , forShelleyBasedEraMaybeEon
 
     -- * Cardano eras, as Byron vs Shelley-based
@@ -70,12 +70,12 @@ forShelleyBasedEraInEon :: ()
 forShelleyBasedEraInEon era no yes =
   inEonForShelleyBasedEra no yes era
 
-inShelleyBasedEraEonMaybe :: ()
+forShelleyBasedEraInEonMaybe :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> (eon era -> a)
   -> Maybe a
-inShelleyBasedEraEonMaybe era yes =
+forShelleyBasedEraInEonMaybe era yes =
   forShelleyBasedEraInEon era Nothing (Just . yes)
 
 -- ----------------------------------------------------------------------------

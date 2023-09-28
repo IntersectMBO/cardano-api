@@ -2306,7 +2306,7 @@ fromLedgerProposalProcedures
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era [Proposal era])
 fromLedgerProposalProcedures sbe body =
-  inShelleyBasedEraEonMaybe sbe $ \w ->
+  forShelleyBasedEraInEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
       $ fmap Proposal
@@ -2318,7 +2318,7 @@ fromLedgerVotingProcedures :: ()
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
 fromLedgerVotingProcedures sbe body =
-  inShelleyBasedEraEonMaybe sbe $ \w ->
+  forShelleyBasedEraInEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
       $ VotingProcedures
