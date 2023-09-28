@@ -33,7 +33,7 @@ module Cardano.Api.Eras.Core
   , AnyEraInEon(..)
   , forEraInEon
   , forEraInEonMaybe
-  , maybeEonInEra
+  , forEraMaybeEon
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
@@ -133,11 +133,11 @@ forEraInEonMaybe :: ()
 forEraInEonMaybe era yes =
   forEraInEon era Nothing (Just . yes)
 
-maybeEonInEra :: ()
+forEraMaybeEon :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
   -> Maybe (eon era)  -- ^ The eon if supported in the era
-maybeEonInEra =
+forEraMaybeEon =
   inEonForEra Nothing Just
 
 -- ----------------------------------------------------------------------------
