@@ -30,6 +30,7 @@ module Cardano.Api.Eras.Core
 
     -- * IsEon
   , Eon(..)
+  , AnyEraInEon(..)
   , forEraInEon
   , inEraEonMaybe
   , maybeEonInEra
@@ -138,6 +139,15 @@ maybeEonInEra :: ()
   -> Maybe (eon era)  -- ^ The eon if supported in the era
 maybeEonInEra =
   inEonForEra Nothing Just
+
+-- ----------------------------------------------------------------------------
+-- AnyEraInEon
+
+data AnyEraInEon where
+  AnyEraInEon
+    :: Eon eon
+    => eon era
+    -> AnyEraInEon
 
 -- ----------------------------------------------------------------------------
 -- ToCardanoEra
