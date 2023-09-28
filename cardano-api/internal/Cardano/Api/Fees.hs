@@ -46,6 +46,7 @@ module Cardano.Api.Fees (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -1000,14 +1001,14 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
                           mnkeys
         fee   = evaluateTransactionFee pp txbody1 nkeys 0 --TODO: byron keys
         (retColl, reqCol) =
-           case totalAndReturnCollateralSupportedInEra era' of
-             Just supInEra ->
-               obtainAlonzoEraPParams supInEra $
-                 calcReturnAndTotalCollateral supInEra
-                   fee pp (txInsCollateral txbodycontent)
-                   (txReturnCollateral txbodycontent)
-                   (txTotalCollateral txbodycontent) changeaddr utxo
-             Nothing -> (TxReturnCollateralNone, TxTotalCollateralNone)
+           caseShelleyToAlonzoOrBabbageEraOnwards
+            (const (TxReturnCollateralNone, TxTotalCollateralNone))
+            (\w ->
+              calcReturnAndTotalCollateral w
+                fee pp (txInsCollateral txbodycontent) (txReturnCollateral txbodycontent)
+                (txTotalCollateral txbodycontent) changeaddr utxo
+            )
+            sbe
 
     -- Make a txbody for calculating the balance. For this the size of the tx
     -- does not matter, instead it's just the values of the fee and outputs.
@@ -1059,32 +1060,35 @@ makeTransactionBodyAutoBalance systemstart history lpp@(LedgerProtocolParameters
      case txInsCollateral of
        TxInsCollateralNone -> (TxReturnCollateralNone, TxTotalCollateralNone)
        TxInsCollateral{} ->
-         case totalAndReturnCollateralSupportedInEra era' of
-           Nothing -> (TxReturnCollateralNone, TxTotalCollateralNone)
-           Just retColSup ->
-             let dummyRetCol = TxReturnCollateral
-                                 retColSup
-                                 (TxOut cAddr (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
-                                 TxOutDatumNone ReferenceScriptNone)
-                 dummyTotCol = TxTotalCollateral retColSup (Lovelace (2^(32 :: Integer) - 1))
-             in case (txReturnCollateral, txTotalCollateral) of
-                  (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) -> (rc, tc)
-                  (rc@TxReturnCollateral{},TxTotalCollateralNone) -> (rc, dummyTotCol)
-                  (TxReturnCollateralNone,tc@TxTotalCollateral{}) -> (dummyRetCol, tc)
-                  (TxReturnCollateralNone, TxTotalCollateralNone) -> (dummyRetCol, dummyTotCol)
+         forEraInEon era'
+            (TxReturnCollateralNone, TxTotalCollateralNone)
+            (\w ->
+              let dummyRetCol =
+                    TxReturnCollateral w
+                    ( TxOut cAddr
+                        (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
+                        TxOutDatumNone ReferenceScriptNone
+                    )
+                  dummyTotCol = TxTotalCollateral w (Lovelace (2^(32 :: Integer) - 1))
+              in case (txReturnCollateral, txTotalCollateral) of
+                (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) -> (rc, tc)
+                (rc@TxReturnCollateral{},TxTotalCollateralNone) -> (rc, dummyTotCol)
+                (TxReturnCollateralNone,tc@TxTotalCollateral{}) -> (dummyRetCol, tc)
+                (TxReturnCollateralNone, TxTotalCollateralNone) -> (dummyRetCol, dummyTotCol)
+            )
    -- Calculation taken from validateInsufficientCollateral: https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
    -- TODO: Bug Jared to expose a function from the ledger that returns total and return collateral.
-   calcReturnAndTotalCollateral
-     :: Ledger.AlonzoEraPParams (ShelleyLedgerEra era)
-     => TxTotalAndReturnCollateralSupportedInEra era
-     -> Lovelace -- ^ Fee
-     -> Ledger.PParams (ShelleyLedgerEra era)
-     -> TxInsCollateral era -- ^ From the initial TxBodyContent
-     -> TxReturnCollateral CtxTx era -- ^ From the initial TxBodyContent
-     -> TxTotalCollateral era -- ^ From the initial TxBodyContent
-     -> AddressInEra era -- ^ Change address
-     -> UTxO era
-     -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
+   calcReturnAndTotalCollateral :: ()
+      => Ledger.AlonzoEraPParams (ShelleyLedgerEra era)
+      => BabbageEraOnwards era
+      -> Lovelace -- ^ Fee
+      -> Ledger.PParams (ShelleyLedgerEra era)
+      -> TxInsCollateral era -- ^ From the initial TxBodyContent
+      -> TxReturnCollateral CtxTx era -- ^ From the initial TxBodyContent
+      -> TxTotalCollateral era -- ^ From the initial TxBodyContent
+      -> AddressInEra era -- ^ Change address
+      -> UTxO era
+      -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
    calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _= (TxReturnCollateralNone, TxTotalCollateralNone)
    calcReturnAndTotalCollateral _ _ _ _ rc@TxReturnCollateral{} tc@TxTotalCollateral{} _ _ = (rc,tc)
    calcReturnAndTotalCollateral retColSup fee pp' (TxInsCollateral _ collIns) txReturnCollateral txTotalCollateral cAddr (UTxO utxo') = do
@@ -1335,10 +1339,3 @@ calculateMinimumUTxO sbe txout pp =
    calcMinUTxO pp' txOut =
       let txOutWithMinCoin = L.setMinCoinTxOut pp' txOut
       in fromShelleyLovelace (txOutWithMinCoin ^. L.coinTxOutL)
-
-obtainAlonzoEraPParams
-  :: TxTotalAndReturnCollateralSupportedInEra era
-  -> (Ledger.AlonzoEraPParams (ShelleyLedgerEra era) => a )
-  -> a
-obtainAlonzoEraPParams TxTotalAndReturnCollateralInBabbageEra f = f
-obtainAlonzoEraPParams TxTotalAndReturnCollateralInConwayEra f = f

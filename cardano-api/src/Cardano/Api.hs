@@ -393,7 +393,6 @@ module Cardano.Api (
     ValidityLowerBoundSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
     TxExtraKeyWitnessesSupportedInEra(..),
-    TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -402,7 +401,6 @@ module Cardano.Api (
     validityLowerBoundSupportedInEra,
     auxScriptsSupportedInEra,
     extraKeyWitnessesSupportedInEra,
-    totalAndReturnCollateralSupportedInEra,
 
     -- ** Era-dependent protocol features
     ProtocolUTxOCostPerByteFeature(..),
