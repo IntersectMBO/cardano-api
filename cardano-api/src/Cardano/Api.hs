@@ -51,22 +51,28 @@ module Cardano.Api (
     byronEraOnlyConstraints,
     byronEraOnlyToCardanoEra,
 
+    ByronAndAllegraEraOnwards(..),
+    byronAndAllegraEraOnwardsConstraints,
+    byronAndAllegraEraOnwardsToCardanoEra,
+
     ByronToAllegraEra(..),
-    IsByronToAllegraEra(..),
     byronToAllegraEraConstraints,
     byronToAllegraEraToCardanoEra,
 
     ByronToMaryEra(..),
-    IsByronToMaryEra(..),
     byronToMaryEraConstraints,
     byronToMaryEraToCardanoEra,
 
     ByronToAlonzoEra(..),
-    IsByronToAlonzoEra(..),
     byronToAlonzoEraConstraints,
     byronToAlonzoEraToCardanoEra,
 
     -- ** From Shelley
+
+    ShelleyEraOnly(..),
+    shelleyEraOnlyConstraints,
+    shelleyEraOnlyToCardanoEra,
+    shelleyEraOnlyToShelleyBasedEra,
 
     ShelleyToAllegraEra(..),
     shelleyToAllegraEraConstraints,
@@ -376,14 +382,10 @@ module Cardano.Api (
 
     -- ** Era-dependent transaction body features
     CollateralSupportedInEra(..),
-    ValidityUpperBoundSupportedInEra(..),
-    ValidityNoUpperBoundSupportedInEra(..),
     AuxScriptsSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
-    validityUpperBoundSupportedInEra,
-    validityNoUpperBoundSupportedInEra,
     auxScriptsSupportedInEra,
 
     -- ** Era-dependent protocol features
@@ -1016,6 +1018,7 @@ import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ByronToAlonzoEra
@@ -1023,6 +1026,7 @@ import           Cardano.Api.Eon.ByronToMaryEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra

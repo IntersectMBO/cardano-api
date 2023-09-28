@@ -9,7 +9,6 @@
 
 module Cardano.Api.Eon.ByronToAlonzoEra
   ( ByronToAlonzoEra(..)
-  , IsByronToAlonzoEra(..)
   , byronToAlonzoEraConstraints
   , byronToAlonzoEraToCardanoEra
 
@@ -20,9 +19,6 @@ import           Cardano.Api.Eras.Core
 
 import           Data.Typeable (Typeable)
 
-class IsByronToAlonzoEra era where
-  byronToAlonzoEra :: ByronToAlonzoEra era
-
 data ByronToAlonzoEra era where
   ByronToAlonzoEraByron   :: ByronToAlonzoEra ByronEra
   ByronToAlonzoEraShelley :: ByronToAlonzoEra ShelleyEra
@@ -32,21 +28,6 @@ data ByronToAlonzoEra era where
 
 deriving instance Show (ByronToAlonzoEra era)
 deriving instance Eq (ByronToAlonzoEra era)
-
-instance IsByronToAlonzoEra ByronEra where
-  byronToAlonzoEra = ByronToAlonzoEraByron
-
-instance IsByronToAlonzoEra ShelleyEra where
-  byronToAlonzoEra = ByronToAlonzoEraShelley
-
-instance IsByronToAlonzoEra AllegraEra where
-  byronToAlonzoEra = ByronToAlonzoEraAllegra
-
-instance IsByronToAlonzoEra MaryEra where
-  byronToAlonzoEra = ByronToAlonzoEraMary
-
-instance IsByronToAlonzoEra AlonzoEra where
-  byronToAlonzoEra = ByronToAlonzoEraAlonzo
 
 instance Eon ByronToAlonzoEra where
   inEonForEra no yes = \case
@@ -68,7 +49,6 @@ instance ToCardanoEra ByronToAlonzoEra where
 
 type ByronToAlonzoEraConstraints era =
   ( IsCardanoEra era
-  , IsByronToAlonzoEra era
   , Typeable era
   )
 
