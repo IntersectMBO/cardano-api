@@ -30,6 +30,8 @@ module Cardano.Api (
     -- * Eon support
     Eon(..),
     AnyEraInEon(..),
+
+    inEonForEraMaybe,
     forEraInEon,
     forEraInEonMaybe,
     forEraMaybeEon,
