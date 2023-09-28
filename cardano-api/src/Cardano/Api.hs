@@ -34,7 +34,7 @@ module Cardano.Api (
     forEraInEonMaybe,
     forEraMaybeEon,
 
-    eonInShelleyBasedEra,
+    inEonForShelleyBasedEra,
     inShelleyBasedEraEon,
     inShelleyBasedEraEonMaybe,
     maybeEonInShelleyBasedEra,

@@ -15,7 +15,7 @@ module Cardano.Api.Eon.ShelleyBasedEra
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , shelleyBasedToCardanoEra
-  , eonInShelleyBasedEra
+  , inEonForShelleyBasedEra
   , inShelleyBasedEraEon
   , inShelleyBasedEraEonMaybe
   , maybeEonInShelleyBasedEra
@@ -45,13 +45,13 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
-eonInShelleyBasedEra :: ()
+inEonForShelleyBasedEra :: ()
   => Eon eon
   => a
   -> (eon era -> a)
   -> ShelleyBasedEra era
   -> a
-eonInShelleyBasedEra no yes =
+inEonForShelleyBasedEra no yes =
   inEonForEra no yes . shelleyBasedToCardanoEra
 
 maybeEonInShelleyBasedEra :: ()
@@ -68,7 +68,7 @@ inShelleyBasedEraEon :: ()
   -> (eon era -> a)
   -> a
 inShelleyBasedEraEon era no yes =
-  eonInShelleyBasedEra no yes era
+  inEonForShelleyBasedEra no yes era
 
 inShelleyBasedEraEonMaybe :: ()
   => Eon eon
