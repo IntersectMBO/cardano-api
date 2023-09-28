@@ -32,7 +32,7 @@ module Cardano.Api.Eras.Core
   , Eon(..)
   , AnyEraInEon(..)
   , forEraInEon
-  , inEraEonMaybe
+  , forEraInEonMaybe
   , maybeEonInEra
 
     -- * Data family instances
@@ -125,12 +125,12 @@ forEraInEon :: ()
 forEraInEon era no yes =
   inEonForEra no yes era
 
-inEraEonMaybe :: ()
+forEraInEonMaybe :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
   -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
   -> Maybe a          -- ^ The value to use
-inEraEonMaybe era yes =
+forEraInEonMaybe era yes =
   forEraInEon era Nothing (Just . yes)
 
 maybeEonInEra :: ()

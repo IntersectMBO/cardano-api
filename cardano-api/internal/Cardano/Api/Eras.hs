@@ -24,7 +24,7 @@ module Cardano.Api.Eras
   , Eon(..)
   , AnyEraInEon(..)
   , forEraInEon
-  , inEraEonMaybe
+  , forEraInEonMaybe
   , maybeEonInEra
 
     -- * Data family instances
