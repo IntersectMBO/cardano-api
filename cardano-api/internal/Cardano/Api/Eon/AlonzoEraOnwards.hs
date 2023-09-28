@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.AlonzoEraOnwards
   ( AlonzoEraOnwards(..)
-  , AnyAlonzoEraOnwards(..)
   , alonzoEraOnwardsConstraints
   , alonzoEraOnwardsToCardanoEra
   , alonzoEraOnwardsToShelleyBasedEra
@@ -61,11 +60,6 @@ instance ToCardanoEra AlonzoEraOnwards where
     AlonzoEraOnwardsAlonzo  -> AlonzoEra
     AlonzoEraOnwardsBabbage -> BabbageEra
     AlonzoEraOnwardsConway  -> ConwayEra
-
-data AnyAlonzoEraOnwards where
-  AnyAlonzoEraOnwards :: AlonzoEraOnwards era -> AnyAlonzoEraOnwards
-
-deriving instance Show AnyAlonzoEraOnwards
 
 type AlonzoEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))

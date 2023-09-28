@@ -11,7 +11,6 @@
 module Cardano.Api.Eon.MaryEraOnwards
   ( MaryEraOnwards(..)
   , IsMaryEraOnwards(..)
-  , AnyMaryEraOnwards(..)
   , maryEraOnwardsConstraints
   , maryEraOnwardsToCardanoEra
   , maryEraOnwardsToShelleyBasedEra
@@ -80,11 +79,6 @@ instance ToCardanoEra MaryEraOnwards where
     MaryEraOnwardsAlonzo  -> AlonzoEra
     MaryEraOnwardsBabbage -> BabbageEra
     MaryEraOnwardsConway  -> ConwayEra
-
-data AnyMaryEraOnwards where
-  AnyMaryEraOnwards :: MaryEraOnwards era -> AnyMaryEraOnwards
-
-deriving instance Show AnyMaryEraOnwards
 
 type MaryEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))

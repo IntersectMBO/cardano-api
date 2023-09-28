@@ -10,7 +10,6 @@
 module Cardano.Api.Eon.ByronToAllegraEra
   ( ByronToAllegraEra(..)
   , IsByronToAllegraEra(..)
-  , AnyByronToAllegraEra(..)
   , byronToAllegraEraConstraints
   , byronToAllegraEraToCardanoEra
 
@@ -62,11 +61,6 @@ type ByronToAllegraEraConstraints era =
   , IsByronToAllegraEra era
   , Typeable era
   )
-
-data AnyByronToAllegraEra where
-  AnyByronToAllegraEra :: ByronToAllegraEra era -> AnyByronToAllegraEra
-
-deriving instance Show AnyByronToAllegraEra
 
 byronToAllegraEraConstraints :: ()
   => ByronToAllegraEra era

@@ -48,50 +48,42 @@ module Cardano.Api (
     -- ** From Byron
 
     ByronEraOnly(..),
-    AnyByronEraOnly(..),
     byronEraOnlyConstraints,
     byronEraOnlyToCardanoEra,
 
     ByronToAllegraEra(..),
     IsByronToAllegraEra(..),
-    AnyByronToAllegraEra(..),
     byronToAllegraEraConstraints,
     byronToAllegraEraToCardanoEra,
 
     ByronToMaryEra(..),
     IsByronToMaryEra(..),
-    AnyByronToMaryEra(..),
     byronToMaryEraConstraints,
     byronToMaryEraToCardanoEra,
 
     ByronToAlonzoEra(..),
     IsByronToAlonzoEra(..),
-    AnyByronToAlonzoEra(..),
     byronToAlonzoEraConstraints,
     byronToAlonzoEraToCardanoEra,
 
     -- ** From Shelley
 
     ShelleyToAllegraEra(..),
-    AnyShelleyToAllegraEra(..),
     shelleyToAllegraEraConstraints,
     shelleyToAllegraEraToCardanoEra,
     shelleyToAllegraEraToShelleyBasedEra,
 
     ShelleyToMaryEra(..),
-    AnyShelleyToMaryEra(..),
     shelleyToMaryEraConstraints,
     shelleyToMaryEraToCardanoEra,
     shelleyToMaryEraToShelleyBasedEra,
 
     ShelleyToAlonzoEra(..),
-    AnyShelleyToAlonzoEra(..),
     shelleyToAlonzoEraConstraints,
     shelleyToAlonzoEraToCardanoEra,
     shelleyToAlonzoEraToShelleyBasedEra,
 
     ShelleyToBabbageEra(..),
-    AnyShelleyToBabbageEra(..),
     shelleyToBabbageEraConstraints,
     shelleyToBabbageEraToCardanoEra,
     shelleyToBabbageEraToShelleyBasedEra,
@@ -110,7 +102,6 @@ module Cardano.Api (
 
     -- ** From Mary
     MaryEraOnwards(..),
-    AnyMaryEraOnwards(..),
     maryEraOnwardsConstraints,
     maryEraOnwardsToCardanoEra,
     maryEraOnwardsToShelleyBasedEra,
@@ -118,13 +109,11 @@ module Cardano.Api (
     -- ** From Alonzo
 
     AlonzoEraOnly(..),
-    AnyAlonzoEraOnly(..),
     alonzoEraOnlyConstraints,
     alonzoEraOnlyToCardanoEra,
     alonzoEraOnlyToShelleyBasedEra,
 
     AlonzoEraOnwards(..),
-    AnyAlonzoEraOnwards(..),
     alonzoEraOnwardsConstraints,
     alonzoEraOnwardsToCardanoEra,
     alonzoEraOnwardsToShelleyBasedEra,
@@ -132,7 +121,6 @@ module Cardano.Api (
     -- ** From Babbage
 
     BabbageEraOnwards(..),
-    AnyBabbageEraOnwards(..),
     babbageEraOnwardsConstraints,
     babbageEraOnwardsToCardanoEra,
     babbageEraOnwardsToShelleyBasedEra,
@@ -140,7 +128,6 @@ module Cardano.Api (
     -- ** From Conway
 
     ConwayEraOnwards(..),
-    AnyConwayEraOnwards(..),
     conwayEraOnwardsConstraints,
     conwayEraOnwardsToCardanoEra,
     conwayEraOnwardsToShelleyBasedEra,

@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.AlonzoEraOnly
   ( AlonzoEraOnly(..)
-  , AnyAlonzoEraOnly(..)
   , alonzoEraOnlyConstraints
   , alonzoEraOnlyToCardanoEra
   , alonzoEraOnlyToShelleyBasedEra
@@ -57,11 +56,6 @@ instance Eon AlonzoEraOnly where
 instance ToCardanoEra AlonzoEraOnly where
   toCardanoEra = \case
     AlonzoEraOnlyAlonzo  -> AlonzoEra
-
-data AnyAlonzoEraOnly where
-  AnyAlonzoEraOnly :: AlonzoEraOnly era -> AnyAlonzoEraOnly
-
-deriving instance Show AnyAlonzoEraOnly
 
 type AlonzoEraOnlyConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
