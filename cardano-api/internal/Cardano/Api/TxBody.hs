@@ -313,7 +313,7 @@ txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptVal
 
 scriptValidityToTxScriptValidity :: ShelleyBasedEra era -> ScriptValidity -> TxScriptValidity era
 scriptValidityToTxScriptValidity sbe scriptValidity =
-  inShelleyBasedEraEon sbe TxScriptValidityNone $ \w -> TxScriptValidity w scriptValidity
+  forShelleyBasedEraInEon sbe TxScriptValidityNone $ \w -> TxScriptValidity w scriptValidity
 
 txScriptValidityToIsValid :: TxScriptValidity era -> L.IsValid
 txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
@@ -1779,7 +1779,7 @@ deserialiseShelleyBasedTxBody sbe bs =
               (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
         4 -> do
           sValiditySupported <-
-            inShelleyBasedEraEon sbe
+            forShelleyBasedEraInEon sbe
               ( fail $ mconcat
                   [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
                   , "script validity flag but got: "
@@ -1811,7 +1811,7 @@ deserialiseShelleyBasedTxBody sbe bs =
               pure
 
           sValiditySupported <-
-            inShelleyBasedEraEon sbe
+            forShelleyBasedEraInEon sbe
               ( fail $ mconcat
                   [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
                   , "script validity flag but got: "
