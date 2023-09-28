@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.ConwayEraOnwards
   ( ConwayEraOnwards(..)
-  , AnyConwayEraOnwards(..)
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToCardanoEra
   , conwayEraOnwardsToShelleyBasedEra
@@ -59,11 +58,6 @@ instance Eon ConwayEraOnwards where
 instance ToCardanoEra ConwayEraOnwards where
   toCardanoEra = \case
     ConwayEraOnwardsConway -> ConwayEra
-
-data AnyConwayEraOnwards where
-  AnyConwayEraOnwards :: ConwayEraOnwards era -> AnyConwayEraOnwards
-
-deriving instance Show AnyConwayEraOnwards
 
 type ConwayEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))

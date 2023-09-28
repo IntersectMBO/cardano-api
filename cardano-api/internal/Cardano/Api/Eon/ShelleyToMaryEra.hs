@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.ShelleyToMaryEra
   ( ShelleyToMaryEra(..)
-  , AnyShelleyToMaryEra(..)
   , shelleyToMaryEraConstraints
   , shelleyToMaryEraToCardanoEra
   , shelleyToMaryEraToShelleyBasedEra
@@ -90,11 +89,6 @@ type ShelleyToMaryEraConstraints era =
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )
-
-data AnyShelleyToMaryEra where
-  AnyShelleyToMaryEra :: ShelleyToMaryEra era -> AnyShelleyToMaryEra
-
-deriving instance Show AnyShelleyToMaryEra
 
 shelleyToMaryEraConstraints :: ()
   => ShelleyToMaryEra era

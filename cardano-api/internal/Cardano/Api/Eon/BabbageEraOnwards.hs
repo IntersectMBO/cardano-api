@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eon.BabbageEraOnwards
   ( BabbageEraOnwards(..)
-  , AnyBabbageEraOnwards(..)
   , babbageEraOnwardsConstraints
   , babbageEraOnwardsToCardanoEra
   , babbageEraOnwardsToShelleyBasedEra
@@ -59,11 +58,6 @@ instance ToCardanoEra BabbageEraOnwards where
   toCardanoEra = \case
     BabbageEraOnwardsBabbage -> BabbageEra
     BabbageEraOnwardsConway  -> ConwayEra
-
-data AnyBabbageEraOnwards where
-  AnyBabbageEraOnwards :: BabbageEraOnwards era -> AnyBabbageEraOnwards
-
-deriving instance Show AnyBabbageEraOnwards
 
 type BabbageEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
