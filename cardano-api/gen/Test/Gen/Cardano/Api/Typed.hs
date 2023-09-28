@@ -747,9 +747,10 @@ genMaybeFeaturedInEra f =
     pure Nothing <|> fmap Just (genFeaturedInEra w (f w))
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
-genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
-  Nothing -> pure TxScriptValidityNone
-  Just witness -> TxScriptValidity witness <$> genScriptValidity
+genTxScriptValidity =
+  inEonForEra
+    (pure TxScriptValidityNone)
+    (\w -> TxScriptValidity w <$> genScriptValidity)
 
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]

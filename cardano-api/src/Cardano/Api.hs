@@ -417,10 +417,7 @@ module Cardano.Api (
     TxBodyErrorAutoBalance(..),
     TxScriptValidity(..),
     ScriptValidity(..),
-    TxScriptValiditySupportedInEra(..),
     scriptValidityToTxScriptValidity,
-    txScriptValiditySupportedInShelleyBasedEra,
-    txScriptValiditySupportedInCardanoEra,
     txScriptValidityToScriptValidity,
 
     -- * Signing transactions
