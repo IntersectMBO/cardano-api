@@ -44,6 +44,7 @@ module Cardano.Api.ProtocolParameters (
     ShelleyToAlonzoPParams(..),
     ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
+    IntroducedInConwayPParams(..),
     createEraBasedProtocolParamUpdate,
     convertToLedgerProtocolParameters,
     createPParams,
@@ -93,7 +94,6 @@ module Cardano.Api.ProtocolParameters (
     -- ** Era-dependent protocol features
     ProtocolUTxOCostPerByteFeature(..),
     ProtocolUTxOCostPerWordFeature(..),
-
   ) where
 
 import           Cardano.Api.Address
@@ -127,10 +127,11 @@ import           Cardano.Ledger.Api.PParams
 import qualified Cardano.Ledger.Babbage.Core as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Shelley.API as Ledger
-import           Cardano.Slotting.Slot (EpochNo)
+import           Cardano.Slotting.Slot (EpochNo (..))
 
 import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
@@ -227,47 +228,40 @@ data EraBasedProtocolParametersUpdate era where
     :: CommonProtocolParametersUpdate
     -> AlonzoOnwardsPParams ConwayEra
     -> IntroducedInBabbagePParams ConwayEra
-  -- TODO: Conway era - need new ledger release
-  -- -> IntroducedInConwayPParamsUpdate (ShelleyLedgerEra ConwayEra)
+    -> IntroducedInConwayPParams (ShelleyLedgerEra ConwayEra)
     -> EraBasedProtocolParametersUpdate ConwayEra
 
 deriving instance Show (EraBasedProtocolParametersUpdate era)
 
 
-{-
-
-TODO: Conway era - need new ledger release
-
-data IntroducedInConwayPParamsUpdate era
-  = IntroducedInConwayPParamsUpdate
-     { icPoolVotingThresholds :: StrictMaybe PoolVotingThresholds
-     , icDRepVotingThresholds :: StrictMaybe DRepVotingThresholds
-     , icMinCommitteeSize :: StrictMaybe Natural
-     , icCommitteeTermLimit :: StrictMaybe Natural
-     , icGovActionExpiration :: StrictMaybe Natural
-     , icGovActionDeposit :: StrictMaybe Coin
-     , icDRepDeposit :: StrictMaybe Coin
-     , icDRepActivity :: StrictMaybe EpochNo
-     }
+data IntroducedInConwayPParams era
+  = IntroducedInConwayPParams
+    { icPoolVotingThresholds :: StrictMaybe Ledger.PoolVotingThresholds
+    , icDRepVotingThresholds :: StrictMaybe Ledger.DRepVotingThresholds
+    , icMinCommitteeSize     :: StrictMaybe Natural
+    , icCommitteeTermLength  :: StrictMaybe Natural
+    , icGovActionLifetime    :: StrictMaybe EpochNo
+    , icGovActionDeposit     :: StrictMaybe Ledger.Coin
+    , icDRepDeposit          :: StrictMaybe Ledger.Coin
+    , icDRepActivity         :: StrictMaybe EpochNo
+    } deriving Show
 
 
 createIntroducedInConwayPParams
   :: Ledger.ConwayEraPParams ledgerera
-  => IntroducedInConwayPParamsUpdate ledgerera
+  => IntroducedInConwayPParams ledgerera
   -> Ledger.PParamsUpdate ledgerera
-createIntroducedInConwayPParams IntroducedInConwayPParamsUpdate{..} =
-
+createIntroducedInConwayPParams IntroducedInConwayPParams{..} =
     Ledger.emptyPParamsUpdate
       & Ledger.ppuPoolVotingThresholdsL .~ icPoolVotingThresholds
       & Ledger.ppuDRepVotingThresholdsL .~ icDRepVotingThresholds
-      & Ledger.ppuMinCommitteeSizeL .~ icMinCommitteeSize
-      & Ledger.ppuCommitteeTermLimitL .~ icCommitteeTermLimit
-      & Ledger.ppuGovActionExpirationL .~ icGovActionExpiration
+      & Ledger.ppuCommitteeMinSizeL .~ icMinCommitteeSize
+      & Ledger.ppuCommitteeMaxTermLengthL .~ icCommitteeTermLength
+      & Ledger.ppuGovActionLifetimeL .~ icGovActionLifetime
       & Ledger.ppuGovActionDepositL .~ icGovActionDeposit
       & Ledger.ppuDRepDepositL .~ icDRepDeposit
       & Ledger.ppuDRepActivityL .~ icDRepActivity
 
--}
 
 createEraBasedProtocolParamUpdate
   :: ShelleyBasedEra era
@@ -306,12 +300,12 @@ createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
             Ledger.PParamsUpdate inBAb = createIntroducedInBabbagePParams sbe introInBabbage
         in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBAb
 
-    ConwayEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage  ->
+    ConwayEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage introInConway ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
             Ledger.PParamsUpdate inAlonzoPParams = createPParamsUpdateIntroducedInAlonzo sbe introInAlonzo
-            Ledger.PParamsUpdate inBAb = createIntroducedInBabbagePParams sbe introInBabbage
-            -- TODO: Conway era - need new ledger release for updated types
-        in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBAb
+            Ledger.PParamsUpdate inBab = createIntroducedInBabbagePParams sbe introInBabbage
+            Ledger.PParamsUpdate inCon = createIntroducedInConwayPParams introInConway
+        in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBab <> inCon
 
 
 -- | Protocol parameters common to each era. This can only ever be reduced

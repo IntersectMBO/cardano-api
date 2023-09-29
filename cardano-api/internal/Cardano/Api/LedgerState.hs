@@ -116,6 +116,8 @@ import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as Crypto
 import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import qualified Cardano.Ledger.Api.Era as Ledger
+import qualified Cardano.Ledger.Api.Transition as Ledger
 import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.BHeaderView as Ledger
@@ -126,7 +128,6 @@ import qualified Cardano.Ledger.PoolDistr as SL
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
-import           Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import qualified Cardano.Protocol.TPraos.API as TPraos
 import           Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
@@ -156,7 +157,6 @@ import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
-import           Ouroboros.Consensus.Protocol.TPraos (TPraos)
 import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
@@ -760,18 +760,18 @@ genesisConfigToEnv
   -- enp
   genCfg =
     case genCfg of
-      GenesisCardano _ bCfg sCfg _ _
-        | Cardano.Crypto.ProtocolMagic.unProtocolMagicId (Cardano.Chain.Genesis.configProtocolMagicId bCfg) /= Ledger.sgNetworkMagic (scConfig sCfg) ->
+      GenesisCardano _ bCfg _ transCfg
+        | Cardano.Crypto.ProtocolMagic.unProtocolMagicId (Cardano.Chain.Genesis.configProtocolMagicId bCfg) /= Ledger.sgNetworkMagic shelleyGenesis ->
             Left . NECardanoConfig $
               mconcat
                 [ "ProtocolMagicId ", textShow (Cardano.Crypto.ProtocolMagic.unProtocolMagicId $ Cardano.Chain.Genesis.configProtocolMagicId bCfg)
-                , " /= ", textShow (Ledger.sgNetworkMagic $ scConfig sCfg)
+                , " /= ", textShow (Ledger.sgNetworkMagic shelleyGenesis)
                 ]
-        | Cardano.Chain.Genesis.gdStartTime (Cardano.Chain.Genesis.configGenesisData bCfg) /= Ledger.sgSystemStart (scConfig sCfg) ->
+        | Cardano.Chain.Genesis.gdStartTime (Cardano.Chain.Genesis.configGenesisData bCfg) /= Ledger.sgSystemStart shelleyGenesis ->
             Left . NECardanoConfig $
               mconcat
                 [ "SystemStart ", textShow (Cardano.Chain.Genesis.gdStartTime $ Cardano.Chain.Genesis.configGenesisData bCfg)
-                , " /= ", textShow (Ledger.sgSystemStart $ scConfig sCfg)
+                , " /= ", textShow (Ledger.sgSystemStart shelleyGenesis)
                 ]
         | otherwise ->
             let
@@ -781,6 +781,8 @@ genesisConfigToEnv
                   { envLedgerConfig = Consensus.topLevelConfigLedger topLevelConfig
                   , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
                   }
+        where
+          shelleyGenesis = transCfg ^. Ledger.tcShelleyGenesisL
 
 readNodeConfig :: NodeConfigFile 'In -> ExceptT Text IO NodeConfig
 readNodeConfig (File ncf) = do
@@ -804,23 +806,7 @@ data NodeConfig = NodeConfig
   , ncConwayGenesisHash :: !GenesisHashConway
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
-
-  -- Per-era parameters for the hardfok transitions:
-  , ncByronToShelley   :: !(Consensus.ProtocolTransitionParams
-                              Byron.ByronBlock
-                              (Shelley.ShelleyBlock (TPraos Shelley.StandardCrypto) Shelley.StandardShelley)
-                           )
-  , ncShelleyToAllegra :: !(Consensus.ProtocolTransitionParams
-                              (Shelley.ShelleyBlock (TPraos Shelley.StandardCrypto) Shelley.StandardShelley)
-                              (Shelley.ShelleyBlock (TPraos Shelley.StandardCrypto) Shelley.StandardAllegra)
-                           )
-  , ncAllegraToMary    :: !(Consensus.ProtocolTransitionParams
-                              (Shelley.ShelleyBlock (TPraos Shelley.StandardCrypto) Shelley.StandardAllegra)
-                              (Shelley.ShelleyBlock (TPraos Shelley.StandardCrypto) Shelley.StandardMary)
-                           )
-  , ncMaryToAlonzo     :: !Consensus.TriggerHardFork
-  , ncAlonzoToBabbage  :: !Consensus.TriggerHardFork
-  , ncBabbageToConway  :: !Consensus.TriggerHardFork
+  , ncHardForkTriggers :: !Consensus.CardanoHardForkTriggers
   }
 
 instance FromJSON NodeConfig where
@@ -841,15 +827,7 @@ instance FromJSON NodeConfig where
           <*> fmap GenesisHashConway (o .: "ConwayGenesisHash")
           <*> o .: "RequiresNetworkMagic"
           <*> parseByronProtocolVersion o
-          <*> (Consensus.ProtocolTransitionParamsByronToShelley emptyFromByronTranslationContext
-                 <$> parseShelleyHardForkEpoch o)
-          <*> (Consensus.ProtocolTransitionParamsIntraShelley ()
-                 <$> parseAllegraHardForkEpoch o)
-          <*> (Consensus.ProtocolTransitionParamsIntraShelley ()
-                 <$> parseMaryHardForkEpoch o)
-          <*> parseAlonzoHardForkEpoch o
-          <*> parseBabbageHardForkEpoch o
-          <*> parseConwayHardForkEpoch o
+          <*> parseHardForkTriggers o
 
       parseByronProtocolVersion :: Object -> Parser Cardano.Chain.Update.ProtocolVersion
       parseByronProtocolVersion o =
@@ -857,6 +835,16 @@ instance FromJSON NodeConfig where
           <$> o .: "LastKnownBlockVersion-Major"
           <*> o .: "LastKnownBlockVersion-Minor"
           <*> o .: "LastKnownBlockVersion-Alt"
+
+      parseHardForkTriggers :: Object -> Parser Consensus.CardanoHardForkTriggers
+      parseHardForkTriggers o =
+        Consensus.CardanoHardForkTriggers'
+          <$> parseShelleyHardForkEpoch o
+          <*> parseAllegraHardForkEpoch o
+          <*> parseMaryHardForkEpoch o
+          <*> parseAlonzoHardForkEpoch o
+          <*> parseBabbageHardForkEpoch o
+          <*> parseConwayHardForkEpoch o
 
       parseShelleyHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
       parseShelleyHardForkEpoch o =
@@ -982,9 +970,8 @@ data GenesisConfig
   = GenesisCardano
       !NodeConfig
       !Cardano.Chain.Genesis.Config
-      !ShelleyConfig
-      !AlonzoGenesis
-      !(ConwayGenesis Shelley.StandardCrypto)
+      !GenesisHashShelley
+      !(Ledger.TransitionConfig (Ledger.LatestKnownEra Shelley.StandardCrypto))
 
 newtype LedgerStateDir = LedgerStateDir
   {  unLedgerStateDir :: FilePath
@@ -1003,7 +990,7 @@ mkProtocolInfoCardano ::
             (Consensus.CardanoEras Consensus.StandardCrypto))
   , IO [BlockForging IO (HFC.HardForkBlock
                               (Consensus.CardanoEras Consensus.StandardCrypto))])
-mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGenesis conwayGenesis)
+mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg)
   = Consensus.protocolInfoCardano Consensus.CardanoProtocolParams
       { Consensus.paramsByron =
           Consensus.ProtocolParamsByron
@@ -1016,8 +1003,7 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
             }
       , Consensus.paramsShelleyBased =
           Consensus.ProtocolParamsShelleyBased
-            { Consensus.shelleyBasedGenesis = scConfig shelleyGenesis
-            , Consensus.shelleyBasedInitialNonce = shelleyPraosNonce shelleyGenesis
+            { Consensus.shelleyBasedInitialNonce = shelleyPraosNonce shelleyGenesisHash
             , Consensus.shelleyBasedLeaderCredentials = []
             }
       , Consensus.paramsShelley =
@@ -1050,43 +1036,25 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis alonzoGene
             { Consensus.conwayProtVer = ProtVer (natVersion @10) 0
             , Consensus.conwayMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
-      , Consensus.transitionParamsByronToShelley =
-          ncByronToShelley dnc
-      , Consensus.transitionParamsShelleyToAllegra =
-          ncShelleyToAllegra dnc
-      , Consensus.transitionParamsAllegraToMary =
-          ncAllegraToMary dnc
-      , Consensus.transitionParamsMaryToAlonzo =
-          Consensus.ProtocolTransitionParamsIntraShelley
-            { Consensus.transitionIntraShelleyTranslationContext = alonzoGenesis
-            , Consensus.transitionIntraShelleyTrigger            = ncMaryToAlonzo dnc
-            }
-      , Consensus.transitionParamsAlonzoToBabbage =
-          Consensus.ProtocolTransitionParamsIntraShelley
-            { Consensus.transitionIntraShelleyTranslationContext = ()
-            , Consensus.transitionIntraShelleyTrigger            = ncAlonzoToBabbage dnc
-            }
-      , Consensus.transitionParamsBabbageToConway =
-          Consensus.ProtocolTransitionParamsIntraShelley
-            { Consensus.transitionIntraShelleyTranslationContext = conwayGenesis
-            , Consensus.transitionIntraShelleyTrigger            = ncBabbageToConway dnc
-            }
+      , Consensus.hardForkTriggers = ncHardForkTriggers dnc
+      , Consensus.ledgerTransitionConfig = transCfg
       }
 
--- | Compute the Nonce from the ShelleyGenesis file.
-shelleyPraosNonce :: ShelleyConfig -> Ledger.Nonce
-shelleyPraosNonce sCfg =
-  Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)
+-- | Compute the Nonce from the hash of the Genesis file.
+shelleyPraosNonce :: GenesisHashShelley -> Ledger.Nonce
+shelleyPraosNonce genesisHash =
+  Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash $ unGenesisHashShelley genesisHash)
 
 readCardanoGenesisConfig
         :: NodeConfig
         -> ExceptT GenesisConfigError IO GenesisConfig
-readCardanoGenesisConfig enc =
-  GenesisCardano enc
-    <$> readByronGenesisConfig enc
-    <*> readShelleyGenesisConfig enc
-    <*> readAlonzoGenesisConfig enc
-    <*> readConwayGenesisConfig enc
+readCardanoGenesisConfig enc = do
+  byronGenesis <- readByronGenesisConfig enc
+  ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
+  alonzoGenesis <- readAlonzoGenesisConfig enc
+  conwayGenesis <- readConwayGenesisConfig enc
+  let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis
+  pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
 
 data GenesisConfigError
   = NEError !Text
