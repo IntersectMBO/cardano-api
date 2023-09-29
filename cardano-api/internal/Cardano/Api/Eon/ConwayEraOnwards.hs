@@ -26,12 +26,17 @@ import           Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
+import qualified Cardano.Ledger.Alonzo.Language as L
+import qualified Cardano.Ledger.Alonzo.Scripts as L
+import qualified Cardano.Ledger.Alonzo.TxInfo as L
+import qualified Cardano.Ledger.Alonzo.UTxO as L
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.TxCert as L
 import qualified Cardano.Ledger.SafeHash as L
+import qualified Cardano.Ledger.UTxO as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
@@ -74,10 +79,15 @@ type ConwayEraOnwardsConstraints era =
   , L.Era (ShelleyLedgerEra era)
   , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
   , L.EraGov (ShelleyLedgerEra era)
+  , L.EraPlutusContext 'L.PlutusV1 (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
+  , L.EraUTxO (ShelleyLedgerEra era)
+  , L.ExtendedUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
+  , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ConwayTxCert (ShelleyLedgerEra era)
