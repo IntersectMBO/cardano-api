@@ -1,5 +1,90 @@
 # Changelog for cardano-api
 
+# 8.23.0.0
+
+- New `caseAlonzoOnlyOrBabbageEraOnwards` and `alonzoEraOnlyToAlonzoEraOnwards` functions
+  (feature, compatible)
+  [PR 282](https://github.com/input-output-hk/cardano-api/pull/282)
+
+- Delete `AuxScriptsSupportedInEra`.  Use `AllegraEraOnwards` instead.
+  (breaking, improvement)
+  [PR 273](https://github.com/input-output-hk/cardano-api/pull/273)
+
+- - Rename `inShelleyBasedEraEonMaybe` to `forShelleyBasedEraInEonMaybe`
+  - Rename `inShelleyBasedEraEon` to `forShelleyBasedEraInEon`
+  - Rename `maybeEonInShelleyBasedEra` to `forShelleyBasedEraMaybeEon`
+  - Rename `eonInShelleyBasedEra` to `inEonForShelleyBasedEra`
+  - Rename `maybeEonInEra` to `forEraMaybeEon`
+  - Rename `inEraEonMaybe` to `forEraInEonMaybe`
+  - New `inEonForEraMaybe` function
+  - New `inEonForShelleyBasedEraMaybe` function
+  (feature, breaking)
+  [PR 281](https://github.com/input-output-hk/cardano-api/pull/281)
+
+- Remove `CollateralSupportedInEra`.  Use `AlonzoEraOnwards` instead.
+  Remove `collateralSupportedInEra`.  Use `inEonForEra` instead.
+  (breaking)
+  [PR 271](https://github.com/input-output-hk/cardano-api/pull/271)
+
+- Replace `TxScriptValiditySupportedInEra`.  Use AlonzoEraOnwards instead.
+  Delete `txScriptValiditySupportedInCardanoEra`. Use `forEraInEra` instead.
+  Delete `txScriptValiditySupportedInShelleyBasedEra`. Use `forEraInEra` instead.
+  (breaking)
+  [PR 261](https://github.com/input-output-hk/cardano-api/pull/261)
+
+- Delete `ValidityUpperBoundSupportedInEra`.  Use `ShelleyBasedEra` instead.
+  Delete `ValidityNoUpperBoundSupportedInEra`. Use `ByronAndAllegraEraOnwards` instead.
+  New `caseByronAndAllegraEraOnwardsOrShelleyEraOnly` function.
+  New `ShelleyEraOnly` eon
+  New `ByronAndAllegraEraOnwards` eon
+  Delete `validityUpperBoundSupportedInEra`.  Use `inEonForEra` instead.
+  Delete `validityNoUpperBoundSupportedInEra`.  Use `inEonForEra` instead.
+  Delete `IsByronToAllegraEra`.
+  Delete `IsByronToMaryEra`.
+  Delete `IsByronToAlonzoEra`.
+  (breaking, improvement)
+  [PR 272](https://github.com/input-output-hk/cardano-api/pull/272)
+
+- New `AnyEraInEon`.
+  Delete:
+  * AnyByronEraOnly
+  * AnyByronToAllegraEra
+  * AnyByronToMaryEra
+  * AnyByronToAlonzoEra
+  * AnyShelleyToAllegraEra
+  * AnyShelleyToMaryEra
+  * AnyShelleyToAlonzoEra
+  * AnyShelleyToBabbageEra
+  * AnyShelleyBasedEra
+  * AnyMaryEraOnwards
+  * AnyAlonzoEraOnly
+  * AnyAlonzoEraOnwards
+  * AnyBabbageEraOnwards
+  * AnyConwayEraOnwards
+  Use `AnyEraInEon` instead.
+  (feature, breaking)
+  [PR 280](https://github.com/input-output-hk/cardano-api/pull/280)
+
+- Delete `ValidityLowerBoundSupportedInEra`.  Use `AllegraEraOnwards` instead
+  Delete `validityLowerBoundSupportedInEra`.  Use `inEonForEra` or equivalent instead
+  (breaking, improvement)
+  [PR 279](https://github.com/input-output-hk/cardano-api/pull/279)
+
+- Delete `TxExtraKeyWitnessesSupportedInEra`.  Use `AlonzoEraOnwards` instead.
+  Delete `extraKeyWitnessesSupportedInEra`.  Use `inEonForEra` or related instead.
+  (breaking, improvement)
+  [PR 278](https://github.com/input-output-hk/cardano-api/pull/278)
+
+- Delete `TxTotalAndReturnCollateralSupportedInEra`.  Use `BabbageEraOnwards` instead.
+  Delete `totalAndReturnCollateralSupportedInEra`.  Use `inEonForEra` or related instead.
+  (breaking, improvement)
+  [PR 275](https://github.com/input-output-hk/cardano-api/pull/275)
+
+- Explicit pattern match on all ledger certificates constructors.
+  Remove `getIsCardanoEraConstraint`. Use `cardanoEraConstraints` instead.
+  (breaking, improvement)
+  [PR 277](https://github.com/input-output-hk/cardano-api/pull/277)
+
 ## 8.22.0.0
 
 - A prior refactor accidentally defaulted to `isLeadingSlotsTPraos` regardless of the era
