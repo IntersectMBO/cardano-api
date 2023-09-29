@@ -30,11 +30,13 @@ module Cardano.Api.Eras.Core
 
     -- * IsEon
   , Eon(..)
+  , AnyEon(..)
   , AnyEraInEon(..)
   , inEonForEraMaybe
   , forEraInEon
   , forEraInEonMaybe
   , forEraMaybeEon
+  , maybeEon
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
@@ -46,8 +48,10 @@ import qualified Cardano.Ledger.Api as L
 
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Kind
+import           Data.Maybe (isJust)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable, showsTypeRep, typeOf)
 
 -- ----------------------------------------------------------------------------
 -- Eras
@@ -149,14 +153,47 @@ forEraMaybeEon :: ()
 forEraMaybeEon =
   inEonForEra Nothing Just
 
--- ----------------------------------------------------------------------------
--- AnyEraInEon
+maybeEon :: ()
+  => Eon eon
+  => IsCardanoEra era   -- ^ Era to check
+  => Maybe (eon era)    -- ^ The eon if supported in the era
+maybeEon =
+  inEonForEra Nothing Just cardanoEra
 
-data AnyEraInEon where
+-- ----------------------------------------------------------------------------
+-- Era and eon existential types
+
+data AnyEraInEon eon where
   AnyEraInEon
-    :: Eon eon
+    :: ( Typeable era
+       , Typeable (eon era)
+       , Eon eon )
     => eon era
-    -> AnyEraInEon
+    -> AnyEraInEon eon
+
+-- | Assumes that eons are singletons
+instance Show (AnyEraInEon eon) where
+  showsPrec _ (AnyEraInEon eonEra) = showsTypeRep (typeOf eonEra)
+
+-- | Assumes that eons are singletons
+instance TestEquality eon => Eq (AnyEraInEon eon) where
+  AnyEraInEon era1 == AnyEraInEon era2 =
+    isJust $ testEquality era1 era2
+
+data AnyEon where
+  AnyEon
+    :: ( Typeable era
+       , Typeable (eon era)
+       , ToCardanoEra eon
+       , IsCardanoEra era
+       , Eon eon )
+    => eon era
+    -> AnyEon
+
+-- | Assumes that eons are singletons
+instance Show AnyEon where
+  showsPrec _ (AnyEon eonEra) = showsTypeRep (typeOf eonEra)
+
 
 -- ----------------------------------------------------------------------------
 -- ToCardanoEra
@@ -254,11 +291,10 @@ data AnyCardanoEra where
 
 deriving instance Show AnyCardanoEra
 
+-- | Assumes that 'CardanoEra era' are singletons
 instance Eq AnyCardanoEra where
     AnyCardanoEra era == AnyCardanoEra era' =
-      case testEquality era era' of
-        Nothing   -> False
-        Just Refl -> True -- since no constructors share types
+      isJust $ testEquality era era'
 
 instance Bounded AnyCardanoEra where
    minBound = AnyCardanoEra ByronEra
