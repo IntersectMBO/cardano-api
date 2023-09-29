@@ -195,6 +195,7 @@ library internal
                       , random
                       , scientific
                       , serialise
+                      , singletons
                       , small-steps ^>= 1.0
                       , sop-core
                       , stm
