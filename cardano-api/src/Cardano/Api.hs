@@ -27,17 +27,20 @@ module Cardano.Api (
     InAnyCardanoEra(..),
     ToCardanoEra(..),
 
-    -- * Feature support
+    -- * Eon support
     Eon(..),
     AnyEraInEon(..),
-    forEraInEon,
-    inEraEonMaybe,
-    maybeEonInEra,
 
-    eonInShelleyBasedEra,
-    inShelleyBasedEraEon,
-    inShelleyBasedEraEonMaybe,
-    maybeEonInShelleyBasedEra,
+    inEonForEraMaybe,
+    forEraInEon,
+    forEraInEonMaybe,
+    forEraMaybeEon,
+
+    inEonForShelleyBasedEra,
+    inEonForShelleyBasedEraMaybe,
+    forShelleyBasedEraInEon,
+    forShelleyBasedEraInEonMaybe,
+    forShelleyBasedEraMaybeEon,
 
     Featured(..),
     asFeaturedInEra,

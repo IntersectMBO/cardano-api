@@ -23,9 +23,11 @@ module Cardano.Api.Eras
     -- * IsEon
   , Eon(..)
   , AnyEraInEon(..)
+
+  , inEonForEraMaybe
   , forEraInEon
-  , inEraEonMaybe
-  , maybeEonInEra
+  , forEraInEonMaybe
+  , forEraMaybeEon
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)

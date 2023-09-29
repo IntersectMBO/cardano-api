@@ -31,9 +31,10 @@ module Cardano.Api.Eras.Core
     -- * IsEon
   , Eon(..)
   , AnyEraInEon(..)
+  , inEonForEraMaybe
   , forEraInEon
-  , inEraEonMaybe
-  , maybeEonInEra
+  , forEraInEonMaybe
+  , forEraMaybeEon
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
@@ -116,6 +117,14 @@ class Eon (eon :: Type -> Type) where
     -> CardanoEra era -- ^ Era to check
     -> a              -- ^ The value to use
 
+inEonForEraMaybe :: ()
+  => Eon eon
+  => (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
+  -> CardanoEra era   -- ^ Era to check
+  -> Maybe a          -- ^ The value to use
+inEonForEraMaybe yes =
+  inEonForEra Nothing (Just . yes)
+
 forEraInEon :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
@@ -125,19 +134,19 @@ forEraInEon :: ()
 forEraInEon era no yes =
   inEonForEra no yes era
 
-inEraEonMaybe :: ()
+forEraInEonMaybe :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
   -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
   -> Maybe a          -- ^ The value to use
-inEraEonMaybe era yes =
+forEraInEonMaybe era yes =
   forEraInEon era Nothing (Just . yes)
 
-maybeEonInEra :: ()
+forEraMaybeEon :: ()
   => Eon eon
   => CardanoEra era   -- ^ Era to check
   -> Maybe (eon era)  -- ^ The eon if supported in the era
-maybeEonInEra =
+forEraMaybeEon =
   inEonForEra Nothing Just
 
 -- ----------------------------------------------------------------------------

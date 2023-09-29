@@ -308,7 +308,7 @@ txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptVal
 
 scriptValidityToTxScriptValidity :: ShelleyBasedEra era -> ScriptValidity -> TxScriptValidity era
 scriptValidityToTxScriptValidity sbe scriptValidity =
-  inShelleyBasedEraEon sbe TxScriptValidityNone $ \w -> TxScriptValidity w scriptValidity
+  forShelleyBasedEraInEon sbe TxScriptValidityNone $ \w -> TxScriptValidity w scriptValidity
 
 txScriptValidityToIsValid :: TxScriptValidity era -> L.IsValid
 txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
@@ -1751,7 +1751,7 @@ deserialiseShelleyBasedTxBody sbe bs =
               (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
         4 -> do
           sValiditySupported <-
-            inShelleyBasedEraEon sbe
+            forShelleyBasedEraInEon sbe
               ( fail $ mconcat
                   [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
                   , "script validity flag but got: "
@@ -1783,7 +1783,7 @@ deserialiseShelleyBasedTxBody sbe bs =
               pure
 
           sValiditySupported <-
-            inShelleyBasedEraEon sbe
+            forShelleyBasedEraInEon sbe
               ( fail $ mconcat
                   [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
                   , "script validity flag but got: "
@@ -2278,7 +2278,7 @@ fromLedgerProposalProcedures
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era [Proposal era])
 fromLedgerProposalProcedures sbe body =
-  inShelleyBasedEraEonMaybe sbe $ \w ->
+  forShelleyBasedEraInEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
       $ fmap Proposal
@@ -2290,7 +2290,7 @@ fromLedgerVotingProcedures :: ()
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
 fromLedgerVotingProcedures sbe body =
-  inShelleyBasedEraEonMaybe sbe $ \w ->
+  forShelleyBasedEraInEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
       $ VotingProcedures

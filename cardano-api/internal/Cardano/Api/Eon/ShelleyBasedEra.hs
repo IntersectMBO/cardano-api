@@ -15,10 +15,11 @@ module Cardano.Api.Eon.ShelleyBasedEra
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , shelleyBasedToCardanoEra
-  , eonInShelleyBasedEra
-  , inShelleyBasedEraEon
-  , inShelleyBasedEraEonMaybe
-  , maybeEonInShelleyBasedEra
+  , inEonForShelleyBasedEra
+  , inEonForShelleyBasedEraMaybe
+  , forShelleyBasedEraInEon
+  , forShelleyBasedEraInEonMaybe
+  , forShelleyBasedEraMaybeEon
 
     -- * Cardano eras, as Byron vs Shelley-based
   , CardanoEraStyle(..)
@@ -45,38 +46,46 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
-eonInShelleyBasedEra :: ()
+inEonForShelleyBasedEra :: ()
   => Eon eon
   => a
   -> (eon era -> a)
   -> ShelleyBasedEra era
   -> a
-eonInShelleyBasedEra no yes =
+inEonForShelleyBasedEra no yes =
   inEonForEra no yes . shelleyBasedToCardanoEra
 
-maybeEonInShelleyBasedEra :: ()
+inEonForShelleyBasedEraMaybe :: ()
+  => Eon eon
+  => (eon era -> a)
+  -> ShelleyBasedEra era
+  -> Maybe a
+inEonForShelleyBasedEraMaybe yes =
+  inEonForShelleyBasedEra Nothing (Just . yes)
+
+forShelleyBasedEraMaybeEon :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> Maybe (eon era)
-maybeEonInShelleyBasedEra =
+forShelleyBasedEraMaybeEon =
   inEonForEra Nothing Just . shelleyBasedToCardanoEra
 
-inShelleyBasedEraEon :: ()
+forShelleyBasedEraInEon :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> a
   -> (eon era -> a)
   -> a
-inShelleyBasedEraEon era no yes =
-  eonInShelleyBasedEra no yes era
+forShelleyBasedEraInEon era no yes =
+  inEonForShelleyBasedEra no yes era
 
-inShelleyBasedEraEonMaybe :: ()
+forShelleyBasedEraInEonMaybe :: ()
   => Eon eon
   => ShelleyBasedEra era
   -> (eon era -> a)
   -> Maybe a
-inShelleyBasedEraEonMaybe era yes =
-  inShelleyBasedEraEon era Nothing (Just . yes)
+forShelleyBasedEraInEonMaybe era yes =
+  forShelleyBasedEraInEon era Nothing (Just . yes)
 
 -- ----------------------------------------------------------------------------
 -- Shelley-based eras
