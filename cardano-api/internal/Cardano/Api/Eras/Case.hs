@@ -19,14 +19,20 @@ module Cardano.Api.Eras.Case
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
 
+    -- Case on AlonzoEraOnwards
+  , caseAlonzoOnlyOrBabbageEraOnwards
+
+    -- Proofs
   , noByronEraInShelleyBasedEra
 
     -- Conversions
   , shelleyToAllegraEraToByronToAllegraEra
+  , alonzoEraOnlyToAlonzoEraOnwards
   , alonzoEraOnwardsToMaryEraOnwards
   ) where
 
 import           Cardano.Api.Eon.AllegraEraOnwards
+import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
@@ -180,6 +186,16 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway  -> r ConwayEraOnwardsConway
 
+caseAlonzoOnlyOrBabbageEraOnwards :: ()
+  => (AlonzoEraOnly era -> a)
+  -> (BabbageEraOnwards era -> a)
+  -> AlonzoEraOnwards era
+  -> a
+caseAlonzoOnlyOrBabbageEraOnwards l r = \case
+  AlonzoEraOnwardsAlonzo -> l AlonzoEraOnlyAlonzo
+  AlonzoEraOnwardsBabbage -> r BabbageEraOnwardsBabbage
+  AlonzoEraOnwardsConway  -> r BabbageEraOnwardsConway
+
 noByronEraInShelleyBasedEra :: ShelleyBasedEra era -> ByronEraOnly era -> a
 noByronEraInShelleyBasedEra sbe ByronEraOnlyByron = case sbe of {}
 
@@ -195,3 +211,9 @@ alonzoEraOnwardsToMaryEraOnwards = \case
   AlonzoEraOnwardsAlonzo  -> MaryEraOnwardsAlonzo
   AlonzoEraOnwardsBabbage -> MaryEraOnwardsBabbage
   AlonzoEraOnwardsConway  -> MaryEraOnwardsConway
+
+alonzoEraOnlyToAlonzoEraOnwards :: ()
+  => AlonzoEraOnly era
+  -> AlonzoEraOnwards era
+alonzoEraOnlyToAlonzoEraOnwards = \case
+  AlonzoEraOnlyAlonzo -> AlonzoEraOnwardsAlonzo

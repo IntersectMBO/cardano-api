@@ -155,9 +155,13 @@ module Cardano.Api (
     caseShelleyToMaryOrAlonzoEraOnwards,
     caseShelleyToAlonzoOrBabbageEraOnwards,
     caseShelleyToBabbageOrConwayEraOnwards,
+    caseAlonzoOnlyOrBabbageEraOnwards,
 
     -- ** Eon relaxation
     shelleyToAllegraEraToByronToAllegraEra,
+    alonzoEraOnlyToAlonzoEraOnwards,
+
+    -- Case on AlonzoEraOnwards
     alonzoEraOnwardsToMaryEraOnwards,
 
     -- * Assertions on era
