@@ -58,10 +58,18 @@ module Cardano.Api.ReexposeLedger
   , Vote (..)
   , Voter (..)
   , VotingProcedure(..)
+  , PoolVotingThresholds(..)
+  , DRepVotingThresholds(..)
+  , dvtPPNetworkGroupL
+  , dvtPPGovGroupL
+  , dvtPPTechnicalGroupL
+  , dvtPPEconomicGroupL
+  , dvtUpdateToConstitutionL
   , drepExpiryL
   , drepAnchorL
   , drepDepositL
   , csCommitteeCredsL
+
   -- Babbage
   , CoinPerByte (..)
 
@@ -107,6 +115,9 @@ import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (.
                    textToDns, textToUrl, unboundRational, urlToText)
 import           Cardano.Ledger.CertState (csCommitteeCredsL)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
+import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVotingThresholds (..),
+                   dvtPPEconomicGroupL, dvtPPGovGroupL, dvtPPNetworkGroupL, dvtPPTechnicalGroupL,
+                   dvtUpdateToConstitutionL)
 import           Cardano.Ledger.Conway.Governance (GovActionId (..), GovState, Vote (..),
                    Voter (..), VotingProcedure (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
