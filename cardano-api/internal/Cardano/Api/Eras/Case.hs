@@ -13,6 +13,7 @@ module Cardano.Api.Eras.Case
   , caseByronAndAllegraEraOnwardsOrShelleyEraOnly
 
     -- Case on ShelleyBasedEra
+  , caseShelleyEraOnlyOrAllegraEraOnwards
   , caseShelleyToAllegraOrMaryEraOnwards
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
@@ -25,6 +26,7 @@ module Cardano.Api.Eras.Case
   , alonzoEraOnwardsToMaryEraOnwards
   ) where
 
+import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
@@ -113,6 +115,18 @@ caseByronAndAllegraEraOnwardsOrShelleyEraOnly l r = \case
   BabbageEra -> l ByronAndAllegraEraOnwardsBabbage
   ConwayEra  -> l ByronAndAllegraEraOnwardsConway
 
+caseShelleyEraOnlyOrAllegraEraOnwards :: ()
+  => (ShelleyEraOnlyConstraints era => ShelleyEraOnly era -> a)
+  -> (AllegraEraOnwardsConstraints era => AllegraEraOnwards era -> a)
+  -> ShelleyBasedEra era
+  -> a
+caseShelleyEraOnlyOrAllegraEraOnwards l r = \case
+  ShelleyBasedEraShelley  -> l ShelleyEraOnlyShelley
+  ShelleyBasedEraAllegra  -> r AllegraEraOnwardsAllegra
+  ShelleyBasedEraMary     -> r AllegraEraOnwardsMary
+  ShelleyBasedEraAlonzo   -> r AllegraEraOnwardsAlonzo
+  ShelleyBasedEraBabbage  -> r AllegraEraOnwardsBabbage
+  ShelleyBasedEraConway   -> r AllegraEraOnwardsConway
 
 caseShelleyToAllegraOrMaryEraOnwards :: ()
   => (ShelleyToAllegraEraConstraints era => ShelleyToAllegraEra era -> a)

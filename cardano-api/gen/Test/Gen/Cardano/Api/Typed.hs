@@ -571,12 +571,9 @@ genTxMetadataInEra =
 
 genTxAuxScripts :: CardanoEra era -> Gen (TxAuxScripts era)
 genTxAuxScripts era =
-  case auxScriptsSupportedInEra era of
-    Nothing -> pure TxAuxScriptsNone
-    Just supported ->
-      TxAuxScripts supported <$>
-        Gen.list (Range.linear 0 3)
-                 (genScriptInEra era)
+  forEraInEon era
+    (pure TxAuxScriptsNone)
+    (\w -> TxAuxScripts w <$> Gen.list (Range.linear 0 3) (genScriptInEra era))
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals =
