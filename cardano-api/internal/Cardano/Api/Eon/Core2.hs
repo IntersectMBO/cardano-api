@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -12,10 +13,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Eon.Core2 where
-
-import           Data.Proxy
-import           Data.Singletons
-import           GHC.TypeLits
 
 data E = Y | N deriving (Eq, Show)
 
@@ -87,13 +84,13 @@ instance {-# OVERLAPPING #-} IsSubset as bs => IsSubset (N ': as) (Y ': bs) wher
   subsetProof = SubsetProof
 
 data Era (eon :: [E]) where
-  Byron   :: Era Byron
-  Shelley :: Era Shelley
-  Allegra :: Era Allegra
-  Mary    :: Era Mary
-  Alonzo  :: Era Alonzo
-  Babbage :: Era Babbage
-  Conway  :: Era Conway
+  Byron   :: SubsetProof Byron   eon -> Era eon
+  Shelley :: SubsetProof Shelley eon -> Era eon
+  Allegra :: SubsetProof Allegra eon -> Era eon
+  Mary    :: SubsetProof Mary    eon -> Era eon
+  Alonzo  :: SubsetProof Alonzo  eon -> Era eon
+  Babbage :: SubsetProof Babbage eon -> Era eon
+  Conway  :: SubsetProof Conway  eon -> Era eon
 
 data Eon (eras :: [E]) era where
   Eon :: Era era -> Eon eras era
@@ -104,23 +101,14 @@ relaxW _ (Eon a) = Eon a
 relax :: forall bs as a. IsSubset as bs => Eon as a -> Eon bs a
 relax (Eon a) = relaxW @as @bs subsetProof (Eon a)
 
-subset :: forall as bs. Proxy (as :: [E]) -> Proxy (bs :: [E]) -> Bool
-subset Proxy Proxy = demote @(Subset as bs :: Bool)
+-- subset :: forall as bs. Proxy (as :: [E]) -> Proxy (bs :: [E]) -> Bool
+-- subset Proxy Proxy = demote @(Subset as bs :: Bool)
 
-class BoolValue (a :: Bool) where
-  boolValue :: Proxy a -> Bool
-
-instance BoolValue 'True where
-  boolValue _ = True
-
-instance BoolValue 'False where
-  boolValue _ = False
-
-case2 :: forall (bs :: [E]) (as :: [E]) era r eon. IsSubset bs as => (Eon bs era -> r) -> (Eon (Minus as bs) era -> r) -> Eon as era -> r
-case2 l r (Eon a) =
-  if demote @(Subset as bs :: Bool)
-    then l (Eon a)
-    else r (Eon a)
+-- case2 :: forall (bs :: [E]) (as :: [E]) era r eon. IsSubset bs as => (Eon bs era -> r) -> (Eon (Minus as bs) era -> r) -> Eon as era -> r
+-- case2 l r (Eon a) =
+--   if demote @(Subset as bs :: Bool)
+--     then l (Eon a)
+--     else r (Eon a)
 
 example1 :: Eon ByronOnwards Byron -> Eon ByronOnwards Byron
 example1 = relax
@@ -131,4 +119,3 @@ example2 = relax
 -- -- Fails with: No instance for (Subset ByronOnwards ShelleyOnwards)
 -- example3 :: Eon ByronOnwards Byron -> Eon ShelleyOnwards Byron
 -- example3 = relax
-

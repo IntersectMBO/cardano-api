@@ -24,21 +24,21 @@ data Alonzo = Alonzo deriving (Eq, Show)
 data Babbage = Babbage deriving (Eq, Show)
 data Conway = Conway deriving (Eq, Show)
 
-type ByronEraOnly       = '[Byron                                                 ]
-type ShelleyEraOnly     = '[       Shelley                                        ]
-type AllegraEraOnly     = '[                Allegra                               ]
-type MaryEraOnly        = '[                         Mary                         ]
-type AlonzoEraOnly      = '[                               Alonzo                 ]
-type BabbageEraOnly     = '[                                       Babbage        ]
-type ConwayEraOnly      = '[                                                Conway]
+type ByronOnly        = '[Byron                                                 ]
+type ShelleyOnly      = '[       Shelley                                        ]
+type AllegraOnly      = '[                Allegra                               ]
+type MaryOnly         = '[                         Mary                         ]
+type AlonzoOnly       = '[                               Alonzo                 ]
+type BabbageOnly      = '[                                       Babbage        ]
+type ConwayOnly       = '[                                                Conway]
 
-type ByronEraOnwards    = '[Byron, Shelley, Allegra, Mary, Alonzo, Babbage, Conway]
-type ShelleyEraOnwards  = '[       Shelley, Allegra, Mary, Alonzo, Babbage, Conway]
-type AllegraEraOnwards  = '[                Allegra, Mary, Alonzo, Babbage, Conway]
-type MaryEraOnwards     = '[                         Mary, Alonzo, Babbage, Conway]
-type AlonzoEraOnwards   = '[                               Alonzo, Babbage, Conway]
-type BabbageEraOnwards  = '[                                       Babbage, Conway]
-type ConwayEraOnwards   = '[                                                Conway]
+type ByronOnwards     = '[Byron, Shelley, Allegra, Mary, Alonzo, Babbage, Conway]
+type ShelleyOnwards   = '[       Shelley, Allegra, Mary, Alonzo, Babbage, Conway]
+type AllegraOnwards   = '[                Allegra, Mary, Alonzo, Babbage, Conway]
+type MaryOnwards      = '[                         Mary, Alonzo, Babbage, Conway]
+type AlonzoOnwards    = '[                               Alonzo, Babbage, Conway]
+type BabbageOnwards   = '[                                       Babbage, Conway]
+type ConwayOnwards    = '[                                                Conway]
 
 relaxEon :: ()
   => Contains as bs
@@ -47,8 +47,8 @@ relaxEon :: ()
   -> Eon bs a
 relaxEon (Eon a) = Eon (relaxOpenUnion a)
 
-example1 :: IsMember era ByronEraOnwards => Eon ByronEraOnwards era -> Eon ByronEraOnwards era
+example1 :: IsMember era ByronOnwards => Eon ByronOnwards era -> Eon ByronOnwards era
 example1 = relaxEon
 
-example2 :: IsMember era ByronEraOnwards => Eon ShelleyEraOnwards era -> Eon ByronEraOnwards era
+example2 :: IsMember era ByronOnwards => Eon ShelleyOnwards era -> Eon ByronOnwards era
 example2 = relaxEon
