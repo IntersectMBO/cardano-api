@@ -29,12 +29,14 @@ module Cardano.Api (
 
     -- * Eon support
     Eon(..),
+    AnyEon(..),
     AnyEraInEon(..),
 
     inEonForEraMaybe,
     forEraInEon,
     forEraInEonMaybe,
     forEraMaybeEon,
+    maybeEon,
 
     inEonForShelleyBasedEra,
     inEonForShelleyBasedEraMaybe,
