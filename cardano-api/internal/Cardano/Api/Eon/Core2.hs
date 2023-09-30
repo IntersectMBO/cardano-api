@@ -131,6 +131,21 @@ case2 l r eon =
     Eon Babbage -> r $ Eon Babbage
     Eon Conway  -> r $ Eon Conway
 
+case3 :: ()
+  => (Eon eonl era -> r)
+  -> (Eon eonr era -> r)
+  -> Eon eon era
+  -> r
+case3 l r eon =
+  case eon of
+    Eon Byron   -> l $ Eon Byron
+    Eon Shelley -> r $ Eon Shelley
+    Eon Allegra -> r $ Eon Allegra
+    Eon Mary    -> r $ Eon Mary
+    Eon Alonzo  -> r $ Eon Alonzo
+    Eon Babbage -> r $ Eon Babbage
+    Eon Conway  -> r $ Eon Conway
+
 -- -- Fails with: No instance for (Subset ByronOnwards ShelleyOnwards)
 -- example3 :: Eon ByronOnwards Byron -> Eon ShelleyOnwards Byron
 -- example3 = relax
