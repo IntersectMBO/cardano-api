@@ -84,13 +84,13 @@ instance {-# OVERLAPPING #-} IsSubset as bs => IsSubset (N ': as) (Y ': bs) wher
   subsetProof = SubsetProof
 
 data Era (eon :: [E]) where
-  Byron   :: SubsetProof Byron   eon -> Era eon
-  Shelley :: SubsetProof Shelley eon -> Era eon
-  Allegra :: SubsetProof Allegra eon -> Era eon
-  Mary    :: SubsetProof Mary    eon -> Era eon
-  Alonzo  :: SubsetProof Alonzo  eon -> Era eon
-  Babbage :: SubsetProof Babbage eon -> Era eon
-  Conway  :: SubsetProof Conway  eon -> Era eon
+  Byron   :: IsSubset Byron   eon => Era eon
+  Shelley :: IsSubset Shelley eon => Era eon
+  Allegra :: IsSubset Allegra eon => Era eon
+  Mary    :: IsSubset Mary    eon => Era eon
+  Alonzo  :: IsSubset Alonzo  eon => Era eon
+  Babbage :: IsSubset Babbage eon => Era eon
+  Conway  :: IsSubset Conway  eon => Era eon
 
 data Eon (eras :: [E]) era where
   Eon :: Era era -> Eon eras era
@@ -115,6 +115,21 @@ example1 = relax
 
 example2 :: Eon ShelleyOnwards Byron -> Eon ByronOnwards Byron
 example2 = relax
+
+case2 :: ()
+  => (Eon Byron era -> r)
+  -> (Eon ShelleyOnwards era -> r)
+  -> Eon ByronOnwards era
+  -> r
+case2 l r eon =
+  case eon of
+    Eon Byron   -> l $ Eon Byron
+    Eon Shelley -> r $ Eon Shelley
+    Eon Allegra -> r $ Eon Allegra
+    Eon Mary    -> r $ Eon Mary
+    Eon Alonzo  -> r $ Eon Alonzo
+    Eon Babbage -> r $ Eon Babbage
+    Eon Conway  -> r $ Eon Conway
 
 -- -- Fails with: No instance for (Subset ByronOnwards ShelleyOnwards)
 -- example3 :: Eon ByronOnwards Byron -> Eon ShelleyOnwards Byron
