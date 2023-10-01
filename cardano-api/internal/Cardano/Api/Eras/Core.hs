@@ -153,9 +153,7 @@ forEraMaybeEon :: ()
 forEraMaybeEon =
   inEonForEra Nothing Just
 
-maybeEon :: ()
-  => Eon eon
-  => IsCardanoEra era   -- ^ Era to check
+maybeEon :: (Eon eon, IsCardanoEra era)
   => Maybe (eon era)    -- ^ The eon if supported in the era
 maybeEon =
   inEonForEra Nothing Just cardanoEra

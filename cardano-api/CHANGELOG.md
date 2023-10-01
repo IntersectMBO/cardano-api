@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+# 8.23.1.0
+
+- Parameterize `AnyEraInEon`. Add `AnyEon`
+  (breaking)
+
 # 8.23.0.0
 
 - New `caseAlonzoOnlyOrBabbageEraOnwards` and `alonzoEraOnlyToAlonzoEraOnwards` functions
