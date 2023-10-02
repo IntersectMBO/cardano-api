@@ -729,6 +729,7 @@ data ShelleyWitnessSigningKey =
      | WitnessGenesisDelegateExtendedKey
                                  (SigningKey GenesisDelegateExtendedKey)
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
+     | WitnessCommitteeColdKey   (SigningKey CommitteeColdKey)
 
 
 makeShelleyKeyWitness :: forall era
@@ -793,6 +794,9 @@ toShelleySigningKey key = case key of
 
   WitnessGenesisDelegateExtendedKey (GenesisDelegateExtendedSigningKey sk) ->
     ShelleyExtendedSigningKey sk
+
+  WitnessCommitteeColdKey (CommitteeColdSigningKey sk) ->
+    ShelleyNormalSigningKey sk
 
 
 getShelleyKeyWitnessVerificationKey
