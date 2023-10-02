@@ -30,7 +30,6 @@ module Cardano.Api.Eras.Core
 
     -- * IsEon
   , Eon(..)
-  , AnyEon(..)
   , EraInEon(..)
   , inEonForEraMaybe
   , forEraInEon
@@ -180,21 +179,6 @@ instance Show (EraInEon eon) where
 instance TestEquality eon => Eq (EraInEon eon) where
   EraInEon era1 == EraInEon era2 =
     isJust $ testEquality era1 era2
-
-data AnyEon where
-  AnyEon
-    :: ( Typeable era
-       , Typeable (eon era)
-       , ToCardanoEra eon
-       , IsCardanoEra era
-       , Eon eon )
-    => eon era
-    -> AnyEon
-
--- | Assumes that eons are singletons
-instance Show AnyEon where
-  showsPrec _ (AnyEon eonEra) = showsTypeRep (typeOf eonEra)
-
 
 -- ----------------------------------------------------------------------------
 -- ToCardanoEra
