@@ -89,7 +89,10 @@ import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
+
+import qualified Cardano.Ledger.Conway.Governance as Ledger
 
 import           Data.ByteString (ByteString)
 import qualified Data.Foldable as Foldable
@@ -588,14 +591,15 @@ data DRepRegistrationRequirements era where
 
 makeDrepRegistrationCertificate :: ()
   => DRepRegistrationRequirements era
+  -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
   -> Certificate era
-makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards (VotingCredential vcred) deposit) =
+makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards (VotingCredential vcred) deposit) anchor =
   ConwayCertificate conwayOnwards
     . Ledger.ConwayTxCertGov
     $ Ledger.ConwayRegDRep
         vcred
         (toShelleyLovelace deposit)
-        Ledger.SNothing   -- TODO: Conway era
+        (noInlineMaybeToStrictMaybe anchor)
 
 data CommitteeHotKeyAuthorizationRequirements era where
   CommitteeHotKeyAuthorizationRequirements
