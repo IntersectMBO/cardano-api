@@ -1,6 +1,21 @@
 # Changelog for cardano-api
 
-# 8.23.0.0
+## 8.24.0.0
+
+- Expose Conway drep registration certificate anchor
+  (breaking, improvement)
+  [PR 284](https://github.com/input-output-hk/cardano-api/pull/284)
+
+- Parameterize `AnyEraInEon`. Add `AnyEon`
+  (breaking)
+  [PR 287](https://github.com/input-output-hk/cardano-api/pull/287)
+
+- Add support for conway era protocol parameters.
+  Adapted `GenesisCardano` to upstream Ledger/Consensus changes.
+  (feature, breaking)
+  [PR 270](https://github.com/input-output-hk/cardano-api/pull/270)
+
+## 8.23.0.0
 
 - New `caseAlonzoOnlyOrBabbageEraOnwards` and `alonzoEraOnlyToAlonzoEraOnwards` functions
   (feature, compatible)
