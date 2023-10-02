@@ -46,6 +46,7 @@ module Cardano.Api.ReexposeLedger
   , fromEraCBOR
 
   -- Conway
+  , Anchor(..)
   , Delegatee(..)
   , DRep(..)
   , DRepState
@@ -118,8 +119,8 @@ import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVotingThresholds (..),
                    dvtPPEconomicGroupL, dvtPPGovGroupL, dvtPPNetworkGroupL, dvtPPTechnicalGroupL,
                    dvtUpdateToConstitutionL)
-import           Cardano.Ledger.Conway.Governance (GovActionId (..), GovState, Vote (..),
-                   Voter (..), VotingProcedure (..))
+import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..), GovState,
+                   Vote (..), Voter (..), VotingProcedure (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
                    ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
 import           Cardano.Ledger.Core (DRep (..), EraCrypto, PParams (..), PoolCert (..),

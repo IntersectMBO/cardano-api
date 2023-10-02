@@ -92,8 +92,6 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
 
-import qualified Cardano.Ledger.Conway.Governance as Ledger
-
 import           Data.ByteString (ByteString)
 import qualified Data.Foldable as Foldable
 import           Data.IP (IPv4, IPv6)
