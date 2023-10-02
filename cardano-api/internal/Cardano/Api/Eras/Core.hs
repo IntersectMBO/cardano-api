@@ -31,7 +31,7 @@ module Cardano.Api.Eras.Core
     -- * IsEon
   , Eon(..)
   , AnyEon(..)
-  , AnyEraInEon(..)
+  , EraInEon(..)
   , inEonForEraMaybe
   , forEraInEon
   , forEraInEonMaybe
@@ -163,21 +163,22 @@ maybeEon =
 -- ----------------------------------------------------------------------------
 -- Era and eon existential types
 
-data AnyEraInEon eon where
-  AnyEraInEon
+data EraInEon eon where
+  EraInEon
     :: ( Typeable era
        , Typeable (eon era)
-       , Eon eon )
+       , Eon eon
+       )
     => eon era
-    -> AnyEraInEon eon
+    -> EraInEon eon
 
 -- | Assumes that eons are singletons
-instance Show (AnyEraInEon eon) where
-  showsPrec _ (AnyEraInEon eonEra) = showsTypeRep (typeOf eonEra)
+instance Show (EraInEon eon) where
+  showsPrec _ (EraInEon eonEra) = showsTypeRep (typeOf eonEra)
 
 -- | Assumes that eons are singletons
-instance TestEquality eon => Eq (AnyEraInEon eon) where
-  AnyEraInEon era1 == AnyEraInEon era2 =
+instance TestEquality eon => Eq (EraInEon eon) where
+  EraInEon era1 == EraInEon era2 =
     isJust $ testEquality era1 era2
 
 data AnyEon where

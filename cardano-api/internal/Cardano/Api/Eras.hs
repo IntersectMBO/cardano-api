@@ -23,7 +23,7 @@ module Cardano.Api.Eras
     -- * IsEon
   , Eon(..)
   , AnyEon(..)
-  , AnyEraInEon(..)
+  , EraInEon(..)
 
   , inEonForEraMaybe
   , forEraInEon
