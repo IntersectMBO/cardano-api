@@ -18,6 +18,7 @@
 module Cardano.Api.Governance.Actions.VotingProcedure where
 
 import           Cardano.Api.Address
+import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Governance.Actions.ProposalProcedure
@@ -33,7 +34,6 @@ import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (HasKeyRole (..), KeyRole (DRepRole))
 
 import           Data.ByteString.Lazy (ByteString)
@@ -99,31 +99,31 @@ data Vote
   | Abstain
   deriving (Show, Eq)
 
-toVoterRole
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => ShelleyBasedEra era
+toVoterRole :: ()
+  => ConwayEraOnwards era
   -> Voter era
   -> Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era))
-toVoterRole _ = \case
-  VoterCommittee (VotingCredential cred) ->
-    Ledger.CommitteeVoter $ coerceKeyRole cred -- TODO: Conway era - Alexey realllllyyy doesn't like this. We need to fix it.
-  VoterDRep (VotingCredential cred) ->
-    Ledger.DRepVoter cred
-  VoterSpo (StakePoolKeyHash kh) ->
-    Ledger.StakePoolVoter kh
+toVoterRole eon =
+  conwayEraOnwardsConstraints eon $ \case
+    VoterCommittee (VotingCredential cred) ->
+      Ledger.CommitteeVoter $ coerceKeyRole cred -- TODO: Conway era - Alexey realllllyyy doesn't like this. We need to fix it.
+    VoterDRep (VotingCredential cred) ->
+      Ledger.DRepVoter cred
+    VoterSpo (StakePoolKeyHash kh) ->
+      Ledger.StakePoolVoter kh
 
-fromVoterRole
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => ShelleyBasedEra era
+fromVoterRole :: ()
+  => ConwayEraOnwards era
   -> Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era))
   -> Voter era
-fromVoterRole _ = \case
-  Ledger.CommitteeVoter cred ->
-    VoterCommittee (VotingCredential (coerceKeyRole cred))    -- TODO: Conway era - We shouldn't be using coerceKeyRole.
-  Ledger.DRepVoter cred ->
-    VoterDRep (VotingCredential cred)
-  Ledger.StakePoolVoter kh ->
-    VoterSpo (StakePoolKeyHash kh)
+fromVoterRole eon =
+  conwayEraOnwardsConstraints eon $ \case
+    Ledger.CommitteeVoter cred ->
+      VoterCommittee (VotingCredential (coerceKeyRole cred))    -- TODO: Conway era - We shouldn't be using coerceKeyRole.
+    Ledger.DRepVoter cred ->
+      VoterDRep (VotingCredential cred)
+    Ledger.StakePoolVoter kh ->
+      VoterSpo (StakePoolKeyHash kh)
 
 toVote :: Vote -> Ledger.Vote
 toVote = \case
@@ -131,8 +131,8 @@ toVote = \case
   Yes -> Ledger.VoteYes
   Abstain -> Ledger.Abstain
 
-toVotingCredential
-  :: ShelleyBasedEra era
+toVotingCredential :: ()
+  => ConwayEraOnwards era
   -> StakeCredential
   -> Either Plain.DecoderError (VotingCredential era)
 toVotingCredential sbe (StakeCredentialByKey (StakeKeyHash kh)) = do
@@ -148,12 +148,12 @@ toVotingCredential _sbe (StakeCredentialByScript (ScriptHash _sh)) =
 -- TODO: Conway era
 -- This is a hack. data StakeCredential in cardano-api is not parameterized by era, it defaults to StandardCrypto.
 -- However VotingProcedure is parameterized on era. We need to also parameterize StakeCredential on era.
-eraDecodeVotingCredential
-  :: ShelleyBasedEra era
+eraDecodeVotingCredential :: ()
+  => ConwayEraOnwards era
   -> ByteString
   -> Either Plain.DecoderError (VotingCredential era)
-eraDecodeVotingCredential sbe bs =
-  shelleyBasedEraConstraints sbe $
+eraDecodeVotingCredential eon bs =
+  conwayEraOnwardsConstraints eon $
     case Plain.decodeFull bs of
       Left e -> Left e
       Right x -> Right $ VotingCredential x
@@ -176,14 +176,14 @@ instance IsShelleyBasedEra era => FromCBOR (VotingCredential era) where
     v <- shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.fromCBOR
     return $ VotingCredential v
 
-createVotingProcedure
-  :: ShelleyBasedEra era
+createVotingProcedure :: ()
+  => ConwayEraOnwards era
   -> Vote
   -> Maybe (Ledger.Url, Text) -- ^ Anchor
   -> VotingProcedure era
-createVotingProcedure sbe vChoice mProposalAnchor =
+createVotingProcedure eon vChoice mProposalAnchor =
   let proposalAnchor = fmap Text.encodeUtf8 <$>  mProposalAnchor
-  in shelleyBasedEraConstraints sbe
+  in conwayEraOnwardsConstraints eon
         $ VotingProcedure $ Ledger.VotingProcedure
           { Ledger.vProcVote = toVote vChoice
           , Ledger.vProcAnchor = Ledger.maybeToStrictMaybe $ uncurry createAnchor <$> proposalAnchor
@@ -245,7 +245,7 @@ emptyVotingProcedures :: VotingProcedures era
 emptyVotingProcedures = VotingProcedures $ L.VotingProcedures Map.empty
 
 singletonVotingProcedures :: ()
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> L.Voter (L.EraCrypto (ShelleyLedgerEra era))
   -> L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))
   -> L.VotingProcedure (ShelleyLedgerEra era)
