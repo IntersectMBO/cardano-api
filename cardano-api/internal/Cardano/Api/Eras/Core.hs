@@ -153,8 +153,8 @@ forEraMaybeEon =
   inEonForEra Nothing Just
 
 maybeEon ::
-  (Eon eon, IsCardanoEra era) -- ^ Era to check
-  => Maybe (eon era)          -- ^ The eon if supported in the era
+  (Eon eon, IsCardanoEra era) 
+  => Maybe (eon era)          
 
 maybeEon =
   inEonForEra Nothing Just cardanoEra
