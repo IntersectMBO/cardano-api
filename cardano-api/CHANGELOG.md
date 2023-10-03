@@ -1,11 +1,17 @@
 # Changelog for cardano-api
 
-# 8.23.1.0
+
+## 8.23.2.0
+
+- Add witness committee cold key
+  (feature, compatible)
+
+## 8.23.1.0
 
 - Parameterize `AnyEraInEon`. Add `AnyEon`
   (breaking)
 
-# 8.23.0.0
+## 8.23.0.0
 
 - New `caseAlonzoOnlyOrBabbageEraOnwards` and `alonzoEraOnlyToAlonzoEraOnwards` functions
   (feature, compatible)
