@@ -1,5 +1,27 @@
 # Changelog for cardano-api
 
+## 8.25.0.0
+
+- Rename `AnyEraInEon` to `EraInEon`
+  (breaking, improvement)
+  [PR 289](https://github.com/input-output-hk/cardano-api/pull/289)
+
+- Require conway onwards for voting.
+  Functions with modified type signatures:
+  - `createVotingProcedure`
+  - `toVotingCredential`
+  - `singletonVotingProcedures`
+  (breaking, improvement)
+  [PR 293](https://github.com/input-output-hk/cardano-api/pull/293)
+
+- Add witness committee cold key
+  (feature, compatible)
+  [PR 292](https://github.com/input-output-hk/cardano-api/pull/292)
+
+- More use of ReexposeLedger
+  (improvement)
+  [PR 290](https://github.com/input-output-hk/cardano-api/pull/290)
+
 ## 8.24.0.0
 
 - Expose Conway drep registration certificate anchor
