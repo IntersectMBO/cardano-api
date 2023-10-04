@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 8.25.0.1
+
+- Haddock bug fix
+  (compatible bug fix)
+
 ## 8.25.0.0
 
 - Rename `AnyEraInEon` to `EraInEon`
