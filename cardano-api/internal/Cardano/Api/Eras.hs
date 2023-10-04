@@ -33,8 +33,6 @@ module Cardano.Api.Eras
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
 
-  , withShelleyBasedEraConstraintsForLedger
-
     -- * Era case handling
 
     -- ** Case on CardanoEra

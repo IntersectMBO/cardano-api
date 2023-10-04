@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eras.Constraints
   ( cardanoEraConstraints
-  , withShelleyBasedEraConstraintsForLedger
   , shelleyBasedEraConstraints
 
   , CardanoEraConstraints
@@ -21,7 +20,6 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()
-import           Cardano.Api.Query.Types
 
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
@@ -72,11 +70,9 @@ type ShelleyBasedEraConstraints era =
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-  , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
   , IsShelleyBasedEra era
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
-  , ToJSON (DebugLedgerState era)
   , Typeable era
   )
 
@@ -91,10 +87,3 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraAlonzo  -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway  -> id
-
--- Deprecated: Use shelleyBasedEraConstraints instead.
-withShelleyBasedEraConstraintsForLedger :: ()
-  => ShelleyBasedEra era
-  -> (ShelleyBasedEraConstraints era => a)
-  -> a
-withShelleyBasedEraConstraintsForLedger = shelleyBasedEraConstraints
