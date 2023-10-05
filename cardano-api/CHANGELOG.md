@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.25.2.0
+
+- Add support for committee hot key witnesses
+  (feature, compatible)
+  [PR 300](https://github.com/input-output-hk/cardano-api/pull/300)
+
+- Delete `withShelleyBasedEraConstraintsForLedger`. Use `shelleyBasedEraConstraints` instead.
+  (breaking, improvement)
+  [PR 297](https://github.com/input-output-hk/cardano-api/pull/297)
+
+- Simplify `DebugLedgerState` with eons
+  (breaking, improvement)
+  [PR 296](https://github.com/input-output-hk/cardano-api/pull/296)
+
 ## 8.25.0.1
 
 - Haddock bug fix
