@@ -1,13 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Query.Types
   ( DebugLedgerState(..)
@@ -15,49 +8,41 @@ module Cardano.Api.Query.Types
   ) where
 
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Constraints
+import           Cardano.Api.Orphans ()
 
 import           Cardano.Binary
-import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.Shelley.API as Shelley
-import qualified Cardano.Ledger.Shelley.Core as Core
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 
 import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
-import           Data.Typeable
 
-data DebugLedgerState era where
-  DebugLedgerState ::
-    ( ShelleyLedgerEra era ~ ledgerera
-    )
-    => Shelley.NewEpochState ledgerera
-    -> DebugLedgerState era
+newtype DebugLedgerState era = DebugLedgerState
+  { unDebugLedgerState :: Shelley.NewEpochState (ShelleyLedgerEra era)
+  }
 
-instance
-    ( Typeable era
-    , Core.EraTxOut (ShelleyLedgerEra era)
-    , Core.EraGov (ShelleyLedgerEra era)
-    , DecCBOR (Shelley.StashedAVVMAddresses (ShelleyLedgerEra era))
-    ) => FromCBOR (DebugLedgerState era) where
-  fromCBOR = DebugLedgerState <$>
-    (fromCBOR :: Plain.Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
+instance IsShelleyBasedEra era => FromCBOR (DebugLedgerState era) where
+  fromCBOR =
+    shelleyBasedEraConstraints (shelleyBasedEra @era) $
+      DebugLedgerState <$>
+        (fromCBOR :: Plain.Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
--- TODO: Shelley based era class!
-instance ( IsShelleyBasedEra era
-         , ShelleyLedgerEra era ~ ledgerera
-         , Consensus.ShelleyBasedEra ledgerera
-         ) => ToJSON (DebugLedgerState era) where
-  toJSON = object . toDebugLedgerStatePair
-  toEncoding = Aeson.pairs . mconcat . toDebugLedgerStatePair
+instance IsShelleyBasedEra era => ToJSON (DebugLedgerState era) where
+  toJSON =
+    let sbe = shelleyBasedEra @era in
+    shelleyBasedEraConstraints sbe $ object . toDebugLedgerStatePair sbe
+  toEncoding =
+    let sbe = shelleyBasedEra @era in
+    shelleyBasedEraConstraints sbe $ Aeson.pairs . mconcat . toDebugLedgerStatePair sbe
 
-toDebugLedgerStatePair ::
-  ( ShelleyLedgerEra era ~ ledgerera
-  , Consensus.ShelleyBasedEra ledgerera
-  , Aeson.KeyValue a
-  ) => DebugLedgerState era -> [a]
-toDebugLedgerStatePair (DebugLedgerState newEpochS) =
+toDebugLedgerStatePair :: ()
+  => Aeson.KeyValue a
+  => ShelleyBasedEra era
+  -> DebugLedgerState era
+  -> [a]
+toDebugLedgerStatePair sbe (DebugLedgerState newEpochS) =
+  shelleyBasedEraConstraints sbe $
     let !nesEL = Shelley.nesEL newEpochS
         !nesBprev = Shelley.nesBprev newEpochS
         !nesBcur = Shelley.nesBcur newEpochS
