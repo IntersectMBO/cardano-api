@@ -1502,7 +1502,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
                                 decodeCurrentEpochState sbe serCurrEpochState
 
   let snapshot :: ShelleyAPI.SnapShot Shelley.StandardCrypto
-      snapshot = ShelleyAPI.ssStakeMark $ withShelleyBasedEraConstraintsForLedger sbe $ ShelleyAPI.esSnapshots cEstate
+      snapshot = ShelleyAPI.ssStakeMark $ shelleyBasedEraConstraints sbe $ ShelleyAPI.esSnapshots cEstate
       markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
       markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 

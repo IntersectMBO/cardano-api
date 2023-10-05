@@ -14,7 +14,6 @@ module Cardano.Api.Governance.Actions.ProposalProcedure where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
@@ -133,21 +132,21 @@ newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (ShelleyLe
 
 instance IsShelleyBasedEra era => Show (Proposal era) where
   show (Proposal pp) = do
-    let ppStr = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ show pp
+    let ppStr = shelleyBasedEraConstraints (shelleyBasedEra @era) $ show pp
     "Proposal {unProposal = " <> ppStr <> "}"
 
 instance IsShelleyBasedEra era => Eq (Proposal era) where
-  (Proposal pp1) == (Proposal pp2) = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ pp1 == pp2
+  (Proposal pp1) == (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ pp1 == pp2
 
 instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
-  toCBOR (Proposal vp) = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
+  toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
 
 instance IsShelleyBasedEra era => FromCBOR (Proposal era) where
-  fromCBOR = Proposal <$> withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) (Shelley.fromEraCBOR @Conway.Conway)
+  fromCBOR = Proposal <$> shelleyBasedEraConstraints (shelleyBasedEra @era) (Shelley.fromEraCBOR @Conway.Conway)
 
 instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
-  serialiseToCBOR = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) CBOR.serialize'
-  deserialiseFromCBOR _proxy = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) CBOR.decodeFull'
+  serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
+  deserialiseFromCBOR _proxy = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
 
 instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
   textEnvelopeType _ = "Governance proposal"

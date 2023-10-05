@@ -4,6 +4,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -119,7 +120,7 @@ transactionFee txFeeFixed txFeePerByte tx =
       b = toInteger txFeeFixed
   in case tx of
        ShelleyTx _ tx' ->
-        let x = withShelleyBasedEraConstraintsForLedger (shelleyBasedEra @era) $ tx' ^. L.sizeTxF
+        let x = shelleyBasedEraConstraints (shelleyBasedEra @era) $ tx' ^. L.sizeTxF
         in Lovelace (a * x + b)
        --TODO: This can be made to work for Byron txs too. Do that: fill in this case
        -- and remove the IsShelleyBasedEra constraint.
@@ -224,7 +225,7 @@ evaluateTransactionFee pp txbody keywitcount _byronwitcount =
       ByronTx{} -> case shelleyBasedEra :: ShelleyBasedEra era of {}
       --TODO: we could actually support Byron here, it'd be different but simpler
 
-      ShelleyTx sbe tx -> withShelleyBasedEraConstraintsForLedger sbe (evalShelleyBasedEra tx)
+      ShelleyTx sbe tx -> shelleyBasedEraConstraints sbe (evalShelleyBasedEra tx)
   where
     evalShelleyBasedEra :: forall ledgerera.
                            ShelleyLedgerEra era ~ ledgerera
@@ -522,8 +523,8 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
 
     fromAlonzoScriptExecutionError :: L.TransactionScriptFailure (ShelleyLedgerEra era)
                                    -> ScriptExecutionError
-    fromAlonzoScriptExecutionError failure = withShelleyBasedEraConstraintsForLedger sbe $
-      case failure of
+    fromAlonzoScriptExecutionError =
+      shelleyBasedEraConstraints sbe $ \case
         L.UnknownTxIn     txin -> ScriptErrorMissingTxIn txin'
                                          where txin' = fromShelleyTxIn txin
         L.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'

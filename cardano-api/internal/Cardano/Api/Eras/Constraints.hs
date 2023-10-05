@@ -10,7 +10,6 @@
 
 module Cardano.Api.Eras.Constraints
   ( cardanoEraConstraints
-  , withShelleyBasedEraConstraintsForLedger
   , shelleyBasedEraConstraints
 
   , CardanoEraConstraints
@@ -88,10 +87,3 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraAlonzo  -> id
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway  -> id
-
--- Deprecated: Use shelleyBasedEraConstraints instead.
-withShelleyBasedEraConstraintsForLedger :: ()
-  => ShelleyBasedEra era
-  -> (ShelleyBasedEraConstraints era => a)
-  -> a
-withShelleyBasedEraConstraintsForLedger = shelleyBasedEraConstraints

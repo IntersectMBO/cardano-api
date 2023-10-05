@@ -106,7 +106,6 @@ module Cardano.Api (
     cardanoEraStyle,
     shelleyBasedToCardanoEra,
     shelleyBasedEraConstraints,
-    withShelleyBasedEraConstraintsForLedger,
 
     -- ** From Allegra
 

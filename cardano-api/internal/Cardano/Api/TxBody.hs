@@ -1806,7 +1806,7 @@ getTxId (ByronTxBody tx) =
       error "getTxId: byron and shelley hash sizes do not match"
 
 getTxId (ShelleyTxBody sbe tx _ _ _ _) =
-  withShelleyBasedEraConstraintsForLedger sbe $ getTxIdShelley sbe tx
+  shelleyBasedEraConstraints sbe $ getTxIdShelley sbe tx
 
 getTxIdShelley
   :: Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
@@ -1993,7 +1993,7 @@ createTransactionBody sbe txBodyContent =
           case sData of
             TxBodyNoScriptData -> pure SNothing
             TxBodyScriptData _sDataSupported datums redeemers ->
-              withShelleyBasedEraConstraintsForLedger sbe
+              shelleyBasedEraConstraints sbe
                 $ convPParamsToScriptIntegrityHash
                     sbe
                     apiProtocolParameters
@@ -2027,7 +2027,7 @@ createTransactionBody sbe txBodyContent =
           case sData of
             TxBodyNoScriptData -> pure SNothing
             TxBodyScriptData _sDataSupported datums redeemers ->
-              withShelleyBasedEraConstraintsForLedger sbe
+              shelleyBasedEraConstraints sbe
                 $ convPParamsToScriptIntegrityHash
                     sbe
                     apiProtocolParameters
@@ -2729,7 +2729,7 @@ convReturnCollateral
 convReturnCollateral sbe txReturnCollateral =
   case txReturnCollateral of
     TxReturnCollateralNone -> SNothing
-    TxReturnCollateral _ colTxOut -> SJust $ withShelleyBasedEraConstraintsForLedger sbe $ toShelleyTxOutAny sbe colTxOut
+    TxReturnCollateral _ colTxOut -> SJust $ shelleyBasedEraConstraints sbe $ toShelleyTxOutAny sbe colTxOut
 
 convTotalCollateral :: TxTotalCollateral era -> StrictMaybe Ledger.Coin
 convTotalCollateral txTotalCollateral =
