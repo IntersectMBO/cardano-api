@@ -57,6 +57,7 @@ library internal
                         Cardano.Api.Eon.AllegraEraOnwards
                         Cardano.Api.Eon.AlonzoEraOnly
                         Cardano.Api.Eon.AlonzoEraOnwards
+                        Cardano.Api.Eon.BabbageEraOnly
                         Cardano.Api.Eon.BabbageEraOnwards
                         Cardano.Api.Eon.ByronAndAllegraEraOnwards
                         Cardano.Api.Eon.ByronEraOnly
