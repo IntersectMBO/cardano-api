@@ -48,6 +48,7 @@ library internal
   -- to expose new functionality is via Cardano.Api or
   -- Cardano.Api.Shelley
   exposed-modules:      Cardano.Api.Address
+                        Cardano.Api.Anchor
                         Cardano.Api.Block
                         Cardano.Api.Certificate
                         Cardano.Api.Convenience.Construction
