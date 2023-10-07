@@ -29,6 +29,8 @@ module Cardano.Api.Eras.Case
   , shelleyToAllegraEraToByronToAllegraEra
   , alonzoEraOnlyToAlonzoEraOnwards
   , alonzoEraOnwardsToMaryEraOnwards
+  , babbageEraOnwardsToMaryEraOnwards
+  , babbageEraOnwardsToAlonzoEraOnwards
   ) where
 
 import           Cardano.Api.Eon.AllegraEraOnwards
@@ -217,3 +219,17 @@ alonzoEraOnlyToAlonzoEraOnwards :: ()
   -> AlonzoEraOnwards era
 alonzoEraOnlyToAlonzoEraOnwards = \case
   AlonzoEraOnlyAlonzo -> AlonzoEraOnwardsAlonzo
+
+babbageEraOnwardsToMaryEraOnwards :: ()
+  => BabbageEraOnwards era
+  -> MaryEraOnwards era
+babbageEraOnwardsToMaryEraOnwards = \case
+  BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
+  BabbageEraOnwardsConway  -> MaryEraOnwardsConway
+
+babbageEraOnwardsToAlonzoEraOnwards :: ()
+  => BabbageEraOnwards era
+  -> AlonzoEraOnwards era
+babbageEraOnwardsToAlonzoEraOnwards = \case
+  BabbageEraOnwardsBabbage  -> AlonzoEraOnwardsBabbage
+  BabbageEraOnwardsConway   -> AlonzoEraOnwardsConway
