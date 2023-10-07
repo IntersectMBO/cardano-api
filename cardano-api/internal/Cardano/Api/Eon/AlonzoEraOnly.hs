@@ -29,6 +29,7 @@ import qualified Cardano.Crypto.VRF as C
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Core as L
+import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
@@ -80,6 +81,7 @@ type AlonzoEraOnlyConstraints era =
   , L.ProtVerAtMost (ShelleyLedgerEra era) 8
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)

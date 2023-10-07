@@ -2321,22 +2321,19 @@ fromLedgerTxOuts sbe body scriptdata =
     selectTxDatums  TxBodyNoScriptData                            = Map.empty
     selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
 
-fromAlonzoTxOut :: forall era ledgerera.
-                   IsShelleyBasedEra era
-                => L.AlonzoEraTxOut ledgerera
-                => Ledger.EraCrypto ledgerera ~ StandardCrypto
-                => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-                => MaryEraOnwards era
-                -> AlonzoEraOnwards era
-                -> Map (L.DataHash StandardCrypto)
-                       (L.Data ledgerera)
-                -> L.TxOut ledgerera
-                -> TxOut CtxTx era
+fromAlonzoTxOut :: ()
+  => MaryEraOnwards era
+  -> AlonzoEraOnwards era
+  -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
+  -> L.TxOut (ShelleyLedgerEra era)
+  -> TxOut CtxTx era
 fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums txOut =
-   TxOut (fromShelleyAddr shelleyBasedEra (txOut ^. L.addrTxOutL))
-         (TxOutValue multiAssetInEra (fromMaryValue (txOut ^. L.valueTxOutL)))
-         (fromAlonzoTxOutDatum scriptDataInEra (txOut ^. L.dataHashTxOutL))
-         ReferenceScriptNone
+  alonzoEraOnwardsConstraints scriptDataInEra $
+    TxOut
+      (fromShelleyAddr shelleyBasedEra (txOut ^. L.addrTxOutL))
+      (TxOutValue multiAssetInEra (fromMaryValue (txOut ^. L.valueTxOutL)))
+      (fromAlonzoTxOutDatum scriptDataInEra (txOut ^. L.dataHashTxOutL))
+      ReferenceScriptNone
   where
     fromAlonzoTxOutDatum :: AlonzoEraOnwards era
                          -> StrictMaybe (L.DataHash StandardCrypto)

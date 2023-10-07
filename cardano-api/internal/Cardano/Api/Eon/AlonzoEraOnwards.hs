@@ -35,6 +35,7 @@ import qualified Cardano.Ledger.Alonzo.UTxO as L
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Core as L
+import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
@@ -93,6 +94,7 @@ type AlonzoEraOnwardsConstraints era =
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
