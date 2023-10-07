@@ -1860,13 +1860,11 @@ createTransactionBody sbe txBodyContent =
       languages = convLanguages apiScriptWitnesses
 
       mkTxBody :: ()
-        => L.EraTxBody (ShelleyLedgerEra era)
-        => L.EraTxAuxData (ShelleyLedgerEra era)
         => ShelleyBasedEra era
         -> TxBodyContent BuildTx era
         -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
         -> L.TxBody (ShelleyLedgerEra era)
-      mkTxBody sbe' bc = shelleyBasedEraConstraints sbe' $
+      mkTxBody sbe' bc =
         mkCommonTxBody
           sbe'
           (txIns bc)
@@ -2824,11 +2822,7 @@ guardShelleyTxInsOverflow txIns = do
 
 -- | A helper function that constructs a TxBody with all of the fields that are common for
 -- all eras
-mkCommonTxBody ::
-     ( L.EraTxBody (ShelleyLedgerEra era)
-     , L.EraTxAuxData (ShelleyLedgerEra era)
-     , L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-     )
+mkCommonTxBody :: ()
   => ShelleyBasedEra era
   -> TxIns BuildTx era
   -> [TxOut ctx era]
@@ -2837,12 +2831,13 @@ mkCommonTxBody ::
   -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
   -> L.TxBody (ShelleyLedgerEra era)
 mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
-  L.mkBasicTxBody
-  & L.inputsTxBodyL .~ convTxIns txIns
-  & L.outputsTxBodyL .~ convTxOuts sbe txOuts
-  & L.feeTxBodyL .~ convTransactionFee sbe txFee
-  & L.withdrawalsTxBodyL .~ convWithdrawals txWithdrawals
-  & L.auxDataHashTxBodyL .~ maybe SNothing (SJust . Ledger.hashTxAuxData) txAuxData
+  shelleyBasedEraConstraints sbe $
+    L.mkBasicTxBody
+      & L.inputsTxBodyL .~ convTxIns txIns
+      & L.outputsTxBodyL .~ convTxOuts sbe txOuts
+      & L.feeTxBodyL .~ convTransactionFee sbe txFee
+      & L.withdrawalsTxBodyL .~ convWithdrawals txWithdrawals
+      & L.auxDataHashTxBodyL .~ maybe SNothing (SJust . Ledger.hashTxAuxData) txAuxData
 
 
 makeShelleyTransactionBody :: forall era. ()
