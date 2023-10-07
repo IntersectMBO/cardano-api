@@ -1602,68 +1602,47 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
-serialiseShelleyBasedTxBody
-  :: forall era ledgerera.
-     L.Era ledgerera
-  => ShelleyLedgerEra era ~ ledgerera
-  => CBOR.EncCBOR (Ledger.TxBody ledgerera)
-  => CBOR.EncCBOR (Ledger.Script ledgerera)
-  => CBOR.EncCBOR (Alonzo.TxDats ledgerera)
-  => CBOR.EncCBOR (Alonzo.Redeemers ledgerera)
-  => CBOR.EncCBOR (L.TxAuxData ledgerera)
+serialiseShelleyBasedTxBody :: forall era. ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody ledgerera
-  -> [Ledger.Script ledgerera]
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> [Ledger.Script (ShelleyLedgerEra era)]
   -> TxBodyScriptData era
-  -> Maybe (L.TxAuxData ledgerera)
+  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
   -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> ByteString
 serialiseShelleyBasedTxBody sbe txbody txscripts
                             TxBodyNoScriptData txmetadata scriptValidity =
-    -- Backwards compat for pre-Alonzo era tx body files
-    case sbe of
-      ShelleyBasedEraShelley -> preAlonzo (L.eraProtVerLow @L.Shelley)
-      ShelleyBasedEraAllegra -> preAlonzo (L.eraProtVerLow @L.Allegra)
-      ShelleyBasedEraMary -> preAlonzo (L.eraProtVerLow @L.Mary)
-      ShelleyBasedEraAlonzo ->
-        CBOR.serialize' (L.eraProtVerLow @L.Alonzo)
-          $ CBOR.encodeListLen 4
-         <> CBOR.encCBOR txbody
-         <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
-      ShelleyBasedEraBabbage ->
-        CBOR.serialize' (L.eraProtVerLow @L.Babbage)
-          $ CBOR.encodeListLen 4
-         <> CBOR.encCBOR txbody
-         <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
-      ShelleyBasedEraConway ->
-        CBOR.serialize' (L.eraProtVerLow @L.Babbage)
-          $ CBOR.encodeListLen 4
-         <> CBOR.encCBOR txbody
-         <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
- where
-   preAlonzo v = CBOR.serialize' v
-                 $ CBOR.encodeListLen 3
-                <> CBOR.encCBOR txbody
-                <> CBOR.encCBOR txscripts
-                <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+      [ CBOR.encodeListLen 3
+      , CBOR.encCBOR txbody
+      , CBOR.encCBOR txscripts
+      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+      ]
+    )
+    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+      [ CBOR.encodeListLen 4
+      , CBOR.encCBOR txbody
+      , CBOR.encCBOR txscripts
+      , CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
+      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+      ]
+    )
+    sbe
 
-serialiseShelleyBasedTxBody _era txbody txscripts
-                            (TxBodyScriptData _ datums redeemers)
+serialiseShelleyBasedTxBody _ txbody txscripts
+                            (TxBodyScriptData w datums redeemers)
                             txmetadata txBodyScriptValidity =
-    CBOR.serialize' (L.eraProtVerLow @ledgerera) $
-        CBOR.encodeListLen 6
-     <> CBOR.encCBOR txbody
-     <> CBOR.encCBOR txscripts
-     <> CBOR.encCBOR datums
-     <> CBOR.encCBOR redeemers
-     <> CBOR.encCBOR (txScriptValidityToScriptValidity txBodyScriptValidity)
-     <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+  alonzoEraOnwardsConstraints w $
+    CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+      [ CBOR.encodeListLen 6
+      , CBOR.encCBOR txbody
+      , CBOR.encCBOR txscripts
+      , CBOR.encCBOR datums
+      , CBOR.encCBOR redeemers
+      , CBOR.encCBOR (txScriptValidityToScriptValidity txBodyScriptValidity)
+      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+      ]
 
 deserialiseShelleyBasedTxBody
   :: forall era ledgerera.
