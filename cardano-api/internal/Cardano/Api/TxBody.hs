@@ -2289,7 +2289,6 @@ fromLedgerTxOuts sbe body scriptdata =
 
     ShelleyBasedEraAlonzo ->
       [ fromAlonzoTxOut
-          MaryEraOnwardsAlonzo
           AlonzoEraOnwardsAlonzo
           txdatums
           txout
@@ -2322,26 +2321,28 @@ fromLedgerTxOuts sbe body scriptdata =
     selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
 
 fromAlonzoTxOut :: ()
-  => MaryEraOnwards era
-  -> AlonzoEraOnwards era
+  => AlonzoEraOnwards era
   -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
   -> L.TxOut (ShelleyLedgerEra era)
   -> TxOut CtxTx era
-fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums txOut =
-  alonzoEraOnwardsConstraints scriptDataInEra $
+fromAlonzoTxOut w txdatums txOut =
+  alonzoEraOnwardsConstraints w $
     TxOut
       (fromShelleyAddr shelleyBasedEra (txOut ^. L.addrTxOutL))
-      (TxOutValue multiAssetInEra (fromMaryValue (txOut ^. L.valueTxOutL)))
-      (fromAlonzoTxOutDatum scriptDataInEra (txOut ^. L.dataHashTxOutL))
+      (TxOutValue (alonzoEraOnwardsToMaryEraOnwards w) (fromMaryValue (txOut ^. L.valueTxOutL)))
+      (fromAlonzoTxOutDatum w txdatums (txOut ^. L.dataHashTxOutL))
       ReferenceScriptNone
-  where
-    fromAlonzoTxOutDatum :: AlonzoEraOnwards era
-                         -> StrictMaybe (L.DataHash StandardCrypto)
-                         -> TxOutDatum CtxTx era
-    fromAlonzoTxOutDatum _ SNothing = TxOutDatumNone
-    fromAlonzoTxOutDatum w (SJust dh)
-      | Just d <- Map.lookup dh txdatums  = TxOutDatumInTx' w (ScriptDataHash dh) (fromAlonzoData d)
-      | otherwise                         = TxOutDatumHash w (ScriptDataHash dh)
+
+fromAlonzoTxOutDatum :: ()
+  => AlonzoEraOnwards era
+  -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
+  -> StrictMaybe (L.DataHash StandardCrypto)
+  -> TxOutDatum CtxTx era
+fromAlonzoTxOutDatum w txdatums = \case
+  SNothing -> TxOutDatumNone
+  SJust dh
+    | Just d <- Map.lookup dh txdatums  -> TxOutDatumInTx' w (ScriptDataHash dh) (fromAlonzoData d)
+    | otherwise                         -> TxOutDatumHash w (ScriptDataHash dh)
 
 fromBabbageTxOut
   :: forall ledgerera era.
