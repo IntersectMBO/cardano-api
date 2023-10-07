@@ -1644,27 +1644,20 @@ serialiseShelleyBasedTxBody _ txbody txscripts
       , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
       ]
 
-deserialiseShelleyBasedTxBody
-  :: forall era ledgerera.
-     L.Era ledgerera
-  => ShelleyLedgerEra era ~ ledgerera
-  => CBOR.DecCBOR (CBOR.Annotator (Ledger.TxBody ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (Ledger.Script ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (Alonzo.TxDats ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (Alonzo.Redeemers ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (L.TxAuxData ledgerera))
+deserialiseShelleyBasedTxBody :: forall era. ()
   => ShelleyBasedEra era
   -> ByteString
   -> Either CBOR.DecoderError (TxBody era)
 deserialiseShelleyBasedTxBody sbe bs =
+  shelleyBasedEraConstraints sbe $
     CBOR.decodeFullAnnotator
-      (L.eraProtVerLow @ledgerera)
+      (L.eraProtVerLow @(ShelleyLedgerEra era))
       "Shelley TxBody"
       decodeAnnotatedTuple
       (LBS.fromStrict bs)
   where
     decodeAnnotatedTuple :: CBOR.Decoder s (CBOR.Annotator (TxBody era))
-    decodeAnnotatedTuple = do
+    decodeAnnotatedTuple = shelleyBasedEraConstraints sbe $ do
       len <- CBOR.decodeListLen
 
       case len of
