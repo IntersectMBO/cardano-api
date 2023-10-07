@@ -1886,7 +1886,7 @@ createTransactionBody sbe txBodyContent =
                            & L.ttlTxBodyL    .~ ttl
                            & L.updateTxBodyL .~ update
 
-            sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
+            sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
         pure $ ShelleyTxBody sbe
               ledgerTxBody
@@ -1904,7 +1904,7 @@ createTransactionBody sbe txBodyContent =
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses)
+              (convScriptData sbe apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
 
@@ -1918,13 +1918,13 @@ createTransactionBody sbe txBodyContent =
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses)
+              (convScriptData sbe apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
 
        ShelleyBasedEraAlonzo -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
+        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         scriptIntegrityHash <-
           case sData of
             TxBodyNoScriptData -> pure SNothing
@@ -1949,13 +1949,13 @@ createTransactionBody sbe txBodyContent =
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses)
+              (convScriptData sbe apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
 
        ShelleyBasedEraBabbage -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
+        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         scriptIntegrityHash <-
           case sData of
             TxBodyNoScriptData -> pure SNothing
@@ -1989,7 +1989,7 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraConway -> do
-        let sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
+        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         scriptIntegrityHash <-
           case sData of
             TxBodyNoScriptData -> pure SNothing
@@ -2770,15 +2770,14 @@ convScripts scriptWitnesses =
     ]
 
 -- ScriptData collectively refers to datums and/or redeemers
-convScriptData
-  :: Ledger.Era (ShelleyLedgerEra era)
-  => CardanoEra era
+convScriptData :: ()
+  => ShelleyBasedEra era
   -> [TxOut CtxTx era]
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
   -> TxBodyScriptData era
-convScriptData era txOuts scriptWitnesses =
-  forEraInEon era
-    TxBodyNoScriptData
+convScriptData sbe txOuts scriptWitnesses =
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (const TxBodyNoScriptData)
     (\w ->
       let redeemers =
             Alonzo.Redeemers $
@@ -2804,6 +2803,7 @@ convScriptData era txOuts scriptWitnesses =
                   ]
       in TxBodyScriptData w datums redeemers
     )
+    sbe
 
 convPParamsToScriptIntegrityHash :: ()
   => ShelleyBasedEra era
