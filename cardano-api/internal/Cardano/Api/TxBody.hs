@@ -2034,19 +2034,20 @@ createTransactionBody sbe txBodyContent =
                     redeemers
                     datums
                     languages
-        let ledgerTxBody = mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
-                          --  & L.conwayCertsTxBodyL         .~ conwayCerts -- TODO CIP-1694
-                           & L.vldtTxBodyL                .~ validityInterval
-                           & L.collateralInputsTxBodyL    .~ collTxIns
-                           & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
-                                                               apiExtraKeyWitnesses
-                           & L.mintTxBodyL                .~ convMintValue apiMintValue
-                           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-                           & L.referenceInputsTxBodyL     .~ refTxIns
-                           & L.collateralReturnTxBodyL    .~ returnCollateral
-                           & L.totalCollateralTxBodyL     .~ totalCollateral
-                           -- TODO: NetworkId for hardware wallets. We don't always want this
-                           -- & L.networkIdTxBodyL .~ ...
+        let ledgerTxBody =
+              mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
+                & L.certsTxBodyL               .~ certs
+                & L.vldtTxBodyL                .~ validityInterval
+                & L.collateralInputsTxBodyL    .~ collTxIns
+                & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
+                                                    apiExtraKeyWitnesses
+                & L.mintTxBodyL                .~ convMintValue apiMintValue
+                & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+                & L.referenceInputsTxBodyL     .~ refTxIns
+                & L.collateralReturnTxBodyL    .~ returnCollateral
+                & L.totalCollateralTxBodyL     .~ totalCollateral
+                -- TODO: NetworkId for hardware wallets. We don't always want this
+                -- & L.networkIdTxBodyL .~ ...
         pure $ ShelleyTxBody sbe
           ledgerTxBody
           scripts
