@@ -160,7 +160,6 @@ import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToBabbageEra
-import           Cardano.Api.EraCast
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
@@ -326,14 +325,6 @@ data TxOut ctx era = TxOut (AddressInEra    era)
 
 deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
-
-instance EraCast (TxOut ctx) where
-  eraCast toEra (TxOut addressInEra txOutValue txOutDatum referenceScript) =
-    TxOut
-      <$> eraCast toEra addressInEra
-      <*> eraCast toEra txOutValue
-      <*> eraCast toEra txOutDatum
-      <*> eraCast toEra referenceScript
 
 data TxOutInAnyEra where
      TxOutInAnyEra :: CardanoEra era
@@ -895,19 +886,6 @@ data TxOutValue era where
 
   TxOutValue   :: MaryEraOnwards era -> Value -> TxOutValue era
 
-instance EraCast TxOutValue where
-  eraCast toEra v = case v of
-    TxOutAdaOnly _previousEra lovelace ->
-      caseByronToAllegraOrMaryEraOnwards
-        (\w -> Right $ TxOutAdaOnly w lovelace)
-        (\w -> Right $ TxOutValue w $ lovelaceToValue lovelace)
-        toEra
-    TxOutValue  (_ :: MaryEraOnwards fromEra) value  ->
-      caseByronToAllegraOrMaryEraOnwards
-        (const (Left $ EraCastError v (cardanoEra @fromEra) toEra))
-        (\w -> Right $ TxOutValue w value)
-        toEra
-
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
 deriving instance Generic (TxOutValue era)
@@ -1044,25 +1022,6 @@ data TxOutDatum ctx era where
 
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
-
-instance EraCast (TxOutDatum ctx)  where
-  eraCast toEra v = case v of
-    TxOutDatumNone -> pure TxOutDatumNone
-    TxOutDatumHash ws hash ->
-      caseByronToMaryOrAlonzoEraOnwards
-        (const (Left $ EraCastError v (alonzoEraOnwardsToCardanoEra ws) toEra))
-        (\wt -> Right $ TxOutDatumHash wt hash)
-        toEra
-    TxOutDatumInTx' ws scriptData hash ->
-      caseByronToMaryOrAlonzoEraOnwards
-        (const (Left $ EraCastError v (alonzoEraOnwardsToCardanoEra ws) toEra))
-        (\wt -> Right $ TxOutDatumInTx' wt scriptData hash)
-        toEra
-    TxOutDatumInline ws scriptData ->
-      caseByronToAlonzoOrBabbageEraOnwards
-        (const (Left $ EraCastError v (babbageEraOnwardsToCardanoEra ws) toEra))
-        (\wt -> Right $ TxOutDatumInline wt scriptData)
-        toEra
 
 pattern TxOutDatumInTx
   :: AlonzoEraOnwards era
