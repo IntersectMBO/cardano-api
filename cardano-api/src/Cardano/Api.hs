@@ -999,6 +999,8 @@ module Cardano.Api (
     validateAndHashDRepMetadata,
 
     -- ** Governance related certificates
+    AnchorDataHash(..),
+    AnchorUrl(..),
     CommitteeColdkeyResignationRequirements(..),
     CommitteeHotKeyAuthorizationRequirements(..),
     DRepRegistrationRequirements(..),
@@ -1012,6 +1014,7 @@ module Cardano.Api (
   ) where
 
 import           Cardano.Api.Address
+import           Cardano.Api.Anchor
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Convenience.Construction
