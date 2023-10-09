@@ -48,9 +48,9 @@ module Cardano.Api.Fees (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
@@ -76,9 +76,7 @@ import qualified Cardano.Ledger.Coin as Ledger
 import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
-import           Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionFee)
-import           Cardano.Ledger.UTxO as Ledger (EraUTxO)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
 
@@ -588,10 +586,10 @@ evaluateTransactionBalance _ _ _ _ _ (ByronTxBody _) =
 
 evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
                            (ShelleyTxBody sbe txbody _ _ _ _) =
-    withLedgerConstraints
+    caseShelleyToAllegraOrMaryEraOnwards
+      evalAdaOnly
+      evalMultiAsset
       sbe
-      (shelleyBasedEraConstraints sbe evalAdaOnly)
-      (shelleyBasedEraConstraints sbe evalMultiAsset)
   where
     isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
@@ -608,81 +606,29 @@ evaluateTransactionBalance pp poolids stakeDelegDeposits drepDelegDeposits utxo
       toShelleyLovelace <$>
       Map.lookup drepCred drepDelegDeposits
 
-    evalMultiAsset :: forall ledgerera.
-                      ShelleyLedgerEra era ~ ledgerera
-                   => LedgerEraConstraints ledgerera
-                   => LedgerMultiAssetConstraints ledgerera
-                   => MaryEraOnwards era
-                   -> TxOutValue era
-    evalMultiAsset evidence =
-      TxOutValue evidence . fromMaryValue $
-         L.evalBalanceTxBody
-           pp
-           lookupDelegDeposit
-           lookupDRepDeposit
-           isRegPool
-           (toLedgerUTxO sbe utxo)
-           txbody
+    evalMultiAsset :: MaryEraOnwards era -> TxOutValue era
+    evalMultiAsset w =
+      maryEraOnwardsConstraints w
+        $ TxOutValue w . fromMaryValue
+        $ L.evalBalanceTxBody
+            pp
+            lookupDelegDeposit
+            lookupDRepDeposit
+            isRegPool
+            (toLedgerUTxO sbe utxo)
+            txbody
 
-    evalAdaOnly :: forall ledgerera.
-                   ShelleyLedgerEra era ~ ledgerera
-                => LedgerEraConstraints ledgerera
-                => LedgerAdaOnlyConstraints ledgerera
-                => ByronToAllegraEra era
-                -> TxOutValue era
-    evalAdaOnly evidence =
-     TxOutAdaOnly evidence . fromShelleyLovelace
-       $ L.evalBalanceTxBody
-           pp
-           lookupDelegDeposit
-           lookupDRepDeposit
-           isRegPool
-           (toLedgerUTxO sbe utxo)
-           txbody
-
-    -- Conjur up all the necessary class instances and evidence
-    withLedgerConstraints
-      :: ShelleyLedgerEra era ~ ledgerera
-      => ShelleyBasedEra era
-      -> (   LedgerEraConstraints ledgerera
-          => LedgerAdaOnlyConstraints ledgerera
-          => LedgerPParamsConstraints ledgerera
-          => LedgerTxBodyConstraints ledgerera
-          => ByronToAllegraEra era
-          -> a)
-      -> (   LedgerEraConstraints ledgerera
-          => LedgerMultiAssetConstraints ledgerera
-          => LedgerPParamsConstraints ledgerera
-          => LedgerTxBodyConstraints ledgerera
-          => MaryEraOnwards era
-          -> a)
-      -> a
-    withLedgerConstraints ShelleyBasedEraShelley f _ = f ByronToAllegraEraShelley
-    withLedgerConstraints ShelleyBasedEraAllegra f _ = f ByronToAllegraEraAllegra
-    withLedgerConstraints ShelleyBasedEraMary    _ f = f MaryEraOnwardsMary
-    withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MaryEraOnwardsAlonzo
-    withLedgerConstraints ShelleyBasedEraBabbage _ f = f MaryEraOnwardsBabbage
-    withLedgerConstraints ShelleyBasedEraConway  _ f = f MaryEraOnwardsConway
-
-type LedgerEraConstraints ledgerera =
-       ( Ledger.EraCrypto ledgerera ~ Ledger.StandardCrypto
-       , Ledger.EraUTxO ledgerera
-       )
-
-type LedgerAdaOnlyConstraints ledgerera =
-         Ledger.Value ledgerera ~ Ledger.Coin
-
-type LedgerMultiAssetConstraints ledgerera =
-       ( Ledger.Value ledgerera ~ MaryValue Ledger.StandardCrypto
-       )
-
-type LedgerPParamsConstraints ledgerera =
-         Ledger.EraPParams ledgerera
-
-type LedgerTxBodyConstraints ledgerera =
-       ( Ledger.EraTx ledgerera
-       )
-
+    evalAdaOnly :: ShelleyToAllegraEra era -> TxOutValue era
+    evalAdaOnly w =
+      shelleyToAllegraEraConstraints w
+        $ TxOutAdaOnly (shelleyToAllegraEraToByronToAllegraEra w) . fromShelleyLovelace
+        $ L.evalBalanceTxBody
+            pp
+            lookupDelegDeposit
+            lookupDRepDeposit
+            isRegPool
+            (toLedgerUTxO sbe utxo)
+            txbody
 
 -- ----------------------------------------------------------------------------
 -- Automated transaction building

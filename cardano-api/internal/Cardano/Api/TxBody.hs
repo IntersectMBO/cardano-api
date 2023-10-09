@@ -1588,109 +1588,76 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
         serialiseShelleyBasedTxBody sbe txbody txscripts redeemers txmetadata scriptValidity
 
     deserialiseFromCBOR _ bs =
-      case cardanoEra :: CardanoEra era of
-        ByronEra ->
+      caseByronOrShelleyBasedEra
+        (\ByronEraOnlyByron ->
           ByronTxBody <$>
             CBOR.decodeFullAnnotatedBytes
               CBOR.byronProtVer
               "Byron TxBody"
               CBOR.decCBORAnnotated
               (LBS.fromStrict bs)
-
-        -- Use the same deserialisation impl, but at different types:
-        ShelleyEra -> deserialiseShelleyBasedTxBody ShelleyBasedEraShelley bs
-        AllegraEra -> deserialiseShelleyBasedTxBody ShelleyBasedEraAllegra bs
-        MaryEra    -> deserialiseShelleyBasedTxBody ShelleyBasedEraMary    bs
-        AlonzoEra  -> deserialiseShelleyBasedTxBody ShelleyBasedEraAlonzo  bs
-        BabbageEra -> deserialiseShelleyBasedTxBody ShelleyBasedEraBabbage bs
-        ConwayEra  -> deserialiseShelleyBasedTxBody ShelleyBasedEraConway  bs
+        )
+        (\sbe -> deserialiseShelleyBasedTxBody sbe bs)
+        (cardanoEra :: CardanoEra era)
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
-serialiseShelleyBasedTxBody
-  :: forall era ledgerera.
-     L.Era ledgerera
-  => ShelleyLedgerEra era ~ ledgerera
-  => CBOR.EncCBOR (Ledger.TxBody ledgerera)
-  => CBOR.EncCBOR (Ledger.Script ledgerera)
-  => CBOR.EncCBOR (Alonzo.TxDats ledgerera)
-  => CBOR.EncCBOR (Alonzo.Redeemers ledgerera)
-  => CBOR.EncCBOR (L.TxAuxData ledgerera)
+serialiseShelleyBasedTxBody :: forall era. ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody ledgerera
-  -> [Ledger.Script ledgerera]
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> [Ledger.Script (ShelleyLedgerEra era)]
   -> TxBodyScriptData era
-  -> Maybe (L.TxAuxData ledgerera)
+  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
   -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> ByteString
 serialiseShelleyBasedTxBody sbe txbody txscripts
                             TxBodyNoScriptData txmetadata scriptValidity =
-    -- Backwards compat for pre-Alonzo era tx body files
-    case sbe of
-      ShelleyBasedEraShelley -> preAlonzo (L.eraProtVerLow @L.Shelley)
-      ShelleyBasedEraAllegra -> preAlonzo (L.eraProtVerLow @L.Allegra)
-      ShelleyBasedEraMary -> preAlonzo (L.eraProtVerLow @L.Mary)
-      ShelleyBasedEraAlonzo ->
-        CBOR.serialize' (L.eraProtVerLow @L.Alonzo)
-          $ CBOR.encodeListLen 4
-         <> CBOR.encCBOR txbody
-         <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
-      ShelleyBasedEraBabbage ->
-        CBOR.serialize' (L.eraProtVerLow @L.Babbage)
-          $ CBOR.encodeListLen 4
-         <> CBOR.encCBOR txbody
-         <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
-      ShelleyBasedEraConway ->
-        CBOR.serialize' (L.eraProtVerLow @L.Babbage)
-          $ CBOR.encodeListLen 4
-         <> CBOR.encCBOR txbody
-         <> CBOR.encCBOR txscripts
-         <> CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
-         <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
- where
-   preAlonzo v = CBOR.serialize' v
-                 $ CBOR.encodeListLen 3
-                <> CBOR.encCBOR txbody
-                <> CBOR.encCBOR txscripts
-                <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+      [ CBOR.encodeListLen 3
+      , CBOR.encCBOR txbody
+      , CBOR.encCBOR txscripts
+      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+      ]
+    )
+    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+      [ CBOR.encodeListLen 4
+      , CBOR.encCBOR txbody
+      , CBOR.encCBOR txscripts
+      , CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
+      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+      ]
+    )
+    sbe
 
-serialiseShelleyBasedTxBody _era txbody txscripts
-                            (TxBodyScriptData _ datums redeemers)
+serialiseShelleyBasedTxBody _ txbody txscripts
+                            (TxBodyScriptData w datums redeemers)
                             txmetadata txBodyScriptValidity =
-    CBOR.serialize' (L.eraProtVerLow @ledgerera) $
-        CBOR.encodeListLen 6
-     <> CBOR.encCBOR txbody
-     <> CBOR.encCBOR txscripts
-     <> CBOR.encCBOR datums
-     <> CBOR.encCBOR redeemers
-     <> CBOR.encCBOR (txScriptValidityToScriptValidity txBodyScriptValidity)
-     <> CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+  alonzoEraOnwardsConstraints w $
+    CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+      [ CBOR.encodeListLen 6
+      , CBOR.encCBOR txbody
+      , CBOR.encCBOR txscripts
+      , CBOR.encCBOR datums
+      , CBOR.encCBOR redeemers
+      , CBOR.encCBOR (txScriptValidityToScriptValidity txBodyScriptValidity)
+      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
+      ]
 
-deserialiseShelleyBasedTxBody
-  :: forall era ledgerera.
-     L.Era ledgerera
-  => ShelleyLedgerEra era ~ ledgerera
-  => CBOR.DecCBOR (CBOR.Annotator (Ledger.TxBody ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (Ledger.Script ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (Alonzo.TxDats ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (Alonzo.Redeemers ledgerera))
-  => CBOR.DecCBOR (CBOR.Annotator (L.TxAuxData ledgerera))
+deserialiseShelleyBasedTxBody :: forall era. ()
   => ShelleyBasedEra era
   -> ByteString
   -> Either CBOR.DecoderError (TxBody era)
 deserialiseShelleyBasedTxBody sbe bs =
+  shelleyBasedEraConstraints sbe $
     CBOR.decodeFullAnnotator
-      (L.eraProtVerLow @ledgerera)
+      (L.eraProtVerLow @(ShelleyLedgerEra era))
       "Shelley TxBody"
       decodeAnnotatedTuple
       (LBS.fromStrict bs)
   where
     decodeAnnotatedTuple :: CBOR.Decoder s (CBOR.Annotator (TxBody era))
-    decodeAnnotatedTuple = do
+    decodeAnnotatedTuple = shelleyBasedEraConstraints sbe $ do
       len <- CBOR.decodeListLen
 
       case len of
@@ -1893,13 +1860,11 @@ createTransactionBody sbe txBodyContent =
       languages = convLanguages apiScriptWitnesses
 
       mkTxBody :: ()
-        => L.EraTxBody (ShelleyLedgerEra era)
-        => L.EraTxAuxData (ShelleyLedgerEra era)
         => ShelleyBasedEra era
         -> TxBodyContent BuildTx era
         -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
         -> L.TxBody (ShelleyLedgerEra era)
-      mkTxBody sbe' bc = shelleyBasedEraConstraints sbe' $
+      mkTxBody sbe' bc =
         mkCommonTxBody
           sbe'
           (txIns bc)
@@ -1914,12 +1879,13 @@ createTransactionBody sbe txBodyContent =
             ttl = case upperBound of
                     TxValidityNoUpperBound sbe' -> case sbe' of {}
                     TxValidityUpperBound _ ttl'  -> ttl'
-            ledgerTxBody = mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
-                           & L.certsTxBodyL  .~ certs
-                           & L.ttlTxBodyL    .~ ttl
-                           & L.updateTxBodyL .~ update
+            ledgerTxBody =
+              mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
+                & L.certsTxBodyL  .~ certs
+                & L.ttlTxBodyL    .~ ttl
+                & L.updateTxBodyL .~ update
 
-            sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
+            sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
         pure $ ShelleyTxBody sbe
               ledgerTxBody
@@ -1930,90 +1896,81 @@ createTransactionBody sbe txBodyContent =
 
        ShelleyBasedEraAllegra -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let ledgerTxBody = mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
-                           & L.certsTxBodyL  .~ certs
-                           & L.updateTxBodyL .~ update
-                           & L.vldtTxBodyL   .~ validityInterval
+        let ledgerTxBody =
+              mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
+                & L.certsTxBodyL  .~ certs
+                & L.updateTxBodyL .~ update
+                & L.vldtTxBodyL   .~ validityInterval
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses)
+              (convScriptData sbe apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
 
        ShelleyBasedEraMary -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let ledgerTxBody = mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
-                           & L.certsTxBodyL  .~ certs
-                           & L.updateTxBodyL .~ update
-                           & L.vldtTxBodyL   .~ validityInterval
-                           & L.mintTxBodyL   .~ convMintValue apiMintValue
+        let ledgerTxBody =
+              mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
+                & L.certsTxBodyL  .~ certs
+                & L.updateTxBodyL .~ update
+                & L.vldtTxBodyL   .~ validityInterval
+                & L.mintTxBodyL   .~ convMintValue apiMintValue
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses)
+              (convScriptData sbe apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
 
        ShelleyBasedEraAlonzo -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
-        scriptIntegrityHash <-
-          case sData of
-            TxBodyNoScriptData -> pure SNothing
-            TxBodyScriptData _ datums redeemers ->
-              convPParamsToScriptIntegrityHash
-                sbe
-                apiProtocolParameters
-                redeemers
-                datums
-                languages
-        let ledgerTxBody = mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
-                           & L.certsTxBodyL               .~ certs
-                           & L.updateTxBodyL              .~ update
-                           & L.vldtTxBodyL                .~ validityInterval
-                           & L.collateralInputsTxBodyL    .~ collTxIns
-                           & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
-                                                               apiExtraKeyWitnesses
-                           & L.mintTxBodyL                .~ convMintValue apiMintValue
-                           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-                           -- TODO: NetworkId for hardware wallets. We don't always want this
-                           -- & L.networkIdTxBodyL .~ ...
+        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        let scriptIntegrityHash =
+              case sData of
+                TxBodyNoScriptData -> SNothing
+                TxBodyScriptData w datums redeemers ->
+                  convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
+        let ledgerTxBody =
+              mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
+                & L.certsTxBodyL               .~ certs
+                & L.updateTxBodyL              .~ update
+                & L.vldtTxBodyL                .~ validityInterval
+                & L.collateralInputsTxBodyL    .~ collTxIns
+                & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses apiExtraKeyWitnesses
+                & L.mintTxBodyL                .~ convMintValue apiMintValue
+                & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+                -- TODO: NetworkId for hardware wallets. We don't always want this
+                -- & L.networkIdTxBodyL .~ ...
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses)
+              (convScriptData sbe apiTxOuts apiScriptWitnesses)
               txAuxData
               apiScriptValidity
 
        ShelleyBasedEraBabbage -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
-        scriptIntegrityHash <-
-          case sData of
-            TxBodyNoScriptData -> pure SNothing
-            TxBodyScriptData _sDataSupported datums redeemers ->
-              shelleyBasedEraConstraints sbe
-                $ convPParamsToScriptIntegrityHash
-                    sbe
-                    apiProtocolParameters
-                    redeemers
-                    datums
-                    languages
-        let ledgerTxBody = mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
-                           & L.certsTxBodyL               .~ certs
-                           & L.updateTxBodyL              .~ update
-                           & L.vldtTxBodyL                .~ validityInterval
-                           & L.collateralInputsTxBodyL    .~ collTxIns
-                           & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
-                                                               apiExtraKeyWitnesses
-                           & L.mintTxBodyL                .~ convMintValue apiMintValue
-                           & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-                           & L.referenceInputsTxBodyL     .~ refTxIns
-                           & L.collateralReturnTxBodyL    .~ returnCollateral
-                           & L.totalCollateralTxBodyL     .~ totalCollateral
-                           -- TODO: NetworkId for hardware wallets. We don't always want this
-                           -- & L.networkIdTxBodyL .~ ...
+        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        let scriptIntegrityHash =
+              case sData of
+                TxBodyNoScriptData -> SNothing
+                TxBodyScriptData w datums redeemers ->
+                  convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
+        let ledgerTxBody =
+              mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
+                & L.certsTxBodyL                .~ certs
+                & L.updateTxBodyL               .~ update
+                & L.vldtTxBodyL                 .~ validityInterval
+                & L.collateralInputsTxBodyL     .~ collTxIns
+                & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
+                & L.mintTxBodyL                 .~ convMintValue apiMintValue
+                & L.scriptIntegrityHashTxBodyL  .~ scriptIntegrityHash
+                & L.referenceInputsTxBodyL      .~ refTxIns
+                & L.collateralReturnTxBodyL     .~ returnCollateral
+                & L.totalCollateralTxBodyL      .~ totalCollateral
+                -- TODO: NetworkId for hardware wallets. We don't always want this
+                -- & L.networkIdTxBodyL .~ ...
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
@@ -2022,30 +1979,23 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraConway -> do
-        let sData = convScriptData (shelleyBasedToCardanoEra sbe) apiTxOuts apiScriptWitnesses
-        scriptIntegrityHash <-
-          case sData of
-            TxBodyNoScriptData -> pure SNothing
-            TxBodyScriptData _sDataSupported datums redeemers ->
-              shelleyBasedEraConstraints sbe
-                $ convPParamsToScriptIntegrityHash
-                    sbe
-                    apiProtocolParameters
-                    redeemers
-                    datums
-                    languages
+        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        let scriptIntegrityHash =
+              case sData of
+                TxBodyNoScriptData -> SNothing
+                TxBodyScriptData w datums redeemers ->
+                  convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
-                & L.certsTxBodyL               .~ certs
-                & L.vldtTxBodyL                .~ validityInterval
-                & L.collateralInputsTxBodyL    .~ collTxIns
-                & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses
-                                                    apiExtraKeyWitnesses
-                & L.mintTxBodyL                .~ convMintValue apiMintValue
-                & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
-                & L.referenceInputsTxBodyL     .~ refTxIns
-                & L.collateralReturnTxBodyL    .~ returnCollateral
-                & L.totalCollateralTxBodyL     .~ totalCollateral
+                & L.certsTxBodyL                .~ certs
+                & L.vldtTxBodyL                 .~ validityInterval
+                & L.collateralInputsTxBodyL     .~ collTxIns
+                & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
+                & L.mintTxBodyL                 .~ convMintValue apiMintValue
+                & L.scriptIntegrityHashTxBodyL  .~ scriptIntegrityHash
+                & L.referenceInputsTxBodyL      .~ refTxIns
+                & L.collateralReturnTxBodyL     .~ returnCollateral
+                & L.totalCollateralTxBodyL      .~ totalCollateral
                 -- TODO: NetworkId for hardware wallets. We don't always want this
                 -- & L.networkIdTxBodyL .~ ...
         pure $ ShelleyTxBody sbe
@@ -2322,7 +2272,6 @@ fromLedgerTxOuts sbe body scriptdata =
 
     ShelleyBasedEraAlonzo ->
       [ fromAlonzoTxOut
-          MaryEraOnwardsAlonzo
           AlonzoEraOnwardsAlonzo
           txdatums
           txout
@@ -2331,8 +2280,6 @@ fromLedgerTxOuts sbe body scriptdata =
 
     ShelleyBasedEraBabbage ->
       [ fromBabbageTxOut
-          MaryEraOnwardsBabbage
-          AlonzoEraOnwardsBabbage
           BabbageEraOnwardsBabbage
           txdatums
           txouts
@@ -2342,8 +2289,6 @@ fromLedgerTxOuts sbe body scriptdata =
 
     ShelleyBasedEraConway ->
       [ fromBabbageTxOut
-          MaryEraOnwardsConway
-          AlonzoEraOnwardsConway
           BabbageEraOnwardsConway
           txdatums
           txouts
@@ -2354,71 +2299,61 @@ fromLedgerTxOuts sbe body scriptdata =
     selectTxDatums  TxBodyNoScriptData                            = Map.empty
     selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
 
-fromAlonzoTxOut :: forall era ledgerera.
-                   IsShelleyBasedEra era
-                => L.AlonzoEraTxOut ledgerera
-                => Ledger.EraCrypto ledgerera ~ StandardCrypto
-                => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-                => MaryEraOnwards era
-                -> AlonzoEraOnwards era
-                -> Map (L.DataHash StandardCrypto)
-                       (L.Data ledgerera)
-                -> L.TxOut ledgerera
-                -> TxOut CtxTx era
-fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums txOut =
-   TxOut (fromShelleyAddr shelleyBasedEra (txOut ^. L.addrTxOutL))
-         (TxOutValue multiAssetInEra (fromMaryValue (txOut ^. L.valueTxOutL)))
-         (fromAlonzoTxOutDatum scriptDataInEra (txOut ^. L.dataHashTxOutL))
-         ReferenceScriptNone
-  where
-    fromAlonzoTxOutDatum :: AlonzoEraOnwards era
-                         -> StrictMaybe (L.DataHash StandardCrypto)
-                         -> TxOutDatum CtxTx era
-    fromAlonzoTxOutDatum _ SNothing = TxOutDatumNone
-    fromAlonzoTxOutDatum w (SJust dh)
-      | Just d <- Map.lookup dh txdatums  = TxOutDatumInTx' w (ScriptDataHash dh) (fromAlonzoData d)
-      | otherwise                         = TxOutDatumHash w (ScriptDataHash dh)
-
-fromBabbageTxOut
-  :: forall ledgerera era.
-     L.BabbageEraTxOut ledgerera
-  => IsShelleyBasedEra era
-  => ShelleyLedgerEra era ~ ledgerera
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
-  => Ledger.Value ledgerera ~ MaryValue StandardCrypto
-  => MaryEraOnwards era
-  -> AlonzoEraOnwards era
-  -> BabbageEraOnwards era
-  -> Map (L.DataHash StandardCrypto)
-         (L.Data ledgerera)
-  -> L.TxOut ledgerera
+fromAlonzoTxOut :: ()
+  => AlonzoEraOnwards era
+  -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
+  -> L.TxOut (ShelleyLedgerEra era)
   -> TxOut CtxTx era
-fromBabbageTxOut multiAssetInEra scriptDataInEra inlineDatumsInEra txdatums txout =
-   TxOut
-     (fromShelleyAddr shelleyBasedEra (txout ^. L.addrTxOutL))
-     (TxOutValue multiAssetInEra (fromMaryValue (txout ^. L.valueTxOutL)))
-     babbageTxOutDatum
-     (case txout ^. L.referenceScriptTxOutL of
-       SNothing -> ReferenceScriptNone
-       SJust rScript -> fromShelleyScriptToReferenceScript shelleyBasedEra rScript
-     )
- where
-   -- NOTE: This is different to 'fromBabbageTxOutDatum' as it may resolve
-   -- 'DatumHash' values using the datums included in the transaction.
-   babbageTxOutDatum :: TxOutDatum CtxTx era
-   babbageTxOutDatum =
-     case txout ^. L.datumTxOutL of
-       L.NoDatum -> TxOutDatumNone
-       L.DatumHash dh -> resolveDatumInTx dh
-       L.Datum d ->
-         TxOutDatumInline inlineDatumsInEra $
-           binaryDataToScriptData inlineDatumsInEra d
+fromAlonzoTxOut w txdatums txOut =
+  alonzoEraOnwardsConstraints w $
+    TxOut
+      (fromShelleyAddr shelleyBasedEra (txOut ^. L.addrTxOutL))
+      (TxOutValue (alonzoEraOnwardsToMaryEraOnwards w) (fromMaryValue (txOut ^. L.valueTxOutL)))
+      (fromAlonzoTxOutDatum w txdatums (txOut ^. L.dataHashTxOutL))
+      ReferenceScriptNone
 
-   resolveDatumInTx :: L.DataHash StandardCrypto -> TxOutDatum CtxTx era
-   resolveDatumInTx dh
+fromAlonzoTxOutDatum :: ()
+  => AlonzoEraOnwards era
+  -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
+  -> StrictMaybe (L.DataHash StandardCrypto)
+  -> TxOutDatum CtxTx era
+fromAlonzoTxOutDatum w txdatums = \case
+  SNothing -> TxOutDatumNone
+  SJust dh
+    | Just d <- Map.lookup dh txdatums  -> TxOutDatumInTx' w (ScriptDataHash dh) (fromAlonzoData d)
+    | otherwise                         -> TxOutDatumHash w (ScriptDataHash dh)
+
+fromBabbageTxOut :: forall era. ()
+  => BabbageEraOnwards era
+  -> Map (L.DataHash StandardCrypto) (L.Data (ShelleyLedgerEra era))
+  -> L.TxOut (ShelleyLedgerEra era)
+  -> TxOut CtxTx era
+fromBabbageTxOut w txdatums txout =
+  babbageEraOnwardsConstraints w $
+    TxOut
+      (fromShelleyAddr shelleyBasedEra (txout ^. L.addrTxOutL))
+      (TxOutValue (babbageEraOnwardsToMaryEraOnwards w) (fromMaryValue (txout ^. L.valueTxOutL)))
+      babbageTxOutDatum
+      (case txout ^. L.referenceScriptTxOutL of
+        SNothing -> ReferenceScriptNone
+        SJust rScript -> fromShelleyScriptToReferenceScript shelleyBasedEra rScript
+      )
+  where
+    -- NOTE: This is different to 'fromBabbageTxOutDatum' as it may resolve
+    -- 'DatumHash' values using the datums included in the transaction.
+    babbageTxOutDatum :: TxOutDatum CtxTx era
+    babbageTxOutDatum =
+      babbageEraOnwardsConstraints w $
+        case txout ^. L.datumTxOutL of
+          L.NoDatum -> TxOutDatumNone
+          L.DatumHash dh -> resolveDatumInTx dh
+          L.Datum d -> TxOutDatumInline w $ binaryDataToScriptData w d
+
+    resolveDatumInTx :: L.DataHash StandardCrypto -> TxOutDatum CtxTx era
+    resolveDatumInTx dh
       | Just d <- Map.lookup dh txdatums
-                  = TxOutDatumInTx' scriptDataInEra (ScriptDataHash dh) (fromAlonzoData d)
-      | otherwise = TxOutDatumHash scriptDataInEra (ScriptDataHash dh)
+                  = TxOutDatumInTx' (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh) (fromAlonzoData d)
+      | otherwise = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh)
 
 
 fromLedgerTxTotalCollateral
@@ -2818,15 +2753,14 @@ convScripts scriptWitnesses =
     ]
 
 -- ScriptData collectively refers to datums and/or redeemers
-convScriptData
-  :: Ledger.Era (ShelleyLedgerEra era)
-  => CardanoEra era
+convScriptData :: ()
+  => ShelleyBasedEra era
   -> [TxOut CtxTx era]
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
   -> TxBodyScriptData era
-convScriptData era txOuts scriptWitnesses =
-  forEraInEon era
-    TxBodyNoScriptData
+convScriptData sbe txOuts scriptWitnesses =
+  caseShelleyToMaryOrAlonzoEraOnwards
+    (const TxBodyNoScriptData)
     (\w ->
       let redeemers =
             Alonzo.Redeemers $
@@ -2852,43 +2786,21 @@ convScriptData era txOuts scriptWitnesses =
                   ]
       in TxBodyScriptData w datums redeemers
     )
+    sbe
 
 convPParamsToScriptIntegrityHash :: ()
-  => ShelleyBasedEra era
-  -> L.AlonzoEraPParams (ShelleyLedgerEra era)
-  => BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
+  => AlonzoEraOnwards era
+  -> BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
   -> Alonzo.Redeemers (ShelleyLedgerEra era)
   -> Alonzo.TxDats (ShelleyLedgerEra era)
   -> Set Alonzo.Language
-  -> Either TxBodyError (StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era))))
-convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages = do
-  lang <- case txProtocolParams of
-               BuildTxWith Nothing -> return Nothing
-               BuildTxWith (Just (LedgerProtocolParameters pp)) ->
-                 case sbe of
-                   ShelleyBasedEraShelley ->
-                     return Nothing
-                   ShelleyBasedEraAllegra ->
-                     return Nothing
-                   ShelleyBasedEraMary ->
-                     return Nothing
-                   ShelleyBasedEraAlonzo ->
-                     return . Just $ L.getLanguageView pp
-                   ShelleyBasedEraBabbage ->
-                     return . Just $ L.getLanguageView pp
-                   ShelleyBasedEraConway ->
-                     return . Just $ L.getLanguageView pp
-
-  case lang of
-    Nothing -> return SNothing
-    Just l ->
-      pure $ Alonzo.hashScriptIntegrity
-        (Set.map
-           l
-           languages
-        )
-        redeemers
-        datums
+  -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era)))
+convPParamsToScriptIntegrityHash w txProtocolParams redeemers datums languages =
+  alonzoEraOnwardsConstraints w $
+    case txProtocolParams of
+      BuildTxWith Nothing -> SNothing
+      BuildTxWith (Just (LedgerProtocolParameters pp)) ->
+        Alonzo.hashScriptIntegrity (Set.map (L.getLanguageView pp) languages) redeemers datums
 
 convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Alonzo.Language
 convLanguages witnesses =
@@ -2910,11 +2822,7 @@ guardShelleyTxInsOverflow txIns = do
 
 -- | A helper function that constructs a TxBody with all of the fields that are common for
 -- all eras
-mkCommonTxBody ::
-     ( L.EraTxBody (ShelleyLedgerEra era)
-     , L.EraTxAuxData (ShelleyLedgerEra era)
-     , L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-     )
+mkCommonTxBody :: ()
   => ShelleyBasedEra era
   -> TxIns BuildTx era
   -> [TxOut ctx era]
@@ -2923,12 +2831,13 @@ mkCommonTxBody ::
   -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
   -> L.TxBody (ShelleyLedgerEra era)
 mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
-  L.mkBasicTxBody
-  & L.inputsTxBodyL .~ convTxIns txIns
-  & L.outputsTxBodyL .~ convTxOuts sbe txOuts
-  & L.feeTxBodyL .~ convTransactionFee sbe txFee
-  & L.withdrawalsTxBodyL .~ convWithdrawals txWithdrawals
-  & L.auxDataHashTxBodyL .~ maybe SNothing (SJust . Ledger.hashTxAuxData) txAuxData
+  shelleyBasedEraConstraints sbe $
+    L.mkBasicTxBody
+      & L.inputsTxBodyL .~ convTxIns txIns
+      & L.outputsTxBodyL .~ convTxOuts sbe txOuts
+      & L.feeTxBodyL .~ convTransactionFee sbe txFee
+      & L.withdrawalsTxBodyL .~ convWithdrawals txWithdrawals
+      & L.auxDataHashTxBodyL .~ maybe SNothing (SJust . Ledger.hashTxAuxData) txAuxData
 
 
 makeShelleyTransactionBody :: forall era. ()
@@ -3069,7 +2978,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
 
     validateTxBodyContent sbe txbodycontent
     update <- convTxUpdateProposal sbe txUpdateProposal
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
+    let scriptIntegrityHash =
+          convPParamsToScriptIntegrityHash AlonzoEraOnwardsAlonzo txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
@@ -3155,7 +3065,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
 
     validateTxBodyContent sbe txbodycontent
     update <- convTxUpdateProposal sbe txUpdateProposal
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
+    let scriptIntegrityHash =
+          convPParamsToScriptIntegrityHash AlonzoEraOnwardsBabbage txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
@@ -3256,7 +3167,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                            } = do
 
     validateTxBodyContent sbe txbodycontent
-    scriptIntegrityHash <- convPParamsToScriptIntegrityHash sbe txProtocolParams redeemers datums languages
+    let scriptIntegrityHash =
+          convPParamsToScriptIntegrityHash AlonzoEraOnwardsConway txProtocolParams redeemers datums languages
     return $
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
