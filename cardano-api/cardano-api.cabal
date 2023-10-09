@@ -73,7 +73,6 @@ library internal
                         Cardano.Api.Eon.ShelleyToAlonzoEra
                         Cardano.Api.Eon.ShelleyToBabbageEra
                         Cardano.Api.Eon.ShelleyToMaryEra
-                        Cardano.Api.EraCast
                         Cardano.Api.Eras
                         Cardano.Api.Eras.Case
                         Cardano.Api.Eras.Constraints
