@@ -104,6 +104,7 @@ library internal
                         Cardano.Api.Keys.Shelley
                         Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
+                        Cardano.Api.EasyEvidence
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate

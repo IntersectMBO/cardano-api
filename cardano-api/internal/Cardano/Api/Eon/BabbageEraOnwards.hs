@@ -1,8 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,6 +19,7 @@ module Cardano.Api.Eon.BabbageEraOnwards
   , BabbageEraOnwardsConstraints
   ) where
 
+import           Cardano.Api.EasyEvidence
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -41,6 +44,17 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import           Data.Aeson
 import           Data.Typeable (Typeable)
+
+instance EasyEvidence BabbageEraOnwards era where
+  easyEvidence sbe =
+    case sbe of
+      ByronEra -> Nothing
+      ShelleyEra -> Nothing
+      AllegraEra -> Nothing
+      MaryEra -> Nothing
+      AlonzoEra -> Nothing
+      BabbageEra -> Just BabbageEraOnwardsBabbage
+      ConwayEra -> Just BabbageEraOnwardsConway
 
 data BabbageEraOnwards era where
   BabbageEraOnwardsBabbage :: BabbageEraOnwards BabbageEra

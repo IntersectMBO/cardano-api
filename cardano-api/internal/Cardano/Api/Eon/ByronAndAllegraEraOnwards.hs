@@ -1,8 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,9 +17,22 @@ module Cardano.Api.Eon.ByronAndAllegraEraOnwards
   , ByronAndAllegraEraOnwardsConstraints
   ) where
 
+import           Cardano.Api.EasyEvidence
 import           Cardano.Api.Eras.Core
 
 import           Data.Typeable (Typeable)
+
+instance EasyEvidence ByronAndAllegraEraOnwards era where
+  easyEvidence era =
+    case era of
+      ByronEra    -> Just ByronAndAllegraEraOnwardsByron
+      ShelleyEra  -> Nothing
+      AllegraEra  -> Just ByronAndAllegraEraOnwardsAllegra
+      MaryEra     -> Just ByronAndAllegraEraOnwardsMary
+      AlonzoEra   -> Just ByronAndAllegraEraOnwardsAlonzo
+      BabbageEra  -> Just ByronAndAllegraEraOnwardsBabbage
+      ConwayEra   -> Just ByronAndAllegraEraOnwardsConway
+
 
 data ByronAndAllegraEraOnwards era where
   ByronAndAllegraEraOnwardsByron   :: ByronAndAllegraEraOnwards ByronEra

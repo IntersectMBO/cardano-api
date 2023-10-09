@@ -1,8 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,6 +19,7 @@ module Cardano.Api.Eon.MaryEraOnwards
   , MaryEraOnwardsConstraints
   ) where
 
+import           Cardano.Api.EasyEvidence
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -37,6 +40,17 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import           Data.Aeson
 import           Data.Typeable (Typeable)
+
+instance EasyEvidence MaryEraOnwards era where
+  easyEvidence era =
+    case era of
+      ByronEra   -> Nothing
+      ShelleyEra -> Nothing
+      AllegraEra -> Nothing
+      MaryEra    -> Just MaryEraOnwardsMary
+      AlonzoEra  -> Just MaryEraOnwardsAlonzo
+      BabbageEra -> Just MaryEraOnwardsBabbage
+      ConwayEra  -> Just MaryEraOnwardsConway
 
 data MaryEraOnwards era where
   MaryEraOnwardsMary  :: MaryEraOnwards MaryEra

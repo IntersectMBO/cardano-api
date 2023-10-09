@@ -1,12 +1,16 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+
+
 
 module Cardano.Api.Eon.AllegraEraOnwards
   ( AllegraEraOnwards(..)
@@ -17,6 +21,7 @@ module Cardano.Api.Eon.AllegraEraOnwards
   , AllegraEraOnwardsConstraints
   ) where
 
+import           Cardano.Api.EasyEvidence
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -36,6 +41,16 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import           Data.Aeson
 import           Data.Typeable (Typeable)
+
+instance EasyEvidence AllegraEraOnwards era where
+ easyEvidence era = case era of
+     ByronEra   -> Nothing
+     ShelleyEra -> Nothing
+     AllegraEra -> Just AllegraEraOnwardsAllegra
+     MaryEra    -> Just AllegraEraOnwardsMary
+     AlonzoEra  -> Just AllegraEraOnwardsAlonzo
+     BabbageEra -> Just AllegraEraOnwardsBabbage
+     ConwayEra  -> Just AllegraEraOnwardsConway
 
 data AllegraEraOnwards era where
   AllegraEraOnwardsAllegra  :: AllegraEraOnwards AllegraEra
