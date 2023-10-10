@@ -167,11 +167,12 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
+import           Control.Error.Util (note)
 import           Control.Exception
 import           Control.Monad (when)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
+import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
 import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor
@@ -1543,8 +1544,9 @@ isLeadingSlotsTPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey
 
   let certifiedVrf s = Crypto.evalCertified () (TPraos.mkSeed TPraos.seedL s eNonce) vrfSkey
 
-  stakePoolStake <- maybe (Left $ LeaderErrStakePoolHasNoStake poolid) Right $
+  stakePoolStake <-
     ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr
+      & note (LeaderErrStakePoolHasNoStake poolid)
 
   let isLeader s = TPraos.checkLeaderValue (Crypto.certifiedOutput (certifiedVrf s)) stakePoolStake activeSlotCoeff'
 
@@ -1561,7 +1563,7 @@ isLeadingSlotsPraos :: ()
 isLeadingSlotsPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey activeSlotCoeff' = do
   let StakePoolKeyHash poolHash = poolid
 
-  stakePoolStake <- maybe (Left $ LeaderErrStakePoolHasNoStake poolid) Right $
+  stakePoolStake <- note (LeaderErrStakePoolHasNoStake poolid) $
     ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr
 
   let isLeader slotNo = checkLeaderNatValue certifiedNatValue stakePoolStake activeSlotCoeff'
