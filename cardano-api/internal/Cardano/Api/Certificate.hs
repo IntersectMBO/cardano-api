@@ -252,76 +252,29 @@ data StakeAddressRequirements era where
     -> StakeCredential
     -> StakeAddressRequirements era
 
-
 makeStakeAddressRegistrationCertificate :: StakeAddressRequirements era -> Certificate era
-makeStakeAddressRegistrationCertificate req =
-  case req of
-    StakeAddrRegistrationPreConway atMostEra scred ->
-      shelleyToBabbageEraConstraints atMostEra
-        $ makeStakeAddressRegistrationCertificatePreConway atMostEra scred
-    StakeAddrRegistrationConway cOnwards ll scred ->
-      conwayEraOnwardsConstraints cOnwards
-        $ makeStakeAddressRegistrationCertificatePostConway cOnwards scred ll
- where
-  makeStakeAddressRegistrationCertificatePreConway :: ()
-    => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-    => Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
-    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
-    => ShelleyToBabbageEra era
-    -> StakeCredential
-    -> Certificate era
-  makeStakeAddressRegistrationCertificatePreConway atMostBabbage scred =
-    ShelleyRelatedCertificate atMostBabbage $ Ledger.mkRegTxCert $ toShelleyStakeCredential scred
-
-  makeStakeAddressRegistrationCertificatePostConway :: ()
-    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
-    => Ledger.ConwayEraTxCert (ShelleyLedgerEra era)
-    => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-    => ConwayEraOnwards era
-    -> StakeCredential
-    -> Lovelace
-    -> Certificate era
-  makeStakeAddressRegistrationCertificatePostConway cWayEraOn scred deposit =
-    ConwayCertificate cWayEraOn
-        $ Ledger.mkRegDepositTxCert
-            (toShelleyStakeCredential scred)
-            (toShelleyLovelace deposit)
+makeStakeAddressRegistrationCertificate = \case
+  StakeAddrRegistrationPreConway w scred ->
+    shelleyToBabbageEraConstraints w
+      $ ShelleyRelatedCertificate w
+      $ Ledger.mkRegTxCert $ toShelleyStakeCredential scred
+  StakeAddrRegistrationConway cOnwards deposit scred ->
+    conwayEraOnwardsConstraints cOnwards
+      $ ConwayCertificate cOnwards
+      $ Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) (toShelleyLovelace deposit)
 
 makeStakeAddressUnregistrationCertificate :: StakeAddressRequirements era -> Certificate era
 makeStakeAddressUnregistrationCertificate req =
   case req of
-    StakeAddrRegistrationConway cOnwards ll scred ->
+    StakeAddrRegistrationConway cOnwards deposit scred ->
       conwayEraOnwardsConstraints cOnwards
-        $ makeStakeAddressDeregistrationCertificatePostConway cOnwards scred ll
+        $ ConwayCertificate cOnwards
+        $ Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) (toShelleyLovelace deposit)
 
     StakeAddrRegistrationPreConway atMostEra scred ->
       shelleyToBabbageEraConstraints atMostEra
-        $ makeStakeAddressDeregistrationCertificatePreConway atMostEra scred
- where
-  makeStakeAddressDeregistrationCertificatePreConway
-    :: Ledger.ShelleyEraTxCert (ShelleyLedgerEra era)
-    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ShelleyTxCert (ShelleyLedgerEra era)
-    => EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-    => ShelleyToBabbageEra era
-    -> StakeCredential
-    -> Certificate era
-  makeStakeAddressDeregistrationCertificatePreConway aMostBab scred =
-    ShelleyRelatedCertificate aMostBab
-      $ Ledger.mkUnRegTxCert $ toShelleyStakeCredential scred
-
-  makeStakeAddressDeregistrationCertificatePostConway
-    :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-    => Ledger.TxCert (ShelleyLedgerEra era) ~ Ledger.ConwayTxCert (ShelleyLedgerEra era)
-    => Ledger.ConwayEraTxCert (ShelleyLedgerEra era)
-    => ConwayEraOnwards era
-    -> StakeCredential
-    -> Lovelace
-    -> Certificate era
-  makeStakeAddressDeregistrationCertificatePostConway cOn scred deposit  =
-    ConwayCertificate cOn
-      $ Ledger.mkUnRegDepositTxCert
-          (toShelleyStakeCredential scred)
-          (toShelleyLovelace deposit)
+        $ ShelleyRelatedCertificate atMostEra
+        $ Ledger.mkUnRegTxCert $ toShelleyStakeCredential scred
 
 data StakeDelegationRequirements era where
   StakeDelegationRequirementsConwayOnwards
@@ -336,19 +289,17 @@ data StakeDelegationRequirements era where
     -> PoolId
     -> StakeDelegationRequirements era
 
-
 makeStakeAddressDelegationCertificate :: StakeDelegationRequirements era -> Certificate era
-makeStakeAddressDelegationCertificate req =
-  case req of
-    StakeDelegationRequirementsConwayOnwards cOnwards scred delegatee ->
-      conwayEraOnwardsConstraints cOnwards
-        $ ConwayCertificate cOnwards
-        $ Ledger.mkDelegTxCert (toShelleyStakeCredential scred) delegatee
+makeStakeAddressDelegationCertificate = \case
+  StakeDelegationRequirementsConwayOnwards cOnwards scred delegatee ->
+    conwayEraOnwardsConstraints cOnwards
+      $ ConwayCertificate cOnwards
+      $ Ledger.mkDelegTxCert (toShelleyStakeCredential scred) delegatee
 
-    StakeDelegationRequirementsPreConway atMostBabbage scred pid ->
-      shelleyToBabbageEraConstraints atMostBabbage
-        $ ShelleyRelatedCertificate atMostBabbage
-        $ Ledger.mkDelegStakeTxCert (toShelleyStakeCredential scred) (unStakePoolKeyHash pid)
+  StakeDelegationRequirementsPreConway atMostBabbage scred pid ->
+    shelleyToBabbageEraConstraints atMostBabbage
+      $ ShelleyRelatedCertificate atMostBabbage
+      $ Ledger.mkDelegStakeTxCert (toShelleyStakeCredential scred) (unStakePoolKeyHash pid)
 
 data StakePoolRegistrationRequirements era where
   StakePoolRegistrationRequirementsConwayOnwards
@@ -364,16 +315,15 @@ data StakePoolRegistrationRequirements era where
 makeStakePoolRegistrationCertificate :: ()
   => StakePoolRegistrationRequirements era
   -> Certificate era
-makeStakePoolRegistrationCertificate req =
-  case req of
-    StakePoolRegistrationRequirementsConwayOnwards cOnwards poolParams ->
-      conwayEraOnwardsConstraints cOnwards
-        $ ConwayCertificate cOnwards
-        $ Ledger.mkRegPoolTxCert poolParams
-    StakePoolRegistrationRequirementsPreConway atMostBab poolParams ->
-      shelleyToBabbageEraConstraints atMostBab
-        $ ShelleyRelatedCertificate atMostBab
-        $ Ledger.mkRegPoolTxCert poolParams
+makeStakePoolRegistrationCertificate = \case
+  StakePoolRegistrationRequirementsConwayOnwards cOnwards poolParams ->
+    conwayEraOnwardsConstraints cOnwards
+      $ ConwayCertificate cOnwards
+      $ Ledger.mkRegPoolTxCert poolParams
+  StakePoolRegistrationRequirementsPreConway atMostBab poolParams ->
+    shelleyToBabbageEraConstraints atMostBab
+      $ ShelleyRelatedCertificate atMostBab
+      $ Ledger.mkRegPoolTxCert poolParams
 
 data StakePoolRetirementRequirements era where
   StakePoolRetirementRequirementsConwayOnwards

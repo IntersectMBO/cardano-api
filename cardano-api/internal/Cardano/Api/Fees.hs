@@ -223,19 +223,10 @@ evaluateTransactionFee pp txbody keywitcount _byronwitcount =
       ByronTx{} -> case shelleyBasedEra :: ShelleyBasedEra era of {}
       --TODO: we could actually support Byron here, it'd be different but simpler
 
-      ShelleyTx sbe tx -> shelleyBasedEraConstraints sbe (evalShelleyBasedEra tx)
-  where
-    evalShelleyBasedEra :: forall ledgerera.
-                           ShelleyLedgerEra era ~ ledgerera
-                        => L.EraTx ledgerera
-                        => Ledger.Tx ledgerera
-                        -> Lovelace
-    evalShelleyBasedEra tx =
-      fromShelleyLovelace $
-        Ledger.evaluateTransactionFee
-          pp
-          tx
-          keywitcount
+      ShelleyTx sbe tx ->
+        shelleyBasedEraConstraints sbe
+          $ fromShelleyLovelace
+          $ Ledger.evaluateTransactionFee pp tx keywitcount
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.
@@ -1208,9 +1199,5 @@ calculateMinimumUTxO
   -> Lovelace
 calculateMinimumUTxO sbe txout pp =
   shelleyBasedEraConstraints sbe
-    $ calcMinUTxO pp (toShelleyTxOutAny sbe txout)
- where
-   calcMinUTxO :: L.EraTxOut ledgerera => L.PParams ledgerera -> L.TxOut ledgerera -> Lovelace
-   calcMinUTxO pp' txOut =
-      let txOutWithMinCoin = L.setMinCoinTxOut pp' txOut
+    $ let txOutWithMinCoin = L.setMinCoinTxOut pp (toShelleyTxOutAny sbe txout)
       in fromShelleyLovelace (txOutWithMinCoin ^. L.coinTxOutL)

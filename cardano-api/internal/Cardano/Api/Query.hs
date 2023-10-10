@@ -489,29 +489,29 @@ toShelleyAddrSet era =
   . Set.toList
 
 
-toLedgerUTxO :: ShelleyLedgerEra era ~ ledgerera
-             => Core.EraCrypto ledgerera ~ StandardCrypto
-             => ShelleyBasedEra era
-             -> UTxO era
-             -> Shelley.UTxO ledgerera
+toLedgerUTxO :: ()
+  => ShelleyBasedEra era
+  -> UTxO era
+  -> Shelley.UTxO (ShelleyLedgerEra era)
 toLedgerUTxO sbe (UTxO utxo) =
-    Shelley.UTxO
-  . Map.fromList
-  . map (bimap toShelleyTxIn (toShelleyTxOut sbe))
-  . Map.toList
-  $ utxo
+  shelleyBasedEraConstraints sbe
+    $ Shelley.UTxO
+    . Map.fromList
+    . map (bimap toShelleyTxIn (toShelleyTxOut sbe))
+    . Map.toList
+    $ utxo
 
-fromLedgerUTxO :: ShelleyLedgerEra era ~ ledgerera
-               => Core.EraCrypto ledgerera ~ StandardCrypto
-               => ShelleyBasedEra era
-               -> Shelley.UTxO ledgerera
-               -> UTxO era
+fromLedgerUTxO :: ()
+  => ShelleyBasedEra era
+  -> Shelley.UTxO (ShelleyLedgerEra era)
+  -> UTxO era
 fromLedgerUTxO sbe (Shelley.UTxO utxo) =
-    UTxO
-  . Map.fromList
-  . map (bimap fromShelleyTxIn (fromShelleyTxOut sbe))
-  . Map.toList
-  $ utxo
+  shelleyBasedEraConstraints sbe
+    $ UTxO
+    . Map.fromList
+    . map (bimap fromShelleyTxIn (fromShelleyTxOut sbe))
+    . Map.toList
+    $ utxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational

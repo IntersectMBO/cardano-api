@@ -121,7 +121,7 @@ import qualified Cardano.Ledger.Api.Transition as Ledger
 import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.BHeaderView as Ledger
-import           Cardano.Ledger.Binary (DecoderError, FromCBOR)
+import           Cardano.Ledger.Binary (DecoderError)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
@@ -154,7 +154,6 @@ import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
-import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
@@ -1429,10 +1428,7 @@ instance Error LeadershipError where
     "Error while calculating the slot range: " <> Text.unpack e
   displayError LeaderErrCandidateNonceStillEvolving = "Candidate nonce is still evolving"
 
-nextEpochEligibleLeadershipSlots
-  :: forall era. ()
-  => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
-  => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
+nextEpochEligibleLeadershipSlots :: forall era. ()
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardCrypto
   -> SerialisedCurrentEpochState era
@@ -1447,81 +1443,82 @@ nextEpochEligibleLeadershipSlots
   -> EpochInfo (Either Text)
   -> (ChainTip, EpochNo)
   -> Either LeadershipError (Set SlotNo)
-nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (VrfSigningKey vrfSkey) pp eInfo (cTip, currentEpoch) = do
-  (_, currentEpochLastSlot) <- first LeaderErrSlotRangeCalculationFailure
-                                 $ Slot.epochInfoRange eInfo currentEpoch
+nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (VrfSigningKey vrfSkey) pp eInfo (cTip, currentEpoch) =
+  shelleyBasedEraConstraints sbe $ do
+    (_, currentEpochLastSlot) <- first LeaderErrSlotRangeCalculationFailure
+                                  $ Slot.epochInfoRange eInfo currentEpoch
 
-  (firstSlotOfEpoch, lastSlotofEpoch) <- first LeaderErrSlotRangeCalculationFailure
-                  $ Slot.epochInfoRange eInfo (currentEpoch + 1)
-
-
-  -- First we check if we are within 3k/f slots of the end of the current epoch.
-  -- Why? Because the stake distribution is stable at this point.
-  -- k is the security parameter
-  -- f is the active slot coefficient
-  let stabilityWindowR :: Rational
-      stabilityWindowR = fromIntegral (3 * sgSecurityParam sGen) / Ledger.unboundRational (sgActiveSlotsCoeff sGen)
-      stabilityWindowSlots :: SlotNo
-      stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
-      stableStakeDistribSlot = currentEpochLastSlot - stabilityWindowSlots
+    (firstSlotOfEpoch, lastSlotofEpoch) <- first LeaderErrSlotRangeCalculationFailure
+                    $ Slot.epochInfoRange eInfo (currentEpoch + 1)
 
 
-  case cTip of
-    ChainTipAtGenesis -> Left LeaderErrGenesisSlot
-    ChainTip tip _ _ ->
-      if tip > stableStakeDistribSlot
-      then return ()
-      else Left $ LeaderErrStakeDistribUnstable tip stableStakeDistribSlot stabilityWindowSlots currentEpochLastSlot
+    -- First we check if we are within 3k/f slots of the end of the current epoch.
+    -- Why? Because the stake distribution is stable at this point.
+    -- k is the security parameter
+    -- f is the active slot coefficient
+    let stabilityWindowR :: Rational
+        stabilityWindowR = fromIntegral (3 * sgSecurityParam sGen) / Ledger.unboundRational (sgActiveSlotsCoeff sGen)
+        stabilityWindowSlots :: SlotNo
+        stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
+        stableStakeDistribSlot = currentEpochLastSlot - stabilityWindowSlots
 
-  chainDepState <- first LeaderErrDecodeProtocolStateFailure
-                     $ decodeProtocolState ptclState
 
-  -- We need the candidate nonce, the previous epoch's last block header hash
-  -- and the extra entropy from the protocol parameters. We then need to combine them
-  -- with the (⭒) operator.
-  let Consensus.PraosNonces { Consensus.candidateNonce, Consensus.evolvingNonce } =
-        Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState
+    case cTip of
+      ChainTipAtGenesis -> Left LeaderErrGenesisSlot
+      ChainTip tip _ _ ->
+        if tip > stableStakeDistribSlot
+        then return ()
+        else Left $ LeaderErrStakeDistribUnstable tip stableStakeDistribSlot stabilityWindowSlots currentEpochLastSlot
 
-  -- Let's do a nonce check. The candidate nonce and the evolving nonce should not be equal.
-  when (evolvingNonce == candidateNonce)
-   $ Left LeaderErrCandidateNonceStillEvolving
+    chainDepState <- first LeaderErrDecodeProtocolStateFailure
+                      $ decodeProtocolState ptclState
 
-  -- Get the previous epoch's last block header hash nonce
-  let previousLabNonce = Consensus.previousLabNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
-      extraEntropy :: Nonce
-      extraEntropy =
-        caseShelleyToAlonzoOrBabbageEraOnwards
-          (const (pp ^. Core.ppExtraEntropyL))
-          (const Ledger.NeutralNonce)
-          sbe
+    -- We need the candidate nonce, the previous epoch's last block header hash
+    -- and the extra entropy from the protocol parameters. We then need to combine them
+    -- with the (⭒) operator.
+    let Consensus.PraosNonces { Consensus.candidateNonce, Consensus.evolvingNonce } =
+          Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState
 
-      nextEpochsNonce = candidateNonce ⭒ previousLabNonce ⭒ extraEntropy
+    -- Let's do a nonce check. The candidate nonce and the evolving nonce should not be equal.
+    when (evolvingNonce == candidateNonce) $
+      Left LeaderErrCandidateNonceStillEvolving
 
-  -- Then we get the "mark" snapshot. This snapshot will be used for the next
-  -- epoch's leadership schedule.
-  CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure $
-                                decodeCurrentEpochState sbe serCurrEpochState
+    -- Get the previous epoch's last block header hash nonce
+    let previousLabNonce = Consensus.previousLabNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
+        extraEntropy :: Nonce
+        extraEntropy =
+          caseShelleyToAlonzoOrBabbageEraOnwards
+            (const (pp ^. Core.ppExtraEntropyL))
+            (const Ledger.NeutralNonce)
+            sbe
 
-  let snapshot :: ShelleyAPI.SnapShot Shelley.StandardCrypto
-      snapshot = ShelleyAPI.ssStakeMark $ shelleyBasedEraConstraints sbe $ ShelleyAPI.esSnapshots cEstate
-      markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
-      markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
+        nextEpochsNonce = candidateNonce ⭒ previousLabNonce ⭒ extraEntropy
 
-  let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
-      slotRangeOfInterest pp' = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
-        $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
+    -- Then we get the "mark" snapshot. This snapshot will be used for the next
+    -- epoch's leadership schedule.
+    CurrentEpochState cEstate <-
+      first LeaderErrDecodeProtocolEpochStateFailure $
+        decodeCurrentEpochState sbe serCurrEpochState
 
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const (isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f))
-    (const (isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f))
-    sbe
- where
-  globals = shelleyBasedEraConstraints sbe
-              $ constructGlobals sGen eInfo $ pp ^. Core.ppProtocolVersionL
+    let snapshot :: ShelleyAPI.SnapShot Shelley.StandardCrypto
+        snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
+        markSnapshotPoolDistr :: Map (SL.KeyHash 'SL.StakePool Shelley.StandardCrypto) (SL.IndividualPoolStake Shelley.StandardCrypto)
+        markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
-  f :: Ledger.ActiveSlotCoeff
-  f = activeSlotCoeff globals
+    let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
+        slotRangeOfInterest pp' = Set.filter
+          (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
+          $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
+
+    caseShelleyToAlonzoOrBabbageEraOnwards
+      (const (isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f))
+      (const (isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid markSnapshotPoolDistr nextEpochsNonce vrfSkey f))
+      sbe
+  where
+    globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo $ pp ^. Core.ppProtocolVersionL
+
+    f :: Ledger.ActiveSlotCoeff
+    f = activeSlotCoeff globals
 
 
 -- | Return slots a given stake pool operator is leading.
@@ -1575,9 +1572,6 @@ isLeadingSlotsPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey 
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.
 currentEpochEligibleLeadershipSlots :: forall era. ()
-  => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
-  => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
-  => Shelley.EraCrypto (ShelleyLedgerEra era) ~ Shelley.StandardCrypto
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardCrypto
   -> EpochInfo (Either Text)
@@ -1588,39 +1582,38 @@ currentEpochEligibleLeadershipSlots :: forall era. ()
   -> SerialisedPoolDistribution era
   -> EpochNo -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
-currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch = do
+currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigningKey vrkSkey) serPoolDistr currentEpoch =
+  shelleyBasedEraConstraints sbe $ do
+    chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
+      first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
 
-  chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
-    first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
+    -- We use the current epoch's nonce for the current leadership schedule
+    -- calculation because the TICKN transition updates the epoch nonce
+    -- at the start of the epoch.
+    let epochNonce :: Nonce = Consensus.epochNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
 
-  -- We use the current epoch's nonce for the current leadership schedule
-  -- calculation because the TICKN transition updates the epoch nonce
-  -- at the start of the epoch.
-  let epochNonce :: Nonce = Consensus.epochNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
+    (firstSlotOfEpoch, lastSlotofEpoch) :: (SlotNo, SlotNo) <- first LeaderErrSlotRangeCalculationFailure
+      $ Slot.epochInfoRange eInfo currentEpoch
 
-  (firstSlotOfEpoch, lastSlotofEpoch) :: (SlotNo, SlotNo) <- first LeaderErrSlotRangeCalculationFailure
-    $ Slot.epochInfoRange eInfo currentEpoch
+    setSnapshotPoolDistr <-
+      first LeaderErrDecodeProtocolEpochStateFailure . fmap (SL.unPoolDistr . unPoolDistr)
+        $ decodePoolDistribution sbe serPoolDistr
 
-  setSnapshotPoolDistr <-
-    first LeaderErrDecodeProtocolEpochStateFailure . fmap (SL.unPoolDistr . unPoolDistr)
-      $ decodePoolDistribution sbe serPoolDistr
+    let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
+        slotRangeOfInterest pp' = Set.filter
+          (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
+          $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
-  let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
-      slotRangeOfInterest pp' = Set.filter
-        (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
-        $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
+    caseShelleyToAlonzoOrBabbageEraOnwards
+      (const (isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f))
+      (const (isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f))
+      sbe
 
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const (isLeadingSlotsTPraos (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f))
-    (const (isLeadingSlotsPraos  (slotRangeOfInterest pp) poolid setSnapshotPoolDistr epochNonce vrkSkey f))
-    sbe
+  where
+    globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo $ pp ^. Core.ppProtocolVersionL
 
- where
-  globals = shelleyBasedEraConstraints sbe
-              $ constructGlobals sGen eInfo $ pp ^. Core.ppProtocolVersionL
-
-  f :: Ledger.ActiveSlotCoeff
-  f = activeSlotCoeff globals
+    f :: Ledger.ActiveSlotCoeff
+    f = activeSlotCoeff globals
 
 constructGlobals
   :: ShelleyGenesis Shelley.StandardCrypto
