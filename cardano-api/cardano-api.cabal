@@ -169,6 +169,7 @@ library internal
                       , deepseq
                       , directory
                       , either
+                      , errors
                       , filepath
                       , formatting
                       , iproute

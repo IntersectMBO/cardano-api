@@ -67,38 +67,40 @@ data GovernanceAction
   deriving (Eq, Show)
 
 
-toGovernanceAction
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => ShelleyLedgerEra era ~ ledgerera
+toGovernanceAction :: ()
   => ShelleyBasedEra era
   -> GovernanceAction
-  -> Gov.GovAction ledgerera
-toGovernanceAction _ (MotionOfNoConfidence prevGovId) = Gov.NoConfidence prevGovId
-toGovernanceAction _ (ProposeNewConstitution prevGovAction anchor) =
-  Gov.NewConstitution prevGovAction Gov.Constitution
-    { Gov.constitutionAnchor = anchor
-    , Gov.constitutionScript = SNothing   -- TODO: Conway era
-    }
-toGovernanceAction _ (ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor) =
-  Gov.UpdateCommittee
-    prevGovId -- previous governance action id
-    (Set.fromList $ map toCommitteeMember oldCommitteeMembers) -- members to remove
-    (Map.mapKeys toCommitteeMember newCommitteeMembers) -- members to add
-    (fromMaybe (error $ mconcat ["toGovernanceAction: the given quorum "
-                               , show quor
-                               , " was outside of the unit interval!"
-                               ])
-          $ boundRational @UnitInterval quor)
-toGovernanceAction _ InfoAct = Gov.InfoAction
-toGovernanceAction _ (TreasuryWithdrawal withdrawals) =
-  let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
-  in Gov.TreasuryWithdrawals m
-toGovernanceAction _ (InitiateHardfork prevGovId pVer) =
-  Gov.HardForkInitiation prevGovId pVer
-toGovernanceAction sbe (UpdatePParams preGovId ppup) =
-  case toLedgerPParamsUpdate sbe ppup of
-    Left e -> error $ "toGovernanceAction: " <> show e
-    Right ppup' -> Gov.ParameterChange preGovId ppup'
+  -> Gov.GovAction (ShelleyLedgerEra era)
+toGovernanceAction sbe =
+  shelleyBasedEraConstraints sbe $ \case
+    MotionOfNoConfidence prevGovId ->
+      Gov.NoConfidence prevGovId
+    ProposeNewConstitution prevGovAction anchor ->
+      Gov.NewConstitution prevGovAction Gov.Constitution
+        { Gov.constitutionAnchor = anchor
+        , Gov.constitutionScript = SNothing   -- TODO: Conway era
+        }
+    ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
+      Gov.UpdateCommittee
+        prevGovId -- previous governance action id
+        (Set.fromList $ map toCommitteeMember oldCommitteeMembers) -- members to remove
+        (Map.mapKeys toCommitteeMember newCommitteeMembers) -- members to add
+        (fromMaybe (error $ mconcat ["toGovernanceAction: the given quorum "
+                                  , show quor
+                                  , " was outside of the unit interval!"
+                                  ])
+              $ boundRational @UnitInterval quor)
+    InfoAct ->
+      Gov.InfoAction
+    TreasuryWithdrawal withdrawals ->
+      let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
+      in Gov.TreasuryWithdrawals m
+    InitiateHardfork prevGovId pVer ->
+      Gov.HardForkInitiation prevGovId pVer
+    UpdatePParams preGovId ppup ->
+      case toLedgerPParamsUpdate sbe ppup of
+        Left e -> error $ "toGovernanceAction: " <> show e
+        Right ppup' -> Gov.ParameterChange preGovId ppup'
 
 fromGovernanceAction
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto

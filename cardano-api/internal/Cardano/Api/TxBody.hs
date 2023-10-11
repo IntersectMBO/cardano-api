@@ -2714,12 +2714,10 @@ convValidityInterval (lowerBound, upperBound) =
     }
 
 -- | Convert transaction update proposal into ledger update proposal
-convTxUpdateProposal
-  :: forall era ledgerera. ShelleyLedgerEra era ~ ledgerera
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
+convTxUpdateProposal :: ()
   => ShelleyBasedEra era
   -> TxUpdateProposal era
-  -> Either TxBodyError (StrictMaybe (Ledger.Update ledgerera))
+  -> Either TxBodyError (StrictMaybe (Ledger.Update (ShelleyLedgerEra era)))
   -- ^ 'Left' when there's protocol params conversion error, 'Right' otherwise, 'Right SNothing' means that
   -- there's no update proposal
 convTxUpdateProposal sbe = \case
