@@ -150,6 +150,7 @@ module Cardano.Api.TxBody (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.AllegraEraOnwards
+import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
@@ -3223,7 +3224,7 @@ toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
 
 toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
-    & L.dataHashTxOutL .~ toAlonzoTxOutDataHash' txoutdata
+      & L.dataHashTxOutL .~ toAlonzoTxOutDataHash' AlonzoEraOnlyAlonzo txoutdata
 
 toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
@@ -3237,13 +3238,20 @@ toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutd
        & L.datumTxOutL .~ toBabbageTxOutDatum' BabbageEraOnwardsConway txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
-toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra
-                       -> StrictMaybe (L.DataHash StandardCrypto)
-toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
-toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
-toAlonzoTxOutDataHash' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
-toAlonzoTxOutDataHash' (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: BabbageEraOnwards AlonzoEra of {}
+toAlonzoTxOutDataHash' :: forall era ctx. ()
+  => AlonzoEraOnly era
+  -> TxOutDatum ctx era
+  -> StrictMaybe (L.DataHash StandardCrypto)
+toAlonzoTxOutDataHash' eon =
+  alonzoEraOnlyConstraints eon $ \case
+    TxOutDatumNone ->
+      SNothing
+    TxOutDatumHash _ (ScriptDataHash dh) ->
+      SJust dh
+    TxOutDatumInTx' _ (ScriptDataHash dh) _ ->
+      SJust dh
+    TxOutDatumInline eon' _sd ->
+      disjointAlonzoEraOnlyAndBabbageEraOnwards eon eon'
 
 -- TODO: Consolidate with alonzo function and rename
 toBabbageTxOutDatum' :: ()
