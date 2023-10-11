@@ -118,9 +118,6 @@ module Cardano.Api.TxBody (
     renderScriptWitnessIndex,
     collectTxBodyScriptWitnesses,
 
-    -- * Conversion to inline data
-    scriptDataToInlineDatum,
-
     -- * Internal conversion functions & types
     toByronTxId,
     toShelleyTxId,
@@ -811,7 +808,7 @@ toBabbageTxOutDatum eon =
   babbageEraOnwardsConstraints eon $ \case
     TxOutDatumNone -> Babbage.NoDatum
     TxOutDatumHash _ (ScriptDataHash dh) -> Babbage.DatumHash dh
-    TxOutDatumInline _ sd -> scriptDataToInlineDatum sd
+    TxOutDatumInline _ sd -> L.Datum . L.dataToBinaryData $ toAlonzoData sd
 
 fromBabbageTxOutDatum :: ()
   => BabbageEraOnwards era
@@ -3267,7 +3264,7 @@ toBabbageTxOutDatum' eon =
     TxOutDatumInTx' _ (ScriptDataHash dh) _ ->
       Babbage.DatumHash dh
     TxOutDatumInline _ sd ->
-      scriptDataToInlineDatum sd
+      L.Datum . L.dataToBinaryData $ toAlonzoData sd
 
 
 -- ----------------------------------------------------------------------------
@@ -3502,14 +3499,3 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
 calculateExecutionUnitsLovelace :: Ledger.Prices -> ExecutionUnits -> Maybe Lovelace
 calculateExecutionUnitsLovelace prices eUnits =
   return . fromShelleyLovelace $ Alonzo.txscriptfee prices (toAlonzoExUnits eUnits)
-
--- ----------------------------------------------------------------------------
--- Inline data
---
--- | Conversion of ScriptData to binary data which allows for the storage of data
--- onchain within a transaction output.
---
-
-scriptDataToInlineDatum :: L.Era ledgerera => HashableScriptData -> L.Datum ledgerera
-scriptDataToInlineDatum d =
-  L.Datum . L.dataToBinaryData $ toAlonzoData d
