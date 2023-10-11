@@ -716,13 +716,13 @@ toShelleyTxOut _ (TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _
 toShelleyTxOut sbe (TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
-       & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
+       & L.datumTxOutL .~ toBabbageTxOutDatum BabbageEraOnwardsBabbage txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
 toShelleyTxOut sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
-       & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
+       & L.datumTxOutL .~ toBabbageTxOutDatum BabbageEraOnwardsConway txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
 fromShelleyTxOut :: forall era ledgerera ctx. ()
@@ -808,12 +808,15 @@ fromAlonzoTxOutDataHash s (SJust dh)   = TxOutDatumHash s (ScriptDataHash dh)
 
 -- TODO: If ledger creates an open type family for datums
 -- we can consolidate this function with the Alonzo version
-toBabbageTxOutDatum
-  :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
-toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
-toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
-toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
+toBabbageTxOutDatum :: ()
+  => BabbageEraOnwards era
+  -> TxOutDatum CtxUTxO era
+  -> Babbage.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatum eon =
+  babbageEraOnwardsConstraints eon $ \case
+    TxOutDatumNone -> Babbage.NoDatum
+    TxOutDatumHash _ (ScriptDataHash dh) -> Babbage.DatumHash dh
+    TxOutDatumInline _ sd -> scriptDataToInlineDatum sd
 
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
