@@ -825,7 +825,7 @@ fromBabbageTxOutDatum _ _ Babbage.NoDatum = TxOutDatumNone
 fromBabbageTxOutDatum w _ (Babbage.DatumHash dh) =
   TxOutDatumHash w $ ScriptDataHash dh
 fromBabbageTxOutDatum _ w (Babbage.Datum binData) =
-  TxOutDatumInline w $ binaryDataToScriptData w binData
+  TxOutDatumInline w $ fromAlonzoData $ L.binaryDataToData binData
 
 
 -- ----------------------------------------------------------------------------
@@ -2306,7 +2306,7 @@ fromBabbageTxOut w txdatums txout =
         case txout ^. L.datumTxOutL of
           L.NoDatum -> TxOutDatumNone
           L.DatumHash dh -> resolveDatumInTx dh
-          L.Datum d -> TxOutDatumInline w $ binaryDataToScriptData w d
+          L.Datum d -> TxOutDatumInline w $ fromAlonzoData $ L.binaryDataToData d
 
     resolveDatumInTx :: L.DataHash StandardCrypto -> TxOutDatum CtxTx era
     resolveDatumInTx dh
@@ -3501,12 +3501,3 @@ calculateExecutionUnitsLovelace prices eUnits =
 scriptDataToInlineDatum :: L.Era ledgerera => HashableScriptData -> L.Datum ledgerera
 scriptDataToInlineDatum d =
   L.Datum . L.dataToBinaryData $ toAlonzoData d
-
-binaryDataToScriptData
-  :: L.Era ledgerera
-  => BabbageEraOnwards era
-  -> L.BinaryData ledgerera -> HashableScriptData
-binaryDataToScriptData BabbageEraOnwardsBabbage d =
-  fromAlonzoData $ L.binaryDataToData d
-binaryDataToScriptData BabbageEraOnwardsConway  d =
-  fromAlonzoData $ L.binaryDataToData d
