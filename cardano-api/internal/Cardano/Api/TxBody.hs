@@ -3228,13 +3228,13 @@ toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdat
 toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
-       & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata
+       & L.datumTxOutL .~ toBabbageTxOutDatum' BabbageEraOnwardsBabbage txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
 toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
-       & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata
+       & L.datumTxOutL .~ toBabbageTxOutDatum' BabbageEraOnwardsConway txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
 toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra
@@ -3246,13 +3246,20 @@ toAlonzoTxOutDataHash' (TxOutDatumInline inlineDatumSupp _sd) =
   case inlineDatumSupp :: BabbageEraOnwards AlonzoEra of {}
 
 -- TODO: Consolidate with alonzo function and rename
-toBabbageTxOutDatum'
-  :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
-toBabbageTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
-toBabbageTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
-toBabbageTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
-toBabbageTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
+toBabbageTxOutDatum' :: ()
+  => BabbageEraOnwards era
+  -> TxOutDatum ctx era
+  -> Babbage.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatum' eon =
+  babbageEraOnwardsConstraints eon $ \case
+    TxOutDatumNone ->
+      Babbage.NoDatum
+    TxOutDatumHash _ (ScriptDataHash dh) ->
+      Babbage.DatumHash dh
+    TxOutDatumInTx' _ (ScriptDataHash dh) _ ->
+      Babbage.DatumHash dh
+    TxOutDatumInline _ sd ->
+      scriptDataToInlineDatum sd
 
 
 -- ----------------------------------------------------------------------------
