@@ -812,15 +812,18 @@ toBabbageTxOutDatum eon =
     TxOutDatumHash _ (ScriptDataHash dh) -> Babbage.DatumHash dh
     TxOutDatumInline _ sd -> scriptDataToInlineDatum sd
 
-fromBabbageTxOutDatum
-  :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
+fromBabbageTxOutDatum :: ()
   => BabbageEraOnwards era
-  -> Babbage.Datum ledgerera
+  -> Babbage.Datum (ShelleyLedgerEra era)
   -> TxOutDatum ctx era
-fromBabbageTxOutDatum _ Babbage.NoDatum = TxOutDatumNone
-fromBabbageTxOutDatum w (Babbage.DatumHash dh) = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) $ ScriptDataHash dh
-fromBabbageTxOutDatum w (Babbage.Datum binData) = TxOutDatumInline w $ fromAlonzoData $ L.binaryDataToData binData
-
+fromBabbageTxOutDatum eon =
+  babbageEraOnwardsConstraints eon $ \case
+    Babbage.NoDatum ->
+      TxOutDatumNone
+    Babbage.DatumHash dh ->
+      TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards eon) $ ScriptDataHash dh
+    Babbage.Datum binData ->
+      TxOutDatumInline eon $ fromAlonzoData $ L.binaryDataToData binData
 
 -- ----------------------------------------------------------------------------
 -- Building vs viewing transactions
