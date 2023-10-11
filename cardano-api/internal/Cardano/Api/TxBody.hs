@@ -3202,34 +3202,34 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
 -- that works with a 'TxOut' in any context (including CtxTx) by ignoring
 -- embedded datums (taking only their hash).
 --
-toShelleyTxOutAny :: forall ctx era ledgerera.
-                   ShelleyLedgerEra era ~ ledgerera
-                => ShelleyBasedEra era
-                -> TxOut ctx era
-                -> Ledger.TxOut ledgerera
-toShelleyTxOutAny sbe (TxOut _ (TxOutAdaOnly ByronToAllegraEraByron _) _ _) =
+toShelleyTxOutAny :: ()
+  => ShelleyBasedEra era
+  -> TxOut ctx era
+  -> Ledger.TxOut (ShelleyLedgerEra era)
+toShelleyTxOutAny sbe = \case
+  TxOut _ (TxOutAdaOnly ByronToAllegraEraByron _) _ _ ->
     case sbe of {}
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraShelley value) _ _) =
+  TxOut addr (TxOutAdaOnly ByronToAllegraEraShelley value) _ _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraAllegra value) _ _) =
+  TxOut addr (TxOutAdaOnly ByronToAllegraEraAllegra value) _ _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
+  TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _) =
+  TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
       & L.dataHashTxOutL .~ toAlonzoTxOutDataHash' AlonzoEraOnlyAlonzo txoutdata
 
-toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript) =
+  TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript ->
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum' BabbageEraOnwardsBabbage txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
-toShelleyTxOutAny sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript) =
+  TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript ->
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum' BabbageEraOnwardsConway txoutdata
