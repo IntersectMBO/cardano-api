@@ -762,10 +762,7 @@ fromShelleyTxOut sbe ledgerTxOut = do
     ShelleyBasedEraBabbage ->
        TxOut addressInEra
              txOutValue
-             (fromBabbageTxOutDatum
-               AlonzoEraOnwardsBabbage
-               BabbageEraOnwardsBabbage
-               datum)
+             (fromBabbageTxOutDatum BabbageEraOnwardsBabbage datum)
              (case mRefScript of
                 SNothing -> ReferenceScriptNone
                 SJust refScript ->
@@ -777,10 +774,7 @@ fromShelleyTxOut sbe ledgerTxOut = do
     ShelleyBasedEraConway ->
        TxOut addressInEra
              txOutValue
-             (fromBabbageTxOutDatum
-               AlonzoEraOnwardsConway
-               BabbageEraOnwardsConway
-               datum)
+             (fromBabbageTxOutDatum BabbageEraOnwardsConway datum)
              (case mRefScript of
                 SNothing -> ReferenceScriptNone
                 SJust refScript ->
@@ -820,15 +814,12 @@ toBabbageTxOutDatum eon =
 
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
-  => AlonzoEraOnwards era
-  -> BabbageEraOnwards era
+  => BabbageEraOnwards era
   -> Babbage.Datum ledgerera
   -> TxOutDatum ctx era
-fromBabbageTxOutDatum _ _ Babbage.NoDatum = TxOutDatumNone
-fromBabbageTxOutDatum w _ (Babbage.DatumHash dh) =
-  TxOutDatumHash w $ ScriptDataHash dh
-fromBabbageTxOutDatum _ w (Babbage.Datum binData) =
-  TxOutDatumInline w $ fromAlonzoData $ L.binaryDataToData binData
+fromBabbageTxOutDatum _ Babbage.NoDatum = TxOutDatumNone
+fromBabbageTxOutDatum w (Babbage.DatumHash dh) = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) $ ScriptDataHash dh
+fromBabbageTxOutDatum w (Babbage.Datum binData) = TxOutDatumInline w $ fromAlonzoData $ L.binaryDataToData binData
 
 
 -- ----------------------------------------------------------------------------
