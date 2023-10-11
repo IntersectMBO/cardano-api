@@ -82,7 +82,6 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.EraCast
 import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.GenesisParameters
@@ -127,7 +126,6 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
-import           Control.Monad (forM)
 import           Control.Monad.Trans.Except
 import           Data.Aeson (FromJSON (..), ToJSON (..), withObject)
 import qualified Data.Aeson as Aeson
@@ -376,9 +374,6 @@ newtype ByronUpdateState = ByronUpdateState Byron.Update.State
 
 newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
-
-instance EraCast UTxO where
-  eraCast toEra' (UTxO m) = UTxO <$> forM m (eraCast toEra')
 
 data UTxOInAnyEra where
   UTxOInAnyEra :: CardanoEra era

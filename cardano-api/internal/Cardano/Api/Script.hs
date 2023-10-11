@@ -110,7 +110,6 @@ module Cardano.Api.Script (
 
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.EraCast
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
@@ -1399,15 +1398,6 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
       (const (pure ReferenceScriptNone))
       (\w -> ReferenceScript w <$> o .: "referenceScript")
       (cardanoEra :: CardanoEra era)
-
-instance EraCast ReferenceScript where
-  eraCast toEra = \case
-    ReferenceScriptNone -> pure ReferenceScriptNone
-    v@(ReferenceScript ws scriptInAnyLang) ->
-      caseByronToAlonzoOrBabbageEraOnwards
-        (const (Left $ EraCastError v (babbageEraOnwardsToCardanoEra ws) toEra))
-        (\wt -> Right $ ReferenceScript wt scriptInAnyLang)
-        toEra
 
 refScriptToShelleyScript
   :: CardanoEra era

@@ -934,10 +934,6 @@ module Cardano.Api (
     parseFilePath,
     writeSecrets,
 
-    -- ** Cast functions
-    EraCast (..),
-    EraCastError (..),
-
     -- * Convenience functions
 
     -- ** Transaction construction
@@ -1037,7 +1033,6 @@ import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
-import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Constraints
