@@ -27,6 +27,8 @@ module Cardano.Api.Eras.Case
 
     -- Proofs
   , noByronEraInShelleyBasedEra
+  , disjointAlonzoEraOnlyAndBabbageEraOnwards
+  , disjointByronEraOnlyAndShelleyBasedEra
 
     -- Conversions
   , shelleyToAllegraEraToByronToAllegraEra
@@ -213,8 +215,17 @@ caseAlonzoOnlyOrBabbageEraOnwards l r = \case
   AlonzoEraOnwardsBabbage -> r BabbageEraOnwardsBabbage
   AlonzoEraOnwardsConway  -> r BabbageEraOnwardsConway
 
+{-# DEPRECATED noByronEraInShelleyBasedEra "Use disjointByronEraOnlyAndShelleyBasedEra instead" #-}
 noByronEraInShelleyBasedEra :: ShelleyBasedEra era -> ByronEraOnly era -> a
-noByronEraInShelleyBasedEra sbe ByronEraOnlyByron = case sbe of {}
+noByronEraInShelleyBasedEra = flip disjointByronEraOnlyAndShelleyBasedEra
+
+disjointByronEraOnlyAndShelleyBasedEra :: ByronEraOnly era -> ShelleyBasedEra era -> a
+disjointByronEraOnlyAndShelleyBasedEra ByronEraOnlyByron sbe = case sbe of {}
+
+disjointAlonzoEraOnlyAndBabbageEraOnwards :: AlonzoEraOnly era -> BabbageEraOnwards era -> a
+disjointAlonzoEraOnlyAndBabbageEraOnwards eonL eonR =
+  case eonL of
+    AlonzoEraOnlyAlonzo -> case eonR of {}
 
 shelleyToAllegraEraToByronToAllegraEra :: ShelleyToAllegraEra era -> ByronToAllegraEra era
 shelleyToAllegraEraToByronToAllegraEra = \case
