@@ -2653,7 +2653,7 @@ convWithdrawals txWithdrawals =
 
 convTransactionFee :: ShelleyBasedEra era -> TxFee era -> Ledger.Coin
 convTransactionFee sbe = \case
-  TxFeeImplicit w  -> noByronEraInShelleyBasedEra sbe w
+  TxFeeImplicit w  -> disjointByronEraOnlyAndShelleyBasedEra w sbe
   TxFeeExplicit _ fee -> toShelleyLovelace fee
 
 convValidityInterval
