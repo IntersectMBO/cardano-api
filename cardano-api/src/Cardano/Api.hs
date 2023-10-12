@@ -94,6 +94,7 @@ module Cardano.Api (
     shelleyToAlonzoEraToShelleyBasedEra,
 
     ShelleyToBabbageEra(..),
+    ShelleyToBabbageEraConstraints,
     shelleyToBabbageEraConstraints,
     shelleyToBabbageEraToCardanoEra,
     shelleyToBabbageEraToShelleyBasedEra,
@@ -142,6 +143,7 @@ module Cardano.Api (
     -- ** From Conway
 
     ConwayEraOnwards(..),
+    ConwayEraOnwardsConstraints,
     conwayEraOnwardsConstraints,
     conwayEraOnwardsToCardanoEra,
     conwayEraOnwardsToShelleyBasedEra,
