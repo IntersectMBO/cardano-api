@@ -78,6 +78,8 @@ library internal
                         Cardano.Api.Eras.Case
                         Cardano.Api.Eras.Constraints
                         Cardano.Api.Eras.Core
+                        Cardano.Api.Eras.HasComplement
+                        Cardano.Api.Eras.Mandatory
                         Cardano.Api.Error
                         Cardano.Api.Feature
                         Cardano.Api.Fees
