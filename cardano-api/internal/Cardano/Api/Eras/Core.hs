@@ -191,8 +191,7 @@ monoidForEraInEonA sbe = forEraInEon sbe (pure mempty)
 
 data EraInEon eon where
   EraInEon
-    :: ( Typeable era
-       , Typeable (eon era)
+    :: ( Typeable (eon era)
        , Eon eon
        )
     => eon era
