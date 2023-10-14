@@ -23,8 +23,9 @@ module Cardano.Api (
     IsCardanoEra(..),
     AnyCardanoEra(..),
     anyCardanoEra,
-    cardanoEraConstraints,
     InAnyCardanoEra(..),
+    inAnyCardanoEra,
+    cardanoEraConstraints,
     ToCardanoEra(..),
 
     -- * Eon support
@@ -101,7 +102,9 @@ module Cardano.Api (
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
     AnyShelleyBasedEra(..),
+    anyShelleyBasedEra,
     InAnyShelleyBasedEra(..),
+    inAnyShelleyBasedEra,
     CardanoEraStyle(..),
     cardanoEraStyle,
     shelleyBasedToCardanoEra,

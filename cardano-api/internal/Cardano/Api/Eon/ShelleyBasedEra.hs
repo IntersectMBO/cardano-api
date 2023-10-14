@@ -14,7 +14,9 @@ module Cardano.Api.Eon.ShelleyBasedEra
     ShelleyBasedEra(..)
   , IsShelleyBasedEra(..)
   , AnyShelleyBasedEra(..)
+  , anyShelleyBasedEra
   , InAnyShelleyBasedEra(..)
+  , inAnyShelleyBasedEra
   , shelleyBasedToCardanoEra
   , inEonForShelleyBasedEra
   , inEonForShelleyBasedEraMaybe
@@ -281,6 +283,11 @@ instance FromJSON AnyShelleyBasedEra where
         "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
         wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
 
+anyShelleyBasedEra :: ()
+  => ShelleyBasedEra era
+  -> AnyShelleyBasedEra
+anyShelleyBasedEra sbe =
+  shelleyBasedEraConstraints sbe $ AnyShelleyBasedEra sbe
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era
@@ -292,6 +299,12 @@ data InAnyShelleyBasedEra thing where
                           -> thing era
                           -> InAnyShelleyBasedEra thing
 
+inAnyShelleyBasedEra :: ()
+  => ShelleyBasedEra era
+  -> thing era
+  -> InAnyShelleyBasedEra thing
+inAnyShelleyBasedEra sbe a =
+  shelleyBasedEraConstraints sbe $ InAnyShelleyBasedEra sbe a
 
 -- | Converts a 'ShelleyBasedEra' to the broader 'CardanoEra'.
 shelleyBasedToCardanoEra :: ShelleyBasedEra era -> CardanoEra era

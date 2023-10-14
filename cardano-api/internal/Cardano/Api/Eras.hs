@@ -15,8 +15,9 @@ module Cardano.Api.Eras
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
-  , cardanoEraConstraints
   , InAnyCardanoEra(..)
+  , inAnyCardanoEra
+  , cardanoEraConstraints
   , CardanoLedgerEra
   , ToCardanoEra(..)
 

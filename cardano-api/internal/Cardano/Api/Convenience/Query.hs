@@ -96,7 +96,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     & onNothing (left ByronEraNotSupported)
 
   qeInMode <- pure (toEraInMode era CardanoMode)
-    & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (cardanoEraConstraints era $ AnyCardanoEra era)))
+    & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (anyCardanoEra era)))
 
   let stakeCreds = Set.fromList $ mapMaybe filterUnRegCreds certs
       drepCreds  = Set.fromList $ mapMaybe filterUnRegDRepCreds certs
@@ -175,9 +175,7 @@ executeQueryAnyMode era localNodeConnInfo q = runExceptT $ do
   let cMode = consensusModeOnly $ localConsensusModeParams localNodeConnInfo
 
   eraInMode <- pure (toEraInMode era cMode)
-    & onNothing (left $ EraConsensusModeMismatch
-        (AnyConsensusMode CardanoMode)
-        (cardanoEraConstraints era $ AnyCardanoEra era))
+    & onNothing (left $ EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (anyCardanoEra era))
 
   case eraInMode of
     ByronEraInByronMode -> left ByronEraNotSupported
