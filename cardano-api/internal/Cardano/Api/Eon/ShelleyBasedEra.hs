@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -31,19 +32,34 @@ module Cardano.Api.Eon.ShelleyBasedEra
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
   , eraProtVerLow
+
+  , ShelleyBasedEraConstraints
+  , shelleyBasedEraConstraints
   ) where
 
 import           Cardano.Api.Eras.Core
+import           Cardano.Api.Modes
+import           Cardano.Api.Orphans ()
 
+import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
+import qualified Cardano.Crypto.Hash.Class as C
+import qualified Cardano.Crypto.VRF as C
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
+import           Cardano.Ledger.Binary (FromCBOR)
+import qualified Cardano.Ledger.Core as L
+import qualified Cardano.Ledger.SafeHash as L
+import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
+import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardBabbage, StandardConway, StandardMary, StandardShelley)
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 inEonForShelleyBasedEra :: ()
@@ -175,6 +191,40 @@ instance IsShelleyBasedEra BabbageEra where
 
 instance IsShelleyBasedEra ConwayEra where
    shelleyBasedEra = ShelleyBasedEraConway
+
+type ShelleyBasedEraConstraints era =
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
+  , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
+  , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+  , L.Era (ShelleyLedgerEra era)
+  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+  , L.EraPParams (ShelleyLedgerEra era)
+  , L.EraTx (ShelleyLedgerEra era)
+  , L.EraTxBody (ShelleyLedgerEra era)
+  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
+  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , IsCardanoEra era
+  , IsShelleyBasedEra era
+  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
+  , Typeable era
+  )
+
+shelleyBasedEraConstraints :: ()
+  => ShelleyBasedEra era
+  -> (ShelleyBasedEraConstraints era => a)
+  -> a
+shelleyBasedEraConstraints = \case
+  ShelleyBasedEraShelley -> id
+  ShelleyBasedEraAllegra -> id
+  ShelleyBasedEraMary    -> id
+  ShelleyBasedEraAlonzo  -> id
+  ShelleyBasedEraBabbage -> id
+  ShelleyBasedEraConway  -> id
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra

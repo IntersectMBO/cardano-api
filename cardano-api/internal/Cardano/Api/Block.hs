@@ -53,7 +53,6 @@ module Cardano.Api.Block (
 
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley

@@ -101,7 +101,6 @@ import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy

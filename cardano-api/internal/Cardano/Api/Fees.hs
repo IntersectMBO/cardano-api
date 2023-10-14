@@ -52,7 +52,6 @@ import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.NetworkId
