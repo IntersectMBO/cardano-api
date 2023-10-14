@@ -161,7 +161,6 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Feature

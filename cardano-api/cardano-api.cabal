@@ -76,7 +76,6 @@ library internal
                         Cardano.Api.Eon.ShelleyToMaryEra
                         Cardano.Api.Eras
                         Cardano.Api.Eras.Case
-                        Cardano.Api.Eras.Constraints
                         Cardano.Api.Eras.Core
                         Cardano.Api.Error
                         Cardano.Api.Feature

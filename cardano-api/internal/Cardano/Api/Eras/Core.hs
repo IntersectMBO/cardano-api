@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -39,6 +40,9 @@ module Cardano.Api.Eras.Core
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
+
+  , CardanoEraConstraints
+  , cardanoEraConstraints
   ) where
 
 import           Cardano.Api.HasTypeProxy
@@ -268,6 +272,24 @@ instance IsCardanoEra BabbageEra where
 
 instance IsCardanoEra ConwayEra where
    cardanoEra      = ConwayEra
+
+type CardanoEraConstraints era =
+  ( Typeable era
+  , IsCardanoEra era
+  )
+
+cardanoEraConstraints :: ()
+  => CardanoEra era
+  -> (CardanoEraConstraints era => a)
+  -> a
+cardanoEraConstraints = \case
+  ByronEra   -> id
+  ShelleyEra -> id
+  AllegraEra -> id
+  MaryEra    -> id
+  AlonzoEra  -> id
+  BabbageEra -> id
+  ConwayEra  -> id
 
 data AnyCardanoEra where
      AnyCardanoEra :: IsCardanoEra era  -- Provide class constraint
