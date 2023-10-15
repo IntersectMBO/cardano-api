@@ -146,6 +146,9 @@ case3 l r eon =
     Eon Babbage -> r $ Eon Babbage
     Eon Conway  -> r $ Eon Conway
 
--- -- Fails with: No instance for (Subset ByronOnwards ShelleyOnwards)
+-- Fails with: No instance for (Subset ByronOnwards ShelleyOnwards)
 -- example3 :: Eon ByronOnwards Byron -> Eon ShelleyOnwards Byron
 -- example3 = relax
+
+example4 :: Eon ShelleyOnwards Byron -> Eon ByronOnwards Byron
+example4 = relax
