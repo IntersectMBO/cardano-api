@@ -66,6 +66,7 @@ library internal
                         Cardano.Api.Eon.ByronToAlonzoEra
                         Cardano.Api.Eon.ByronToMaryEra
                         Cardano.Api.Eon.ConwayEraOnwards
+                        Cardano.Api.Eon.Core
                         Cardano.Api.Eon.MaryEraOnly
                         Cardano.Api.Eon.MaryEraOnwards
                         Cardano.Api.Eon.ShelleyBasedEra
@@ -204,6 +205,7 @@ library internal
                       , typed-protocols ^>= 0.1
                       , unordered-containers >= 0.2.11
                       , vector
+                      , world-peace
                       , yaml
 
 library
