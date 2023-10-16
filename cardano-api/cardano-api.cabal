@@ -205,7 +205,6 @@ library internal
                       , typed-protocols ^>= 0.1
                       , unordered-containers >= 0.2.11
                       , vector
-                      , world-peace
                       , yaml
 
 library
