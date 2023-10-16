@@ -245,6 +245,8 @@ data SomeAddressVerificationKey
   | AVrfVerificationKey             (VerificationKey VrfKey)
   | AStakeVerificationKey           (VerificationKey StakeKey)
   | AStakeExtendedVerificationKey   (VerificationKey StakeExtendedKey)
+  | ADRepVerificationKey            (VerificationKey DRepKey)
+  | ADRepExtendedVerificationKey    (VerificationKey DRepExtendedKey)
   deriving (Show)
 
 renderSomeAddressVerificationKey :: SomeAddressVerificationKey -> Text
@@ -267,6 +269,8 @@ renderSomeAddressVerificationKey (AKesVerificationKey vk) = serialiseToBech32 vk
 renderSomeAddressVerificationKey (AVrfVerificationKey vk) = serialiseToBech32 vk
 renderSomeAddressVerificationKey (AStakeVerificationKey vk) = serialiseToBech32 vk
 renderSomeAddressVerificationKey (AStakeExtendedVerificationKey vk) = serialiseToBech32 vk
+renderSomeAddressVerificationKey (ADRepVerificationKey vk) = serialiseToBech32 vk
+renderSomeAddressVerificationKey (ADRepExtendedVerificationKey vk) = serialiseToBech32 vk
 
 
 mapSomeAddressVerificationKey :: ()
@@ -284,6 +288,8 @@ mapSomeAddressVerificationKey f = \case
   AVrfVerificationKey                       vk -> f vk
   AStakeVerificationKey                     vk -> f vk
   AStakeExtendedVerificationKey             vk -> f vk
+  ADRepVerificationKey                      vk -> f vk
+  ADRepExtendedVerificationKey              vk -> f vk
 
 -- | Internal function to pretty render byron keys
 prettyByronVerificationKey :: VerificationKey ByronKey-> Text
@@ -311,7 +317,9 @@ deserialiseAnyVerificationKeyBech32 =
   allBech32VerKey
     :: [FromSomeType SerialiseAsBech32 SomeAddressVerificationKey]
   allBech32VerKey =
-    [ FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
+    [ FromSomeType (AsVerificationKey AsDRepKey) ADRepVerificationKey
+    , FromSomeType (AsVerificationKey AsDRepExtendedKey) ADRepExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsKesKey) AKesVerificationKey
     , FromSomeType (AsVerificationKey AsVrfKey) AVrfVerificationKey
@@ -329,6 +337,8 @@ deserialiseAnyVerificationKeyTextEnvelope bs =
     :: [FromSomeType HasTextEnvelope SomeAddressVerificationKey]
   allTextEnvelopeCBOR =
     [ FromSomeType (AsVerificationKey AsByronKey) AByronVerificationKey
+    , FromSomeType (AsVerificationKey AsDRepKey) ADRepVerificationKey
+    , FromSomeType (AsVerificationKey AsDRepExtendedKey) ADRepExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsStakeExtendedKey) AStakeExtendedVerificationKey
