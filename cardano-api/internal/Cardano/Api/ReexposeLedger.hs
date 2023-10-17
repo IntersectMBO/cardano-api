@@ -40,6 +40,7 @@ module Cardano.Api.ReexposeLedger
   , Network(..)
   , PoolCert(..)
   , PParams(..)
+  , PParamsUpdate
   , addDeltaCoin
   , toDeltaCoin
   , toEraCBOR
@@ -102,7 +103,7 @@ module Cardano.Api.ReexposeLedger
   ) where
 
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
+import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..), PParamsUpdate (..))
 import           Cardano.Ledger.Alonzo.Scripts (Prices (..))
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,

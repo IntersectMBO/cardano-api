@@ -18,6 +18,7 @@ import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
+import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxIn
@@ -25,7 +26,6 @@ import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.Address as L
-import qualified Cardano.Ledger.Allegra.Core as Ledger
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
