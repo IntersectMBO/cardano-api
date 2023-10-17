@@ -80,16 +80,23 @@ data Eon (eras :: [Type]) era where
     -> era
     -> Eon eras era
 
--- relaxEon :: ()
---   => as ⊆ bs
---   -> Eon as a
---   -> Eon bs a
--- relaxEon subsetProof (Eon membership era) =
---   case membership of
---     MemberHead ->
---       case subsetProof of
---         SubsetCons Elem subsetProofRest ->
---           Eon _u era
+class Member (a :: Type) (as :: [Type]) where
+  member :: a ∈ as
+
+instance Member a (a ': as) where
+  member = MemberHead
+
+instance Member a as => Member a (b ': as) where
+  member = MemberTail member
+
+class Subset (as :: [Type]) (bs :: [Type]) where
+  subset :: as ⊆ bs
+
+instance Subset '[] bs where
+  subset = SubsetNil
+
+-- instance (Member a as, Subset as bs) => Subset (a ': as) bs where
+--   subset = SubsetCons member subset
 
 example1 :: ()
   => Eon ConwayEraOnwards era
@@ -169,6 +176,53 @@ example8 p (Eon m era) =
           SubsetCons pAllegra _ -> Eon pAllegra era
     MemberTail (MemberTail m') ->
       case m' of {}
+
+
+-- data (∈) (a :: Type) (as :: [Type]) where
+--   MemberHead :: a ∈ (a ': as)
+--   MemberTail :: a ∈ as -> a ∈ (b ': as)
+
+memberSubsetEx1 :: ()
+  => Byron      ∈ ByronOnly
+  -> ByronOnly  ⊆ ByronToShelley
+  -> Byron      ∈ ByronToShelley
+memberSubsetEx1 mp sp =
+  case mp of
+    MemberHead ->
+      case sp of
+        SubsetCons pm _ ->
+          pm
+    MemberTail mz ->
+      case mz of {}
+
+memberSubsetEx2 :: ()
+  => Shelley     ∈ ShelleyOnly
+  -> ShelleyOnly ⊆ ByronToShelley
+  -> Shelley     ∈ ByronToShelley
+memberSubsetEx2 mp sp =
+  case mp of
+    MemberHead ->
+      case sp of
+        SubsetCons pm _ ->
+          pm
+    MemberTail mz ->
+      case mz of {}
+
+-- memberSubset :: ()
+--   => a  ∈ as
+--   -> as ⊆ bs
+--   -> a  ∈ bs
+-- memberSubset mp sp =
+--   case mp of
+--     MemberHead ->
+--       case sp of
+--         SubsetCons pm _ ->
+--           pm
+--     MemberTail mpm ->
+--       memberSubset mpm sp
+--       -- case sp of
+--       --   SubsetCons _ ssn ->
+
 
 relaxEon :: ()
   => as ⊆ bs
