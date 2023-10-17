@@ -1469,8 +1469,7 @@ fromShelleyCommonPParamsUpdate :: EraPParams ledgerera
                                -> ProtocolParametersUpdate
 fromShelleyCommonPParamsUpdate ppu =
     ProtocolParametersUpdate {
-      protocolUpdateProtocolVersion     = (\(Ledger.ProtVer a b) -> (Ledger.getVersion a,b)) <$>
-                                          strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
+      protocolUpdateProtocolVersion     = Nothing
     , protocolUpdateMaxBlockHeaderSize  = strictMaybeToMaybe (ppu ^. ppuMaxBHSizeL)
     , protocolUpdateMaxBlockBodySize    = strictMaybeToMaybe (ppu ^. ppuMaxBBSizeL)
     , protocolUpdateMaxTxSize           = strictMaybeToMaybe (ppu ^. ppuMaxTxSizeL)
@@ -1509,12 +1508,15 @@ fromShelleyCommonPParamsUpdate ppu =
 fromShelleyPParamsUpdate :: ( EraPParams ledgerera
                             , Ledger.AtMostEra Ledger.MaryEra ledgerera
                             , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
+                            , Ledger.AtMostEra Ledger.BabbageEra ledgerera
                             )
                          => PParamsUpdate ledgerera
                          -> ProtocolParametersUpdate
 fromShelleyPParamsUpdate ppu =
   (fromShelleyCommonPParamsUpdate ppu) {
-      protocolUpdateDecentralization    = Ledger.unboundRational <$>
+      protocolUpdateProtocolVersion     = (\(Ledger.ProtVer a b) -> (Ledger.getVersion a,b)) <$>
+                                           strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
+    , protocolUpdateDecentralization    = Ledger.unboundRational <$>
                                             strictMaybeToMaybe (ppu ^. ppuDL)
     , protocolUpdateExtraPraosEntropy   = fromLedgerNonce <$>
                                             strictMaybeToMaybe (ppu ^. ppuExtraEntropyL)
@@ -1547,23 +1549,34 @@ fromAlonzoPParamsUpdate :: Ledger.Crypto crypto
                         -> ProtocolParametersUpdate
 fromAlonzoPParamsUpdate ppu =
   (fromAlonzoCommonPParamsUpdate ppu) {
-    protocolUpdateUTxOCostPerWord = fromShelleyLovelace . unCoinPerWord <$>
-                                      strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOWordL)
+      protocolUpdateProtocolVersion    = (\(Ledger.ProtVer a b) -> (Ledger.getVersion a,b)) <$>
+                                           strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
+    , protocolUpdateUTxOCostPerWord    = fromShelleyLovelace . unCoinPerWord <$>
+                                            strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOWordL)
     }
 
-fromBabbagePParamsUpdate :: BabbageEraPParams ledgerera
-                         => PParamsUpdate ledgerera
+fromBabbageCommonPParamsUpdate :: BabbageEraPParams ledgerera
+                               => PParamsUpdate ledgerera
+                               -> ProtocolParametersUpdate
+fromBabbageCommonPParamsUpdate ppu =
+  (fromAlonzoCommonPParamsUpdate ppu) {
+      protocolUpdateUTxOCostPerByte    = fromShelleyLovelace . unCoinPerByte <$>
+                                           strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
+    }
+
+fromBabbagePParamsUpdate :: Ledger.Crypto crypto
+                         => PParamsUpdate (Ledger.BabbageEra crypto)
                          -> ProtocolParametersUpdate
 fromBabbagePParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu) {
-    protocolUpdateUTxOCostPerByte = fromShelleyLovelace . unCoinPerByte <$>
-                                      strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
+  (fromBabbageCommonPParamsUpdate ppu) {
+    protocolUpdateProtocolVersion    = (\(Ledger.ProtVer a b) -> (Ledger.getVersion a,b)) <$>
+                                       strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
     }
 
 fromConwayPParamsUpdate :: BabbageEraPParams ledgerera
                         => PParamsUpdate ledgerera
                         -> ProtocolParametersUpdate
-fromConwayPParamsUpdate = fromBabbagePParamsUpdate
+fromConwayPParamsUpdate = fromBabbageCommonPParamsUpdate
 
 
 -- ----------------------------------------------------------------------------
