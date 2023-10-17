@@ -993,7 +993,7 @@ module Cardano.Api (
     queryGovState,
     queryDRepState,
     queryDRepStakeDistribution,
-    queryCommitteeState,
+    queryCommitteeMembersState,
 
     -- ** DReps
     DRepKey,
