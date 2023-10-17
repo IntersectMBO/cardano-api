@@ -170,6 +170,21 @@ example8 p (Eon m era) =
     MemberTail (MemberTail m') ->
       case m' of {}
 
+relaxEon :: ()
+  => as ⊆ bs
+  -> Eon as a
+  -> Eon bs a
+relaxEon p (Eon m era) =
+  case m of
+    MemberHead ->
+      case p of
+        SubsetCons pm _ ->
+          Eon pm era
+    MemberTail mpm ->
+      case p of
+        SubsetCons _ ssn ->
+          relaxEon ssn (Eon mpm era)
+
 -- example2 :: ()
 --   => IsMember era ByronEraOnwards -- These constraints are due to relaxEon.  They shouldn't be needed.
 --   => Eon ShelleyEraOnwards era
