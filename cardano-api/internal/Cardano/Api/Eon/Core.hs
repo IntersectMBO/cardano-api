@@ -208,6 +208,43 @@ memberSubsetEx2 mp sp =
     MemberTail mz ->
       case mz of {}
 
+memberSubsetEx3 :: ()
+  => Byron          ∈ ByronToShelley
+  -> ByronToShelley ⊆ ByronToAllegra
+  -> Byron          ∈ ByronToAllegra
+memberSubsetEx3 mp sp =
+  case mp of
+    MemberHead ->
+      case sp of
+        SubsetCons pm _ ->
+          pm
+    MemberTail mz ->
+      case mz of
+        MemberTail mzz ->
+          case mzz of {}
+
+
+memberSubsetEx4 :: ()
+  => Shelley        ∈ ByronToShelley
+  -> ByronToShelley ⊆ ByronToAllegra
+  -> Shelley        ∈ ByronToAllegra
+memberSubsetEx4 mp sp =
+  case mp of
+    MemberTail mz ->
+      case mz of
+        MemberHead ->
+          case sp of
+            SubsetCons (MemberTail (MemberTail (MemberTail z))) _ ->
+              case z of {}
+            SubsetCons MemberHead spp ->
+              case spp of
+                SubsetCons (MemberTail _) sppp ->
+                  case sppp of
+                    SubsetNil ->
+                      MemberTail MemberHead
+        MemberTail mzz ->
+          case mzz of {}
+
 -- memberSubset :: ()
 --   => a  ∈ as
 --   -> as ⊆ bs
