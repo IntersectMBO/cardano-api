@@ -1242,7 +1242,7 @@ toLedgerProposedPPUpdates sbe m =
 
 toLedgerPParamsUpdate :: ShelleyBasedEra era
                       -> ProtocolParametersUpdate
-                      -> Either ProtocolParametersConversionError (PParamsUpdate (ShelleyLedgerEra era))
+                      -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate (ShelleyLedgerEra era))
 toLedgerPParamsUpdate ShelleyBasedEraShelley = toShelleyPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraAllegra = toShelleyPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraMary    = toShelleyPParamsUpdate
@@ -1253,11 +1253,10 @@ toLedgerPParamsUpdate ShelleyBasedEraConway  = toConwayPParamsUpdate
 
 toShelleyCommonPParamsUpdate :: EraPParams ledgerera
                              => ProtocolParametersUpdate
-                             -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
+                             -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate ledgerera)
 toShelleyCommonPParamsUpdate
     ProtocolParametersUpdate {
-      protocolUpdateProtocolVersion
-    , protocolUpdateMaxBlockHeaderSize
+      protocolUpdateMaxBlockHeaderSize
     , protocolUpdateMaxBlockBodySize
     , protocolUpdateMaxTxSize
     , protocolUpdateTxFeeFixed
@@ -1274,7 +1273,6 @@ toShelleyCommonPParamsUpdate
   a0 <- mapM (boundRationalEither "A0") protocolUpdatePoolPledgeInfluence
   rho <- mapM (boundRationalEither "Rho") protocolUpdateMonetaryExpansion
   tau <- mapM (boundRationalEither "Tau") protocolUpdateTreasuryCut
-  protVer <- mapM mkProtVer protocolUpdateProtocolVersion
   let ppuCommon =
         emptyPParamsUpdate
         & ppuMinFeeAL     .~
@@ -1294,7 +1292,6 @@ toShelleyCommonPParamsUpdate
 
         & ppuRhoL         .~ noInlineMaybeToStrictMaybe rho
         & ppuTauL         .~ noInlineMaybeToStrictMaybe tau
-        & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
         & ppuMinPoolCostL     .~
           (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost)
   pure ppuCommon
@@ -1302,17 +1299,20 @@ toShelleyCommonPParamsUpdate
 toShelleyPParamsUpdate :: ( EraPParams ledgerera
                           , Ledger.AtMostEra Ledger.MaryEra ledgerera
                           , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
+                          , Ledger.AtMostEra Ledger.BabbageEra ledgerera
                           )
                        => ProtocolParametersUpdate
-                       -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
+                       -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate ledgerera)
 toShelleyPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
-      protocolUpdateDecentralization
+      protocolUpdateProtocolVersion
+    , protocolUpdateDecentralization
     , protocolUpdateExtraPraosEntropy
     , protocolUpdateMinUTxOValue
     } = do
   ppuCommon <- toShelleyCommonPParamsUpdate protocolParametersUpdate
   d <- mapM (boundRationalEither "D") protocolUpdateDecentralization
+  protVer <- mapM mkProtVer protocolUpdateProtocolVersion
   let ppuShelley =
         ppuCommon
         & ppuDL            .~ noInlineMaybeToStrictMaybe d
@@ -1320,12 +1320,13 @@ toShelleyPParamsUpdate
           (toLedgerNonce <$> noInlineMaybeToStrictMaybe protocolUpdateExtraPraosEntropy)
         & ppuMinUTxOValueL .~
           (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateMinUTxOValue)
+        & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
   pure ppuShelley
 
 
 toAlonzoCommonPParamsUpdate :: AlonzoEraPParams ledgerera
                             => ProtocolParametersUpdate
-                            -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
+                            -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate ledgerera)
 toAlonzoCommonPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateCostModels
@@ -1358,27 +1359,29 @@ toAlonzoCommonPParamsUpdate
 
 toAlonzoPParamsUpdate :: Ledger.Crypto crypto
                       => ProtocolParametersUpdate
-                      -> Either ProtocolParametersConversionError (PParamsUpdate (Ledger.AlonzoEra crypto))
+                      -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate (Ledger.AlonzoEra crypto))
 toAlonzoPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
-      protocolUpdateDecentralization
+      protocolUpdateProtocolVersion
+    , protocolUpdateDecentralization
     , protocolUpdateUTxOCostPerWord
     } = do
   ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
   d <- mapM (boundRationalEither "D") protocolUpdateDecentralization
+  protVer <- mapM mkProtVer protocolUpdateProtocolVersion
   let ppuAlonzo =
         ppuAlonzoCommon
         & ppuDL .~ noInlineMaybeToStrictMaybe d
         & ppuCoinsPerUTxOWordL .~
           (CoinPerWord . toShelleyLovelace <$>
            noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord)
+        & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
   pure ppuAlonzo
 
-
-toBabbagePParamsUpdate :: BabbageEraPParams ledgerera
-                       => ProtocolParametersUpdate
-                       -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
-toBabbagePParamsUpdate
+toBabbageCommonPParamsUpdate :: BabbageEraPParams ledgerera
+                            => ProtocolParametersUpdate
+                            -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate ledgerera)
+toBabbageCommonPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateUTxOCostPerByte
     } = do
@@ -1388,6 +1391,20 @@ toBabbagePParamsUpdate
         & ppuCoinsPerUTxOByteL .~
           (CoinPerByte . toShelleyLovelace <$>
            noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
+  pure ppuBabbage
+
+toBabbagePParamsUpdate :: Ledger.Crypto crypto
+                       => ProtocolParametersUpdate
+                       -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate (Ledger.BabbageEra crypto))
+toBabbagePParamsUpdate
+    protocolParametersUpdate@ProtocolParametersUpdate {
+      protocolUpdateProtocolVersion
+    } = do
+  ppuBabbageCommon <- toBabbageCommonPParamsUpdate protocolParametersUpdate
+  protVer <- mapM mkProtVer protocolUpdateProtocolVersion
+  let ppuBabbage =
+        ppuBabbageCommon
+        & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
   pure ppuBabbage
 
 requireParam :: String -> (a -> Either ProtocolParametersConversionError b) -> Maybe a -> Either ProtocolParametersConversionError b
@@ -1407,7 +1424,7 @@ boundRationalEither name r = maybeToRight (PpceOutOfBounds name r) $ Ledger.boun
 toConwayPParamsUpdate :: BabbageEraPParams ledgerera
                       => ProtocolParametersUpdate
                       -> Either ProtocolParametersConversionError (PParamsUpdate ledgerera)
-toConwayPParamsUpdate = toBabbagePParamsUpdate
+toConwayPParamsUpdate = toBabbageCommonPParamsUpdate
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: updates from ledger types
