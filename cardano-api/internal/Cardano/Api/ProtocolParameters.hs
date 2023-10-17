@@ -271,34 +271,39 @@ createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
   case eraPParamsUpdate  of
     ShelleyEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+          Ledger.PParamsUpdate withProtVer = createPreConwayProtocolVersionUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
           Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
-      in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
+      in Ledger.PParamsUpdate $ common <> withProtVer <> depAfterMary' <> depAfterAlonzo'
 
     AllegraEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+          Ledger.PParamsUpdate withProtVer = createPreConwayProtocolVersionUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
           Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
-      in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
+      in Ledger.PParamsUpdate $ common <> withProtVer <> depAfterMary' <> depAfterAlonzo'
 
     MaryEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+          Ledger.PParamsUpdate withProtVer = createPreConwayProtocolVersionUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
           Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
-      in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
+      in Ledger.PParamsUpdate $ common <> withProtVer <> depAfterMary' <> depAfterAlonzo'
 
     AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon depAfterAlonzoB ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+            Ledger.PParamsUpdate withProtVer = createPreConwayProtocolVersionUpdate c
             Ledger.PParamsUpdate preAl' = createPParamsUpdateIntroducedInAlonzo AlonzoEraOnwardsAlonzo introInAlon
             Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzoA
             Ledger.PParamsUpdate depAfterAlonzoB' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzoB
-        in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA' <> depAfterAlonzoB'
+        in Ledger.PParamsUpdate $ common <> withProtVer <> preAl' <> depAfterAlonzoA' <> depAfterAlonzoB'
 
     BabbageEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
+            Ledger.PParamsUpdate withProtVer = createPreConwayProtocolVersionUpdate c
             Ledger.PParamsUpdate inAlonzoPParams = createPParamsUpdateIntroducedInAlonzo AlonzoEraOnwardsBabbage introInAlonzo
             Ledger.PParamsUpdate inBAb = createIntroducedInBabbagePParams BabbageEraOnwardsBabbage introInBabbage
-        in Ledger.PParamsUpdate $ common <> inAlonzoPParams <> inBAb
+        in Ledger.PParamsUpdate $ common <> withProtVer <> inAlonzoPParams <> inBAb
 
     ConwayEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage introInConway ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
@@ -345,8 +350,20 @@ createCommonPParamsUpdate CommonProtocolParametersUpdate{..} =
     & Ledger.ppuA0L .~ cppPoolPledgeInfluence
     & Ledger.ppuTauL .~ cppTreasuryExpansion
     & Ledger.ppuRhoL .~ cppMonetaryExpansion
-    & Ledger.ppuProtocolVersionL .~ cppProtocolVersion
     & Ledger.ppuMinPoolCostL .~ cppMinPoolCost
+
+-- | Updating protocol version with PParamUpdate is being prevented in Conway
+-- (via the `ProtVerAtMost era 8` constraint in `ppuProtocolVersionL`).
+-- As a consequence, ppuProtocolVersionL cannot be used in `createCommonPParamsUpdate`,
+-- as was the case pre-Conway.
+-- Here we isolate the usage of the lens, so that it can be used in each pre-conway era
+-- when creating `Ledger.PParamsUpdate` within `createEraBasedProtocolParamUpdate`.
+createPreConwayProtocolVersionUpdate
+  :: (EraPParams ledgerera, Ledger.ProtVerAtMost ledgerera 8)
+  => CommonProtocolParametersUpdate
+  -> Ledger.PParamsUpdate ledgerera
+createPreConwayProtocolVersionUpdate CommonProtocolParametersUpdate {cppProtocolVersion} =
+  Ledger.emptyPParamsUpdate & Ledger.ppuProtocolVersionL .~ cppProtocolVersion
 
 newtype DeprecatedAfterMaryPParams ledgerera
   = DeprecatedAfterMaryPParams (StrictMaybe Ledger.Coin) -- Minimum UTxO value
