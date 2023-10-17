@@ -25,6 +25,7 @@ import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.Address as L
+import qualified Cardano.Ledger.Allegra.Core as Ledger
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
@@ -45,7 +46,7 @@ import           Data.Word
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 
 -- TODO: Conway - Transitiion to Ledger.GovAction
-data GovernanceAction
+data GovernanceAction era
   = MotionOfNoConfidence
       (StrictMaybe (Ledger.PrevGovActionId Ledger.CommitteePurpose StandardCrypto))
   | ProposeNewConstitution
@@ -63,13 +64,11 @@ data GovernanceAction
       ProtVer
   | UpdatePParams
       (StrictMaybe (Ledger.PrevGovActionId Ledger.PParamUpdatePurpose StandardCrypto))
-      ProtocolParametersUpdate
-  deriving (Eq, Show)
-
+      (Ledger.PParamsUpdate (ShelleyLedgerEra era))
 
 toGovernanceAction :: ()
   => ShelleyBasedEra era
-  -> GovernanceAction
+  -> GovernanceAction era
   -> Gov.GovAction (ShelleyLedgerEra era)
 toGovernanceAction sbe =
   shelleyBasedEraConstraints sbe $ \case
@@ -98,22 +97,19 @@ toGovernanceAction sbe =
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
     UpdatePParams preGovId ppup ->
-      case toLedgerPParamsUpdate sbe ppup of
-        Left e -> error $ "toGovernanceAction: " <> show e
-        Right ppup' -> Gov.ParameterChange preGovId ppup'
+      Gov.ParameterChange preGovId ppup
 
 fromGovernanceAction
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => ShelleyBasedEra era
-  -> Gov.GovAction (ShelleyLedgerEra era)
-  -> GovernanceAction
-fromGovernanceAction sbe = \case
+  => Gov.GovAction (ShelleyLedgerEra era)
+  -> GovernanceAction era
+fromGovernanceAction = \case
   Gov.NoConfidence prevGovId ->
     MotionOfNoConfidence prevGovId
   Gov.NewConstitution prevGovId constitution ->
     ProposeNewConstitution prevGovId $ Gov.constitutionAnchor constitution
   Gov.ParameterChange prevGovId pparams ->
-    UpdatePParams prevGovId $ fromLedgerPParamsUpdate sbe pparams
+    UpdatePParams prevGovId pparams
   Gov.HardForkInitiation prevGovId pVer ->
     InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap ->
@@ -163,7 +159,7 @@ createProposalProcedure
   -> Network
   -> Lovelace -- ^ Deposit
   -> Hash StakeKey -- ^ Return address
-  -> GovernanceAction
+  -> GovernanceAction era
   -> Ledger.Anchor StandardCrypto
   -> Proposal era
 createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
@@ -178,7 +174,7 @@ createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
 fromProposalProcedure
   :: ShelleyBasedEra era
   -> Proposal era
-  -> (Lovelace, Hash StakeKey, GovernanceAction)
+  -> (Lovelace, Hash StakeKey, GovernanceAction era)
 fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints sbe
     ( fromShelleyLovelace $ Gov.pProcDeposit pp
@@ -186,7 +182,7 @@ fromProposalProcedure sbe (Proposal pp) =
           StakeCredentialByKey keyhash -> keyhash
           StakeCredentialByScript _scripthash ->
             error "fromProposalProcedure TODO: Conway era script reward addresses not yet supported"
-    , fromGovernanceAction sbe (Gov.pProcGovAction pp)
+    , fromGovernanceAction (Gov.pProcGovAction pp)
     )
 
 
