@@ -1,5 +1,57 @@
 # Changelog for cardano-api
 
+## 8.26.0.0
+
+- Add support for DRep extended keys
+  (feature, compatible)
+  [PR 320](https://github.com/input-output-hk/cardano-api/pull/320)
+
+- Parameterize GovernanceAction on era
+  (breaking)
+  [PR 322](https://github.com/input-output-hk/cardano-api/pull/322)
+
+- Haddock-document the `case*` functions
+  (compatible, improvement)
+  [PR 314](https://github.com/input-output-hk/cardano-api/pull/314)
+
+- New `MaryEraOnly` eon
+  New functions:
+  - `caseMaryEraOnlyOrAlonzoEraOnwards`
+  - `disjointByronEraOnlyAndShelleyBasedEra`
+  - `disjointAlonzoEraOnlyAndBabbageEraOnwards`
+  Deprecate:
+  - `noByronEraInShelleyBasedEra`.  Use `disjointByronEraOnlyAndShelleyBasedEra` instead.
+  (feature, breaking)
+  [PR 312](https://github.com/input-output-hk/cardano-api/pull/312)
+
+- Delete `EraCast` type class
+  (breaking)
+  [PR 308](https://github.com/input-output-hk/cardano-api/pull/308)
+
+- Fewer constraints in functions
+  (compatible)
+  [PR 310](https://github.com/input-output-hk/cardano-api/pull/310)
+
+- Introduce anchor newtypes for drep registration certificate
+  (feature, compatible)
+  [PR 305](https://github.com/input-output-hk/cardano-api/pull/305)
+
+- Reduce constraint usage with eons
+  (compatible, improvement)
+  [PR 299](https://github.com/input-output-hk/cardano-api/pull/299)
+
+- Delete `EraCast` instance for `Certificate`
+  (breaking)
+  [PR 307](https://github.com/input-output-hk/cardano-api/pull/307)
+
+- Add certs to txbody of Conway transactions
+  (feature, compatible)
+  [PR 306](https://github.com/input-output-hk/cardano-api/pull/306)
+
+- Add `BabbageEraOnly`
+  (feature, compatible)
+  [PR 304](https://github.com/input-output-hk/cardano-api/pull/304)
+
 ## 8.25.2.0
 
 - Add support for committee hot key witnesses
