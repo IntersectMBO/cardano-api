@@ -1,5 +1,12 @@
 # Changelog for cardano-api
 
+## 8.27.0.0
+
+- Remove `IsShelleyBasedEra` and `IsCardanoEra` from all functions and types.
+  Use `ShelleyBasedEra` and `CardanoEra` instead.
+  (breaking)
+  [PR 313](https://github.com/input-output-hk/cardano-api/pull/313)
+
 ## 8.26.0.0
 
 - Add support for DRep extended keys
