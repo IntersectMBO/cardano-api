@@ -642,21 +642,19 @@ eraOfScriptLanguageInEra :: ScriptLanguageInEra lang era
 eraOfScriptLanguageInEra langInEra =
     case langInEra of
       SimpleScriptInShelley   -> ShelleyBasedEraShelley
-
       SimpleScriptInAllegra   -> ShelleyBasedEraAllegra
-
       SimpleScriptInMary      -> ShelleyBasedEraMary
-
       SimpleScriptInAlonzo    -> ShelleyBasedEraAlonzo
-      PlutusScriptV1InAlonzo  -> ShelleyBasedEraAlonzo
-
       SimpleScriptInBabbage   -> ShelleyBasedEraBabbage
       SimpleScriptInConway    -> ShelleyBasedEraConway
 
+      PlutusScriptV1InAlonzo  -> ShelleyBasedEraAlonzo
       PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
       PlutusScriptV1InConway  -> ShelleyBasedEraConway
+
       PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
       PlutusScriptV2InConway  -> ShelleyBasedEraConway
+
       PlutusScriptV3InConway  -> ShelleyBasedEraConway
 
 -- | Given a target era and a script in some language, check if the language is
