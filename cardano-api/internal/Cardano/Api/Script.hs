@@ -606,6 +606,9 @@ scriptLanguageSupportedInEra era lang =
       (BabbageEra, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InBabbage
 
+      (ConwayEra, PlutusScriptLanguage PlutusScriptV1) ->
+        Just PlutusScriptV1InConway
+
       (ConwayEra, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InConway
 
