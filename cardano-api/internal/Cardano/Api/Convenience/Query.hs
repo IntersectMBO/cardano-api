@@ -34,8 +34,8 @@ import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
+import           Cardano.Ledger.CertState (DRepState (..))
 import qualified Cardano.Ledger.Credential as L
-import           Cardano.Ledger.DRepDistr (DRepState (..))
 import qualified Cardano.Ledger.Keys as L
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 
