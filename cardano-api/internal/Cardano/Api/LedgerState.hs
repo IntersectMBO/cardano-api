@@ -85,7 +85,6 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Genesis
 import           Cardano.Api.IO
@@ -473,7 +472,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
             -> CSP.ClientStNext n (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
           clientNextN n knownLedgerStates =
             CSP.ClientStNext {
-                CSP.recvMsgRollForward = \blockInMode@(BlockInMode block@(Block (BlockHeader slotNo _ currBlockNo) _) _era) serverChainTip -> do
+                CSP.recvMsgRollForward = \blockInMode@(BlockInMode _ block@(Block (BlockHeader slotNo _ currBlockNo) _) _era) serverChainTip -> do
                   let newLedgerStateE = applyBlock
                         env
                         (maybe
@@ -589,7 +588,7 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
             goClientStIdle (Left err) <$> CS.runChainSyncClient (recvMsgRollBackward point tip)
       )
     goClientStNext (Right history) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) = CS.ClientStNext
-      (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> CS.ChainSyncClient $ let
+      (\blkInMode@(BlockInMode _ blk@(Block (BlockHeader slotNo _ _) _) _) tip -> CS.ChainSyncClient $ let
           newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
@@ -677,7 +676,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
           goClientPipelinedStIdle (Left err) n <$> recvMsgRollBackward point tip
       )
     goClientStNext (Right history) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) = CSP.ClientStNext
-      (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> let
+      (\blkInMode@(BlockInMode _ blk@(Block (BlockHeader slotNo _ _) _) _) tip -> let
           newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err

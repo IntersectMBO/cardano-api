@@ -41,9 +41,9 @@ import qualified Data.Text as Text
 -- See Cardano.Api.Convenience.Query.queryStateForBalancedTx for a
 -- convenient way of querying the node to get the required arguements
 -- for constructBalancedTx.
-constructBalancedTx
-  :: IsShelleyBasedEra era
-  => TxBodyContent BuildTx era
+constructBalancedTx :: ()
+  => ShelleyBasedEra era
+  -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
@@ -55,17 +55,17 @@ constructBalancedTx
   -> Map.Map (L.Credential L.DRepRole L.StandardCrypto) Lovelace
   -> [ShelleyWitnessSigningKey]
   -> Either TxBodyErrorAutoBalance (Tx era)
-constructBalancedTx txbodcontent changeAddr mOverrideWits utxo lpp
+constructBalancedTx sbe txbodcontent changeAddr mOverrideWits utxo lpp
                     ledgerEpochInfo systemStart stakePools
                     stakeDelegDeposits drepDelegDeposits shelleyWitSigningKeys = do
 
   BalancedTxBody _ txbody _txBalanceOutput _fee
     <- makeTransactionBodyAutoBalance
-         systemStart ledgerEpochInfo
+         sbe systemStart ledgerEpochInfo
          lpp stakePools stakeDelegDeposits drepDelegDeposits utxo txbodcontent
          changeAddr mOverrideWits
 
-  let keyWits = map (makeShelleyKeyWitness txbody) shelleyWitSigningKeys
+  let keyWits = map (makeShelleyKeyWitness sbe txbody) shelleyWitSigningKeys
   return $ makeSignedTransaction keyWits txbody
 
 data TxInsExistError

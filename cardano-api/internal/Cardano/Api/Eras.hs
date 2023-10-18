@@ -15,8 +15,9 @@ module Cardano.Api.Eras
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
-  , cardanoEraConstraints
   , InAnyCardanoEra(..)
+  , inAnyCardanoEra
+  , cardanoEraConstraints
   , CardanoLedgerEra
   , ToCardanoEra(..)
 
@@ -49,5 +50,4 @@ module Cardano.Api.Eras
   ) where
 
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core

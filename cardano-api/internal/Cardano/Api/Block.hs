@@ -53,7 +53,6 @@ module Cardano.Api.Block (
 
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
@@ -200,7 +199,11 @@ getShelleyBlockTxs era (Ledger.Block _header txs) =
 -- different block types for all the eras. It is used in the ChainSync protocol.
 --
 data BlockInMode mode where
-     BlockInMode :: IsCardanoEra era => Block era -> EraInMode era mode -> BlockInMode mode
+  BlockInMode
+    :: CardanoEra era
+    -> Block era
+    -> EraInMode era mode
+    -> BlockInMode mode
 
 deriving instance Show (BlockInMode mode)
 
@@ -213,41 +216,41 @@ fromConsensusBlock :: ConsensusBlockForMode mode ~ block
 fromConsensusBlock ByronMode =
     \b -> case b of
       Consensus.DegenBlock b' ->
-        BlockInMode (ByronBlock b') ByronEraInByronMode
+        BlockInMode cardanoEra (ByronBlock b') ByronEraInByronMode
 
 fromConsensusBlock ShelleyMode =
   \b -> case b of
     Consensus.DegenBlock b' ->
-      BlockInMode (ShelleyBlock ShelleyBasedEraShelley b')
+      BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraShelley b')
                    ShelleyEraInShelleyMode
 
 fromConsensusBlock CardanoMode =
     \b -> case b of
       Consensus.BlockByron b' ->
-        BlockInMode (ByronBlock b') ByronEraInCardanoMode
+        BlockInMode cardanoEra (ByronBlock b') ByronEraInCardanoMode
 
       Consensus.BlockShelley b' ->
-        BlockInMode (ShelleyBlock ShelleyBasedEraShelley b')
+        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraShelley b')
                      ShelleyEraInCardanoMode
 
       Consensus.BlockAllegra b' ->
-        BlockInMode (ShelleyBlock ShelleyBasedEraAllegra b')
+        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraAllegra b')
                      AllegraEraInCardanoMode
 
       Consensus.BlockMary b' ->
-        BlockInMode (ShelleyBlock ShelleyBasedEraMary b')
+        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraMary b')
                      MaryEraInCardanoMode
 
       Consensus.BlockAlonzo b' ->
-        BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b')
+        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraAlonzo b')
                      AlonzoEraInCardanoMode
 
       Consensus.BlockBabbage b' ->
-        BlockInMode (ShelleyBlock ShelleyBasedEraBabbage b')
+        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraBabbage b')
                      BabbageEraInCardanoMode
 
       Consensus.BlockConway b' ->
-        BlockInMode (ShelleyBlock ShelleyBasedEraConway b')
+        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraConway b')
                      ConwayEraInCardanoMode
 
 toConsensusBlock
@@ -260,19 +263,19 @@ toConsensusBlock
 toConsensusBlock bInMode =
   case bInMode of
     -- Byron mode
-    BlockInMode (ByronBlock b') ByronEraInByronMode -> Consensus.DegenBlock b'
+    BlockInMode _ (ByronBlock b') ByronEraInByronMode -> Consensus.DegenBlock b'
 
     -- Shelley mode
-    BlockInMode (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInShelleyMode -> Consensus.DegenBlock b'
+    BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInShelleyMode -> Consensus.DegenBlock b'
 
     -- Cardano mode
-    BlockInMode (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
-    BlockInMode (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInCardanoMode -> Consensus.BlockShelley b'
-    BlockInMode (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
-    BlockInMode (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
-    BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
-    BlockInMode (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
-    BlockInMode (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
+    BlockInMode _ (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
+    BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInCardanoMode -> Consensus.BlockShelley b'
+    BlockInMode _ (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
+    BlockInMode _ (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
+    BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
+    BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
+    BlockInMode _ (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers

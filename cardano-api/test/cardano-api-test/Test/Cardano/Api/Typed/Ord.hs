@@ -38,7 +38,7 @@ prop_ord_distributive_Address =
     ord_distributive genAddressShelley (toShelleyAddr . toAddressInAnyEra)
   where
     toAddressInAnyEra :: Address ShelleyAddr -> AddressInEra ShelleyEra
-    toAddressInAnyEra = anyAddressInShelleyBasedEra . toAddressAny
+    toAddressInAnyEra = anyAddressInShelleyBasedEra ShelleyBasedEraShelley . toAddressAny
 
 prop_ord_distributive_StakeAddress :: Property
 prop_ord_distributive_StakeAddress =

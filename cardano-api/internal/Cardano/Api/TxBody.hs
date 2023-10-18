@@ -161,7 +161,6 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
@@ -340,8 +339,8 @@ instance Eq TxOutInAnyEra where
       Nothing   -> False
 
 -- | Convenience constructor for 'TxOutInAnyEra'
-txOutInAnyEra :: IsCardanoEra era => TxOut CtxTx era -> TxOutInAnyEra
-txOutInAnyEra = TxOutInAnyEra cardanoEra
+txOutInAnyEra :: CardanoEra era -> TxOut CtxTx era -> TxOutInAnyEra
+txOutInAnyEra = TxOutInAnyEra
 
 toCtxUTxOTxOut :: TxOut CtxTx  era -> TxOut CtxUTxO era
 toCtxUTxOTxOut (TxOut addr val d refS) =
@@ -938,12 +937,15 @@ instance IsCardanoEra era => FromJSON (TxOutValue era) where
          Nothing -> fail $ "Expected a Bounded number but got: " <> show sci
      decodeQuantity wrong = fail $ "Expected aeson Number but got: " <> show wrong
 
-lovelaceToTxOutValue :: IsCardanoEra era => Lovelace -> TxOutValue era
-lovelaceToTxOutValue l =
+lovelaceToTxOutValue :: ()
+  => CardanoEra era
+  -> Lovelace
+  -> TxOutValue era
+lovelaceToTxOutValue era l =
   caseByronToAllegraOrMaryEraOnwards
     (\w -> TxOutAdaOnly w l)
     (\w -> TxOutValue w (lovelaceToValue l))
-    cardanoEra
+    era
 
 txOutValueToLovelace :: TxOutValue era -> Lovelace
 txOutValueToLovelace tv =
@@ -1052,12 +1054,11 @@ data TxFee era where
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
 
-defaultTxFee :: forall era. IsCardanoEra era => TxFee era
+defaultTxFee :: CardanoEra era -> TxFee era
 defaultTxFee =
   caseByronOrShelleyBasedEra
     TxFeeImplicit
     (\w -> TxFeeExplicit w mempty)
-    (cardanoEra @era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction validity range
@@ -1078,12 +1079,13 @@ data TxValidityUpperBound era where
 deriving instance Eq   (TxValidityUpperBound era)
 deriving instance Show (TxValidityUpperBound era)
 
-defaultTxValidityUpperBound :: forall era. IsCardanoEra era => TxValidityUpperBound era
+defaultTxValidityUpperBound :: ()
+  => CardanoEra era
+  -> TxValidityUpperBound era
 defaultTxValidityUpperBound =
   caseByronAndAllegraEraOnwardsOrShelleyEraOnly
     TxValidityNoUpperBound
     (\w -> TxValidityUpperBound (shelleyEraOnlyToShelleyBasedEra w) maxBound)
-    (cardanoEra @era)
 
 data TxValidityLowerBound era where
 
@@ -1241,16 +1243,18 @@ data TxBodyContent build era =
      }
      deriving (Eq, Show)
 
-defaultTxBodyContent :: IsCardanoEra era => TxBodyContent BuildTx era
-defaultTxBodyContent = TxBodyContent
+defaultTxBodyContent :: ()
+  => CardanoEra era
+  -> TxBodyContent BuildTx era
+defaultTxBodyContent era = TxBodyContent
     { txIns = []
     , txInsCollateral = TxInsCollateralNone
     , txInsReference = TxInsReferenceNone
     , txOuts = []
     , txTotalCollateral = TxTotalCollateralNone
     , txReturnCollateral = TxReturnCollateralNone
-    , txFee = defaultTxFee
-    , txValidityRange = (TxValidityNoLowerBound, defaultTxValidityUpperBound)
+    , txFee = defaultTxFee era
+    , txValidityRange = (TxValidityNoLowerBound, defaultTxValidityUpperBound era)
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
@@ -2055,13 +2059,15 @@ validateTxInsCollateral txInsCollateral languages =
       guardShelleyTxInsOverflow collateralTxIns
 
 validateTxOuts :: ShelleyBasedEra era -> [TxOut CtxTx era] -> Either TxBodyError ()
-validateTxOuts era txOuts = do
-  let cEra = shelleyBasedToCardanoEra era
-  cardanoEraConstraints cEra $
-    sequence_ [ do positiveOutput (txOutValueToValue v) txout
-                   outputDoesNotExceedMax (txOutValueToValue v) txout
-                 | txout@(TxOut _ v _ _) <- txOuts
-                 ]
+validateTxOuts sbe txOuts = do
+  let era = shelleyBasedToCardanoEra sbe
+  cardanoEraConstraints era $
+    sequence_
+      [ do
+          positiveOutput era (txOutValueToValue v) txout
+          outputDoesNotExceedMax era (txOutValueToValue v) txout
+        | txout@(TxOut _ v _ _) <- txOuts
+        ]
 
 validateMintValue :: TxMintValue build era -> Either TxBodyError ()
 validateMintValue txMintValue =
@@ -2075,20 +2081,25 @@ inputIndexDoesNotExceedMax txIns =
    for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
                 guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
 
-outputDoesNotExceedMax
-  :: IsCardanoEra era => Value -> TxOut CtxTx era -> Either TxBodyError ()
-outputDoesNotExceedMax v txout =
+outputDoesNotExceedMax :: ()
+  => CardanoEra era
+  -> Value
+  -> TxOut CtxTx era
+  -> Either TxBodyError ()
+outputDoesNotExceedMax era v txout =
   case [ q | (_,q) <- valueToList v, q > maxTxOut ] of
     []  -> Right ()
-    q:_ -> Left (TxBodyOutputOverflow q (txOutInAnyEra txout))
+    q:_ -> Left (TxBodyOutputOverflow q (txOutInAnyEra era txout))
 
-positiveOutput
-  :: IsCardanoEra era
-  => Value -> TxOut CtxTx era -> Either TxBodyError ()
-positiveOutput v txout =
-    case [ q | (_, q) <- valueToList v, q < 0 ] of
-      []  -> Right ()
-      q:_ -> Left (TxBodyOutputNegative q (txOutInAnyEra txout))
+positiveOutput :: ()
+  => CardanoEra era
+  -> Value
+  -> TxOut CtxTx era
+  -> Either TxBodyError ()
+positiveOutput era v txout =
+  case [ q | (_, q) <- valueToList v, q < 0 ] of
+    []  -> Right ()
+    q:_ -> Left (TxBodyOutputNegative q (txOutInAnyEra era txout))
 
 txBodyContentHasTxIns :: TxIns BuildTx era -> Either TxBodyError ()
 txBodyContentHasTxIns txIns = guard (not (null txIns)) ?! TxBodyEmptyTxIns
@@ -2099,15 +2110,14 @@ maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 maxTxOut :: Quantity
 maxTxOut = fromIntegral (maxBound :: Word64)
 
-createAndValidateTransactionBody
-  :: forall era.
-     IsCardanoEra era
-  => TxBodyContent BuildTx era
+createAndValidateTransactionBody :: ()
+  => CardanoEra era
+  -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
-createAndValidateTransactionBody =
-    case cardanoEraStyle (cardanoEra :: CardanoEra era) of
-      LegacyByronEra      -> makeByronTransactionBody
-      ShelleyBasedEra sbe -> makeShelleyTransactionBody sbe
+createAndValidateTransactionBody era =
+  case cardanoEraStyle era of
+    LegacyByronEra      -> makeByronTransactionBody
+    ShelleyBasedEra sbe -> makeShelleyTransactionBody sbe
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
 pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
@@ -2570,10 +2580,8 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
     classifyRangeError
       txout@(TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{})
                    (TxOutAdaOnly ByronToAllegraEraByron value) _ _)
-      | value < 0        = TxBodyOutputNegative (lovelaceToQuantity value)
-                                                (txOutInAnyEra txout)
-      | otherwise        = TxBodyOutputOverflow (lovelaceToQuantity value)
-                                                (txOutInAnyEra txout)
+      | value < 0 = TxBodyOutputNegative (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
+      | otherwise = TxBodyOutputOverflow (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
 
     classifyRangeError
       (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))

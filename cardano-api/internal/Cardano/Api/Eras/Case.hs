@@ -56,7 +56,6 @@ import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Eras.Core
 
 -- | @caseByronOrShelleyBasedEra f g era@ applies @f@ to byron and @g@ to other eras.

@@ -122,7 +122,7 @@ txout1 :: TxOut ctx AllegraEra
 txout1 = TxOut changeaddr1 txOutValue1 TxOutDatumNone ReferenceScriptNone
 
 txOutInAnyEra1 :: TxOutInAnyEra
-txOutInAnyEra1 = txOutInAnyEra txout1
+txOutInAnyEra1 = txOutInAnyEra AllegraEra txout1
 
 poolId :: Hash StakePoolKey
 poolId = fromJust $ hush $ deserialiseFromRawBytesHex (AsHash AsStakePoolKey)

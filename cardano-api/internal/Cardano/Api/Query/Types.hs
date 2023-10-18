@@ -8,7 +8,6 @@ module Cardano.Api.Query.Types
   ) where
 
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Orphans ()
 
 import           Cardano.Binary

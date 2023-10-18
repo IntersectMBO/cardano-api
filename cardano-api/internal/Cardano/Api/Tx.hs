@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -54,7 +55,6 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
@@ -621,29 +621,23 @@ data WitnessNetworkIdOrByronAddress
   -- both the network ID and derivation path will be extracted from the
   -- address and used in the construction of the witness.
 
-makeShelleyBootstrapWitness :: forall era.
-                               IsShelleyBasedEra era
-                            => WitnessNetworkIdOrByronAddress
-                            -> TxBody era
-                            -> SigningKey ByronKey
-                            -> KeyWitness era
-makeShelleyBootstrapWitness _ ByronTxBody{} _ =
-    case shelleyBasedEra :: ShelleyBasedEra era of {}
+makeShelleyBootstrapWitness :: forall era. ()
+  => ShelleyBasedEra era
+  -> WitnessNetworkIdOrByronAddress
+  -> TxBody era
+  -> SigningKey ByronKey
+  -> KeyWitness era
+makeShelleyBootstrapWitness sbe nwOrAddr txBody sk =
+  case txBody of
+    ByronTxBody{} -> case sbe of {}
+    ShelleyTxBody _ txbody _ _ _ _ -> makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
 
-makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody sbe txbody _ _ _ _) sk =
-  shelleyBasedEraConstraints sbe $
-    makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
-
-makeShelleyBasedBootstrapWitness :: forall era.
-                                    (Ledger.HashAnnotated
-                                       (Ledger.TxBody (ShelleyLedgerEra era))
-                                       Ledger.EraIndependentTxBody
-                                       StandardCrypto)
-                                 => ShelleyBasedEra era
-                                 -> WitnessNetworkIdOrByronAddress
-                                 -> Ledger.TxBody (ShelleyLedgerEra era)
-                                 -> SigningKey ByronKey
-                                 -> KeyWitness era
+makeShelleyBasedBootstrapWitness :: forall era. ()
+  => ShelleyBasedEra era
+  -> WitnessNetworkIdOrByronAddress
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> SigningKey ByronKey
+  -> KeyWitness era
 makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
     ShelleyBootstrapWitness sbe $
       -- Byron era witnesses were weird. This reveals all that weirdness.
@@ -675,7 +669,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
                   (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
 
     txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
-    txhash = Ledger.extractHash (Ledger.hashAnnotated txbody)
+    txhash = shelleyBasedEraConstraints sbe $ Ledger.extractHash (Ledger.hashAnnotated txbody)
     --TODO: use Shelley.eraIndTxBodyHash txbody once that function has a
     -- suitably general type.
 
@@ -733,34 +727,26 @@ data ShelleyWitnessSigningKey =
      | WitnessCommitteeHotKey    (SigningKey CommitteeHotKey)
 
 
-makeShelleyKeyWitness :: forall era
-                      .  IsShelleyBasedEra era
-                      => TxBody era
-                      -> ShelleyWitnessSigningKey
-                      -> KeyWitness era
-makeShelleyKeyWitness (ShelleyTxBody sbe txbody _ _ _ _) =
-  shelleyBasedEraConstraints sbe $ makeShelleyBasedKeyWitness txbody
-  where
-    makeShelleyBasedKeyWitness :: Ledger.HashAnnotated (Ledger.TxBody (ShelleyLedgerEra era)) Ledger.EraIndependentTxBody StandardCrypto
-                               => Ledger.TxBody (ShelleyLedgerEra era)
-                               -> ShelleyWitnessSigningKey
-                               -> KeyWitness era
-    makeShelleyBasedKeyWitness txbody' =
+makeShelleyKeyWitness :: forall era. ()
+  => ShelleyBasedEra era
+  -> TxBody era
+  -> ShelleyWitnessSigningKey
+  -> KeyWitness era
+makeShelleyKeyWitness sbe = \case
+  ShelleyTxBody _ txbody _ _ _ _ ->
+    shelleyBasedEraConstraints sbe $
+      let txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
+          txhash = Ledger.extractHash @StandardCrypto (Ledger.hashAnnotated txbody)
 
-     let txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
-         txhash = Ledger.extractHash @StandardCrypto (Ledger.hashAnnotated txbody')
-
-        -- To allow sharing of the txhash computation across many signatures we
-        -- define and share the txhash outside the lambda for the signing key:
-     in \wsk ->
-        let sk        = toShelleySigningKey wsk
-            vk        = getShelleyKeyWitnessVerificationKey sk
-            signature = makeShelleySignature txhash sk
-         in ShelleyKeyWitness sbe $
-              L.WitVKey vk signature
-
-makeShelleyKeyWitness ByronTxBody{} =
-    case shelleyBasedEra :: ShelleyBasedEra era of {}
+          -- To allow sharing of the txhash computation across many signatures we
+          -- define and share the txhash outside the lambda for the signing key:
+      in \wsk ->
+          let sk        = toShelleySigningKey wsk
+              vk        = getShelleyKeyWitnessVerificationKey sk
+              signature = makeShelleySignature txhash sk
+          in ShelleyKeyWitness sbe $
+                L.WitVKey vk signature
+  ByronTxBody{} -> case sbe of {}
 
 
 -- | We support making key witnesses with both normal and extended signing keys.
@@ -863,12 +849,13 @@ signByronTransaction nw txbody sks =
     witnesses = map (makeByronKeyWitness nw txbody) sks
 
 -- signing keys is a set
-signShelleyTransaction :: IsShelleyBasedEra era
-                       => TxBody era
-                       -> [ShelleyWitnessSigningKey]
-                       -> Tx era
-signShelleyTransaction txbody sks =
+signShelleyTransaction :: ()
+  => ShelleyBasedEra era
+  -> TxBody era
+  -> [ShelleyWitnessSigningKey]
+  -> Tx era
+signShelleyTransaction sbe txbody sks =
     makeSignedTransaction witnesses txbody
   where
-    witnesses = map (makeShelleyKeyWitness txbody) sks
+    witnesses = map (makeShelleyKeyWitness sbe txbody) sks
 

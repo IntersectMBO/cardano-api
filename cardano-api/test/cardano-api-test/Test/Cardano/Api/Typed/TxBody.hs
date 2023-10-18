@@ -25,9 +25,10 @@ import           Test.Tasty.Hedgehog (testProperty)
 prop_roundtrip_txbodycontent_txouts:: Property
 prop_roundtrip_txbodycontent_txouts =
   H.property $ do
-    content <- H.forAll $ genTxBodyContent BabbageEra
+    let era = BabbageEra
+    content <- H.forAll $ genTxBodyContent era
     -- Create the ledger body & auxiliaries
-    body <- case createAndValidateTransactionBody content of
+    body <- case createAndValidateTransactionBody era content of
       Left err -> annotateShow err >> failure
       Right body -> pure body
     annotateShow body

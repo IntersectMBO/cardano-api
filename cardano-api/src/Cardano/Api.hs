@@ -23,8 +23,9 @@ module Cardano.Api (
     IsCardanoEra(..),
     AnyCardanoEra(..),
     anyCardanoEra,
-    cardanoEraConstraints,
     InAnyCardanoEra(..),
+    inAnyCardanoEra,
+    cardanoEraConstraints,
     ToCardanoEra(..),
 
     -- * Eon support
@@ -101,7 +102,9 @@ module Cardano.Api (
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
     AnyShelleyBasedEra(..),
+    anyShelleyBasedEra,
     InAnyShelleyBasedEra(..),
+    inAnyShelleyBasedEra,
     CardanoEraStyle(..),
     cardanoEraStyle,
     shelleyBasedToCardanoEra,
@@ -1041,7 +1044,6 @@ import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Constraints
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
 import           Cardano.Api.Fees

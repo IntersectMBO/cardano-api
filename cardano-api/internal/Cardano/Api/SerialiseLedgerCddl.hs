@@ -123,14 +123,15 @@ instance Error TextEnvelopeCddlError where
   displayError TextEnvelopeCddlErrByronKeyWitnessUnsupported =
     "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 
-serialiseTxLedgerCddl :: forall era. IsCardanoEra era => Tx era -> TextEnvelopeCddl
-serialiseTxLedgerCddl tx =
-  TextEnvelopeCddl
-    { teCddlType = genType tx
-    , teCddlDescription = "Ledger Cddl Format"
-    , teCddlRawCBOR = serialiseToCBOR tx
-    -- The SerialiseAsCBOR (Tx era) instance serializes to the Cddl format
-    }
+serialiseTxLedgerCddl :: CardanoEra era -> Tx era -> TextEnvelopeCddl
+serialiseTxLedgerCddl era tx =
+  cardanoEraConstraints era $
+    TextEnvelopeCddl
+      { teCddlType = genType tx
+      , teCddlDescription = "Ledger Cddl Format"
+      , teCddlRawCBOR = serialiseToCBOR tx
+      -- The SerialiseAsCBOR (Tx era) instance serializes to the Cddl format
+      }
  where
   genType :: Tx era -> Text
   genType tx' = case getTxWitnesses tx' of
@@ -138,7 +139,7 @@ serialiseTxLedgerCddl tx =
                   _ -> "Witnessed " <> genTxType
   genTxType :: Text
   genTxType =
-    case cardanoEra :: CardanoEra era of
+    case era of
       ByronEra -> "Tx ByronEra"
       ShelleyEra -> "Tx ShelleyEra"
       AllegraEra -> "Tx AllegraEra"
@@ -147,27 +148,23 @@ serialiseTxLedgerCddl tx =
       BabbageEra -> "Tx BabbageEra"
       ConwayEra -> "Tx ConwayEra"
 
-deserialiseTxLedgerCddl
-  :: IsCardanoEra era
+deserialiseTxLedgerCddl :: ()
   => CardanoEra era
   -> TextEnvelopeCddl
   -> Either TextEnvelopeCddlError (Tx era)
 deserialiseTxLedgerCddl era tec =
   first TextEnvelopeCddlErrCBORDecodingError . deserialiseTx era $ teCddlRawCBOR tec
 
-deserialiseTx
-  :: forall era. IsCardanoEra era
+deserialiseTx :: ()
   => CardanoEra era
   -> ByteString
   -> Either DecoderError (Tx era)
 deserialiseTx era bs =
   case era of
-    ByronEra -> ByronTx <$> CBOR.decodeFullAnnotatedBytes
-                              CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
-    _ -> deserialiseFromCBOR (AsTx ttoken) bs
- where
-  ttoken :: AsType era
-  ttoken = proxyToAsType Proxy
+    ByronEra ->
+      ByronTx
+        <$> CBOR.decodeFullAnnotatedBytes CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
+    _ -> cardanoEraConstraints era $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy)) bs
 
 serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelopeCddl
 serialiseWitnessLedgerCddl sbe kw =
@@ -216,16 +213,16 @@ deserialiseWitnessLedgerCddl sbe TextEnvelopeCddl{teCddlRawCBOR,teCddlDescriptio
       Right $ ShelleyKeyWitness sbe w
     _ -> Left TextEnvelopeCddlUnknownKeyWitness
 
-writeTxFileTextEnvelopeCddl
-  :: IsCardanoEra era
-  => File content Out
+writeTxFileTextEnvelopeCddl :: ()
+  => CardanoEra era
+  -> File content Out
   -> Tx era
   -> IO (Either (FileError ()) ())
-writeTxFileTextEnvelopeCddl path tx =
+writeTxFileTextEnvelopeCddl era path tx =
   runExceptT $ do
     handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
- where
-  txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseTxLedgerCddl tx) <> "\n"
+  where
+    txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseTxLedgerCddl era tx) <> "\n"
 
 writeTxWitnessFileTextEnvelopeCddl
   :: ShelleyBasedEra era
@@ -235,8 +232,8 @@ writeTxWitnessFileTextEnvelopeCddl
 writeTxWitnessFileTextEnvelopeCddl sbe path w =
   runExceptT $ do
     handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
- where
-  txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseWitnessLedgerCddl sbe w) <> "\n"
+  where
+    txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseWitnessLedgerCddl sbe w) <> "\n"
 
 textEnvelopeCddlJSONConfig :: Config
 textEnvelopeCddlJSONConfig =
