@@ -160,7 +160,7 @@ import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Plutus
+import           Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
 import           Test.Cardano.Ledger.Conway.Arbitrary ()
 import           Test.Cardano.Ledger.Core.Arbitrary ()
 
@@ -960,15 +960,12 @@ genUpdateProposal era =
 
 genCostModel :: Gen Alonzo.CostModel
 genCostModel = do
-  let costModelParams = Alonzo.getCostModelParams Plutus.testingCostModelV1
-  eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
-                                   <*> mapM (const $ Gen.integral (Range.linear 0 5000)) costModelParams
-  case eCostModel of
-    Left err -> error $ "genCostModel: " <> show err
-    Right cModel -> return cModel
+  lang <- genPlutusLanguage
+  cm <- Q.quickcheck (genValidCostModel lang)
+  pure cm
 
 genPlutusLanguage :: Gen Language
-genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
+genPlutusLanguage = Gen.element [PlutusV1, PlutusV2, PlutusV3]
 
 _genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
 _genCostModels =
