@@ -24,6 +24,7 @@ import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Cardano.Ledger.Crypto as Crypto
+import           Cardano.Ledger.HKD (NoUpdate (..))
 import qualified Cardano.Ledger.Shelley.PParams as Ledger
 import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
@@ -313,7 +314,7 @@ instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
     , Ledger.cppA0 = lastMappendWith Ledger.cppA0 p1 p2
     , Ledger.cppRho = lastMappendWith Ledger.cppRho p1 p2
     , Ledger.cppTau = lastMappendWith Ledger.cppTau p1 p2
-    , Ledger.cppProtocolVersion = lastMappendWith Ledger.cppProtocolVersion p1 p2
+    , Ledger.cppProtocolVersion = NoUpdate -- For conway, protocol version cannot be changed via `PParamsUpdate`
     , Ledger.cppMinPoolCost = lastMappendWith Ledger.cppMinPoolCost p1 p2
     , Ledger.cppCoinsPerUTxOByte = lastMappendWith Ledger.cppCoinsPerUTxOByte p1 p2
     , Ledger.cppCostModels = lastMappendWith Ledger.cppCostModels p1 p2
