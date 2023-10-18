@@ -20,6 +20,7 @@ module Cardano.Api.Keys.Shelley (
     CommitteeColdKey,
     CommitteeHotKey,
     DRepKey,
+    DRepExtendedKey,
     PaymentKey,
     PaymentExtendedKey,
     StakeKey,
@@ -1604,6 +1605,123 @@ instance HasTextEnvelope (SigningKey DRepKey) where
       where
         proxy :: Proxy (Shelley.DSIGN StandardCrypto)
         proxy = Proxy
+
+---
+--- Drep extended keys
+---
+data DRepExtendedKey
+
+instance HasTypeProxy DRepExtendedKey where
+    data AsType DRepExtendedKey = AsDRepExtendedKey
+    proxyToAsType _ = AsDRepExtendedKey
+
+instance Key DRepExtendedKey where
+
+    newtype VerificationKey DRepExtendedKey =
+        DRepExtendedVerificationKey Crypto.HD.XPub
+      deriving stock (Eq)
+      deriving anyclass SerialiseAsCBOR
+      deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
+
+    newtype SigningKey DRepExtendedKey =
+        DRepExtendedSigningKey Crypto.HD.XPrv
+      deriving anyclass SerialiseAsCBOR
+      deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
+
+    deterministicSigningKey :: AsType DRepExtendedKey
+                            -> Crypto.Seed
+                            -> SigningKey DRepExtendedKey
+    deterministicSigningKey AsDRepExtendedKey seed =
+        DRepExtendedSigningKey
+          (Crypto.HD.generate seedbs BS.empty)
+      where
+       (seedbs, _) = Crypto.getBytesFromSeedT 32 seed
+
+    deterministicSigningKeySeedSize :: AsType DRepExtendedKey -> Word
+    deterministicSigningKeySeedSize AsDRepExtendedKey = 32
+
+    getVerificationKey :: SigningKey DRepExtendedKey
+                       -> VerificationKey DRepExtendedKey
+    getVerificationKey (DRepExtendedSigningKey sk) =
+        DRepExtendedVerificationKey (Crypto.HD.toXPub sk)
+
+    -- | We use the hash of the normal non-extended pub key so that it is
+    -- consistent with the one used in addresses and signatures.
+    --
+    verificationKeyHash :: VerificationKey DRepExtendedKey
+                        -> Hash DRepExtendedKey
+    verificationKeyHash (DRepExtendedVerificationKey vk) =
+        DRepExtendedKeyHash
+      . Shelley.KeyHash
+      . Crypto.castHash
+      $ Crypto.hashWith Crypto.HD.xpubPublicKey vk
+
+newtype instance Hash DRepExtendedKey =
+    DRepExtendedKeyHash { unDRepExtendedKeyHash :: Shelley.KeyHash Shelley.DRepRole StandardCrypto }
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)
+  deriving anyclass SerialiseAsCBOR
+
+instance ToCBOR (VerificationKey DRepExtendedKey) where
+    toCBOR (DRepExtendedVerificationKey xpub) =
+      toCBOR (Crypto.HD.unXPub xpub)
+
+instance FromCBOR (VerificationKey DRepExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . DRepExtendedVerificationKey)
+             (Crypto.HD.xpub (bs :: ByteString))
+
+instance ToCBOR (SigningKey DRepExtendedKey) where
+    toCBOR (DRepExtendedSigningKey xprv) =
+      toCBOR (Crypto.HD.unXPrv xprv)
+
+instance FromCBOR (SigningKey DRepExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . DRepExtendedSigningKey)
+             (Crypto.HD.xprv (bs :: ByteString))
+
+instance SerialiseAsRawBytes (VerificationKey DRepExtendedKey) where
+    serialiseToRawBytes (DRepExtendedVerificationKey xpub) =
+      Crypto.HD.unXPub xpub
+
+    deserialiseFromRawBytes (AsVerificationKey AsDRepExtendedKey) bs =
+      first
+        (const (SerialiseAsRawBytesError "Unable to deserialise VerificationKey DRepExtendedKey"))
+        (DRepExtendedVerificationKey <$> Crypto.HD.xpub bs)
+
+instance SerialiseAsRawBytes (SigningKey DRepExtendedKey) where
+    serialiseToRawBytes (DRepExtendedSigningKey xprv) =
+      Crypto.HD.unXPrv xprv
+
+    deserialiseFromRawBytes (AsSigningKey AsDRepExtendedKey) bs =
+      first
+        (const (SerialiseAsRawBytesError "Unable to deserialise SigningKey DRepExtendedKey"))
+        (DRepExtendedSigningKey <$> Crypto.HD.xprv bs)
+
+instance SerialiseAsRawBytes (Hash DRepExtendedKey) where
+    serialiseToRawBytes (DRepExtendedKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.hashToBytes vkh
+
+    deserialiseFromRawBytes (AsHash AsDRepExtendedKey) bs =
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash DRepExtendedKey") $
+        DRepExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
+instance HasTextEnvelope (VerificationKey DRepExtendedKey) where
+    textEnvelopeType _ = "DRepExtendedVerificationKey_ed25519_bip32"
+
+instance HasTextEnvelope (SigningKey DRepExtendedKey) where
+    textEnvelopeType _ = "DRepExtendedSigningKey_ed25519_bip32"
+
+instance SerialiseAsBech32 (VerificationKey DRepExtendedKey) where
+    bech32PrefixFor         _ =  "drep_xvk"
+    bech32PrefixesPermitted _ = ["drep_xvk"]
+
+instance SerialiseAsBech32 (SigningKey DRepExtendedKey) where
+    bech32PrefixFor         _ =  "drep_xsk"
+    bech32PrefixesPermitted _ = ["drep_xsk"]
 
 --
 -- Committee keys
