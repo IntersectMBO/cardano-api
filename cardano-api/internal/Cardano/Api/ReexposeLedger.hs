@@ -115,7 +115,7 @@ import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (..), Url,
                    boundRational, dnsToText, maybeToStrictMaybe, portToWord16, strictMaybeToMaybe,
                    textToDns, textToUrl, unboundRational, urlToText)
-import           Cardano.Ledger.CertState (csCommitteeCredsL)
+import           Cardano.Ledger.CertState (DRepState, csCommitteeCredsL)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVotingThresholds (..),
                    dvtPPEconomicGroupL, dvtPPGovGroupL, dvtPPNetworkGroupL, dvtPPTechnicalGroupL,
@@ -124,11 +124,11 @@ import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..)
                    Vote (..), Voter (..), VotingProcedure (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
                    ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
-import           Cardano.Ledger.Core (DRep (..), EraCrypto, PParams (..), PoolCert (..),
-                   fromEraCBOR, toEraCBOR)
+import           Cardano.Ledger.Core (EraCrypto, PParams (..), PoolCert (..), fromEraCBOR,
+                   toEraCBOR)
 import           Cardano.Ledger.Credential (Credential (..))
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import           Cardano.Ledger.DRepDistr (DRepState, drepAnchorL, drepDepositL, drepExpiryL)
+import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
 import           Cardano.Ledger.Keys (HasKeyRole (..), KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import           Cardano.Ledger.Shelley.TxCert (EraTxCert (..), GenesisDelegCert (..), MIRCert (..),
