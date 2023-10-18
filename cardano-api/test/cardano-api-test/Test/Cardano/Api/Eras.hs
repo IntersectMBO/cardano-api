@@ -23,7 +23,7 @@ prop_maxBound_CardanoMatchesShelley = property $ do
   AnyCardanoEra era <- forAll $ Gen.element [maxBound]
   AnyShelleyBasedEra sbe <- forAll $ Gen.element [maxBound]
 
-  fromEnum (AnyCardanoEra era) === fromEnum (AnyCardanoEra (shelleyBasedToCardanoEra sbe))
+  fromEnum (anyCardanoEra era) === fromEnum (anyCardanoEra (shelleyBasedToCardanoEra sbe))
 
 --------------------------------------------------------------------------------
 -- Aeson instances
@@ -44,7 +44,7 @@ prop_toJSON_CardanoMatchesShelley :: Property
 prop_toJSON_CardanoMatchesShelley = property $ do
   AnyShelleyBasedEra sbe <- forAll $ Gen.element [minBound..maxBound]
 
-  toJSON (AnyShelleyBasedEra sbe) === toJSON (AnyCardanoEra (shelleyBasedToCardanoEra sbe))
+  toJSON (anyShelleyBasedEra sbe) === toJSON (anyCardanoEra (shelleyBasedToCardanoEra sbe))
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Json"

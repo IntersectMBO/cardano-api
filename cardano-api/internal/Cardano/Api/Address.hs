@@ -6,6 +6,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
@@ -373,9 +374,11 @@ instance IsCardanoEra era => ToJSON (AddressInEra era) where
   toJSON = Aeson.String . serialiseAddress
 
 instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
-  parseJSON = withText "AddressInEra" $ \txt -> do
-    addressAny <- runParsecParser parseAddressAny txt
-    pure $ anyAddressInShelleyBasedEra addressAny
+  parseJSON =
+    let sbe = shelleyBasedEra @era in
+    withText "AddressInEra" $ \txt -> do
+      addressAny <- runParsecParser parseAddressAny txt
+      pure $ anyAddressInShelleyBasedEra sbe addressAny
 
 parseAddressAny :: Parsec.Parser AddressAny
 parseAddressAny = do
@@ -467,15 +470,20 @@ byronAddressInEra :: Address ByronAddr -> AddressInEra era
 byronAddressInEra = AddressInEra ByronAddressInAnyEra
 
 
-shelleyAddressInEra :: IsShelleyBasedEra era
-                    => Address ShelleyAddr -> AddressInEra era
-shelleyAddressInEra = AddressInEra (ShelleyAddressInEra shelleyBasedEra)
+shelleyAddressInEra :: ()
+  => ShelleyBasedEra era
+  -> Address ShelleyAddr
+  -> AddressInEra era
+shelleyAddressInEra sbe =
+  AddressInEra (ShelleyAddressInEra sbe)
 
-
-anyAddressInShelleyBasedEra :: IsShelleyBasedEra era
-                            => AddressAny -> AddressInEra era
-anyAddressInShelleyBasedEra (AddressByron   addr) = byronAddressInEra addr
-anyAddressInShelleyBasedEra (AddressShelley addr) = shelleyAddressInEra addr
+anyAddressInShelleyBasedEra :: ()
+  => ShelleyBasedEra era
+  -> AddressAny
+  -> AddressInEra era
+anyAddressInShelleyBasedEra sbe = \case
+  AddressByron   addr -> byronAddressInEra addr
+  AddressShelley addr -> shelleyAddressInEra sbe addr
 
 
 anyAddressInEra :: CardanoEra era
@@ -500,13 +508,14 @@ makeByronAddressInEra nw vk =
     byronAddressInEra (makeByronAddress nw vk)
 
 
-makeShelleyAddressInEra :: IsShelleyBasedEra era
-                        => NetworkId
-                        -> PaymentCredential
-                        -> StakeAddressReference
-                        -> AddressInEra era
-makeShelleyAddressInEra nw pc scr =
-    shelleyAddressInEra (makeShelleyAddress nw pc scr)
+makeShelleyAddressInEra :: ()
+  => ShelleyBasedEra era
+  -> NetworkId
+  -> PaymentCredential
+  -> StakeAddressReference
+  -> AddressInEra era
+makeShelleyAddressInEra sbe nw pc scr =
+  shelleyAddressInEra sbe (makeShelleyAddress nw pc scr)
 
 
 -- ----------------------------------------------------------------------------
@@ -659,15 +668,15 @@ toShelleyStakeReference (StakeAddressByPointer ptr) =
 toShelleyStakeReference  NoStakeAddress =
     Shelley.StakeRefNull
 
-fromShelleyAddrIsSbe :: IsShelleyBasedEra era
-                     => Shelley.Addr StandardCrypto -> AddressInEra era
-fromShelleyAddrIsSbe (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
-  AddressInEra ByronAddressInAnyEra (ByronAddress addr)
-
-fromShelleyAddrIsSbe (Shelley.Addr nw pc scr) =
-  AddressInEra
-    (ShelleyAddressInEra shelleyBasedEra)
-    (ShelleyAddress nw pc scr)
+fromShelleyAddrIsSbe :: ()
+  => ShelleyBasedEra era
+  -> Shelley.Addr StandardCrypto
+  -> AddressInEra era
+fromShelleyAddrIsSbe sbe = \case
+  Shelley.AddrBootstrap (Shelley.BootstrapAddress addr) ->
+    AddressInEra ByronAddressInAnyEra (ByronAddress addr)
+  Shelley.Addr nw pc scr ->
+    AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress nw pc scr)
 
 fromShelleyAddr
   :: ShelleyBasedEra era

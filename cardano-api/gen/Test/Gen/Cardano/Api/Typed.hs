@@ -188,10 +188,10 @@ genAddressInEra era =
     LegacyByronEra ->
       byronAddressInEra <$> genAddressByron
 
-    ShelleyBasedEra _ ->
+    ShelleyBasedEra sbe ->
       Gen.choice
-        [ byronAddressInEra   <$> genAddressByron
-        , shelleyAddressInEra <$> genAddressShelley
+        [ byronAddressInEra       <$> genAddressByron
+        , shelleyAddressInEra sbe <$> genAddressShelley
         ]
 
 genKESPeriod :: Gen KESPeriod
@@ -717,9 +717,9 @@ genTxFee =
     (pure . TxFeeImplicit)
     (\w -> TxFeeExplicit w <$> genLovelace)
 
-genTxBody :: IsCardanoEra era => CardanoEra era -> Gen (TxBody era)
+genTxBody :: CardanoEra era -> Gen (TxBody era)
 genTxBody era = do
-  res <- Api.createAndValidateTransactionBody <$> genTxBodyContent era
+  res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
   case res of
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
@@ -753,7 +753,9 @@ genTxScriptValidity =
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 
-genTx :: forall era. IsCardanoEra era => CardanoEra era -> Gen (Tx era)
+genTx :: ()
+  => CardanoEra era
+  -> Gen (Tx era)
 genTx era =
   makeSignedTransaction
     <$> genWitnesses era
@@ -762,12 +764,10 @@ genTx era =
 genWitnesses :: CardanoEra era -> Gen [KeyWitness era]
 genWitnesses era =
   case cardanoEraStyle era of
-    LegacyByronEra    -> Gen.list (Range.constant 1 10) genByronKeyWitness
-    ShelleyBasedEra _ -> do
-      bsWits  <- Gen.list (Range.constant 0 10)
-                          (genShelleyBootstrapWitness era)
-      keyWits <- Gen.list (Range.constant 0 10)
-                          (genShelleyKeyWitness era)
+    LegacyByronEra -> Gen.list (Range.constant 1 10) genByronKeyWitness
+    ShelleyBasedEra sbe -> do
+      bsWits  <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
+      keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
       return $ bsWits ++ keyWits
 
 genVerificationKey :: ()
@@ -806,33 +806,30 @@ genWitnessNetworkIdOrByronAddress =
     , WitnessByronAddress <$> genAddressByron
     ]
 
-genShelleyBootstrapWitness
-  :: IsShelleyBasedEra era
-  => CardanoEra era
+genShelleyBootstrapWitness :: ()
+  => ShelleyBasedEra era
   -> Gen (KeyWitness era)
-genShelleyBootstrapWitness era =
- makeShelleyBootstrapWitness
+genShelleyBootstrapWitness sbe =
+ makeShelleyBootstrapWitness sbe
    <$> genWitnessNetworkIdOrByronAddress
-   <*> genTxBody era
+   <*> genTxBody (shelleyBasedToCardanoEra sbe)
    <*> genSigningKey AsByronKey
 
-genShelleyKeyWitness
-  :: IsShelleyBasedEra era
-  => CardanoEra era
+genShelleyKeyWitness :: ()
+  => ShelleyBasedEra era
   -> Gen (KeyWitness era)
-genShelleyKeyWitness era =
-  makeShelleyKeyWitness
-    <$> genTxBody era
+genShelleyKeyWitness sbe =
+  makeShelleyKeyWitness sbe
+    <$> genTxBody (shelleyBasedToCardanoEra sbe)
     <*> genShelleyWitnessSigningKey
 
-genShelleyWitness
-  :: IsShelleyBasedEra era
-  => CardanoEra era
+genShelleyWitness :: ()
+  => ShelleyBasedEra era
   -> Gen (KeyWitness era)
-genShelleyWitness era =
+genShelleyWitness sbe =
   Gen.choice
-   [ genShelleyKeyWitness era
-   , genShelleyBootstrapWitness era
+   [ genShelleyKeyWitness sbe
+   , genShelleyBootstrapWitness sbe
    ]
 
 genShelleyWitnessSigningKey :: Gen ShelleyWitnessSigningKey
@@ -845,12 +842,12 @@ genShelleyWitnessSigningKey =
              , WitnessGenesisUTxOKey <$>  genSigningKey AsGenesisUTxOKey
              ]
 
-genCardanoKeyWitness
-  :: CardanoEra era
+genCardanoKeyWitness :: ()
+  => CardanoEra era
   -> Gen (KeyWitness era)
 genCardanoKeyWitness era = case cardanoEraStyle era of
   LegacyByronEra -> genByronKeyWitness
-  ShelleyBasedEra _ -> genShelleyWitness era
+  ShelleyBasedEra sbe -> genShelleyWitness sbe
 
 genSeed :: Int -> Gen Crypto.Seed
 genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)

@@ -8,6 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Eon.ShelleyBasedEra
   ( -- * Shelley-based eras
@@ -230,8 +231,7 @@ shelleyBasedEraConstraints = \case
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra
-    :: IsShelleyBasedEra era  -- Provide class constraint
-    => ShelleyBasedEra era    -- and explicit value.
+    :: ShelleyBasedEra era
     -> AnyShelleyBasedEra
 
 deriving instance Show AnyShelleyBasedEra
@@ -294,10 +294,11 @@ anyShelleyBasedEra sbe =
 -- is not statically known, for example when deserialising from a file.
 --
 data InAnyShelleyBasedEra thing where
-     InAnyShelleyBasedEra :: IsShelleyBasedEra era -- Provide class constraint
-                          => ShelleyBasedEra era   -- and explicit value.
-                          -> thing era
-                          -> InAnyShelleyBasedEra thing
+  InAnyShelleyBasedEra
+    :: IsShelleyBasedEra era
+    => ShelleyBasedEra era
+    -> thing era
+    -> InAnyShelleyBasedEra thing
 
 inAnyShelleyBasedEra :: ()
   => ShelleyBasedEra era
@@ -328,10 +329,11 @@ shelleyBasedToCardanoEra ShelleyBasedEraConway  = ConwayEra
 -- the Shelley-based eras can often be treated uniformly.
 --
 data CardanoEraStyle era where
-     LegacyByronEra  :: CardanoEraStyle ByronEra
-     ShelleyBasedEra :: IsShelleyBasedEra era -- Also provide class constraint
-                     => ShelleyBasedEra era
-                     -> CardanoEraStyle era
+  LegacyByronEra  :: CardanoEraStyle ByronEra
+
+  ShelleyBasedEra
+    :: ShelleyBasedEra era
+    -> CardanoEraStyle era
 
 deriving instance Eq   (CardanoEraStyle era)
 deriving instance Ord  (CardanoEraStyle era)
