@@ -273,13 +273,13 @@ instance Eq (KeyWitness era) where
     (==) (ByronKeyWitness wA)
          (ByronKeyWitness wB) = wA == wB
 
-    (==) (ShelleyBootstrapWitness sbe wA)
-         (ShelleyBootstrapWitness _   wB) =
-      shelleyBasedEraConstraints sbe $ wA == wB
+    (==) (ShelleyBootstrapWitness _ wA)
+         (ShelleyBootstrapWitness _ wB) =
+      wA == wB
 
-    (==) (ShelleyKeyWitness sbe wA)
-         (ShelleyKeyWitness _   wB) =
-      shelleyBasedEraConstraints sbe $ wA == wB
+    (==) (ShelleyKeyWitness _ wA)
+         (ShelleyKeyWitness _ wB) =
+      wA == wB
 
     (==) _ _ = False
 

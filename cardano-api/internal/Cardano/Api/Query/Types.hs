@@ -30,10 +30,10 @@ instance IsShelleyBasedEra era => FromCBOR (DebugLedgerState era) where
 instance IsShelleyBasedEra era => ToJSON (DebugLedgerState era) where
   toJSON =
     let sbe = shelleyBasedEra @era in
-    shelleyBasedEraConstraints sbe $ object . toDebugLedgerStatePair sbe
+    object . toDebugLedgerStatePair sbe
   toEncoding =
     let sbe = shelleyBasedEra @era in
-    shelleyBasedEraConstraints sbe $ Aeson.pairs . mconcat . toDebugLedgerStatePair sbe
+    Aeson.pairs . mconcat . toDebugLedgerStatePair sbe
 
 toDebugLedgerStatePair :: ()
   => Aeson.KeyValue a
