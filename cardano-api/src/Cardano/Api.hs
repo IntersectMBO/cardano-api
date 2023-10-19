@@ -168,6 +168,9 @@ module Cardano.Api (
     shelleyToAllegraEraToByronToAllegraEra,
     shelleyToAlonzoEraToShelleyToBabbageEra,
 
+    -- ** for AllegraEraOnwards
+    allegraEraOnwardsToByronAndAllegraOnwardsEra,
+
     -- *** for AlonzoEraOnwards
     alonzoEraOnwardsToMaryEraOnwards,
 
