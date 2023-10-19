@@ -166,15 +166,18 @@ module Cardano.Api (
     caseAlonzoOnlyOrBabbageEraOnwards,
 
     -- ** Eon relaxation
-    shelleyToAllegraEraToByronToAllegraEra,
 
-    -- *** Case on AlonzoEraOnly
+    -- *** for AlonzoEraOnly
+    shelleyToAllegraEraToByronToAllegraEra,
+    shelleyToAlonzoEraToShelleyToBabbageEra,
+
+    -- *** for AlonzoEraOnly
     alonzoEraOnlyToAlonzoEraOnwards,
 
-    -- *** Case on AlonzoEraOnwards
+    -- *** for AlonzoEraOnwards
     alonzoEraOnwardsToMaryEraOnwards,
 
-    -- *** Case on BabbageEraOnwards
+    -- *** for BabbageEraOnwards
     babbageEraOnwardsToMaryEraOnwards,
     babbageEraOnwardsToAlonzoEraOnwards,
 
