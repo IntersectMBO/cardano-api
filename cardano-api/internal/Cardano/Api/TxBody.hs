@@ -2364,66 +2364,23 @@ fromLedgerTxValidityRange
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> (TxValidityLowerBound era, TxValidityUpperBound era)
 fromLedgerTxValidityRange sbe body =
-  case sbe of
-    ShelleyBasedEraShelley ->
+  caseShelleyEraOnlyOrAllegraEraOnwards
+    ( const
       ( TxValidityNoLowerBound
       , TxValidityUpperBound sbe $ body ^. L.ttlTxBodyL
       )
-
-    ShelleyBasedEraAllegra ->
+    )
+    (\w ->
+      let L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL in
       ( case invalidBefore of
           SNothing -> TxValidityNoLowerBound
-          SJust s  -> TxValidityLowerBound AllegraEraOnwardsAllegra s
+          SJust s  -> TxValidityLowerBound w s
       , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsAllegra
+          SNothing -> TxValidityNoUpperBound (allegraEraOnwardsToByronAndAllegraOnwardsEra w)
           SJust s  -> TxValidityUpperBound sbe s
       )
-      where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
-
-    ShelleyBasedEraMary ->
-      ( case invalidBefore of
-          SNothing -> TxValidityNoLowerBound
-          SJust s  -> TxValidityLowerBound AllegraEraOnwardsMary s
-      , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsMary
-          SJust s  -> TxValidityUpperBound sbe s
-      )
-      where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
-
-    ShelleyBasedEraAlonzo ->
-      ( case invalidBefore of
-          SNothing -> TxValidityNoLowerBound
-          SJust s  -> TxValidityLowerBound AllegraEraOnwardsAlonzo s
-      , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsAlonzo
-          SJust s  -> TxValidityUpperBound sbe s
-      )
-      where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
-
-    ShelleyBasedEraBabbage ->
-      ( case invalidBefore of
-          SNothing -> TxValidityNoLowerBound
-          SJust s  -> TxValidityLowerBound AllegraEraOnwardsBabbage s
-      , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsBabbage
-          SJust s  -> TxValidityUpperBound sbe s
-      )
-      where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
-
-    ShelleyBasedEraConway ->
-      ( case invalidBefore of
-          SNothing -> TxValidityNoLowerBound
-          SJust s  -> TxValidityLowerBound AllegraEraOnwardsConway s
-      , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound ByronAndAllegraEraOnwardsConway
-          SJust s  -> TxValidityUpperBound sbe s
-      )
-      where
-        L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL
+    )
+    sbe
 
 fromLedgerAuxiliaryData
   :: ShelleyBasedEra era
