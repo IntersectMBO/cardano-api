@@ -287,7 +287,7 @@ anyShelleyBasedEra :: ()
   => ShelleyBasedEra era
   -> AnyShelleyBasedEra
 anyShelleyBasedEra sbe =
-  shelleyBasedEraConstraints sbe $ AnyShelleyBasedEra sbe
+  AnyShelleyBasedEra sbe
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era

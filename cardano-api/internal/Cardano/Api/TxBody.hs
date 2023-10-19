@@ -1547,8 +1547,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
       recoverBytes txbody
 
     serialiseToCBOR (ShelleyTxBody sbe txbody txscripts redeemers txmetadata scriptValidity) =
-      shelleyBasedEraConstraints sbe $
-        serialiseShelleyBasedTxBody sbe txbody txscripts redeemers txmetadata scriptValidity
+      serialiseShelleyBasedTxBody sbe txbody txscripts redeemers txmetadata scriptValidity
 
     deserialiseFromCBOR _ bs =
       caseByronOrShelleyBasedEra
@@ -2632,7 +2631,7 @@ convReturnCollateral
 convReturnCollateral sbe txReturnCollateral =
   case txReturnCollateral of
     TxReturnCollateralNone -> SNothing
-    TxReturnCollateral _ colTxOut -> SJust $ shelleyBasedEraConstraints sbe $ toShelleyTxOutAny sbe colTxOut
+    TxReturnCollateral _ colTxOut -> SJust $ toShelleyTxOutAny sbe colTxOut
 
 convTotalCollateral :: TxTotalCollateral era -> StrictMaybe Ledger.Coin
 convTotalCollateral txTotalCollateral =
@@ -2650,10 +2649,9 @@ convCertificates
   :: ShelleyBasedEra era
   -> TxCertificates build era
   -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
-convCertificates sbe txCertificates = shelleyBasedEraConstraints sbe $
-  case txCertificates of
-    TxCertificatesNone    -> Seq.empty
-    TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
+convCertificates _ = \case
+  TxCertificatesNone    -> Seq.empty
+  TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
 
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
@@ -3351,7 +3349,7 @@ fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
 collectTxBodyScriptWitnesses :: forall era. ShelleyBasedEra era
                              -> TxBodyContent BuildTx era
                              -> [(ScriptWitnessIndex, AnyScriptWitness era)]
-collectTxBodyScriptWitnesses sbe TxBodyContent {
+collectTxBodyScriptWitnesses _ TxBodyContent {
                                txIns,
                                txWithdrawals,
                                txCertificates,
@@ -3394,7 +3392,7 @@ collectTxBodyScriptWitnesses sbe TxBodyContent {
           -- The certs are indexed in list order
         | (ix, cert) <- zip [0..] certs
         , ScriptWitness _ witness <- maybeToList $ do
-                                       stakecred <- shelleyBasedEraConstraints sbe $ selectStakeCredential cert
+                                       stakecred <- selectStakeCredential cert
                                        Map.lookup stakecred witnesses
         ]
 

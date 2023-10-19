@@ -162,7 +162,7 @@ createProposalProcedure
   -> Ledger.Anchor StandardCrypto
   -> Proposal era
 createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
-  shelleyBasedEraConstraints sbe $ shelleyBasedEraConstraints sbe $
+  shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
       , Gov.pProcReturnAddr = L.mkRwdAcnt nw (L.KeyHashObj retAddrh)

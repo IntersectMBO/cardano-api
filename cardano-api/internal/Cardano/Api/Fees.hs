@@ -951,7 +951,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
    calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _= (TxReturnCollateralNone, TxTotalCollateralNone)
    calcReturnAndTotalCollateral _ _ _ _ rc@TxReturnCollateral{} tc@TxTotalCollateral{} _ _ = (rc,tc)
    calcReturnAndTotalCollateral retColSup fee pp' (TxInsCollateral _ collIns) txReturnCollateral txTotalCollateral cAddr (UTxO utxo') =
-      shelleyBasedEraConstraints sbe $ do
+      do
         let colPerc = pp' ^. Ledger.ppCollateralPercentageL
         -- We must first figure out how much lovelace we have committed
         -- as collateral and we must determine if we have enough lovelace at our
