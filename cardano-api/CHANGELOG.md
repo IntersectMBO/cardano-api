@@ -1,5 +1,20 @@
 # Changelog for cardano-api
 
+## 8.28.0.0
+
+- Delete `AlonzoEraOnly`.
+  Export `caseMaryEraOnlyOrAlonzoEraOnwards`
+  (feature, breaking)
+  [PR 330](https://github.com/input-output-hk/cardano-api/pull/330)
+
+- New `shelleyToAlonzoEraToShelleyToBabbageEra` function
+  (feature, compatible)
+  [PR 329](https://github.com/input-output-hk/cardano-api/pull/329)
+
+- Delete unnecessary calls to `shelleyBasedEraConstraints`
+  (improvement)
+  [PR 325](https://github.com/input-output-hk/cardano-api/pull/325)
+
 ## 8.27.0.0
 
 - Remove `IsShelleyBasedEra` and `IsCardanoEra` from all functions and types.
