@@ -125,11 +125,6 @@ module Cardano.Api (
 
     -- ** From Alonzo
 
-    AlonzoEraOnly(..),
-    alonzoEraOnlyConstraints,
-    alonzoEraOnlyToCardanoEra,
-    alonzoEraOnlyToShelleyBasedEra,
-
     AlonzoEraOnwards(..),
     alonzoEraOnwardsConstraints,
     alonzoEraOnwardsToCardanoEra,
@@ -163,16 +158,15 @@ module Cardano.Api (
     caseShelleyToMaryOrAlonzoEraOnwards,
     caseShelleyToAlonzoOrBabbageEraOnwards,
     caseShelleyToBabbageOrConwayEraOnwards,
-    caseAlonzoOnlyOrBabbageEraOnwards,
+
+    -- Case on MaryEraOnwards
+    caseMaryEraOnlyOrAlonzoEraOnwards,
 
     -- ** Eon relaxation
 
     -- *** for AlonzoEraOnly
     shelleyToAllegraEraToByronToAllegraEra,
     shelleyToAlonzoEraToShelleyToBabbageEra,
-
-    -- *** for AlonzoEraOnly
-    alonzoEraOnlyToAlonzoEraOnwards,
 
     -- *** for AlonzoEraOnwards
     alonzoEraOnwardsToMaryEraOnwards,
@@ -1028,7 +1022,6 @@ import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.DRepMetadata
-import           Cardano.Api.Eon.AlonzoEraOnly
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
