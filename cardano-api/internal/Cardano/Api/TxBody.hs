@@ -1840,11 +1840,18 @@ createTransactionBody sbe txBodyContent =
         (\aOn -> pure $ A.invalidBeforeTxBodyL aOn .~ convValidityLowerBound (txValidityLowerBound txBodyContent))
         sbe
 
+    setMint <-
+      caseShelleyToAllegraOrMaryEraOnwards
+        (const $ pure id)
+        (const $ pure $ L.mintTxBodyL .~ convMintValue apiMintValue)
+        sbe
+
     let setTxBodyFields txBody = txBody
           & L.certsTxBodyL                .~ certs
           & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
           & modifyWith setUpdateProposal
           & modifyWith setInvalidBefore
+          & modifyWith setMint
 
         mkTxBody :: ()
           => ShelleyBasedEra era
@@ -1888,7 +1895,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
                 & setTxBodyFields
-                & L.mintTxBodyL                 .~ convMintValue apiMintValue
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
@@ -1907,7 +1913,6 @@ createTransactionBody sbe txBodyContent =
                 & setTxBodyFields
                 & L.collateralInputsTxBodyL    .~ collTxIns
                 & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses apiExtraKeyWitnesses
-                & L.mintTxBodyL                .~ convMintValue apiMintValue
                 & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
                 -- TODO: NetworkId for hardware wallets. We don't always want this
                 -- & L.networkIdTxBodyL .~ ...
@@ -1929,7 +1934,6 @@ createTransactionBody sbe txBodyContent =
                 & setTxBodyFields
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
-                & L.mintTxBodyL                 .~ convMintValue apiMintValue
                 & L.scriptIntegrityHashTxBodyL  .~ scriptIntegrityHash
                 & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
@@ -1954,7 +1958,6 @@ createTransactionBody sbe txBodyContent =
                 & setTxBodyFields
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
-                & L.mintTxBodyL                 .~ convMintValue apiMintValue
                 & L.scriptIntegrityHashTxBodyL  .~ scriptIntegrityHash
                 & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
