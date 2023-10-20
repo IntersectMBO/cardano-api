@@ -12,6 +12,9 @@ module Cardano.Api.Ledger.Lens
   , invalidHereAfterTxBodyL
   , ttlAsInvalidHereAfterTxBodyL
   , apiUpdateTxBodyL
+
+  , TxBody(..)
+  , txBodyL
   ) where
 
 import           Cardano.Api.Eon.AllegraEraOnwards
@@ -27,6 +30,10 @@ import qualified Cardano.Ledger.Shelley.PParams as L
 
 import           Lens.Micro
 
+newtype TxBody era = TxBody
+  { unTxBody :: L.TxBody (ShelleyLedgerEra era)
+  }
+
 strictMaybeL :: Lens' (StrictMaybe a) (Maybe a)
 strictMaybeL = lens g s
   where
@@ -36,6 +43,9 @@ strictMaybeL = lens g s
 
     s :: StrictMaybe a -> Maybe a -> StrictMaybe a
     s _ = maybe SNothing SJust
+
+txBodyL :: Lens' (TxBody era) (L.TxBody (ShelleyLedgerEra era))
+txBodyL = lens unTxBody (\_ x -> TxBody x)
 
 invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (L.TxBody (ShelleyLedgerEra era)) (Maybe SlotNo)
 invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ L.vldtTxBodyL . L.invalidBeforeL
