@@ -1800,8 +1800,8 @@ instance Error TxBodyError where
     displayError (TxBodyProtocolParamsConversionError ppces) =
       "Errors in protocol parameters conversion: " ++ displayError ppces
 
-createTransactionBody
-  :: forall era. ShelleyBasedEra era
+createTransactionBody :: ()
+  => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe bc =
