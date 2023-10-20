@@ -1825,6 +1825,8 @@ createTransactionBody sbe txBodyContent =
       scripts = convScripts apiScriptWitnesses
       languages = convLanguages apiScriptWitnesses
 
+      setTxBodyFields = id
+
       mkTxBody :: ()
         => ShelleyBasedEra era
         -> TxBodyContent BuildTx era
@@ -1843,6 +1845,7 @@ createTransactionBody sbe txBodyContent =
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
+                & setTxBodyFields
                 & L.certsTxBodyL                .~ certs
                 & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.updateTxBodyL               .~ update
@@ -1861,6 +1864,7 @@ createTransactionBody sbe txBodyContent =
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
+                & setTxBodyFields
                 & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
@@ -1878,6 +1882,7 @@ createTransactionBody sbe txBodyContent =
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
+                & setTxBodyFields
                 & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
@@ -1901,6 +1906,7 @@ createTransactionBody sbe txBodyContent =
                   convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
+                & setTxBodyFields
                 & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
@@ -1929,6 +1935,7 @@ createTransactionBody sbe txBodyContent =
                   convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
+                & setTxBodyFields
                 & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
@@ -1959,6 +1966,7 @@ createTransactionBody sbe txBodyContent =
                   convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
+                & setTxBodyFields
                 & L.certsTxBodyL                .~ certs
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
                 & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
