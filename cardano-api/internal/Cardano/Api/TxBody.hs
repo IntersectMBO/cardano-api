@@ -1846,12 +1846,19 @@ createTransactionBody sbe txBodyContent =
         (const $ pure $ L.mintTxBodyL .~ convMintValue apiMintValue)
         sbe
 
+    setScriptIntegrityHash <-
+      caseShelleyToMaryOrAlonzoEraOnwards
+        (const $ pure id)
+        (const $ pure $ L.scriptIntegrityHashTxBodyL .~ getScriptIntegrityHash apiProtocolParameters languages sData)
+        sbe
+
     let setTxBodyFields txBody = txBody
           & L.certsTxBodyL                .~ certs
           & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
           & modifyWith setUpdateProposal
           & modifyWith setInvalidBefore
           & modifyWith setMint
+          & modifyWith setScriptIntegrityHash
 
         mkTxBody :: ()
           => ShelleyBasedEra era
@@ -1903,13 +1910,11 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraAlonzo -> do
-        let scriptIntegrityHash = getScriptIntegrityHash apiProtocolParameters languages sData
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
                 & setTxBodyFields
                 & L.collateralInputsTxBodyL    .~ collTxIns
                 & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses apiExtraKeyWitnesses
-                & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
                 -- TODO: NetworkId for hardware wallets. We don't always want this
                 -- & L.networkIdTxBodyL .~ ...
         pure $ ShelleyTxBody sbe
@@ -1920,13 +1925,11 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraBabbage -> do
-        let scriptIntegrityHash = getScriptIntegrityHash apiProtocolParameters languages sData
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
                 & setTxBodyFields
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
-                & L.scriptIntegrityHashTxBodyL  .~ scriptIntegrityHash
                 & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
                 & L.totalCollateralTxBodyL      .~ totalCollateral
@@ -1940,13 +1943,11 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraConway -> do
-        let scriptIntegrityHash = getScriptIntegrityHash apiProtocolParameters languages sData
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
                 & setTxBodyFields
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
-                & L.scriptIntegrityHashTxBodyL  .~ scriptIntegrityHash
                 & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
                 & L.totalCollateralTxBodyL      .~ totalCollateral
