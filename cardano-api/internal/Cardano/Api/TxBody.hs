@@ -1804,46 +1804,46 @@ createTransactionBody
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe txBodyContent =
-  shelleyBasedEraConstraints sbe $
-  let apiTxOuts = txOuts txBodyContent
-      apiScriptWitnesses = collectTxBodyScriptWitnesses sbe txBodyContent
-      apiScriptValidity = txScriptValidity txBodyContent
-      apiMintValue = txMintValue txBodyContent
-      apiProtocolParameters = txProtocolParams txBodyContent
-      apiCollateralTxIns = txInsCollateral txBodyContent
-      apiReferenceInputs = txInsReference txBodyContent
-      apiExtraKeyWitnesses = txExtraKeyWits txBodyContent
-      apiReturnCollateral = txReturnCollateral txBodyContent
-      apiTotalCollateral = txTotalCollateral txBodyContent
+  shelleyBasedEraConstraints sbe $ do
+    let apiTxOuts = txOuts txBodyContent
+        apiScriptWitnesses = collectTxBodyScriptWitnesses sbe txBodyContent
+        apiScriptValidity = txScriptValidity txBodyContent
+        apiMintValue = txMintValue txBodyContent
+        apiProtocolParameters = txProtocolParams txBodyContent
+        apiCollateralTxIns = txInsCollateral txBodyContent
+        apiReferenceInputs = txInsReference txBodyContent
+        apiExtraKeyWitnesses = txExtraKeyWits txBodyContent
+        apiReturnCollateral = txReturnCollateral txBodyContent
+        apiTotalCollateral = txTotalCollateral txBodyContent
 
-      -- Ledger types
-      collTxIns = convCollateralTxIns apiCollateralTxIns
-      refTxIns = convReferenceInputs apiReferenceInputs
-      returnCollateral = convReturnCollateral sbe apiReturnCollateral
-      totalCollateral = convTotalCollateral apiTotalCollateral
-      certs = convCertificates sbe $ txCertificates txBodyContent
-      txAuxData = toAuxiliaryData sbe (txMetadata txBodyContent) (txAuxScripts txBodyContent)
-      scripts = convScripts apiScriptWitnesses
-      languages = convLanguages apiScriptWitnesses
+        -- Ledger types
+        collTxIns = convCollateralTxIns apiCollateralTxIns
+        refTxIns = convReferenceInputs apiReferenceInputs
+        returnCollateral = convReturnCollateral sbe apiReturnCollateral
+        totalCollateral = convTotalCollateral apiTotalCollateral
+        certs = convCertificates sbe $ txCertificates txBodyContent
+        txAuxData = toAuxiliaryData sbe (txMetadata txBodyContent) (txAuxScripts txBodyContent)
+        scripts = convScripts apiScriptWitnesses
+        languages = convLanguages apiScriptWitnesses
 
-      setTxBodyFields txBody = txBody
-        & L.certsTxBodyL                .~ certs
-        & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
+        setTxBodyFields txBody = txBody
+          & L.certsTxBodyL                .~ certs
+          & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
 
-      mkTxBody :: ()
-        => ShelleyBasedEra era
-        -> TxBodyContent BuildTx era
-        -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
-        -> L.TxBody (ShelleyLedgerEra era)
-      mkTxBody sbe' bc =
-        mkCommonTxBody
-          sbe'
-          (txIns bc)
-          (txOuts bc)
-          (txFee bc)
-          (txWithdrawals bc)
+        mkTxBody :: ()
+          => ShelleyBasedEra era
+          -> TxBodyContent BuildTx era
+          -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+          -> L.TxBody (ShelleyLedgerEra era)
+        mkTxBody sbe' bc =
+          mkCommonTxBody
+            sbe'
+            (txIns bc)
+            (txOuts bc)
+            (txFee bc)
+            (txWithdrawals bc)
 
-  in case sbe of
+    case sbe of
        ShelleyBasedEraShelley -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let ledgerTxBody =
