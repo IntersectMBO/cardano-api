@@ -81,6 +81,7 @@ invalidHereAfterL :: Lens' L.ValidityInterval (Maybe SlotNo)
 invalidHereAfterL = invalidHereAfterStrictL . strictMaybeL
 
 -- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
+-- Ideally this should be defined in cardano-ledger
 invalidBeforeStrictL :: Lens' L.ValidityInterval (StrictMaybe SlotNo)
 invalidBeforeStrictL = lens g s
   where
@@ -91,6 +92,7 @@ invalidBeforeStrictL = lens g s
     s (L.ValidityInterval _ b) a = L.ValidityInterval a b
 
 -- | Lens to access the 'invalidHereAfter' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
+-- Ideally this should be defined in cardano-ledger
 invalidHereAfterStrictL :: Lens' L.ValidityInterval (StrictMaybe SlotNo)
 invalidHereAfterStrictL = lens g s
   where
