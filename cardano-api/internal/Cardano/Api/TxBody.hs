@@ -1804,6 +1804,7 @@ createTransactionBody
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe txBodyContent =
+  shelleyBasedEraConstraints sbe $
   let apiTxOuts = txOuts txBodyContent
       apiScriptWitnesses = collectTxBodyScriptWitnesses sbe txBodyContent
       apiScriptValidity = txScriptValidity txBodyContent
@@ -1825,7 +1826,9 @@ createTransactionBody sbe txBodyContent =
       scripts = convScripts apiScriptWitnesses
       languages = convLanguages apiScriptWitnesses
 
-      setTxBodyFields = id
+      setTxBodyFields txBody = txBody
+        & L.certsTxBodyL                .~ certs
+        & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
 
       mkTxBody :: ()
         => ShelleyBasedEra era
@@ -1846,8 +1849,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
                 & setTxBodyFields
-                & L.certsTxBodyL                .~ certs
-                & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.updateTxBodyL               .~ update
 
             sData = convScriptData sbe apiTxOuts apiScriptWitnesses
@@ -1865,10 +1866,8 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
                 & setTxBodyFields
-                & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
 
         pure $ ShelleyTxBody sbe
               ledgerTxBody
@@ -1883,10 +1882,8 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
                 & setTxBodyFields
-                & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
         pure $ ShelleyTxBody sbe
               ledgerTxBody
@@ -1907,10 +1904,8 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
                 & setTxBodyFields
-                & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
@@ -1936,10 +1931,8 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
                 & setTxBodyFields
-                & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
@@ -1967,9 +1960,7 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
                 & setTxBodyFields
-                & L.certsTxBodyL                .~ certs
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
