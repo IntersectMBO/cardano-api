@@ -45,7 +45,8 @@ module Cardano.Api.TxBody (
     setTxTotalCollateral,
     setTxReturnCollateral,
     setTxFee,
-    setTxValidityRange,
+    setTxValidityLowerBound,
+    setTxValidityUpperBound,
     setTxMetadata,
     setTxAuxScripts,
     setTxExtraKeyWits,
@@ -1227,8 +1228,8 @@ data TxBodyContent build era =
        txTotalCollateral    :: TxTotalCollateral era,
        txReturnCollateral   :: TxReturnCollateral CtxTx era,
        txFee                :: TxFee era,
-       txValidityRange      :: (TxValidityLowerBound era,
-                              TxValidityUpperBound era),
+       txValidityLowerBound :: TxValidityLowerBound era,
+       txValidityUpperBound :: TxValidityUpperBound era,
        txMetadata           :: TxMetadataInEra era,
        txAuxScripts         :: TxAuxScripts era,
        txExtraKeyWits       :: TxExtraKeyWitnesses era,
@@ -1254,7 +1255,8 @@ defaultTxBodyContent era = TxBodyContent
     , txTotalCollateral = TxTotalCollateralNone
     , txReturnCollateral = TxReturnCollateralNone
     , txFee = defaultTxFee era
-    , txValidityRange = (TxValidityNoLowerBound, defaultTxValidityUpperBound era)
+    , txValidityLowerBound = TxValidityNoLowerBound
+    , txValidityUpperBound = defaultTxValidityUpperBound era
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
@@ -1301,8 +1303,11 @@ setTxReturnCollateral v txBodyContent = txBodyContent { txReturnCollateral = v }
 setTxFee :: TxFee era -> TxBodyContent build era -> TxBodyContent build era
 setTxFee v txBodyContent = txBodyContent { txFee = v }
 
-setTxValidityRange :: (TxValidityLowerBound era, TxValidityUpperBound era) -> TxBodyContent build era -> TxBodyContent build era
-setTxValidityRange v txBodyContent = txBodyContent { txValidityRange = v }
+setTxValidityLowerBound :: TxValidityLowerBound era -> TxBodyContent build era -> TxBodyContent build era
+setTxValidityLowerBound v txBodyContent = txBodyContent { txValidityLowerBound = v }
+
+setTxValidityUpperBound :: TxValidityUpperBound era -> TxBodyContent build era -> TxBodyContent build era
+setTxValidityUpperBound v txBodyContent = txBodyContent { txValidityUpperBound = v }
 
 setTxMetadata :: TxMetadataInEra era -> TxBodyContent build era -> TxBodyContent build era
 setTxMetadata v txBodyContent = txBodyContent { txMetadata = v }
@@ -1818,7 +1823,11 @@ createTransactionBody sbe txBodyContent =
       certs = convCertificates sbe $ txCertificates txBodyContent
       txAuxData = toAuxiliaryData sbe (txMetadata txBodyContent) (txAuxScripts txBodyContent)
       scripts = convScripts apiScriptWitnesses
-      validityInterval = convValidityInterval $ txValidityRange txBodyContent
+      validityInterval =
+        convValidityInterval
+          ( txValidityLowerBound txBodyContent
+          , txValidityUpperBound txBodyContent
+          )
       languages = convLanguages apiScriptWitnesses
 
       mkTxBody :: ()
@@ -1837,7 +1846,7 @@ createTransactionBody sbe txBodyContent =
   in case sbe of
        ShelleyBasedEraShelley -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let (_, upperBound) = txValidityRange txBodyContent
+        let upperBound = txValidityUpperBound txBodyContent
             ttl = case upperBound of
                     TxValidityNoUpperBound sbe' -> case sbe' of {}
                     TxValidityUpperBound _ ttl'  -> ttl'
@@ -2143,7 +2152,8 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
       , txTotalCollateral     = fromLedgerTxTotalCollateral     sbe body
       , txReturnCollateral    = fromLedgerTxReturnCollateral    sbe body
       , txFee                 = fromLedgerTxFee                 sbe body
-      , txValidityRange       = fromLedgerTxValidityRange       sbe body
+      , txValidityLowerBound  = fromLedgerTxValidityLowerBound  sbe body
+      , txValidityUpperBound  = fromLedgerTxValidityUpperBound  sbe body
       , txWithdrawals         = fromLedgerTxWithdrawals         sbe body
       , txCertificates        = fromLedgerTxCertificates        sbe body
       , txUpdateProposal      = maybeFromLedgerTxUpdateProposal sbe body
@@ -2359,26 +2369,33 @@ fromLedgerTxFee sbe body =
     $ TxFeeExplicit sbe
     $ fromShelleyLovelace $ body ^. L.feeTxBodyL
 
-fromLedgerTxValidityRange
+fromLedgerTxValidityLowerBound
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> (TxValidityLowerBound era, TxValidityUpperBound era)
-fromLedgerTxValidityRange sbe body =
+  -> TxValidityLowerBound era
+fromLedgerTxValidityLowerBound sbe body =
   caseShelleyEraOnlyOrAllegraEraOnwards
-    ( const
-      ( TxValidityNoLowerBound
-      , TxValidityUpperBound sbe $ body ^. L.ttlTxBodyL
-      )
-    )
+    (const TxValidityNoLowerBound)
     (\w ->
-      let L.ValidityInterval{invalidBefore, invalidHereafter} = body ^. L.vldtTxBodyL in
-      ( case invalidBefore of
-          SNothing -> TxValidityNoLowerBound
-          SJust s  -> TxValidityLowerBound w s
-      , case invalidHereafter of
-          SNothing -> TxValidityNoUpperBound (allegraEraOnwardsToByronAndAllegraOnwardsEra w)
-          SJust s  -> TxValidityUpperBound sbe s
-      )
+      let L.ValidityInterval{invalidBefore} = body ^. L.vldtTxBodyL in
+      case invalidBefore of
+        SNothing -> TxValidityNoLowerBound
+        SJust s  -> TxValidityLowerBound w s
+    )
+    sbe
+
+fromLedgerTxValidityUpperBound
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxValidityUpperBound era
+fromLedgerTxValidityUpperBound sbe body =
+  caseShelleyEraOnlyOrAllegraEraOnwards
+    (const (TxValidityUpperBound sbe $ body ^. L.ttlTxBodyL))
+    (\w ->
+      let L.ValidityInterval{invalidHereafter} = body ^. L.vldtTxBodyL in
+      case invalidHereafter of
+        SNothing -> TxValidityNoUpperBound (allegraEraOnwardsToByronAndAllegraOnwardsEra w)
+        SJust s  -> TxValidityUpperBound sbe s
     )
     sbe
 
@@ -2551,25 +2568,26 @@ getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
 getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   TxBodyContent
-  { txIns               = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
-  , txInsCollateral     = TxInsCollateralNone
-  , txInsReference      = TxInsReferenceNone
-  , txOuts              = fromByronTxOut <$> toList txOutputs
-  , txReturnCollateral  = TxReturnCollateralNone
-  , txTotalCollateral   = TxTotalCollateralNone
-  , txFee               = TxFeeImplicit ByronEraOnlyByron
-  , txValidityRange     = (TxValidityNoLowerBound, TxValidityNoUpperBound ByronAndAllegraEraOnwardsByron)
-  , txMetadata          = TxMetadataNone
-  , txAuxScripts        = TxAuxScriptsNone
-  , txExtraKeyWits      = TxExtraKeyWitnessesNone
-  , txProtocolParams    = ViewTx
-  , txWithdrawals       = TxWithdrawalsNone
-  , txCertificates      = TxCertificatesNone
-  , txUpdateProposal    = TxUpdateProposalNone
-  , txMintValue         = TxMintNone
-  , txScriptValidity    = TxScriptValidityNone
-  , txProposalProcedures = Nothing
-  , txVotingProcedures  = Nothing
+  { txIns                 = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
+  , txInsCollateral       = TxInsCollateralNone
+  , txInsReference        = TxInsReferenceNone
+  , txOuts                = fromByronTxOut <$> toList txOutputs
+  , txReturnCollateral    = TxReturnCollateralNone
+  , txTotalCollateral     = TxTotalCollateralNone
+  , txFee                 = TxFeeImplicit ByronEraOnlyByron
+  , txValidityLowerBound  = TxValidityNoLowerBound
+  , txValidityUpperBound  = TxValidityNoUpperBound ByronAndAllegraEraOnwardsByron
+  , txMetadata            = TxMetadataNone
+  , txAuxScripts          = TxAuxScriptsNone
+  , txExtraKeyWits        = TxExtraKeyWitnessesNone
+  , txProtocolParams      = ViewTx
+  , txWithdrawals         = TxWithdrawalsNone
+  , txCertificates        = TxCertificatesNone
+  , txUpdateProposal      = TxUpdateProposalNone
+  , txMintValue           = TxMintNone
+  , txScriptValidity      = TxScriptValidityNone
+  , txProposalProcedures  = Nothing
+  , txVotingProcedures    = Nothing
   }
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
@@ -2769,7 +2787,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraShelley
                              txIns,
                              txOuts,
                              txFee,
-                             txValidityRange = (_, upperBound),
+                             txValidityUpperBound = upperBound,
                              txMetadata,
                              txWithdrawals,
                              txCertificates,
@@ -2807,7 +2825,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAllegra
                              txIns,
                              txOuts,
                              txFee,
-                             txValidityRange = (lowerBound, upperBound),
+                             txValidityLowerBound,
+                             txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
                              txWithdrawals,
@@ -2821,7 +2840,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAllegra
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
            & L.certsTxBodyL  .~ convCertificates sbe txCertificates
-           & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
+           & L.vldtTxBodyL   .~ convValidityInterval (txValidityLowerBound, txValidityUpperBound)
            & L.updateTxBodyL .~ update
         )
         scripts_
@@ -2844,7 +2863,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraMary
                              txIns,
                              txOuts,
                              txFee,
-                             txValidityRange = (lowerBound, upperBound),
+                             txValidityLowerBound,
+                             txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
                              txWithdrawals,
@@ -2859,7 +2879,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraMary
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
            & L.certsTxBodyL  .~ convCertificates sbe txCertificates
-           & L.vldtTxBodyL   .~ convValidityInterval (lowerBound, upperBound)
+           & L.vldtTxBodyL   .~ convValidityInterval (txValidityLowerBound, txValidityUpperBound)
            & L.updateTxBodyL .~ update
            & L.mintTxBodyL   .~ convMintValue txMintValue
         )
@@ -2884,7 +2904,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
                              txInsCollateral,
                              txOuts,
                              txFee,
-                             txValidityRange = (lowerBound, upperBound),
+                             txValidityLowerBound,
+                             txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
                              txExtraKeyWits,
@@ -2905,7 +2926,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
            & L.collateralInputsTxBodyL    .~ convCollateralTxIns txInsCollateral
            & L.certsTxBodyL               .~ convCertificates sbe txCertificates
-           & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
+           & L.vldtTxBodyL                .~ convValidityInterval (txValidityLowerBound, txValidityUpperBound)
            & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
@@ -2971,7 +2992,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
                              txTotalCollateral,
                              txOuts,
                              txFee,
-                             txValidityRange = (lowerBound, upperBound),
+                             txValidityLowerBound,
+                             txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
                              txExtraKeyWits,
@@ -2998,7 +3020,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
            & L.collateralReturnTxBodyL    .~ convReturnCollateral sbe txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
            & L.certsTxBodyL               .~ convCertificates sbe txCertificates
-           & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
+           & L.vldtTxBodyL                .~ convValidityInterval (txValidityLowerBound, txValidityUpperBound)
            & L.updateTxBodyL              .~ update
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
@@ -3073,7 +3095,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                              txTotalCollateral,
                              txOuts,
                              txFee,
-                             txValidityRange = (lowerBound, upperBound),
+                             txValidityLowerBound,
+                             txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
                              txExtraKeyWits,
@@ -3100,7 +3123,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
            & L.collateralReturnTxBodyL    .~ convReturnCollateral sbe txReturnCollateral
            & L.totalCollateralTxBodyL     .~ convTotalCollateral txTotalCollateral
            & L.certsTxBodyL               .~ convCertificates sbe txCertificates
-           & L.vldtTxBodyL                .~ convValidityInterval (lowerBound, upperBound)
+           & L.vldtTxBodyL                .~ convValidityInterval (txValidityLowerBound, txValidityUpperBound)
            & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses txExtraKeyWits
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
