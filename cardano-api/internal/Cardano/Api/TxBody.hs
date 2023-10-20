@@ -1826,6 +1826,7 @@ createTransactionBody sbe txBodyContent =
         txAuxData = toAuxiliaryData sbe (txMetadata txBodyContent) (txAuxScripts txBodyContent)
         scripts = convScripts apiScriptWitnesses
         languages = convLanguages apiScriptWitnesses
+        sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
     setUpdateProposal <-
       caseShelleyToBabbageOrConwayEraOnwards
@@ -1864,8 +1865,6 @@ createTransactionBody sbe txBodyContent =
               mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
                 & setTxBodyFields
 
-            sData = convScriptData sbe apiTxOuts apiScriptWitnesses
-
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
@@ -1881,7 +1880,7 @@ createTransactionBody sbe txBodyContent =
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData sbe apiTxOuts apiScriptWitnesses)
+              sData
               txAuxData
               apiScriptValidity
 
@@ -1893,12 +1892,11 @@ createTransactionBody sbe txBodyContent =
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData sbe apiTxOuts apiScriptWitnesses)
+              sData
               txAuxData
               apiScriptValidity
 
        ShelleyBasedEraAlonzo -> do
-        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         let scriptIntegrityHash =
               case sData of
                 TxBodyNoScriptData -> SNothing
@@ -1916,12 +1914,11 @@ createTransactionBody sbe txBodyContent =
         pure $ ShelleyTxBody sbe
               ledgerTxBody
               scripts
-              (convScriptData sbe apiTxOuts apiScriptWitnesses)
+              sData
               txAuxData
               apiScriptValidity
 
        ShelleyBasedEraBabbage -> do
-        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         let scriptIntegrityHash =
               case sData of
                 TxBodyNoScriptData -> SNothing
@@ -1947,7 +1944,6 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraConway -> do
-        let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         let scriptIntegrityHash =
               case sData of
                 TxBodyNoScriptData -> SNothing
