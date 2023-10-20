@@ -1858,6 +1858,12 @@ createTransactionBody sbe txBodyContent =
         (const $ pure $ L.collateralInputsTxBodyL .~ collTxIns)
         sbe
 
+    setReqSignerHashes <-
+      caseShelleyToMaryOrAlonzoEraOnwards
+        (const $ pure id)
+        (const $ pure $ L.reqSignerHashesTxBodyL .~ convExtraKeyWitnesses apiExtraKeyWitnesses)
+        sbe
+
     let setTxBodyFields txBody = txBody
           & L.certsTxBodyL                .~ certs
           & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
@@ -1866,6 +1872,7 @@ createTransactionBody sbe txBodyContent =
           & modifyWith setMint
           & modifyWith setScriptIntegrityHash
           & modifyWith setCollateralInputs
+          & modifyWith setReqSignerHashes
 
         mkTxBody :: ()
           => ShelleyBasedEra era
@@ -1920,7 +1927,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
                 & setTxBodyFields
-                & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 -- TODO: NetworkId for hardware wallets. We don't always want this
                 -- & L.networkIdTxBodyL .~ ...
         pure $ ShelleyTxBody sbe
@@ -1934,7 +1940,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
                 & setTxBodyFields
-                & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
                 & L.totalCollateralTxBodyL      .~ totalCollateral
@@ -1951,7 +1956,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
                 & setTxBodyFields
-                & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
                 & L.totalCollateralTxBodyL      .~ totalCollateral
