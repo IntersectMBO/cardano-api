@@ -1864,6 +1864,12 @@ createTransactionBody sbe txBodyContent =
         (const $ pure $ L.reqSignerHashesTxBodyL .~ convExtraKeyWitnesses apiExtraKeyWitnesses)
         sbe
 
+    setReferenceInputs <-
+      caseShelleyToAlonzoOrBabbageEraOnwards
+        (const $ pure id)
+        (const $ pure $ L.referenceInputsTxBodyL .~ refTxIns)
+        sbe
+
     let setTxBodyFields txBody = txBody
           & L.certsTxBodyL                .~ certs
           & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
@@ -1873,6 +1879,7 @@ createTransactionBody sbe txBodyContent =
           & modifyWith setScriptIntegrityHash
           & modifyWith setCollateralInputs
           & modifyWith setReqSignerHashes
+          & modifyWith setReferenceInputs
 
         mkTxBody :: ()
           => ShelleyBasedEra era
@@ -1940,7 +1947,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
                 & setTxBodyFields
-                & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
                 & L.totalCollateralTxBodyL      .~ totalCollateral
                 -- TODO: NetworkId for hardware wallets. We don't always want this
@@ -1956,7 +1962,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
                 & setTxBodyFields
-                & L.referenceInputsTxBodyL      .~ refTxIns
                 & L.collateralReturnTxBodyL     .~ returnCollateral
                 & L.totalCollateralTxBodyL      .~ totalCollateral
                 -- TODO: NetworkId for hardware wallets. We don't always want this
