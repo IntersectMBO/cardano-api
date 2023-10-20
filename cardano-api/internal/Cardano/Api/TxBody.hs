@@ -1903,11 +1903,7 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraAlonzo -> do
-        let scriptIntegrityHash =
-              case sData of
-                TxBodyNoScriptData -> SNothing
-                TxBodyScriptData w datums redeemers ->
-                  convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
+        let scriptIntegrityHash = getScriptIntegrityHash apiProtocolParameters languages sData
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
                 & setTxBodyFields
@@ -1924,11 +1920,7 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraBabbage -> do
-        let scriptIntegrityHash =
-              case sData of
-                TxBodyNoScriptData -> SNothing
-                TxBodyScriptData w datums redeemers ->
-                  convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
+        let scriptIntegrityHash = getScriptIntegrityHash apiProtocolParameters languages sData
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
                 & setTxBodyFields
@@ -1948,11 +1940,7 @@ createTransactionBody sbe txBodyContent =
               apiScriptValidity
 
        ShelleyBasedEraConway -> do
-        let scriptIntegrityHash =
-              case sData of
-                TxBodyNoScriptData -> SNothing
-                TxBodyScriptData w datums redeemers ->
-                  convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
+        let scriptIntegrityHash = getScriptIntegrityHash apiProtocolParameters languages sData
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
                 & setTxBodyFields
@@ -1970,6 +1958,16 @@ createTransactionBody sbe txBodyContent =
           sData
           txAuxData
           apiScriptValidity
+
+getScriptIntegrityHash :: ()
+  => BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
+  -> Set Alonzo.Language
+  -> TxBodyScriptData era
+  -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era)))
+getScriptIntegrityHash apiProtocolParameters languages = \case
+  TxBodyNoScriptData -> SNothing
+  TxBodyScriptData w datums redeemers ->
+    convPParamsToScriptIntegrityHash w apiProtocolParameters redeemers datums languages
 
 validateTxBodyContent
   :: ShelleyBasedEra era
