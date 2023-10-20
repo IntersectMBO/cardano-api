@@ -101,6 +101,7 @@ library internal
                         Cardano.Api.Keys.Praos
                         Cardano.Api.Keys.Read
                         Cardano.Api.Keys.Shelley
+                        Cardano.Api.Ledger.Lens
                         Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
                         Cardano.Api.Modes
