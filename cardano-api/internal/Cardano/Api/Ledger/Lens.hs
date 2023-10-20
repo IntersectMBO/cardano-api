@@ -11,16 +11,19 @@ module Cardano.Api.Ledger.Lens
   , invalidBeforeTxBodyL
   , invalidHereAfterTxBodyL
   , ttlAsInvalidHereAfterTxBodyL
+  , apiUpdateTxBodyL
   ) where
 
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
+import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 
 import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
+import qualified Cardano.Ledger.Shelley.PParams as L
 
 import           Lens.Micro
 
@@ -95,3 +98,6 @@ invalidHereAfterStrictL = lens g s
 
     s :: L.ValidityInterval -> StrictMaybe SlotNo -> L.ValidityInterval
     s (L.ValidityInterval a _) b = L.ValidityInterval a b
+
+apiUpdateTxBodyL :: ShelleyToBabbageEra era -> Lens' (L.TxBody (ShelleyLedgerEra era)) (StrictMaybe (L.Update (ShelleyLedgerEra era)))
+apiUpdateTxBodyL w = shelleyToBabbageEraConstraints w L.updateTxBodyL

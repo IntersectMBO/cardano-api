@@ -19,6 +19,7 @@
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
 {- HLINT ignore "Redundant flip" -}
+{- HLINT ignore "Use let" -}
 {- HLINT ignore "Use section" -}
 
 -- | Transaction bodies
@@ -1800,7 +1801,7 @@ instance Error TxBodyError where
       "Errors in protocol parameters conversion: " ++ displayError ppces
 
 createTransactionBody
-  :: ShelleyBasedEra era
+  :: forall era. ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe txBodyContent =
@@ -1826,9 +1827,19 @@ createTransactionBody sbe txBodyContent =
         scripts = convScripts apiScriptWitnesses
         languages = convLanguages apiScriptWitnesses
 
+    setUpdateProposal <-
+      caseShelleyToBabbageOrConwayEraOnwards
+        (\w -> do
+            update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
+            pure $ A.apiUpdateTxBodyL w .~ update)
+        (const $ pure id)
+        sbe
+
+    let setTxBodyFields :: Ledger.TxBody (ShelleyLedgerEra era) -> Ledger.TxBody (ShelleyLedgerEra era)
         setTxBodyFields txBody = txBody
           & L.certsTxBodyL                .~ certs
           & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
+          & setUpdateProposal
 
         mkTxBody :: ()
           => ShelleyBasedEra era
@@ -1845,11 +1856,10 @@ createTransactionBody sbe txBodyContent =
 
     case sbe of
        ShelleyBasedEraShelley -> do
-        update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
                 & setTxBodyFields
-                & L.updateTxBodyL               .~ update
+                -- & setUpdateProposal
 
             sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
@@ -1862,11 +1872,9 @@ createTransactionBody sbe txBodyContent =
 
        ShelleyBasedEraAllegra -> do
         let aOn = AllegraEraOnwardsAllegra
-        update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
                 & setTxBodyFields
-                & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
 
         pure $ ShelleyTxBody sbe
@@ -1878,11 +1886,9 @@ createTransactionBody sbe txBodyContent =
 
        ShelleyBasedEraMary -> do
         let aOn = AllegraEraOnwardsMary
-        update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
                 & setTxBodyFields
-                & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
         pure $ ShelleyTxBody sbe
@@ -1894,7 +1900,6 @@ createTransactionBody sbe txBodyContent =
 
        ShelleyBasedEraAlonzo -> do
         let aOn = AllegraEraOnwardsAlonzo
-        update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         let scriptIntegrityHash =
               case sData of
@@ -1904,7 +1909,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
                 & setTxBodyFields
-                & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
@@ -1921,7 +1925,6 @@ createTransactionBody sbe txBodyContent =
 
        ShelleyBasedEraBabbage -> do
         let aOn = AllegraEraOnwardsBabbage
-        update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
         let sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         let scriptIntegrityHash =
               case sData of
@@ -1931,7 +1934,6 @@ createTransactionBody sbe txBodyContent =
         let ledgerTxBody =
               mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
                 & setTxBodyFields
-                & L.updateTxBodyL               .~ update
                 & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
