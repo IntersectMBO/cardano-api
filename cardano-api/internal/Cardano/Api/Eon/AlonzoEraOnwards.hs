@@ -79,6 +79,7 @@ type AlonzoEraOnwardsConstraints era =
   , L.AlonzoEraTx (ShelleyLedgerEra era)
   , L.AlonzoEraTxBody (ShelleyLedgerEra era)
   , L.AlonzoEraTxOut (ShelleyLedgerEra era)
+  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
   , L.AlonzoEraTxWits (ShelleyLedgerEra era)
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
   , L.Era (ShelleyLedgerEra era)
@@ -90,6 +91,7 @@ type AlonzoEraOnwardsConstraints era =
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.ExtendedUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
