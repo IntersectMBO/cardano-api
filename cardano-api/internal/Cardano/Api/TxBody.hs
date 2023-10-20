@@ -171,6 +171,7 @@ import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
+import qualified Cardano.Api.Ledger.Lens as L
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
@@ -2377,10 +2378,10 @@ fromLedgerTxValidityLowerBound sbe body =
   caseShelleyEraOnlyOrAllegraEraOnwards
     (const TxValidityNoLowerBound)
     (\w ->
-      let L.ValidityInterval{invalidBefore} = body ^. L.vldtTxBodyL in
-      case invalidBefore of
-        SNothing -> TxValidityNoLowerBound
-        SJust s  -> TxValidityLowerBound w s
+      let mInvalidBefore = body ^. L.vldtTxBodyL . L.invalidBeforeL in
+      case mInvalidBefore of
+        Nothing -> TxValidityNoLowerBound
+        Just s  -> TxValidityLowerBound w s
     )
     sbe
 
@@ -2392,10 +2393,10 @@ fromLedgerTxValidityUpperBound sbe body =
   caseShelleyEraOnlyOrAllegraEraOnwards
     (const (TxValidityUpperBound sbe $ body ^. L.ttlTxBodyL))
     (\w ->
-      let L.ValidityInterval{invalidHereafter} = body ^. L.vldtTxBodyL in
-      case invalidHereafter of
-        SNothing -> TxValidityNoUpperBound (allegraEraOnwardsToByronAndAllegraOnwardsEra w)
-        SJust s  -> TxValidityUpperBound sbe s
+      let mInvalidHereafter = body ^. L.vldtTxBodyL . L.invalidHereAfterL in
+      case mInvalidHereafter of
+        Nothing -> TxValidityNoUpperBound (allegraEraOnwardsToByronAndAllegraOnwardsEra w)
+        Just s  -> TxValidityUpperBound sbe s
     )
     sbe
 
