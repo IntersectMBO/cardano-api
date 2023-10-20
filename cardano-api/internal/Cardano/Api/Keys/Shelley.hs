@@ -1723,6 +1723,18 @@ instance SerialiseAsBech32 (SigningKey DRepExtendedKey) where
     bech32PrefixFor         _ =  "drep_xsk"
     bech32PrefixesPermitted _ = ["drep_xsk"]
 
+instance CastVerificationKeyRole DRepExtendedKey DRepKey where
+    castVerificationKey (DRepExtendedVerificationKey vk) =
+        DRepVerificationKey
+      . Shelley.VKey
+      . fromMaybe impossible
+      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.HD.xpubPublicKey
+      $ vk
+      where
+        impossible =
+          error "castVerificationKey (DRep): byron and shelley key sizes do not match!"
+
 --
 -- Committee keys
 --
