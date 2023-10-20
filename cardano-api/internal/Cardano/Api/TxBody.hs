@@ -1908,82 +1908,14 @@ createTransactionBody sbe txBodyContent =
             (txFee bc)
             (txWithdrawals bc)
 
-    case sbe of
-       ShelleyBasedEraShelley -> do
-        let ledgerTxBody =
-              mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
-                & setTxBodyFields
+    let ledgerTxBody =
+          mkTxBody sbe txBodyContent txAuxData
+            & setTxBodyFields
 
-        pure $ ShelleyTxBody sbe
-              ledgerTxBody
-              scripts
-              sData
-              txAuxData
-              apiScriptValidity
+    -- TODO: NetworkId for hardware wallets. We don't always want this
+    -- & L.networkIdTxBodyL .~ ...
 
-       ShelleyBasedEraAllegra -> do
-        let ledgerTxBody =
-              mkTxBody ShelleyBasedEraAllegra txBodyContent txAuxData
-                & setTxBodyFields
-
-        pure $ ShelleyTxBody sbe
-              ledgerTxBody
-              scripts
-              sData
-              txAuxData
-              apiScriptValidity
-
-       ShelleyBasedEraMary -> do
-        let ledgerTxBody =
-              mkTxBody ShelleyBasedEraMary txBodyContent txAuxData
-                & setTxBodyFields
-        pure $ ShelleyTxBody sbe
-              ledgerTxBody
-              scripts
-              sData
-              txAuxData
-              apiScriptValidity
-
-       ShelleyBasedEraAlonzo -> do
-        let ledgerTxBody =
-              mkTxBody ShelleyBasedEraAlonzo txBodyContent txAuxData
-                & setTxBodyFields
-                -- TODO: NetworkId for hardware wallets. We don't always want this
-                -- & L.networkIdTxBodyL .~ ...
-        pure $ ShelleyTxBody sbe
-              ledgerTxBody
-              scripts
-              sData
-              txAuxData
-              apiScriptValidity
-
-       ShelleyBasedEraBabbage -> do
-        let ledgerTxBody =
-              mkTxBody ShelleyBasedEraBabbage txBodyContent txAuxData
-                & setTxBodyFields
-
-                -- TODO: NetworkId for hardware wallets. We don't always want this
-                -- & L.networkIdTxBodyL .~ ...
-        pure $ ShelleyTxBody sbe
-              ledgerTxBody
-              scripts
-              sData
-              txAuxData
-              apiScriptValidity
-
-       ShelleyBasedEraConway -> do
-        let ledgerTxBody =
-              mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
-                & setTxBodyFields
-
-                -- TODO: NetworkId for hardware wallets. We don't always want this
-                -- & L.networkIdTxBodyL .~ ...
-        pure $ ShelleyTxBody sbe
-          ledgerTxBody
-          scripts
-          sData
-          txAuxData
-          apiScriptValidity
+    pure $ ShelleyTxBody sbe ledgerTxBody scripts sData txAuxData apiScriptValidity
 
 getScriptIntegrityHash :: ()
   => BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
