@@ -1882,20 +1882,7 @@ createTransactionBody sbe txBodyContent =
         (const $ pure $ L.totalCollateralTxBodyL .~ totalCollateral)
         sbe
 
-    let setTxBodyFields txBody = txBody
-          & L.certsTxBodyL                .~ certs
-          & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
-          & modifyWith setUpdateProposal
-          & modifyWith setInvalidBefore
-          & modifyWith setMint
-          & modifyWith setScriptIntegrityHash
-          & modifyWith setCollateralInputs
-          & modifyWith setReqSignerHashes
-          & modifyWith setReferenceInputs
-          & modifyWith setCollateralReturn
-          & modifyWith setTotalCollateral
-
-        mkTxBody :: ()
+    let mkTxBody :: ()
           => ShelleyBasedEra era
           -> TxBodyContent BuildTx era
           -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
@@ -1910,7 +1897,17 @@ createTransactionBody sbe txBodyContent =
 
     let ledgerTxBody =
           mkTxBody sbe txBodyContent txAuxData
-            & setTxBodyFields
+            & L.certsTxBodyL                .~ certs
+            & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
+            & modifyWith setUpdateProposal
+            & modifyWith setInvalidBefore
+            & modifyWith setMint
+            & modifyWith setScriptIntegrityHash
+            & modifyWith setCollateralInputs
+            & modifyWith setReqSignerHashes
+            & modifyWith setReferenceInputs
+            & modifyWith setCollateralReturn
+            & modifyWith setTotalCollateral
 
     -- TODO: NetworkId for hardware wallets. We don't always want this
     -- & L.networkIdTxBodyL .~ ...
