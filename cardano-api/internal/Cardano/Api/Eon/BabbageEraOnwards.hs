@@ -31,6 +31,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as L
 import qualified Cardano.Ledger.Alonzo.TxInfo as L
 import qualified Cardano.Ledger.Alonzo.UTxO as L
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Babbage.TxOut as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.Mary.Value as L
@@ -90,6 +91,7 @@ type BabbageEraOnwardsConstraints era =
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.TxOut (ShelleyLedgerEra era) ~ L.BabbageTxOut (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
