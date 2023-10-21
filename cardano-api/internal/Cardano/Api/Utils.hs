@@ -5,7 +5,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -26,6 +25,7 @@ module Cardano.Api.Utils
   , renderEra
   , runParsecParser
   , textShow
+  , modifyWith
 
     -- ** CLI option parsing
   , bounded
@@ -133,3 +133,10 @@ bounded t = eitherReader $ \s -> do
   when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
   when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
   pure (fromIntegral i)
+
+-- | Aids type inference.  Use this function to ensure the value is a function
+-- that modifies a value.
+modifyWith :: ()
+  => (a -> a)
+  -> (a -> a)
+modifyWith = id
