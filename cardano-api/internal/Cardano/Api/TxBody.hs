@@ -1829,9 +1829,7 @@ createTransactionBody sbe txBodyContent =
 
     setUpdateProposal <-
       caseShelleyToBabbageOrConwayEraOnwards
-        (\w -> do
-            update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-            pure $ A.apiUpdateTxBodyL w .~ update)
+        (\w -> (A.apiUpdateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal txBodyContent))
         (const $ pure id)
         sbe
 
@@ -1839,7 +1837,7 @@ createTransactionBody sbe txBodyContent =
         setTxBodyFields txBody = txBody
           & L.certsTxBodyL                .~ certs
           & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
-          & setUpdateProposal
+          & modifyWith setUpdateProposal
 
         mkTxBody :: ()
           => ShelleyBasedEra era
