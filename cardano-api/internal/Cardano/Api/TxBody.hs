@@ -1830,59 +1830,32 @@ createTransactionBody sbe bc =
         languages = convLanguages apiScriptWitnesses
         sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
-    setUpdateProposal <-
-      caseShelleyToBabbageOrConwayEraOnwards
-        (\w -> (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc))
-        (const $ pure id)
-        sbe
+    setUpdateProposal <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc)
 
-    setInvalidBefore <-
-      caseShelleyEraOnlyOrAllegraEraOnwards
-        (const $ pure id)
-        (\aOn -> pure $ A.invalidBeforeTxBodyL aOn .~ convValidityLowerBound (txValidityLowerBound bc))
-        sbe
+    setInvalidBefore <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.invalidBeforeTxBodyL w .~ convValidityLowerBound (txValidityLowerBound bc)
 
-    setMint <-
-      caseShelleyToAllegraOrMaryEraOnwards
-        (const $ pure id)
-        (\w -> pure $ A.mintTxBodyL w .~ convMintValue apiMintValue)
-        sbe
+    setMint <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.mintTxBodyL w .~ convMintValue apiMintValue
 
-    setScriptIntegrityHash <-
-      caseShelleyToMaryOrAlonzoEraOnwards
-        (const $ pure id)
-        (\w -> pure $ A.scriptIntegrityHashTxBodyL w .~ getScriptIntegrityHash apiProtocolParameters languages sData)
-        sbe
+    setScriptIntegrityHash <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.scriptIntegrityHashTxBodyL w .~ getScriptIntegrityHash apiProtocolParameters languages sData
 
-    setCollateralInputs <-
-      caseShelleyToMaryOrAlonzoEraOnwards
-        (const $ pure id)
-        (\w -> pure $ A.collateralInputsTxBodyL w .~ collTxIns)
-        sbe
+    setCollateralInputs <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.collateralInputsTxBodyL w .~ collTxIns
 
-    setReqSignerHashes <-
-      caseShelleyToMaryOrAlonzoEraOnwards
-        (const $ pure id)
-        (\w -> pure $ A.reqSignerHashesTxBodyL w .~ convExtraKeyWitnesses apiExtraKeyWitnesses)
-        sbe
+    setReqSignerHashes <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.reqSignerHashesTxBodyL w .~ convExtraKeyWitnesses apiExtraKeyWitnesses
 
-    setReferenceInputs <-
-      caseShelleyToAlonzoOrBabbageEraOnwards
-        (const $ pure id)
-        (\w -> pure $ A.referenceInputsTxBodyL w .~ refTxIns)
-        sbe
+    setReferenceInputs <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.referenceInputsTxBodyL w .~ refTxIns
 
-    setCollateralReturn <-
-      caseShelleyToAlonzoOrBabbageEraOnwards
-        (const $ pure id)
-        (\w -> pure $ A.collateralReturnTxBodyL w .~ returnCollateral)
-        sbe
+    setCollateralReturn <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.collateralReturnTxBodyL w .~ returnCollateral
 
-    setTotalCollateral <-
-      caseShelleyToAlonzoOrBabbageEraOnwards
-        (const $ pure id)
-        (\w -> pure $ A.totalCollateralTxBodyL w .~ totalCollateral)
-        sbe
+    setTotalCollateral <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+      pure $ A.totalCollateralTxBodyL w .~ totalCollateral
 
     let ledgerTxBody =
           mkCommonTxBody sbe (txIns bc) (txOuts bc) (txFee bc) (txWithdrawals bc) txAuxData
