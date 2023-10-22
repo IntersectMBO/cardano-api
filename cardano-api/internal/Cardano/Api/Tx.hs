@@ -203,25 +203,13 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
       shelleyBasedEraConstraints sbe $ serialiseShelleyBasedTx tx
 
     deserialiseFromCBOR _ bs =
-      case cardanoEra :: CardanoEra era of
-        ByronEra ->
-          ByronTx ByronEraOnlyByron <$>
-            CBOR.decodeFullAnnotatedBytes
-              CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
-
-        -- Use the same derialisation impl, but at different types:
-        ShelleyEra -> deserialiseShelleyBasedTx
-                        (ShelleyTx ShelleyBasedEraShelley) bs
-        AllegraEra -> deserialiseShelleyBasedTx
-                        (ShelleyTx ShelleyBasedEraAllegra) bs
-        MaryEra    -> deserialiseShelleyBasedTx
-                        (ShelleyTx ShelleyBasedEraMary) bs
-        AlonzoEra  -> deserialiseShelleyBasedTx
-                        (ShelleyTx ShelleyBasedEraAlonzo) bs
-        BabbageEra -> deserialiseShelleyBasedTx
-                        (ShelleyTx ShelleyBasedEraBabbage) bs
-        ConwayEra  -> deserialiseShelleyBasedTx
-                        (ShelleyTx ShelleyBasedEraConway) bs
+      caseByronOrShelleyBasedEra
+        (\w -> ByronTx w <$>
+          CBOR.decodeFullAnnotatedBytes
+            CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
+        )
+        (\sbe -> deserialiseShelleyBasedTx (ShelleyTx sbe) bs)
+        (cardanoEra :: CardanoEra era)
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
