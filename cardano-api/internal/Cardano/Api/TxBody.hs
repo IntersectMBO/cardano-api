@@ -2125,10 +2125,8 @@ createAndValidateTransactionBody :: ()
   => CardanoEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
-createAndValidateTransactionBody era =
-  case cardanoEraStyle era of
-    LegacyByronEra      -> makeByronTransactionBody ByronEraOnlyByron
-    ShelleyBasedEra sbe -> makeShelleyTransactionBody sbe
+createAndValidateTransactionBody =
+  caseByronOrShelleyBasedEra makeByronTransactionBody makeShelleyTransactionBody
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
 pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
