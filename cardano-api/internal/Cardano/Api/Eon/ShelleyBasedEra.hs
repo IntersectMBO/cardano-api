@@ -25,10 +25,6 @@ module Cardano.Api.Eon.ShelleyBasedEra
   , forShelleyBasedEraInEonMaybe
   , forShelleyBasedEraMaybeEon
 
-    -- * Cardano eras, as Byron vs Shelley-based
-  , CardanoEraStyle(..)
-  , cardanoEraStyle
-
     -- * Assertions on era
   , requireShelleyBasedEra
 
@@ -315,40 +311,6 @@ shelleyBasedToCardanoEra ShelleyBasedEraMary    = MaryEra
 shelleyBasedToCardanoEra ShelleyBasedEraAlonzo  = AlonzoEra
 shelleyBasedToCardanoEra ShelleyBasedEraBabbage = BabbageEra
 shelleyBasedToCardanoEra ShelleyBasedEraConway  = ConwayEra
-
--- ----------------------------------------------------------------------------
--- Cardano eras factored as Byron vs Shelley-based
---
-
--- | This is the same essential information as 'CardanoEra' but instead of a
--- flat set of alternative eras, it is factored into the legcy Byron era and
--- the current Shelley-based eras.
---
--- This way of factoring the eras is useful because in many cases the
--- major differences are between the Byron and Shelley-based eras, and
--- the Shelley-based eras can often be treated uniformly.
---
-data CardanoEraStyle era where
-  LegacyByronEra  :: CardanoEraStyle ByronEra
-
-  ShelleyBasedEra
-    :: ShelleyBasedEra era
-    -> CardanoEraStyle era
-
-deriving instance Eq   (CardanoEraStyle era)
-deriving instance Ord  (CardanoEraStyle era)
-deriving instance Show (CardanoEraStyle era)
-
--- | The 'CardanoEraStyle' for a 'CardanoEra'.
---
-cardanoEraStyle :: CardanoEra era -> CardanoEraStyle era
-cardanoEraStyle ByronEra   = LegacyByronEra
-cardanoEraStyle ShelleyEra = ShelleyBasedEra ShelleyBasedEraShelley
-cardanoEraStyle AllegraEra = ShelleyBasedEra ShelleyBasedEraAllegra
-cardanoEraStyle MaryEra    = ShelleyBasedEra ShelleyBasedEraMary
-cardanoEraStyle AlonzoEra  = ShelleyBasedEra ShelleyBasedEraAlonzo
-cardanoEraStyle BabbageEra = ShelleyBasedEra ShelleyBasedEraBabbage
-cardanoEraStyle ConwayEra  = ShelleyBasedEra ShelleyBasedEraConway
 
 -- ----------------------------------------------------------------------------
 -- Conversion to Shelley ledger library types

@@ -105,8 +105,6 @@ module Cardano.Api (
     anyShelleyBasedEra,
     InAnyShelleyBasedEra(..),
     inAnyShelleyBasedEra,
-    CardanoEraStyle(..),
-    cardanoEraStyle,
     shelleyBasedToCardanoEra,
     shelleyBasedEraConstraints,
 
