@@ -384,7 +384,4 @@ requireShelleyBasedEra :: ()
   => Applicative m
   => CardanoEra era
   -> m (Maybe (ShelleyBasedEra era))
-requireShelleyBasedEra era =
-  case cardanoEraStyle era of
-    LegacyByronEra -> pure Nothing
-    ShelleyBasedEra sbe -> pure (Just sbe)
+requireShelleyBasedEra = inEonForEra (pure Nothing) (pure . Just)
