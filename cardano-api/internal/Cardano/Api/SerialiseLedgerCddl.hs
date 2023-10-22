@@ -30,7 +30,6 @@ module Cardano.Api.SerialiseLedgerCddl
   )
   where
 
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -161,11 +160,10 @@ deserialiseTx :: ()
   -> ByteString
   -> Either DecoderError (Tx era)
 deserialiseTx era bs =
-  case era of
-    ByronEra ->
-      ByronTx ByronEraOnlyByron
-        <$> CBOR.decodeFullAnnotatedBytes CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
-    _ -> cardanoEraConstraints era $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy)) bs
+  caseByronOrShelleyBasedEra
+    (\w -> ByronTx w <$> CBOR.decodeFullAnnotatedBytes CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs))
+    (const $ cardanoEraConstraints era $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy)) bs)
+    era
 
 serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelopeCddl
 serialiseWitnessLedgerCddl sbe kw =
