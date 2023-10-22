@@ -48,6 +48,7 @@ module Cardano.Api.Fees (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToAllegraEra
@@ -120,7 +121,7 @@ transactionFee sbe txFeeFixed txFeePerByte tx =
     ShelleyTx _ tx' ->
       let x = shelleyBasedEraConstraints sbe $ tx' ^. L.sizeTxF in Lovelace (a * x + b)
       --TODO: This can be made to work for Byron txs too.
-    ByronTx _ -> case sbe of {}
+    ByronTx ByronEraOnlyByron _ -> case sbe of {}
 
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
@@ -148,7 +149,7 @@ estimateTransactionFee :: ()
   -> Lovelace
 estimateTransactionFee sbe nw txFeeFixed txFeePerByte = \case
   -- TODO: This can be made to work for Byron txs too.
-  ByronTx _ ->
+  ByronTx ByronEraOnlyByron _ ->
     case sbe of {}
   ShelleyTx era tx ->
     let Lovelace baseFee = transactionFee sbe txFeeFixed txFeePerByte (ShelleyTx era tx)
@@ -218,7 +219,7 @@ evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
 evaluateTransactionFee sbe pp txbody keywitcount _byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction [] txbody of
-      ByronTx{} -> case sbe of {}
+      ByronTx ByronEraOnlyByron _ -> case sbe of {}
       --TODO: we could actually support Byron here, it'd be different but simpler
 
       ShelleyTx _ tx -> fromShelleyLovelace $ Ledger.evaluateTransactionFee pp tx keywitcount
@@ -566,7 +567,7 @@ evaluateTransactionBalance :: forall era. ()
                            -> UTxO era
                            -> TxBody era
                            -> TxOutValue era
-evaluateTransactionBalance sbe _ _ _ _ _ (ByronTxBody _) =
+evaluateTransactionBalance sbe _ _ _ _ _ (ByronTxBody ByronEraOnlyByron _) =
   -- TODO: we could actually support Byron here, it'd be different but simpler
   case sbe of {}
 

@@ -30,6 +30,7 @@ module Cardano.Api.SerialiseLedgerCddl
   )
   where
 
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -162,7 +163,7 @@ deserialiseTx :: ()
 deserialiseTx era bs =
   case era of
     ByronEra ->
-      ByronTx
+      ByronTx ByronEraOnlyByron
         <$> CBOR.decodeFullAnnotatedBytes CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
     _ -> cardanoEraConstraints era $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy)) bs
 
