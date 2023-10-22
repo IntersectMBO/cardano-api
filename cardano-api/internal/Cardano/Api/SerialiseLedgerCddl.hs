@@ -269,10 +269,9 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 
       Just (FromCDDLWitness ttoken f) -> do
          AnyCardanoEra era <- cddlTypeToEra ttoken
-         case cardanoEraStyle era of
-           LegacyByronEra -> Left TextEnvelopeCddlErrByronKeyWitnessUnsupported
-           ShelleyBasedEra sbe ->
-             f . InAnyCardanoEra era <$> deserialiseWitnessLedgerCddl sbe teCddl
+         forEraInEon era
+           (Left TextEnvelopeCddlErrByronKeyWitnessUnsupported)
+           (\sbe -> f . InAnyCardanoEra era <$> deserialiseWitnessLedgerCddl sbe teCddl)
   where
    actualType :: Text
    actualType = teCddlType teCddl
