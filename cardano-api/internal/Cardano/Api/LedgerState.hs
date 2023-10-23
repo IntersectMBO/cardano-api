@@ -337,6 +337,7 @@ pattern LedgerStateConway st <- LedgerState  (Consensus.LedgerStateConway st)
 data FoldBlocksError
   = FoldBlocksInitialLedgerStateError InitialLedgerStateError
   | FoldBlocksApplyBlockError LedgerStateError
+  deriving Show
 
 renderFoldBlocksError :: FoldBlocksError -> Text
 renderFoldBlocksError fbe = case fbe of
@@ -438,6 +439,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
     chainSyncClient :: Word32
                     -- ^ The maximum number of concurrent requests.
                     -> IORef a
+                    -- ^ State accumulator. Written to on every block.
                     -> IORef (Maybe LedgerStateError)
                     -- ^ Resulting error if any. Written to once on protocol
                     -- completion.
