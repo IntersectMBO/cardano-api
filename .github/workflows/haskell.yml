@@ -20,7 +20,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-10-17"
+      CABAL_CACHE_VERSION: "2023-10-23"
 
     concurrency:
       group: >
@@ -58,7 +58,7 @@ jobs:
         use-sodium-vrf: true # default is true
 
     - uses: actions/checkout@v3
-  
+
     - name: Cabal update
       run: cabal update
 
