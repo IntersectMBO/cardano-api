@@ -153,13 +153,11 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
@@ -1070,12 +1068,12 @@ defaultTxFee =
 --
 data TxValidityUpperBound era where
   TxValidityNoUpperBound
-    :: ByronAndAllegraEraOnwards era
+    :: ByronEraOnly era
     -> TxValidityUpperBound era
 
   TxValidityUpperBound
     :: ShelleyBasedEra era
-    -> SlotNo
+    -> Maybe SlotNo
     -> TxValidityUpperBound era
 
 deriving instance Eq   (TxValidityUpperBound era)
@@ -1085,9 +1083,9 @@ defaultTxValidityUpperBound :: ()
   => CardanoEra era
   -> TxValidityUpperBound era
 defaultTxValidityUpperBound =
-  caseByronAndAllegraEraOnwardsOrShelleyEraOnly
+  caseByronOrShelleyBasedEra
     TxValidityNoUpperBound
-    (\w -> TxValidityUpperBound (shelleyEraOnlyToShelleyBasedEra w) maxBound)
+    (\sbe -> TxValidityUpperBound sbe Nothing)
 
 data TxValidityLowerBound era where
 
@@ -1842,15 +1840,11 @@ createTransactionBody sbe txBodyContent =
   in case sbe of
        ShelleyBasedEraShelley -> do
         update <- convTxUpdateProposal sbe (txUpdateProposal txBodyContent)
-        let upperBound = txValidityUpperBound txBodyContent
-            ttl = case upperBound of
-                    TxValidityNoUpperBound sbe' -> case sbe' of {}
-                    TxValidityUpperBound _ ttl'  -> ttl'
-            ledgerTxBody =
+        let ledgerTxBody =
               mkTxBody ShelleyBasedEraShelley txBodyContent txAuxData
-                & L.certsTxBodyL  .~ certs
-                & L.ttlTxBodyL    .~ ttl
-                & L.updateTxBodyL .~ update
+                & L.certsTxBodyL                .~ certs
+                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
+                & L.updateTxBodyL               .~ update
 
             sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
@@ -1869,7 +1863,7 @@ createTransactionBody sbe txBodyContent =
                 & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound (txValidityUpperBound txBodyContent)
+                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
 
         pure $ ShelleyTxBody sbe
               ledgerTxBody
@@ -1886,7 +1880,7 @@ createTransactionBody sbe txBodyContent =
                 & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound (txValidityUpperBound txBodyContent)
+                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
         pure $ ShelleyTxBody sbe
               ledgerTxBody
@@ -1909,7 +1903,7 @@ createTransactionBody sbe txBodyContent =
                 & L.certsTxBodyL               .~ certs
                 & L.updateTxBodyL              .~ update
                 & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound (txValidityUpperBound txBodyContent)
+                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.collateralInputsTxBodyL    .~ collTxIns
                 & L.reqSignerHashesTxBodyL     .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.mintTxBodyL                .~ convMintValue apiMintValue
@@ -1937,7 +1931,7 @@ createTransactionBody sbe txBodyContent =
                 & L.certsTxBodyL                .~ certs
                 & L.updateTxBodyL               .~ update
                 & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound (txValidityUpperBound txBodyContent)
+                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
@@ -1966,7 +1960,7 @@ createTransactionBody sbe txBodyContent =
               mkTxBody ShelleyBasedEraConway txBodyContent txAuxData
                 & L.certsTxBodyL                .~ certs
                 & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound (txValidityLowerBound txBodyContent)
-                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound (txValidityUpperBound txBodyContent)
+                & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound txBodyContent)
                 & L.collateralInputsTxBodyL     .~ collTxIns
                 & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses apiExtraKeyWitnesses
                 & L.mintTxBodyL                 .~ convMintValue apiMintValue
@@ -2396,15 +2390,7 @@ fromLedgerTxValidityUpperBound
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxValidityUpperBound era
 fromLedgerTxValidityUpperBound sbe body =
-  caseShelleyEraOnlyOrAllegraEraOnwards
-    (const (TxValidityUpperBound sbe $ body ^. L.ttlTxBodyL))
-    (\w ->
-      let mInvalidHereafter = body ^. L.vldtTxBodyL . L.invalidHereAfterL in
-      case mInvalidHereafter of
-        Nothing -> TxValidityNoUpperBound (allegraEraOnwardsToByronAndAllegraOnwardsEra w)
-        Just s  -> TxValidityUpperBound sbe s
-    )
-    sbe
+  TxValidityUpperBound sbe $ body ^. L.invalidHereAfterTxBodyL sbe
 
 fromLedgerAuxiliaryData
   :: ShelleyBasedEra era
@@ -2583,7 +2569,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   , txTotalCollateral     = TxTotalCollateralNone
   , txFee                 = TxFeeImplicit ByronEraOnlyByron
   , txValidityLowerBound  = TxValidityNoLowerBound
-  , txValidityUpperBound  = TxValidityNoUpperBound ByronAndAllegraEraOnwardsByron
+  , txValidityUpperBound  = TxValidityNoUpperBound ByronEraOnlyByron
   , txMetadata            = TxMetadataNone
   , txAuxScripts          = TxAuxScriptsNone
   , txExtraKeyWits        = TxExtraKeyWitnessesNone
@@ -2655,11 +2641,12 @@ convValidityLowerBound = \case
   TxValidityLowerBound _ s -> Just s
 
 convValidityUpperBound :: ()
-  => TxValidityUpperBound era
+  => ShelleyBasedEra era
+  -> TxValidityUpperBound era
   -> Maybe SlotNo
-convValidityUpperBound = \case
-  TxValidityNoUpperBound _ -> Nothing
-  TxValidityUpperBound _ s -> Just s
+convValidityUpperBound sbe = \case
+  TxValidityNoUpperBound w -> disjointByronEraOnlyAndShelleyBasedEra w sbe
+  TxValidityUpperBound _ ms -> ms
 
 -- | Convert transaction update proposal into ledger update proposal
 convTxUpdateProposal :: ()
@@ -2795,7 +2782,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraShelley
                              txIns,
                              txOuts,
                              txFee,
-                             txValidityUpperBound = upperBound,
+                             txValidityUpperBound,
                              txMetadata,
                              txWithdrawals,
                              txCertificates,
@@ -2807,11 +2794,9 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraShelley
     return $
       ShelleyTxBody sbe
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
-           & L.certsTxBodyL  .~ convCertificates sbe txCertificates
-           & L.updateTxBodyL .~ update
-           & L.ttlTxBodyL    .~ case upperBound of
-                                  TxValidityNoUpperBound era' -> case era' of {}
-                                  TxValidityUpperBound _ ttl  -> ttl
+           & L.certsTxBodyL                 .~ convCertificates sbe txCertificates
+           & L.updateTxBodyL                .~ update
+           & L.invalidHereAfterTxBodyL sbe  .~ convValidityUpperBound sbe txValidityUpperBound
         )
         scripts_
         TxBodyNoScriptData
@@ -2849,7 +2834,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAllegra
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
             & L.certsTxBodyL                .~ convCertificates sbe txCertificates
             & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound txValidityLowerBound
-            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound txValidityUpperBound
+            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe txValidityUpperBound
             & L.updateTxBodyL               .~ update
         )
         scripts_
@@ -2889,7 +2874,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraMary
         (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
             & L.certsTxBodyL                .~ convCertificates sbe txCertificates
             & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound txValidityLowerBound
-            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound txValidityUpperBound
+            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe txValidityUpperBound
             & L.updateTxBodyL               .~ update
             & L.mintTxBodyL                 .~ convMintValue txMintValue
         )
@@ -2937,7 +2922,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
             & L.collateralInputsTxBodyL     .~ convCollateralTxIns txInsCollateral
             & L.certsTxBodyL                .~ convCertificates sbe txCertificates
             & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound txValidityLowerBound
-            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound txValidityUpperBound
+            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe txValidityUpperBound
             & L.updateTxBodyL               .~ update
             & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses txExtraKeyWits
             & L.mintTxBodyL                 .~ convMintValue txMintValue
@@ -3032,7 +3017,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
             & L.totalCollateralTxBodyL      .~ convTotalCollateral txTotalCollateral
             & L.certsTxBodyL                .~ convCertificates sbe txCertificates
             & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound txValidityLowerBound
-            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound txValidityUpperBound
+            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe txValidityUpperBound
             & L.updateTxBodyL               .~ update
             & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses txExtraKeyWits
             & L.mintTxBodyL                 .~ convMintValue txMintValue
@@ -3136,7 +3121,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
             & L.totalCollateralTxBodyL      .~ convTotalCollateral txTotalCollateral
             & L.certsTxBodyL                .~ convCertificates sbe txCertificates
             & L.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound txValidityLowerBound
-            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound txValidityUpperBound
+            & L.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe txValidityUpperBound
             & L.reqSignerHashesTxBodyL      .~ convExtraKeyWitnesses txExtraKeyWits
             & L.mintTxBodyL                 .~ convMintValue txMintValue
             & L.scriptIntegrityHashTxBodyL  .~ scriptIntegrityHash

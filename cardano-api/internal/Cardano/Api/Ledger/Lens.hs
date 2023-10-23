@@ -32,10 +32,7 @@ strictMaybeL = lens g s
     g (SJust x) = Just x
 
     s :: StrictMaybe a -> Maybe a -> StrictMaybe a
-    s SNothing  Nothing  = SNothing
-    s SNothing  (Just x) = SJust x
-    s (SJust _) Nothing  = SNothing
-    s (SJust _) (Just x) = SJust x
+    s _ = maybe SNothing SJust
 
 invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (L.TxBody (ShelleyLedgerEra era)) (Maybe SlotNo)
 invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ L.vldtTxBodyL . invalidBeforeL

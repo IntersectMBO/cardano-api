@@ -547,7 +547,7 @@ genTxValidityUpperBound era =
         (error "genTxValidityUpperBound: unexpected era support combination")
         (pure . TxValidityNoUpperBound)
     )
-    (\w -> TxValidityUpperBound w <$> genTtl)
+    (\w -> TxValidityUpperBound w <$> Gen.maybe genTtl)
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
