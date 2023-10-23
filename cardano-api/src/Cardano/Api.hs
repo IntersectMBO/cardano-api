@@ -168,6 +168,9 @@ module Cardano.Api (
     shelleyToAllegraEraToByronToAllegraEra,
     shelleyToAlonzoEraToShelleyToBabbageEra,
 
+    -- ** for AllegraEraOnwards
+    allegraEraOnwardsToByronAndAllegraOnwardsEra,
+
     -- *** for AlonzoEraOnwards
     alonzoEraOnwardsToMaryEraOnwards,
 
@@ -341,7 +344,8 @@ module Cardano.Api (
     setTxTotalCollateral,
     setTxReturnCollateral,
     setTxFee,
-    setTxValidityRange,
+    setTxValidityLowerBound,
+    setTxValidityUpperBound,
     setTxMetadata,
     setTxAuxScripts,
     setTxExtraKeyWits,

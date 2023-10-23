@@ -106,7 +106,6 @@ module Test.Gen.Cardano.Api.Typed
   , genTxTotalCollateral
   , genTxUpdateProposal
   , genTxValidityLowerBound
-  , genTxValidityRange
   , genTxValidityUpperBound
   , genTxWithdrawals
   , genUnsignedQuantity
@@ -548,15 +547,7 @@ genTxValidityUpperBound era =
         (error "genTxValidityUpperBound: unexpected era support combination")
         (pure . TxValidityNoUpperBound)
     )
-    (\w -> TxValidityUpperBound w <$> genTtl)
-
-genTxValidityRange
-  :: CardanoEra era
-  -> Gen (TxValidityLowerBound era, TxValidityUpperBound era)
-genTxValidityRange era =
-  (,)
-    <$> genTxValidityLowerBound era
-    <*> genTxValidityUpperBound era
+    (\w -> TxValidityUpperBound w <$> Gen.maybe genTtl)
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
@@ -647,7 +638,8 @@ genTxBodyContent era = do
   txTotalCollateral <- genTxTotalCollateral era
   txReturnCollateral <- genTxReturnCollateral era
   txFee <- genTxFee era
-  txValidityRange <- genTxValidityRange era
+  txValidityLowerBound <- genTxValidityLowerBound era
+  txValidityUpperBound <- genTxValidityUpperBound era
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts era
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
@@ -669,7 +661,8 @@ genTxBodyContent era = do
     , Api.txTotalCollateral
     , Api.txReturnCollateral
     , Api.txFee
-    , Api.txValidityRange
+    , Api.txValidityLowerBound
+    , Api.txValidityUpperBound
     , Api.txMetadata
     , Api.txAuxScripts
     , Api.txExtraKeyWits

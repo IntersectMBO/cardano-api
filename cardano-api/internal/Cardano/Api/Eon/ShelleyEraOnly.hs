@@ -72,6 +72,7 @@ type ShelleyEraOnlyConstraints era =
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.ExactEra L.ShelleyEra (ShelleyLedgerEra era)
+  , L.ExactEra L.ShelleyEra (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.ProtVerAtMost (ShelleyLedgerEra era) 2
   , L.ProtVerAtMost (ShelleyLedgerEra era) 6
