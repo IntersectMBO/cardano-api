@@ -34,6 +34,7 @@ module Cardano.Api.LedgerState
 
     -- * Traversing the block chain
   , foldBlocks
+  , FoldStatus(..)
   , chainSyncClientWithLedgerState
   , chainSyncClientPipelinedWithLedgerState
 
@@ -80,7 +81,6 @@ module Cardano.Api.LedgerState
 
   )
   where
-
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -160,6 +160,7 @@ import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
+import           Ouroboros.Network.Block (blockNo)
 import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
@@ -167,7 +168,7 @@ import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
 import           Control.Error.Util (note)
 import           Control.Exception
-import           Control.Monad (when)
+import           Control.Monad
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -183,6 +184,7 @@ import qualified Data.ByteString.Lazy as LB
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.IORef
+import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
@@ -238,6 +240,7 @@ data LedgerStateError
   -- ^ Encountered a rollback larger than the security parameter.
       SlotNo     -- ^ Oldest known slot number that we can roll back to.
       ChainPoint -- ^ Rollback was attempted to this point.
+  | DebugError String
   deriving (Show)
 
 instance Exception LedgerStateError
@@ -245,6 +248,7 @@ instance Exception LedgerStateError
 
 renderLedgerStateError :: LedgerStateError -> Text
 renderLedgerStateError = \case
+  DebugError e -> Text.pack e
   ApplyBlockHashMismatch err -> "Applying a block did not result in the expected block hash: " <> err
   ApplyBlockError hardForkLedgerError -> "Applying a block resulted in an error: " <> textShow hardForkLedgerError
   InvalidRollback oldestSupported rollbackPoint ->
@@ -344,10 +348,19 @@ renderFoldBlocksError fbe = case fbe of
   FoldBlocksInitialLedgerStateError err -> renderInitialLedgerStateError err
   FoldBlocksApplyBlockError err -> "Failed when applying a block: " <> renderLedgerStateError err
 
+-- | Type that lets us decide whether to continue or stop
+-- the fold from within our accumulation function.
+data FoldStatus
+  = ContinueFold
+  | StopFold
+  | DebugFold
+  deriving (Show, Eq)
+
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
   :: forall a. ()
+  => Show a
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
@@ -355,7 +368,7 @@ foldBlocks
   -> ValidationMode
   -> a
   -- ^ The initial accumulator state.
-  -> (Env -> LedgerState -> [LedgerEvent] -> BlockInMode -> a -> IO a)
+  -> (Env -> LedgerState -> [LedgerEvent] -> BlockInMode -> a -> IO (a, FoldStatus))
   -- ^ Accumulator function Takes:
   --
   --  * Environment (this is a constant over the whole fold).
@@ -367,6 +380,7 @@ foldBlocks
   -- And returns:
   --
   --  * The accumulator state at block @i@
+  --  * A type indicating whether to stop or continue folding.
   --
   -- Note: This function can safely assume no rollback will occur even though
   -- internally this is implemented with a client protocol that may require
@@ -488,24 +502,50 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                         validationMode
                         block
                   case newLedgerStateE of
-                    Left err -> clientIdle_DoneN n (Just err)
+                    Left err -> clientIdle_DoneNwithMaybeError n (Just err)
                     Right newLedgerState -> do
                       let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
                           newClientTip = At currBlockNo
                           newServerTip = fromChainTip serverChainTip
-                      forM_ committedStates $ \(_, (ledgerState, ledgerEvents), currBlockMay) -> case currBlockMay of
-                          Origin -> return ()
+                      -- TODO: We are constantly overwriting an IORef which isn't ideal.
+
+                      foldStatuses <- forM knownLedgerStates' $ \(_, (ledgerState, ledgerEvents), currBlockMay) -> case currBlockMay of
+                          Origin -> pure ContinueFold
                           At currBlock -> do
-                            newState <- accumulate
+                            (newState, foldStatus) <- accumulate
                               env
                               ledgerState
                               ledgerEvents
                               currBlock
                               =<< readIORef stateIORef
-                            writeIORef stateIORef newState
-                      if newClientTip == newServerTip
-                        then  clientIdle_DoneN n Nothing
-                        else return (clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates')
+                            atomicWriteIORef stateIORef newState
+                            return foldStatus
+                      case foldDecision foldStatuses of
+                        StopFold ->
+                          -- We return StopFold in our accumulate function if we want to terminate the fold.
+                          -- This allow us to check for a specific condition in our accumulate function
+                          -- and then terminate e.g a specific stake pool was registered
+                          let noError = Nothing
+                          in clientIdle_DoneNwithMaybeError n noError
+
+                        DebugFold -> do
+                          currentIORefState <- readIORef stateIORef
+
+                          -- Useful for debugging:
+                          let ioRefErr = Just . DebugError
+                                              $ unlines [ "newClientTip: " <> show newClientTip
+                                                        , "newServerTip: " <> show newServerTip
+                                                        , "newLedgerState: " <> show (snd newLedgerState)
+                                                        , "knownLedgerStates: " <> show (extractHistory knownLedgerStates)
+                                                        , "committedStates: " <> show (extractHistory committedStates)
+                                                        , "numberOfRequestsInFlight: " <> show n
+                                                        , "k: " <> show (envSecurityParam env)
+                                                        , "Current IORef State: " <> show currentIORefState
+                                                        ]
+                          clientIdle_DoneNwithMaybeError n ioRefErr
+
+                        ContinueFold -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
+
               , CSP.recvMsgRollBackward = \chainPoint serverChainTip -> do
                   let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
                       newServerTip = fromChainTip serverChainTip
@@ -515,30 +555,36 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                   return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
               }
 
-          clientIdle_DoneN
+          clientIdle_DoneNwithMaybeError
             :: Nat n -- Number of requests inflight.
             -> Maybe LedgerStateError -- Return value (maybe an error)
             -> IO (CSP.ClientPipelinedStIdle n BlockInMode ChainPoint ChainTip IO ())
-          clientIdle_DoneN n errorMay = case n of
-            Succ predN -> return (CSP.CollectResponse Nothing (clientNext_DoneN predN errorMay)) -- Ignore remaining message responses
+          clientIdle_DoneNwithMaybeError n errorMay = case n of
+            Succ predN -> return (CSP.CollectResponse Nothing (clientNext_DoneNwithMaybeError predN errorMay)) -- Ignore remaining message responses
             Zero -> do
               writeIORef errorIORef errorMay
               return (CSP.SendMsgDone ())
 
-          clientNext_DoneN
+          clientNext_DoneNwithMaybeError
             :: Nat n -- Number of requests inflight.
             -> Maybe LedgerStateError -- Return value (maybe an error)
             -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
-          clientNext_DoneN n errorMay =
+          clientNext_DoneNwithMaybeError n errorMay =
             CSP.ClientStNext {
-                CSP.recvMsgRollForward = \_ _ -> clientIdle_DoneN n errorMay
-              , CSP.recvMsgRollBackward = \_ _ -> clientIdle_DoneN n errorMay
+                CSP.recvMsgRollForward = \_ _ -> clientIdle_DoneNwithMaybeError n errorMay
+              , CSP.recvMsgRollBackward = \_ _ -> clientIdle_DoneNwithMaybeError n errorMay
               }
 
           fromChainTip :: ChainTip -> WithOrigin BlockNo
           fromChainTip ct = case ct of
             ChainTipAtGenesis -> Origin
             ChainTip _ _ bno -> At bno
+
+foldDecision :: Seq FoldStatus -> FoldStatus
+foldDecision foldStatuses
+  | StopFold `List.elem` toList foldStatuses = StopFold
+  | DebugFold `List.elem` toList foldStatuses = DebugFold
+  | otherwise = ContinueFold
 
 -- | Wrap a 'ChainSyncClient' with logic that tracks the ledger state.
 chainSyncClientWithLedgerState
@@ -718,6 +764,17 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
 
     initialLedgerStateHistory :: History (Either LedgerStateError LedgerStateEvents)
     initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
+
+
+extractHistory
+  :: History LedgerStateEvents
+  -> [(SlotNo, [LedgerEvent], BlockNo)]
+extractHistory historySeq =
+  let histList = toList historySeq
+  in List.map (\(slotNo, (_ledgerState, ledgerEvents), block) -> (slotNo, ledgerEvents, getBlockNo block)) histList
+
+getBlockNo :: WithOrigin BlockInMode -> BlockNo
+getBlockNo = Consensus.withOrigin (BlockNo 0) (blockNo . toConsensusBlock)
 
 {- HLINT ignore chainSyncClientPipelinedWithLedgerState "Use fmap" -}
 
