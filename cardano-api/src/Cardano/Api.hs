@@ -404,7 +404,6 @@ module Cardano.Api (
     ViewTx,
 
     -- ** Era-dependent protocol features
-    ProtocolUTxOCostPerByteFeature(..),
     ProtocolUTxOCostPerWordFeature(..),
 
     -- ** Fee calculation

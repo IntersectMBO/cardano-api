@@ -908,7 +908,7 @@ genProtocolParameters era = do
   protocolParamMaxValueSize <- Gen.maybe genNat
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <- inEonForEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+  protocolParamUTxOCostPerByte <- inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
   pure ProtocolParameters {..}
 
@@ -945,7 +945,7 @@ genProtocolParametersUpdate era = do
   protocolUpdateMaxValueSize        <- Gen.maybe genNat
   protocolUpdateCollateralPercent   <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
-  protocolUpdateUTxOCostPerByte     <- inEonForEra @ProtocolUTxOCostPerByteFeature (pure Nothing) (const (Just <$> genLovelace)) era
+  protocolUpdateUTxOCostPerByte     <- inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
   pure ProtocolParametersUpdate{..}
 
