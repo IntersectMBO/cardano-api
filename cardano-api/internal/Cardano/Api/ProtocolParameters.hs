@@ -1378,15 +1378,18 @@ toAlonzoPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateDecentralization
     , protocolUpdateUTxOCostPerWord
+    , protocolUpdateCostModels
     } = do
   ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
   d <- mapM (boundRationalEither "D") protocolUpdateDecentralization
+  costModels <- toAlonzoCostModels protocolUpdateCostModels
   let ppuAlonzo =
         ppuAlonzoCommon
         & ppuDL .~ noInlineMaybeToStrictMaybe d
         & ppuCoinsPerUTxOWordL .~
           (CoinPerWord . toShelleyLovelace <$>
            noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord)
+        & ppuCostModelsL .~ SJust costModels
   pure ppuAlonzo
 
 
