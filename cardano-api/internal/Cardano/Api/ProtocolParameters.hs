@@ -41,7 +41,7 @@ module Cardano.Api.ProtocolParameters (
     AlonzoOnwardsPParams(..),
     CommonProtocolParametersUpdate(..),
     DeprecatedAfterMaryPParams(..),
-    ShelleyToAlonzoPParams'(..),
+    ShelleyToAlonzoPParams(..),
     IntroducedInBabbagePParams(..),
     IntroducedInConwayPParams(..),
     createEraBasedProtocolParamUpdate,
@@ -194,24 +194,24 @@ data EraBasedProtocolParametersUpdate era where
   ShelleyEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
     -> DeprecatedAfterMaryPParams ShelleyEra
-    -> ShelleyToAlonzoPParams' ShelleyEra
+    -> ShelleyToAlonzoPParams ShelleyEra
     -> EraBasedProtocolParametersUpdate ShelleyEra
 
   AllegraEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
     -> DeprecatedAfterMaryPParams AllegraEra
-    -> ShelleyToAlonzoPParams' AllegraEra
+    -> ShelleyToAlonzoPParams AllegraEra
     -> EraBasedProtocolParametersUpdate AllegraEra
 
   MaryEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
     -> DeprecatedAfterMaryPParams MaryEra
-    -> ShelleyToAlonzoPParams' MaryEra
+    -> ShelleyToAlonzoPParams MaryEra
     -> EraBasedProtocolParametersUpdate MaryEra
 
   AlonzoEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> ShelleyToAlonzoPParams' AlonzoEra
+    -> ShelleyToAlonzoPParams AlonzoEra
     -> AlonzoOnwardsPParams AlonzoEra
     -> EraBasedProtocolParametersUpdate AlonzoEra
 
@@ -357,8 +357,8 @@ createDeprecatedAfterMaryPParams
 createDeprecatedAfterMaryPParams _ (DeprecatedAfterMaryPParams minUtxoVal) =
   Ledger.emptyPParamsUpdate & Ledger.ppuMinUTxOValueL .~ minUtxoVal
 
-data ShelleyToAlonzoPParams' ledgerera
-  = ShelleyToAlonzoPParams'
+data ShelleyToAlonzoPParams ledgerera
+  = ShelleyToAlonzoPParams
       (StrictMaybe Ledger.Nonce) -- ^ Extra entropy
       (StrictMaybe Ledger.UnitInterval) -- ^ Decentralization parameter
   deriving Show
@@ -370,9 +370,9 @@ createDeprecatedAfterAlonzoPParams
   :: EraPParams (ShelleyLedgerEra era)
   => MaxAlonzoEra (ShelleyLedgerEra era)
   => ShelleyBasedEra era
-  -> ShelleyToAlonzoPParams' era
+  -> ShelleyToAlonzoPParams era
   -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams' extraEntropy decentralization) =
+createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams extraEntropy decentralization) =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuExtraEntropyL .~ extraEntropy
     & Ledger.ppuDL .~ decentralization
