@@ -237,6 +237,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.OSet.Strict as OSet (fromStrictSeq)
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -3148,7 +3149,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
            & L.mintTxBodyL                .~ convMintValue txMintValue
            & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
            & L.votingProceduresTxBodyL    .~ unVotingProcedures @era (maybe emptyVotingProcedures unFeatured txVotingProcedures)
-           & L.proposalProceduresTxBodyL  .~ Seq.fromList (fmap unProposal (maybe [] unFeatured txProposalProcedures))
+           & L.proposalProceduresTxBodyL  .~
+               OSet.fromStrictSeq (Seq.fromList (fmap unProposal (maybe [] unFeatured txProposalProcedures)))
            -- TODO Conway: support optional network id in TxBodyContent
            -- & L.networkIdTxBodyL .~ SNothing
         )
