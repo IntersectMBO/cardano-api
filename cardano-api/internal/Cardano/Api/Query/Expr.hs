@@ -26,6 +26,8 @@ module Cardano.Api.Query.Expr
   , querySystemStart
   , queryUtxo
   , determineEraExpr
+  , L.MemberStatus (..)
+  , L.CommitteeMembersState (..)
   , queryCommitteeMembersState
   , queryDRepStakeDistribution
   , queryDRepState
