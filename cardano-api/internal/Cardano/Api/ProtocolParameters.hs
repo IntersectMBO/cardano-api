@@ -269,25 +269,25 @@ createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
     ShelleyEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
-          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzo
       in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
 
     AllegraEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
-          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzo
       in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
 
     MaryEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
-          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzo
       in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
 
     AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
             Ledger.PParamsUpdate preAl' = createPParamsUpdateIntroducedInAlonzo AlonzoEraOnwardsAlonzo introInAlon
-            Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzoA
+            Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzoA
         in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA'
 
     BabbageEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage ->
@@ -366,13 +366,13 @@ data ShelleyToAlonzoPParams' ledgerera
 
 type MaxAlonzoEra ledgerera = Ledger.ProtVerAtMost ledgerera 6
 
-createDeprecatedAfterAlonzoPParams'
+createDeprecatedAfterAlonzoPParams
   :: EraPParams (ShelleyLedgerEra era)
   => MaxAlonzoEra (ShelleyLedgerEra era)
   => ShelleyBasedEra era
   -> ShelleyToAlonzoPParams' era
   -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-createDeprecatedAfterAlonzoPParams' _ (ShelleyToAlonzoPParams' extraEntropy decentralization) =
+createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams' extraEntropy decentralization) =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuExtraEntropyL .~ extraEntropy
     & Ledger.ppuDL .~ decentralization
