@@ -41,7 +41,6 @@ module Cardano.Api.ProtocolParameters (
     AlonzoOnwardsPParams(..),
     CommonProtocolParametersUpdate(..),
     DeprecatedAfterMaryPParams(..),
-    ShelleyToAlonzoPParams(..),
     ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
     IntroducedInConwayPParams(..),
@@ -214,7 +213,6 @@ data EraBasedProtocolParametersUpdate era where
     :: CommonProtocolParametersUpdate
     -> ShelleyToAlonzoPParams' AlonzoEra
     -> AlonzoOnwardsPParams AlonzoEra
-    -> ShelleyToAlonzoPParams AlonzoEra
     -> EraBasedProtocolParametersUpdate AlonzoEra
 
   BabbageEraBasedProtocolParametersUpdate
@@ -286,12 +284,11 @@ createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
           Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
       in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
 
-    AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon depAfterAlonzoB ->
+    AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
             Ledger.PParamsUpdate preAl' = createPParamsUpdateIntroducedInAlonzo AlonzoEraOnwardsAlonzo introInAlon
             Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzoA
-            Ledger.PParamsUpdate depAfterAlonzoB' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzoB
-        in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA' <> depAfterAlonzoB'
+        in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA'
 
     BabbageEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
@@ -359,21 +356,6 @@ createDeprecatedAfterMaryPParams
   => ShelleyBasedEra era -> DeprecatedAfterMaryPParams era -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
 createDeprecatedAfterMaryPParams _ (DeprecatedAfterMaryPParams minUtxoVal) =
   Ledger.emptyPParamsUpdate & Ledger.ppuMinUTxOValueL .~ minUtxoVal
-
-newtype ShelleyToAlonzoPParams ledgerera
-  = ShelleyToAlonzoPParams (StrictMaybe CoinPerWord) -- ^ Coins per UTxO word
-  deriving Show
-
--- We had to duplicate ShelleyToAlonzoPParams because
--- of type class constraints.
-createDeprecatedAfterAlonzoPParams
-  :: AlonzoEraPParams (ShelleyLedgerEra era)
-  => Ledger.ProtVerAtLeast (ShelleyLedgerEra era) 5
-  => Ledger.ProtVerAtMost (ShelleyLedgerEra era) 6
-  => ShelleyBasedEra era -> ShelleyToAlonzoPParams era -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams alCoinsPerUTxOWord) =
-   Ledger.emptyPParamsUpdate
-      & Ledger.ppuCoinsPerUTxOWordL .~ alCoinsPerUTxOWord
 
 data ShelleyToAlonzoPParams' ledgerera
   = ShelleyToAlonzoPParams'
