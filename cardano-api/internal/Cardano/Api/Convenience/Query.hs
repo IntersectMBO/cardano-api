@@ -162,9 +162,9 @@ executeQueryCardanoMode socketPath nid q = runExceptT $ do
   ExceptT $ executeQueryAnyMode localNodeConnInfo q
 
 -- | Execute a query against the local node in any mode.
-executeQueryAnyMode :: forall result mode. ()
-  => LocalNodeConnectInfo mode
-  -> QueryInMode mode (Either EraMismatch result)
+executeQueryAnyMode :: forall result. ()
+  => LocalNodeConnectInfo CardanoMode
+  -> QueryInMode CardanoMode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
 executeQueryAnyMode localNodeConnInfo q = runExceptT $ do
   lift (queryNodeLocalState localNodeConnInfo Nothing q)

@@ -41,9 +41,9 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
 
 -- | Execute a local state query expression.
 executeLocalStateQueryExpr
-  :: LocalNodeConnectInfo mode
+  :: LocalNodeConnectInfo CardanoMode
   -> Maybe ChainPoint
-  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a
+  -> LocalStateQueryExpr (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) () IO a
   -> IO (Either AcquiringFailure a)
 executeLocalStateQueryExpr connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO

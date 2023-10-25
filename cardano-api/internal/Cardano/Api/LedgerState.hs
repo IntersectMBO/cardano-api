@@ -426,7 +426,12 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
     Nothing -> lift $ readIORef stateIORef
   where
 
-    protocols :: IORef a -> IORef (Maybe LedgerStateError) -> Env -> LedgerState -> LocalNodeClientProtocolsInMode CardanoMode
+    protocols :: ()
+      => IORef a
+      -> IORef (Maybe LedgerStateError)
+      -> Env
+      -> LedgerState
+      -> LocalNodeClientProtocolsInMode
     protocols stateIORef errorIORef env ledgerState =
         LocalNodeClientProtocols {
           localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef errorIORef env ledgerState),

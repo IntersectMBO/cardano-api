@@ -165,16 +165,16 @@ data LocalChainSyncClient block point tip m
   | LocalChainSyncClient          (ChainSyncClient          block point tip   m ())
 
 -- public, exported
-type LocalNodeClientProtocolsInMode mode =
+type LocalNodeClientProtocolsInMode =
        LocalNodeClientProtocols
-         (BlockInMode mode)
+         (BlockInMode CardanoMode)
          ChainPoint
          ChainTip
          SlotNo
-         (TxInMode mode)
-         (TxIdInMode mode)
-         (TxValidationErrorInMode mode)
-         (QueryInMode mode)
+         (TxInMode CardanoMode)
+         (TxIdInMode CardanoMode)
+         (TxValidationErrorInMode CardanoMode)
+         (QueryInMode CardanoMode)
          IO
 
 data LocalNodeConnectInfo mode =
@@ -200,9 +200,10 @@ consensusModeOnly CardanoModeParams{} = CardanoMode
 -- | Establish a connection to a local node and execute the given set of
 -- protocol handlers.
 --
-connectToLocalNode :: LocalNodeConnectInfo mode
-                   -> LocalNodeClientProtocolsInMode mode
-                   -> IO ()
+connectToLocalNode :: ()
+  => LocalNodeConnectInfo CardanoMode
+  -> LocalNodeClientProtocolsInMode
+  -> IO ()
 connectToLocalNode localNodeConnectInfo handlers
   = connectToLocalNodeWithVersion localNodeConnectInfo (const handlers)
 
@@ -210,9 +211,10 @@ connectToLocalNode localNodeConnectInfo handlers
 -- protocol handlers parameterized on the negotiated node-to-client protocol
 -- version.
 --
-connectToLocalNodeWithVersion :: LocalNodeConnectInfo mode
-                              -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode mode)
-                              -> IO ()
+connectToLocalNodeWithVersion :: ()
+  => LocalNodeConnectInfo CardanoMode
+  -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
+  -> IO ()
 connectToLocalNodeWithVersion LocalNodeConnectInfo {
                      localNodeSocketPath,
                      localNodeNetworkId,
@@ -395,11 +397,11 @@ data LocalNodeClientProtocolsForBlock block =
 
 -- | Convert from the mode-parametrised style to the block-parametrised style.
 --
-mkLocalNodeClientParams :: forall mode block.
-                           ConsensusBlockForMode mode ~ block
-                        => ConsensusModeParams mode
-                        -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode mode)
-                        -> LocalNodeClientParams
+mkLocalNodeClientParams :: forall block. ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => ConsensusModeParams CardanoMode
+  -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
+  -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =
     -- For each of the possible consensus modes we pick the concrete block type
     -- (by picking the appropriate 'ProtocolClient' value).
@@ -422,7 +424,7 @@ mkLocalNodeClientParams modeparams clients =
 convLocalNodeClientProtocols :: forall block. ()
   => ConsensusBlockForMode CardanoMode ~ block
   => ConsensusMode CardanoMode
-  -> LocalNodeClientProtocolsInMode CardanoMode
+  -> LocalNodeClientProtocolsInMode
   -> LocalNodeClientProtocolsForBlock block
 convLocalNodeClientProtocols
     mode
@@ -559,11 +561,11 @@ toAcquiringFailure :: Net.Query.AcquireFailure -> AcquiringFailure
 toAcquiringFailure AcquireFailurePointTooOld = AFPointTooOld
 toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
 
-queryNodeLocalState :: forall mode result.
-                       LocalNodeConnectInfo mode
-                    -> Maybe ChainPoint
-                    -> QueryInMode mode result
-                    -> IO (Either AcquiringFailure result)
+queryNodeLocalState :: forall result. ()
+  => LocalNodeConnectInfo CardanoMode
+  -> Maybe ChainPoint
+  -> QueryInMode CardanoMode result
+  -> IO (Either AcquiringFailure result)
 queryNodeLocalState connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -579,8 +581,7 @@ queryNodeLocalState connctInfo mpoint query = do
     singleQuery
       :: Maybe ChainPoint
       -> TMVar (Either AcquiringFailure result)
-      -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
-                                         (QueryInMode mode) IO ()
+      -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) IO ()
     singleQuery mPointVar' resultVar' =
       LocalStateQueryClient $ do
       pure $
@@ -600,10 +601,10 @@ queryNodeLocalState connctInfo mpoint query = do
               pure $ Net.Query.SendMsgDone ()
           }
 
-submitTxToNodeLocal :: forall mode.
-                       LocalNodeConnectInfo mode
-                    -> TxInMode mode
-                    -> IO (Net.Tx.SubmitResult (TxValidationErrorInMode mode))
+submitTxToNodeLocal :: ()
+  => LocalNodeConnectInfo CardanoMode
+  -> TxInMode CardanoMode
+  -> IO (Net.Tx.SubmitResult (TxValidationErrorInMode CardanoMode))
 submitTxToNodeLocal connctInfo tx = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -616,11 +617,9 @@ submitTxToNodeLocal connctInfo tx = do
       }
     atomically (takeTMVar resultVar)
   where
-    localTxSubmissionClientSingle
-      :: TMVar (Net.Tx.SubmitResult (TxValidationErrorInMode mode))
-      -> Net.Tx.LocalTxSubmissionClient (TxInMode mode)
-                                        (TxValidationErrorInMode mode)
-                                        IO ()
+    localTxSubmissionClientSingle :: ()
+      => TMVar (Net.Tx.SubmitResult (TxValidationErrorInMode CardanoMode))
+      -> Net.Tx.LocalTxSubmissionClient (TxInMode CardanoMode) (TxValidationErrorInMode CardanoMode) IO ()
     localTxSubmissionClientSingle resultVar =
       LocalTxSubmissionClient $
         pure $ Net.Tx.SendMsgSubmitTx tx $ \result -> do
@@ -686,10 +685,10 @@ data LocalTxMonitoringQuery mode
   | LocalTxMonitoringMempoolInformation
 
 
-queryTxMonitoringLocal
-  :: forall mode. LocalNodeConnectInfo mode
-  -> LocalTxMonitoringQuery mode
-  -> IO (LocalTxMonitoringResult mode)
+queryTxMonitoringLocal :: ()
+  => LocalNodeConnectInfo CardanoMode
+  -> LocalTxMonitoringQuery CardanoMode
+  -> IO (LocalTxMonitoringResult CardanoMode)
 queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
   resultVar <- newEmptyTMVarIO
 
@@ -748,7 +747,9 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
 -- Get tip as 'ChainPoint'
 --
 
-getLocalChainTip :: LocalNodeConnectInfo mode -> IO ChainTip
+getLocalChainTip :: ()
+  => LocalNodeConnectInfo CardanoMode
+  -> IO ChainTip
 getLocalChainTip localNodeConInfo = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
