@@ -149,7 +149,7 @@ data LocalNodeClientProtocols block point tip slot tx txid txerr query m =
     { localChainSyncClient    :: LocalChainSyncClient block point tip m
     , localTxSubmissionClient :: Maybe (LocalTxSubmissionClient tx txerr m ())
     , localStateQueryClient   :: Maybe (LocalStateQueryClient block point query m ())
-    , localTxMonitoringClient :: Maybe (LocalTxMonitorClient txid tx slot m ())
+    , localTxMonitoringClient :: Maybe (LocalTxMonitorClient (TxIdInMode CardanoMode) tx slot m ())
     }
 
 data LocalChainSyncClient block point tip m
