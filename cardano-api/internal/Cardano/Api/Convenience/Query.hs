@@ -142,8 +142,7 @@ determineEra :: ()
 determineEra cModeParams localNodeConnInfo =
   case consensusModeOnly cModeParams of
     CardanoMode ->
-      queryNodeLocalState localNodeConnInfo Nothing
-        $ QueryCurrentEra CardanoModeIsMultiEra
+      queryNodeLocalState localNodeConnInfo Nothing QueryCurrentEra
 
 -- | Execute a query against the local node. The local
 -- node must be in CardanoMode.

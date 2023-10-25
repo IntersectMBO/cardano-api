@@ -18,7 +18,6 @@ module Cardano.Api.Modes (
     ConsensusMode(..),
     AnyConsensusMode(..),
     renderMode,
-    ConsensusModeIsMultiEra(..),
 
     -- * The eras supported by each mode
     EraInMode(..),
@@ -96,15 +95,6 @@ deriving instance Show AnyConsensusMode
 
 renderMode :: AnyConsensusMode -> Text
 renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
-
--- | The subset of consensus modes that consist of multiple eras. Some features
--- are not supported in single-era modes (for exact compatibility without
--- using the hard fork combination at all).
---
-data ConsensusModeIsMultiEra mode where
-     CardanoModeIsMultiEra :: ConsensusModeIsMultiEra CardanoMode
-
-deriving instance Show (ConsensusModeIsMultiEra mode)
 
 toEraInMode :: CardanoEra era -> ConsensusMode mode -> Maybe (EraInMode era mode)
 toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode

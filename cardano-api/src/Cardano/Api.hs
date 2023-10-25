@@ -790,7 +790,6 @@ module Cardano.Api (
     renderMode,
     ConsensusMode(CardanoMode),
     consensusModeOnly,
-    ConsensusModeIsMultiEra(..),
     AnyConsensusModeParams(..),
     ConsensusModeParams(..),
     ConsensusProtocol,

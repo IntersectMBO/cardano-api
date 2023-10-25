@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -152,8 +153,7 @@ import           GHC.Stack
 
 data QueryInMode mode result where
   QueryCurrentEra
-    :: ConsensusModeIsMultiEra mode
-    -> QueryInMode mode AnyCardanoEra
+    :: QueryInMode mode AnyCardanoEra
 
   QueryInEra
     :: EraInMode era mode
@@ -161,8 +161,7 @@ data QueryInMode mode result where
     -> QueryInMode mode (Either EraMismatch result)
 
   QueryEraHistory
-    :: ConsensusModeIsMultiEra mode
-    -> QueryInMode mode (EraHistory mode)
+    :: QueryInMode mode (EraHistory mode)
 
   QuerySystemStart
     :: QueryInMode mode SystemStart
@@ -175,12 +174,13 @@ data QueryInMode mode result where
     -> QueryInMode mode ChainPoint
 
 instance NodeToClientVersionOf (QueryInMode mode result) where
-  nodeToClientVersionOf (QueryCurrentEra _) = NodeToClientV_9
-  nodeToClientVersionOf (QueryInEra _ q) = nodeToClientVersionOf q
-  nodeToClientVersionOf (QueryEraHistory _) = NodeToClientV_9
-  nodeToClientVersionOf QuerySystemStart = NodeToClientV_9
-  nodeToClientVersionOf QueryChainBlockNo = NodeToClientV_10
-  nodeToClientVersionOf (QueryChainPoint _) = NodeToClientV_10
+  nodeToClientVersionOf = \case
+    QueryCurrentEra   -> NodeToClientV_9
+    QueryInEra _ q    -> nodeToClientVersionOf q
+    QueryEraHistory   -> NodeToClientV_9
+    QuerySystemStart  -> NodeToClientV_9
+    QueryChainBlockNo -> NodeToClientV_10
+    QueryChainPoint _ -> NodeToClientV_10
 
 data EraHistory mode where
   EraHistory
@@ -204,11 +204,6 @@ toLedgerEpochInfo :: EraHistory mode -> LedgerEpochInfo
 toLedgerEpochInfo (EraHistory _ interpreter) =
     LedgerEpochInfo $ hoistEpochInfo (first (Text.pack . show) . runExcept) $
       Consensus.interpreterToEpochInfo interpreter
-
---TODO: add support for these
---     QueryEraStart   :: ConsensusModeIsMultiEra mode
---                     -> EraInMode era mode
---                     -> QueryInMode mode (Maybe EraStart)
 
 newtype SlotsInEpoch = SlotsInEpoch Word64
 
@@ -546,16 +541,16 @@ fromShelleyRewardAccounts =
 -- Conversions of queries into the consensus types.
 --
 
-toConsensusQuery :: forall mode block result.
-                    ConsensusBlockForMode mode ~ block
-                 => QueryInMode mode result
-                 -> Some (Consensus.Query block)
-toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
+toConsensusQuery :: forall block result. ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => QueryInMode CardanoMode result
+  -> Some (Consensus.Query block)
+toConsensusQuery QueryCurrentEra =
     Some $ Consensus.BlockQuery $
       Consensus.QueryHardFork
         Consensus.GetCurrentEra
 
-toConsensusQuery (QueryEraHistory CardanoModeIsMultiEra) =
+toConsensusQuery QueryEraHistory =
     Some $ Consensus.BlockQuery $
       Consensus.QueryHardFork
         Consensus.GetInterpreter
@@ -703,14 +698,14 @@ consensusQueryInEraInMode erainmode =
 -- Conversions of query results from the consensus types.
 --
 
-fromConsensusQueryResult :: forall mode block result result'.
-                            HasCallStack
-                         => ConsensusBlockForMode mode ~ block
-                         => QueryInMode mode result
-                         -> Consensus.Query block result'
-                         -> result'
-                         -> result
-fromConsensusQueryResult (QueryEraHistory CardanoModeIsMultiEra) q' r' =
+fromConsensusQueryResult :: forall block result result'. ()
+  => HasCallStack
+  => ConsensusBlockForMode CardanoMode ~ block
+  => QueryInMode CardanoMode result
+  -> Consensus.Query block result'
+  -> result'
+  -> result
+fromConsensusQueryResult QueryEraHistory q' r' =
     case q' of
       Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetInterpreter)
         -> EraHistory CardanoMode r'
@@ -734,7 +729,7 @@ fromConsensusQueryResult (QueryChainPoint mode) q' r' =
         -> fromConsensusPointInMode mode r'
       _ -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
+fromConsensusQueryResult QueryCurrentEra q' r' =
     case q' of
       Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetCurrentEra)
         -> fromConsensusEraIndex CardanoMode r'

@@ -78,7 +78,7 @@ queryChainPoint =
 queryCurrentEra :: ()
   => LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
 queryCurrentEra =
-  queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+  queryExpr QueryCurrentEra
 
 queryCurrentEpochState :: ()
   => EraInMode era mode
@@ -104,7 +104,7 @@ queryDebugLedgerState eraInMode sbe =
 queryEraHistory :: ()
   => LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError (EraHistory CardanoMode))
 queryEraHistory =
-  queryExpr $ QueryEraHistory CardanoModeIsMultiEra
+  queryExpr QueryEraHistory
 
 queryGenesisParameters :: ()
   => EraInMode era mode

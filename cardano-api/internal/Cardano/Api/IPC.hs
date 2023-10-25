@@ -419,11 +419,11 @@ mkLocalNodeClientParams modeparams clients =
          (convLocalNodeClientProtocols CardanoMode . clients)
 
 
-convLocalNodeClientProtocols :: forall mode block.
-                                ConsensusBlockForMode mode ~ block
-                             => ConsensusMode mode
-                             -> LocalNodeClientProtocolsInMode mode
-                             -> LocalNodeClientProtocolsForBlock block
+convLocalNodeClientProtocols :: forall block. ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => ConsensusMode CardanoMode
+  -> LocalNodeClientProtocolsInMode CardanoMode
+  -> LocalNodeClientProtocolsForBlock block
 convLocalNodeClientProtocols
     mode
     LocalNodeClientProtocols {
@@ -438,15 +438,9 @@ convLocalNodeClientProtocols
         LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined mode clientPipelined
         LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient mode client,
 
-      localTxSubmissionClientForBlock = convLocalTxSubmissionClient mode <$>
-                                          localTxSubmissionClient,
-
-      localStateQueryClientForBlock   = convLocalStateQueryClient mode <$>
-                                          localStateQueryClient,
-
-      localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$>
-                                          localTxMonitoringClient
-
+      localTxSubmissionClientForBlock = convLocalTxSubmissionClient mode <$> localTxSubmissionClient,
+      localStateQueryClientForBlock   = convLocalStateQueryClient   mode <$> localStateQueryClient,
+      localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$> localTxMonitoringClient
     }
 
 convLocalTxMonitoringClient
@@ -500,12 +494,12 @@ convLocalTxSubmissionClient mode =
 
 
 convLocalStateQueryClient
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) m a
-  -> LocalStateQueryClient block (Consensus.Point block)
-                           (Consensus.Query block) m a
+  :: forall block m a. ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => Functor m
+  => ConsensusMode CardanoMode
+  -> LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) m a
+  -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block) m a
 convLocalStateQueryClient mode =
     Net.Query.mapLocalStateQueryClient
       (toConsensusPointInMode mode)
