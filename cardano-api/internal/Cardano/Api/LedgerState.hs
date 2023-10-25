@@ -409,13 +409,11 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
       cardanoModeParams = CardanoModeParams . EpochSlots $ 10 * envSecurityParam env
 
   -- Connect to the node.
-  let connectInfo :: LocalNodeConnectInfo CardanoMode
-      connectInfo =
-          LocalNodeConnectInfo {
-            localConsensusModeParams = cardanoModeParams,
-            localNodeNetworkId       = networkId',
-            localNodeSocketPath      = socketPath
-          }
+  let connectInfo = LocalNodeConnectInfo
+        { localConsensusModeParams  = cardanoModeParams
+        , localNodeNetworkId        = networkId'
+        , localNodeSocketPath       = socketPath
+        }
 
   lift $ connectToLocalNode
     connectInfo

@@ -40,8 +40,8 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
   } deriving (Functor, Applicative, Monad, MonadReader NodeToClientVersion, MonadIO)
 
 -- | Execute a local state query expression.
-executeLocalStateQueryExpr
-  :: LocalNodeConnectInfo CardanoMode
+executeLocalStateQueryExpr :: ()
+  => LocalNodeConnectInfo
   -> Maybe ChainPoint
   -> LocalStateQueryExpr (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) () IO a
   -> IO (Either AcquiringFailure a)

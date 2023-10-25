@@ -136,8 +136,8 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
 
 -- | Query the node to determine which era it is in.
 determineEra :: ()
-  => ConsensusModeParams mode
-  -> LocalNodeConnectInfo mode
+  => ConsensusModeParams CardanoMode
+  -> LocalNodeConnectInfo
   -> IO (Either AcquiringFailure AnyCardanoEra)
 determineEra cModeParams localNodeConnInfo =
   case consensusModeOnly cModeParams of
@@ -163,7 +163,7 @@ executeQueryCardanoMode socketPath nid q = runExceptT $ do
 
 -- | Execute a query against the local node in any mode.
 executeQueryAnyMode :: forall result. ()
-  => LocalNodeConnectInfo CardanoMode
+  => LocalNodeConnectInfo
   -> QueryInMode CardanoMode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
 executeQueryAnyMode localNodeConnInfo q = runExceptT $ do
