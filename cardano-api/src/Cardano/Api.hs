@@ -403,9 +403,6 @@ module Cardano.Api (
     BuildTx,
     ViewTx,
 
-    -- ** Era-dependent protocol features
-    ProtocolUTxOCostPerWordFeature(..),
-
     -- ** Fee calculation
     LedgerEpochInfo(..),
     transactionFee,

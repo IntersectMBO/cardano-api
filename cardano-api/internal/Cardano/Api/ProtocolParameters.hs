@@ -42,7 +42,6 @@ module Cardano.Api.ProtocolParameters (
     CommonProtocolParametersUpdate(..),
     DeprecatedAfterMaryPParams(..),
     ShelleyToAlonzoPParams(..),
-    ShelleyToAlonzoPParams'(..),
     IntroducedInBabbagePParams(..),
     IntroducedInConwayPParams(..),
     createEraBasedProtocolParamUpdate,
@@ -92,7 +91,6 @@ module Cardano.Api.ProtocolParameters (
     AsType(..),
 
     -- ** Era-dependent protocol features
-    ProtocolUTxOCostPerWordFeature(..),
   ) where
 
 import           Cardano.Api.Address
@@ -196,26 +194,25 @@ data EraBasedProtocolParametersUpdate era where
   ShelleyEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
     -> DeprecatedAfterMaryPParams ShelleyEra
-    -> ShelleyToAlonzoPParams' ShelleyEra
+    -> ShelleyToAlonzoPParams ShelleyEra
     -> EraBasedProtocolParametersUpdate ShelleyEra
 
   AllegraEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
     -> DeprecatedAfterMaryPParams AllegraEra
-    -> ShelleyToAlonzoPParams' AllegraEra
+    -> ShelleyToAlonzoPParams AllegraEra
     -> EraBasedProtocolParametersUpdate AllegraEra
 
   MaryEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
     -> DeprecatedAfterMaryPParams MaryEra
-    -> ShelleyToAlonzoPParams' MaryEra
+    -> ShelleyToAlonzoPParams MaryEra
     -> EraBasedProtocolParametersUpdate MaryEra
 
   AlonzoEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
-    -> ShelleyToAlonzoPParams' AlonzoEra
-    -> AlonzoOnwardsPParams AlonzoEra
     -> ShelleyToAlonzoPParams AlonzoEra
+    -> AlonzoOnwardsPParams AlonzoEra
     -> EraBasedProtocolParametersUpdate AlonzoEra
 
   BabbageEraBasedProtocolParametersUpdate
@@ -272,27 +269,26 @@ createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
     ShelleyEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
-          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzo
       in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
 
     AllegraEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
-          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzo
       in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
 
     MaryEraBasedProtocolParametersUpdate c depAfterMary depAfterAlonzo ->
       let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
           Ledger.PParamsUpdate depAfterMary' = createDeprecatedAfterMaryPParams sbe depAfterMary
-          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzo
+          Ledger.PParamsUpdate depAfterAlonzo' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzo
       in Ledger.PParamsUpdate $ common <> depAfterMary' <> depAfterAlonzo'
 
-    AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon depAfterAlonzoB ->
+    AlonzoEraBasedProtocolParametersUpdate c depAfterAlonzoA introInAlon ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
             Ledger.PParamsUpdate preAl' = createPParamsUpdateIntroducedInAlonzo AlonzoEraOnwardsAlonzo introInAlon
-            Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams' sbe depAfterAlonzoA
-            Ledger.PParamsUpdate depAfterAlonzoB' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzoB
-        in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA' <> depAfterAlonzoB'
+            Ledger.PParamsUpdate depAfterAlonzoA' = createDeprecatedAfterAlonzoPParams sbe depAfterAlonzoA
+        in Ledger.PParamsUpdate $ common <> preAl' <> depAfterAlonzoA'
 
     BabbageEraBasedProtocolParametersUpdate c introInAlonzo introInBabbage ->
         let Ledger.PParamsUpdate common = createCommonPParamsUpdate c
@@ -361,23 +357,8 @@ createDeprecatedAfterMaryPParams
 createDeprecatedAfterMaryPParams _ (DeprecatedAfterMaryPParams minUtxoVal) =
   Ledger.emptyPParamsUpdate & Ledger.ppuMinUTxOValueL .~ minUtxoVal
 
-newtype ShelleyToAlonzoPParams ledgerera
-  = ShelleyToAlonzoPParams (StrictMaybe CoinPerWord) -- ^ Coins per UTxO word
-  deriving Show
-
--- We had to duplicate ShelleyToAlonzoPParams because
--- of type class constraints.
-createDeprecatedAfterAlonzoPParams
-  :: AlonzoEraPParams (ShelleyLedgerEra era)
-  => Ledger.ProtVerAtLeast (ShelleyLedgerEra era) 5
-  => Ledger.ProtVerAtMost (ShelleyLedgerEra era) 6
-  => ShelleyBasedEra era -> ShelleyToAlonzoPParams era -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams alCoinsPerUTxOWord) =
-   Ledger.emptyPParamsUpdate
-      & Ledger.ppuCoinsPerUTxOWordL .~ alCoinsPerUTxOWord
-
-data ShelleyToAlonzoPParams' ledgerera
-  = ShelleyToAlonzoPParams'
+data ShelleyToAlonzoPParams ledgerera
+  = ShelleyToAlonzoPParams
       (StrictMaybe Ledger.Nonce) -- ^ Extra entropy
       (StrictMaybe Ledger.UnitInterval) -- ^ Decentralization parameter
   deriving Show
@@ -385,13 +366,13 @@ data ShelleyToAlonzoPParams' ledgerera
 
 type MaxAlonzoEra ledgerera = Ledger.ProtVerAtMost ledgerera 6
 
-createDeprecatedAfterAlonzoPParams'
+createDeprecatedAfterAlonzoPParams
   :: EraPParams (ShelleyLedgerEra era)
   => MaxAlonzoEra (ShelleyLedgerEra era)
   => ShelleyBasedEra era
-  -> ShelleyToAlonzoPParams' era
+  -> ShelleyToAlonzoPParams era
   -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-createDeprecatedAfterAlonzoPParams' _ (ShelleyToAlonzoPParams' extraEntropy decentralization) =
+createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams extraEntropy decentralization) =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuExtraEntropyL .~ extraEntropy
     & Ledger.ppuDL .~ decentralization
@@ -562,11 +543,6 @@ data ProtocolParameters =
        --
        protocolParamTreasuryCut :: Rational,
 
-       -- | Cost in ada per word of UTxO storage.
-       --
-       -- /Introduced in Alonzo/
-       protocolParamUTxOCostPerWord :: Maybe Lovelace,
-
        -- | Cost models for script languages that use them.
        --
        -- /Introduced in Alonzo/
@@ -633,7 +609,6 @@ instance FromJSON ProtocolParameters where
         <*> o .: "poolPledgeInfluence"
         <*> o .: "monetaryExpansion"
         <*> o .: "treasuryCut"
-        <*> o .:? "utxoCostPerWord"
         <*> (fmap unCostModels <$> o .:? "costModels") .!= Map.empty
         <*> o .:? "executionUnitPrices"
         <*> o .:? "maxTxExecutionUnits"
@@ -665,7 +640,6 @@ instance ToJSON ProtocolParameters where
       , "txFeeFixed"          .= protocolParamTxFeeFixed
       , "txFeePerByte"        .= protocolParamTxFeePerByte
       -- Alonzo era:
-      , "utxoCostPerWord"        .= protocolParamUTxOCostPerWord
       , "costModels"             .= CostModels protocolParamCostModels
       , "executionUnitPrices"    .= protocolParamPrices
       , "maxTxExecutionUnits"    .= protocolParamMaxTxExUnits
@@ -799,13 +773,6 @@ data ProtocolParametersUpdate =
 
        -- Introduced in Alonzo,
 
-       -- | Cost in ada per word of UTxO storage.
-       --
-       -- /Introduced in Alonzo, obsoleted in Babbage by 'protocolUpdateUTxOCostPerByte'/
-       protocolUpdateUTxOCostPerWord :: Maybe Lovelace,
-
-       -- Introduced in Alonzo,
-
        -- | Cost models for script languages that use them.
        --
        -- /Introduced in Alonzo/
@@ -844,7 +811,7 @@ data ProtocolParametersUpdate =
 
        -- | Cost in ada per byte of UTxO storage.
        --
-       -- /Introduced in Babbage.  Supercedes 'protocolUpdateUTxOCostPerWord'/
+       -- /Introduced in Babbage/
        protocolUpdateUTxOCostPerByte :: Maybe Lovelace
     }
   deriving (Eq, Show)
@@ -870,7 +837,6 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdateMonetaryExpansion   = merge protocolUpdateMonetaryExpansion
       , protocolUpdateTreasuryCut         = merge protocolUpdateTreasuryCut
       -- Introduced in Alonzo below.
-      , protocolUpdateUTxOCostPerWord     = merge protocolUpdateUTxOCostPerWord
       , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
       , protocolUpdatePrices              = merge protocolUpdatePrices
       , protocolUpdateMaxTxExUnits        = merge protocolUpdateMaxTxExUnits
@@ -910,7 +876,6 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdatePoolPledgeInfluence = Nothing
       , protocolUpdateMonetaryExpansion   = Nothing
       , protocolUpdateTreasuryCut         = Nothing
-      , protocolUpdateUTxOCostPerWord     = Nothing
       , protocolUpdateCostModels          = mempty
       , protocolUpdatePrices              = Nothing
       , protocolUpdateMaxTxExUnits        = Nothing
@@ -941,7 +906,6 @@ instance ToCBOR ProtocolParametersUpdate where
      <> toCBOR protocolUpdatePoolPledgeInfluence
      <> toCBOR protocolUpdateMonetaryExpansion
      <> toCBOR protocolUpdateTreasuryCut
-     <> toCBOR protocolUpdateUTxOCostPerWord
      <> toCBOR protocolUpdateCostModels
      <> toCBOR protocolUpdatePrices
      <> toCBOR protocolUpdateMaxTxExUnits
@@ -980,32 +944,6 @@ instance FromCBOR ProtocolParametersUpdate where
         <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
-        <*> fromCBOR
-
--- | A representation of whether the era supports the 'UTxO Cost Per Word'
--- protocol parameter.
---
--- The Babbage and subsequent eras support such a protocol parameter.
---
-data ProtocolUTxOCostPerWordFeature era where
-  ProtocolUpdateUTxOCostPerWordInAlonzoEra :: ProtocolUTxOCostPerWordFeature AlonzoEra
-
-deriving instance Eq   (ProtocolUTxOCostPerWordFeature era)
-deriving instance Show (ProtocolUTxOCostPerWordFeature era)
-
-instance Eon ProtocolUTxOCostPerWordFeature where
-  inEonForEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> no
-    AllegraEra  -> no
-    MaryEra     -> no
-    AlonzoEra   -> yes ProtocolUpdateUTxOCostPerWordInAlonzoEra
-    BabbageEra  -> no
-    ConwayEra   -> no
-
-instance ToCardanoEra ProtocolUTxOCostPerWordFeature where
-  toCardanoEra = \case
-    ProtocolUpdateUTxOCostPerWordInAlonzoEra -> AlonzoEra
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
@@ -1345,16 +1283,12 @@ toAlonzoPParamsUpdate :: Ledger.Crypto crypto
 toAlonzoPParamsUpdate
     protocolParametersUpdate@ProtocolParametersUpdate {
       protocolUpdateDecentralization
-    , protocolUpdateUTxOCostPerWord
     } = do
   ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
   d <- mapM (boundRationalEither "D") protocolUpdateDecentralization
   let ppuAlonzo =
         ppuAlonzoCommon
         & ppuDL .~ noInlineMaybeToStrictMaybe d
-        & ppuCoinsPerUTxOWordL .~
-          (CoinPerWord . toShelleyLovelace <$>
-           noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord)
   pure ppuAlonzo
 
 
@@ -1458,7 +1392,6 @@ fromShelleyCommonPParamsUpdate ppu =
                                             strictMaybeToMaybe (ppu ^. ppuRhoL)
     , protocolUpdateTreasuryCut         = Ledger.unboundRational <$>
                                             strictMaybeToMaybe (ppu ^. ppuTauL)
-    , protocolUpdateUTxOCostPerWord     = Nothing
     , protocolUpdateCostModels          = mempty
     , protocolUpdatePrices              = Nothing
     , protocolUpdateMaxTxExUnits        = Nothing
@@ -1488,10 +1421,10 @@ fromShelleyPParamsUpdate ppu =
                                             strictMaybeToMaybe (ppu ^. ppuMinUTxOValueL)
     }
 
-fromAlonzoCommonPParamsUpdate :: AlonzoEraPParams ledgerera
+fromAlonzoPParamsUpdate :: AlonzoEraPParams ledgerera
                               => PParamsUpdate ledgerera
                               -> ProtocolParametersUpdate
-fromAlonzoCommonPParamsUpdate ppu =
+fromAlonzoPParamsUpdate ppu =
   (fromShelleyCommonPParamsUpdate ppu) {
       protocolUpdateCostModels          = maybe mempty fromAlonzoCostModels
                                                (strictMaybeToMaybe (ppu ^. ppuCostModelsL))
@@ -1507,21 +1440,11 @@ fromAlonzoCommonPParamsUpdate ppu =
     , protocolUpdateUTxOCostPerByte     = Nothing
     }
 
-
-fromAlonzoPParamsUpdate :: Ledger.Crypto crypto
-                        => PParamsUpdate (Ledger.AlonzoEra crypto)
-                        -> ProtocolParametersUpdate
-fromAlonzoPParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu) {
-    protocolUpdateUTxOCostPerWord = fromShelleyLovelace . unCoinPerWord <$>
-                                      strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOWordL)
-    }
-
 fromBabbagePParamsUpdate :: BabbageEraPParams ledgerera
                          => PParamsUpdate ledgerera
                          -> ProtocolParametersUpdate
 fromBabbagePParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu) {
+  (fromAlonzoPParamsUpdate ppu) {
     protocolUpdateUTxOCostPerByte = fromShelleyLovelace . unCoinPerByte <$>
                                       strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
     }
@@ -1657,7 +1580,6 @@ toAlonzoPParams :: Ledger.Crypto crypto
 toAlonzoPParams
     protocolParameters@ProtocolParameters {
       protocolParamDecentralization
-    , protocolParamUTxOCostPerWord
     } = do
   ppAlonzoCommon <- toAlonzoCommonPParams protocolParameters
   -- QUESTION? This is strange, why do we need to construct Alonzo Tx with Babbage PParams?
@@ -1676,12 +1598,9 @@ toAlonzoPParams
   -- d <- requireParam "protocolParamDecentralization"
   --                   (boundRationalEither "D")
   --                   protocolParamDecentralization
-  utxoCostPerWord <-
-    requireParam "protocolParamUTxOCostPerWord" Right protocolParamUTxOCostPerWord
   let ppAlonzo =
         ppAlonzoCommon
         & ppDL .~ d
-        & ppCoinsPerUTxOWordL .~ CoinPerWord (toShelleyLovelace utxoCostPerWord)
   pure ppAlonzo
 
 
@@ -1741,7 +1660,6 @@ fromShelleyCommonPParams pp =
     , protocolParamPoolPledgeInfluence = Ledger.unboundRational (pp ^. ppA0L)
     , protocolParamMonetaryExpansion   = Ledger.unboundRational (pp ^. ppRhoL)
     , protocolParamTreasuryCut         = Ledger.unboundRational (pp ^. ppTauL)
-    , protocolParamUTxOCostPerWord     = Nothing -- Obsolete from Babbage onwards
     , protocolParamCostModels          = mempty  -- Only from Alonzo onwards
     , protocolParamPrices              = Nothing -- Only from Alonzo onwards
     , protocolParamMaxTxExUnits        = Nothing -- Only from Alonzo onwards
@@ -1769,10 +1687,10 @@ fromShelleyPParams pp =
     }
 
 
-fromAlonzoCommonPParams :: AlonzoEraPParams ledgerera
+fromAlonzoPParams :: AlonzoEraPParams ledgerera
                         => PParams ledgerera
                         -> ProtocolParameters
-fromAlonzoCommonPParams pp =
+fromAlonzoPParams pp =
   (fromShelleyCommonPParams pp) {
       protocolParamCostModels          = fromAlonzoCostModels $ pp ^. ppCostModelsL
     , protocolParamPrices              = Just . fromAlonzoPrices $ pp ^. ppPricesL
@@ -1783,21 +1701,11 @@ fromAlonzoCommonPParams pp =
     , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
     }
 
-
-fromAlonzoPParams :: Ledger.Crypto crypto
-                  => PParams (Ledger.AlonzoEra crypto)
-                  -> ProtocolParameters
-fromAlonzoPParams pp =
-  (fromAlonzoCommonPParams pp) {
-    protocolParamUTxOCostPerWord = Just . fromShelleyLovelace . unCoinPerWord $
-                                     pp ^. ppCoinsPerUTxOWordL
-    }
-
 fromBabbagePParams :: BabbageEraPParams ledgerera
                    => PParams ledgerera
                    -> ProtocolParameters
 fromBabbagePParams pp =
-  (fromAlonzoCommonPParams pp) {
+  (fromAlonzoPParams pp) {
     protocolParamUTxOCostPerByte = Just . fromShelleyLovelace . unCoinPerByte $
                                      pp ^. ppCoinsPerUTxOByteL
     }
@@ -1822,7 +1730,6 @@ checkProtocolParameters sbe ProtocolParameters{..} =
  where
    era = shelleyBasedToCardanoEra sbe
 
-   costPerWord = isJust protocolParamUTxOCostPerWord
    cModel = not $ Map.null protocolParamCostModels
    prices = isJust protocolParamPrices
    maxTxUnits = isJust protocolParamMaxTxExUnits
@@ -1836,8 +1743,7 @@ checkProtocolParameters sbe ProtocolParameters{..} =
 
    alonzoPParamFieldsRequirements :: [Bool]
    alonzoPParamFieldsRequirements =
-     [     costPerWord
-     ,     cModel
+     [     cModel
      ,     prices
      ,     maxTxUnits
      ,     maxBlockExUnits
@@ -1849,8 +1755,7 @@ checkProtocolParameters sbe ProtocolParameters{..} =
 
    babbagePParamFieldsRequirements :: [Bool]
    babbagePParamFieldsRequirements =
-     [ not costPerWord
-     ,     cModel
+     [     cModel
      ,     prices
      ,     maxTxUnits
      ,     maxBlockExUnits
