@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -22,8 +23,6 @@ module Cardano.Api.Modes (
     -- * The eras supported by each mode
     EraInMode(..),
     eraInModeToEra,
-    anyEraInModeToAnyEra,
-    AnyEraInMode(..),
     toEraInMode,
 
     -- * The protocols supported in each era
@@ -204,25 +203,6 @@ eraInModeToEra AlonzoEraInCardanoMode  = AlonzoEra
 eraInModeToEra BabbageEraInCardanoMode = BabbageEra
 eraInModeToEra ConwayEraInCardanoMode  = ConwayEra
 
-
-data AnyEraInMode mode where
-     AnyEraInMode :: EraInMode era mode -> AnyEraInMode mode
-
-deriving instance Show (AnyEraInMode mode)
-
-
-anyEraInModeToAnyEra :: AnyEraInMode mode -> AnyCardanoEra
-anyEraInModeToAnyEra (AnyEraInMode erainmode) =
-  case erainmode of
-    ByronEraInCardanoMode   -> AnyCardanoEra ByronEra
-    ShelleyEraInCardanoMode -> AnyCardanoEra ShelleyEra
-    AllegraEraInCardanoMode -> AnyCardanoEra AllegraEra
-    MaryEraInCardanoMode    -> AnyCardanoEra MaryEra
-    AlonzoEraInCardanoMode  -> AnyCardanoEra AlonzoEra
-    BabbageEraInCardanoMode -> AnyCardanoEra BabbageEra
-    ConwayEraInCardanoMode  -> AnyCardanoEra ConwayEra
-
-
 -- | The consensus-mode-specific parameters needed to connect to a local node
 -- that is using each consensus mode.
 --
@@ -304,44 +284,36 @@ eraIndex5 = eraIndexSucc eraIndex4
 eraIndex6 :: Consensus.EraIndex (x6 : x5 : x4 : x3 : x2 : x1 : x0 : xs)
 eraIndex6 = eraIndexSucc eraIndex5
 
-toConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
-                    => EraInMode era mode
-                    -> Consensus.EraIndex xs
-toConsensusEraIndex ByronEraInCardanoMode   = eraIndex0
-toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
-toConsensusEraIndex AllegraEraInCardanoMode = eraIndex2
-toConsensusEraIndex MaryEraInCardanoMode    = eraIndex3
-toConsensusEraIndex AlonzoEraInCardanoMode  = eraIndex4
-toConsensusEraIndex BabbageEraInCardanoMode = eraIndex5
-toConsensusEraIndex ConwayEraInCardanoMode  = eraIndex6
+toConsensusEraIndex :: ()
+  => ConsensusBlockForMode CardanoMode ~ Consensus.HardForkBlock xs
+  => CardanoEra era
+  -> Consensus.EraIndex xs
+toConsensusEraIndex = \case
+  ByronEra    -> eraIndex0
+  ShelleyEra  -> eraIndex1
+  AllegraEra  -> eraIndex2
+  MaryEra     -> eraIndex3
+  AlonzoEra   -> eraIndex4
+  BabbageEra  -> eraIndex5
+  ConwayEra   -> eraIndex6
 
 
-fromConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
-                      => ConsensusMode mode
-                      -> Consensus.EraIndex xs
-                      -> AnyEraInMode mode
-fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
-  where
-    fromShelleyEraIndex :: Consensus.EraIndex
-                             (Consensus.CardanoEras StandardCrypto)
-                        -> AnyEraInMode CardanoMode
-    fromShelleyEraIndex (Consensus.EraIndex (Z (K ()))) =
-      AnyEraInMode ByronEraInCardanoMode
-
-    fromShelleyEraIndex (Consensus.EraIndex (S (Z (K ())))) =
-      AnyEraInMode ShelleyEraInCardanoMode
-
-    fromShelleyEraIndex (Consensus.EraIndex (S (S (Z (K ()))))) =
-      AnyEraInMode AllegraEraInCardanoMode
-
-    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (Z (K ())))))) =
-      AnyEraInMode MaryEraInCardanoMode
-
-    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (Z (K ()))))))) =
-      AnyEraInMode AlonzoEraInCardanoMode
-
-    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (Z (K ())))))))) =
-      AnyEraInMode BabbageEraInCardanoMode
-
-    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (S (Z (K ()))))))))) =
-      AnyEraInMode ConwayEraInCardanoMode
+fromConsensusEraIndex :: ()
+  => ConsensusMode mode
+  -> Consensus.EraIndex (Consensus.CardanoEras StandardCrypto)
+  -> AnyCardanoEra
+fromConsensusEraIndex CardanoMode = \case
+  Consensus.EraIndex (Z (K ())) ->
+    AnyCardanoEra ByronEra
+  Consensus.EraIndex (S (Z (K ()))) ->
+    AnyCardanoEra ShelleyEra
+  Consensus.EraIndex (S (S (Z (K ())))) ->
+    AnyCardanoEra AllegraEra
+  Consensus.EraIndex (S (S (S (Z (K ()))))) ->
+    AnyCardanoEra MaryEra
+  Consensus.EraIndex (S (S (S (S (Z (K ())))))) ->
+    AnyCardanoEra AlonzoEra
+  Consensus.EraIndex (S (S (S (S (S (Z (K ()))))))) ->
+    AnyCardanoEra BabbageEra
+  Consensus.EraIndex (S (S (S (S (S (S (Z (K ())))))))) ->
+    AnyCardanoEra ConwayEra
