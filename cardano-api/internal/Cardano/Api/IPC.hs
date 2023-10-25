@@ -440,11 +440,11 @@ convLocalNodeClientProtocols
       localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$> localTxMonitoringClient
     }
 
-convLocalTxMonitoringClient
-  :: forall mode block m a. ConsensusBlockForMode mode ~ block
+convLocalTxMonitoringClient :: forall block m a. ()
+  => ConsensusBlockForMode CardanoMode ~ block
   => Functor m
-  => ConsensusMode mode
-  -> LocalTxMonitorClient (TxIdInMode mode)  (TxInMode mode) SlotNo m a
+  => ConsensusMode CardanoMode
+  -> LocalTxMonitorClient (TxIdInMode CardanoMode)  (TxInMode CardanoMode) SlotNo m a
   -> LocalTxMonitorClient (Consensus.TxId (Consensus.GenTx block)) (Consensus.GenTx block) SlotNo m a
 convLocalTxMonitoringClient mode =
   mapLocalTxMonitoringClient
@@ -621,7 +621,7 @@ submitTxToNodeLocal connctInfo tx = do
         pure (Net.Tx.SendMsgDone ())
 
 
-data LocalTxMonitoringResult mode
+data LocalTxMonitoringResult
   = LocalTxMonitoringTxExists
       TxId
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
@@ -629,13 +629,13 @@ data LocalTxMonitoringResult mode
       TxId
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
   | LocalTxMonitoringNextTx
-      (Maybe (TxInMode mode))
+      (Maybe (TxInMode CardanoMode))
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
   | LocalTxMonitoringMempoolSizeAndCapacity
       Consensus.MempoolSizeAndCapacity
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
 
-instance ToJSON (LocalTxMonitoringResult mode) where
+instance ToJSON LocalTxMonitoringResult where
   toJSON result =
     object $ case result of
       LocalTxMonitoringTxExists tx slot ->
@@ -664,11 +664,11 @@ instance ToJSON (LocalTxMonitoringResult mode) where
           , "slot" .= slot
           ]
 
-data LocalTxMonitoringQuery mode
+data LocalTxMonitoringQuery
   -- | Query if a particular tx exists in the mempool. Note that, the absence
   -- of a transaction does not imply anything about how the transaction was
   -- processed: it may have been dropped, or inserted in a block.
-  = LocalTxMonitoringQueryTx (TxIdInMode mode)
+  = LocalTxMonitoringQueryTx (TxIdInMode CardanoMode)
   -- | The mempool is modeled as an ordered list of transactions and thus, can
   -- be traversed linearly. 'LocalTxMonitoringSendNextTx' requests the next transaction from the
   -- current list. This must be a transaction that was not previously sent to
@@ -681,8 +681,8 @@ data LocalTxMonitoringQuery mode
 
 queryTxMonitoringLocal :: ()
   => LocalNodeConnectInfo
-  -> LocalTxMonitoringQuery CardanoMode
-  -> IO (LocalTxMonitoringResult CardanoMode)
+  -> LocalTxMonitoringQuery
+  -> IO LocalTxMonitoringResult
 queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
   resultVar <- newEmptyTMVarIO
 
@@ -704,10 +704,10 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
     }
   atomically (takeTMVar resultVar)
  where
-  localTxMonitorClientTxExists
-    :: TxIdInMode mode
-    -> TMVar (LocalTxMonitoringResult mode)
-    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorClientTxExists :: ()
+    => TxIdInMode CardanoMode
+    -> TMVar LocalTxMonitoringResult
+    -> LocalTxMonitorClient (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ()
   localTxMonitorClientTxExists tIdInMode@(TxIdInMode txid _) resultVar = do
     LocalTxMonitorClient $ return $
       CTxMon.SendMsgAcquire $ \slt -> do
@@ -717,9 +717,9 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
            else atomically . putTMVar resultVar $ LocalTxMonitoringTxDoesNotExist txid slt
            return $ CTxMon.SendMsgRelease $ return $ CTxMon.SendMsgDone ()
 
-  localTxMonitorNextTx
-    :: TMVar (LocalTxMonitoringResult mode)
-    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorNextTx :: ()
+    => TMVar LocalTxMonitoringResult
+    -> LocalTxMonitorClient (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ()
   localTxMonitorNextTx resultVar =
     LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do
@@ -727,9 +727,9 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
           atomically $ putTMVar resultVar $ LocalTxMonitoringNextTx mTx slt
           return $ CTxMon.SendMsgRelease $ return $ CTxMon.SendMsgDone ()
 
-  localTxMonitorMempoolInfo
-    :: TMVar (LocalTxMonitoringResult mode)
-    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorMempoolInfo :: ()
+    => TMVar LocalTxMonitoringResult
+    -> LocalTxMonitorClient (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ()
   localTxMonitorMempoolInfo resultVar =
      LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do

@@ -159,9 +159,9 @@ toConsensusGenTx (TxInMode (ShelleyTx _ _) ByronEraInCardanoMode) =
 data TxIdInMode mode where
   TxIdInMode :: TxId -> EraInMode era mode -> TxIdInMode mode
 
-toConsensusTxId
-  :: ConsensusBlockForMode mode ~ block
-  => TxIdInMode mode -> Consensus.TxId  (Consensus.GenTx block)
+toConsensusTxId :: ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => TxIdInMode CardanoMode -> Consensus.TxId  (Consensus.GenTx block)
 toConsensusTxId (TxIdInMode txid ByronEraInCardanoMode) =
   Consensus.HardForkGenTxId . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
  where
