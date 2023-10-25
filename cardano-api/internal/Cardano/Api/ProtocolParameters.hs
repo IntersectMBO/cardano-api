@@ -92,7 +92,6 @@ module Cardano.Api.ProtocolParameters (
     AsType(..),
 
     -- ** Era-dependent protocol features
-    ProtocolUTxOCostPerByteFeature(..),
     ProtocolUTxOCostPerWordFeature(..),
   ) where
 
@@ -982,37 +981,6 @@ instance FromCBOR ProtocolParametersUpdate where
         <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
-
--- ----------------------------------------------------------------------------
--- Features
---
-
--- | A representation of whether the era supports the 'UTxO Cost Per Byte'
--- protocol parameter.
---
--- The Babbage and subsequent eras support such a protocol parameter.
---
-data ProtocolUTxOCostPerByteFeature era where
-  ProtocolUTxOCostPerByteInBabbageEra :: ProtocolUTxOCostPerByteFeature BabbageEra
-  ProtocolUTxOCostPerByteInConwayEra  :: ProtocolUTxOCostPerByteFeature ConwayEra
-
-deriving instance Eq   (ProtocolUTxOCostPerByteFeature era)
-deriving instance Show (ProtocolUTxOCostPerByteFeature era)
-
-instance Eon ProtocolUTxOCostPerByteFeature where
-  inEonForEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> no
-    AllegraEra  -> no
-    MaryEra     -> no
-    AlonzoEra   -> no
-    BabbageEra  -> yes ProtocolUTxOCostPerByteInBabbageEra
-    ConwayEra   -> yes ProtocolUTxOCostPerByteInConwayEra
-
-instance ToCardanoEra ProtocolUTxOCostPerByteFeature where
-  toCardanoEra = \case
-    ProtocolUTxOCostPerByteInBabbageEra -> BabbageEra
-    ProtocolUTxOCostPerByteInConwayEra  -> ConwayEra
 
 -- | A representation of whether the era supports the 'UTxO Cost Per Word'
 -- protocol parameter.
