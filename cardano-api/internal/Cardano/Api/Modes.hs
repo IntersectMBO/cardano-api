@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,7 +14,6 @@ module Cardano.Api.Modes (
 
     -- * Consensus modes
     ByronMode,
-    ShelleyMode,
     CardanoMode,
     ConsensusMode(..),
     AnyConsensusMode(..),
@@ -79,16 +77,6 @@ import           Data.Text (Text)
 --
 data ByronMode
 
--- | The Shelley-only consensus mode consists of only the Shelley era.
---
--- This was used for the early Shelley testnets prior to the use of the
--- multi-era 'CardanoMode'. It is useful for setting up Shelley test networks
--- (e.g. for benchmarking) without having to go through the complication of the
--- hard fork from Byron to Shelley eras. It also shows how a single-era
--- consensus mode works. It may be replaced by other single-era modes in future.
---
-data ShelleyMode
-
 -- | The Cardano consensus mode consists of all the eras currently in use on
 -- the Cardano mainnet. This is currently: the 'ByronEra'; 'ShelleyEra',
 -- 'AllegraEra' and 'MaryEra', in that order.
@@ -108,7 +96,6 @@ deriving instance Show AnyConsensusModeParams
 --
 data ConsensusMode mode where
      ByronMode   :: ConsensusMode ByronMode
-     ShelleyMode :: ConsensusMode ShelleyMode
      CardanoMode :: ConsensusMode CardanoMode
 
 
@@ -121,7 +108,6 @@ deriving instance Show AnyConsensusMode
 
 renderMode :: AnyConsensusMode -> Text
 renderMode (AnyConsensusMode ByronMode) = "ByronMode"
-renderMode (AnyConsensusMode ShelleyMode) = "ShelleyMode"
 renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 
 -- | The subset of consensus modes that consist of multiple eras. Some features
@@ -136,8 +122,6 @@ deriving instance Show (ConsensusModeIsMultiEra mode)
 toEraInMode :: CardanoEra era -> ConsensusMode mode -> Maybe (EraInMode era mode)
 toEraInMode ByronEra   ByronMode   = Just ByronEraInByronMode
 toEraInMode _          ByronMode   = Nothing
-toEraInMode ShelleyEra ShelleyMode = Just ShelleyEraInShelleyMode
-toEraInMode _          ShelleyMode = Nothing
 toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
 toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
@@ -151,8 +135,6 @@ toEraInMode ConwayEra  CardanoMode = Just ConwayEraInCardanoMode
 --
 data EraInMode era mode where
      ByronEraInByronMode     :: EraInMode ByronEra   ByronMode
-
-     ShelleyEraInShelleyMode :: EraInMode ShelleyEra ShelleyMode
 
      ByronEraInCardanoMode   :: EraInMode ByronEra   CardanoMode
      ShelleyEraInCardanoMode :: EraInMode ShelleyEra CardanoMode
@@ -171,13 +153,6 @@ instance FromJSON (EraInMode ByronEra ByronMode) where
   parseJSON invalid =
       invalidJSONFailure "ByronEraInByronMode"
                          "parsing 'EraInMode ByronEra ByronMode' failed, "
-                         invalid
-
-instance FromJSON (EraInMode ShelleyEra ShelleyMode) where
-  parseJSON "ShelleyEraInShelleyMode" = pure ShelleyEraInShelleyMode
-  parseJSON invalid =
-      invalidJSONFailure "ShelleyEraInShelleyMode"
-                         "parsing 'EraInMode ShelleyEra ShelleyMode' failed, "
                          invalid
 
 instance FromJSON (EraInMode ByronEra CardanoMode) where
@@ -236,7 +211,6 @@ invalidJSONFailure expectedType errorMsg invalidValue =
 
 instance ToJSON (EraInMode era mode) where
   toJSON ByronEraInByronMode = "ByronEraInByronMode"
-  toJSON ShelleyEraInShelleyMode  = "ShelleyEraInShelleyMode"
   toJSON ByronEraInCardanoMode  = "ByronEraInCardanoMode"
   toJSON ShelleyEraInCardanoMode = "ShelleyEraInCardanoMode"
   toJSON AllegraEraInCardanoMode = "AllegraEraInCardanoMode"
@@ -247,7 +221,6 @@ instance ToJSON (EraInMode era mode) where
 
 eraInModeToEra :: EraInMode era mode -> CardanoEra era
 eraInModeToEra ByronEraInByronMode     = ByronEra
-eraInModeToEra ShelleyEraInShelleyMode = ShelleyEra
 eraInModeToEra ByronEraInCardanoMode   = ByronEra
 eraInModeToEra ShelleyEraInCardanoMode = ShelleyEra
 eraInModeToEra AllegraEraInCardanoMode = AllegraEra
@@ -267,7 +240,6 @@ anyEraInModeToAnyEra :: AnyEraInMode mode -> AnyCardanoEra
 anyEraInModeToAnyEra (AnyEraInMode erainmode) =
   case erainmode of
     ByronEraInByronMode     -> AnyCardanoEra ByronEra
-    ShelleyEraInShelleyMode -> AnyCardanoEra ShelleyEra
     ByronEraInCardanoMode   -> AnyCardanoEra ByronEra
     ShelleyEraInCardanoMode -> AnyCardanoEra ShelleyEra
     AllegraEraInCardanoMode -> AnyCardanoEra AllegraEra
@@ -295,9 +267,6 @@ data ConsensusModeParams mode where
        :: Byron.EpochSlots
        -> ConsensusModeParams ByronMode
 
-     ShelleyModeParams
-       :: ConsensusModeParams ShelleyMode
-
      CardanoModeParams
        :: Byron.EpochSlots
        -> ConsensusModeParams CardanoMode
@@ -313,7 +282,6 @@ deriving instance Show (ConsensusModeParams mode)
 --
 type family ConsensusBlockForMode mode where
   ConsensusBlockForMode ByronMode   = Consensus.ByronBlockHFC
-  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC (Consensus.TPraos StandardCrypto) Consensus.StandardShelley
   ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
 
 type family ConsensusBlockForEra era where
@@ -371,7 +339,6 @@ toConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
                     => EraInMode era mode
                     -> Consensus.EraIndex xs
 toConsensusEraIndex ByronEraInByronMode     = eraIndex0
-toConsensusEraIndex ShelleyEraInShelleyMode = eraIndex0
 
 toConsensusEraIndex ByronEraInCardanoMode   = eraIndex0
 toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
@@ -393,13 +360,6 @@ fromConsensusEraIndex ByronMode = fromByronEraIndex
                       -> AnyEraInMode ByronMode
     fromByronEraIndex (Consensus.EraIndex (Z (K ()))) =
       AnyEraInMode ByronEraInByronMode
-fromConsensusEraIndex ShelleyMode = fromShelleyEraIndex
-  where
-    fromShelleyEraIndex :: Consensus.EraIndex
-                             '[Consensus.StandardShelleyBlock]
-                        -> AnyEraInMode ShelleyMode
-    fromShelleyEraIndex (Consensus.EraIndex (Z (K ()))) =
-      AnyEraInMode ShelleyEraInShelleyMode
 
 
 fromConsensusEraIndex CardanoMode = fromShelleyEraIndex

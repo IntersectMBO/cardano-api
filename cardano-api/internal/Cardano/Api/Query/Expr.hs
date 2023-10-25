@@ -227,7 +227,6 @@ determineEraExpr :: ()
 determineEraExpr cModeParams = runExceptT $
   case consensusModeOnly cModeParams of
     ByronMode -> pure $ AnyCardanoEra ByronEra
-    ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
     CardanoMode -> ExceptT queryCurrentEra
 
 queryConstitution :: ()

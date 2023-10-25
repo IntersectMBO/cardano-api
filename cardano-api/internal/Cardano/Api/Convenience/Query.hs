@@ -142,7 +142,6 @@ determineEra
 determineEra cModeParams localNodeConnInfo =
   case consensusModeOnly cModeParams of
     ByronMode -> return . Right $ AnyCardanoEra ByronEra
-    ShelleyMode -> return . Right $ AnyCardanoEra ShelleyEra
     CardanoMode ->
       queryNodeLocalState localNodeConnInfo Nothing
         $ QueryCurrentEra CardanoModeIsMultiEra

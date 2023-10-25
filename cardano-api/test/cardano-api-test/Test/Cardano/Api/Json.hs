@@ -55,7 +55,6 @@ prop_json_roundtrip_txout_utxo_context = H.property $ do
 prop_json_roundtrip_eraInMode :: Property
 prop_json_roundtrip_eraInMode = H.property $ do
   H.assert $ parseEither rountripEraInModeParser ByronEraInByronMode == Right ByronEraInByronMode
-  H.assert $ parseEither rountripEraInModeParser ShelleyEraInShelleyMode == Right ShelleyEraInShelleyMode
   H.assert $ parseEither rountripEraInModeParser ByronEraInCardanoMode == Right ByronEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser ShelleyEraInCardanoMode == Right ShelleyEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser AllegraEraInCardanoMode == Right AllegraEraInCardanoMode
@@ -71,7 +70,6 @@ prop_json_roundtrip_eraInMode = H.property $ do
     rountripEraInModeParser :: EraInMode era mode -> Parser (EraInMode era mode)
     rountripEraInModeParser = \case
       ByronEraInByronMode -> parseJSON $ toJSON ByronEraInByronMode
-      ShelleyEraInShelleyMode -> parseJSON $ toJSON ShelleyEraInShelleyMode
       ByronEraInCardanoMode -> parseJSON $ toJSON ByronEraInCardanoMode
       ShelleyEraInCardanoMode -> parseJSON $ toJSON ShelleyEraInCardanoMode
       AllegraEraInCardanoMode -> parseJSON $ toJSON AllegraEraInCardanoMode

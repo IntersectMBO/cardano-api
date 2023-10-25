@@ -580,7 +580,6 @@ toConsensusQuery (QueryInEra ByronEraInCardanoMode QueryByronUpdateState) =
 toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra sbe q)) =
     case erainmode of
       ByronEraInByronMode     -> case sbe of {}
-      ShelleyEraInShelleyMode -> toConsensusQueryShelleyBased erainmode q
       ByronEraInCardanoMode   -> case sbe of {}
       ShelleyEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
@@ -700,7 +699,6 @@ consensusQueryInEraInMode erainmode =
     Consensus.BlockQuery
   . case erainmode of
       ByronEraInByronMode     -> Consensus.DegenQuery
-      ShelleyEraInShelleyMode -> Consensus.DegenQuery
       ByronEraInCardanoMode   -> Consensus.QueryIfCurrentByron
       ShelleyEraInCardanoMode -> Consensus.QueryIfCurrentShelley
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
@@ -769,15 +767,6 @@ fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
 fromConsensusQueryResult (QueryInEra ByronEraInByronMode
                                      (QueryInShelleyBasedEra sbe _)) _ _ =
     case sbe of {}
-
-fromConsensusQueryResult (QueryInEra ShelleyEraInShelleyMode
-                                     (QueryInShelleyBasedEra _sbe q)) q' r' =
-    case (q', r') of
-      (Consensus.BlockQuery (Consensus.DegenQuery q''),
-       Consensus.DegenQueryResult r'')
-        -> Right (fromConsensusQueryResultShelleyBased
-                    ShelleyBasedEraShelley q q'' r'')
-      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra sbe _)) _ _ =
