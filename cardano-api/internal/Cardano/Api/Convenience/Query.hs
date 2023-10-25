@@ -135,26 +135,24 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   pure (utxo, LedgerProtocolParameters pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits, drepDelegDeposits)
 
 -- | Query the node to determine which era it is in.
-determineEra
-  :: ConsensusModeParams mode
+determineEra :: ()
+  => ConsensusModeParams mode
   -> LocalNodeConnectInfo mode
   -> IO (Either AcquiringFailure AnyCardanoEra)
 determineEra cModeParams localNodeConnInfo =
   case consensusModeOnly cModeParams of
-    ByronMode -> return . Right $ AnyCardanoEra ByronEra
     CardanoMode ->
       queryNodeLocalState localNodeConnInfo Nothing
         $ QueryCurrentEra CardanoModeIsMultiEra
 
 -- | Execute a query against the local node. The local
 -- node must be in CardanoMode.
-executeQueryCardanoMode
-  :: SocketPath
-  -> CardanoEra era
+executeQueryCardanoMode :: ()
+  => SocketPath
   -> NetworkId
   -> QueryInMode CardanoMode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
-executeQueryCardanoMode socketPath era nid q = runExceptT $ do
+executeQueryCardanoMode socketPath nid q = runExceptT $ do
   let localNodeConnInfo =
         LocalNodeConnectInfo
           { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
@@ -162,23 +160,14 @@ executeQueryCardanoMode socketPath era nid q = runExceptT $ do
           , localNodeSocketPath = socketPath
           }
 
-  ExceptT $ executeQueryAnyMode era localNodeConnInfo q
+  ExceptT $ executeQueryAnyMode localNodeConnInfo q
 
 -- | Execute a query against the local node in any mode.
-executeQueryAnyMode
-  :: forall result era mode. CardanoEra era
-  -> LocalNodeConnectInfo mode
+executeQueryAnyMode :: forall result mode. ()
+  => LocalNodeConnectInfo mode
   -> QueryInMode mode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
-executeQueryAnyMode era localNodeConnInfo q = runExceptT $ do
-  let cMode = consensusModeOnly $ localConsensusModeParams localNodeConnInfo
-
-  eraInMode <- pure (toEraInMode era cMode)
-    & onNothing (left $ EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (anyCardanoEra era))
-
-  case eraInMode of
-    ByronEraInByronMode -> left ByronEraNotSupported
-    _ ->
-      lift (queryNodeLocalState localNodeConnInfo Nothing q)
-        & onLeft (left . AcqFailure)
-        & onLeft (left . QueryEraMismatch)
+executeQueryAnyMode localNodeConnInfo q = runExceptT $ do
+  lift (queryNodeLocalState localNodeConnInfo Nothing q)
+    & onLeft (left . AcqFailure)
+    & onLeft (left . QueryEraMismatch)

@@ -214,9 +214,6 @@ module Cardano.Api.Shelley
 
     -- ** Low level protocol interaction with a Cardano node
     LocalNodeConnectInfo(LocalNodeConnectInfo),
-    ConsensusMode
-      ( ByronMode
-      ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
 
     -- ** Shelley based eras

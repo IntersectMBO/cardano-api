@@ -36,7 +36,6 @@ import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
-import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
@@ -73,9 +72,6 @@ deriving instance Show (TxInMode mode)
 fromConsensusGenTx
   :: ConsensusBlockForMode mode ~ block
   => ConsensusMode mode -> Consensus.GenTx block -> TxInMode mode
-fromConsensusGenTx ByronMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))) =
-  TxInByronSpecial tx' ByronEraInByronMode
-
 fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))) =
   TxInByronSpecial tx' ByronEraInCardanoMode
 
@@ -106,20 +102,12 @@ fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (
 toConsensusGenTx :: ConsensusBlockForMode mode ~ block
                  => TxInMode mode
                  -> Consensus.GenTx block
-toConsensusGenTx (TxInMode (ByronTx ByronEraOnlyByron tx) ByronEraInByronMode) =
-    Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))
-  where
-    tx' = Consensus.ByronTx (Consensus.byronIdTx tx) tx
-
 toConsensusGenTx (TxInMode (ByronTx ByronEraOnlyByron tx) ByronEraInCardanoMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))
   where
     tx' = Consensus.ByronTx (Consensus.byronIdTx tx) tx
     --TODO: add the above as mkByronTx to the consensus code,
     -- matching mkShelleyTx below
-
-toConsensusGenTx (TxInByronSpecial gtx ByronEraInByronMode) =
-    Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z gtx))
 
 toConsensusGenTx (TxInByronSpecial gtx ByronEraInCardanoMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z gtx))
@@ -154,8 +142,6 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) ConwayEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
-toConsensusGenTx (TxInMode (ShelleyTx _ _) ByronEraInByronMode) =
-  error "Cardano.Api.InMode.toConsensusGenTx: ShelleyTx In Byron era"
 toConsensusGenTx (TxInMode (ShelleyTx _ _) ByronEraInCardanoMode) =
   error "Cardano.Api.InMode.toConsensusGenTx: ShelleyTx In Byron era"
 
@@ -176,12 +162,6 @@ data TxIdInMode mode where
 toConsensusTxId
   :: ConsensusBlockForMode mode ~ block
   => TxIdInMode mode -> Consensus.TxId  (Consensus.GenTx block)
-toConsensusTxId (TxIdInMode txid ByronEraInByronMode) =
-  Consensus.HardForkGenTxId . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
- where
-  txid' :: Consensus.TxId (Consensus.GenTx Consensus.ByronBlock)
-  txid' = Consensus.ByronTxId $ toByronTxId txid
-
 toConsensusTxId (TxIdInMode txid ByronEraInCardanoMode) =
   Consensus.HardForkGenTxId . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
  where
@@ -306,11 +286,6 @@ fromConsensusApplyTxErr :: ConsensusBlockForMode mode ~ block
                         => ConsensusMode mode
                         -> Consensus.ApplyTxErr block
                         -> TxValidationErrorInMode mode
-fromConsensusApplyTxErr ByronMode (Consensus.DegenApplyTxErr err) =
-    TxValidationErrorInMode
-      (ByronTxValidationError err)
-      ByronEraInByronMode
-
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrByron err) =
     TxValidationErrorInMode
       (ByronTxValidationError err)

@@ -226,7 +226,6 @@ determineEraExpr :: ()
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
 determineEraExpr cModeParams = runExceptT $
   case consensusModeOnly cModeParams of
-    ByronMode -> pure $ AnyCardanoEra ByronEra
     CardanoMode -> ExceptT queryCurrentEra
 
 queryConstitution :: ()

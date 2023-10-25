@@ -115,7 +115,6 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.HardFork.History as History
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
@@ -556,11 +555,6 @@ toConsensusQuery (QueryCurrentEra CardanoModeIsMultiEra) =
       Consensus.QueryHardFork
         Consensus.GetCurrentEra
 
-toConsensusQuery (QueryInEra ByronEraInByronMode QueryByronUpdateState) =
-    Some $ Consensus.BlockQuery $
-      Consensus.DegenQuery
-        Consensus.GetUpdateInterfaceState
-
 toConsensusQuery (QueryEraHistory CardanoModeIsMultiEra) =
     Some $ Consensus.BlockQuery $
       Consensus.QueryHardFork
@@ -579,7 +573,6 @@ toConsensusQuery (QueryInEra ByronEraInCardanoMode QueryByronUpdateState) =
 
 toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra sbe q)) =
     case erainmode of
-      ByronEraInByronMode     -> case sbe of {}
       ByronEraInCardanoMode   -> case sbe of {}
       ShelleyEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
@@ -698,7 +691,6 @@ consensusQueryInEraInMode
 consensusQueryInEraInMode erainmode =
     Consensus.BlockQuery
   . case erainmode of
-      ByronEraInByronMode     -> Consensus.DegenQuery
       ByronEraInCardanoMode   -> Consensus.QueryIfCurrentByron
       ShelleyEraInCardanoMode -> Consensus.QueryIfCurrentShelley
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
@@ -748,14 +740,6 @@ fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
         -> anyEraInModeToAnyEra (fromConsensusEraIndex CardanoMode r')
       _ -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResult (QueryInEra ByronEraInByronMode
-                                     QueryByronUpdateState) q' r' =
-    case (q', r') of
-      (Consensus.BlockQuery (Consensus.DegenQuery Consensus.GetUpdateInterfaceState),
-       Consensus.DegenQueryResult r'')
-        -> Right (ByronUpdateState r'')
-      _ -> fromConsensusQueryResultMismatch
-
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      QueryByronUpdateState) q' r' =
     case q' of
@@ -763,10 +747,6 @@ fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
         (Consensus.QueryIfCurrentByron Consensus.GetUpdateInterfaceState)
         -> bimap fromConsensusEraMismatch ByronUpdateState r'
       _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResult (QueryInEra ByronEraInByronMode
-                                     (QueryInShelleyBasedEra sbe _)) _ _ =
-    case sbe of {}
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra sbe _)) _ _ =

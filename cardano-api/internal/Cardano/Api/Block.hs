@@ -73,9 +73,7 @@ import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
 import qualified Ouroboros.Consensus.Block as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.Protocol.Abstract as Consensus
 import qualified Ouroboros.Network.Block as Consensus
@@ -210,10 +208,6 @@ fromConsensusBlock :: ()
   => ConsensusMode mode
   -> block
   -> BlockInMode mode
-fromConsensusBlock ByronMode = \case
-      Consensus.DegenBlock b' ->
-        BlockInMode cardanoEra (ByronBlock b') ByronEraInByronMode
-
 fromConsensusBlock CardanoMode = \case
       Consensus.BlockByron b' ->
         BlockInMode cardanoEra (ByronBlock b') ByronEraInCardanoMode
@@ -247,7 +241,6 @@ toConsensusBlock :: ()
   => BlockInMode mode -> block
 toConsensusBlock = \case
     -- Byron mode
-    BlockInMode _ (ByronBlock b') ByronEraInByronMode -> Consensus.DegenBlock b'
 
     -- Cardano mode
     BlockInMode _ (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
@@ -351,13 +344,11 @@ toConsensusPointInMode :: ConsensusMode mode
 -- It's the same concrete impl in all cases, but we have to show
 -- individually for each case that we satisfy the type equality constraint
 -- HeaderHash block ~ OneEraHash xs
-toConsensusPointInMode ByronMode   = toConsensusPointHF
 toConsensusPointInMode CardanoMode = toConsensusPointHF
 
 fromConsensusPointInMode :: ConsensusMode mode
                          -> Consensus.Point (ConsensusBlockForMode mode)
                          -> ChainPoint
-fromConsensusPointInMode ByronMode   = fromConsensusPointHF
 fromConsensusPointInMode CardanoMode = fromConsensusPointHF
 
 
@@ -448,13 +439,6 @@ fromConsensusTip  :: ConsensusBlockForMode mode ~ block
                   => ConsensusMode mode
                   -> Consensus.Tip block
                   -> ChainTip
-fromConsensusTip ByronMode = conv
-  where
-    conv :: Consensus.Tip Consensus.ByronBlockHFC -> ChainTip
-    conv Consensus.TipGenesis = ChainTipAtGenesis
-    conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =
-      ChainTip slot (HeaderHash h) block
-
 fromConsensusTip CardanoMode = conv
   where
     conv :: Consensus.Tip (Consensus.CardanoBlock Consensus.StandardCrypto)
@@ -473,7 +457,6 @@ TODO: In principle we should be able to use this common implementation rather
       some reason not able to use it to see that it is indeed the only pattern.
 fromConsensusTip =
     \mode -> case mode of
-      ByronMode   -> conv
       CardanoMode -> conv
   where
     conv :: HeaderHash block ~ OneEraHash xs
