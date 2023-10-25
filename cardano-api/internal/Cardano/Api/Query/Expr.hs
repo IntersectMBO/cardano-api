@@ -268,6 +268,6 @@ queryCommitteeMembersState :: ()
   -> Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
   -> Set (L.Credential L.HotCommitteeRole L.StandardCrypto)
   -> Set L.MemberStatus
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.CommitteeMembersState L.StandardCrypto)))
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.CommitteeMembersState L.StandardCrypto))))
 queryCommitteeMembersState eraInMode sbe coldCreds hotCreds statuses =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)
