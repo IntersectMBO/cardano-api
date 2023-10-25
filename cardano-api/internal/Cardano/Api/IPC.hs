@@ -164,7 +164,7 @@ type LocalNodeClientProtocolsInMode =
     ChainPoint
     ChainTip
     SlotNo
-    (TxInMode CardanoMode)
+    TxInMode
     (TxIdInMode CardanoMode)
     TxValidationErrorInCardanoMode
     (QueryInMode CardanoMode)
@@ -444,7 +444,7 @@ convLocalTxMonitoringClient :: forall block m a. ()
   => ConsensusBlockForMode CardanoMode ~ block
   => Functor m
   => ConsensusMode CardanoMode
-  -> LocalTxMonitorClient (TxIdInMode CardanoMode)  (TxInMode CardanoMode) SlotNo m a
+  -> LocalTxMonitorClient (TxIdInMode CardanoMode)  TxInMode SlotNo m a
   -> LocalTxMonitorClient (Consensus.TxId (Consensus.GenTx block)) (Consensus.GenTx block) SlotNo m a
 convLocalTxMonitoringClient mode =
   mapLocalTxMonitoringClient
@@ -481,7 +481,7 @@ convLocalTxSubmissionClient :: forall block m a. ()
   => ConsensusBlockForMode CardanoMode ~ block
   => Functor m
   => ConsensusMode CardanoMode
-  -> LocalTxSubmissionClient (TxInMode CardanoMode) TxValidationErrorInCardanoMode m a
+  -> LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode m a
   -> LocalTxSubmissionClient (Consensus.GenTx block) (Consensus.ApplyTxErr block) m a
 convLocalTxSubmissionClient mode =
     Net.Tx.mapLocalTxSubmissionClient
@@ -597,7 +597,7 @@ queryNodeLocalState connctInfo mpoint query = do
 
 submitTxToNodeLocal :: ()
   => LocalNodeConnectInfo
-  -> TxInMode CardanoMode
+  -> TxInMode
   -> IO (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
 submitTxToNodeLocal connctInfo tx = do
     resultVar <- newEmptyTMVarIO
@@ -613,7 +613,7 @@ submitTxToNodeLocal connctInfo tx = do
   where
     localTxSubmissionClientSingle :: ()
       => TMVar (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
-      -> Net.Tx.LocalTxSubmissionClient (TxInMode CardanoMode) TxValidationErrorInCardanoMode IO ()
+      -> Net.Tx.LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode IO ()
     localTxSubmissionClientSingle resultVar =
       LocalTxSubmissionClient $
         pure $ Net.Tx.SendMsgSubmitTx tx $ \result -> do
@@ -629,7 +629,7 @@ data LocalTxMonitoringResult
       TxId
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
   | LocalTxMonitoringNextTx
-      (Maybe (TxInMode CardanoMode))
+      (Maybe TxInMode)
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
   | LocalTxMonitoringMempoolSizeAndCapacity
       Consensus.MempoolSizeAndCapacity
@@ -707,7 +707,7 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
   localTxMonitorClientTxExists :: ()
     => TxIdInMode CardanoMode
     -> TMVar LocalTxMonitoringResult
-    -> LocalTxMonitorClient (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ()
+    -> LocalTxMonitorClient (TxIdInMode CardanoMode) TxInMode SlotNo IO ()
   localTxMonitorClientTxExists tIdInMode@(TxIdInMode txid _) resultVar = do
     LocalTxMonitorClient $ return $
       CTxMon.SendMsgAcquire $ \slt -> do
@@ -719,7 +719,7 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
 
   localTxMonitorNextTx :: ()
     => TMVar LocalTxMonitoringResult
-    -> LocalTxMonitorClient (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ()
+    -> LocalTxMonitorClient (TxIdInMode CardanoMode) TxInMode SlotNo IO ()
   localTxMonitorNextTx resultVar =
     LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do
@@ -729,7 +729,7 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
 
   localTxMonitorMempoolInfo :: ()
     => TMVar LocalTxMonitoringResult
-    -> LocalTxMonitorClient (TxIdInMode CardanoMode) (TxInMode CardanoMode) SlotNo IO ()
+    -> LocalTxMonitorClient (TxIdInMode CardanoMode) TxInMode SlotNo IO ()
   localTxMonitorMempoolInfo resultVar =
      LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do

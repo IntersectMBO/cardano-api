@@ -54,24 +54,30 @@ import           Data.SOP.Strict (NS (S, Z))
 -- different transaction types for all the eras. It is used in the
 -- LocalTxSubmission protocol.
 --
-data TxInMode mode where
+data TxInMode where
+  -- | Everything we consider a normal transaction.
+  --
+  TxInMode
+    :: Tx era
+    -> EraInMode era CardanoMode
+    -> TxInMode
 
-     -- | Everything we consider a normal transaction.
-     --
-     TxInMode :: Tx era -> EraInMode era mode -> TxInMode mode
+  -- | Byron has various things we can post to the chain which are not
+  -- actually transactions. This covers: update proposals, votes and
+  -- delegation certs.
+  --
+  TxInByronSpecial
+    :: Consensus.GenTx Consensus.ByronBlock
+    -> EraInMode ByronEra CardanoMode
+    -> TxInMode
 
-     -- | Byron has various things we can post to the chain which are not
-     -- actually transactions. This covers: update proposals, votes and
-     -- delegation certs.
-     --
-     TxInByronSpecial :: Consensus.GenTx Consensus.ByronBlock
-                      -> EraInMode ByronEra mode -> TxInMode mode
+deriving instance Show TxInMode
 
-deriving instance Show (TxInMode mode)
-
-fromConsensusGenTx
-  :: ConsensusBlockForMode mode ~ block
-  => ConsensusMode mode -> Consensus.GenTx block -> TxInMode mode
+fromConsensusGenTx :: ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => ConsensusMode CardanoMode
+  -> Consensus.GenTx block
+  -> TxInMode
 fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))) =
   TxInByronSpecial tx' ByronEraInCardanoMode
 
@@ -99,9 +105,10 @@ fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (
   let Consensus.ShelleyTx _txid shelleyEraTx = tx'
   in TxInMode (ShelleyTx ShelleyBasedEraConway shelleyEraTx) ConwayEraInCardanoMode
 
-toConsensusGenTx :: ConsensusBlockForMode mode ~ block
-                 => TxInMode mode
-                 -> Consensus.GenTx block
+toConsensusGenTx :: ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => TxInMode
+  -> Consensus.GenTx block
 toConsensusGenTx (TxInMode (ByronTx ByronEraOnlyByron tx) ByronEraInCardanoMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))
   where
