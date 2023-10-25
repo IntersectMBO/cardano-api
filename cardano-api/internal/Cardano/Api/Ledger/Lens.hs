@@ -4,8 +4,8 @@
 
 module Cardano.Api.Ledger.Lens
   ( strictMaybeL
-  , invalidBeforeL
-  , invalidHereAfterL
+  , L.invalidBeforeL
+  , L.invalidHereAfterL
   , invalidBeforeStrictL
   , invalidHereAfterStrictL
   , invalidBeforeTxBodyL
@@ -35,7 +35,7 @@ strictMaybeL = lens g s
     s _ = maybe SNothing SJust
 
 invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (L.TxBody (ShelleyLedgerEra era)) (Maybe SlotNo)
-invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ L.vldtTxBodyL . invalidBeforeL
+invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ L.vldtTxBodyL . L.invalidBeforeL
 
 -- | Compatibility lens that provides a consistent interface over 'ttlTxBodyL' and
 -- 'vldtTxBodyL . invalidHereAfterStrictL' across all shelley based eras.
@@ -56,7 +56,7 @@ invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (L.TxBody (ShelleyLedger
 invalidHereAfterTxBodyL =
   caseShelleyEraOnlyOrAllegraEraOnwards
     ttlAsInvalidHereAfterTxBodyL
-    (const $ L.vldtTxBodyL . invalidHereAfterL)
+    (const $ L.vldtTxBodyL . L.invalidHereAfterL)
 
 -- | Compatibility lens over 'ttlTxBodyL' which represents 'maxBound' as Nothing and all other values as 'Just'.
 ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (L.TxBody (ShelleyLedgerEra era)) (Maybe SlotNo)
@@ -73,12 +73,6 @@ ttlAsInvalidHereAfterTxBodyL w = lens (g w) (s w)
         case mSlotNo of
           Nothing -> txBody & L.ttlTxBodyL .~ maxBound
           Just ttl -> txBody & L.ttlTxBodyL .~ ttl
-
-invalidBeforeL :: Lens' L.ValidityInterval (Maybe SlotNo)
-invalidBeforeL = invalidBeforeStrictL . strictMaybeL
-
-invalidHereAfterL :: Lens' L.ValidityInterval (Maybe SlotNo)
-invalidHereAfterL = invalidHereAfterStrictL . strictMaybeL
 
 -- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
 invalidBeforeStrictL :: Lens' L.ValidityInterval (StrictMaybe SlotNo)
