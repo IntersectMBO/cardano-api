@@ -316,7 +316,7 @@ data QueryInShelleyBasedEra era result where
     :: Set (Shelley.Credential Shelley.ColdCommitteeRole StandardCrypto)
     -> Set (Shelley.Credential Shelley.HotCommitteeRole StandardCrypto)
     -> Set L.MemberStatus
-    -> QueryInShelleyBasedEra era (L.CommitteeMembersState StandardCrypto)
+    -> QueryInShelleyBasedEra era (Maybe (L.CommitteeMembersState StandardCrypto))
 
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
