@@ -43,7 +43,7 @@ module Cardano.Api.IPC (
     -- *** Local tx submission
     LocalTxSubmissionClient(..),
     TxInMode(..),
-    TxValidationErrorInMode(..),
+    TxValidationErrorInCardanoMode,
     TxValidationError,
     submitTxToNodeLocal,
     SubmitResult(..),
@@ -166,7 +166,7 @@ type LocalNodeClientProtocolsInMode =
     SlotNo
     (TxInMode CardanoMode)
     (TxIdInMode CardanoMode)
-    (TxValidationErrorInMode CardanoMode)
+    TxValidationErrorInCardanoMode
     (QueryInMode CardanoMode)
     IO
 
@@ -475,13 +475,12 @@ convLocalChainSyncClientPipelined mode =
     (fromConsensusBlock mode)
     (fromConsensusTip mode)
 
-convLocalTxSubmissionClient
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> LocalTxSubmissionClient (TxInMode mode) (TxValidationErrorInMode mode) m a
-  -> LocalTxSubmissionClient (Consensus.GenTx block)
-                             (Consensus.ApplyTxErr block) m a
+convLocalTxSubmissionClient :: forall block m a. ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => Functor m
+  => ConsensusMode CardanoMode
+  -> LocalTxSubmissionClient (TxInMode CardanoMode) TxValidationErrorInCardanoMode m a
+  -> LocalTxSubmissionClient (Consensus.GenTx block) (Consensus.ApplyTxErr block) m a
 convLocalTxSubmissionClient mode =
     Net.Tx.mapLocalTxSubmissionClient
       toConsensusGenTx
@@ -597,7 +596,7 @@ queryNodeLocalState connctInfo mpoint query = do
 submitTxToNodeLocal :: ()
   => LocalNodeConnectInfo CardanoMode
   -> TxInMode CardanoMode
-  -> IO (Net.Tx.SubmitResult (TxValidationErrorInMode CardanoMode))
+  -> IO (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
 submitTxToNodeLocal connctInfo tx = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -611,8 +610,8 @@ submitTxToNodeLocal connctInfo tx = do
     atomically (takeTMVar resultVar)
   where
     localTxSubmissionClientSingle :: ()
-      => TMVar (Net.Tx.SubmitResult (TxValidationErrorInMode CardanoMode))
-      -> Net.Tx.LocalTxSubmissionClient (TxInMode CardanoMode) (TxValidationErrorInMode CardanoMode) IO ()
+      => TMVar (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
+      -> Net.Tx.LocalTxSubmissionClient (TxInMode CardanoMode) TxValidationErrorInCardanoMode IO ()
     localTxSubmissionClientSingle resultVar =
       LocalTxSubmissionClient $
         pure $ Net.Tx.SendMsgSubmitTx tx $ \result -> do

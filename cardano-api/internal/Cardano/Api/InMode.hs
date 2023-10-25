@@ -21,7 +21,7 @@ module Cardano.Api.InMode (
 
     -- * Transaction validation errors
     TxValidationError(..),
-    TxValidationErrorInMode(..),
+    TxValidationErrorInCardanoMode(..),
     fromConsensusApplyTxErr,
   ) where
 
@@ -271,53 +271,56 @@ instance Show (TxValidationError era) where
 --
 -- This is used in the LocalStateQuery protocol.
 --
-data TxValidationErrorInMode mode where
-     TxValidationErrorInMode :: TxValidationError era
-                             -> EraInMode era mode
-                             -> TxValidationErrorInMode mode
+data TxValidationErrorInCardanoMode where
+  TxValidationErrorInCardanoMode :: ()
+    => TxValidationError era
+    -> EraInMode era CardanoMode
+    -> TxValidationErrorInCardanoMode
 
-     TxValidationEraMismatch :: EraMismatch
-                             -> TxValidationErrorInMode mode
+  TxValidationEraMismatch :: ()
+    => EraMismatch
+    -> TxValidationErrorInCardanoMode
 
-deriving instance Show (TxValidationErrorInMode mode)
+deriving instance Show TxValidationErrorInCardanoMode
 
 
-fromConsensusApplyTxErr :: ConsensusBlockForMode mode ~ block
-                        => ConsensusMode mode
-                        -> Consensus.ApplyTxErr block
-                        -> TxValidationErrorInMode mode
+fromConsensusApplyTxErr :: ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => ConsensusMode CardanoMode
+  -> Consensus.ApplyTxErr block
+  -> TxValidationErrorInCardanoMode
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrByron err) =
-    TxValidationErrorInMode
+    TxValidationErrorInCardanoMode
       (ByronTxValidationError err)
       ByronEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrShelley err) =
-    TxValidationErrorInMode
+    TxValidationErrorInCardanoMode
       (ShelleyTxValidationError ShelleyBasedEraShelley err)
       ShelleyEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAllegra err) =
-    TxValidationErrorInMode
+    TxValidationErrorInCardanoMode
       (ShelleyTxValidationError ShelleyBasedEraAllegra err)
       AllegraEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrMary err) =
-    TxValidationErrorInMode
+    TxValidationErrorInCardanoMode
       (ShelleyTxValidationError ShelleyBasedEraMary err)
       MaryEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAlonzo err) =
-    TxValidationErrorInMode
+    TxValidationErrorInCardanoMode
       (ShelleyTxValidationError ShelleyBasedEraAlonzo err)
       AlonzoEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrBabbage err) =
-    TxValidationErrorInMode
+    TxValidationErrorInCardanoMode
       (ShelleyTxValidationError ShelleyBasedEraBabbage err)
       BabbageEraInCardanoMode
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrConway err) =
-    TxValidationErrorInMode
+    TxValidationErrorInCardanoMode
       (ShelleyTxValidationError ShelleyBasedEraConway err)
       ConwayEraInCardanoMode
 
