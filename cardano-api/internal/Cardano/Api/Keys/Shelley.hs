@@ -1735,7 +1735,3 @@ instance CastVerificationKeyRole DRepExtendedKey DRepKey where
         impossible =
           error "castVerificationKey (DRep): byron and shelley key sizes do not match!"
 
---
--- Committee keys
---
-

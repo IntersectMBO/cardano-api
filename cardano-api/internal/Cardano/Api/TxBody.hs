@@ -2668,12 +2668,12 @@ convMintValue txMintValue =
       case toMaryValue v of
         MaryValue _ ma -> ma
 
-convExtraKeyWitnesses :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash r' StandardCrypto)
+convExtraKeyWitnesses :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash Shelley.Witness StandardCrypto)
 convExtraKeyWitnesses txExtraKeyWits =
   case txExtraKeyWits of
     TxExtraKeyWitnessesNone   -> Set.empty
     TxExtraKeyWitnesses _ khs -> Set.fromList
-                                   [ Shelley.coerceKeyRole kh
+                                   [ Shelley.asWitness kh
                                    | PaymentKeyHash kh <- khs ]
 
 convScripts

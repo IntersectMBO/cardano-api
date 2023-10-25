@@ -793,16 +793,16 @@ getShelleyKeyWitnessVerificationKey
   :: ShelleySigningKey
   -> Shelley.VKey Shelley.Witness StandardCrypto
 getShelleyKeyWitnessVerificationKey (ShelleyNormalSigningKey sk) =
-      (Shelley.coerceKeyRole :: Shelley.VKey Shelley.Payment StandardCrypto
-                             -> Shelley.VKey Shelley.Witness StandardCrypto)
+      (Shelley.asWitness :: Shelley.VKey Shelley.Payment StandardCrypto
+                         -> Shelley.VKey Shelley.Witness StandardCrypto)
     . (\(PaymentVerificationKey vk) -> vk)
     . getVerificationKey
     . PaymentSigningKey
     $ sk
 
 getShelleyKeyWitnessVerificationKey (ShelleyExtendedSigningKey sk) =
-      (Shelley.coerceKeyRole :: Shelley.VKey Shelley.Payment StandardCrypto
-                             -> Shelley.VKey Shelley.Witness StandardCrypto)
+      (Shelley.asWitness :: Shelley.VKey Shelley.Payment StandardCrypto
+                         -> Shelley.VKey Shelley.Witness StandardCrypto)
     . (\(PaymentVerificationKey vk) -> vk)
     . (castVerificationKey :: VerificationKey PaymentExtendedKey
                            -> VerificationKey PaymentKey)

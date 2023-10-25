@@ -9,7 +9,7 @@ module Cardano.Api.ReexposeLedger
   , ShelleyEraTxCert(..)
   , GenesisDelegCert(..)
   , PoolParams (..)
-  , HasKeyRole(..)
+  , HasKeyRole
   , MIRPot(..)
   , MIRTarget(..)
   , MIRCert(..)
@@ -129,7 +129,7 @@ import           Cardano.Ledger.Core (EraCrypto, PParams (..), PoolCert (..), fr
 import           Cardano.Ledger.Credential (Credential (..))
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
-import           Cardano.Ledger.Keys (HasKeyRole (..), KeyHash (..), KeyRole (..))
+import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import           Cardano.Ledger.Shelley.TxCert (EraTxCert (..), GenesisDelegCert (..), MIRCert (..),
                    MIRPot (..), MIRTarget (..), ShelleyDelegCert (..), ShelleyEraTxCert (..),

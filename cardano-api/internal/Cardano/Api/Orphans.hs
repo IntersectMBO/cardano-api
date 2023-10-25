@@ -333,3 +333,4 @@ instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
     , Ledger.cppDRepDeposit = lastMappendWith Ledger.cppDRepDeposit p1 p2
     , Ledger.cppDRepActivity = lastMappendWith Ledger.cppDRepActivity p1 p2
     }
+
