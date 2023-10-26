@@ -189,65 +189,42 @@ getShelleyBlockTxs era (Ledger.Block _header txs) =
 -- Block in a consensus mode
 --
 
--- | A 'Block' in one of the eras supported by a given protocol mode.
---
--- For multi-era modes such as the 'CardanoMode' this type is a sum of the
--- different block types for all the eras. It is used in the ChainSync protocol.
---
-data BlockInMode mode where
+-- | A 'Block' in one of the eras.
+-- TODO Rename this to BlockInEra
+data BlockInMode where
   BlockInMode
     :: CardanoEra era
     -> Block era
-    -> EraInMode era mode
-    -> BlockInMode mode
+    -> BlockInMode
 
-deriving instance Show (BlockInMode mode)
+deriving instance Show BlockInMode
 
 fromConsensusBlock :: ()
   => ConsensusBlockForMode CardanoMode ~ block
   => ConsensusMode CardanoMode
   -> block
-  -> BlockInMode CardanoMode
+  -> BlockInMode
 fromConsensusBlock CardanoMode = \case
-      Consensus.BlockByron b' ->
-        BlockInMode cardanoEra (ByronBlock b') ByronEraInCardanoMode
-
-      Consensus.BlockShelley b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraShelley b')
-                     ShelleyEraInCardanoMode
-
-      Consensus.BlockAllegra b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraAllegra b')
-                     AllegraEraInCardanoMode
-
-      Consensus.BlockMary b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraMary b')
-                     MaryEraInCardanoMode
-
-      Consensus.BlockAlonzo b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraAlonzo b')
-                     AlonzoEraInCardanoMode
-
-      Consensus.BlockBabbage b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraBabbage b')
-                     BabbageEraInCardanoMode
-
-      Consensus.BlockConway b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraConway b')
-                     ConwayEraInCardanoMode
+  Consensus.BlockByron    b' -> BlockInMode cardanoEra $ ByronBlock b'
+  Consensus.BlockShelley  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraShelley b'
+  Consensus.BlockAllegra  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraAllegra b'
+  Consensus.BlockMary     b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraMary b'
+  Consensus.BlockAlonzo   b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraAlonzo b'
+  Consensus.BlockBabbage  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraBabbage b'
+  Consensus.BlockConway   b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraConway b'
 
 toConsensusBlock :: ()
   => ConsensusBlockForMode CardanoMode ~ block
-  => BlockInMode CardanoMode
+  => BlockInMode
   -> block
 toConsensusBlock = \case
-  BlockInMode _ (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
-  BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInCardanoMode -> Consensus.BlockShelley b'
-  BlockInMode _ (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
-  BlockInMode _ (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
-  BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
-  BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
-  BlockInMode _ (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
+  BlockInMode _ (ByronBlock                           b') -> Consensus.BlockByron b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley  b') -> Consensus.BlockShelley b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraAllegra  b') -> Consensus.BlockAllegra b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraMary     b') -> Consensus.BlockMary b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo   b') -> Consensus.BlockAlonzo b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage  b') -> Consensus.BlockBabbage b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraConway   b') -> Consensus.BlockConway b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers

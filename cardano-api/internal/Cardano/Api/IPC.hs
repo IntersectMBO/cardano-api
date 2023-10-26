@@ -160,7 +160,7 @@ data LocalChainSyncClient block point tip m
 -- public, exported
 type LocalNodeClientProtocolsInMode =
   LocalNodeClientProtocols
-    (BlockInMode CardanoMode)
+    BlockInMode
     ChainPoint
     ChainTip
     SlotNo
@@ -456,7 +456,7 @@ convLocalChainSyncClient
   => ConsensusBlockForMode CardanoMode ~ block
   => Functor m
   => ConsensusMode CardanoMode
-  -> ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip m a
+  -> ChainSyncClient BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClient block (Net.Point block) (Net.Tip block) m a
 convLocalChainSyncClient mode =
     Net.Sync.mapChainSyncClient
@@ -469,7 +469,7 @@ convLocalChainSyncClientPipelined :: forall block m a. ()
   => ConsensusBlockForMode CardanoMode ~ block
   => Functor m
   => ConsensusMode CardanoMode
-  -> ChainSyncClientPipelined (BlockInMode CardanoMode) ChainPoint ChainTip m a
+  -> ChainSyncClientPipelined BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClientPipelined block (Net.Point block) (Net.Tip block) m a
 convLocalChainSyncClientPipelined mode =
   mapChainSyncClientPipelined
@@ -495,7 +495,7 @@ convLocalStateQueryClient
   => ConsensusBlockForMode CardanoMode ~ block
   => Functor m
   => ConsensusMode CardanoMode
-  -> LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) m a
+  -> LocalStateQueryClient BlockInMode ChainPoint (QueryInMode CardanoMode) m a
   -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block) m a
 convLocalStateQueryClient mode =
     Net.Query.mapLocalStateQueryClient
@@ -576,7 +576,7 @@ queryNodeLocalState connctInfo mpoint query = do
     singleQuery
       :: Maybe ChainPoint
       -> TMVar (Either AcquiringFailure result)
-      -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) IO ()
+      -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint (QueryInMode CardanoMode) IO ()
     singleQuery mPointVar' resultVar' =
       LocalStateQueryClient $ do
       pure $
@@ -759,15 +759,15 @@ getLocalChainTip localNodeConInfo = do
 
 chainSyncGetCurrentTip :: ()
   => TMVar ChainTip
-  -> ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+  -> ChainSyncClient BlockInMode ChainPoint ChainTip IO ()
 chainSyncGetCurrentTip tipVar =
   ChainSyncClient $ pure clientStIdle
  where
-  clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
+  clientStIdle :: Net.Sync.ClientStIdle BlockInMode ChainPoint ChainTip IO ()
   clientStIdle =
     Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
 
-  clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+  clientStNext :: Net.Sync.ClientStNext BlockInMode ChainPoint ChainTip IO ()
   clientStNext = Net.Sync.ClientStNext
     { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
         void $ atomically $ tryPutTMVar tipVar tip
