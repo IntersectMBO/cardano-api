@@ -66,7 +66,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
     -- Defined this way instead of using 'tripping' in order to warn the
     -- developer if there's ever a new constructor in 'EraInMode' and we would
     -- need to add a new 'FromJSON' instance.
-    rountripEraInModeParser :: EraInMode era mode -> Parser (EraInMode era mode)
+    rountripEraInModeParser :: EraInMode era CardanoMode -> Parser (EraInMode era CardanoMode)
     rountripEraInModeParser = \case
       ByronEraInCardanoMode -> parseJSON $ toJSON ByronEraInCardanoMode
       ShelleyEraInCardanoMode -> parseJSON $ toJSON ShelleyEraInCardanoMode

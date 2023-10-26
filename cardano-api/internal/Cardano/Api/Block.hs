@@ -204,10 +204,10 @@ data BlockInMode mode where
 deriving instance Show (BlockInMode mode)
 
 fromConsensusBlock :: ()
-  => ConsensusBlockForMode mode ~ block
-  => ConsensusMode mode
+  => ConsensusBlockForMode CardanoMode ~ block
+  => ConsensusMode CardanoMode
   -> block
-  -> BlockInMode mode
+  -> BlockInMode CardanoMode
 fromConsensusBlock CardanoMode = \case
       Consensus.BlockByron b' ->
         BlockInMode cardanoEra (ByronBlock b') ByronEraInCardanoMode
@@ -237,19 +237,17 @@ fromConsensusBlock CardanoMode = \case
                      ConwayEraInCardanoMode
 
 toConsensusBlock :: ()
-  => ConsensusBlockForMode mode ~ block
-  => BlockInMode mode -> block
+  => ConsensusBlockForMode CardanoMode ~ block
+  => BlockInMode CardanoMode
+  -> block
 toConsensusBlock = \case
-    -- Byron mode
-
-    -- Cardano mode
-    BlockInMode _ (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInCardanoMode -> Consensus.BlockShelley b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
+  BlockInMode _ (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInCardanoMode -> Consensus.BlockShelley b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers

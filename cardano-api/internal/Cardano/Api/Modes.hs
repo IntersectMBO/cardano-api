@@ -96,7 +96,7 @@ deriving instance Show AnyConsensusMode
 renderMode :: AnyConsensusMode -> Text
 renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 
-toEraInMode :: CardanoEra era -> ConsensusMode mode -> Maybe (EraInMode era mode)
+toEraInMode :: CardanoEra era -> ConsensusMode CardanoMode -> Maybe (EraInMode era CardanoMode)
 toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
 toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
@@ -289,7 +289,7 @@ toConsensusEraIndex = \case
 
 
 fromConsensusEraIndex :: ()
-  => ConsensusMode mode
+  => ConsensusMode CardanoMode
   -> Consensus.EraIndex (Consensus.CardanoEras StandardCrypto)
   -> AnyCardanoEra
 fromConsensusEraIndex CardanoMode = \case

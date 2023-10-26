@@ -189,18 +189,18 @@ data EraHistory mode where
     -> History.Interpreter xs
     -> EraHistory mode
 
-getProgress :: SlotNo -> EraHistory mode -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
+getProgress :: SlotNo -> EraHistory CardanoMode -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
 getProgress slotNo (EraHistory _ interpreter) = Qry.interpretQuery interpreter (Qry.slotToWallclock slotNo)
 
 -- | Returns the slot number for provided relative time from 'SystemStart'
-getSlotForRelativeTime :: RelativeTime -> EraHistory mode -> Either Qry.PastHorizonException SlotNo
+getSlotForRelativeTime :: RelativeTime -> EraHistory CardanoMode -> Either Qry.PastHorizonException SlotNo
 getSlotForRelativeTime relTime (EraHistory _ interpreter) = do
   (slotNo, _, _) <- Qry.interpretQuery interpreter $ Qry.wallclockToSlot relTime
   pure slotNo
 
 newtype LedgerEpochInfo = LedgerEpochInfo { unLedgerEpochInfo :: Consensus.EpochInfo (Either Text) }
 
-toLedgerEpochInfo :: EraHistory mode -> LedgerEpochInfo
+toLedgerEpochInfo :: EraHistory CardanoMode -> LedgerEpochInfo
 toLedgerEpochInfo (EraHistory _ interpreter) =
     LedgerEpochInfo $ hoistEpochInfo (first (Text.pack . show) . runExcept) $
       Consensus.interpreterToEpochInfo interpreter
@@ -209,12 +209,15 @@ newtype SlotsInEpoch = SlotsInEpoch Word64
 
 newtype SlotsToEpochEnd = SlotsToEpochEnd Word64
 
-slotToEpoch :: SlotNo -> EraHistory mode -> Either Qry.PastHorizonException (EpochNo, SlotsInEpoch, SlotsToEpochEnd)
+slotToEpoch :: ()
+  => SlotNo
+  -> EraHistory CardanoMode
+  -> Either Qry.PastHorizonException (EpochNo, SlotsInEpoch, SlotsToEpochEnd)
 slotToEpoch slotNo (EraHistory _ interpreter) = case Qry.interpretQuery interpreter (Qry.slotToEpoch slotNo) of
   Right (epochNumber, slotsInEpoch, slotsToEpochEnd) -> Right (epochNumber, SlotsInEpoch slotsInEpoch, SlotsToEpochEnd slotsToEpochEnd)
   Left e -> Left e
 
-deriving instance Show (QueryInMode mode result)
+deriving instance Show (QueryInMode CardanoMode result)
 
 data QueryInEra era result where
      QueryByronUpdateState :: QueryInEra ByronEra ByronUpdateState
@@ -577,14 +580,11 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra sbe q)) =
       ConwayEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
 
 
-toConsensusQueryShelleyBased
-  :: forall era ledgerera mode protocol block xs result.
-     ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol ledgerera
-  => Core.EraCrypto ledgerera ~ Consensus.StandardCrypto
-  => ShelleyLedgerEra era ~ ledgerera
-  => ConsensusBlockForMode mode ~ block
-  => block ~ Consensus.HardForkBlock xs
-  => EraInMode era mode
+toConsensusQueryShelleyBased :: forall era protocol block result. ()
+  => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
+  => Core.EraCrypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
+  => ConsensusBlockForMode CardanoMode ~ block
+  => EraInMode era CardanoMode
   -> QueryInShelleyBasedEra era result
   -> Some (Consensus.Query block)
 toConsensusQueryShelleyBased erainmode QueryEpoch =
@@ -675,12 +675,12 @@ toConsensusQueryShelleyBased erainmode (QueryCommitteeMembersState coldCreds hot
   Some (consensusQueryInEraInMode erainmode (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
 
 consensusQueryInEraInMode
-  :: forall era mode erablock modeblock result result' xs.
+  :: forall era erablock modeblock result result' xs.
      ConsensusBlockForEra era   ~ erablock
-  => ConsensusBlockForMode mode ~ modeblock
+  => ConsensusBlockForMode CardanoMode ~ modeblock
   => modeblock ~ Consensus.HardForkBlock xs
   => Consensus.HardForkQueryResult xs result ~ result'
-  => EraInMode era mode
+  => EraInMode era CardanoMode
   -> Consensus.BlockQuery erablock  result
   -> Consensus.Query modeblock result'
 consensusQueryInEraInMode erainmode =

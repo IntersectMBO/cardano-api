@@ -183,10 +183,10 @@ localConsensusMode :: ()
 localConsensusMode LocalNodeConnectInfo {localConsensusModeParams} =
     consensusModeOnly localConsensusModeParams
 
-consensusModeOnly :: ConsensusModeParams mode
-                  -> ConsensusMode       mode
+consensusModeOnly :: ()
+  => ConsensusModeParams CardanoMode
+  -> ConsensusMode CardanoMode
 consensusModeOnly CardanoModeParams{} = CardanoMode
-
 
 -- ----------------------------------------------------------------------------
 -- Actually connect to the node
@@ -452,10 +452,11 @@ convLocalTxMonitoringClient mode =
     (fromConsensusGenTx mode)
 
 convLocalChainSyncClient
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip m a
+  :: forall block m a. ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => Functor m
+  => ConsensusMode CardanoMode
+  -> ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip m a
   -> ChainSyncClient block (Net.Point block) (Net.Tip block) m a
 convLocalChainSyncClient mode =
     Net.Sync.mapChainSyncClient
@@ -464,11 +465,11 @@ convLocalChainSyncClient mode =
       (fromConsensusBlock mode)
       (fromConsensusTip mode)
 
-convLocalChainSyncClientPipelined
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> ChainSyncClientPipelined (BlockInMode mode) ChainPoint ChainTip m a
+convLocalChainSyncClientPipelined :: forall block m a. ()
+  => ConsensusBlockForMode CardanoMode ~ block
+  => Functor m
+  => ConsensusMode CardanoMode
+  -> ChainSyncClientPipelined (BlockInMode CardanoMode) ChainPoint ChainTip m a
   -> ChainSyncClientPipelined block (Net.Point block) (Net.Tip block) m a
 convLocalChainSyncClientPipelined mode =
   mapChainSyncClientPipelined
@@ -504,8 +505,8 @@ convLocalStateQueryClient mode =
 
 
 --TODO: Move to consensus
-mapLocalTxMonitoringClient
-  :: forall txid txid' tx tx' m a. Functor m
+mapLocalTxMonitoringClient :: forall txid txid' tx tx' m a. ()
+  => Functor m
   => (txid -> txid')
   -> (tx'-> tx)
   -> LocalTxMonitorClient txid tx SlotNo m a
@@ -756,9 +757,9 @@ getLocalChainTip localNodeConInfo = do
         }
     atomically $ takeTMVar resultVar
 
-chainSyncGetCurrentTip
-  :: forall mode. TMVar ChainTip
-  -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+chainSyncGetCurrentTip :: ()
+  => TMVar ChainTip
+  -> ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
 chainSyncGetCurrentTip tipVar =
   ChainSyncClient $ pure clientStIdle
  where
