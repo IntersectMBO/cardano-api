@@ -165,7 +165,7 @@ type LocalNodeClientProtocolsInMode =
     ChainTip
     SlotNo
     TxInMode
-    (TxIdInMode CardanoMode)
+    TxIdInMode
     TxValidationErrorInCardanoMode
     (QueryInMode CardanoMode)
     IO
@@ -444,7 +444,7 @@ convLocalTxMonitoringClient :: forall block m a. ()
   => ConsensusBlockForMode CardanoMode ~ block
   => Functor m
   => ConsensusMode CardanoMode
-  -> LocalTxMonitorClient (TxIdInMode CardanoMode)  TxInMode SlotNo m a
+  -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo m a
   -> LocalTxMonitorClient (Consensus.TxId (Consensus.GenTx block)) (Consensus.GenTx block) SlotNo m a
 convLocalTxMonitoringClient mode =
   mapLocalTxMonitoringClient
@@ -669,7 +669,7 @@ data LocalTxMonitoringQuery
   -- | Query if a particular tx exists in the mempool. Note that, the absence
   -- of a transaction does not imply anything about how the transaction was
   -- processed: it may have been dropped, or inserted in a block.
-  = LocalTxMonitoringQueryTx (TxIdInMode CardanoMode)
+  = LocalTxMonitoringQueryTx TxIdInMode
   -- | The mempool is modeled as an ordered list of transactions and thus, can
   -- be traversed linearly. 'LocalTxMonitoringSendNextTx' requests the next transaction from the
   -- current list. This must be a transaction that was not previously sent to
@@ -706,10 +706,10 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
   atomically (takeTMVar resultVar)
  where
   localTxMonitorClientTxExists :: ()
-    => TxIdInMode CardanoMode
+    => TxIdInMode
     -> TMVar LocalTxMonitoringResult
-    -> LocalTxMonitorClient (TxIdInMode CardanoMode) TxInMode SlotNo IO ()
-  localTxMonitorClientTxExists tIdInMode@(TxIdInMode txid _) resultVar = do
+    -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ()
+  localTxMonitorClientTxExists tIdInMode@(TxIdInMode _ txid) resultVar = do
     LocalTxMonitorClient $ return $
       CTxMon.SendMsgAcquire $ \slt -> do
          return $ CTxMon.SendMsgHasTx tIdInMode $ \txPresentBool -> do
@@ -720,7 +720,7 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
 
   localTxMonitorNextTx :: ()
     => TMVar LocalTxMonitoringResult
-    -> LocalTxMonitorClient (TxIdInMode CardanoMode) TxInMode SlotNo IO ()
+    -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ()
   localTxMonitorNextTx resultVar =
     LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do
@@ -730,7 +730,7 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
 
   localTxMonitorMempoolInfo :: ()
     => TMVar LocalTxMonitoringResult
-    -> LocalTxMonitorClient (TxIdInMode CardanoMode) TxInMode SlotNo IO ()
+    -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ()
   localTxMonitorMempoolInfo resultVar =
      LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do

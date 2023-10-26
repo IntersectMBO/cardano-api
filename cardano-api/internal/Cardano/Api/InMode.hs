@@ -162,50 +162,54 @@ toConsensusGenTx (TxInMode (ShelleyTx _ _) ByronEraInCardanoMode) =
 -- different transaction types for all the eras. It is used in the
 -- LocalTxMonitoring protocol.
 --
-
-data TxIdInMode mode where
-  TxIdInMode :: TxId -> EraInMode era mode -> TxIdInMode mode
+-- TODO Rename to TxIdInEra
+data TxIdInMode where
+  TxIdInMode
+    :: CardanoEra era
+    -> TxId
+    -> TxIdInMode
 
 toConsensusTxId :: ()
   => ConsensusBlockForMode CardanoMode ~ block
-  => TxIdInMode CardanoMode -> Consensus.TxId  (Consensus.GenTx block)
-toConsensusTxId (TxIdInMode txid ByronEraInCardanoMode) =
+  => TxIdInMode
+  -> Consensus.TxId  (Consensus.GenTx block)
+toConsensusTxId (TxIdInMode ByronEra txid) =
   Consensus.HardForkGenTxId . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.ByronBlock)
   txid' = Consensus.ByronTxId $ toByronTxId txid
 
-toConsensusTxId (TxIdInMode txid ShelleyEraInCardanoMode) =
+toConsensusTxId (TxIdInMode ShelleyEra txid) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (Z (Consensus.WrapGenTxId txid'))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardShelleyBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
-toConsensusTxId (TxIdInMode txid AllegraEraInCardanoMode) =
+toConsensusTxId (TxIdInMode AllegraEra txid) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (Z (Consensus.WrapGenTxId txid')))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardAllegraBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
-toConsensusTxId (TxIdInMode txid MaryEraInCardanoMode) =
+toConsensusTxId (TxIdInMode MaryEra txid) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (Z (Consensus.WrapGenTxId txid'))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardMaryBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
-toConsensusTxId (TxIdInMode txid AlonzoEraInCardanoMode) =
+toConsensusTxId (TxIdInMode AlonzoEra txid) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardAlonzoBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
-toConsensusTxId (TxIdInMode txid BabbageEraInCardanoMode) =
+toConsensusTxId (TxIdInMode BabbageEra txid) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (S (S (Z (Consensus.WrapGenTxId txid'))))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardBabbageBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
-toConsensusTxId (TxIdInMode txid ConwayEraInCardanoMode) =
+toConsensusTxId (TxIdInMode ConwayEra txid) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))))
  where
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardConwayBlock)
