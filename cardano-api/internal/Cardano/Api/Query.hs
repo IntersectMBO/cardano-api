@@ -161,7 +161,7 @@ data QueryInMode mode result where
     -> QueryInMode mode (Either EraMismatch result)
 
   QueryEraHistory
-    :: QueryInMode mode (EraHistory mode)
+    :: QueryInMode mode EraHistory
 
   QuerySystemStart
     :: QueryInMode mode SystemStart
@@ -182,28 +182,36 @@ instance NodeToClientVersionOf (QueryInMode mode result) where
     QueryChainBlockNo -> NodeToClientV_10
     QueryChainPoint _ -> NodeToClientV_10
 
-data EraHistory mode where
+data EraHistory where
   EraHistory
-    :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
-    => ConsensusMode mode
+    :: ConsensusBlockForMode CardanoMode ~ Consensus.HardForkBlock xs
+    => ConsensusMode CardanoMode
     -> History.Interpreter xs
-    -> EraHistory mode
+    -> EraHistory
 
-getProgress :: SlotNo -> EraHistory CardanoMode -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
+getProgress :: ()
+  => SlotNo
+  -> EraHistory
+  -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
 getProgress slotNo (EraHistory _ interpreter) = Qry.interpretQuery interpreter (Qry.slotToWallclock slotNo)
 
 -- | Returns the slot number for provided relative time from 'SystemStart'
-getSlotForRelativeTime :: RelativeTime -> EraHistory CardanoMode -> Either Qry.PastHorizonException SlotNo
+getSlotForRelativeTime :: ()
+  => RelativeTime
+  -> EraHistory
+  -> Either Qry.PastHorizonException SlotNo
 getSlotForRelativeTime relTime (EraHistory _ interpreter) = do
   (slotNo, _, _) <- Qry.interpretQuery interpreter $ Qry.wallclockToSlot relTime
   pure slotNo
 
 newtype LedgerEpochInfo = LedgerEpochInfo { unLedgerEpochInfo :: Consensus.EpochInfo (Either Text) }
 
-toLedgerEpochInfo :: EraHistory CardanoMode -> LedgerEpochInfo
+toLedgerEpochInfo :: ()
+  => EraHistory
+  -> LedgerEpochInfo
 toLedgerEpochInfo (EraHistory _ interpreter) =
-    LedgerEpochInfo $ hoistEpochInfo (first (Text.pack . show) . runExcept) $
-      Consensus.interpreterToEpochInfo interpreter
+  LedgerEpochInfo $ hoistEpochInfo (first (Text.pack . show) . runExcept) $
+    Consensus.interpreterToEpochInfo interpreter
 
 newtype SlotsInEpoch = SlotsInEpoch Word64
 
@@ -211,7 +219,7 @@ newtype SlotsToEpochEnd = SlotsToEpochEnd Word64
 
 slotToEpoch :: ()
   => SlotNo
-  -> EraHistory CardanoMode
+  -> EraHistory
   -> Either Qry.PastHorizonException (EpochNo, SlotsInEpoch, SlotsToEpochEnd)
 slotToEpoch slotNo (EraHistory _ interpreter) = case Qry.interpretQuery interpreter (Qry.slotToEpoch slotNo) of
   Right (epochNumber, slotsInEpoch, slotsToEpochEnd) -> Right (epochNumber, SlotsInEpoch slotsInEpoch, SlotsToEpochEnd slotsToEpochEnd)

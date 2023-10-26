@@ -86,7 +86,7 @@ queryStateForBalancedTx :: ()
           QueryConvenienceError
           ( UTxO era
           , LedgerProtocolParameters era
-          , EraHistory CardanoMode
+          , EraHistory
           , SystemStart
           , Set PoolId
           , Map StakeCredential Lovelace

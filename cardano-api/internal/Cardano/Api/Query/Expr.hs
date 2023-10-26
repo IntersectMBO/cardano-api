@@ -102,7 +102,7 @@ queryDebugLedgerState eraInMode sbe =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryDebugLedgerState
 
 queryEraHistory :: ()
-  => LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError (EraHistory CardanoMode))
+  => LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError  EraHistory)
 queryEraHistory =
   queryExpr QueryEraHistory
 
