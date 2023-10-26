@@ -1,5 +1,44 @@
 # Changelog for cardano-api
 
+## 8.29.0.0
+
+- DRep extended key: add CastVerificationKeyRole
+  (feature, compatible)
+  [PR 320](https://github.com/input-output-hk/cardano-api/pull/320)
+
+- Add support for Plutus V1 in Conway
+  (bugfix)
+  [PR 323](https://github.com/input-output-hk/cardano-api/pull/323)
+
+- Upgrade typed-protocols to 1.1.1
+  (maintenance)
+  [PR 336](https://github.com/input-output-hk/cardano-api/pull/336)
+
+- Split the `txValidityRange` field into two fields.
+  New function `allegraEraOnwardsToByronAndAllegraOnwardsEra`
+  (breaking, improvement)
+  [PR 332](https://github.com/input-output-hk/cardano-api/pull/332)
+
+- Add Show instance for FoldBlocksError
+  (feature, compatible)
+  [PR 338](https://github.com/input-output-hk/cardano-api/pull/338)
+
+- Delete `ProtocolUTxOCostPerByteFeature`
+  (breaking)
+  [PR 340](https://github.com/input-output-hk/cardano-api/pull/340)
+
+- Update ledger and consensus packages:
+   -cardano-ledger-conway-1.10.0, cardano-ledger-core-1.8.0.0, cardano-ledger-alonzo- 1.5.0.0, cardano-ledger-babbage-1.5.0.0, cardano-ledger-shelley 1.7.0.0, cardano-protocol-tpraos-1.0.3.6, ouroboros-consensus-0.13.0.0, ouroboros-consensus-cardano-0.11.0.0, ouroboros-consensus-diffusion-0.8.0.2, ouroboros-consensus-protocol-0.6.0.0
+- Adapted ProtocolParameters to the new ProtVer >=8 constraint in  in ppuProtocolVersionL
+- Replaced  queryCommitteState with new queryCommitteeMembersState
+- Improved  costModel generation for tests
+- Adapt to new type HKDNoUpdate f ProtVer of cppProtocolVersion
+- Export types needed for querying the committee state
+- Adjust to type change of proposalProceduresTxBodyL
+- Remove invalidBeforeL and invalidHereAfterL defined in ledger
+  (release, breking)
+  [PR 321](https://github.com/input-output-hk/cardano-api/pull/321)
+
 ## 8.28.0.0
 
 - Delete `AlonzoEraOnly`.
