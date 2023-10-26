@@ -219,9 +219,7 @@ evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
 evaluateTransactionFee sbe pp txbody keywitcount _byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction [] txbody of
-      ByronTx ByronEraOnlyByron _ -> case sbe of {}
-      --TODO: we could actually support Byron here, it'd be different but simpler
-
+      ByronTx w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
       ShelleyTx _ tx -> fromShelleyLovelace $ Ledger.evaluateTransactionFee pp tx keywitcount
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)

@@ -95,18 +95,15 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   sbe <- requireShelleyBasedEra era
     & onNothing (left ByronEraNotSupported)
 
-  qeInMode <- pure (toEraInMode era CardanoMode)
-    & onNothing (left (EraConsensusModeMismatch (AnyConsensusMode CardanoMode) (anyCardanoEra era)))
-
   let stakeCreds = Set.fromList $ mapMaybe filterUnRegCreds certs
       drepCreds  = Set.fromList $ mapMaybe filterUnRegDRepCreds certs
 
   -- Query execution
-  utxo <- lift (queryUtxo qeInMode sbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
+  utxo <- lift (queryUtxo sbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
-  pparams <- lift (queryProtocolParameters qeInMode sbe)
+  pparams <- lift (queryProtocolParameters sbe)
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
@@ -116,19 +113,19 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   systemStart <- lift querySystemStart
     & onLeft (left . QceUnsupportedNtcVersion)
 
-  stakePools <- lift (queryStakePools qeInMode sbe)
+  stakePools <- lift (queryStakePools sbe)
     & onLeft (left . QceUnsupportedNtcVersion)
     & onLeft (left . QueryEraMismatch)
 
   stakeDelegDeposits <-
-    lift (queryStakeDelegDeposits qeInMode sbe stakeCreds)
+    lift (queryStakeDelegDeposits sbe stakeCreds)
       & onLeft (left . QceUnsupportedNtcVersion)
       & onLeft (left . QueryEraMismatch)
 
   drepDelegDeposits <-
     forEraInEon @ConwayEraOnwards era (pure mempty) $ \_ ->
       Map.map (fromShelleyLovelace . drepDeposit) <$>
-      (lift (queryDRepState qeInMode sbe drepCreds)
+      (lift (queryDRepState sbe drepCreds)
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch))
 
