@@ -20,7 +20,6 @@ module Cardano.Api.IPC (
     connectToLocalNode,
     connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
-    localConsensusMode,
     LocalNodeClientParams(..),
     mkLocalNodeClientParams,
     LocalNodeClientProtocols(..),
@@ -72,7 +71,6 @@ module Cardano.Api.IPC (
     -- *** Helpers
     --TODO: These should be exported via Cardano.Api.Mode
     ConsensusMode(..),
-    consensusModeOnly,
     toAcquiringFailure,
 
     NodeToClientVersion(..),
@@ -177,17 +175,6 @@ data LocalNodeConnectInfo =
     , localNodeNetworkId        :: NetworkId
     , localNodeSocketPath       :: SocketPath
     }
-
-localConsensusMode :: ()
-  => LocalNodeConnectInfo
-  -> ConsensusMode CardanoMode
-localConsensusMode LocalNodeConnectInfo {localConsensusModeParams} =
-    consensusModeOnly localConsensusModeParams
-
-consensusModeOnly :: ()
-  => ConsensusModeParams
-  -> ConsensusMode CardanoMode
-consensusModeOnly CardanoModeParams{} = CardanoMode
 
 -- ----------------------------------------------------------------------------
 -- Actually connect to the node
