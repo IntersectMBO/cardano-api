@@ -162,13 +162,22 @@ module Cardano.Api (
     -- Case on MaryEraOnwards
     caseMaryEraOnlyOrAlonzoEraOnwards,
 
+    -- ** Proofs
+    disjointByronEraOnlyAndShelleyBasedEra,
+    disjointByronEraOnlyAndMaryEraOnwards,
+
     -- ** Eon relaxation
 
-    -- *** for AlonzoEraOnly
+    -- *** for ByronEraOnly
+    byronEraOnlyToByronToAllegraEraByron,
+
+    -- *** for ShelleyToAllegraEra
     shelleyToAllegraEraToByronToAllegraEra,
+
+    -- *** for ShelleyToAlonzoEra
     shelleyToAlonzoEraToShelleyToBabbageEra,
 
-    -- ** for AllegraEraOnwards
+    -- *** for AllegraEraOnwards
     allegraEraOnwardsToByronAndAllegraOnwardsEra,
 
     -- *** for AlonzoEraOnwards

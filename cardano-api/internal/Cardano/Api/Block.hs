@@ -51,6 +51,7 @@ module Cardano.Api.Block (
     makeChainTip,
   ) where
 
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
@@ -172,7 +173,7 @@ getBlockTxs = \case
             Byron.ABody {
               Byron.bodyTxPayload = Byron.ATxPayload txs
             }
-        } -> map ByronTx txs
+        } -> map (ByronTx ByronEraOnlyByron) txs
   ShelleyBlock sbe Consensus.ShelleyBlock{Consensus.shelleyBlockRaw} ->
     shelleyBasedEraConstraints sbe $
       getShelleyBlockTxs sbe shelleyBlockRaw

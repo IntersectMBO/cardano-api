@@ -120,7 +120,7 @@ transactionFee sbe txFeeFixed txFeePerByte tx =
     ShelleyTx _ tx' ->
       let x = shelleyBasedEraConstraints sbe $ tx' ^. L.sizeTxF in Lovelace (a * x + b)
       --TODO: This can be made to work for Byron txs too.
-    ByronTx _ -> case sbe of {}
+    ByronTx w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
 
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
@@ -148,8 +148,7 @@ estimateTransactionFee :: ()
   -> Lovelace
 estimateTransactionFee sbe nw txFeeFixed txFeePerByte = \case
   -- TODO: This can be made to work for Byron txs too.
-  ByronTx _ ->
-    case sbe of {}
+  ByronTx w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
   ShelleyTx era tx ->
     let Lovelace baseFee = transactionFee sbe txFeeFixed txFeePerByte (ShelleyTx era tx)
     in \nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
@@ -218,9 +217,7 @@ evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
 evaluateTransactionFee sbe pp txbody keywitcount _byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction [] txbody of
-      ByronTx{} -> case sbe of {}
-      --TODO: we could actually support Byron here, it'd be different but simpler
-
+      ByronTx w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
       ShelleyTx _ tx -> fromShelleyLovelace $ Ledger.evaluateTransactionFee pp tx keywitcount
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
@@ -566,9 +563,8 @@ evaluateTransactionBalance :: forall era. ()
                            -> UTxO era
                            -> TxBody era
                            -> TxOutValue era
-evaluateTransactionBalance sbe _ _ _ _ _ (ByronTxBody _) =
-  -- TODO: we could actually support Byron here, it'd be different but simpler
-  case sbe of {}
+evaluateTransactionBalance sbe _ _ _ _ _ (ByronTxBody w _) =
+  disjointByronEraOnlyAndShelleyBasedEra w sbe
 
 evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo (ShelleyTxBody _ txbody _ _ _ _) =
     caseShelleyToAllegraOrMaryEraOnwards

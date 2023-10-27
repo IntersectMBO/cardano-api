@@ -53,8 +53,10 @@ module Cardano.Api.Tx (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
+import           Cardano.Api.Eras.Case
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
@@ -101,8 +103,9 @@ import           Lens.Micro
 data Tx era where
 
      ByronTx
-       :: Byron.ATxAux ByteString
-       -> Tx ByronEra
+       :: ByronEraOnly era
+       -> Byron.ATxAux ByteString
+       -> Tx era
 
      ShelleyTx
        :: ShelleyBasedEra era
@@ -121,19 +124,19 @@ instance Eq (InAnyCardanoEra Tx) where
 
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Eq (Tx era) where
-    (==) (ByronTx txA)
-         (ByronTx txB) = txA == txB
+    (==) (ByronTx _ txA)
+         (ByronTx _ txB) = txA == txB
 
     (==) (ShelleyTx sbe txA)
          (ShelleyTx _   txB) =
       shelleyBasedEraConstraints sbe $ txA == txB
 
-    (==) ByronTx{} (ShelleyTx sbe _) = case sbe of {}
-    (==) (ShelleyTx sbe _) ByronTx{} = case sbe of {}
+    (==) (ByronTx w _) (ShelleyTx sbe _) = disjointByronEraOnlyAndShelleyBasedEra w sbe
+    (==) (ShelleyTx sbe _) (ByronTx w _) = disjointByronEraOnlyAndShelleyBasedEra w sbe
 
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Show (Tx era) where
-    showsPrec p (ByronTx tx) =
+    showsPrec p (ByronTx _ tx) =
       showParen (p >= 11) $
         showString "ByronTx "
       . showsPrec 11 tx
@@ -195,7 +198,7 @@ pattern AsAlonzoTx = AsTx AsAlonzoEra
 {-# COMPLETE AsAlonzoTx #-}
 
 instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
-    serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx
+    serialiseToCBOR (ByronTx _ tx) = CBOR.recoverBytes tx
 
     serialiseToCBOR (ShelleyTx sbe tx) =
       shelleyBasedEraConstraints sbe $ serialiseShelleyBasedTx tx
@@ -203,7 +206,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
         ByronEra ->
-          ByronTx <$>
+          ByronTx ByronEraOnlyByron <$>
             CBOR.decodeFullAnnotatedBytes
               CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
 
@@ -443,8 +446,8 @@ getTxBodyAndWitnesses :: Tx era -> (TxBody era, [KeyWitness era])
 getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)
 
 getTxBody :: forall era. Tx era -> TxBody era
-getTxBody (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
-    ByronTxBody txbody
+getTxBody (ByronTx w Byron.ATxAux { Byron.aTaTx = txbody }) =
+  ByronTxBody w txbody
 
 getTxBody (ShelleyTx sbe tx) =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -475,7 +478,7 @@ getTxBody (ShelleyTx sbe tx) =
 
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
-getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =
+getTxWitnesses (ByronTx ByronEraOnlyByron Byron.ATxAux { Byron.aTaWitness = witnesses }) =
     map ByronKeyWitness
   . Vector.toList
   . unAnnotated
@@ -507,8 +510,8 @@ makeSignedTransaction :: forall era.
      [KeyWitness era]
   -> TxBody era
   -> Tx era
-makeSignedTransaction witnesses (ByronTxBody txbody) =
-    ByronTx
+makeSignedTransaction witnesses (ByronTxBody eon txbody) =
+    ByronTx eon
   . Byron.annotateTxAux
   $ Byron.mkTxAux
       (unAnnotated txbody)
@@ -580,7 +583,7 @@ makeByronKeyWitness :: forall key.
                     -> SigningKey key
                     -> KeyWitness ByronEra
 makeByronKeyWitness _ (ShelleyTxBody sbe _ _ _ _ _) = case sbe of {}
-makeByronKeyWitness nw (ByronTxBody txbody) =
+makeByronKeyWitness nw (ByronTxBody _ txbody) =
     let txhash :: Byron.Hash Byron.Tx
         txhash = Byron.hashDecoded txbody
 
@@ -629,7 +632,7 @@ makeShelleyBootstrapWitness :: forall era. ()
   -> KeyWitness era
 makeShelleyBootstrapWitness sbe nwOrAddr txBody sk =
   case txBody of
-    ByronTxBody{} -> case sbe of {}
+    ByronTxBody w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
     ShelleyTxBody _ txbody _ _ _ _ -> makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
 
 makeShelleyBasedBootstrapWitness :: forall era. ()
@@ -746,7 +749,7 @@ makeShelleyKeyWitness sbe = \case
               signature = makeShelleySignature txhash sk
           in ShelleyKeyWitness sbe $
                 L.WitVKey vk signature
-  ByronTxBody{} -> case sbe of {}
+  ByronTxBody w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
 
 
 -- | We support making key witnesses with both normal and extended signing keys.

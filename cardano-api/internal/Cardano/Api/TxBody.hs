@@ -672,11 +672,14 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
                         <*> return (TxOutDatumHash w dHash)
                         <*> return ReferenceScriptNone
 
-fromByronTxOut :: Byron.TxOut -> TxOut ctx ByronEra
-fromByronTxOut (Byron.TxOut addr value) =
+fromByronTxOut :: ()
+  => ByronEraOnly era
+  -> Byron.TxOut
+  -> TxOut ctx era
+fromByronTxOut w (Byron.TxOut addr value) =
   TxOut
     (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-    (TxOutAdaOnly ByronToAllegraEraByron (fromByronLovelace value))
+    (TxOutAdaOnly (byronEraOnlyToByronToAllegraEraByron w) (fromByronLovelace value))
      TxOutDatumNone ReferenceScriptNone
 
 
@@ -1343,8 +1346,9 @@ setTxScriptValidity v txBodyContent = txBodyContent { txScriptValidity = v }
 data TxBody era where
 
      ByronTxBody
-       :: Annotated Byron.Tx ByteString
-       -> TxBody ByronEra
+       :: ByronEraOnly era
+       -> Annotated Byron.Tx ByteString
+       -> TxBody era
 
      ShelleyTxBody
        :: ShelleyBasedEra era
@@ -1391,8 +1395,8 @@ deriving instance L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto => Show (T
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
 instance Eq (TxBody era) where
-    (==) (ByronTxBody txbodyA)
-         (ByronTxBody txbodyB) = txbodyA == txbodyB
+    (==) (ByronTxBody _ txbodyA)
+         (ByronTxBody _ txbodyB) = txbodyA == txbodyB
 
     (==) (ShelleyTxBody sbe txbodyA txscriptsA redeemersA txmetadataA scriptValidityA)
          (ShelleyTxBody _   txbodyB txscriptsB redeemersB txmetadataB scriptValidityB) =
@@ -1427,15 +1431,15 @@ instance Eq (TxBody era) where
                                   && txmetadataA     == txmetadataB
                                   && scriptValidityA == scriptValidityB
 
-    (==) ByronTxBody{} (ShelleyTxBody sbe _ _ _ _ _) = case sbe of {}
-    (==) (ShelleyTxBody sbe _ _ _ _ _) ByronTxBody{} = case sbe of {}
+    (==) (ByronTxBody w _) (ShelleyTxBody sbe _ _ _ _ _) = disjointByronEraOnlyAndShelleyBasedEra w sbe
+    (==) (ShelleyTxBody sbe _ _ _ _ _) (ByronTxBody w _) = disjointByronEraOnlyAndShelleyBasedEra w sbe
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
 instance Show (TxBody era) where
-    showsPrec p (ByronTxBody txbody) =
+    showsPrec p (ByronTxBody _ txbody) =
       showParen (p >= 11)
-        ( showString "ByronTxBody "
+        ( showString "ByronTxBody ByronEraOnlyByron "
         . showsPrec 11 txbody
         )
 
@@ -1548,7 +1552,7 @@ pattern AsMaryTxBody = AsTxBody AsMaryEra
 
 instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
 
-    serialiseToCBOR (ByronTxBody txbody) =
+    serialiseToCBOR (ByronTxBody _ txbody) =
       recoverBytes txbody
 
     serialiseToCBOR (ShelleyTxBody sbe txbody txscripts redeemers txmetadata scriptValidity) =
@@ -1556,8 +1560,8 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
 
     deserialiseFromCBOR _ bs =
       caseByronOrShelleyBasedEra
-        (\ByronEraOnlyByron ->
-          ByronTxBody <$>
+        (\w ->
+          ByronTxBody w <$>
             CBOR.decodeFullAnnotatedBytes
               CBOR.byronProtVer
               "Byron TxBody"
@@ -1728,7 +1732,7 @@ instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
 -- | Calculate the transaction identifier for a 'TxBody'.
 --
 getTxId :: forall era. TxBody era -> TxId
-getTxId (ByronTxBody tx) =
+getTxId (ByronTxBody _ tx) =
     TxId
   . fromMaybe impossible
   . Crypto.hashFromBytesShort
@@ -2126,7 +2130,7 @@ createAndValidateTransactionBody :: ()
   -> Either TxBodyError (TxBody era)
 createAndValidateTransactionBody era =
   case cardanoEraStyle era of
-    LegacyByronEra      -> makeByronTransactionBody
+    LegacyByronEra      -> makeByronTransactionBody ByronEraOnlyByron
     ShelleyBasedEra sbe -> makeShelleyTransactionBody sbe
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
@@ -2134,8 +2138,9 @@ pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
 {-# COMPLETE TxBody #-}
 
 getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
-getTxBodyContent (ByronTxBody body) = getByronTxBodyContent body
-getTxBodyContent (ShelleyTxBody sbe body _scripts scriptdata mAux scriptValidity) =
+getTxBodyContent = \case
+  ByronTxBody w body -> getByronTxBodyContent w body
+  ShelleyTxBody sbe body _scripts scriptdata mAux scriptValidity ->
     fromLedgerTxBody sbe scriptValidity body scriptdata mAux
 
 fromLedgerTxBody
@@ -2521,9 +2526,11 @@ fromLedgerTxMintValue sbe body =
         mint = MaryValue 0 (txBody ^. L.mintTxBodyL)
 
 
-makeByronTransactionBody :: TxBodyContent BuildTx ByronEra
-                         -> Either TxBodyError (TxBody ByronEra)
-makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
+makeByronTransactionBody :: ()
+  => ByronEraOnly era
+  -> TxBodyContent BuildTx ByronEra
+  -> Either TxBodyError (TxBody era)
+makeByronTransactionBody w TxBodyContent { txIns, txOuts } = do
     ins' <- NonEmpty.nonEmpty (map fst txIns) ?! TxBodyEmptyTxIns
     for_ ins' $ \txin@(TxIn _ (TxIx txix)) ->
       guard (fromIntegral txix <= maxByronTxInIx) ?! TxBodyInIxOverflow txin
@@ -2534,7 +2541,7 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
                 (\out -> toByronTxOut out ?! classifyRangeError out)
                 outs'
     return $
-      ByronTxBody $
+      ByronTxBody w $
         reAnnotate CBOR.byronProtVer $
           Annotated
             (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
@@ -2552,25 +2559,27 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
 
     classifyRangeError
       (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
-             (TxOutValue w _) _ _) = case w of {}
+             (TxOutValue eon _) _ _) = case eon of {}
 
     classifyRangeError
       (TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{})
              _ _ _) = case sbe of {}
 
-getByronTxBodyContent :: Annotated Byron.Tx ByteString
-                      -> TxBodyContent ViewTx ByronEra
-getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
+getByronTxBodyContent :: ()
+  => ByronEraOnly era
+  -> Annotated Byron.Tx ByteString
+  -> TxBodyContent ViewTx era
+getByronTxBodyContent w (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
   TxBodyContent
   { txIns                 = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
   , txInsCollateral       = TxInsCollateralNone
   , txInsReference        = TxInsReferenceNone
-  , txOuts                = fromByronTxOut <$> toList txOutputs
+  , txOuts                = fromByronTxOut w <$> toList txOutputs
   , txReturnCollateral    = TxReturnCollateralNone
   , txTotalCollateral     = TxTotalCollateralNone
-  , txFee                 = TxFeeImplicit ByronEraOnlyByron
+  , txFee                 = TxFeeImplicit w
   , txValidityLowerBound  = TxValidityNoLowerBound
-  , txValidityUpperBound  = TxValidityNoUpperBound ByronEraOnlyByron
+  , txValidityUpperBound  = TxValidityNoUpperBound w
   , txMetadata            = TxMetadataNone
   , txAuxScripts          = TxAuxScriptsNone
   , txExtraKeyWits        = TxExtraKeyWitnessesNone

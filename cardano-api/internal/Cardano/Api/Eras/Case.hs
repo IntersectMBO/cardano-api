@@ -25,8 +25,10 @@ module Cardano.Api.Eras.Case
     -- Proofs
   , noByronEraInShelleyBasedEra
   , disjointByronEraOnlyAndShelleyBasedEra
+  , disjointByronEraOnlyAndMaryEraOnwards
 
     -- Conversions
+  , byronEraOnlyToByronToAllegraEraByron
   , shelleyToAllegraEraToByronToAllegraEra
   , shelleyToAlonzoEraToShelleyToBabbageEra
   , allegraEraOnwardsToByronAndAllegraOnwardsEra
@@ -227,6 +229,13 @@ noByronEraInShelleyBasedEra = flip disjointByronEraOnlyAndShelleyBasedEra
 
 disjointByronEraOnlyAndShelleyBasedEra :: ByronEraOnly era -> ShelleyBasedEra era -> a
 disjointByronEraOnlyAndShelleyBasedEra ByronEraOnlyByron sbe = case sbe of {}
+
+disjointByronEraOnlyAndMaryEraOnwards :: ByronEraOnly era -> MaryEraOnwards era -> a
+disjointByronEraOnlyAndMaryEraOnwards ByronEraOnlyByron meo = case meo of {}
+
+byronEraOnlyToByronToAllegraEraByron :: ByronEraOnly era -> ByronToAllegraEra era
+byronEraOnlyToByronToAllegraEraByron = \case
+  ByronEraOnlyByron -> ByronToAllegraEraByron
 
 shelleyToAllegraEraToByronToAllegraEra :: ShelleyToAllegraEra era -> ByronToAllegraEra era
 shelleyToAllegraEraToByronToAllegraEra = \case
