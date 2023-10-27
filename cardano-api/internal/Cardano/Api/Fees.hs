@@ -218,7 +218,7 @@ evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
 
 evaluateTransactionFee sbe pp txbody keywitcount _byronwitcount =
   shelleyBasedEraConstraints sbe $
-    case makeSignedTransaction [] txbody of
+    case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ByronTx w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
       ShelleyTx _ tx -> fromShelleyLovelace $ Ledger.evaluateTransactionFee pp tx keywitcount
 
@@ -455,15 +455,16 @@ instance Error TransactionValidityError where
 -- are actually used.
 --
 evaluateTransactionExecutionUnits :: forall era. ()
-  => SystemStart
+  => CardanoEra era
+  -> SystemStart
   -> LedgerEpochInfo
   -> LedgerProtocolParameters era
   -> UTxO era
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnits systemstart epochInfo pp utxo txbody =
-    case makeSignedTransaction [] txbody of
+evaluateTransactionExecutionUnits era systemstart epochInfo pp utxo txbody =
+    case makeSignedTransaction' era [] txbody of
       ByronTx {}        -> evalPreAlonzo
       ShelleyTx sbe tx' -> evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx'
   where
@@ -800,6 +801,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
 
     exUnitsMap <- first TxBodyErrorValidityInterval $
                     evaluateTransactionExecutionUnits
+                      era
                       systemstart history
                       lpp
                       utxo

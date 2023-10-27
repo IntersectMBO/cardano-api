@@ -36,6 +36,7 @@ module Cardano.Api.Tx (
 
     -- ** Incremental signing and separate witnesses
     makeSignedTransaction,
+    makeSignedTransaction',
     KeyWitness(..),
     makeByronKeyWitness,
     ShelleyWitnessSigningKey(..),
@@ -492,6 +493,13 @@ getTxWitnesses (ShelleyTx sbe tx') =
                          => L.Tx ledgerera
                          -> [KeyWitness era]
     getAlonzoTxWitnesses = getShelleyTxWitnesses
+
+makeSignedTransaction' :: ()
+  => CardanoEra era
+  -> [KeyWitness era]
+  -> TxBody era
+  -> Tx era
+makeSignedTransaction' _ = makeSignedTransaction
 
 makeSignedTransaction :: forall era.
      [KeyWitness era]
