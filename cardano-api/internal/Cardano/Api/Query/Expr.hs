@@ -26,7 +26,9 @@ module Cardano.Api.Query.Expr
   , querySystemStart
   , queryUtxo
   , determineEraExpr
-  , queryCommitteeState
+  , L.MemberStatus (..)
+  , L.CommitteeMembersState (..)
+  , queryCommitteeMembersState
   , queryDRepStakeDistribution
   , queryDRepState
   , queryGovState
@@ -49,12 +51,12 @@ import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Api.State.Query as L
 import qualified Cardano.Ledger.CertState as L
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
 import           Cardano.Ledger.SafeHash
-import qualified Cardano.Ledger.Shelley.Core as L
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
@@ -258,9 +260,14 @@ queryDRepStakeDistribution :: ()
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
 queryDRepStakeDistribution eraInMode sbe dreps = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
 
-queryCommitteeState :: ()
+-- | Returns info about committee members filtered by: cold credentials, hot credentials and statuses.
+-- If empty sets are passed as filters, then no filtering is done.
+queryCommitteeMembersState :: ()
   => EraInMode era mode
   -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.CommitteeState (ShelleyLedgerEra era))))
-queryCommitteeState eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryCommitteeState
+  -> Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
+  -> Set (L.Credential L.HotCommitteeRole L.StandardCrypto)
+  -> Set L.MemberStatus
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.CommitteeMembersState L.StandardCrypto))))
+queryCommitteeMembersState eraInMode sbe coldCreds hotCreds statuses =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)

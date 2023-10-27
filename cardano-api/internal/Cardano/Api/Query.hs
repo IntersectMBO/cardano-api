@@ -96,6 +96,7 @@ import           Cardano.Api.Value
 
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Api.State.Query as L
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.CertState as L
@@ -308,11 +309,14 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map (Shelley.Credential Shelley.DRepRole StandardCrypto) (L.DRepState StandardCrypto))
 
   QueryDRepStakeDistr
-    :: Set (Core.DRep StandardCrypto)
-    -> QueryInShelleyBasedEra era (Map (Core.DRep StandardCrypto) Lovelace)
+    :: Set (Ledger.DRep StandardCrypto)
+    -> QueryInShelleyBasedEra era (Map (Ledger.DRep StandardCrypto) Lovelace)
 
-  QueryCommitteeState
-    :: QueryInShelleyBasedEra era (L.CommitteeState (ShelleyLedgerEra era))
+  QueryCommitteeMembersState
+    :: Set (Shelley.Credential Shelley.ColdCommitteeRole StandardCrypto)
+    -> Set (Shelley.Credential Shelley.HotCommitteeRole StandardCrypto)
+    -> Set L.MemberStatus
+    -> QueryInShelleyBasedEra era (Maybe (L.CommitteeMembersState StandardCrypto))
 
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
@@ -336,7 +340,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryGovState = NodeToClientV_16
   nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
   nodeToClientVersionOf QueryDRepStakeDistr{} = NodeToClientV_16
-  nodeToClientVersionOf QueryCommitteeState = NodeToClientV_16
+  nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -680,8 +684,8 @@ toConsensusQueryShelleyBased erainmode (QueryDRepState creds) =
 toConsensusQueryShelleyBased erainmode (QueryDRepStakeDistr dreps) =
   Some (consensusQueryInEraInMode erainmode (Consensus.GetDRepStakeDistr dreps))
 
-toConsensusQueryShelleyBased erainmode QueryCommitteeState =
-  Some (consensusQueryInEraInMode erainmode Consensus.GetCommitteeState)
+toConsensusQueryShelleyBased erainmode (QueryCommitteeMembersState coldCreds hotCreds statuses) =
+  Some (consensusQueryInEraInMode erainmode (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -969,10 +973,10 @@ fromConsensusQueryResultShelleyBased _ QueryDRepStakeDistr{} q' stakeDistr' =
     Consensus.GetDRepStakeDistr{} -> Map.map fromShelleyLovelace stakeDistr'
     _                             -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResultShelleyBased _ QueryCommitteeState{} q' committeeState' =
+fromConsensusQueryResultShelleyBased _ QueryCommitteeMembersState{} q' committeeMembersState' =
   case q' of
-    Consensus.GetCommitteeState{} -> committeeState'
-    _                             -> fromConsensusQueryResultMismatch
+    Consensus.GetCommitteeMembersState{} -> committeeMembersState'
+    _                                    -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.

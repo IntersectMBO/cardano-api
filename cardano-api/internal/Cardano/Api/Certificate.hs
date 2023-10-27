@@ -421,16 +421,18 @@ data CommitteeColdkeyResignationRequirements era where
   CommitteeColdkeyResignationRequirements
     :: ConwayEraOnwards era
     -> Ledger.KeyHash Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
+    -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
     -> CommitteeColdkeyResignationRequirements era
 
 makeCommitteeColdkeyResignationCertificate :: ()
   => CommitteeColdkeyResignationRequirements era
   -> Certificate era
-makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequirements cOnwards coldKeyHash) =
+makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequirements cOnwards coldKeyHash anchor) =
   ConwayCertificate cOnwards
     . Ledger.ConwayTxCertGov
     $ Ledger.ConwayResignCommitteeColdKey
         (Ledger.KeyHashObj coldKeyHash)
+        (noInlineMaybeToStrictMaybe anchor)
 
 data DRepUnregistrationRequirements era where
   DRepUnregistrationRequirements
@@ -494,7 +496,7 @@ selectStakeCredential = fmap fromShelleyStakeCredential . \case
       Ledger.DelegTxCert sCred _             -> Just sCred
       Ledger.RegDepositDelegTxCert sCred _ _ -> Just sCred
       Ledger.AuthCommitteeHotKeyTxCert{}     -> Nothing
-      Ledger.ResignCommitteeColdTxCert _     -> Nothing
+      Ledger.ResignCommitteeColdTxCert _ _   -> Nothing
       Ledger.RegDRepTxCert{}                 -> Nothing
       Ledger.UnRegDRepTxCert{}               -> Nothing
       Ledger.UpdateDRepTxCert{}              -> Nothing
@@ -523,7 +525,7 @@ filterUnRegCreds = fmap fromShelleyStakeCredential . \case
       Ledger.DelegTxCert _ _             -> Nothing
       Ledger.RegDepositDelegTxCert{}     -> Nothing
       Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
-      Ledger.ResignCommitteeColdTxCert _ -> Nothing
+      Ledger.ResignCommitteeColdTxCert _ _ -> Nothing
       Ledger.RegDRepTxCert{}             -> Nothing
       Ledger.UnRegDRepTxCert{}           -> Nothing
       Ledger.UpdateDRepTxCert{}          -> Nothing
@@ -544,7 +546,7 @@ filterUnRegDRepCreds = \case
       Ledger.DelegTxCert _ _             -> Nothing
       Ledger.RegDepositDelegTxCert{}     -> Nothing
       Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
-      Ledger.ResignCommitteeColdTxCert _ -> Nothing
+      Ledger.ResignCommitteeColdTxCert _ _ -> Nothing
       Ledger.RegDRepTxCert{}             -> Nothing
       Ledger.UnRegDRepTxCert cred _      -> Just cred
       Ledger.UpdateDRepTxCert{}          -> Nothing
