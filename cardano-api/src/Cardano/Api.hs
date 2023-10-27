@@ -786,8 +786,6 @@ module Cardano.Api (
     connectToLocalNode,
     connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
-    AnyConsensusMode(..),
-    renderMode,
     ConsensusMode(CardanoMode),
     ConsensusModeParams(..),
     ConsensusProtocol,

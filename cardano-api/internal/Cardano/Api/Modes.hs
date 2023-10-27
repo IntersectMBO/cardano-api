@@ -16,8 +16,6 @@ module Cardano.Api.Modes (
     -- * Consensus modes
     CardanoMode,
     ConsensusMode(..),
-    AnyConsensusMode(..),
-    renderMode,
 
     -- * The protocols supported in each era
     ConsensusProtocol,
@@ -51,7 +49,6 @@ import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
 import           Data.SOP (K (K))
 import           Data.SOP.Strict (NS (S, Z))
-import           Data.Text (Text)
 
 -- ----------------------------------------------------------------------------
 -- Consensus modes
@@ -74,14 +71,6 @@ data ConsensusMode mode where
 
 
 deriving instance Show (ConsensusMode mode)
-
-data AnyConsensusMode where
-  AnyConsensusMode :: ConsensusMode mode -> AnyConsensusMode
-
-deriving instance Show AnyConsensusMode
-
-renderMode :: AnyConsensusMode -> Text
-renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 
 -- | The consensus-mode-specific parameters needed to connect to a local node
 -- that is using each consensus mode.

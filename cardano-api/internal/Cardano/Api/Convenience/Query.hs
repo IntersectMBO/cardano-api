@@ -24,7 +24,6 @@ import           Cardano.Api.Eras
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
-import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -54,7 +53,6 @@ data QueryConvenienceError
   = AcqFailure AcquiringFailure
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
-  | EraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
   | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
   deriving Show
 
@@ -67,9 +65,6 @@ renderQueryConvenienceError (QueryEraMismatch (EraMismatch ledgerEraName' otherE
   " era, but the transaction is for the " <> otherEraName' <> " era."
 renderQueryConvenienceError ByronEraNotSupported =
   "Byron era not supported"
-renderQueryConvenienceError (EraConsensusModeMismatch cMode anyCEra) =
-  "Consensus mode and era mismatch. Consensus mode: " <> textShow cMode <>
-  " Era: " <> textShow anyCEra
 renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionError minNtcVersion ntcVersion)) =
   "Unsupported feature for the node-to-client protocol version.\n" <>
   "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
