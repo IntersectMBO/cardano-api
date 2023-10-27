@@ -183,22 +183,21 @@ instance NodeToClientVersionOf (QueryInMode result) where
 data EraHistory where
   EraHistory
     :: Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
-    => ConsensusMode CardanoMode
-    -> History.Interpreter xs
+    => History.Interpreter xs
     -> EraHistory
 
 getProgress :: ()
   => SlotNo
   -> EraHistory
   -> Either Qry.PastHorizonException (RelativeTime, SlotLength)
-getProgress slotNo (EraHistory _ interpreter) = Qry.interpretQuery interpreter (Qry.slotToWallclock slotNo)
+getProgress slotNo (EraHistory interpreter) = Qry.interpretQuery interpreter (Qry.slotToWallclock slotNo)
 
 -- | Returns the slot number for provided relative time from 'SystemStart'
 getSlotForRelativeTime :: ()
   => RelativeTime
   -> EraHistory
   -> Either Qry.PastHorizonException SlotNo
-getSlotForRelativeTime relTime (EraHistory _ interpreter) = do
+getSlotForRelativeTime relTime (EraHistory interpreter) = do
   (slotNo, _, _) <- Qry.interpretQuery interpreter $ Qry.wallclockToSlot relTime
   pure slotNo
 
@@ -207,7 +206,7 @@ newtype LedgerEpochInfo = LedgerEpochInfo { unLedgerEpochInfo :: Consensus.Epoch
 toLedgerEpochInfo :: ()
   => EraHistory
   -> LedgerEpochInfo
-toLedgerEpochInfo (EraHistory _ interpreter) =
+toLedgerEpochInfo (EraHistory interpreter) =
   LedgerEpochInfo $ hoistEpochInfo (first (Text.pack . show) . runExcept) $
     Consensus.interpreterToEpochInfo interpreter
 
@@ -219,7 +218,7 @@ slotToEpoch :: ()
   => SlotNo
   -> EraHistory
   -> Either Qry.PastHorizonException (EpochNo, SlotsInEpoch, SlotsToEpochEnd)
-slotToEpoch slotNo (EraHistory _ interpreter) = case Qry.interpretQuery interpreter (Qry.slotToEpoch slotNo) of
+slotToEpoch slotNo (EraHistory interpreter) = case Qry.interpretQuery interpreter (Qry.slotToEpoch slotNo) of
   Right (epochNumber, slotsInEpoch, slotsToEpochEnd) -> Right (epochNumber, SlotsInEpoch slotsInEpoch, SlotsToEpochEnd slotsToEpochEnd)
   Left e -> Left e
 
@@ -710,7 +709,7 @@ fromConsensusQueryResult :: forall block result result'. ()
 fromConsensusQueryResult QueryEraHistory q' r' =
     case q' of
       Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetInterpreter)
-        -> EraHistory CardanoMode r'
+        -> EraHistory r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult QuerySystemStart q' r' =
