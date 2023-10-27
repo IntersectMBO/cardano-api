@@ -174,12 +174,10 @@ toConsensusEraIndex = \case
   BabbageEra  -> eraIndex5
   ConwayEra   -> eraIndex6
 
-
 fromConsensusEraIndex :: ()
-  => ConsensusMode CardanoMode
-  -> Consensus.EraIndex (Consensus.CardanoEras StandardCrypto)
+  => Consensus.EraIndex (Consensus.CardanoEras StandardCrypto)
   -> AnyCardanoEra
-fromConsensusEraIndex CardanoMode = \case
+fromConsensusEraIndex = \case
   Consensus.EraIndex (Z (K ())) ->
     AnyCardanoEra ByronEra
   Consensus.EraIndex (S (Z (K ()))) ->

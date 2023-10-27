@@ -733,7 +733,7 @@ fromConsensusQueryResult QueryChainPoint q' r' =
 fromConsensusQueryResult QueryCurrentEra q' r' =
     case q' of
       Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetCurrentEra)
-        -> fromConsensusEraIndex CardanoMode r'
+        -> fromConsensusEraIndex r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra QueryByronUpdateState) q' r' =
