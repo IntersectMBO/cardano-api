@@ -795,8 +795,6 @@ module Cardano.Api (
     ConsensusProtocol,
     ChainDepStateProtocol,
     ConsensusBlockForEra,
-    EraInMode(..),
-    toEraInMode,
     LocalNodeClientProtocols(..),
     LocalNodeClientParams(..),
     mkLocalNodeClientParams,

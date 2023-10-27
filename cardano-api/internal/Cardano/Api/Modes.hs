@@ -19,11 +19,6 @@ module Cardano.Api.Modes (
     AnyConsensusMode(..),
     renderMode,
 
-    -- * The eras supported by each mode
-    EraInMode(..),
-    eraInModeToEra,
-    toEraInMode,
-
     -- * The protocols supported in each era
     ConsensusProtocol,
     ChainDepStateProtocol,
@@ -55,8 +50,6 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
-import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), Value)
-import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
 import           Data.SOP (K (K))
 import           Data.SOP.Strict (NS (S, Z))
 import           Data.Text (Text)
@@ -95,103 +88,6 @@ deriving instance Show AnyConsensusMode
 
 renderMode :: AnyConsensusMode -> Text
 renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
-
-toEraInMode :: CardanoEra era -> ConsensusMode CardanoMode -> Maybe (EraInMode era CardanoMode)
-toEraInMode ByronEra   CardanoMode = Just ByronEraInCardanoMode
-toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
-toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
-toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
-toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
-toEraInMode BabbageEra CardanoMode = Just BabbageEraInCardanoMode
-toEraInMode ConwayEra  CardanoMode = Just ConwayEraInCardanoMode
-
--- | A representation of which 'CardanoEra's are included in each
--- 'ConsensusMode'.
---
-data EraInMode era mode where
-     ByronEraInCardanoMode   :: EraInMode ByronEra   CardanoMode
-     ShelleyEraInCardanoMode :: EraInMode ShelleyEra CardanoMode
-     AllegraEraInCardanoMode :: EraInMode AllegraEra CardanoMode
-     MaryEraInCardanoMode    :: EraInMode MaryEra    CardanoMode
-     AlonzoEraInCardanoMode  :: EraInMode AlonzoEra  CardanoMode
-     BabbageEraInCardanoMode :: EraInMode BabbageEra CardanoMode
-     ConwayEraInCardanoMode  :: EraInMode ConwayEra  CardanoMode
-
-deriving instance Show (EraInMode era mode)
-
-deriving instance Eq (EraInMode era mode)
-
-instance FromJSON (EraInMode ByronEra CardanoMode) where
-  parseJSON "ByronEraInCardanoMode" = pure ByronEraInCardanoMode
-  parseJSON invalid =
-      invalidJSONFailure "ByronEraInCardanoMode"
-                         "parsing 'EraInMode ByronEra CardanoMode' failed, "
-                         invalid
-
-instance FromJSON (EraInMode ShelleyEra CardanoMode) where
-  parseJSON "ShelleyEraInCardanoMode" = pure ShelleyEraInCardanoMode
-  parseJSON invalid =
-      invalidJSONFailure "ShelleyEraInCardanoMode"
-                         "parsing 'EraInMode ShelleyEra CardanoMode' failed, "
-                         invalid
-
-instance FromJSON (EraInMode AllegraEra CardanoMode) where
-  parseJSON "AllegraEraInCardanoMode" = pure AllegraEraInCardanoMode
-  parseJSON invalid =
-      invalidJSONFailure "AllegraEraInCardanoMode"
-                         "parsing 'EraInMode AllegraEra CardanoMode' failed, "
-                         invalid
-
-instance FromJSON (EraInMode MaryEra CardanoMode) where
-  parseJSON "MaryEraInCardanoMode" = pure MaryEraInCardanoMode
-  parseJSON invalid =
-      invalidJSONFailure "MaryEraInCardanoMode"
-                         "parsing 'EraInMode MaryEra CardanoMode' failed, "
-                         invalid
-
-instance FromJSON (EraInMode AlonzoEra CardanoMode) where
-  parseJSON "AlonzoEraInCardanoMode" = pure AlonzoEraInCardanoMode
-  parseJSON invalid =
-      invalidJSONFailure "AlonzoEraInCardanoMode"
-                         "parsing 'EraInMode AlonzoEra CardanoMode' failed, "
-                         invalid
-
-instance FromJSON (EraInMode BabbageEra CardanoMode) where
-  parseJSON "BabbageEraInCardanoMode" = pure BabbageEraInCardanoMode
-  parseJSON invalid =
-      invalidJSONFailure "BabbageEraInCardanoMode"
-                         "parsing 'EraInMode Babbage CardanoMode' failed, "
-                         invalid
-
-instance FromJSON (EraInMode ConwayEra CardanoMode) where
-  parseJSON "ConwayEraInCardanoMode" = pure ConwayEraInCardanoMode
-  parseJSON invalid =
-      invalidJSONFailure "ConwayEraInCardanoMode"
-                         "parsing 'EraInMode Conway CardanoMode' failed, "
-                         invalid
-
-invalidJSONFailure :: String -> String -> Value -> Parser a
-invalidJSONFailure expectedType errorMsg invalidValue =
-    prependFailure errorMsg
-                   (typeMismatch expectedType invalidValue)
-
-instance ToJSON (EraInMode era mode) where
-  toJSON ByronEraInCardanoMode  = "ByronEraInCardanoMode"
-  toJSON ShelleyEraInCardanoMode = "ShelleyEraInCardanoMode"
-  toJSON AllegraEraInCardanoMode = "AllegraEraInCardanoMode"
-  toJSON MaryEraInCardanoMode = "MaryEraInCardanoMode"
-  toJSON AlonzoEraInCardanoMode = "AlonzoEraInCardanoMode"
-  toJSON BabbageEraInCardanoMode = "BabbageEraInCardanoMode"
-  toJSON ConwayEraInCardanoMode = "ConwayEraInCardanoMode"
-
-eraInModeToEra :: EraInMode era mode -> CardanoEra era
-eraInModeToEra ByronEraInCardanoMode   = ByronEra
-eraInModeToEra ShelleyEraInCardanoMode = ShelleyEra
-eraInModeToEra AllegraEraInCardanoMode = AllegraEra
-eraInModeToEra MaryEraInCardanoMode    = MaryEra
-eraInModeToEra AlonzoEraInCardanoMode  = AlonzoEra
-eraInModeToEra BabbageEraInCardanoMode = BabbageEra
-eraInModeToEra ConwayEraInCardanoMode  = ConwayEra
 
 -- | The consensus-mode-specific parameters needed to connect to a local node
 -- that is using each consensus mode.
