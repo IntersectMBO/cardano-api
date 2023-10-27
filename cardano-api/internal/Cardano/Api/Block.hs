@@ -394,11 +394,11 @@ makeChainTip woBlockNo chainPoint = case woBlockNo of
     ChainPointAtGenesis -> ChainTipAtGenesis
     ChainPoint slotNo headerHash -> ChainTip slotNo headerHash blockNo
 
-fromConsensusTip  :: Consensus.CardanoBlock L.StandardCrypto ~ block
-                  => ConsensusMode CardanoMode
-                  -> Consensus.Tip block
-                  -> ChainTip
-fromConsensusTip CardanoMode = conv
+fromConsensusTip :: ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.Tip block
+  -> ChainTip
+fromConsensusTip = conv
   where
     conv :: Consensus.Tip (Consensus.CardanoBlock Consensus.StandardCrypto)
          -> ChainTip

@@ -414,16 +414,14 @@ mkLocalNodeClientParams modeparams clients =
       CardanoModeParams epochSlots ->
        LocalNodeClientParamsCardano
          (ProtocolClientInfoArgsCardano epochSlots)
-         (convLocalNodeClientProtocols CardanoMode . clients)
+         (convLocalNodeClientProtocols . clients)
 
 
-convLocalNodeClientProtocols :: forall block. ()
+convLocalNodeClientProtocols :: ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => ConsensusMode CardanoMode
-  -> LocalNodeClientProtocolsInMode
+  => LocalNodeClientProtocolsInMode
   -> LocalNodeClientProtocolsForBlock block
 convLocalNodeClientProtocols
-    mode
     LocalNodeClientProtocols {
       localChainSyncClient,
       localTxSubmissionClient,
@@ -433,51 +431,48 @@ convLocalNodeClientProtocols
     LocalNodeClientProtocolsForBlock {
       localChainSyncClientForBlock    = case localChainSyncClient of
         NoLocalChainSyncClient -> NoLocalChainSyncClient
-        LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined mode clientPipelined
-        LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient mode client,
+        LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined clientPipelined
+        LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient client,
 
-      localTxSubmissionClientForBlock = convLocalTxSubmissionClient      <$> localTxSubmissionClient,
-      localStateQueryClientForBlock   = convLocalStateQueryClient        <$> localStateQueryClient,
-      localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$> localTxMonitoringClient
+      localTxSubmissionClientForBlock = convLocalTxSubmissionClient <$> localTxSubmissionClient,
+      localStateQueryClientForBlock   = convLocalStateQueryClient   <$> localStateQueryClient,
+      localTxMonitoringClientForBlock = convLocalTxMonitoringClient <$> localTxMonitoringClient
     }
 
 convLocalTxMonitoringClient :: forall block m a. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
-  => ConsensusMode CardanoMode
-  -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo m a
+  => LocalTxMonitorClient TxIdInMode TxInMode SlotNo m a
   -> LocalTxMonitorClient (Consensus.TxId (Consensus.GenTx block)) (Consensus.GenTx block) SlotNo m a
-convLocalTxMonitoringClient mode =
+convLocalTxMonitoringClient =
   mapLocalTxMonitoringClient
     toConsensusTxId
-    (fromConsensusGenTx mode)
+    fromConsensusGenTx
 
 convLocalChainSyncClient
   :: forall block m a. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
-  => ConsensusMode CardanoMode
-  -> ChainSyncClient BlockInMode ChainPoint ChainTip m a
+  => ChainSyncClient BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClient block (Net.Point block) (Net.Tip block) m a
-convLocalChainSyncClient mode =
+convLocalChainSyncClient =
     Net.Sync.mapChainSyncClient
       toConsensusPointHF
       fromConsensusPointHF
       fromConsensusBlock
-      (fromConsensusTip mode)
+      fromConsensusTip
 
 convLocalChainSyncClientPipelined :: forall block m a. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
-  => ConsensusMode CardanoMode
-  -> ChainSyncClientPipelined BlockInMode ChainPoint ChainTip m a
+  => ChainSyncClientPipelined BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClientPipelined block (Net.Point block) (Net.Tip block) m a
-convLocalChainSyncClientPipelined mode =
+convLocalChainSyncClientPipelined =
   mapChainSyncClientPipelined
     toConsensusPointHF
     fromConsensusPointHF
     fromConsensusBlock
-    (fromConsensusTip mode)
+    fromConsensusTip
 
 convLocalTxSubmissionClient :: forall block m a. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block

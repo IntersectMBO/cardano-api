@@ -69,43 +69,37 @@ data TxInMode where
   -- delegation certs.
   --
   TxInByronSpecial
-    :: Consensus.GenTx Consensus.ByronBlock
-    -> EraInMode ByronEra CardanoMode
+    :: ByronEraOnly era
+    -> Consensus.GenTx Consensus.ByronBlock
     -> TxInMode
 
 deriving instance Show TxInMode
 
 fromConsensusGenTx :: ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => ConsensusMode CardanoMode
-  -> Consensus.GenTx block
+  => Consensus.GenTx block
   -> TxInMode
-fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))) =
-  TxInByronSpecial tx' ByronEraInCardanoMode
-
-fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (Z tx')))) =
-  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
-  in TxInMode ShelleyEra (ShelleyTx ShelleyBasedEraShelley shelleyEraTx)
-
-fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (Z tx'))))) =
-  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
-  in TxInMode AllegraEra (ShelleyTx ShelleyBasedEraAllegra shelleyEraTx)
-
-fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (Z tx')))))) =
-  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
-  in TxInMode MaryEra (ShelleyTx ShelleyBasedEraMary shelleyEraTx)
-
-fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))) =
-  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
-  in TxInMode AlonzoEra (ShelleyTx ShelleyBasedEraAlonzo shelleyEraTx)
-
-fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx')))))))) =
-  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
-  in TxInMode BabbageEra (ShelleyTx ShelleyBasedEraBabbage shelleyEraTx)
-
-fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx'))))))))) =
-  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
-  in TxInMode ConwayEra (ShelleyTx ShelleyBasedEraConway shelleyEraTx)
+fromConsensusGenTx = \case
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx')) ->
+    TxInByronSpecial ByronEraOnlyByron tx'
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (Z tx'))) ->
+    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    in TxInMode ShelleyEra (ShelleyTx ShelleyBasedEraShelley shelleyEraTx)
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (Z tx')))) ->
+    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    in TxInMode AllegraEra (ShelleyTx ShelleyBasedEraAllegra shelleyEraTx)
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (Z tx'))))) ->
+    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    in TxInMode MaryEra (ShelleyTx ShelleyBasedEraMary shelleyEraTx)
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx')))))) ->
+    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    in TxInMode AlonzoEra (ShelleyTx ShelleyBasedEraAlonzo shelleyEraTx)
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx'))))))) ->
+    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    in TxInMode BabbageEra (ShelleyTx ShelleyBasedEraBabbage shelleyEraTx)
+  Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx')))))))) ->
+    let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+    in TxInMode ConwayEra (ShelleyTx ShelleyBasedEraConway shelleyEraTx)
 
 toConsensusGenTx :: ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
@@ -119,7 +113,7 @@ toConsensusGenTx (TxInMode w (ByronTx ByronEraOnlyByron tx)) =
     --TODO: add the above as mkByronTx to the consensus code,
     -- matching mkShelleyTx below
 
-toConsensusGenTx (TxInByronSpecial gtx ByronEraInCardanoMode) =
+toConsensusGenTx (TxInByronSpecial ByronEraOnlyByron gtx) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z gtx))
 
 toConsensusGenTx (TxInMode ShelleyEra (ShelleyTx _ tx)) =
