@@ -656,7 +656,7 @@ instance ToJSON LocalTxMonitoringResult where
           ]
         where
           txId = case txInMode of
-            Just (TxInMode tx _) -> Just $ getTxId $ getTxBody tx
+            Just (TxInMode _ tx) -> Just $ getTxId $ getTxBody tx
             -- TODO: support fetching the ID of a Byron Era transaction
             _ -> Nothing
       LocalTxMonitoringMempoolSizeAndCapacity mempool slot ->
