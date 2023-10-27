@@ -34,7 +34,6 @@ module Cardano.Api.Block (
     fromConsensusPoint,
     fromConsensusPointHF,
     toConsensusPointInMode,
-    fromConsensusPointInMode,
     toConsensusPointHF,
 
     -- * Tip of the chain
@@ -322,13 +321,6 @@ toConsensusPointInMode :: ()
 -- individually for each case that we satisfy the type equality constraint
 -- HeaderHash block ~ OneEraHash xs
 toConsensusPointInMode CardanoMode = toConsensusPointHF
-
-fromConsensusPointInMode :: ()
-  => ConsensusMode CardanoMode
-  -> Consensus.Point (Consensus.CardanoBlock L.StandardCrypto)
-  -> ChainPoint
-fromConsensusPointInMode CardanoMode = fromConsensusPointHF
-
 
 -- | Convert a 'Consensus.Point' for multi-era block type
 --

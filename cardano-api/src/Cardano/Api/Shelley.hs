@@ -97,7 +97,6 @@ module Cardano.Api.Shelley
     fromConsensusBlock,
     toConsensusBlock,
     fromConsensusTip,
-    fromConsensusPointInMode,
     fromConsensusPointHF,
     toConsensusPointInMode,
     toConsensusPointHF,

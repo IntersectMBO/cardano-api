@@ -726,10 +726,10 @@ fromConsensusQueryResult QueryChainBlockNo q' r' =
         -> r'
       _ -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResult (QueryChainPoint mode) q' r' =
+fromConsensusQueryResult (QueryChainPoint _) q' r' =
     case q' of
       Consensus.GetChainPoint
-        -> fromConsensusPointInMode mode r'
+        -> fromConsensusPointHF r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult QueryCurrentEra q' r' =
