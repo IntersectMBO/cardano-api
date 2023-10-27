@@ -405,21 +405,3 @@ fromConsensusTip = conv
     conv Consensus.TipGenesis = ChainTipAtGenesis
     conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =
       ChainTip slot (HeaderHash h) block
-
-{-
-TODO: In principle we should be able to use this common implementation rather
-      than repeating it for each mode above. It does actually type-check. The
-      problem is that (at least with ghc-8.10.x) ghc's pattern match warning
-      mechanism cannot see that the OneEraHash is a complete pattern match.
-      I'm guessing that while the type checker can use the type equality to
-      see that OneEraHash is a valid pattern, the exhaustiveness checker is for
-      some reason not able to use it to see that it is indeed the only pattern.
-fromConsensusTip =
-    \mode -> case mode of
-      CardanoMode -> conv
-  where
-    conv :: HeaderHash block ~ OneEraHash xs
-         => Tip block -> ChainTip
-    conv TipGenesis                      = ChainTipAtGenesis
-    conv (Tip slot (OneEraHash h) block) = ChainTip slot (HeaderHash h) block
--}
