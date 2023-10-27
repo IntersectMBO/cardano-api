@@ -29,6 +29,9 @@ common project-config
                         -Wredundant-constraints
                         -Wunused-packages
 
+  if impl(ghc < 9)
+    ghc-options:        -Wno-incomplete-patterns
+
 common maybe-unix
   if !os(windows)
      build-depends:    unix
