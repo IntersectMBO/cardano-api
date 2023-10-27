@@ -1,5 +1,51 @@
 # Changelog for cardano-api
 
+## 8.29.0.0
+
+- Updated ledger, consensus and typed-protocol packages
+  Adapted ProtocolParameters to the new ProtVer >=8 constraint in  in ppuProtocolVersionL
+  Replaced  queryCommitteState with new queryCommitteeMembersState
+  Improved  costModel generation for tests
+  Adapt to new type HKDNoUpdate f ProtVer of cppProtocolVersion
+  Export types needed for querying the committee state
+  Adjust to type change of proposalProceduresTxBodyL
+  Remove invalidBeforeL and invalidHereAfterL defined in ledger
+  (breaking, maintenance)
+  [PR 321](https://github.com/input-output-hk/cardano-api/pull/321)
+
+- Expose `PlutusScriptV3`
+  (bugfix)
+  [PR 343](https://github.com/input-output-hk/cardano-api/pull/343)
+
+- Add support for simple scripts in Conway
+  (bugfix)
+  [PR 344](https://github.com/input-output-hk/cardano-api/pull/344)
+
+- Delete `ProtocolUTXOCostPerWord` feature
+  (breaking)
+  [PR 339](https://github.com/input-output-hk/cardano-api/pull/339)
+
+- Delete `ProtocolUTxOCostPerByteFeature`
+  (breaking)
+  [PR 340](https://github.com/input-output-hk/cardano-api/pull/340)
+
+- Add Show instance for FoldBlocksError
+  (feature, compatible)
+  [PR 338](https://github.com/input-output-hk/cardano-api/pull/338)
+
+- Split the `txValidityRange` field into two fields.
+  New function `allegraEraOnwardsToByronAndAllegraOnwardsEra`
+  (breaking, improvement)
+  [PR 332](https://github.com/input-output-hk/cardano-api/pull/332)
+
+- Add support for Plutus V1 in Conway
+  (bugfix)
+  [PR 323](https://github.com/input-output-hk/cardano-api/pull/323)
+
+- DRep extended key: add CastVerificationKeyRole
+  (compatible)
+  [PR 327](https://github.com/input-output-hk/cardano-api/pull/327)
+
 ## 8.28.0.0
 
 - Delete `AlonzoEraOnly`.
