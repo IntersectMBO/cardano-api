@@ -200,10 +200,9 @@ deriving instance Show BlockInMode
 
 fromConsensusBlock :: ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => ConsensusMode CardanoMode
-  -> block
+  => block
   -> BlockInMode
-fromConsensusBlock CardanoMode = \case
+fromConsensusBlock = \case
   Consensus.BlockByron    b' -> BlockInMode cardanoEra $ ByronBlock b'
   Consensus.BlockShelley  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraShelley b'
   Consensus.BlockAllegra  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraAllegra b'

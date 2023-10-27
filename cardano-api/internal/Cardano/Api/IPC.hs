@@ -463,7 +463,7 @@ convLocalChainSyncClient mode =
     Net.Sync.mapChainSyncClient
       toConsensusPointHF
       fromConsensusPointHF
-      (fromConsensusBlock mode)
+      fromConsensusBlock
       (fromConsensusTip mode)
 
 convLocalChainSyncClientPipelined :: forall block m a. ()
@@ -476,7 +476,7 @@ convLocalChainSyncClientPipelined mode =
   mapChainSyncClientPipelined
     toConsensusPointHF
     fromConsensusPointHF
-    (fromConsensusBlock mode)
+    fromConsensusBlock
     (fromConsensusTip mode)
 
 convLocalTxSubmissionClient :: forall block m a. ()
