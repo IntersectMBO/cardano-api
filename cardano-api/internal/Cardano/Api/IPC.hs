@@ -28,7 +28,6 @@ module Cardano.Api.IPC (
 
     -- ** Modes
     -- | TODO move to Cardano.Api
-    CardanoMode,
     ConsensusModeParams(..),
     EpochSlots(..),
 
@@ -70,7 +69,6 @@ module Cardano.Api.IPC (
 
     -- *** Helpers
     --TODO: These should be exported via Cardano.Api.Mode
-    ConsensusMode(..),
     toAcquiringFailure,
 
     NodeToClientVersion(..),

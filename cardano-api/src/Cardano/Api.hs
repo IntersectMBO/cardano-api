@@ -786,7 +786,6 @@ module Cardano.Api (
     connectToLocalNode,
     connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
-    ConsensusMode(CardanoMode),
     ConsensusModeParams(..),
     ConsensusProtocol,
     ChainDepStateProtocol,
@@ -795,7 +794,6 @@ module Cardano.Api (
     LocalNodeClientParams(..),
     mkLocalNodeClientParams,
     LocalChainSyncClient(..),
-    CardanoMode,
     --  connectToRemoteNode,
 
     -- ** Protocol related types

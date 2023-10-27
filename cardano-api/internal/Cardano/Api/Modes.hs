@@ -12,11 +12,6 @@
 -- combinations of consensus protocols and ledger eras.
 --
 module Cardano.Api.Modes (
-
-    -- * Consensus modes
-    CardanoMode,
-    ConsensusMode(..),
-
     -- * The protocols supported in each era
     ConsensusProtocol,
     ChainDepStateProtocol,
@@ -53,24 +48,6 @@ import           Data.SOP.Strict (NS (S, Z))
 -- ----------------------------------------------------------------------------
 -- Consensus modes
 --
-
--- | The Cardano consensus mode consists of all the eras currently in use on
--- the Cardano mainnet. This is currently: the 'ByronEra'; 'ShelleyEra',
--- 'AllegraEra' and 'MaryEra', in that order.
---
--- This mode will be extended with new eras as the Cardano mainnet develops.
---
-data CardanoMode
-
--- | This GADT provides a value-level representation of all the consensus modes.
--- This enables pattern matching on the era to allow them to be treated in a
--- non-uniform way.
---
-data ConsensusMode mode where
-     CardanoMode :: ConsensusMode CardanoMode
-
-
-deriving instance Show (ConsensusMode mode)
 
 -- | The consensus-mode-specific parameters needed to connect to a local node
 -- that is using each consensus mode.
