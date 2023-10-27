@@ -66,6 +66,7 @@ import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing
+import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Slotting.Block (BlockNo)
@@ -200,7 +201,7 @@ data BlockInMode where
 deriving instance Show BlockInMode
 
 fromConsensusBlock :: ()
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => ConsensusMode CardanoMode
   -> block
   -> BlockInMode
@@ -214,7 +215,7 @@ fromConsensusBlock CardanoMode = \case
   Consensus.BlockConway   b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraConway b'
 
 toConsensusBlock :: ()
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => BlockInMode
   -> block
 toConsensusBlock = \case
@@ -313,17 +314,19 @@ instance FromJSON ChainPoint where
       "ChainPoint" -> ChainPoint <$> o .: "slot" <*> o .: "blockHash"
       _ -> fail "Expected tag to be ChainPointAtGenesis | ChainPoint"
 
-toConsensusPointInMode :: ConsensusMode mode
-                       -> ChainPoint
-                       -> Consensus.Point (ConsensusBlockForMode mode)
+toConsensusPointInMode :: ()
+  => ConsensusMode CardanoMode
+  -> ChainPoint
+  -> Consensus.Point (Consensus.CardanoBlock L.StandardCrypto)
 -- It's the same concrete impl in all cases, but we have to show
 -- individually for each case that we satisfy the type equality constraint
 -- HeaderHash block ~ OneEraHash xs
 toConsensusPointInMode CardanoMode = toConsensusPointHF
 
-fromConsensusPointInMode :: ConsensusMode mode
-                         -> Consensus.Point (ConsensusBlockForMode mode)
-                         -> ChainPoint
+fromConsensusPointInMode :: ()
+  => ConsensusMode CardanoMode
+  -> Consensus.Point (Consensus.CardanoBlock L.StandardCrypto)
+  -> ChainPoint
 fromConsensusPointInMode CardanoMode = fromConsensusPointHF
 
 
@@ -410,8 +413,8 @@ makeChainTip woBlockNo chainPoint = case woBlockNo of
     ChainPointAtGenesis -> ChainTipAtGenesis
     ChainPoint slotNo headerHash -> ChainTip slotNo headerHash blockNo
 
-fromConsensusTip  :: ConsensusBlockForMode mode ~ block
-                  => ConsensusMode mode
+fromConsensusTip  :: Consensus.CardanoBlock L.StandardCrypto ~ block
+                  => ConsensusMode CardanoMode
                   -> Consensus.Tip block
                   -> ChainTip
 fromConsensusTip CardanoMode = conv

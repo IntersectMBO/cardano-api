@@ -183,7 +183,7 @@ instance NodeToClientVersionOf (QueryInMode mode result) where
 
 data EraHistory where
   EraHistory
-    :: ConsensusBlockForMode CardanoMode ~ Consensus.HardForkBlock xs
+    :: Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
     => ConsensusMode CardanoMode
     -> History.Interpreter xs
     -> EraHistory
@@ -552,7 +552,7 @@ fromShelleyRewardAccounts =
 --
 
 toConsensusQuery :: forall block result. ()
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => QueryInMode CardanoMode result
   -> Some (Consensus.Query block)
 toConsensusQuery QueryCurrentEra =
@@ -582,7 +582,7 @@ toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
 toConsensusQueryShelleyBased :: forall era protocol block result. ()
   => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
   => Core.EraCrypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
   -> Some (Consensus.Query block)
@@ -680,7 +680,7 @@ toConsensusQueryShelleyBased sbe = \case
 consensusQueryInEraInMode
   :: forall era erablock modeblock result result' xs.
      ConsensusBlockForEra era   ~ erablock
-  => ConsensusBlockForMode CardanoMode ~ modeblock
+  => Consensus.CardanoBlock L.StandardCrypto ~ modeblock
   => modeblock ~ Consensus.HardForkBlock xs
   => Consensus.HardForkQueryResult xs result ~ result'
   => CardanoEra era
@@ -703,7 +703,7 @@ consensusQueryInEraInMode era =
 
 fromConsensusQueryResult :: forall block result result'. ()
   => HasCallStack
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => QueryInMode CardanoMode result
   -> Consensus.Query block result'
   -> result'

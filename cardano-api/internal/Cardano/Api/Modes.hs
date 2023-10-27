@@ -35,7 +35,6 @@ module Cardano.Api.Modes (
 
     -- * Conversions to and from types in the consensus library
     ConsensusCryptoForBlock,
-    ConsensusBlockForMode,
     ConsensusBlockForEra,
     toConsensusEraIndex,
     fromConsensusEraIndex,
@@ -44,6 +43,7 @@ module Cardano.Api.Modes (
 import           Cardano.Api.Eras.Core
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
+import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -220,8 +220,6 @@ deriving instance Show (ConsensusModeParams mode)
 -- | A closed type family that maps between the consensus mode (from this API)
 -- and the block type used by the consensus libraries.
 --
-type family ConsensusBlockForMode mode where
-  ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
 
 type family ConsensusBlockForEra era where
   ConsensusBlockForEra ByronEra   = Consensus.ByronBlock
@@ -275,7 +273,7 @@ eraIndex6 :: Consensus.EraIndex (x6 : x5 : x4 : x3 : x2 : x1 : x0 : xs)
 eraIndex6 = eraIndexSucc eraIndex5
 
 toConsensusEraIndex :: ()
-  => ConsensusBlockForMode CardanoMode ~ Consensus.HardForkBlock xs
+  => Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
   => CardanoEra era
   -> Consensus.EraIndex xs
 toConsensusEraIndex = \case

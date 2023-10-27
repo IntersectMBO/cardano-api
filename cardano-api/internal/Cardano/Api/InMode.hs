@@ -32,6 +32,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 
+import qualified Cardano.Ledger.Api as L
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
@@ -74,7 +75,7 @@ data TxInMode where
 deriving instance Show TxInMode
 
 fromConsensusGenTx :: ()
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => ConsensusMode CardanoMode
   -> Consensus.GenTx block
   -> TxInMode
@@ -106,7 +107,7 @@ fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (
   in TxInMode (ShelleyTx ShelleyBasedEraConway shelleyEraTx) ConwayEraInCardanoMode
 
 toConsensusGenTx :: ()
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => TxInMode
   -> Consensus.GenTx block
 toConsensusGenTx (TxInMode (ByronTx ByronEraOnlyByron tx) ByronEraInCardanoMode) =
@@ -170,7 +171,7 @@ data TxIdInMode where
     -> TxIdInMode
 
 toConsensusTxId :: ()
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => TxIdInMode
   -> Consensus.TxId  (Consensus.GenTx block)
 toConsensusTxId (TxIdInMode ByronEra txid) =
@@ -296,7 +297,7 @@ deriving instance Show TxValidationErrorInCardanoMode
 
 
 fromConsensusApplyTxErr :: ()
-  => ConsensusBlockForMode CardanoMode ~ block
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => ConsensusMode CardanoMode
   -> Consensus.ApplyTxErr block
   -> TxValidationErrorInCardanoMode

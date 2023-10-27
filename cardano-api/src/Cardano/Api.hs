@@ -794,7 +794,6 @@ module Cardano.Api (
     ConsensusModeParams(..),
     ConsensusProtocol,
     ChainDepStateProtocol,
-    ConsensusBlockForMode,
     ConsensusBlockForEra,
     EraInMode(..),
     toEraInMode,
