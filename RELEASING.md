@@ -36,6 +36,12 @@ This part requires user to have the following tools installed on your local mach
 * https://jqlang.github.io/jq/
 * https://mikefarah.gitbook.io/yq/
 
+Alternatively, you can enter the `cardano-api` nix-shell, where these tools are already available, by running
+```bash
+nix develop
+```
+in `cardano-api` directory.
+
 >[!NOTE]
 > Steps which are only required when performing this process for the first time are marked with :four_leaf_clover: .
 
@@ -51,14 +57,15 @@ In order to generate changelog files in markdown format use the following steps:
     ```
     If you're not authenticated, follow the steps shown on the command output.
 
-1. Create a new branch, for example:
+1. Create a new branch in `cardano-api`, for example:
     ```bash
     git checkout -b <github-user-name>/new-version-cardano-api-8.3.0.0
     ```
     It does not matter much, as after the merge to `main` branch, this branch will be deleted.
+    Make sure that it is up to date with main branch in github.
 
 1. Download all PRs data from the `cardano-api` repo.
-    This will take some time if the number of all PRs is large.
+    This will take some time if the number of all PRs is large. From `cardano-api` directory, run:
     ```bash
     ../cardano-dev/scripts/download-prs.sh input-output-hk/cardano-api
     ```
