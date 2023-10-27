@@ -98,7 +98,6 @@ module Cardano.Api.Shelley
     toConsensusBlock,
     fromConsensusTip,
     fromConsensusPointHF,
-    toConsensusPointInMode,
     toConsensusPointHF,
 
     -- * Transaction metadata

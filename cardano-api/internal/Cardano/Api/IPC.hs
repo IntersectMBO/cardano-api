@@ -437,7 +437,7 @@ convLocalNodeClientProtocols
         LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient mode client,
 
       localTxSubmissionClientForBlock = convLocalTxSubmissionClient      <$> localTxSubmissionClient,
-      localStateQueryClientForBlock   = convLocalStateQueryClient   mode <$> localStateQueryClient,
+      localStateQueryClientForBlock   = convLocalStateQueryClient        <$> localStateQueryClient,
       localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$> localTxMonitoringClient
     }
 
@@ -461,7 +461,7 @@ convLocalChainSyncClient
   -> ChainSyncClient block (Net.Point block) (Net.Tip block) m a
 convLocalChainSyncClient mode =
     Net.Sync.mapChainSyncClient
-      (toConsensusPointInMode mode)
+      toConsensusPointHF
       fromConsensusPointHF
       (fromConsensusBlock mode)
       (fromConsensusTip mode)
@@ -474,7 +474,7 @@ convLocalChainSyncClientPipelined :: forall block m a. ()
   -> ChainSyncClientPipelined block (Net.Point block) (Net.Tip block) m a
 convLocalChainSyncClientPipelined mode =
   mapChainSyncClientPipelined
-    (toConsensusPointInMode mode)
+    toConsensusPointHF
     fromConsensusPointHF
     (fromConsensusBlock mode)
     (fromConsensusTip mode)
@@ -491,15 +491,13 @@ convLocalStateQueryClient
   :: forall block m a. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
-  => ConsensusMode CardanoMode
-  -> LocalStateQueryClient BlockInMode ChainPoint (QueryInMode CardanoMode) m a
+  => LocalStateQueryClient BlockInMode ChainPoint (QueryInMode CardanoMode) m a
   -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block) m a
-convLocalStateQueryClient mode =
+convLocalStateQueryClient =
     Net.Query.mapLocalStateQueryClient
-      (toConsensusPointInMode mode)
+      toConsensusPointHF
       toConsensusQuery
       fromConsensusQueryResult
-
 
 --TODO: Move to consensus
 mapLocalTxMonitoringClient :: forall txid txid' tx tx' m a. ()

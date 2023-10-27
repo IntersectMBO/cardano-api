@@ -33,7 +33,6 @@ module Cardano.Api.Block (
     toConsensusPoint,
     fromConsensusPoint,
     fromConsensusPointHF,
-    toConsensusPointInMode,
     toConsensusPointHF,
 
     -- * Tip of the chain
@@ -312,15 +311,6 @@ instance FromJSON ChainPoint where
       "ChainPointAtGenesis" -> pure ChainPointAtGenesis
       "ChainPoint" -> ChainPoint <$> o .: "slot" <*> o .: "blockHash"
       _ -> fail "Expected tag to be ChainPointAtGenesis | ChainPoint"
-
-toConsensusPointInMode :: ()
-  => ConsensusMode CardanoMode
-  -> ChainPoint
-  -> Consensus.Point (Consensus.CardanoBlock L.StandardCrypto)
--- It's the same concrete impl in all cases, but we have to show
--- individually for each case that we satisfy the type equality constraint
--- HeaderHash block ~ OneEraHash xs
-toConsensusPointInMode CardanoMode = toConsensusPointHF
 
 -- | Convert a 'Consensus.Point' for multi-era block type
 --
