@@ -151,35 +151,34 @@ import           GHC.Stack
 -- Queries
 --
 
-data QueryInMode mode result where
+data QueryInMode result where
   QueryCurrentEra
-    :: QueryInMode mode AnyCardanoEra
+    :: QueryInMode AnyCardanoEra
 
   QueryInEra
     :: QueryInEra era result
-    -> QueryInMode mode (Either EraMismatch result)
+    -> QueryInMode (Either EraMismatch result)
 
   QueryEraHistory
-    :: QueryInMode mode EraHistory
+    :: QueryInMode EraHistory
 
   QuerySystemStart
-    :: QueryInMode mode SystemStart
+    :: QueryInMode SystemStart
 
   QueryChainBlockNo
-    :: QueryInMode mode (WithOrigin BlockNo)
+    :: QueryInMode (WithOrigin BlockNo)
 
   QueryChainPoint
-    :: ConsensusMode mode
-    -> QueryInMode mode ChainPoint
+    :: QueryInMode ChainPoint
 
-instance NodeToClientVersionOf (QueryInMode mode result) where
+instance NodeToClientVersionOf (QueryInMode result) where
   nodeToClientVersionOf = \case
     QueryCurrentEra   -> NodeToClientV_9
     QueryInEra q      -> nodeToClientVersionOf q
     QueryEraHistory   -> NodeToClientV_9
     QuerySystemStart  -> NodeToClientV_9
     QueryChainBlockNo -> NodeToClientV_10
-    QueryChainPoint _ -> NodeToClientV_10
+    QueryChainPoint   -> NodeToClientV_10
 
 data EraHistory where
   EraHistory
@@ -224,7 +223,7 @@ slotToEpoch slotNo (EraHistory _ interpreter) = case Qry.interpretQuery interpre
   Right (epochNumber, slotsInEpoch, slotsToEpochEnd) -> Right (epochNumber, SlotsInEpoch slotsInEpoch, SlotsToEpochEnd slotsToEpochEnd)
   Left e -> Left e
 
-deriving instance Show (QueryInMode CardanoMode result)
+deriving instance Show (QueryInMode result)
 
 data QueryInEra era result where
      QueryByronUpdateState :: QueryInEra ByronEra ByronUpdateState
@@ -553,7 +552,7 @@ fromShelleyRewardAccounts =
 
 toConsensusQuery :: forall block result. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => QueryInMode CardanoMode result
+  => QueryInMode result
   -> Some (Consensus.Query block)
 toConsensusQuery QueryCurrentEra =
     Some $ Consensus.BlockQuery $
@@ -569,7 +568,7 @@ toConsensusQuery QuerySystemStart = Some Consensus.GetSystemStart
 
 toConsensusQuery QueryChainBlockNo = Some Consensus.GetChainBlockNo
 
-toConsensusQuery (QueryChainPoint _) = Some Consensus.GetChainPoint
+toConsensusQuery QueryChainPoint = Some Consensus.GetChainPoint
 
 toConsensusQuery (QueryInEra QueryByronUpdateState) =
   Some $ Consensus.BlockQuery $
@@ -704,7 +703,7 @@ consensusQueryInEraInMode era =
 fromConsensusQueryResult :: forall block result result'. ()
   => HasCallStack
   => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => QueryInMode CardanoMode result
+  => QueryInMode result
   -> Consensus.Query block result'
   -> result'
   -> result
@@ -726,7 +725,7 @@ fromConsensusQueryResult QueryChainBlockNo q' r' =
         -> r'
       _ -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResult (QueryChainPoint _) q' r' =
+fromConsensusQueryResult QueryChainPoint q' r' =
     case q' of
       Consensus.GetChainPoint
         -> fromConsensusPointHF r'

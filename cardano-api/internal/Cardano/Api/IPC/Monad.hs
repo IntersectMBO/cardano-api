@@ -43,7 +43,7 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
 executeLocalStateQueryExpr :: ()
   => LocalNodeConnectInfo
   -> Maybe ChainPoint
-  -> LocalStateQueryExpr BlockInMode ChainPoint (QueryInMode CardanoMode) () IO a
+  -> LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
   -> IO (Either AcquiringFailure a)
 executeLocalStateQueryExpr connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
@@ -71,8 +71,8 @@ setupLocalStateQueryExpr ::
   -> Maybe ChainPoint
   -> TMVar (Either AcquiringFailure a)
   -> NodeToClientVersion
-  -> LocalStateQueryExpr BlockInMode ChainPoint (QueryInMode CardanoMode) () IO a
-  -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint (QueryInMode CardanoMode) IO ()
+  -> LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+  -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
 setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
   LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
     Net.Query.ClientStAcquiring
@@ -88,11 +88,11 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
     }
 
 -- | Get the node server's Node-to-Client version.
-getNtcVersion :: LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO NodeToClientVersion
+getNtcVersion :: LocalStateQueryExpr block point QueryInMode r IO NodeToClientVersion
 getNtcVersion = LocalStateQueryExpr ask
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
-queryExpr :: QueryInMode CardanoMode a -> LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError a)
+queryExpr :: QueryInMode a -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
 queryExpr q = do
   let minNtcVersion = nodeToClientVersionOf q
   ntcVersion <- getNtcVersion

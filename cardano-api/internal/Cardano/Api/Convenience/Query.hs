@@ -81,7 +81,7 @@ queryStateForBalancedTx :: ()
   => CardanoEra era
   -> [TxIn]
   -> [Certificate era]
-  -> LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO
+  -> LocalStateQueryExpr block point QueryInMode r IO
       ( Either
           QueryConvenienceError
           ( UTxO era
@@ -143,7 +143,7 @@ determineEra localNodeConnInfo =
 executeQueryCardanoMode :: ()
   => SocketPath
   -> NetworkId
-  -> QueryInMode CardanoMode (Either EraMismatch result)
+  -> QueryInMode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
 executeQueryCardanoMode socketPath nid q = runExceptT $ do
   let localNodeConnInfo =
@@ -158,7 +158,7 @@ executeQueryCardanoMode socketPath nid q = runExceptT $ do
 -- | Execute a query against the local node in any mode.
 executeQueryAnyMode :: forall result. ()
   => LocalNodeConnectInfo
-  -> QueryInMode CardanoMode (Either EraMismatch result)
+  -> QueryInMode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
 executeQueryAnyMode localNodeConnInfo q = runExceptT $ do
   lift (queryNodeLocalState localNodeConnInfo Nothing q)

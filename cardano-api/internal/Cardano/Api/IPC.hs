@@ -168,7 +168,7 @@ type LocalNodeClientProtocolsInMode =
     TxInMode
     TxIdInMode
     TxValidationErrorInCardanoMode
-    (QueryInMode CardanoMode)
+    QueryInMode
     IO
 
 data LocalNodeConnectInfo =
@@ -486,7 +486,7 @@ convLocalStateQueryClient
   :: forall block m a. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
-  => LocalStateQueryClient BlockInMode ChainPoint (QueryInMode CardanoMode) m a
+  => LocalStateQueryClient BlockInMode ChainPoint QueryInMode m a
   -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block) m a
 convLocalStateQueryClient =
     Net.Query.mapLocalStateQueryClient
@@ -549,7 +549,7 @@ toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
 queryNodeLocalState :: forall result. ()
   => LocalNodeConnectInfo
   -> Maybe ChainPoint
-  -> QueryInMode CardanoMode result
+  -> QueryInMode result
   -> IO (Either AcquiringFailure result)
 queryNodeLocalState connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO
@@ -566,7 +566,7 @@ queryNodeLocalState connctInfo mpoint query = do
     singleQuery
       :: Maybe ChainPoint
       -> TMVar (Either AcquiringFailure result)
-      -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint (QueryInMode CardanoMode) IO ()
+      -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
     singleQuery mPointVar' resultVar' =
       LocalStateQueryClient $ do
       pure $
