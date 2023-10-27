@@ -25,7 +25,6 @@ module Cardano.Api.Query.Expr
   , queryStakeSnapshot
   , querySystemStart
   , queryUtxo
-  , determineEraExpr
   , L.MemberStatus (..)
   , L.CommitteeMembersState (..)
   , queryCommitteeMembersState
@@ -59,7 +58,6 @@ import           Cardano.Ledger.SafeHash
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
-import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Data.Map (Map)
 import           Data.Set (Set)
 import qualified Data.Set as S
@@ -201,14 +199,6 @@ queryUtxo :: ()
   -> LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
 queryUtxo sbe utxoFilter =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryUTxO utxoFilter
-
--- | A monad expression that determines what era the node is in.
-determineEraExpr :: ()
-  => ConsensusModeParams CardanoMode
-  -> LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
-determineEraExpr cModeParams = runExceptT $
-  case consensusModeOnly cModeParams of
-    CardanoMode -> ExceptT queryCurrentEra
 
 queryConstitution :: ()
   => ShelleyBasedEra era

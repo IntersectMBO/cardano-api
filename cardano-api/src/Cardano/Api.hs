@@ -983,7 +983,6 @@ module Cardano.Api (
     queryStakeSnapshot,
     querySystemStart,
     queryUtxo,
-    determineEraExpr,
     queryConstitution,
     queryGovState,
     queryDRepState,
