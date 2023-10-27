@@ -172,11 +172,11 @@ type LocalNodeClientProtocolsInMode =
     IO
 
 data LocalNodeConnectInfo =
-     LocalNodeConnectInfo {
-       localConsensusModeParams :: ConsensusModeParams CardanoMode,
-       localNodeNetworkId       :: NetworkId,
-       localNodeSocketPath      :: SocketPath
-     }
+  LocalNodeConnectInfo
+    { localConsensusModeParams  :: ConsensusModeParams
+    , localNodeNetworkId        :: NetworkId
+    , localNodeSocketPath       :: SocketPath
+    }
 
 localConsensusMode :: ()
   => LocalNodeConnectInfo
@@ -185,7 +185,7 @@ localConsensusMode LocalNodeConnectInfo {localConsensusModeParams} =
     consensusModeOnly localConsensusModeParams
 
 consensusModeOnly :: ()
-  => ConsensusModeParams CardanoMode
+  => ConsensusModeParams
   -> ConsensusMode CardanoMode
 consensusModeOnly CardanoModeParams{} = CardanoMode
 
@@ -395,7 +395,7 @@ data LocalNodeClientProtocolsForBlock block =
 --
 mkLocalNodeClientParams :: forall block. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => ConsensusModeParams CardanoMode
+  => ConsensusModeParams
   -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
   -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =

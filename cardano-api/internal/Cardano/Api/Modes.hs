@@ -25,7 +25,6 @@ module Cardano.Api.Modes (
 
     -- * Connection parameters for each mode
     ConsensusModeParams(..),
-    AnyConsensusModeParams(..),
     Byron.EpochSlots(..),
 
     -- * Conversions to and from types in the consensus library
@@ -66,11 +65,6 @@ import           Data.Text (Text)
 --
 data CardanoMode
 
-data AnyConsensusModeParams where
-  AnyConsensusModeParams :: ConsensusModeParams mode -> AnyConsensusModeParams
-
-deriving instance Show AnyConsensusModeParams
-
 -- | This GADT provides a value-level representation of all the consensus modes.
 -- This enables pattern matching on the era to allow them to be treated in a
 -- non-uniform way.
@@ -101,13 +95,12 @@ renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 -- It is possible in future that we may be able to eliminate this parameter by
 -- discovering it from the node during the initial handshake.
 --
-data ConsensusModeParams mode where
+data ConsensusModeParams where
+  CardanoModeParams
+    :: Byron.EpochSlots
+    -> ConsensusModeParams
 
-     CardanoModeParams
-       :: Byron.EpochSlots
-       -> ConsensusModeParams CardanoMode
-
-deriving instance Show (ConsensusModeParams mode)
+deriving instance Show ConsensusModeParams
 
 -- ----------------------------------------------------------------------------
 -- Consensus conversion functions
