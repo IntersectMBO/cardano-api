@@ -436,7 +436,7 @@ convLocalNodeClientProtocols
         LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined mode clientPipelined
         LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient mode client,
 
-      localTxSubmissionClientForBlock = convLocalTxSubmissionClient mode <$> localTxSubmissionClient,
+      localTxSubmissionClientForBlock = convLocalTxSubmissionClient      <$> localTxSubmissionClient,
       localStateQueryClientForBlock   = convLocalStateQueryClient   mode <$> localStateQueryClient,
       localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$> localTxMonitoringClient
     }
@@ -482,14 +482,10 @@ convLocalChainSyncClientPipelined mode =
 convLocalTxSubmissionClient :: forall block m a. ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
-  => ConsensusMode CardanoMode
-  -> LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode m a
+  => LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode m a
   -> LocalTxSubmissionClient (Consensus.GenTx block) (Consensus.ApplyTxErr block) m a
-convLocalTxSubmissionClient mode =
-    Net.Tx.mapLocalTxSubmissionClient
-      toConsensusGenTx
-      (fromConsensusApplyTxErr mode)
-
+convLocalTxSubmissionClient =
+  Net.Tx.mapLocalTxSubmissionClient toConsensusGenTx fromConsensusApplyTxErr
 
 convLocalStateQueryClient
   :: forall block m a. ()
