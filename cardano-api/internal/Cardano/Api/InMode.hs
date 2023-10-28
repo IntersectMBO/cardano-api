@@ -25,6 +25,7 @@ module Cardano.Api.InMode (
     fromConsensusApplyTxErr,
   ) where
 
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
@@ -111,12 +112,12 @@ fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (
 toConsensusGenTx :: ConsensusBlockForMode mode ~ block
                  => TxInMode mode
                  -> Consensus.GenTx block
-toConsensusGenTx (TxInMode (ByronTx tx) ByronEraInByronMode) =
+toConsensusGenTx (TxInMode (ByronTx ByronEraOnlyByron tx) ByronEraInByronMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))
   where
     tx' = Consensus.ByronTx (Consensus.byronIdTx tx) tx
 
-toConsensusGenTx (TxInMode (ByronTx tx) ByronEraInCardanoMode) =
+toConsensusGenTx (TxInMode (ByronTx ByronEraOnlyByron tx) ByronEraInCardanoMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))
   where
     tx' = Consensus.ByronTx (Consensus.byronIdTx tx) tx

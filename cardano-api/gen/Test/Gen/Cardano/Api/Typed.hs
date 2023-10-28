@@ -182,16 +182,15 @@ genAddressShelley = makeShelleyAddress <$> genNetworkId
                                        <*> genStakeAddressReference
 
 genAddressInEra :: CardanoEra era -> Gen (AddressInEra era)
-genAddressInEra era =
-  case cardanoEraStyle era of
-    LegacyByronEra ->
-      byronAddressInEra <$> genAddressByron
-
-    ShelleyBasedEra sbe ->
+genAddressInEra =
+  inEonForEra
+    (byronAddressInEra <$> genAddressByron)
+    (\sbe ->
       Gen.choice
         [ byronAddressInEra       <$> genAddressByron
         , shelleyAddressInEra sbe <$> genAddressShelley
         ]
+    )
 
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
@@ -643,9 +642,7 @@ genTxBodyContent era = do
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts era
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
-  txProtocolParams <- BuildTxWith <$> case cardanoEraStyle era of
-                                        LegacyByronEra -> return Nothing
-                                        ShelleyBasedEra sbe -> Gen.maybe $ genValidProtocolParameters sbe
+  txProtocolParams <- BuildTxWith <$> forEraInEon era (pure Nothing) (Gen.maybe . genValidProtocolParameters)
   txWithdrawals <- genTxWithdrawals era
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
@@ -755,13 +752,14 @@ genTx era =
     <*> genTxBody era
 
 genWitnesses :: CardanoEra era -> Gen [KeyWitness era]
-genWitnesses era =
-  case cardanoEraStyle era of
-    LegacyByronEra -> Gen.list (Range.constant 1 10) genByronKeyWitness
-    ShelleyBasedEra sbe -> do
+genWitnesses =
+  caseByronOrShelleyBasedEra
+    (Gen.list (Range.constant 1 10) . genByronKeyWitness)
+    (\sbe -> do
       bsWits  <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
       keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
       return $ bsWits ++ keyWits
+    )
 
 genVerificationKey :: ()
 #if MIN_VERSION_base(4,17,0)
@@ -786,8 +784,8 @@ genVerificationKeyHash :: ()
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken
 
-genByronKeyWitness :: Gen (KeyWitness ByronEra)
-genByronKeyWitness = do
+genByronKeyWitness :: ByronEraOnly era -> Gen (KeyWitness era)
+genByronKeyWitness ByronEraOnlyByron = do
   pmId <- genProtocolMagicId
   txinWitness <- genVKWitness pmId
   return $ ByronKeyWitness txinWitness
@@ -838,9 +836,7 @@ genShelleyWitnessSigningKey =
 genCardanoKeyWitness :: ()
   => CardanoEra era
   -> Gen (KeyWitness era)
-genCardanoKeyWitness era = case cardanoEraStyle era of
-  LegacyByronEra -> genByronKeyWitness
-  ShelleyBasedEra sbe -> genShelleyWitness sbe
+genCardanoKeyWitness = caseByronOrShelleyBasedEra genByronKeyWitness genShelleyWitness
 
 genSeed :: Int -> Gen Crypto.Seed
 genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)

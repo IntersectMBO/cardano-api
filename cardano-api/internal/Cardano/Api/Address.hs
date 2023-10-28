@@ -489,13 +489,13 @@ anyAddressInShelleyBasedEra sbe = \case
 anyAddressInEra :: CardanoEra era
                 -> AddressAny
                 -> Either String (AddressInEra era)
-anyAddressInEra _ (AddressByron addr) =
+anyAddressInEra era = \case
+  AddressByron addr ->
     Right (AddressInEra ByronAddressInAnyEra addr)
-
-anyAddressInEra era (AddressShelley addr) =
-    case cardanoEraStyle era of
-      LegacyByronEra       -> Left "Expected Byron based era address"
-      ShelleyBasedEra era' -> Right (AddressInEra (ShelleyAddressInEra era') addr)
+  AddressShelley addr ->
+    forEraInEon era
+      (Left "Expected Byron based era address")
+      (\sbe -> Right (AddressInEra (ShelleyAddressInEra sbe) addr))
 
 toAddressAny :: Address addr -> AddressAny
 toAddressAny a@ShelleyAddress{} = AddressShelley a

@@ -160,11 +160,10 @@ deserialiseTx :: ()
   -> ByteString
   -> Either DecoderError (Tx era)
 deserialiseTx era bs =
-  case era of
-    ByronEra ->
-      ByronTx
-        <$> CBOR.decodeFullAnnotatedBytes CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
-    _ -> cardanoEraConstraints era $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy)) bs
+  caseByronOrShelleyBasedEra
+    (\w -> ByronTx w <$> CBOR.decodeFullAnnotatedBytes CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs))
+    (const $ cardanoEraConstraints era $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy)) bs)
+    era
 
 serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelopeCddl
 serialiseWitnessLedgerCddl sbe kw =
@@ -270,10 +269,9 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 
       Just (FromCDDLWitness ttoken f) -> do
          AnyCardanoEra era <- cddlTypeToEra ttoken
-         case cardanoEraStyle era of
-           LegacyByronEra -> Left TextEnvelopeCddlErrByronKeyWitnessUnsupported
-           ShelleyBasedEra sbe ->
-             f . InAnyCardanoEra era <$> deserialiseWitnessLedgerCddl sbe teCddl
+         forEraInEon era
+           (Left TextEnvelopeCddlErrByronKeyWitnessUnsupported)
+           (\sbe -> f . InAnyCardanoEra era <$> deserialiseWitnessLedgerCddl sbe teCddl)
   where
    actualType :: Text
    actualType = teCddlType teCddl
