@@ -71,6 +71,7 @@ type BabbageEraOnwardsConstraints era =
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
   , L.BabbageEraPParams (ShelleyLedgerEra era)
   , L.BabbageEraTxBody (ShelleyLedgerEra era)
   , L.BabbageEraTxOut (ShelleyLedgerEra era)
@@ -84,6 +85,7 @@ type BabbageEraOnwardsConstraints era =
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.ExtendedUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
