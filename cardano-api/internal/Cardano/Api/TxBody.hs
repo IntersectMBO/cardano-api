@@ -1808,7 +1808,8 @@ createTransactionBody :: ()
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
-    let apiTxOuts = txOuts bc
+    let era = shelleyBasedToCardanoEra sbe
+        apiTxOuts = txOuts bc
         apiScriptWitnesses = collectTxBodyScriptWitnesses sbe bc
         apiScriptValidity = txScriptValidity bc
         apiMintValue = txMintValue bc
@@ -1830,31 +1831,31 @@ createTransactionBody sbe bc =
         languages = convLanguages apiScriptWitnesses
         sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
-    setUpdateProposal <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setUpdateProposal <- forEraInEon era (pure id) $ \w ->
       (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc)
 
-    setInvalidBefore <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setInvalidBefore <- forEraInEon era (pure id) $ \w ->
       pure $ A.invalidBeforeTxBodyL w .~ convValidityLowerBound (txValidityLowerBound bc)
 
-    setMint <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setMint <- forEraInEon era (pure id) $ \w ->
       pure $ A.mintTxBodyL w .~ convMintValue apiMintValue
 
-    setScriptIntegrityHash <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setScriptIntegrityHash <- forEraInEon era (pure id) $ \w ->
       pure $ A.scriptIntegrityHashTxBodyL w .~ getScriptIntegrityHash apiProtocolParameters languages sData
 
-    setCollateralInputs <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setCollateralInputs <- forEraInEon era (pure id) $ \w ->
       pure $ A.collateralInputsTxBodyL w .~ collTxIns
 
-    setReqSignerHashes <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setReqSignerHashes <- forEraInEon era (pure id) $ \w ->
       pure $ A.reqSignerHashesTxBodyL w .~ convExtraKeyWitnesses apiExtraKeyWitnesses
 
-    setReferenceInputs <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setReferenceInputs <- forEraInEon era (pure id) $ \w ->
       pure $ A.referenceInputsTxBodyL w .~ refTxIns
 
-    setCollateralReturn <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setCollateralReturn <- forEraInEon era (pure id) $ \w ->
       pure $ A.collateralReturnTxBodyL w .~ returnCollateral
 
-    setTotalCollateral <- forShelleyBasedEraInEon sbe (pure id) $ \w ->
+    setTotalCollateral <- forEraInEon era (pure id) $ \w ->
       pure $ A.totalCollateralTxBodyL w .~ totalCollateral
 
     let ledgerTxBody =
