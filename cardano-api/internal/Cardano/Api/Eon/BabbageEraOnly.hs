@@ -63,8 +63,7 @@ instance ToCardanoEra BabbageEraOnly where
     BabbageEraOnlyBabbage  -> BabbageEra
 
 type BabbageEraOnlyConstraints era =
-  ( L.AlonzoEraTxOut (ShelleyLedgerEra era)
-  , C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
