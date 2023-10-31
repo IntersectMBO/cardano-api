@@ -18,6 +18,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
+{- HLINT ignore "Move brackets to avoid $." -}
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use let" -}
 {- HLINT ignore "Use section" -}
@@ -239,6 +240,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.Monoid
 import qualified Data.OSet.Strict as OSet
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
@@ -1831,46 +1833,49 @@ createTransactionBody sbe bc =
         languages = convLanguages apiScriptWitnesses
         sData = convScriptData sbe apiTxOuts apiScriptWitnesses
 
-    setUpdateProposal <- forEraInEon era (pure id) $ \w ->
-      (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc)
+    setUpdateProposal <- monoidForEraInEonA era $ \w ->
+      Endo . (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc)
 
-    setInvalidBefore <- forEraInEon era (pure id) $ \w ->
-      pure $ A.invalidBeforeTxBodyL w .~ convValidityLowerBound (txValidityLowerBound bc)
+    setInvalidBefore <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.invalidBeforeTxBodyL w .~ convValidityLowerBound (txValidityLowerBound bc)
 
-    setMint <- forEraInEon era (pure id) $ \w ->
-      pure $ A.mintTxBodyL w .~ convMintValue apiMintValue
+    setMint <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.mintTxBodyL w .~ convMintValue apiMintValue
 
-    setScriptIntegrityHash <- forEraInEon era (pure id) $ \w ->
-      pure $ A.scriptIntegrityHashTxBodyL w .~ getScriptIntegrityHash apiProtocolParameters languages sData
+    setScriptIntegrityHash <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.scriptIntegrityHashTxBodyL w .~ getScriptIntegrityHash apiProtocolParameters languages sData
 
-    setCollateralInputs <- forEraInEon era (pure id) $ \w ->
-      pure $ A.collateralInputsTxBodyL w .~ collTxIns
+    setCollateralInputs <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.collateralInputsTxBodyL w .~ collTxIns
 
-    setReqSignerHashes <- forEraInEon era (pure id) $ \w ->
-      pure $ A.reqSignerHashesTxBodyL w .~ convExtraKeyWitnesses apiExtraKeyWitnesses
+    setReqSignerHashes <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.reqSignerHashesTxBodyL w .~ convExtraKeyWitnesses apiExtraKeyWitnesses
 
-    setReferenceInputs <- forEraInEon era (pure id) $ \w ->
-      pure $ A.referenceInputsTxBodyL w .~ refTxIns
+    setReferenceInputs <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.referenceInputsTxBodyL w .~ refTxIns
 
-    setCollateralReturn <- forEraInEon era (pure id) $ \w ->
-      pure $ A.collateralReturnTxBodyL w .~ returnCollateral
+    setCollateralReturn <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.collateralReturnTxBodyL w .~ returnCollateral
 
-    setTotalCollateral <- forEraInEon era (pure id) $ \w ->
-      pure $ A.totalCollateralTxBodyL w .~ totalCollateral
+    setTotalCollateral <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.totalCollateralTxBodyL w .~ totalCollateral
 
     let ledgerTxBody =
           mkCommonTxBody sbe (txIns bc) (txOuts bc) (txFee bc) (txWithdrawals bc) txAuxData
             & A.certsTxBodyL sbe            .~ certs
             & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound bc)
-            & modifyWith setUpdateProposal
-            & modifyWith setInvalidBefore
-            & modifyWith setMint
-            & modifyWith setScriptIntegrityHash
-            & modifyWith setCollateralInputs
-            & modifyWith setReqSignerHashes
-            & modifyWith setReferenceInputs
-            & modifyWith setCollateralReturn
-            & modifyWith setTotalCollateral
+            & ( appEndo $ mconcat
+                  [ setUpdateProposal
+                  , setInvalidBefore
+                  , setMint
+                  , setScriptIntegrityHash
+                  , setCollateralInputs
+                  , setReqSignerHashes
+                  , setReferenceInputs
+                  , setCollateralReturn
+                  , setTotalCollateral
+                  ]
+              )
 
     -- TODO: NetworkId for hardware wallets. We don't always want this
     -- & L.networkIdTxBodyL .~ ...

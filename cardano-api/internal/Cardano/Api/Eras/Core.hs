@@ -38,6 +38,8 @@ module Cardano.Api.Eras.Core
   , forEraInEonMaybe
   , forEraMaybeEon
   , maybeEon
+  , monoidForEraInEon
+  , monoidForEraInEonA
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
@@ -163,6 +165,23 @@ maybeEon :: ()
   => Maybe (eon era)  -- ^ The eon if supported in the era
 maybeEon =
   inEonForEra Nothing Just cardanoEra
+
+monoidForEraInEon :: ()
+  => Eon eon
+  => Monoid a
+  => CardanoEra era
+  -> (eon era -> a)
+  -> a
+monoidForEraInEon sbe = forEraInEon sbe mempty
+
+monoidForEraInEonA :: ()
+  => Applicative f
+  => Eon eon
+  => Monoid a
+  => CardanoEra era
+  -> (eon era -> f a)
+  -> f a
+monoidForEraInEonA sbe = forEraInEon sbe (pure mempty)
 
 -- ----------------------------------------------------------------------------
 -- Era and eon existential types
