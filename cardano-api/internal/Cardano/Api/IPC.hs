@@ -145,19 +145,12 @@ import           Data.Void (Void)
 -- 'connectToLocalNode'.
 --
 data LocalNodeClientProtocols block point tip slot tx txid txerr query m =
-     LocalNodeClientProtocols {
-       localChainSyncClient
-         :: LocalChainSyncClient block point tip m
-
-     , localTxSubmissionClient
-         :: Maybe (LocalTxSubmissionClient tx txerr          m ())
-
-     , localStateQueryClient
-         :: Maybe (LocalStateQueryClient   block point query m ())
-
-     , localTxMonitoringClient
-         :: Maybe (LocalTxMonitorClient txid tx slot m ())
-     }
+  LocalNodeClientProtocols
+    { localChainSyncClient    :: LocalChainSyncClient block point tip m
+    , localTxSubmissionClient :: Maybe (LocalTxSubmissionClient tx txerr m ())
+    , localStateQueryClient   :: Maybe (LocalStateQueryClient block point query m ())
+    , localTxMonitoringClient :: Maybe (LocalTxMonitorClient txid tx slot m ())
+    }
 
 data LocalChainSyncClient block point tip m
   = NoLocalChainSyncClient
@@ -166,16 +159,16 @@ data LocalChainSyncClient block point tip m
 
 -- public, exported
 type LocalNodeClientProtocolsInMode =
-       LocalNodeClientProtocols
-         (BlockInMode CardanoMode)
-         ChainPoint
-         ChainTip
-         SlotNo
-         (TxInMode CardanoMode)
-         (TxIdInMode CardanoMode)
-         (TxValidationErrorInMode CardanoMode)
-         (QueryInMode CardanoMode)
-         IO
+  LocalNodeClientProtocols
+    (BlockInMode CardanoMode)
+    ChainPoint
+    ChainTip
+    SlotNo
+    (TxInMode CardanoMode)
+    (TxIdInMode CardanoMode)
+    (TxValidationErrorInMode CardanoMode)
+    (QueryInMode CardanoMode)
+    IO
 
 data LocalNodeConnectInfo mode =
      LocalNodeConnectInfo {
