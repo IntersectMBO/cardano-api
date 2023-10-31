@@ -79,7 +79,6 @@ type AlonzoEraOnwardsConstraints era =
   , L.AlonzoEraTx (ShelleyLedgerEra era)
   , L.AlonzoEraTxBody (ShelleyLedgerEra era)
   , L.AlonzoEraTxOut (ShelleyLedgerEra era)
-  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
   , L.AlonzoEraTxWits (ShelleyLedgerEra era)
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
   , L.Era (ShelleyLedgerEra era)
