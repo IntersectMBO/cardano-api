@@ -140,7 +140,7 @@ library internal
                         -- in this module
                         Cardano.Api.Orphans
 
-  build-depends:        aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 2.2.1
                       , aeson-pretty      >= 0.8.5
                       , attoparsec
                       , base16-bytestring >= 1.0
@@ -149,9 +149,9 @@ library internal
                       , bytestring
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-wrapper ^>= 1.5
-                      , cardano-data >= 1.0
+                      , cardano-data >= 1.1
                       , cardano-ledger-alonzo >= 1.5.0
                       , cardano-ledger-allegra >= 1.2.3.1
                       , cardano-ledger-api ^>= 1.7
@@ -232,7 +232,7 @@ library
                       , cardano-api:internal
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-crypto-class ^>= 2.1
                       , cryptonite
                       , deepseq
                       , memory
@@ -256,13 +256,13 @@ library gen
                         Test.Hedgehog.Roundtrip.Bech32
                         Test.Hedgehog.Roundtrip.CBOR
 
-  build-depends:        aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 2.2.1
                       , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-api:internal
                       , cardano-binary >= 1.6 && < 1.8
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
                       , cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >= 1.5.0
                       , cardano-ledger-byron-test >= 1.5
@@ -285,13 +285,13 @@ test-suite cardano-api-test
   main-is:              cardano-api-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        aeson             >= 1.5.6.0
+  build-depends:        aeson             >= 2.2.1
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
                       , cardano-api:internal
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
                       , cardano-ledger-api ^>= 1.7
@@ -340,8 +340,8 @@ test-suite cardano-api-golden
                       , cardano-api
                       , cardano-api:gen
                       , cardano-binary
-                      , cardano-crypto-class ^>= 2.1.2
-                      , cardano-data >= 1.0
+                      , cardano-crypto-class ^>= 2.1
+                      , cardano-data >= 1.1
                       , cardano-ledger-alonzo
                       , cardano-ledger-api ^>= 1.7
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8

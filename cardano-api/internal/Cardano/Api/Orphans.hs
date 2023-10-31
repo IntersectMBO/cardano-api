@@ -63,7 +63,7 @@ instance Crypto.Crypto crypto => ToJSON (Consensus.StakeSnapshots crypto) where
   toJSON = object . stakeSnapshotsToPair
   toEncoding = pairs . mconcat . stakeSnapshotsToPair
 
-stakeSnapshotsToPair :: (Aeson.KeyValue a, Crypto.Crypto crypto) => Consensus.StakeSnapshots crypto -> [a]
+stakeSnapshotsToPair :: (Aeson.KeyValue e a, Crypto.Crypto crypto) => Consensus.StakeSnapshots crypto -> [a]
 stakeSnapshotsToPair Consensus.StakeSnapshots
     { Consensus.ssStakeSnapshots
     , Consensus.ssMarkTotal
@@ -82,7 +82,7 @@ instance ToJSON (Consensus.StakeSnapshot crypto) where
   toJSON = object . stakeSnapshotToPair
   toEncoding = pairs . mconcat . stakeSnapshotToPair
 
-stakeSnapshotToPair :: Aeson.KeyValue a => Consensus.StakeSnapshot crypto -> [a]
+stakeSnapshotToPair :: Aeson.KeyValue e a => Consensus.StakeSnapshot crypto -> [a]
 stakeSnapshotToPair Consensus.StakeSnapshot
     { Consensus.ssMarkPool
     , Consensus.ssSetPool

@@ -36,7 +36,7 @@ instance IsShelleyBasedEra era => ToJSON (DebugLedgerState era) where
     Aeson.pairs . mconcat . toDebugLedgerStatePair sbe
 
 toDebugLedgerStatePair :: ()
-  => Aeson.KeyValue a
+  => Aeson.KeyValue e a
   => ShelleyBasedEra era
   -> DebugLedgerState era
   -> [a]
