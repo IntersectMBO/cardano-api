@@ -1,5 +1,130 @@
 # Changelog for cardano-api
 
+## 8.30.0.0
+
+- Remove uses of `coerceKeyRole`, use asWitness when key role conversion is required 
+  (feature, breaking)
+  [PR 341](https://github.com/input-output-hk/cardano-api/pull/341)
+
+- Delete `ByronMode` and `ShelleyMode`
+  Delete `anyEraInModeToAnyEra`
+  Delete `AnyEraInMode`
+  Modify to use `CardanoMode` only:
+    - `executeQueryAnyMode`
+    - `connectToLocalNode`
+    - `connectToLocalNodeWithVersion
+    - `mkLocalNodeClientParams`
+    - `queryNodeLocalState`
+    - `submitTxToNodeLocal`
+    - `queryTxMonitoringLocal`
+    - `getLocalChainTip`
+    - `executeLocalStateQueryExpr`
+  Deparameterise `LocalNodeClientProtocolsInMode`
+  Modify `LocalNodeClientProtocols` to only work in `CardanoMode`.
+  Rename `LocalNodeClientProtocolsInMode` to `LocalNodeClientProtocolsInIO`
+  Rename `TxValidationErrorInMode` to `TxValidationErrorInCardanoMode`
+  Deparameterise `TxValidationErrorInMode`
+  Modify to use `CardanoMode` only
+  - `determineEra`
+  Deparameterise `LocalNodeConnectInfo`
+  Deparameterise `LocalTxMonitoringResult`
+  Deparameterise `LocalTxMonitoringQuery`
+  Deparameterise `TxInMode`
+  Modify to use `CardanoMode` only
+  - `fromConsensusBlock`
+  - `toConsensusBlock`
+  - `queryExpr`
+  - `getProgress`
+  - `getSlotForRelativeTime`
+  - `toLedgerEpochInfo`
+  - `slotToEpoch`
+  - `queryCurrentEpochState`
+  - `queryEpoch`
+  - `queryDebugLedgerState`
+  - `queryGenesisParameters`
+  - `queryPoolDistribution`
+  - `queryPoolState`
+  - `queryProtocolParameters`
+  - `queryConstitutionHash`
+  - `queryProtocolParametersUpdate`
+  - `queryProtocolState`
+  - `queryStakeAddresses`
+  - `queryStakeDelegDeposits`
+  - `queryStakeDistribution`
+  - `queryStakePoolParameters`
+  - `queryStakePools`
+  - `queryStakeSnapshot`
+  - `queryUtxo`
+  - `queryConstitution`
+  - `queryGovState`
+  - `queryDRepState`
+  - `queryDRepStakeDistribution`
+  - `queryCommitteeMembersState`
+  Deparameterise `BlockInMode`
+  Deparameterise `TxIdInMode`
+  Remove `EraInMode` argument in `QueryInEra` constructor
+  Delete `ConsensusBlockForMode`
+  Modify `TxInMode` to carry `CardanoEra` instead of `EraInMode`
+  Deparameterise `BlockInMode`
+  Deparameterise `TxIdInMode`
+  Deparameterise `EraHistory`
+  Modify to not take `EraInMode` argument
+  - `queryCurrentEpochState`
+  - `queryEpoch`
+  - `queryDebugLedgerState`
+  - `queryGenesisParameters`
+  - `queryPoolDistribution`
+  - `queryPoolState`
+  - `queryProtocolParameters`
+  - `queryConstitutionHash`
+  - `queryProtocolParametersUpdate`
+  - `queryProtocolState`
+  - `queryStakeAddresses`
+  - `queryStakeDelegDeposits`
+  - `queryStakeDistribution`
+  - `queryStakePoolParameters`
+  - `queryStakePools`
+  - `queryStakeSnapshot`
+  - `queryUtxo`
+  - `queryConstitution`
+  - `queryGovState`
+  - `queryDRepState`
+  - `queryDRepStakeDistribution`
+  - `queryCommitteeMembersState`
+  Modify `TxInMode` constructors to remove `EraInMode` arguments from constructors
+  Remove `EraInMode` from `TxValidationErrorInCardanoMode` constructors
+  Delete `EraInMode`, `eraInModeToEra` and `toEraInMode`
+  Remove `ConsensusMode` argument from:
+  - `fromConsensusBlock`
+  - `fromConsensusTip`
+  - `determineEra`
+  Delete `determineEraExpr`.  Use `queryCurrentEra` instead.
+  Deparameterise `QueryInMode`
+  Delete `AnyConsensusModeParams`
+  Deparametrise `ConsensusModeParams`
+  Remove `ConsensusMode` argument from `EraHistory` constructor
+  Delete `EraConsensusModeMismatch` constructor
+  Delete `localConsensusMode`, `AnyConsensusMode` and `renderMode`
+  Delete `EraConsensusModeMismatch`
+  Delete `CardanoMode` and `ConsensusMode`.
+  (breaking)
+  [PR 342](https://github.com/input-output-hk/cardano-api/pull/342)
+
+- Switch to use lens and eons for txbody construction
+  (improvement)
+  [PR 334](https://github.com/input-output-hk/cardano-api/pull/334)
+
+- Simplify `createTransactionBody`
+  (improvement)
+  [PR 333](https://github.com/input-output-hk/cardano-api/pull/333)
+
+- In `Tx`, `ByronTx` now carries additional `ByronEraOnly` witness
+  In `TxBody`, `TxBodyByron` now carries additional `ByronEraOnly` witness
+  Delete `CardanoEraStyle` because eons solve the same problem more generally
+  Delete `cardanoEraStyle`
+  (breaking)
+  [PR 335](https://github.com/input-output-hk/cardano-api/pull/335)
+
 ## 8.29.0.0
 
 - Updated ledger, consensus and typed-protocol packages
