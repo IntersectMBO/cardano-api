@@ -189,7 +189,7 @@ mkAdaValue :: ShelleyBasedEra era -> L.Coin -> L.Value (ShelleyLedgerEra era)
 mkAdaValue sbe coin =
   caseShelleyToAllegraOrMaryEraOnwards
     (const coin)
-    (const (L.MaryValue (L.unCoin coin) mempty))
+    (const (L.MaryValue coin mempty))
     sbe
 
 adaAssetL :: ShelleyBasedEra era -> Lens' (L.Value (ShelleyLedgerEra era)) L.Coin
@@ -206,8 +206,8 @@ adaAssetShelleyToAllegraEraL w =
 adaAssetMaryEraOnwardsL :: MaryEraOnwards era -> Lens' (L.MaryValue L.StandardCrypto) L.Coin
 adaAssetMaryEraOnwardsL w =
   maryEraOnwardsConstraints w $ lens
-    (\(L.MaryValue c _) -> L.Coin c)
-    (\(L.MaryValue _ ma) (L.Coin c) -> L.MaryValue c ma)
+    (\(L.MaryValue c _) -> c)
+    (\(L.MaryValue _ ma) c -> L.MaryValue c ma)
 
 multiAssetL :: MaryEraOnwards era -> Lens' (L.MaryValue L.StandardCrypto) (L.MultiAsset L.StandardCrypto)
 multiAssetL w =

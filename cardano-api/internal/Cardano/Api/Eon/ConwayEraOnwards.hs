@@ -26,9 +26,8 @@ import           Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
-import qualified Cardano.Ledger.Alonzo.Language as L
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as L
 import qualified Cardano.Ledger.Alonzo.Scripts as L
-import qualified Cardano.Ledger.Alonzo.TxInfo as L
 import qualified Cardano.Ledger.Alonzo.UTxO as L
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
@@ -37,6 +36,7 @@ import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Conway.TxCert as L
 import qualified Cardano.Ledger.Mary.Value as L
+import qualified Cardano.Ledger.Plutus.Language as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus

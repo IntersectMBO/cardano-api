@@ -10,10 +10,10 @@ module Test.Gen.Cardano.Api
 
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
+import qualified Cardano.Ledger.Plutus.Language as Alonzo
 import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 
 import qualified Data.Map.Strict as Map

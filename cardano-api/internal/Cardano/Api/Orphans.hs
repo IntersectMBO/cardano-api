@@ -63,7 +63,7 @@ instance Crypto.Crypto crypto => ToJSON (Consensus.StakeSnapshots crypto) where
   toJSON = object . stakeSnapshotsToPair
   toEncoding = pairs . mconcat . stakeSnapshotsToPair
 
-stakeSnapshotsToPair :: (Aeson.KeyValue a, Crypto.Crypto crypto) => Consensus.StakeSnapshots crypto -> [a]
+stakeSnapshotsToPair :: (Aeson.KeyValue e a, Crypto.Crypto crypto) => Consensus.StakeSnapshots crypto -> [a]
 stakeSnapshotsToPair Consensus.StakeSnapshots
     { Consensus.ssStakeSnapshots
     , Consensus.ssMarkTotal
@@ -82,7 +82,7 @@ instance ToJSON (Consensus.StakeSnapshot crypto) where
   toJSON = object . stakeSnapshotToPair
   toEncoding = pairs . mconcat . stakeSnapshotToPair
 
-stakeSnapshotToPair :: Aeson.KeyValue a => Consensus.StakeSnapshot crypto -> [a]
+stakeSnapshotToPair :: Aeson.KeyValue e a => Consensus.StakeSnapshot crypto -> [a]
 stakeSnapshotToPair Consensus.StakeSnapshot
     { Consensus.ssMarkPool
     , Consensus.ssSetPool
@@ -302,35 +302,37 @@ instance Semigroup (Ledger.BabbagePParams StrictMaybe era) where
 
 instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
   (<>) p1 p2 = Ledger.ConwayPParams
-    { Ledger.cppMinFeeA = lastMappendWith Ledger.cppMinFeeA p1 p2
-    , Ledger.cppMinFeeB = lastMappendWith Ledger.cppMinFeeB p1 p2
-    , Ledger.cppMaxBBSize = lastMappendWith Ledger.cppMaxBBSize p1 p2
-    , Ledger.cppMaxTxSize = lastMappendWith Ledger.cppMaxTxSize p1 p2
-    , Ledger.cppMaxBHSize = lastMappendWith Ledger.cppMaxBHSize p1 p2
-    , Ledger.cppKeyDeposit = lastMappendWith Ledger.cppKeyDeposit p1 p2
-    , Ledger.cppPoolDeposit = lastMappendWith Ledger.cppPoolDeposit p1 p2
-    , Ledger.cppEMax = lastMappendWith Ledger.cppEMax p1 p2
-    , Ledger.cppNOpt = lastMappendWith Ledger.cppNOpt p1 p2
-    , Ledger.cppA0 = lastMappendWith Ledger.cppA0 p1 p2
-    , Ledger.cppRho = lastMappendWith Ledger.cppRho p1 p2
-    , Ledger.cppTau = lastMappendWith Ledger.cppTau p1 p2
+    { Ledger.cppMinFeeA = lastMappendWithTHKD Ledger.cppMinFeeA p1 p2
+    , Ledger.cppMinFeeB = lastMappendWithTHKD Ledger.cppMinFeeB p1 p2
+    , Ledger.cppMaxBBSize = lastMappendWithTHKD Ledger.cppMaxBBSize p1 p2
+    , Ledger.cppMaxTxSize = lastMappendWithTHKD Ledger.cppMaxTxSize p1 p2
+    , Ledger.cppMaxBHSize = lastMappendWithTHKD Ledger.cppMaxBHSize p1 p2
+    , Ledger.cppKeyDeposit = lastMappendWithTHKD Ledger.cppKeyDeposit p1 p2
+    , Ledger.cppPoolDeposit = lastMappendWithTHKD Ledger.cppPoolDeposit p1 p2
+    , Ledger.cppEMax = lastMappendWithTHKD Ledger.cppEMax p1 p2
+    , Ledger.cppNOpt = lastMappendWithTHKD Ledger.cppNOpt p1 p2
+    , Ledger.cppA0 = lastMappendWithTHKD Ledger.cppA0 p1 p2
+    , Ledger.cppRho = lastMappendWithTHKD Ledger.cppRho p1 p2
+    , Ledger.cppTau = lastMappendWithTHKD Ledger.cppTau p1 p2
     , Ledger.cppProtocolVersion = NoUpdate -- For conway, protocol version cannot be changed via `PParamsUpdate`
-    , Ledger.cppMinPoolCost = lastMappendWith Ledger.cppMinPoolCost p1 p2
-    , Ledger.cppCoinsPerUTxOByte = lastMappendWith Ledger.cppCoinsPerUTxOByte p1 p2
-    , Ledger.cppCostModels = lastMappendWith Ledger.cppCostModels p1 p2
-    , Ledger.cppPrices = lastMappendWith Ledger.cppPrices p1 p2
-    , Ledger.cppMaxTxExUnits = lastMappendWith Ledger.cppMaxTxExUnits p1 p2
-    , Ledger.cppMaxBlockExUnits = lastMappendWith Ledger.cppMaxBlockExUnits p1 p2
-    , Ledger.cppMaxValSize = lastMappendWith Ledger.cppMaxValSize p1 p2
-    , Ledger.cppCollateralPercentage = lastMappendWith Ledger.cppCollateralPercentage p1 p2
-    , Ledger.cppMaxCollateralInputs = lastMappendWith Ledger.cppMaxCollateralInputs p1 p2
-    , Ledger.cppPoolVotingThresholds = lastMappendWith Ledger.cppPoolVotingThresholds p1 p2
-    , Ledger.cppDRepVotingThresholds = lastMappendWith Ledger.cppDRepVotingThresholds p1 p2
-    , Ledger.cppCommitteeMinSize = lastMappendWith Ledger.cppCommitteeMinSize p1 p2
-    , Ledger.cppCommitteeMaxTermLength = lastMappendWith Ledger.cppCommitteeMaxTermLength p1 p2
-    , Ledger.cppGovActionLifetime = lastMappendWith Ledger.cppGovActionLifetime p1 p2
-    , Ledger.cppGovActionDeposit = lastMappendWith Ledger.cppGovActionDeposit p1 p2
-    , Ledger.cppDRepDeposit = lastMappendWith Ledger.cppDRepDeposit p1 p2
-    , Ledger.cppDRepActivity = lastMappendWith Ledger.cppDRepActivity p1 p2
+    , Ledger.cppMinPoolCost = lastMappendWithTHKD Ledger.cppMinPoolCost p1 p2
+    , Ledger.cppCoinsPerUTxOByte = lastMappendWithTHKD Ledger.cppCoinsPerUTxOByte p1 p2
+    , Ledger.cppCostModels = lastMappendWithTHKD Ledger.cppCostModels p1 p2
+    , Ledger.cppPrices = lastMappendWithTHKD Ledger.cppPrices p1 p2
+    , Ledger.cppMaxTxExUnits = lastMappendWithTHKD Ledger.cppMaxTxExUnits p1 p2
+    , Ledger.cppMaxBlockExUnits = lastMappendWithTHKD Ledger.cppMaxBlockExUnits p1 p2
+    , Ledger.cppMaxValSize = lastMappendWithTHKD Ledger.cppMaxValSize p1 p2
+    , Ledger.cppCollateralPercentage = lastMappendWithTHKD Ledger.cppCollateralPercentage p1 p2
+    , Ledger.cppMaxCollateralInputs = lastMappendWithTHKD Ledger.cppMaxCollateralInputs p1 p2
+    , Ledger.cppPoolVotingThresholds = lastMappendWithTHKD Ledger.cppPoolVotingThresholds p1 p2
+    , Ledger.cppDRepVotingThresholds = lastMappendWithTHKD Ledger.cppDRepVotingThresholds p1 p2
+    , Ledger.cppCommitteeMinSize = lastMappendWithTHKD Ledger.cppCommitteeMinSize p1 p2
+    , Ledger.cppCommitteeMaxTermLength = lastMappendWithTHKD Ledger.cppCommitteeMaxTermLength p1 p2
+    , Ledger.cppGovActionLifetime = lastMappendWithTHKD Ledger.cppGovActionLifetime p1 p2
+    , Ledger.cppGovActionDeposit = lastMappendWithTHKD Ledger.cppGovActionDeposit p1 p2
+    , Ledger.cppDRepDeposit = lastMappendWithTHKD Ledger.cppDRepDeposit p1 p2
+    , Ledger.cppDRepActivity = lastMappendWithTHKD Ledger.cppDRepActivity p1 p2
     }
 
+lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b
+lastMappendWithTHKD f a b = Ledger.THKD $ lastMappendWith (Ledger.unTHKD . f) a b

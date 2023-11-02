@@ -129,13 +129,13 @@ import           Cardano.Api.Utils (failEitherWith)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Allegra.Scripts as Timelock
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Binary as Binary (decCBOR, decodeFullAnnotator)
 import           Cardano.Ledger.Core (Era (EraCrypto))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Keys as Shelley
+import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
 import           Cardano.Slotting.Slot (SlotNo)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
@@ -347,15 +347,15 @@ instance Aeson.ToJSONKey AnyPlutusScriptVersion where
         toText (AnyPlutusScriptVersion PlutusScriptV2) = "PlutusScriptV2"
         toText (AnyPlutusScriptVersion PlutusScriptV3) = "PlutusScriptV3"
 
-toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
-toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
-toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2
-toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV3) = Alonzo.PlutusV3
+toAlonzoLanguage :: AnyPlutusScriptVersion -> Plutus.Language
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Plutus.PlutusV1
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Plutus.PlutusV2
+toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV3) = Plutus.PlutusV3
 
-fromAlonzoLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
-fromAlonzoLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
-fromAlonzoLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
-fromAlonzoLanguage Alonzo.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
+fromAlonzoLanguage :: Plutus.Language -> AnyPlutusScriptVersion
+fromAlonzoLanguage Plutus.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
+fromAlonzoLanguage Plutus.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
+fromAlonzoLanguage Plutus.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
 
 
 class HasTypeProxy lang => IsScriptLanguage lang where
@@ -925,8 +925,8 @@ fromAlonzoExUnits Alonzo.ExUnits{Alonzo.exUnitsSteps, Alonzo.exUnitsMem} =
 -- Alonzo mediator pattern
 --
 
-pattern AlonzoPlutusScript :: Alonzo.Language -> ShortByteString -> Alonzo.AlonzoScript era
-pattern AlonzoPlutusScript lang script = Alonzo.PlutusScript (Alonzo.Plutus {Alonzo.plutusLanguage = lang, Alonzo.plutusScript = Alonzo.BinaryPlutus script})
+pattern AlonzoPlutusScript :: Plutus.Language -> ShortByteString -> Alonzo.AlonzoScript era
+pattern AlonzoPlutusScript lang script = Alonzo.PlutusScript (Plutus.Plutus {Plutus.plutusLanguage = lang, Plutus.plutusScript = Alonzo.BinaryPlutus script})
 
 pattern AlonzoTimelockScript :: Timelock.Timelock era -> Alonzo.AlonzoScript era
 pattern AlonzoTimelockScript script = Alonzo.TimelockScript script
@@ -939,7 +939,7 @@ pattern AlonzoTimelockScript script = Alonzo.TimelockScript script
 _completenessProof :: Alonzo.AlonzoScript era -> ()
 _completenessProof = \case
     Alonzo.TimelockScript _ -> ()
-    Alonzo.PlutusScript (Alonzo.Plutus _ (Alonzo.BinaryPlutus _)) -> ()
+    Alonzo.PlutusScript (Plutus.Plutus _ (Alonzo.BinaryPlutus _)) -> ()
 
 {-# COMPLETE AlonzoTimelockScript, AlonzoPlutusScript #-}
 
@@ -984,17 +984,17 @@ hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
     -- hash that. Later ledger eras have to be compatible anyway.
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
-  $ AlonzoPlutusScript Alonzo.PlutusV1 script
+  $ AlonzoPlutusScript Plutus.PlutusV1 script
 
 hashScript (PlutusScript PlutusScriptV2 (PlutusScriptSerialised script)) =
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra BabbageEra)
-  $ AlonzoPlutusScript Alonzo.PlutusV2 script
+  $ AlonzoPlutusScript Plutus.PlutusV2 script
 
 hashScript (PlutusScript PlutusScriptV3 (PlutusScriptSerialised script)) =
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra ConwayEra)
-  $ AlonzoPlutusScript Alonzo.PlutusV3 script
+  $ AlonzoPlutusScript Plutus.PlutusV3 script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
 toShelleyScriptHash (ScriptHash h) =  h
@@ -1113,20 +1113,20 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript script)) =
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1
                                          (PlutusScriptSerialised script))) =
     case langInEra of
-      PlutusScriptV1InAlonzo  -> AlonzoPlutusScript Alonzo.PlutusV1 script
-      PlutusScriptV1InBabbage -> AlonzoPlutusScript Alonzo.PlutusV1 script
-      PlutusScriptV1InConway  -> AlonzoPlutusScript Alonzo.PlutusV1 script
+      PlutusScriptV1InAlonzo  -> AlonzoPlutusScript Plutus.PlutusV1 script
+      PlutusScriptV1InBabbage -> AlonzoPlutusScript Plutus.PlutusV1 script
+      PlutusScriptV1InConway  -> AlonzoPlutusScript Plutus.PlutusV1 script
 
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV2
                                          (PlutusScriptSerialised script))) =
     case langInEra of
-      PlutusScriptV2InBabbage -> AlonzoPlutusScript Alonzo.PlutusV2 script
-      PlutusScriptV2InConway  -> AlonzoPlutusScript Alonzo.PlutusV2 script
+      PlutusScriptV2InBabbage -> AlonzoPlutusScript Plutus.PlutusV2 script
+      PlutusScriptV2InConway  -> AlonzoPlutusScript Plutus.PlutusV2 script
 
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV3
                                          (PlutusScriptSerialised script))) =
     case langInEra of
-      PlutusScriptV3InConway  -> AlonzoPlutusScript Alonzo.PlutusV3 script
+      PlutusScriptV3InConway  -> AlonzoPlutusScript Plutus.PlutusV3 script
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
@@ -1147,26 +1147,26 @@ fromShelleyBasedScript sbe script =
         AlonzoTimelockScript s ->
           ScriptInEra SimpleScriptInAlonzo
             . SimpleScript $ fromAllegraTimelock s
-        AlonzoPlutusScript Alonzo.PlutusV1 s ->
+        AlonzoPlutusScript Plutus.PlutusV1 s ->
           ScriptInEra PlutusScriptV1InAlonzo
             . PlutusScript PlutusScriptV1
             $ PlutusScriptSerialised s
-        AlonzoPlutusScript Alonzo.PlutusV2 _ ->
+        AlonzoPlutusScript Plutus.PlutusV2 _ ->
           error "fromShelleyBasedScript: PlutusV2 not supported in Alonzo era"
-        AlonzoPlutusScript Alonzo.PlutusV3 _ ->
+        AlonzoPlutusScript Plutus.PlutusV3 _ ->
           error "fromShelleyBasedScript: PlutusV3 not supported in Alonzo era"
     ShelleyBasedEraBabbage ->
       case script of
         AlonzoTimelockScript s ->
           ScriptInEra SimpleScriptInBabbage
             . SimpleScript $ fromAllegraTimelock  s
-        AlonzoPlutusScript Alonzo.PlutusV1 s ->
+        AlonzoPlutusScript Plutus.PlutusV1 s ->
           ScriptInEra PlutusScriptV1InBabbage
             . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Alonzo.PlutusV2 s ->
+        AlonzoPlutusScript Plutus.PlutusV2 s ->
           ScriptInEra PlutusScriptV2InBabbage
             . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Alonzo.PlutusV3 _ ->
+        AlonzoPlutusScript Plutus.PlutusV3 _ ->
           error "fromShelleyBasedScript: PlutusV3 not supported in Babbage era"
 
     ShelleyBasedEraConway ->
@@ -1174,13 +1174,13 @@ fromShelleyBasedScript sbe script =
         AlonzoTimelockScript s ->
           ScriptInEra SimpleScriptInConway
             . SimpleScript $ fromAllegraTimelock  s
-        AlonzoPlutusScript Alonzo.PlutusV1 s ->
+        AlonzoPlutusScript Plutus.PlutusV1 s ->
           ScriptInEra PlutusScriptV1InConway
             . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Alonzo.PlutusV2 s ->
+        AlonzoPlutusScript Plutus.PlutusV2 s ->
           ScriptInEra PlutusScriptV2InConway
             . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Alonzo.PlutusV3 s ->
+        AlonzoPlutusScript Plutus.PlutusV3 s ->
           ScriptInEra PlutusScriptV3InConway
             . PlutusScript PlutusScriptV3 $ PlutusScriptSerialised s
 

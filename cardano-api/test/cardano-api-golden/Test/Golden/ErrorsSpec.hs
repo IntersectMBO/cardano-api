@@ -35,13 +35,13 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Ledger
 import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
-import qualified Cardano.Ledger.Alonzo.TxInfo as Ledger
 import qualified Cardano.Ledger.Alonzo.TxWits as Ledger
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
-import qualified PlutusLedgerApi.Common as Plutus
+import qualified PlutusLedgerApi.Common as Plutus hiding (PlutusV2)
 
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Error.Util (hush)
@@ -244,7 +244,7 @@ test_ScriptExecutionError =
     , ("ScriptErrorNotPlutusWitnessedTxIn", ScriptErrorNotPlutusWitnessedTxIn (ScriptWitnessIndexTxIn 0) scriptHash)
     , ("ScriptErrorRedeemerPointsToUnknownScriptHash", ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0))
     , ("ScriptErrorMissingScript", ScriptErrorMissingScript (Ledger.RdmrPtr Ledger.Mint 0) (ResolvablePointers ShelleyBasedEraBabbage Map.empty)) -- TODO CIP-1694 make work in all eras
-    , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Alonzo.PlutusV2)
+    , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Plutus.PlutusV2)
     ]
 
 test_StakePoolMetadataValidationError :: TestTree

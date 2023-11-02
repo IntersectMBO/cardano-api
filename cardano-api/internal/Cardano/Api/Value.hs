@@ -299,7 +299,7 @@ valueToLovelace v =
 
 toMaryValue :: Value -> MaryValue StandardCrypto
 toMaryValue v =
-    Mary.valueFromList lovelace other
+    Mary.valueFromList (Shelley.Coin lovelace) other
   where
     Quantity lovelace = selectAsset v AdaAssetId
     other = [ (toMaryPolicyID pid, toMaryAssetName name, q)
@@ -322,7 +322,7 @@ fromLedgerValue sbe v =
     sbe
 
 fromMaryValue :: MaryValue StandardCrypto -> Value
-fromMaryValue (MaryValue lovelace other) =
+fromMaryValue (MaryValue (Shelley.Coin lovelace) other) =
     Value $
       --TODO: write QC tests to show it's ok to use Map.fromAscList here
       Map.fromList $
