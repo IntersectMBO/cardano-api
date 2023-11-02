@@ -523,7 +523,6 @@ makeShelleyAddressInEra sbe nw pc scr =
 --
 
 data StakeAddress where
-
      StakeAddress
        :: Shelley.Network
        -> Shelley.StakeCredential StandardCrypto

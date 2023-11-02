@@ -1197,7 +1197,7 @@ toShelleyMultiSig = go
   where
     go :: SimpleScript -> Either MultiSigError (Shelley.MultiSig era)
     go (RequireSignature (PaymentKeyHash kh)) =
-      return $ Shelley.RequireSignature (Shelley.coerceKeyRole kh)
+      return $ Shelley.RequireSignature (Shelley.asWitness kh)
     go (RequireAllOf s) = mapM go s <&> Shelley.RequireAllOf
     go (RequireAnyOf s) = mapM go s <&> Shelley.RequireAnyOf
     go (RequireMOf m s) = mapM go s <&> Shelley.RequireMOf m
@@ -1226,7 +1226,7 @@ toAllegraTimelock = go
   where
     go :: SimpleScript -> Timelock.Timelock era
     go (RequireSignature (PaymentKeyHash kh))
-                        = Timelock.RequireSignature (Shelley.coerceKeyRole kh)
+                        = Timelock.RequireSignature (Shelley.asWitness kh)
     go (RequireAllOf s) = Timelock.RequireAllOf (Seq.fromList (map go s))
     go (RequireAnyOf s) = Timelock.RequireAnyOf (Seq.fromList (map go s))
     go (RequireMOf m s) = Timelock.RequireMOf m (Seq.fromList (map go s))

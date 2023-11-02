@@ -98,7 +98,6 @@ instance HasTypeProxy a => HasTypeProxy (SigningKey a) where
 
 -- | Some key roles share the same representation and it is sometimes
 -- legitimate to change the role of a key.
---
 class CastVerificationKeyRole keyroleA keyroleB where
 
     -- | Change the role of a 'VerificationKey', if the representation permits.

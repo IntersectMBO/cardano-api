@@ -10,7 +10,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 -- | Certificates embedded in transactions
 --
@@ -383,7 +382,7 @@ makeMIRCertificate (MirCertificateRequirements atMostEra mirPot mirTarget) =
 data DRepRegistrationRequirements era where
   DRepRegistrationRequirements
     :: ConwayEraOnwards era
-    -> VotingCredential era
+    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
     -> Lovelace
     -> DRepRegistrationRequirements era
 
@@ -392,7 +391,7 @@ makeDrepRegistrationCertificate :: ()
   => DRepRegistrationRequirements era
   -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
   -> Certificate era
-makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards (VotingCredential vcred) deposit) anchor =
+makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcred deposit) anchor =
   ConwayCertificate conwayOnwards
     . Ledger.ConwayTxCertGov
     $ Ledger.ConwayRegDRep
@@ -437,14 +436,14 @@ makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequireme
 data DRepUnregistrationRequirements era where
   DRepUnregistrationRequirements
     :: ConwayEraOnwards era
-    -> VotingCredential era
+    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
     -> Lovelace
     -> DRepUnregistrationRequirements era
 
 makeDrepUnregistrationCertificate :: ()
   => DRepUnregistrationRequirements era
   -> Certificate era
-makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards (VotingCredential vcred) deposit) =
+makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards vcred deposit) =
   ConwayCertificate conwayOnwards
     . Ledger.ConwayTxCertGov
     . Ledger.ConwayUnRegDRep vcred
@@ -476,19 +475,18 @@ selectStakeCredential = fmap fromShelleyStakeCredential . \case
       Ledger.RegTxCert sCred           -> Just sCred
       Ledger.UnRegTxCert sCred         -> Just sCred
       Ledger.DelegStakeTxCert sCred _  -> Just sCred
-      Ledger.RegPoolTxCert poolParams  ->
-        Just . Ledger.coerceKeyRole . Ledger.KeyHashObj $ Ledger.ppId poolParams
-      Ledger.RetirePoolTxCert poolId _ ->
-        Just . Ledger.coerceKeyRole $ Ledger.KeyHashObj poolId
+      -- StakePool is always controlled by key, i.e. it is never a script. In other words,
+      -- @Credential StakePool@ cannot exist, because @ScriptHashObj@ constructor can't be used for that type.
+      Ledger.RegPoolTxCert _           -> Nothing -- contains StakePool key which cannot be a credential
+      Ledger.RetirePoolTxCert _ _      -> Nothing -- contains StakePool key which cannot be a credential
+
       Ledger.MirTxCert _               -> Nothing
       Ledger.GenesisDelegTxCert{}      -> Nothing
 
   ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
     case conwayCert of
-      Ledger.RegPoolTxCert poolParams        ->
-        Just . Ledger.coerceKeyRole . Ledger.KeyHashObj $ Ledger.ppId poolParams
-      Ledger.RetirePoolTxCert kh _           ->
-        Just . Ledger.coerceKeyRole $ Ledger.KeyHashObj kh
+      Ledger.RegPoolTxCert _                 -> Nothing -- contains StakePool key which cannot be a credential
+      Ledger.RetirePoolTxCert _ _            -> Nothing -- contains StakePool key which cannot be a credential
       Ledger.RegTxCert sCred                 -> Just sCred
       Ledger.UnRegTxCert sCred               -> Just sCred
       Ledger.RegDepositTxCert sCred _        -> Just sCred
