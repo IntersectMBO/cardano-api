@@ -20,7 +20,6 @@ module Cardano.Api.IPC (
     connectToLocalNode,
     connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
-    localConsensusMode,
     LocalNodeClientParams(..),
     mkLocalNodeClientParams,
     LocalNodeClientProtocols(..),
@@ -29,9 +28,6 @@ module Cardano.Api.IPC (
 
     -- ** Modes
     -- | TODO move to Cardano.Api
-    ByronMode,
-    ShelleyMode,
-    CardanoMode,
     ConsensusModeParams(..),
     EpochSlots(..),
 
@@ -45,7 +41,7 @@ module Cardano.Api.IPC (
     -- *** Local tx submission
     LocalTxSubmissionClient(..),
     TxInMode(..),
-    TxValidationErrorInMode(..),
+    TxValidationErrorInCardanoMode,
     TxValidationError,
     submitTxToNodeLocal,
     SubmitResult(..),
@@ -73,8 +69,6 @@ module Cardano.Api.IPC (
 
     -- *** Helpers
     --TODO: These should be exported via Cardano.Api.Mode
-    ConsensusMode(..),
-    consensusModeOnly,
     toAcquiringFailure,
 
     NodeToClientVersion(..),
@@ -94,7 +88,9 @@ import           Cardano.Api.Query
 import           Cardano.Api.Tx (getTxBody)
 import           Cardano.Api.TxBody
 
+import qualified Cardano.Ledger.Api as L
 import qualified Ouroboros.Consensus.Block as Consensus
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import           Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
@@ -103,7 +99,6 @@ import qualified Ouroboros.Consensus.Network.NodeToClient as Consensus
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as Consensus
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
-import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
@@ -147,19 +142,12 @@ import           Data.Void (Void)
 -- 'connectToLocalNode'.
 --
 data LocalNodeClientProtocols block point tip slot tx txid txerr query m =
-     LocalNodeClientProtocols {
-       localChainSyncClient
-         :: LocalChainSyncClient block point tip m
-
-     , localTxSubmissionClient
-         :: Maybe (LocalTxSubmissionClient tx txerr          m ())
-
-     , localStateQueryClient
-         :: Maybe (LocalStateQueryClient   block point query m ())
-
-     , localTxMonitoringClient
-         :: Maybe (LocalTxMonitorClient txid tx slot m ())
-     }
+  LocalNodeClientProtocols
+    { localChainSyncClient    :: LocalChainSyncClient block point tip m
+    , localTxSubmissionClient :: Maybe (LocalTxSubmissionClient tx txerr m ())
+    , localStateQueryClient   :: Maybe (LocalStateQueryClient block point query m ())
+    , localTxMonitoringClient :: Maybe (LocalTxMonitorClient txid tx slot m ())
+    }
 
 data LocalChainSyncClient block point tip m
   = NoLocalChainSyncClient
@@ -167,35 +155,24 @@ data LocalChainSyncClient block point tip m
   | LocalChainSyncClient          (ChainSyncClient          block point tip   m ())
 
 -- public, exported
-type LocalNodeClientProtocolsInMode mode =
-       LocalNodeClientProtocols
-         (BlockInMode mode)
-         ChainPoint
-         ChainTip
-         SlotNo
-         (TxInMode mode)
-         (TxIdInMode mode)
-         (TxValidationErrorInMode mode)
-         (QueryInMode mode)
-         IO
+type LocalNodeClientProtocolsInMode =
+  LocalNodeClientProtocols
+    BlockInMode
+    ChainPoint
+    ChainTip
+    SlotNo
+    TxInMode
+    TxIdInMode
+    TxValidationErrorInCardanoMode
+    QueryInMode
+    IO
 
-data LocalNodeConnectInfo mode =
-     LocalNodeConnectInfo {
-       localConsensusModeParams :: ConsensusModeParams mode,
-       localNodeNetworkId       :: NetworkId,
-       localNodeSocketPath      :: SocketPath
-     }
-
-localConsensusMode :: LocalNodeConnectInfo mode -> ConsensusMode mode
-localConsensusMode LocalNodeConnectInfo {localConsensusModeParams} =
-    consensusModeOnly localConsensusModeParams
-
-consensusModeOnly :: ConsensusModeParams mode
-                  -> ConsensusMode       mode
-consensusModeOnly ByronModeParams{}   = ByronMode
-consensusModeOnly ShelleyModeParams{} = ShelleyMode
-consensusModeOnly CardanoModeParams{} = CardanoMode
-
+data LocalNodeConnectInfo =
+  LocalNodeConnectInfo
+    { localConsensusModeParams  :: ConsensusModeParams
+    , localNodeNetworkId        :: NetworkId
+    , localNodeSocketPath       :: SocketPath
+    }
 
 -- ----------------------------------------------------------------------------
 -- Actually connect to the node
@@ -204,9 +181,10 @@ consensusModeOnly CardanoModeParams{} = CardanoMode
 -- | Establish a connection to a local node and execute the given set of
 -- protocol handlers.
 --
-connectToLocalNode :: LocalNodeConnectInfo mode
-                   -> LocalNodeClientProtocolsInMode mode
-                   -> IO ()
+connectToLocalNode :: ()
+  => LocalNodeConnectInfo
+  -> LocalNodeClientProtocolsInMode
+  -> IO ()
 connectToLocalNode localNodeConnectInfo handlers
   = connectToLocalNodeWithVersion localNodeConnectInfo (const handlers)
 
@@ -214,9 +192,10 @@ connectToLocalNode localNodeConnectInfo handlers
 -- protocol handlers parameterized on the negotiated node-to-client protocol
 -- version.
 --
-connectToLocalNodeWithVersion :: LocalNodeConnectInfo mode
-                              -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode mode)
-                              -> IO ()
+connectToLocalNodeWithVersion :: ()
+  => LocalNodeConnectInfo
+  -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
+  -> IO ()
 connectToLocalNodeWithVersion LocalNodeConnectInfo {
                      localNodeSocketPath,
                      localNodeNetworkId,
@@ -399,11 +378,11 @@ data LocalNodeClientProtocolsForBlock block =
 
 -- | Convert from the mode-parametrised style to the block-parametrised style.
 --
-mkLocalNodeClientParams :: forall mode block.
-                           ConsensusBlockForMode mode ~ block
-                        => ConsensusModeParams mode
-                        -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode mode)
-                        -> LocalNodeClientParams
+mkLocalNodeClientParams :: forall block. ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => ConsensusModeParams
+  -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
+  -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =
     -- For each of the possible consensus modes we pick the concrete block type
     -- (by picking the appropriate 'ProtocolClient' value).
@@ -417,29 +396,17 @@ mkLocalNodeClientParams modeparams clients =
     -- block type monomorphic.
     --
     case modeparams of
-      ByronModeParams epochSlots ->
-        LocalNodeClientParamsSingleBlock
-          (ProtocolClientInfoArgsByron epochSlots)
-          (convLocalNodeClientProtocols ByronMode . clients)
-
-      ShelleyModeParams ->
-        LocalNodeClientParamsSingleBlock
-          ProtocolClientInfoArgsShelley
-          (convLocalNodeClientProtocols ShelleyMode . clients)
-
       CardanoModeParams epochSlots ->
        LocalNodeClientParamsCardano
          (ProtocolClientInfoArgsCardano epochSlots)
-         (convLocalNodeClientProtocols CardanoMode . clients)
+         (convLocalNodeClientProtocols . clients)
 
 
-convLocalNodeClientProtocols :: forall mode block.
-                                ConsensusBlockForMode mode ~ block
-                             => ConsensusMode mode
-                             -> LocalNodeClientProtocolsInMode mode
-                             -> LocalNodeClientProtocolsForBlock block
+convLocalNodeClientProtocols :: ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => LocalNodeClientProtocolsInMode
+  -> LocalNodeClientProtocolsForBlock block
 convLocalNodeClientProtocols
-    mode
     LocalNodeClientProtocols {
       localChainSyncClient,
       localTxSubmissionClient,
@@ -449,87 +416,72 @@ convLocalNodeClientProtocols
     LocalNodeClientProtocolsForBlock {
       localChainSyncClientForBlock    = case localChainSyncClient of
         NoLocalChainSyncClient -> NoLocalChainSyncClient
-        LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined mode clientPipelined
-        LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient mode client,
+        LocalChainSyncClientPipelined clientPipelined -> LocalChainSyncClientPipelined $ convLocalChainSyncClientPipelined clientPipelined
+        LocalChainSyncClient client -> LocalChainSyncClient $ convLocalChainSyncClient client,
 
-      localTxSubmissionClientForBlock = convLocalTxSubmissionClient mode <$>
-                                          localTxSubmissionClient,
-
-      localStateQueryClientForBlock   = convLocalStateQueryClient mode <$>
-                                          localStateQueryClient,
-
-      localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$>
-                                          localTxMonitoringClient
-
+      localTxSubmissionClientForBlock = convLocalTxSubmissionClient <$> localTxSubmissionClient,
+      localStateQueryClientForBlock   = convLocalStateQueryClient   <$> localStateQueryClient,
+      localTxMonitoringClientForBlock = convLocalTxMonitoringClient <$> localTxMonitoringClient
     }
 
-convLocalTxMonitoringClient
-  :: forall mode block m a. ConsensusBlockForMode mode ~ block
+convLocalTxMonitoringClient :: forall block m a. ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
-  => ConsensusMode mode
-  -> LocalTxMonitorClient (TxIdInMode mode)  (TxInMode mode) SlotNo m a
+  => LocalTxMonitorClient TxIdInMode TxInMode SlotNo m a
   -> LocalTxMonitorClient (Consensus.TxId (Consensus.GenTx block)) (Consensus.GenTx block) SlotNo m a
-convLocalTxMonitoringClient mode =
+convLocalTxMonitoringClient =
   mapLocalTxMonitoringClient
     toConsensusTxId
-    (fromConsensusGenTx mode)
+    fromConsensusGenTx
 
 convLocalChainSyncClient
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip m a
+  :: forall block m a. ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Functor m
+  => ChainSyncClient BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClient block (Net.Point block) (Net.Tip block) m a
-convLocalChainSyncClient mode =
+convLocalChainSyncClient =
     Net.Sync.mapChainSyncClient
-      (toConsensusPointInMode mode)
-      (fromConsensusPointInMode mode)
-      (fromConsensusBlock mode)
-      (fromConsensusTip mode)
+      toConsensusPointHF
+      fromConsensusPointHF
+      fromConsensusBlock
+      fromConsensusTip
 
-convLocalChainSyncClientPipelined
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> ChainSyncClientPipelined (BlockInMode mode) ChainPoint ChainTip m a
+convLocalChainSyncClientPipelined :: forall block m a. ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Functor m
+  => ChainSyncClientPipelined BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClientPipelined block (Net.Point block) (Net.Tip block) m a
-convLocalChainSyncClientPipelined mode =
+convLocalChainSyncClientPipelined =
   mapChainSyncClientPipelined
-    (toConsensusPointInMode mode)
-    (fromConsensusPointInMode mode)
-    (fromConsensusBlock mode)
-    (fromConsensusTip mode)
+    toConsensusPointHF
+    fromConsensusPointHF
+    fromConsensusBlock
+    fromConsensusTip
 
-convLocalTxSubmissionClient
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> LocalTxSubmissionClient (TxInMode mode) (TxValidationErrorInMode mode) m a
-  -> LocalTxSubmissionClient (Consensus.GenTx block)
-                             (Consensus.ApplyTxErr block) m a
-convLocalTxSubmissionClient mode =
-    Net.Tx.mapLocalTxSubmissionClient
-      toConsensusGenTx
-      (fromConsensusApplyTxErr mode)
-
+convLocalTxSubmissionClient :: forall block m a. ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Functor m
+  => LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode m a
+  -> LocalTxSubmissionClient (Consensus.GenTx block) (Consensus.ApplyTxErr block) m a
+convLocalTxSubmissionClient =
+  Net.Tx.mapLocalTxSubmissionClient toConsensusGenTx fromConsensusApplyTxErr
 
 convLocalStateQueryClient
-  :: forall mode block m a.
-     (ConsensusBlockForMode mode ~ block, Functor m)
-  => ConsensusMode mode
-  -> LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) m a
-  -> LocalStateQueryClient block (Consensus.Point block)
-                           (Consensus.Query block) m a
-convLocalStateQueryClient mode =
+  :: forall block m a. ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Functor m
+  => LocalStateQueryClient BlockInMode ChainPoint QueryInMode m a
+  -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block) m a
+convLocalStateQueryClient =
     Net.Query.mapLocalStateQueryClient
-      (toConsensusPointInMode mode)
+      toConsensusPointHF
       toConsensusQuery
       fromConsensusQueryResult
 
-
 --TODO: Move to consensus
-mapLocalTxMonitoringClient
-  :: forall txid txid' tx tx' m a. Functor m
+mapLocalTxMonitoringClient :: forall txid txid' tx tx' m a. ()
+  => Functor m
   => (txid -> txid')
   -> (tx'-> tx)
   -> LocalTxMonitorClient txid tx SlotNo m a
@@ -579,11 +531,11 @@ toAcquiringFailure :: Net.Query.AcquireFailure -> AcquiringFailure
 toAcquiringFailure AcquireFailurePointTooOld = AFPointTooOld
 toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
 
-queryNodeLocalState :: forall mode result.
-                       LocalNodeConnectInfo mode
-                    -> Maybe ChainPoint
-                    -> QueryInMode mode result
-                    -> IO (Either AcquiringFailure result)
+queryNodeLocalState :: forall result. ()
+  => LocalNodeConnectInfo
+  -> Maybe ChainPoint
+  -> QueryInMode result
+  -> IO (Either AcquiringFailure result)
 queryNodeLocalState connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -599,8 +551,7 @@ queryNodeLocalState connctInfo mpoint query = do
     singleQuery
       :: Maybe ChainPoint
       -> TMVar (Either AcquiringFailure result)
-      -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
-                                         (QueryInMode mode) IO ()
+      -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
     singleQuery mPointVar' resultVar' =
       LocalStateQueryClient $ do
       pure $
@@ -620,10 +571,10 @@ queryNodeLocalState connctInfo mpoint query = do
               pure $ Net.Query.SendMsgDone ()
           }
 
-submitTxToNodeLocal :: forall mode.
-                       LocalNodeConnectInfo mode
-                    -> TxInMode mode
-                    -> IO (Net.Tx.SubmitResult (TxValidationErrorInMode mode))
+submitTxToNodeLocal :: ()
+  => LocalNodeConnectInfo
+  -> TxInMode
+  -> IO (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
 submitTxToNodeLocal connctInfo tx = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -636,11 +587,9 @@ submitTxToNodeLocal connctInfo tx = do
       }
     atomically (takeTMVar resultVar)
   where
-    localTxSubmissionClientSingle
-      :: TMVar (Net.Tx.SubmitResult (TxValidationErrorInMode mode))
-      -> Net.Tx.LocalTxSubmissionClient (TxInMode mode)
-                                        (TxValidationErrorInMode mode)
-                                        IO ()
+    localTxSubmissionClientSingle :: ()
+      => TMVar (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
+      -> Net.Tx.LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode IO ()
     localTxSubmissionClientSingle resultVar =
       LocalTxSubmissionClient $
         pure $ Net.Tx.SendMsgSubmitTx tx $ \result -> do
@@ -648,7 +597,7 @@ submitTxToNodeLocal connctInfo tx = do
         pure (Net.Tx.SendMsgDone ())
 
 
-data LocalTxMonitoringResult mode
+data LocalTxMonitoringResult
   = LocalTxMonitoringTxExists
       TxId
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
@@ -656,13 +605,13 @@ data LocalTxMonitoringResult mode
       TxId
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
   | LocalTxMonitoringNextTx
-      (Maybe (TxInMode mode))
+      (Maybe TxInMode)
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
   | LocalTxMonitoringMempoolSizeAndCapacity
       Consensus.MempoolSizeAndCapacity
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
 
-instance ToJSON (LocalTxMonitoringResult mode) where
+instance ToJSON LocalTxMonitoringResult where
   toJSON result =
     object $ case result of
       LocalTxMonitoringTxExists tx slot ->
@@ -681,7 +630,7 @@ instance ToJSON (LocalTxMonitoringResult mode) where
           ]
         where
           txId = case txInMode of
-            Just (TxInMode tx _) -> Just $ getTxId $ getTxBody tx
+            Just (TxInMode _ tx) -> Just $ getTxId $ getTxBody tx
             -- TODO: support fetching the ID of a Byron Era transaction
             _ -> Nothing
       LocalTxMonitoringMempoolSizeAndCapacity mempool slot ->
@@ -691,11 +640,11 @@ instance ToJSON (LocalTxMonitoringResult mode) where
           , "slot" .= slot
           ]
 
-data LocalTxMonitoringQuery mode
+data LocalTxMonitoringQuery
   -- | Query if a particular tx exists in the mempool. Note that, the absence
   -- of a transaction does not imply anything about how the transaction was
   -- processed: it may have been dropped, or inserted in a block.
-  = LocalTxMonitoringQueryTx (TxIdInMode mode)
+  = LocalTxMonitoringQueryTx TxIdInMode
   -- | The mempool is modeled as an ordered list of transactions and thus, can
   -- be traversed linearly. 'LocalTxMonitoringSendNextTx' requests the next transaction from the
   -- current list. This must be a transaction that was not previously sent to
@@ -706,10 +655,10 @@ data LocalTxMonitoringQuery mode
   | LocalTxMonitoringMempoolInformation
 
 
-queryTxMonitoringLocal
-  :: forall mode. LocalNodeConnectInfo mode
-  -> LocalTxMonitoringQuery mode
-  -> IO (LocalTxMonitoringResult mode)
+queryTxMonitoringLocal :: ()
+  => LocalNodeConnectInfo
+  -> LocalTxMonitoringQuery
+  -> IO LocalTxMonitoringResult
 queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
   resultVar <- newEmptyTMVarIO
 
@@ -731,11 +680,11 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
     }
   atomically (takeTMVar resultVar)
  where
-  localTxMonitorClientTxExists
-    :: TxIdInMode mode
-    -> TMVar (LocalTxMonitoringResult mode)
-    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
-  localTxMonitorClientTxExists tIdInMode@(TxIdInMode txid _) resultVar = do
+  localTxMonitorClientTxExists :: ()
+    => TxIdInMode
+    -> TMVar LocalTxMonitoringResult
+    -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ()
+  localTxMonitorClientTxExists tIdInMode@(TxIdInMode _ txid) resultVar = do
     LocalTxMonitorClient $ return $
       CTxMon.SendMsgAcquire $ \slt -> do
          return $ CTxMon.SendMsgHasTx tIdInMode $ \txPresentBool -> do
@@ -744,9 +693,9 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
            else atomically . putTMVar resultVar $ LocalTxMonitoringTxDoesNotExist txid slt
            return $ CTxMon.SendMsgRelease $ return $ CTxMon.SendMsgDone ()
 
-  localTxMonitorNextTx
-    :: TMVar (LocalTxMonitoringResult mode)
-    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorNextTx :: ()
+    => TMVar LocalTxMonitoringResult
+    -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ()
   localTxMonitorNextTx resultVar =
     LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do
@@ -754,9 +703,9 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
           atomically $ putTMVar resultVar $ LocalTxMonitoringNextTx mTx slt
           return $ CTxMon.SendMsgRelease $ return $ CTxMon.SendMsgDone ()
 
-  localTxMonitorMempoolInfo
-    :: TMVar (LocalTxMonitoringResult mode)
-    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorMempoolInfo :: ()
+    => TMVar LocalTxMonitoringResult
+    -> LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ()
   localTxMonitorMempoolInfo resultVar =
      LocalTxMonitorClient $ return $ do
       CTxMon.SendMsgAcquire $ \slt -> do
@@ -768,7 +717,9 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
 -- Get tip as 'ChainPoint'
 --
 
-getLocalChainTip :: LocalNodeConnectInfo mode -> IO ChainTip
+getLocalChainTip :: ()
+  => LocalNodeConnectInfo
+  -> IO ChainTip
 getLocalChainTip localNodeConInfo = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
@@ -781,17 +732,17 @@ getLocalChainTip localNodeConInfo = do
         }
     atomically $ takeTMVar resultVar
 
-chainSyncGetCurrentTip
-  :: forall mode. TMVar ChainTip
-  -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+chainSyncGetCurrentTip :: ()
+  => TMVar ChainTip
+  -> ChainSyncClient BlockInMode ChainPoint ChainTip IO ()
 chainSyncGetCurrentTip tipVar =
   ChainSyncClient $ pure clientStIdle
  where
-  clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
+  clientStIdle :: Net.Sync.ClientStIdle BlockInMode ChainPoint ChainTip IO ()
   clientStIdle =
     Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
 
-  clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+  clientStNext :: Net.Sync.ClientStNext BlockInMode ChainPoint ChainTip IO ()
   clientStNext = Net.Sync.ClientStNext
     { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
         void $ atomically $ tryPutTMVar tipVar tip

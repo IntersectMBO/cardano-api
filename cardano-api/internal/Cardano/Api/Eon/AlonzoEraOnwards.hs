@@ -73,6 +73,7 @@ type AlonzoEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
+  , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
   , L.AlonzoEraPParams (ShelleyLedgerEra era)

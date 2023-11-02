@@ -33,8 +33,6 @@ module Cardano.Api.Block (
     toConsensusPoint,
     fromConsensusPoint,
     fromConsensusPointHF,
-    toConsensusPointInMode,
-    fromConsensusPointInMode,
     toConsensusPointHF,
 
     -- * Tip of the chain
@@ -66,6 +64,7 @@ import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing
+import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Slotting.Block (BlockNo)
@@ -73,14 +72,9 @@ import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
 import qualified Ouroboros.Consensus.Block as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
-import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
-import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.Protocol.Abstract as Consensus
-import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 import qualified Ouroboros.Network.Block as Consensus
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
@@ -194,89 +188,41 @@ getShelleyBlockTxs era (Ledger.Block _header txs) =
 -- Block in a consensus mode
 --
 
--- | A 'Block' in one of the eras supported by a given protocol mode.
---
--- For multi-era modes such as the 'CardanoMode' this type is a sum of the
--- different block types for all the eras. It is used in the ChainSync protocol.
---
-data BlockInMode mode where
+-- | A 'Block' in one of the eras.
+-- TODO Rename this to BlockInEra
+data BlockInMode where
   BlockInMode
     :: CardanoEra era
     -> Block era
-    -> EraInMode era mode
-    -> BlockInMode mode
+    -> BlockInMode
 
-deriving instance Show (BlockInMode mode)
+deriving instance Show BlockInMode
 
-fromConsensusBlock :: ConsensusBlockForMode mode ~ block
-                   => Consensus.LedgerSupportsProtocol
-                        (Consensus.ShelleyBlock
-                        (Consensus.TPraos Consensus.StandardCrypto)
-                        (Consensus.ShelleyEra Consensus.StandardCrypto))
-                   => ConsensusMode mode -> block -> BlockInMode mode
-fromConsensusBlock ByronMode =
-    \b -> case b of
-      Consensus.DegenBlock b' ->
-        BlockInMode cardanoEra (ByronBlock b') ByronEraInByronMode
+fromConsensusBlock :: ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => block
+  -> BlockInMode
+fromConsensusBlock = \case
+  Consensus.BlockByron    b' -> BlockInMode cardanoEra $ ByronBlock b'
+  Consensus.BlockShelley  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraShelley b'
+  Consensus.BlockAllegra  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraAllegra b'
+  Consensus.BlockMary     b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraMary b'
+  Consensus.BlockAlonzo   b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraAlonzo b'
+  Consensus.BlockBabbage  b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraBabbage b'
+  Consensus.BlockConway   b' -> BlockInMode cardanoEra $ ShelleyBlock ShelleyBasedEraConway b'
 
-fromConsensusBlock ShelleyMode =
-  \b -> case b of
-    Consensus.DegenBlock b' ->
-      BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraShelley b')
-                   ShelleyEraInShelleyMode
-
-fromConsensusBlock CardanoMode =
-    \b -> case b of
-      Consensus.BlockByron b' ->
-        BlockInMode cardanoEra (ByronBlock b') ByronEraInCardanoMode
-
-      Consensus.BlockShelley b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraShelley b')
-                     ShelleyEraInCardanoMode
-
-      Consensus.BlockAllegra b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraAllegra b')
-                     AllegraEraInCardanoMode
-
-      Consensus.BlockMary b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraMary b')
-                     MaryEraInCardanoMode
-
-      Consensus.BlockAlonzo b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraAlonzo b')
-                     AlonzoEraInCardanoMode
-
-      Consensus.BlockBabbage b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraBabbage b')
-                     BabbageEraInCardanoMode
-
-      Consensus.BlockConway b' ->
-        BlockInMode cardanoEra (ShelleyBlock ShelleyBasedEraConway b')
-                     ConwayEraInCardanoMode
-
-toConsensusBlock
-  :: ConsensusBlockForMode mode ~ block
-  => Consensus.LedgerSupportsProtocol
-       (Consensus.ShelleyBlock
-       (Consensus.TPraos Consensus.StandardCrypto)
-       (Consensus.ShelleyEra Consensus.StandardCrypto))
-  => BlockInMode mode -> block
-toConsensusBlock bInMode =
-  case bInMode of
-    -- Byron mode
-    BlockInMode _ (ByronBlock b') ByronEraInByronMode -> Consensus.DegenBlock b'
-
-    -- Shelley mode
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInShelleyMode -> Consensus.DegenBlock b'
-
-    -- Cardano mode
-    BlockInMode _ (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInCardanoMode -> Consensus.BlockShelley b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage b') BabbageEraInCardanoMode -> Consensus.BlockBabbage b'
-    BlockInMode _ (ShelleyBlock ShelleyBasedEraConway b') ConwayEraInCardanoMode -> Consensus.BlockConway b'
+toConsensusBlock :: ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => BlockInMode
+  -> block
+toConsensusBlock = \case
+  BlockInMode _ (ByronBlock                           b') -> Consensus.BlockByron b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraShelley  b') -> Consensus.BlockShelley b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraAllegra  b') -> Consensus.BlockAllegra b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraMary     b') -> Consensus.BlockMary b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraAlonzo   b') -> Consensus.BlockAlonzo b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraBabbage  b') -> Consensus.BlockBabbage b'
+  BlockInMode _ (ShelleyBlock ShelleyBasedEraConway   b') -> Consensus.BlockConway b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers
@@ -365,24 +311,6 @@ instance FromJSON ChainPoint where
       "ChainPoint" -> ChainPoint <$> o .: "slot" <*> o .: "blockHash"
       _ -> fail "Expected tag to be ChainPointAtGenesis | ChainPoint"
 
-toConsensusPointInMode :: ConsensusMode mode
-                       -> ChainPoint
-                       -> Consensus.Point (ConsensusBlockForMode mode)
--- It's the same concrete impl in all cases, but we have to show
--- individually for each case that we satisfy the type equality constraint
--- HeaderHash block ~ OneEraHash xs
-toConsensusPointInMode ByronMode   = toConsensusPointHF
-toConsensusPointInMode ShelleyMode = toConsensusPointHF
-toConsensusPointInMode CardanoMode = toConsensusPointHF
-
-fromConsensusPointInMode :: ConsensusMode mode
-                         -> Consensus.Point (ConsensusBlockForMode mode)
-                         -> ChainPoint
-fromConsensusPointInMode ByronMode   = fromConsensusPointHF
-fromConsensusPointInMode ShelleyMode = fromConsensusPointHF
-fromConsensusPointInMode CardanoMode = fromConsensusPointHF
-
-
 -- | Convert a 'Consensus.Point' for multi-era block type
 --
 toConsensusPointHF :: Consensus.HeaderHash block ~ Consensus.OneEraHash xs
@@ -466,49 +394,14 @@ makeChainTip woBlockNo chainPoint = case woBlockNo of
     ChainPointAtGenesis -> ChainTipAtGenesis
     ChainPoint slotNo headerHash -> ChainTip slotNo headerHash blockNo
 
-fromConsensusTip  :: ConsensusBlockForMode mode ~ block
-                  => ConsensusMode mode
-                  -> Consensus.Tip block
-                  -> ChainTip
-fromConsensusTip ByronMode = conv
-  where
-    conv :: Consensus.Tip Consensus.ByronBlockHFC -> ChainTip
-    conv Consensus.TipGenesis = ChainTipAtGenesis
-    conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =
-      ChainTip slot (HeaderHash h) block
-
-fromConsensusTip ShelleyMode = conv
-  where
-    conv :: Consensus.Tip (Consensus.ShelleyBlockHFC (Consensus.TPraos Consensus.StandardCrypto) Consensus.StandardShelley)
-         -> ChainTip
-    conv Consensus.TipGenesis = ChainTipAtGenesis
-    conv (Consensus.Tip slot (Consensus.OneEraHash hashSBS) block) =
-      ChainTip slot (HeaderHash hashSBS) block
-
-fromConsensusTip CardanoMode = conv
+fromConsensusTip :: ()
+  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.Tip block
+  -> ChainTip
+fromConsensusTip = conv
   where
     conv :: Consensus.Tip (Consensus.CardanoBlock Consensus.StandardCrypto)
          -> ChainTip
     conv Consensus.TipGenesis = ChainTipAtGenesis
     conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =
       ChainTip slot (HeaderHash h) block
-
-{-
-TODO: In principle we should be able to use this common implementation rather
-      than repeating it for each mode above. It does actually type-check. The
-      problem is that (at least with ghc-8.10.x) ghc's pattern match warning
-      mechanism cannot see that the OneEraHash is a complete pattern match.
-      I'm guessing that while the type checker can use the type equality to
-      see that OneEraHash is a valid pattern, the exhaustiveness checker is for
-      some reason not able to use it to see that it is indeed the only pattern.
-fromConsensusTip =
-    \mode -> case mode of
-      ByronMode   -> conv
-      ShelleyMode -> conv
-      CardanoMode -> conv
-  where
-    conv :: HeaderHash block ~ OneEraHash xs
-         => Tip block -> ChainTip
-    conv TipGenesis                      = ChainTipAtGenesis
-    conv (Tip slot (OneEraHash h) block) = ChainTip slot (HeaderHash h) block
--}

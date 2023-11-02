@@ -97,9 +97,7 @@ module Cardano.Api.Shelley
     fromConsensusBlock,
     toConsensusBlock,
     fromConsensusTip,
-    fromConsensusPointInMode,
     fromConsensusPointHF,
-    toConsensusPointInMode,
     toConsensusPointHF,
 
     -- * Transaction metadata
@@ -214,11 +212,6 @@ module Cardano.Api.Shelley
 
     -- ** Low level protocol interaction with a Cardano node
     LocalNodeConnectInfo(LocalNodeConnectInfo),
-    ShelleyMode,
-    ConsensusMode
-      ( ByronMode
-      , ShelleyMode
-      ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
 
     -- ** Shelley based eras

@@ -47,10 +47,6 @@ module Cardano.Api.Byron
 
     -- ** Low level protocol interaction with a Cardano node
     LocalNodeConnectInfo(LocalNodeConnectInfo),
-    ByronMode,
-    ConsensusMode
-      ( ByronMode
-      ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
 
     -- *** Chain sync protocol
@@ -92,7 +88,6 @@ module Cardano.Api.Byron
 
 import           Cardano.Api
 import           Cardano.Api.Address
-import           Cardano.Api.IPC
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId
 import           Cardano.Api.SpecialByron

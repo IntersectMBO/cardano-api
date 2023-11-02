@@ -25,7 +25,6 @@ module Cardano.Api.Query.Expr
   , queryStakeSnapshot
   , querySystemStart
   , queryUtxo
-  , determineEraExpr
   , L.MemberStatus (..)
   , L.CommitteeMembersState (..)
   , queryCommitteeMembersState
@@ -43,7 +42,6 @@ import           Cardano.Api.GenesisParameters
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -60,214 +58,181 @@ import           Cardano.Ledger.SafeHash
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
-import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import           Data.Map (Map)
 import           Data.Set (Set)
 import qualified Data.Set as S
 
 queryChainBlockNo :: ()
-  => LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (WithOrigin BlockNo))
+  => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (WithOrigin BlockNo))
 queryChainBlockNo =
   queryExpr QueryChainBlockNo
 
 queryChainPoint :: ()
-  => LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError ChainPoint)
+  => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError ChainPoint)
 queryChainPoint =
-  queryExpr $ QueryChainPoint CardanoMode
+  queryExpr QueryChainPoint
 
 queryCurrentEra :: ()
-  => LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
+  => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
 queryCurrentEra =
-  queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+  queryExpr QueryCurrentEra
 
 queryCurrentEpochState :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedCurrentEpochState era)))
-queryCurrentEpochState eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryCurrentEpochState
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedCurrentEpochState era)))
+queryCurrentEpochState sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryCurrentEpochState
 
 queryEpoch :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch EpochNo))
-queryEpoch eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryEpoch
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch EpochNo))
+queryEpoch sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryEpoch
 
 queryDebugLedgerState :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedDebugLedgerState era)))
-queryDebugLedgerState eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryDebugLedgerState
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedDebugLedgerState era)))
+queryDebugLedgerState sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryDebugLedgerState
 
 queryEraHistory :: ()
-  => LocalStateQueryExpr block point (QueryInMode CardanoMode) r IO (Either UnsupportedNtcVersionError (EraHistory CardanoMode))
+  => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError  EraHistory)
 queryEraHistory =
-  queryExpr $ QueryEraHistory CardanoModeIsMultiEra
+  queryExpr QueryEraHistory
 
 queryGenesisParameters :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (GenesisParameters ShelleyEra)))
-queryGenesisParameters eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryGenesisParameters
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (GenesisParameters ShelleyEra)))
+queryGenesisParameters sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryGenesisParameters
 
 queryPoolDistribution :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Maybe (Set PoolId)
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolDistribution era)))
-queryPoolDistribution eraInMode sbe mPoolIds =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryPoolDistribution mPoolIds
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolDistribution era)))
+queryPoolDistribution sbe mPoolIds =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryPoolDistribution mPoolIds
 
 queryPoolState :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Maybe (Set PoolId)
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolState era)))
-queryPoolState eraInMode sbe mPoolIds =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryPoolState mPoolIds
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolState era)))
+queryPoolState sbe mPoolIds =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryPoolState mPoolIds
 
 queryProtocolParameters :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Ledger.PParams (ShelleyLedgerEra era))))
-queryProtocolParameters eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Ledger.PParams (ShelleyLedgerEra era))))
+queryProtocolParameters sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
 queryConstitutionHash :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))))
-queryConstitutionHash eraInMode sbe =
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))))
+queryConstitutionHash sbe =
   (fmap . fmap . fmap . fmap) (L.anchorDataHash .  L.constitutionAnchor)
-    $ queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitution
+    $ queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
 
 queryProtocolParametersUpdate :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (Hash GenesisKey) ProtocolParametersUpdate)))
-queryProtocolParametersUpdate eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryProtocolParametersUpdate
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (Hash GenesisKey) ProtocolParametersUpdate)))
+queryProtocolParametersUpdate sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryProtocolParametersUpdate
 
 queryProtocolState :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (ProtocolState era)))
-queryProtocolState eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryProtocolState
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (ProtocolState era)))
+queryProtocolState sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryProtocolState
 
 queryStakeAddresses :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Set StakeCredential
   -> NetworkId
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map StakeAddress Lovelace, Map StakeAddress PoolId)))
-queryStakeAddresses eraInMode sbe stakeCredentials networkId =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeCredentials networkId
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map StakeAddress Lovelace, Map StakeAddress PoolId)))
+queryStakeAddresses sbe stakeCredentials networkId =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeCredentials networkId
 
 queryStakeDelegDeposits :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Set StakeCredential
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either Consensus.EraMismatch (Map StakeCredential Lovelace)))
-queryStakeDelegDeposits eraInMode sbe stakeCreds
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either Consensus.EraMismatch (Map StakeCredential Lovelace)))
+queryStakeDelegDeposits sbe stakeCreds
   | S.null stakeCreds = pure . pure $ pure mempty
-  | otherwise         = queryExpr $ QueryInEra eraInMode . QueryInShelleyBasedEra sbe $ QueryStakeDelegDeposits stakeCreds
+  | otherwise         = queryExpr $ QueryInEra . QueryInShelleyBasedEra sbe $ QueryStakeDelegDeposits stakeCreds
 
 queryStakeDistribution :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (Hash StakePoolKey) Rational)))
-queryStakeDistribution eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryStakeDistribution
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (Hash StakePoolKey) Rational)))
+queryStakeDistribution sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryStakeDistribution
 
 queryStakePoolParameters :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Set PoolId
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map PoolId StakePoolParameters)))
-queryStakePoolParameters eraInMode sbe poolIds
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map PoolId StakePoolParameters)))
+queryStakePoolParameters sbe poolIds
   | S.null poolIds  = pure . pure $ pure mempty
-  | otherwise       = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryStakePoolParameters poolIds
+  | otherwise       = queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakePoolParameters poolIds
 
 queryStakePools :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
-queryStakePools eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+queryStakePools sbe =
+  queryExpr $ QueryInEra . QueryInShelleyBasedEra sbe $ QueryStakePools
 
 queryStakeSnapshot :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Maybe (Set PoolId)
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedStakeSnapshots era)))
-queryStakeSnapshot eraInMode sbe mPoolIds =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryStakeSnapshot mPoolIds
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedStakeSnapshots era)))
+queryStakeSnapshot sbe mPoolIds =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeSnapshot mPoolIds
 
 querySystemStart :: ()
-  => LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError SystemStart)
+  => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError SystemStart)
 querySystemStart =
   queryExpr QuerySystemStart
 
 queryUtxo :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> QueryUTxOFilter
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
-queryUtxo eraInMode sbe utxoFilter =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryUTxO utxoFilter
-
--- | A monad expression that determines what era the node is in.
-determineEraExpr :: ()
-  => ConsensusModeParams mode
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError AnyCardanoEra)
-determineEraExpr cModeParams = runExceptT $
-  case consensusModeOnly cModeParams of
-    ByronMode -> pure $ AnyCardanoEra ByronEra
-    ShelleyMode -> pure $ AnyCardanoEra ShelleyEra
-    CardanoMode -> ExceptT queryCurrentEra
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+queryUtxo sbe utxoFilter =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryUTxO utxoFilter
 
 queryConstitution :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.Constitution (ShelleyLedgerEra era)))))
-queryConstitution eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryConstitution
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.Constitution (ShelleyLedgerEra era)))))
+queryConstitution sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
 
 queryGovState :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.GovState (ShelleyLedgerEra era))))
-queryGovState eraInMode sbe =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe QueryGovState
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.GovState (ShelleyLedgerEra era))))
+queryGovState sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryGovState
 
 queryDRepState :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Set (L.Credential L.DRepRole L.StandardCrypto)
   -- ^ An empty credentials set means that states for all DReps will be returned
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto))))
-queryDRepState eraInMode sbe drepCreds = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto))))
+queryDRepState sbe drepCreds = queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
 
 queryDRepStakeDistribution :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Set (L.DRep L.StandardCrypto)
   -- ^ An empty DRep set means that distributions for all DReps will be returned
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
-queryDRepStakeDistribution eraInMode sbe dreps = queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
+queryDRepStakeDistribution sbe dreps = queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
 
 -- | Returns info about committee members filtered by: cold credentials, hot credentials and statuses.
 -- If empty sets are passed as filters, then no filtering is done.
 queryCommitteeMembersState :: ()
-  => EraInMode era mode
-  -> ShelleyBasedEra era
+  => ShelleyBasedEra era
   -> Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
   -> Set (L.Credential L.HotCommitteeRole L.StandardCrypto)
   -> Set L.MemberStatus
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.CommitteeMembersState L.StandardCrypto))))
-queryCommitteeMembersState eraInMode sbe coldCreds hotCreds statuses =
-  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.CommitteeMembersState L.StandardCrypto))))
+queryCommitteeMembersState sbe coldCreds hotCreds statuses =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)
