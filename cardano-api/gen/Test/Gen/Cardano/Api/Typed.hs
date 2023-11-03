@@ -20,6 +20,7 @@ module Test.Gen.Cardano.Api.Typed
   , genAddressShelley
   , genCertificate
   , genCostModel
+  , genCostModels
   , genMaybePraosNonce
   , genPraosNonce
   , genValidProtocolParameters
@@ -137,7 +138,6 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import qualified Cardano.Crypto.Seed as Crypto
-import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -148,7 +148,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
-import           Data.Map.Strict (Map)
 import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
@@ -160,11 +159,10 @@ import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import           Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
 import           Test.Cardano.Ledger.Conway.Arbitrary ()
 import           Test.Cardano.Ledger.Core.Arbitrary ()
 
-import           Hedgehog (Gen, Range)
+import           Hedgehog (Gen, MonadGen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
@@ -954,23 +952,11 @@ genUpdateProposal era =
         )
     <*> genEpochNo
 
-genCostModel :: Gen Alonzo.CostModel
-genCostModel = do
-  lang <- genPlutusLanguage
-  cm <- Q.quickcheck (genValidCostModel lang)
-  pure cm
+genCostModel :: MonadGen m => m Alonzo.CostModel
+genCostModel = Q.arbitrary
 
-genPlutusLanguage :: Gen Language
-genPlutusLanguage = Gen.element [PlutusV1, PlutusV2, PlutusV3]
-
-_genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
-_genCostModels =
-    Gen.map (Range.linear 0 (length plutusScriptVersions))
-            ((,) <$> Gen.element plutusScriptVersions
-                 <*> (Api.fromAlonzoCostModel <$> genCostModel))
-  where
-    plutusScriptVersions :: [AnyPlutusScriptVersion]
-    plutusScriptVersions = [minBound..maxBound]
+genCostModels :: MonadGen m => m Alonzo.CostModels
+genCostModels = Q.arbitrary
 
 genExecutionUnits :: Gen ExecutionUnits
 genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
