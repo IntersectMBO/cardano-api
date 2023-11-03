@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -166,6 +167,7 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
+import           Control.DeepSeq
 import           Control.Error.Util (note)
 import           Control.Exception
 import           Control.Monad
@@ -240,7 +242,7 @@ data LedgerStateError
   -- ^ Encountered a rollback larger than the security parameter.
       SlotNo     -- ^ Oldest known slot number that we can roll back to.
       ChainPoint -- ^ Rollback was attempted to this point.
-  | DebugError String
+  | DebugError !String
   deriving (Show)
 
 instance Exception LedgerStateError
@@ -532,17 +534,17 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                           currentIORefState <- readIORef stateIORef
 
                           -- Useful for debugging:
-                          let ioRefErr = Just . DebugError
-                                              $ unlines [ "newClientTip: " <> show newClientTip
-                                                        , "newServerTip: " <> show newServerTip
-                                                        , "newLedgerState: " <> show (snd newLedgerState)
-                                                        , "knownLedgerStates: " <> show (extractHistory knownLedgerStates)
-                                                        , "committedStates: " <> show (extractHistory committedStates)
-                                                        , "numberOfRequestsInFlight: " <> show n
-                                                        , "k: " <> show (envSecurityParam env)
-                                                        , "Current IORef State: " <> show currentIORefState
-                                                        ]
-                          clientIdle_DoneNwithMaybeError n ioRefErr
+                          let !ioRefErr = DebugError . force
+                                            $ unlines [ "newClientTip: " <> show newClientTip
+                                                      , "newServerTip: " <> show newServerTip
+                                                      , "newLedgerState: " <> show (snd newLedgerState)
+                                                      , "knownLedgerStates: " <> show (extractHistory knownLedgerStates)
+                                                      , "committedStates: " <> show (extractHistory committedStates)
+                                                      , "numberOfRequestsInFlight: " <> show n
+                                                      , "k: " <> show (envSecurityParam env)
+                                                      , "Current IORef State: " <> show currentIORefState
+                                                      ]
+                          clientIdle_DoneNwithMaybeError n $ Just ioRefErr
 
                         ContinueFold -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
 
