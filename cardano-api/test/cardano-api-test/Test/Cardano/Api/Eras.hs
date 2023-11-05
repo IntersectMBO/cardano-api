@@ -44,7 +44,7 @@ prop_toJSON_CardanoMatchesShelley :: Property
 prop_toJSON_CardanoMatchesShelley = property $ do
   AnyShelleyBasedEra sbe <- forAll $ Gen.element [minBound..maxBound]
 
-  toJSON (anyShelleyBasedEra sbe) === toJSON (anyCardanoEra (shelleyBasedToCardanoEra sbe))
+  toJSON (AnyShelleyBasedEra sbe) === toJSON (anyCardanoEra (shelleyBasedToCardanoEra sbe))
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Json"
