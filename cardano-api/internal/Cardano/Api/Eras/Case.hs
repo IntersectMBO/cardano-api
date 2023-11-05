@@ -8,7 +8,6 @@ module Cardano.Api.Eras.Case
   ( -- Case on CardanoEra
     caseByronOrShelleyBasedEra
   , caseByronToAllegraOrMaryEraOnwards
-  , caseByronToMaryOrAlonzoEraOnwards
   , caseByronToAlonzoOrBabbageEraOnwards
 
     -- Case on ShelleyBasedEra
@@ -39,7 +38,6 @@ import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ByronToAlonzoEra
-import           Cardano.Api.Eon.ByronToMaryEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
@@ -81,22 +79,6 @@ caseByronToAllegraOrMaryEraOnwards l r = \case
   AlonzoEra  -> r MaryEraOnwardsAlonzo
   BabbageEra -> r MaryEraOnwardsBabbage
   ConwayEra  -> r MaryEraOnwardsConway
-
--- | @caseByronToMaryOrAlonzoEraOnwards f g era@ applies @f@ to byron, shelley, allegra, and mary;
--- and @g@ to alonzo and later eras.
-caseByronToMaryOrAlonzoEraOnwards :: ()
-  => (ByronToMaryEraConstraints era => ByronToMaryEra era -> a)
-  -> (AlonzoEraOnwardsConstraints era => AlonzoEraOnwards era -> a)
-  -> CardanoEra era
-  -> a
-caseByronToMaryOrAlonzoEraOnwards l r = \case
-  ByronEra   -> l ByronToMaryEraByron
-  ShelleyEra -> l ByronToMaryEraShelley
-  AllegraEra -> l ByronToMaryEraAllegra
-  MaryEra    -> l ByronToMaryEraMary
-  AlonzoEra  -> r AlonzoEraOnwardsAlonzo
-  BabbageEra -> r AlonzoEraOnwardsBabbage
-  ConwayEra  -> r AlonzoEraOnwardsConway
 
 -- | @caseByronToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to byron, shelley, allegra, mary, and alonzo;
 -- and @g@ to babbage and later eras.

@@ -65,7 +65,6 @@ library internal
                         Cardano.Api.Eon.ByronEraOnly
                         Cardano.Api.Eon.ByronToAllegraEra
                         Cardano.Api.Eon.ByronToAlonzoEra
-                        Cardano.Api.Eon.ByronToMaryEra
                         Cardano.Api.Eon.ConwayEraOnwards
                         Cardano.Api.Eon.MaryEraOnly
                         Cardano.Api.Eon.MaryEraOnwards
