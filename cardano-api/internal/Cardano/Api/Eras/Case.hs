@@ -17,9 +17,6 @@ module Cardano.Api.Eras.Case
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
 
-    -- Case on MaryEraOnwards
-  , caseMaryEraOnlyOrAlonzoEraOnwards
-
     -- Proofs
   , noByronEraInShelleyBasedEra
   , disjointByronEraOnlyAndShelleyBasedEra
@@ -39,7 +36,6 @@ import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ByronToAlonzoEra
 import           Cardano.Api.Eon.ConwayEraOnwards
-import           Cardano.Api.Eon.MaryEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
@@ -170,19 +166,6 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraAlonzo  -> l ShelleyToBabbageEraAlonzo
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway  -> r ConwayEraOnwardsConway
-
--- | @caseMaryEraOnlyOrAlonzoEraOnwards f g era@ applies @f@ to mary;
--- and applies @g@ to alonzo and later eras.
-caseMaryEraOnlyOrAlonzoEraOnwards :: ()
-  => (MaryEraOnly era -> a)
-  -> (AlonzoEraOnwards era -> a)
-  -> MaryEraOnwards era
-  -> a
-caseMaryEraOnlyOrAlonzoEraOnwards l r = \case
-  MaryEraOnwardsMary    -> l MaryEraOnlyMary
-  MaryEraOnwardsAlonzo  -> r AlonzoEraOnwardsAlonzo
-  MaryEraOnwardsBabbage -> r AlonzoEraOnwardsBabbage
-  MaryEraOnwardsConway  -> r AlonzoEraOnwardsConway
 
 {-# DEPRECATED noByronEraInShelleyBasedEra "Use disjointByronEraOnlyAndShelleyBasedEra instead" #-}
 noByronEraInShelleyBasedEra :: ShelleyBasedEra era -> ByronEraOnly era -> a
