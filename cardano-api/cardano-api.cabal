@@ -60,7 +60,6 @@ library internal
                         Cardano.Api.DRepMetadata
                         Cardano.Api.Eon.AllegraEraOnwards
                         Cardano.Api.Eon.AlonzoEraOnwards
-                        Cardano.Api.Eon.BabbageEraOnly
                         Cardano.Api.Eon.BabbageEraOnwards
                         Cardano.Api.Eon.ByronEraOnly
                         Cardano.Api.Eon.ByronToAllegraEra
