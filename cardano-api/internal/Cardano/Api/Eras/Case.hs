@@ -10,7 +10,6 @@ module Cardano.Api.Eras.Case
   , caseByronToAllegraOrMaryEraOnwards
   , caseByronToMaryOrAlonzoEraOnwards
   , caseByronToAlonzoOrBabbageEraOnwards
-  , caseByronAndAllegraEraOnwardsOrShelleyEraOnly
 
     -- Case on ShelleyBasedEra
   , caseShelleyEraOnlyOrAllegraEraOnwards
@@ -29,7 +28,6 @@ module Cardano.Api.Eras.Case
     -- Conversions
   , shelleyToAllegraEraToByronToAllegraEra
   , shelleyToAlonzoEraToShelleyToBabbageEra
-  , allegraEraOnwardsToByronAndAllegraOnwardsEra
   , alonzoEraOnwardsToMaryEraOnwards
   , babbageEraOnwardsToMaryEraOnwards
   , babbageEraOnwardsToAlonzoEraOnwards
@@ -38,7 +36,6 @@ module Cardano.Api.Eras.Case
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ByronToAlonzoEra
@@ -116,22 +113,6 @@ caseByronToAlonzoOrBabbageEraOnwards l r = \case
   AlonzoEra  -> l ByronToAlonzoEraAlonzo
   BabbageEra -> r BabbageEraOnwardsBabbage
   ConwayEra  -> r BabbageEraOnwardsConway
-
--- | @caseByronAndAllegraEraOnwardsOrShelleyEraOnly f g era@ applies @f@ to all eras except shelley;
--- and applies @g@ to shelley.
-caseByronAndAllegraEraOnwardsOrShelleyEraOnly :: ()
-  => (ByronAndAllegraEraOnwardsConstraints era => ByronAndAllegraEraOnwards era -> a)
-  -> (ShelleyEraOnlyConstraints era => ShelleyEraOnly era -> a)
-  -> CardanoEra era
-  -> a
-caseByronAndAllegraEraOnwardsOrShelleyEraOnly l r = \case
-  ByronEra   -> l ByronAndAllegraEraOnwardsByron
-  ShelleyEra -> r ShelleyEraOnlyShelley
-  AllegraEra -> l ByronAndAllegraEraOnwardsAllegra
-  MaryEra    -> l ByronAndAllegraEraOnwardsMary
-  AlonzoEra  -> l ByronAndAllegraEraOnwardsAlonzo
-  BabbageEra -> l ByronAndAllegraEraOnwardsBabbage
-  ConwayEra  -> l ByronAndAllegraEraOnwardsConway
 
 -- | @caseShelleyEraOnlyOrAllegraEraOnwards f g era@ applies @f@ to shelley;
 -- and applies @g@ to allegra and later eras.
@@ -241,16 +222,6 @@ shelleyToAlonzoEraToShelleyToBabbageEra = \case
   ShelleyToAlonzoEraAllegra -> ShelleyToBabbageEraAllegra
   ShelleyToAlonzoEraMary -> ShelleyToBabbageEraMary
   ShelleyToAlonzoEraAlonzo -> ShelleyToBabbageEraAlonzo
-
-allegraEraOnwardsToByronAndAllegraOnwardsEra :: ()
-  => AllegraEraOnwards era
-  -> ByronAndAllegraEraOnwards era
-allegraEraOnwardsToByronAndAllegraOnwardsEra = \case
-  AllegraEraOnwardsAllegra -> ByronAndAllegraEraOnwardsAllegra
-  AllegraEraOnwardsMary    -> ByronAndAllegraEraOnwardsMary
-  AllegraEraOnwardsAlonzo  -> ByronAndAllegraEraOnwardsAlonzo
-  AllegraEraOnwardsBabbage -> ByronAndAllegraEraOnwardsBabbage
-  AllegraEraOnwardsConway  -> ByronAndAllegraEraOnwardsConway
 
 alonzoEraOnwardsToMaryEraOnwards :: ()
   => AlonzoEraOnwards era
