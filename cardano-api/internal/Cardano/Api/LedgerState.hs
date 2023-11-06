@@ -509,20 +509,39 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                       let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
                           newClientTip = At currBlockNo
                           newServerTip = fromChainTip serverChainTip
-                      -- TODO: We are constantly overwriting an IORef which isn't ideal.
 
-                      foldStatuses <- forM knownLedgerStates' $ \(_, (ledgerState, ledgerEvents), currBlockMay) -> case currBlockMay of
-                          Origin -> pure ContinueFold
-                          At currBlock -> do
+                          ledgerStateSingleFold
+                            :: (SlotNo, (LedgerState, [LedgerEvent]), WithOrigin BlockInMode) -- Ledger events for a single block
+                            -> IO FoldStatus
+                          ledgerStateSingleFold (_, _, Origin) = return ContinueFold
+                          ledgerStateSingleFold (_, (ledgerState, ledgerEvents), At currBlock) = do
+                            accumulatorState <- readIORef stateIORef
                             (newState, foldStatus) <- accumulate
-                              env
-                              ledgerState
-                              ledgerEvents
-                              currBlock
-                              =<< readIORef stateIORef
+                                                      env
+                                                      ledgerState
+                                                      ledgerEvents
+                                                      currBlock
+                                                      accumulatorState
                             atomicWriteIORef stateIORef newState
                             return foldStatus
-                      case foldDecision foldStatuses of
+
+                          ledgerStateRecurser
+                            :: Seq (SlotNo, LedgerStateEvents, WithOrigin BlockInMode) -- Ledger events for multiple blocks
+                            -> IO FoldStatus
+                          ledgerStateRecurser states = go (toList states) ContinueFold
+                            where
+                              go [] foldStatus = return foldStatus
+                              go (s : rest) ContinueFold = do
+                                newFoldStatus <- ledgerStateSingleFold s
+                                go rest newFoldStatus
+                              go _          StopFold    = go [] StopFold
+                              go _          DebugFold   = go [] DebugFold
+
+                      -- NB: knownLedgerStates' is the new ledger state history i.e k blocks from the tip
+                      -- or also known as the mutable blocks. We default to using the mutable blocks.
+                      finalFoldStatus <- ledgerStateRecurser knownLedgerStates'
+
+                      case finalFoldStatus of
                         StopFold ->
                           -- We return StopFold in our accumulate function if we want to terminate the fold.
                           -- This allow us to check for a specific condition in our accumulate function
@@ -557,6 +576,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                   return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
               }
 
+
           clientIdle_DoneNwithMaybeError
             :: Nat n -- Number of requests inflight.
             -> Maybe LedgerStateError -- Return value (maybe an error)
@@ -582,11 +602,6 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
             ChainTipAtGenesis -> Origin
             ChainTip _ _ bno -> At bno
 
-foldDecision :: Seq FoldStatus -> FoldStatus
-foldDecision foldStatuses
-  | StopFold `List.elem` toList foldStatuses = StopFold
-  | DebugFold `List.elem` toList foldStatuses = DebugFold
-  | otherwise = ContinueFold
 
 -- | Wrap a 'ChainSyncClient' with logic that tracks the ledger state.
 chainSyncClientWithLedgerState
