@@ -497,7 +497,8 @@ genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
 genTxOutValue =
-  caseByronToAllegraOrMaryEraOnwards
+  caseByronOrShelleyToAllegraOrMaryEraOnwards
+    (\w -> TxOutAdaOnlyByron w <$> genPositiveLovelace)
     (\w -> TxOutAdaOnly w <$> genPositiveLovelace)
     (\w -> TxOutValue w <$> genValueForTxOut)
 

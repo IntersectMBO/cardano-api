@@ -156,10 +156,10 @@ import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
-import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
@@ -680,20 +680,20 @@ fromByronTxOut :: ByronEraOnly era -> Byron.TxOut -> TxOut ctx era
 fromByronTxOut ByronEraOnlyByron (Byron.TxOut addr value) =
   TxOut
     (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-    (TxOutAdaOnly ByronToAllegraEraByron (fromByronLovelace value))
+    (TxOutAdaOnlyByron ByronEraOnlyByron (fromByronLovelace value))
      TxOutDatumNone ReferenceScriptNone
 
 
 toByronTxOut :: ByronEraOnly era -> TxOut ctx era -> Maybe Byron.TxOut
-toByronTxOut ByronEraOnlyByron (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-                    (TxOutAdaOnly ByronToAllegraEraByron value) _ _) =
+toByronTxOut ByronEraOnlyByron = \case
+  TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutAdaOnlyByron _ value) _ _ ->
     Byron.TxOut addr <$> toByronLovelace value
-
-toByronTxOut ByronEraOnlyByron (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
-                    (TxOutValue w _) _ _) = case w of {}
-
-toByronTxOut ByronEraOnlyByron (TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{})
-                    _ _ _) = case sbe of {}
+  TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutAdaOnly _ value) _ _ ->
+    Byron.TxOut addr <$> toByronLovelace value
+  TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValue w _) _ _ ->
+    case w of {}
+  TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ ->
+    case sbe of {}
 
 
 toShelleyTxOut :: forall era ledgerera.
@@ -701,13 +701,13 @@ toShelleyTxOut :: forall era ledgerera.
                => ShelleyBasedEra era
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
-toShelleyTxOut sbe (TxOut _ (TxOutAdaOnly ByronToAllegraEraByron _) _ _) =
+toShelleyTxOut sbe (TxOut _ (TxOutAdaOnlyByron ByronEraOnlyByron _) _ _) =
     case sbe of {}
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraShelley value) _ _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ShelleyToAllegraEraShelley value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraAllegra value) _ _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ShelleyToAllegraEraAllegra value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOut _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
@@ -738,7 +738,7 @@ fromShelleyTxOut sbe ledgerTxOut = do
   let txOutValue :: TxOutValue era
       txOutValue =
         caseShelleyToAllegraOrMaryEraOnwards
-          (\w -> TxOutAdaOnly (shelleyToAllegraEraToByronToAllegraEra w) (fromShelleyLovelace (ledgerTxOut ^. L.valueTxOutL)))
+          (\w -> TxOutAdaOnly w (fromShelleyLovelace (ledgerTxOut ^. L.valueTxOutL)))
           (\w -> TxOutValue w (fromMaryValue (ledgerTxOut ^. L.valueTxOutL)))
           sbe
 
@@ -886,7 +886,9 @@ deriving instance Show (TxInsReference build era)
 
 data TxOutValue era where
 
-  TxOutAdaOnly :: ByronToAllegraEra era -> Lovelace -> TxOutValue era
+  TxOutAdaOnlyByron :: ByronEraOnly era -> Lovelace -> TxOutValue era
+
+  TxOutAdaOnly :: ShelleyToAllegraEra era -> Lovelace -> TxOutValue era
 
   TxOutValue   :: MaryEraOnwards era -> Value -> TxOutValue era
 
@@ -895,12 +897,18 @@ deriving instance Show (TxOutValue era)
 deriving instance Generic (TxOutValue era)
 
 instance ToJSON (TxOutValue era) where
-  toJSON (TxOutAdaOnly _ ll) = toJSON ll
-  toJSON (TxOutValue _ val) = toJSON val
+  toJSON = \case
+    TxOutAdaOnlyByron _ ll -> toJSON ll
+    TxOutAdaOnly _ ll -> toJSON ll
+    TxOutValue _ val -> toJSON val
 
 instance IsCardanoEra era => FromJSON (TxOutValue era) where
   parseJSON = withObject "TxOutValue" $ \o ->
-    caseByronToAllegraOrMaryEraOnwards
+    caseByronOrShelleyToAllegraOrMaryEraOnwards
+      (\bo -> do
+        ll <- o .: "lovelace"
+        pure $ TxOutAdaOnlyByron bo $ selectLovelace ll
+      )
       (\w -> do
         ll <- o .: "lovelace"
         pure $ TxOutAdaOnly w $ selectLovelace ll
@@ -947,7 +955,8 @@ lovelaceToTxOutValue :: ()
   -> Lovelace
   -> TxOutValue era
 lovelaceToTxOutValue era l =
-  caseByronToAllegraOrMaryEraOnwards
+  caseByronOrShelleyToAllegraOrMaryEraOnwards
+    (\w -> TxOutAdaOnlyByron w l)
     (\w -> TxOutAdaOnly w l)
     (\w -> TxOutValue w (lovelaceToValue l))
     era
@@ -955,12 +964,14 @@ lovelaceToTxOutValue era l =
 txOutValueToLovelace :: TxOutValue era -> Lovelace
 txOutValueToLovelace tv =
   case tv of
+    TxOutAdaOnlyByron _ l -> l
     TxOutAdaOnly _ l -> l
     TxOutValue _ v -> selectLovelace v
 
 txOutValueToValue :: TxOutValue era -> Value
 txOutValueToValue tv =
   case tv of
+    TxOutAdaOnlyByron _ l -> lovelaceToValue l
     TxOutAdaOnly _ l -> lovelaceToValue l
     TxOutValue _ v -> v
 
@@ -2460,19 +2471,15 @@ makeByronTransactionBody eon TxBodyContent { txIns, txOuts } = do
     maxByronTxInIx = fromIntegral (maxBound :: Word32)
 
 classifyRangeError :: ByronEraOnly era -> TxOut CtxTx era -> TxBodyError
-classifyRangeError ByronEraOnlyByron
-  txout@(TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{})
-                (TxOutAdaOnly ByronToAllegraEraByron value) _ _)
-  | value < 0 = TxBodyOutputNegative (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
-  | otherwise = TxBodyOutputOverflow (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
+classifyRangeError ByronEraOnlyByron txout =
+  case txout of
+    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutAdaOnlyByron ByronEraOnlyByron value) _ _
+      | value < 0 -> TxBodyOutputNegative (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
+      | otherwise -> TxBodyOutputOverflow (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
 
-classifyRangeError ByronEraOnlyByron
-  (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
-          (TxOutValue w _) _ _) = case w of {}
-
-classifyRangeError ByronEraOnlyByron
-  (TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{})
-          _ _ _) = case sbe of {}
+    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutAdaOnly w _) _ _ -> case w of {}
+    TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValue w _) _ _ -> case w of {}
+    TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ -> case sbe of {}
 
 getByronTxBodyContent :: ()
   => ByronEraOnly era
@@ -3141,13 +3148,13 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 => ShelleyBasedEra era
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
-toShelleyTxOutAny sbe (TxOut _ (TxOutAdaOnly ByronToAllegraEraByron _) _ _) =
+toShelleyTxOutAny sbe (TxOut _ (TxOutAdaOnlyByron ByronEraOnlyByron _) _ _) =
     case sbe of {}
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraShelley value) _ _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ShelleyToAllegraEraShelley value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ByronToAllegraEraAllegra value) _ _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ShelleyToAllegraEraAllegra value) _ _) =
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOutAny _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
