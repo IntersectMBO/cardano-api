@@ -77,6 +77,7 @@ data LedgerEvent
   | SuccessfulPlutusScript (NonEmpty PlutusDebug)
     -- | A number of failed Plutus script evaluations.
   | FailedPlutusScript (NonEmpty PlutusDebug)
+  deriving Show
 
 class ConvertLedgerEvent blk where
   toLedgerEvent :: WrapLedgerEvent blk -> Maybe LedgerEvent
@@ -150,7 +151,7 @@ data MIRDistributionDetails = MIRDistributionDetails
     mirddTreasuryPayouts :: Map StakeCredential Lovelace,
     mirddReservesToTreasury :: Lovelace,
     mirddTreasuryToReserves :: Lovelace
-  }
+  } deriving Show
 
 data PoolReapDetails = PoolReapDetails
   { prdEpochNo :: EpochNo,
@@ -161,7 +162,7 @@ data PoolReapDetails = PoolReapDetails
     -- actively registered at the time of the pool reaping, and as such the
     -- funds are returned to the treasury.
     prdUnclaimed :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
-  }
+  } deriving Show
 
 --------------------------------------------------------------------------------
 -- Patterns for event access

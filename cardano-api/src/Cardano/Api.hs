@@ -749,6 +749,7 @@ module Cardano.Api (
 
     -- *** Traversing the block chain
     foldBlocks,
+    FoldStatus(..),
     chainSyncClientWithLedgerState,
     chainSyncClientPipelinedWithLedgerState,
 
