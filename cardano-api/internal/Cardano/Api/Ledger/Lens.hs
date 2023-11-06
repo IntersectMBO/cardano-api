@@ -23,6 +23,9 @@ module Cardano.Api.Ledger.Lens
   , updateTxBodyL
 
   , txBodyL
+  , bodyTxL
+  , auxDataTxL
+  , witsTxL
   , mintTxBodyL
   , scriptIntegrityHashTxBodyL
   , collateralInputsTxBodyL
@@ -37,6 +40,18 @@ module Cardano.Api.Ledger.Lens
   , multiAssetL
   , valueTxOutL
   , valueTxOutAdaAssetL
+  , coinTxOutL
+  , scriptTxWitsL
+  , setMinCoinTxOut
+  , datsTxWitsL
+  , rdmrsTxWitsL
+  , isValidTxL
+  , bootAddrTxWitsL
+  , addrTxWitsL
+  , dataHashTxOutL
+  , binaryDataToData
+  , datumTxOutL
+  , referenceScriptTxOutL
   ) where
 
 import           Cardano.Api.Eon.AllegraEraOnwards
@@ -60,6 +75,7 @@ import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.Shelley.PParams as L
 import qualified Cardano.Ledger.TxIn as L
 
+import           Data.Map (Map)
 import qualified Data.OSet.Strict as L
 import qualified Data.Sequence.Strict as L
 import           Data.Set (Set)
@@ -220,3 +236,48 @@ valueTxOutL sbe = shelleyBasedEraConstraints sbe L.valueTxOutL
 
 valueTxOutAdaAssetL :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) L.Coin
 valueTxOutAdaAssetL sbe = valueTxOutL sbe . adaAssetL sbe
+
+bodyTxL :: ShelleyBasedEra era -> Lens' (L.Tx (ShelleyLedgerEra era)) (L.TxBody (ShelleyLedgerEra era))
+bodyTxL sbe = shelleyBasedEraConstraints sbe L.bodyTxL
+
+auxDataTxL :: ShelleyBasedEra era -> Lens' (L.Tx (ShelleyLedgerEra era)) (StrictMaybe (L.TxAuxData (ShelleyLedgerEra era)))
+auxDataTxL sbe = shelleyBasedEraConstraints sbe L.auxDataTxL
+
+witsTxL :: ShelleyBasedEra era -> Lens' (L.Tx (ShelleyLedgerEra era)) (L.TxWits (ShelleyLedgerEra era))
+witsTxL sbe = shelleyBasedEraConstraints sbe L.witsTxL
+
+coinTxOutL :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) L.Coin
+coinTxOutL sbe = shelleyBasedEraConstraints sbe L.coinTxOutL
+
+setMinCoinTxOut :: ShelleyBasedEra era -> L.PParams (ShelleyLedgerEra era) -> L.TxOut (ShelleyLedgerEra era) -> L.TxOut (ShelleyLedgerEra era)
+setMinCoinTxOut sbe = shelleyBasedEraConstraints sbe L.setMinCoinTxOut
+
+scriptTxWitsL :: ShelleyBasedEra era -> Lens' (L.TxWits (ShelleyLedgerEra era)) (Map (L.ScriptHash L.StandardCrypto) (L.Script (ShelleyLedgerEra era)))
+scriptTxWitsL sbe = shelleyBasedEraConstraints sbe L.scriptTxWitsL
+
+datsTxWitsL :: AlonzoEraOnwards era -> Lens' (L.TxWits (ShelleyLedgerEra era)) (L.TxDats (ShelleyLedgerEra era))
+datsTxWitsL eon = alonzoEraOnwardsConstraints eon L.datsTxWitsL
+
+rdmrsTxWitsL :: AlonzoEraOnwards era -> Lens' (L.TxWits (ShelleyLedgerEra era)) (L.Redeemers (ShelleyLedgerEra era))
+rdmrsTxWitsL eon = alonzoEraOnwardsConstraints eon L.rdmrsTxWitsL
+
+isValidTxL :: AlonzoEraOnwards era -> Lens' (L.Tx (ShelleyLedgerEra era)) L.IsValid
+isValidTxL eon = alonzoEraOnwardsConstraints eon L.isValidTxL
+
+bootAddrTxWitsL :: ShelleyBasedEra era -> Lens' (L.TxWits (ShelleyLedgerEra era)) (Set (L.BootstrapWitness L.StandardCrypto))
+bootAddrTxWitsL eon = shelleyBasedEraConstraints eon L.bootAddrTxWitsL
+
+addrTxWitsL :: ShelleyBasedEra era -> Lens' (L.TxWits (ShelleyLedgerEra era)) (Set (L.WitVKey 'L.Witness L.StandardCrypto))
+addrTxWitsL eon = shelleyBasedEraConstraints eon L.addrTxWitsL
+
+dataHashTxOutL :: AlonzoEraOnwards era -> Lens' (L.TxOut (ShelleyLedgerEra era)) (StrictMaybe (L.DataHash L.StandardCrypto))
+dataHashTxOutL eon = alonzoEraOnwardsConstraints eon L.dataHashTxOutL
+
+binaryDataToData :: ShelleyBasedEra era -> L.BinaryData (ShelleyLedgerEra era) -> L.Data (ShelleyLedgerEra era)
+binaryDataToData eon = shelleyBasedEraConstraints eon L.binaryDataToData
+
+datumTxOutL :: BabbageEraOnwards era -> Lens' (L.TxOut (ShelleyLedgerEra era)) (L.Datum (ShelleyLedgerEra era))
+datumTxOutL eon = babbageEraOnwardsConstraints eon L.datumTxOutL
+
+referenceScriptTxOutL :: BabbageEraOnwards era -> Lens' (L.TxOut (ShelleyLedgerEra era)) (StrictMaybe (L.Script (ShelleyLedgerEra era)))
+referenceScriptTxOutL eon = babbageEraOnwardsConstraints eon L.referenceScriptTxOutL
