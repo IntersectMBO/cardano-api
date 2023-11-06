@@ -59,17 +59,9 @@ module Cardano.Api (
     byronEraOnlyConstraints,
     byronEraOnlyToCardanoEra,
 
-    ByronAndAllegraEraOnwards(..),
-    byronAndAllegraEraOnwardsConstraints,
-    byronAndAllegraEraOnwardsToCardanoEra,
-
     ByronToAllegraEra(..),
     byronToAllegraEraConstraints,
     byronToAllegraEraToCardanoEra,
-
-    ByronToMaryEra(..),
-    byronToMaryEraConstraints,
-    byronToMaryEraToCardanoEra,
 
     ByronToAlonzoEra(..),
     byronToAlonzoEraConstraints,
@@ -114,11 +106,6 @@ module Cardano.Api (
     -- ** From Allegra
 
     -- ** From Mary
-    MaryEraOnly(..),
-    maryEraOnlyConstraints,
-    maryEraOnlyToCardanoEra,
-    maryEraOnlyToShelleyBasedEra,
-
     MaryEraOnwards(..),
     maryEraOnwardsConstraints,
     maryEraOnwardsToCardanoEra,
@@ -150,7 +137,6 @@ module Cardano.Api (
     -- ** Case on CardanoEra
     caseByronOrShelleyBasedEra,
     caseByronToAllegraOrMaryEraOnwards,
-    caseByronToMaryOrAlonzoEraOnwards,
     caseByronToAlonzoOrBabbageEraOnwards,
 
     -- ** Case on ShelleyBasedEra
@@ -160,17 +146,11 @@ module Cardano.Api (
     caseShelleyToAlonzoOrBabbageEraOnwards,
     caseShelleyToBabbageOrConwayEraOnwards,
 
-    -- Case on MaryEraOnwards
-    caseMaryEraOnlyOrAlonzoEraOnwards,
-
     -- ** Eon relaxation
 
     -- *** for AlonzoEraOnly
     shelleyToAllegraEraToByronToAllegraEra,
     shelleyToAlonzoEraToShelleyToBabbageEra,
-
-    -- ** for AllegraEraOnwards
-    allegraEraOnwardsToByronAndAllegraOnwardsEra,
 
     -- *** for AlonzoEraOnwards
     alonzoEraOnwardsToMaryEraOnwards,
@@ -1018,13 +998,10 @@ import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ByronToAlonzoEra
-import           Cardano.Api.Eon.ByronToMaryEra
 import           Cardano.Api.Eon.ConwayEraOnwards
-import           Cardano.Api.Eon.MaryEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
