@@ -112,6 +112,7 @@ module Cardano.Api.Shelley
     EraBasedProtocolParametersUpdate(..),
     CommonProtocolParametersUpdate(..),
     AlonzoOnwardsPParams(..),
+    DeprecatedAfterBabbagePParams(..),
     DeprecatedAfterMaryPParams(..),
     ShelleyToAlonzoPParams(..),
     IntroducedInBabbagePParams(..),
