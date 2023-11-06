@@ -8,7 +8,6 @@ module Cardano.Api.Eras.Case
   ( -- Case on CardanoEra
     caseByronOrShelleyBasedEra
   , caseByronOrShelleyToAllegraOrMaryEraOnwards
-  , caseByronToAllegraOrMaryEraOnwards
   , caseByronToAlonzoOrBabbageEraOnwards
 
     -- Case on ShelleyBasedEra
@@ -23,7 +22,6 @@ module Cardano.Api.Eras.Case
   , disjointByronEraOnlyAndShelleyBasedEra
 
     -- Conversions
-  , shelleyToAllegraEraToByronToAllegraEra
   , shelleyToAlonzoEraToShelleyToBabbageEra
   , alonzoEraOnwardsToMaryEraOnwards
   , babbageEraOnwardsToMaryEraOnwards
@@ -34,7 +32,6 @@ import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
-import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ByronToAlonzoEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
@@ -60,22 +57,6 @@ caseByronOrShelleyBasedEra l r = \case
   AlonzoEra  -> r ShelleyBasedEraAlonzo
   BabbageEra -> r ShelleyBasedEraBabbage
   ConwayEra  -> r ShelleyBasedEraConway
-
--- | @caseByronToAllegraOrMaryEraOnwards f g era@ applies @f@ to byron, shelley, and allegra;
--- and @g@ to mary and later eras.
-caseByronToAllegraOrMaryEraOnwards :: ()
-  => (ByronToAllegraEraConstraints era => ByronToAllegraEra era -> a)
-  -> (MaryEraOnwardsConstraints era => MaryEraOnwards era -> a)
-  -> CardanoEra era
-  -> a
-caseByronToAllegraOrMaryEraOnwards l r = \case
-  ByronEra   -> l ByronToAllegraEraByron
-  ShelleyEra -> l ByronToAllegraEraShelley
-  AllegraEra -> l ByronToAllegraEraAllegra
-  MaryEra    -> r MaryEraOnwardsMary
-  AlonzoEra  -> r MaryEraOnwardsAlonzo
-  BabbageEra -> r MaryEraOnwardsBabbage
-  ConwayEra  -> r MaryEraOnwardsConway
 
 -- | @caseByronOrShelleyToAllegraOrMaryEraOnwards l m r era@ applies @l@ to byron; @m@ to shelley, and allegra;
 -- and @r@ to mary and later eras.
@@ -191,11 +172,6 @@ noByronEraInShelleyBasedEra = flip disjointByronEraOnlyAndShelleyBasedEra
 
 disjointByronEraOnlyAndShelleyBasedEra :: ByronEraOnly era -> ShelleyBasedEra era -> a
 disjointByronEraOnlyAndShelleyBasedEra ByronEraOnlyByron sbe = case sbe of {}
-
-shelleyToAllegraEraToByronToAllegraEra :: ShelleyToAllegraEra era -> ByronToAllegraEra era
-shelleyToAllegraEraToByronToAllegraEra = \case
-  ShelleyToAllegraEraShelley -> ByronToAllegraEraShelley
-  ShelleyToAllegraEraAllegra -> ByronToAllegraEraAllegra
 
 shelleyToAlonzoEraToShelleyToBabbageEra :: ()
   => ShelleyToAlonzoEra era
