@@ -248,6 +248,7 @@ library gen
                         Test.Gen.Cardano.Api.Era
                         Test.Gen.Cardano.Api.Metadata
                         Test.Gen.Cardano.Api.Typed
+                        Test.Gen.Cardano.Api.ProtocolParameters
                         Test.Gen.Cardano.Crypto.Seed
                         Test.Hedgehog.Golden.ErrorMessage
                         Test.Hedgehog.Roundtrip.Bech32
