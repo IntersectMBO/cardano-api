@@ -606,7 +606,7 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
     evalAdaOnly :: ShelleyToAllegraEra era -> TxOutValue era
     evalAdaOnly w =
       shelleyToAllegraEraConstraints w
-        $ TxOutAdaOnly (shelleyToAllegraEraToByronToAllegraEra w) . fromShelleyLovelace
+        $ TxOutAdaOnly w . fromShelleyLovelace
         $ L.evalBalanceTxBody
             pp
             lookupDelegDeposit

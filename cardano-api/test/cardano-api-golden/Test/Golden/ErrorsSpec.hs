@@ -116,7 +116,7 @@ changeaddr1 =
       (PaymentCredentialByKey (verificationKeyHash paymentVerKey1)) NoStakeAddress)
 
 txOutValue1 :: TxOutValue AllegraEra
-txOutValue1 = TxOutAdaOnly ByronToAllegraEraAllegra 1
+txOutValue1 = TxOutAdaOnly ShelleyToAllegraEraAllegra 1
 
 txout1 :: TxOut ctx AllegraEra
 txout1 = TxOut changeaddr1 txOutValue1 TxOutDatumNone ReferenceScriptNone
