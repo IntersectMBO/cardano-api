@@ -839,7 +839,8 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
           , negateValue outgoingNonAda
           ]
 
-    let changeTxOut = caseByronToAllegraOrMaryEraOnwards
+    let changeTxOut = caseByronOrShelleyToAllegraOrMaryEraOnwards
+          (const $ lovelaceToTxOutValue era $ Lovelace (2^(64 :: Integer)) - 1)
           (const $ lovelaceToTxOutValue era $ Lovelace (2^(64 :: Integer)) - 1)
           (\w -> TxOutValue w (lovelaceToValue (Lovelace (2^(64 :: Integer)) - 1) <> nonAdaChange))
           era
