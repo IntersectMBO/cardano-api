@@ -48,6 +48,7 @@ import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Binary (FromCBOR)
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.SafeHash as L
+import qualified Cardano.Ledger.UTxO as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
@@ -204,6 +205,8 @@ type ShelleyBasedEraConstraints era =
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
+  , L.EraTxOut (ShelleyLedgerEra era)
+  , L.EraUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)

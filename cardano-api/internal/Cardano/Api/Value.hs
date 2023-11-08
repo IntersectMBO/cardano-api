@@ -24,6 +24,7 @@ module Cardano.Api.Value
   , valueToList
   , filterValue
   , negateValue
+  , negateLedgerValue
   , calcMinimumDeposit
 
     -- ** Ada \/ Lovelace specifically
@@ -51,13 +52,21 @@ module Cardano.Api.Value
   , fromShelleyDeltaLovelace
   , toMaryValue
   , fromMaryValue
+  , fromLedgerValue
+  , lovelaceToCoin
+  , toLedgerValue
+  , coinToLovelace
 
     -- * Data family instances
   , AsType(..)
   ) where
 
+import           Cardano.Api.Eon.MaryEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
+import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -65,6 +74,7 @@ import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
 
 import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Coin as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
@@ -81,6 +91,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Short as Short
 import           Data.Data (Data)
+import           Data.Function ((&))
+import           Data.Group (invert)
 import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -88,6 +100,7 @@ import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Lens.Micro ((%~))
 
 -- ----------------------------------------------------------------------------
 -- Lovelace
@@ -245,6 +258,13 @@ valueToList (Value m) = Map.toList m
 negateValue :: Value -> Value
 negateValue (Value m) = Value (Map.map negate m)
 
+negateLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> L.Value (ShelleyLedgerEra era)
+negateLedgerValue sbe v =
+  caseShelleyToAllegraOrMaryEraOnwards
+    (\_ -> v & A.adaAssetL sbe %~ Shelley.Coin . negate . Shelley.unCoin)
+    (\w -> v & A.multiAssetL w %~ invert)
+    sbe
+
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
 
@@ -253,6 +273,15 @@ selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 
 lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
+
+lovelaceToCoin :: Lovelace -> Shelley.Coin
+lovelaceToCoin (Lovelace ll) = Shelley.Coin ll
+
+coinToLovelace :: Shelley.Coin -> Lovelace
+coinToLovelace (Shelley.Coin ll) = Lovelace ll
+
+coinToValue :: Shelley.Coin -> Value
+coinToValue = lovelaceToValue . coinToLovelace
 
 -- | Check if the 'Value' consists of /only/ 'Lovelace' and no other assets,
 -- and if so then return the Lovelace.
@@ -281,6 +310,15 @@ toMaryValue v =
     toMaryAssetName :: AssetName -> Mary.AssetName
     toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
 
+toLedgerValue :: MaryEraOnwards era -> Value -> L.Value (ShelleyLedgerEra era)
+toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
+
+fromLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> Value
+fromLedgerValue sbe v =
+  caseShelleyToAllegraOrMaryEraOnwards
+    (const (coinToValue v))
+    (const (fromMaryValue v))
+    sbe
 
 fromMaryValue :: MaryValue StandardCrypto -> Value
 fromMaryValue (MaryValue lovelace other) =

@@ -270,6 +270,8 @@ module Cardano.Api (
     valueFromNestedRep,
     renderValue,
     renderValuePretty,
+    toLedgerValue,
+    fromLedgerValue,
 
     -- ** Ada \/ Lovelace within multi-asset values
     quantityToLovelace,

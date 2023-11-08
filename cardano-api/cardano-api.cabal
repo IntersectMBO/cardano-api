@@ -169,6 +169,7 @@ library internal
                       , errors
                       , filepath
                       , formatting
+                      , groups
                       , iproute
                       , memory
                       , microlens
@@ -222,6 +223,7 @@ library
                         -- exposed by cardano-api-ledger
                         Cardano.Api.Ledger
 
+  reexported-modules:   Cardano.Api.Ledger.Lens
 
   build-depends:        bytestring
                       , cardano-api:internal

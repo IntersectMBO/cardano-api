@@ -9,6 +9,7 @@ module Cardano.Api.Ledger.Lens
 
     -- * Constructors
   , mkAdaOnlyTxOut
+  , mkAdaValue
 
     -- * Lenses
   , strictMaybeL
@@ -34,6 +35,8 @@ module Cardano.Api.Ledger.Lens
   , proposalProceduresTxBodyL
   , adaAssetL
   , multiAssetL
+  , valueTxOutL
+  , valueTxOutAdaAssetL
   ) where
 
 import           Cardano.Api.Eon.AllegraEraOnwards
@@ -176,9 +179,17 @@ proposalProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.propos
 
 mkAdaOnlyTxOut :: ShelleyBasedEra era -> L.Addr (L.EraCrypto (ShelleyLedgerEra era)) -> L.Coin -> L.TxOut (ShelleyLedgerEra era)
 mkAdaOnlyTxOut sbe addr coin =
+  mkBasicTxOut sbe addr (mkAdaValue sbe coin)
+
+mkBasicTxOut :: ShelleyBasedEra era -> L.Addr (L.EraCrypto (ShelleyLedgerEra era)) -> L.Value (ShelleyLedgerEra era) -> L.TxOut (ShelleyLedgerEra era)
+mkBasicTxOut sbe addr value =
+  shelleyBasedEraConstraints sbe $ L.mkBasicTxOut addr value
+
+mkAdaValue :: ShelleyBasedEra era -> L.Coin -> L.Value (ShelleyLedgerEra era)
+mkAdaValue sbe coin =
   caseShelleyToAllegraOrMaryEraOnwards
-    (const (L.mkBasicTxOut addr mempty))
-    (const (L.mkBasicTxOut addr (L.MaryValue (L.unCoin coin) mempty)))
+    (const coin)
+    (const (L.MaryValue (L.unCoin coin) mempty))
     sbe
 
 adaAssetL :: ShelleyBasedEra era -> Lens' (L.Value (ShelleyLedgerEra era)) L.Coin
@@ -203,3 +214,9 @@ multiAssetL w =
   maryEraOnwardsConstraints w $ lens
     (\(L.MaryValue _ ma) -> ma)
     (\(L.MaryValue c _) ma -> L.MaryValue c ma)
+
+valueTxOutL :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) (L.Value (ShelleyLedgerEra era))
+valueTxOutL sbe = shelleyBasedEraConstraints sbe L.valueTxOutL
+
+valueTxOutAdaAssetL :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) L.Coin
+valueTxOutAdaAssetL sbe = valueTxOutL sbe . adaAssetL sbe

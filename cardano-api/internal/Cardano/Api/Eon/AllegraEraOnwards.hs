@@ -78,6 +78,7 @@ type AllegraEraOnwardsConstraints era =
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
+  , L.EraTxOut (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.AllegraEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
