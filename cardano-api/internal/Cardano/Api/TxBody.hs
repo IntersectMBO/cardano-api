@@ -703,24 +703,14 @@ toShelleyTxOut sbe = \case -- jky simplify
 
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     let cEra = shelleyBasedToCardanoEra sbe in
-    case sbe of
-      ShelleyBasedEraShelley ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-      ShelleyBasedEraAllegra ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-      ShelleyBasedEraMary ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-      ShelleyBasedEraAlonzo ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-      ShelleyBasedEraBabbage ->
+    caseShelleyToAlonzoOrBabbageEraOnwards
+      (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
+      (const $
         L.mkBasicTxOut (toShelleyAddr addr) value
           & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
           & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
-      ShelleyBasedEraConway ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-          & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
-          & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
-
+      )
+      sbe
 
 fromShelleyTxOut :: forall era ctx. ()
   => ShelleyBasedEra era
@@ -3113,30 +3103,15 @@ toShelleyTxOutAny sbe = \case
     case sbe of {}
 
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
-    case sbe of
-      ShelleyBasedEraShelley ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-
-      ShelleyBasedEraAllegra ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-
-      ShelleyBasedEraMary ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-
-      ShelleyBasedEraAlonzo ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-
-      ShelleyBasedEraBabbage ->
+    let cEra = shelleyBasedToCardanoEra sbe in
+    caseShelleyToAlonzoOrBabbageEraOnwards
+      (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
+      (const $
         L.mkBasicTxOut (toShelleyAddr addr) value
           & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata
           & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
-
-      ShelleyBasedEraConway ->
-        L.mkBasicTxOut (toShelleyAddr addr) value
-          & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata
-          & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
-  where
-    cEra = shelleyBasedToCardanoEra sbe
+      )
+      sbe
 
 -- TODO: Consolidate with alonzo function and rename
 toBabbageTxOutDatum'
