@@ -49,6 +49,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
@@ -821,11 +822,11 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
           ]
 
     let maxLovelace = Lovelace (2^(64 :: Integer)) - 1
-    let changeTxOut = caseByronOrShelleyToAllegraOrMaryEraOnwards
-          (const $ lovelaceToTxOutValue era maxLovelace)
-          (const $ lovelaceToTxOutValue era maxLovelace)
-          (const $ TxOutValueShelleyBased sbe (nonAdaChange & A.adaAssetL sbe .~ lovelaceToCoin maxLovelace))
-          era
+    let changeTxOut = forShelleyBasedEraInEon sbe
+          (lovelaceToTxOutValue era maxLovelace)
+          (\w -> maryEraOnwardsConstraints w
+            $ TxOutValueShelleyBased sbe (nonAdaChange & A.adaAssetL sbe .~ lovelaceToCoin maxLovelace)
+          )
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now

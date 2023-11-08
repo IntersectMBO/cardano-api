@@ -132,7 +132,6 @@ module Cardano.Api (
 
     -- ** Case on CardanoEra
     caseByronOrShelleyBasedEra,
-    caseByronOrShelleyToAllegraOrMaryEraOnwards,
     caseByronToAlonzoOrBabbageEraOnwards,
 
     -- ** Case on ShelleyBasedEra

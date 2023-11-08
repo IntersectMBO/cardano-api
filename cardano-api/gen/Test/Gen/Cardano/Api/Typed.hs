@@ -626,9 +626,8 @@ genTxUpdateProposal sbe =
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue =
-  caseByronOrShelleyToAllegraOrMaryEraOnwards
-    (const (pure TxMintNone))
-    (const (pure TxMintNone))
+  inEonForEra
+    (pure TxMintNone)
     (\supported ->
       Gen.choice
         [ pure TxMintNone
