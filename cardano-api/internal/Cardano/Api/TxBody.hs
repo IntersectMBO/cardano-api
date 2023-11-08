@@ -680,13 +680,13 @@ fromByronTxOut :: ByronEraOnly era -> Byron.TxOut -> TxOut ctx era
 fromByronTxOut ByronEraOnlyByron (Byron.TxOut addr value) =
   TxOut
     (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-    (TxOutAdaOnlyByron ByronEraOnlyByron (fromByronLovelace value))
+    (TxOutValueByron ByronEraOnlyByron (fromByronLovelace value))
      TxOutDatumNone ReferenceScriptNone
 
 
 toByronTxOut :: ByronEraOnly era -> TxOut ctx era -> Maybe Byron.TxOut
 toByronTxOut ByronEraOnlyByron = \case
-  TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutAdaOnlyByron _ value) _ _ ->
+  TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutValueByron _ value) _ _ ->
     Byron.TxOut addr <$> toByronLovelace value
   TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutAdaOnly _ value) _ _ ->
     Byron.TxOut addr <$> toByronLovelace value
@@ -702,7 +702,7 @@ toShelleyTxOut :: forall era ledgerera.
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
 toShelleyTxOut sbe = \case
-  TxOut _ (TxOutAdaOnlyByron ByronEraOnlyByron _) _ _ ->
+  TxOut _ (TxOutValueByron ByronEraOnlyByron _) _ _ ->
     case sbe of {}
 
   TxOut addr (TxOutAdaOnly ShelleyToAllegraEraShelley value) _ _ ->
@@ -887,7 +887,7 @@ deriving instance Show (TxInsReference build era)
 
 data TxOutValue era where
 
-  TxOutAdaOnlyByron :: ByronEraOnly era -> Lovelace -> TxOutValue era
+  TxOutValueByron :: ByronEraOnly era -> Lovelace -> TxOutValue era
 
   TxOutAdaOnly :: ShelleyToAllegraEra era -> Lovelace -> TxOutValue era
 
@@ -899,7 +899,7 @@ deriving instance Generic (TxOutValue era)
 
 instance ToJSON (TxOutValue era) where
   toJSON = \case
-    TxOutAdaOnlyByron _ ll -> toJSON ll
+    TxOutValueByron _ ll -> toJSON ll
     TxOutAdaOnly _ ll -> toJSON ll
     TxOutValue _ val -> toJSON val
 
@@ -908,7 +908,7 @@ instance IsCardanoEra era => FromJSON (TxOutValue era) where
     caseByronOrShelleyToAllegraOrMaryEraOnwards
       (\bo -> do
         ll <- o .: "lovelace"
-        pure $ TxOutAdaOnlyByron bo $ selectLovelace ll
+        pure $ TxOutValueByron bo $ selectLovelace ll
       )
       (\w -> do
         ll <- o .: "lovelace"
@@ -957,7 +957,7 @@ lovelaceToTxOutValue :: ()
   -> TxOutValue era
 lovelaceToTxOutValue era l =
   caseByronOrShelleyToAllegraOrMaryEraOnwards
-    (\w -> TxOutAdaOnlyByron w l)
+    (\w -> TxOutValueByron w l)
     (\w -> TxOutAdaOnly w l)
     (\w -> TxOutValue w (lovelaceToValue l))
     era
@@ -965,14 +965,14 @@ lovelaceToTxOutValue era l =
 txOutValueToLovelace :: TxOutValue era -> Lovelace
 txOutValueToLovelace tv =
   case tv of
-    TxOutAdaOnlyByron _ l -> l
+    TxOutValueByron _ l -> l
     TxOutAdaOnly _ l -> l
     TxOutValue _ v -> selectLovelace v
 
 txOutValueToValue :: TxOutValue era -> Value
 txOutValueToValue tv =
   case tv of
-    TxOutAdaOnlyByron _ l -> lovelaceToValue l
+    TxOutValueByron _ l -> lovelaceToValue l
     TxOutAdaOnly _ l -> lovelaceToValue l
     TxOutValue _ v -> v
 
@@ -2474,7 +2474,7 @@ makeByronTransactionBody eon TxBodyContent { txIns, txOuts } = do
 classifyRangeError :: ByronEraOnly era -> TxOut CtxTx era -> TxBodyError
 classifyRangeError ByronEraOnlyByron txout =
   case txout of
-    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutAdaOnlyByron ByronEraOnlyByron value) _ _
+    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutValueByron ByronEraOnlyByron value) _ _
       | value < 0 -> TxBodyOutputNegative (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
       | otherwise -> TxBodyOutputOverflow (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
 
@@ -3149,7 +3149,7 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 => ShelleyBasedEra era
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
-toShelleyTxOutAny sbe (TxOut _ (TxOutAdaOnlyByron ByronEraOnlyByron _) _ _) =
+toShelleyTxOutAny sbe (TxOut _ (TxOutValueByron ByronEraOnlyByron _) _ _) =
     case sbe of {}
 
 toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly ShelleyToAllegraEraShelley value) _ _) =
