@@ -712,7 +712,6 @@ toShelleyTxOut sbe = \case -- jky simplify
         L.mkBasicTxOut (toShelleyAddr addr) value
       ShelleyBasedEraAlonzo ->
         L.mkBasicTxOut (toShelleyAddr addr) value
-          & L.dataHashTxOutL .~ toAlonzoTxOutDataHash txoutdata
       ShelleyBasedEraBabbage ->
         L.mkBasicTxOut (toShelleyAddr addr) value
           & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
@@ -742,12 +741,7 @@ fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
       TxOut addressInEra txOutValue TxOutDatumNone ReferenceScriptNone
 
     ShelleyBasedEraAlonzo ->
-       TxOut addressInEra
-             txOutValue
-             (fromAlonzoTxOutDataHash AlonzoEraOnwardsAlonzo datahash)
-             ReferenceScriptNone
-      where
-        datahash = ledgerTxOut ^. L.dataHashTxOutL
+      TxOut addressInEra txOutValue TxOutDatumNone ReferenceScriptNone
 
     ShelleyBasedEraBabbage ->
        TxOut addressInEra
@@ -779,25 +773,6 @@ fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
         datum = ledgerTxOut ^. L.datumTxOutL
         mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
 
-
--- TODO: If ledger creates an open type family for datums
--- we can consolidate this function with the Babbage version
-toAlonzoTxOutDataHash
-  :: TxOutDatum CtxUTxO AlonzoEra
-  -> StrictMaybe (L.DataHash StandardCrypto)
-toAlonzoTxOutDataHash  TxOutDatumNone                        = SNothing
-toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
-toAlonzoTxOutDataHash (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: BabbageEraOnwards AlonzoEra of {}
-
-fromAlonzoTxOutDataHash :: AlonzoEraOnwards era
-                        -> StrictMaybe (L.DataHash StandardCrypto)
-                        -> TxOutDatum ctx era
-fromAlonzoTxOutDataHash _    SNothing  = TxOutDatumNone
-fromAlonzoTxOutDataHash s (SJust dh)   = TxOutDatumHash s (ScriptDataHash dh)
-
--- TODO: If ledger creates an open type family for datums
--- we can consolidate this function with the Alonzo version
 toBabbageTxOutDatum
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
   => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
@@ -2174,10 +2149,8 @@ fromLedgerTxOuts sbe body scriptdata =
     ShelleyBasedEraAlonzo ->
       [ fromAlonzoTxOut
           AlonzoEraOnwardsAlonzo
-          txdatums
           txout
-      | let txdatums = selectTxDatums scriptdata
-      , txout <- toList (body ^. L.outputsTxBodyL) ]
+      | txout <- toList (body ^. L.outputsTxBodyL) ]
 
     ShelleyBasedEraBabbage ->
       [ fromBabbageTxOut
@@ -2202,29 +2175,17 @@ fromLedgerTxOuts sbe body scriptdata =
 
 fromAlonzoTxOut :: ()
   => AlonzoEraOnwards era
-  -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
   -> L.TxOut (ShelleyLedgerEra era)
   -> TxOut CtxTx era
-fromAlonzoTxOut w txdatums txOut =
+fromAlonzoTxOut w txOut =
   alonzoEraOnwardsConstraints w $
     TxOut
       (fromShelleyAddr shelleyBasedEra (txOut ^. L.addrTxOutL))
       (TxOutValueShelleyBased sbe (txOut ^. L.valueTxOutL))
-      (fromAlonzoTxOutDatum w txdatums (txOut ^. L.dataHashTxOutL))
+      TxOutDatumNone
       ReferenceScriptNone
   where
     sbe = alonzoEraOnwardsToShelleyBasedEra w
-
-fromAlonzoTxOutDatum :: ()
-  => AlonzoEraOnwards era
-  -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
-  -> StrictMaybe (L.DataHash StandardCrypto)
-  -> TxOutDatum CtxTx era
-fromAlonzoTxOutDatum w txdatums = \case
-  SNothing -> TxOutDatumNone
-  SJust dh
-    | Just d <- Map.lookup dh txdatums  -> TxOutDatumInTx' w (ScriptDataHash dh) (fromAlonzoData d)
-    | otherwise                         -> TxOutDatumHash w (ScriptDataHash dh)
 
 fromBabbageTxOut :: forall era. ()
   => BabbageEraOnwards era
@@ -3164,7 +3125,6 @@ toShelleyTxOutAny sbe = \case
 
       ShelleyBasedEraAlonzo ->
         L.mkBasicTxOut (toShelleyAddr addr) value
-          & L.dataHashTxOutL .~ toAlonzoTxOutDataHash' txoutdata
 
       ShelleyBasedEraBabbage ->
         L.mkBasicTxOut (toShelleyAddr addr) value
@@ -3177,14 +3137,6 @@ toShelleyTxOutAny sbe = \case
           & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
   where
     cEra = shelleyBasedToCardanoEra sbe
-
-toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra
-                       -> StrictMaybe (L.DataHash StandardCrypto)
-toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
-toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
-toAlonzoTxOutDataHash' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
-toAlonzoTxOutDataHash' (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: BabbageEraOnwards AlonzoEra of {}
 
 -- TODO: Consolidate with alonzo function and rename
 toBabbageTxOutDatum'
