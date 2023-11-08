@@ -701,29 +701,30 @@ toShelleyTxOut :: forall era ledgerera.
                => ShelleyBasedEra era
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
-toShelleyTxOut sbe (TxOut _ (TxOutAdaOnlyByron ByronEraOnlyByron _) _ _) =
+toShelleyTxOut sbe = \case
+  TxOut _ (TxOutAdaOnlyByron ByronEraOnlyByron _) _ _ ->
     case sbe of {}
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ShelleyToAllegraEraShelley value) _ _) =
+  TxOut addr (TxOutAdaOnly ShelleyToAllegraEraShelley value) _ _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly ShelleyToAllegraEraAllegra value) _ _) =
+  TxOut addr (TxOutAdaOnly ShelleyToAllegraEraAllegra value) _ _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut _ (TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _) =
+  TxOut addr (TxOutValue MaryEraOnwardsMary value) _ _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut _ (TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _) =
+  TxOut addr (TxOutValue MaryEraOnwardsAlonzo value) txoutdata _ ->
     L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
     & L.dataHashTxOutL .~ toAlonzoTxOutDataHash txoutdata
 
-toShelleyTxOut sbe (TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript) =
+  TxOut addr (TxOutValue MaryEraOnwardsBabbage value) txoutdata refScript ->
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
        & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
 
-toShelleyTxOut sbe (TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript) =
+  TxOut addr (TxOutValue MaryEraOnwardsConway value) txoutdata refScript ->
     let cEra = shelleyBasedToCardanoEra sbe
     in L.mkBasicTxOut (toShelleyAddr addr) (toMaryValue value)
        & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
