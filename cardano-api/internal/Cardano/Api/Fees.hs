@@ -809,36 +809,28 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     -- of less than around 18 trillion ada  (2^64-1 lovelace).
     -- However, since at this point we know how much non-Ada change to give
     -- we can use the true values for that.
+    let maxLovelaceChange = Lovelace (2^(64 :: Integer)) - 1
+    let maxLovelaceFee = Lovelace (2^(32 :: Integer) - 1)
 
-    let outgoingNonAda = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
-    let incomingNonAda = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- Map.elems $ unUTxO utxo]
-    let mintedNonAda = case txMintValue txbodycontent1 of
+    let outgoing = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
+    let incoming = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- Map.elems $ unUTxO utxo]
+    let minted = case txMintValue txbodycontent1 of
           TxMintNone -> mempty
           TxMintValue w v _ -> toLedgerValue w v
-    let nonAdaChange = mconcat
-          [ incomingNonAda
-          , mintedNonAda
-          , negateLedgerValue sbe outgoingNonAda
-          ]
-
-    let maxLovelace = Lovelace (2^(64 :: Integer)) - 1
+    let change = mconcat [incoming, minted, negateLedgerValue sbe outgoing]
+    let changeWithMaxLovelace = change & A.adaAssetL sbe .~ lovelaceToCoin maxLovelaceChange
     let changeTxOut = forShelleyBasedEraInEon sbe
-          (lovelaceToTxOutValue era maxLovelace)
-          (\w -> maryEraOnwardsConstraints w
-            $ TxOutValueShelleyBased sbe (nonAdaChange & A.adaAssetL sbe .~ lovelaceToCoin maxLovelace)
-          )
+          (lovelaceToTxOutValue era maxLovelaceChange)
+          (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                createAndValidateTransactionBody era txbodycontent1 {
-                 txFee  = TxFeeExplicit sbe $ Lovelace (2^(32 :: Integer) - 1),
-                 txOuts = TxOut changeaddr
-                                changeTxOut
-                                TxOutDatumNone ReferenceScriptNone
+                 txFee  = TxFeeExplicit sbe maxLovelaceFee,
+                 txOuts = TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone
                         : txOuts txbodycontent,
                  txReturnCollateral = dummyCollRet,
                  txTotalCollateral = dummyTotColl
-
                }
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
