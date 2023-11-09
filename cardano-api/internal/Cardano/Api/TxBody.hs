@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE EmptyCase #-}
@@ -2010,8 +2009,11 @@ createAndValidateTransactionBody :: ()
   => CardanoEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
-createAndValidateTransactionBody =
-  caseByronOrShelleyBasedEra makeByronTransactionBody makeShelleyTransactionBody
+createAndValidateTransactionBody era txBodyContent =
+  caseByronOrShelleyBasedEra
+    (\eon -> makeByronTransactionBody eon (txIns txBodyContent) (txOuts txBodyContent))
+    (\eon -> makeShelleyTransactionBody eon txBodyContent)
+    era
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
 pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
@@ -2399,9 +2401,10 @@ fromLedgerTxMintValue sbe body =
 
 makeByronTransactionBody :: ()
   => ByronEraOnly era
-  -> TxBodyContent BuildTx era
+  -> TxIns BuildTx era
+  -> [TxOut CtxTx era]
   -> Either TxBodyError (TxBody era)
-makeByronTransactionBody eon TxBodyContent { txIns, txOuts } = do
+makeByronTransactionBody eon txIns txOuts = do
     ins' <- NonEmpty.nonEmpty (map fst txIns) ?! TxBodyEmptyTxIns
     for_ ins' $ \txin@(TxIn _ (TxIx txix)) ->
       guard (fromIntegral txix <= maxByronTxInIx) ?! TxBodyInIxOverflow txin
