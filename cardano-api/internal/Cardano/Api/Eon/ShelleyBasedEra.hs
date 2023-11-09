@@ -15,7 +15,6 @@ module Cardano.Api.Eon.ShelleyBasedEra
     ShelleyBasedEra(..)
   , IsShelleyBasedEra(..)
   , AnyShelleyBasedEra(..)
-  , anyShelleyBasedEra
   , InAnyShelleyBasedEra(..)
   , inAnyShelleyBasedEra
   , shelleyBasedToCardanoEra
@@ -228,7 +227,8 @@ shelleyBasedEraConstraints = \case
 
 data AnyShelleyBasedEra where
   AnyShelleyBasedEra
-    :: ShelleyBasedEra era
+    :: Typeable era
+    => ShelleyBasedEra era
     -> AnyShelleyBasedEra
 
 deriving instance Show AnyShelleyBasedEra
@@ -280,19 +280,13 @@ instance FromJSON AnyShelleyBasedEra where
         "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
         wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
 
-anyShelleyBasedEra :: ()
-  => ShelleyBasedEra era
-  -> AnyShelleyBasedEra
-anyShelleyBasedEra sbe =
-  AnyShelleyBasedEra sbe
-
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era
 -- is not statically known, for example when deserialising from a file.
 --
 data InAnyShelleyBasedEra thing where
   InAnyShelleyBasedEra
-    :: IsShelleyBasedEra era
+    :: Typeable era
     => ShelleyBasedEra era
     -> thing era
     -> InAnyShelleyBasedEra thing

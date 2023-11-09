@@ -313,7 +313,7 @@ cardanoEraConstraints = \case
 
 data AnyCardanoEra where
   AnyCardanoEra
-    :: IsCardanoEra era
+    :: Typeable era
     => CardanoEra era
     -> AnyCardanoEra
 
@@ -390,7 +390,7 @@ anyCardanoEra = \case
 --
 data InAnyCardanoEra thing where
   InAnyCardanoEra
-    :: IsCardanoEra era
+    :: Typeable era
     => CardanoEra era
     -> thing era
     -> InAnyCardanoEra thing
