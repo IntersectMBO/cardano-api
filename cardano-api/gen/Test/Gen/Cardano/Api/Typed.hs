@@ -368,14 +368,14 @@ genUnsignedQuantity = genQuantity (Range.constant 0 2)
 genPositiveQuantity :: Gen Quantity
 genPositiveQuantity = genQuantity (Range.constant 1 2)
 
-genValue :: MaryEraOnwards era -> Gen AssetId -> Gen Quantity -> Gen (L.Value (ShelleyLedgerEra era))
+genValue :: MaryEraOnwards era -> Gen AssetId -> Gen Quantity -> Gen (L.Value (LedgerEra era))
 genValue w genAId genQuant =
   toLedgerValue w . valueFromList <$>
     Gen.list (Range.constant 0 10)
              ((,) <$> genAId <*> genQuant)
 
 -- | Generate a 'Value' with any asset ID and a positive or negative quantity.
-genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
+genValueDefault :: MaryEraOnwards era -> Gen (L.Value (LedgerEra era))
 genValueDefault w = genValue w genAssetId genSignedNonZeroQuantity
 
 -- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
@@ -390,7 +390,7 @@ genValueForMinting w =
 
 -- | Generate a 'Value' suitable for usage in a transaction output, i.e. any
 -- asset ID and a positive quantity.
-genValueForTxOut :: ShelleyBasedEra era -> Gen (L.Value (ShelleyLedgerEra era))
+genValueForTxOut :: ShelleyBasedEra era -> Gen (L.Value (LedgerEra era))
 genValueForTxOut sbe = do
   -- Generate at least one positive ADA, without it Value in TxOut makes no sense
   -- and will fail deserialization starting with ConwayEra

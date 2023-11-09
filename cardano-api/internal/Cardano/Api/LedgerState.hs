@@ -1517,7 +1517,7 @@ nextEpochEligibleLeadershipSlots :: forall era. ()
   -- ^ Potential slot leading stake pool
   -> SigningKey VrfKey
   -- ^ VRF signing key of the stake pool
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> Ledger.PParams (LedgerEra era)
   -> EpochInfo (Either Text)
   -> (ChainTip, EpochNo)
   -> Either LeadershipError (Set SlotNo)
@@ -1653,7 +1653,7 @@ currentEpochEligibleLeadershipSlots :: forall era. ()
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardCrypto
   -> EpochInfo (Either Text)
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> Ledger.PParams (LedgerEra era)
   -> ProtocolState era
   -> PoolId
   -> SigningKey VrfKey

@@ -206,7 +206,7 @@ estimateTransactionFee sbe nw txFeeFixed txFeePerByte = \case
 --
 evaluateTransactionFee :: forall era. ()
   => ShelleyBasedEra era
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> Ledger.PParams (LedgerEra era)
   -> TxBody era
   -> Word  -- ^ The number of Shelley key witnesses
   -> Word  -- ^ The number of Byron key witnesses
@@ -281,13 +281,13 @@ type PlutusScriptBytes = ShortByteString
 
 data ResolvablePointers where
   ResolvablePointers ::
-      ( Ledger.Era (ShelleyLedgerEra era)
-      , Show (Ledger.TxCert (ShelleyLedgerEra era))
+      ( Ledger.Era (LedgerEra era)
+      , Show (Ledger.TxCert (LedgerEra era))
       )
     => ShelleyBasedEra era
     -> Map
          Alonzo.RdmrPtr
-         ( Alonzo.ScriptPurpose (ShelleyLedgerEra era)
+         ( Alonzo.ScriptPurpose (LedgerEra era)
          , Maybe (PlutusScriptBytes, Alonzo.Language)
          , Ledger.ScriptHash Ledger.StandardCrypto
          )
@@ -478,7 +478,7 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
   -> LedgerEpochInfo
   -> LedgerProtocolParameters era
   -> UTxO era
-  -> L.Tx (ShelleyLedgerEra era)
+  -> L.Tx (LedgerEra era)
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
@@ -494,7 +494,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
     LedgerEpochInfo ledgerEpochInfo = epochInfo
 
     fromLedgerScriptExUnitsMap
-      :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure (ShelleyLedgerEra era))
+      :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure (LedgerEra era))
                                     Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap exmap =
@@ -503,7 +503,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
            bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
-    fromAlonzoScriptExecutionError :: L.TransactionScriptFailure (ShelleyLedgerEra era)
+    fromAlonzoScriptExecutionError :: L.TransactionScriptFailure (LedgerEra era)
                                    -> ScriptExecutionError
     fromAlonzoScriptExecutionError =
       shelleyBasedEraConstraints sbe $ \case
@@ -557,7 +557,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
 --
 evaluateTransactionBalance :: forall era. ()
                            => ShelleyBasedEra era
-                           -> Ledger.PParams (ShelleyLedgerEra era)
+                           -> Ledger.PParams (LedgerEra era)
                            -> Set PoolId
                            -> Map StakeCredential Lovelace
                            -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) Lovelace
@@ -913,10 +913,10 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
    -- Calculation taken from validateInsufficientCollateral: https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
    -- TODO: Bug Jared to expose a function from the ledger that returns total and return collateral.
    calcReturnAndTotalCollateral :: ()
-      => Ledger.AlonzoEraPParams (ShelleyLedgerEra era)
+      => Ledger.AlonzoEraPParams (LedgerEra era)
       => BabbageEraOnwards era
       -> Lovelace -- ^ Fee
-      -> Ledger.PParams (ShelleyLedgerEra era)
+      -> Ledger.PParams (LedgerEra era)
       -> TxInsCollateral era -- ^ From the initial TxBodyContent
       -> TxReturnCollateral CtxTx era -- ^ From the initial TxBodyContent
       -> TxTotalCollateral era -- ^ From the initial TxBodyContent
@@ -982,7 +982,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
        -- of the outputs
        _ -> rest ++ [change]
 
-   balanceCheck :: Ledger.PParams (ShelleyLedgerEra era) -> TxOutValue era -> Either TxBodyErrorAutoBalance ()
+   balanceCheck :: Ledger.PParams (LedgerEra era) -> TxOutValue era -> Either TxBodyErrorAutoBalance ()
    balanceCheck bpparams balance
     | txOutValueToLovelace balance == 0 && onlyAda (txOutValueToValue balance) = return ()
     | txOutValueToLovelace balance < 0 =
@@ -1003,7 +1003,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
 
    checkMinUTxOValue
      :: TxOut CtxTx era
-     -> Ledger.PParams (ShelleyLedgerEra era)
+     -> Ledger.PParams (LedgerEra era)
      -> Either TxBodyErrorAutoBalance ()
    checkMinUTxOValue txout@(TxOut _ v _ _) bpp = do
       let minUTxO = calculateMinimumUTxO sbe txout bpp
@@ -1159,7 +1159,7 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
 calculateMinimumUTxO
   :: ShelleyBasedEra era
   -> TxOut CtxTx era
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> Ledger.PParams (LedgerEra era)
   -> Lovelace
 calculateMinimumUTxO sbe txout pp =
   shelleyBasedEraConstraints sbe

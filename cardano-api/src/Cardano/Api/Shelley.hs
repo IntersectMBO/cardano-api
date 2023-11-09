@@ -216,7 +216,7 @@ module Cardano.Api.Shelley
     LocalNodeClientProtocols(LocalNodeClientProtocols),
 
     -- ** Shelley based eras
-    ShelleyLedgerEra,
+    LedgerEra,
 
 
     -- ** Local State Query

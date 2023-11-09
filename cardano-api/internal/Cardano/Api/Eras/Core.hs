@@ -27,7 +27,7 @@ module Cardano.Api.Eras.Core
   , anyCardanoEra
   , InAnyCardanoEra(..)
   , inAnyCardanoEra
-  , CardanoLedgerEra
+  , LedgerEra
   , ToCardanoEra(..)
 
     -- * IsEon
@@ -409,15 +409,15 @@ inAnyCardanoEra era a =
 -- | A type family that connects our era type tags to equivalent type tags used
 -- in the ledger library.
 --
--- This type mapping  connect types from this API with types in the
+-- This type mapping connects types from this API with types in the
 -- ledger library which allows writing conversion functions in a more generic
 -- way.
 
-type family CardanoLedgerEra era = ledgerera | ledgerera -> era where
-  CardanoLedgerEra ByronEra   = L.ByronEra   L.StandardCrypto
-  CardanoLedgerEra ShelleyEra = L.ShelleyEra L.StandardCrypto
-  CardanoLedgerEra AllegraEra = L.AllegraEra L.StandardCrypto
-  CardanoLedgerEra MaryEra    = L.MaryEra    L.StandardCrypto
-  CardanoLedgerEra AlonzoEra  = L.AlonzoEra  L.StandardCrypto
-  CardanoLedgerEra BabbageEra = L.BabbageEra L.StandardCrypto
-  CardanoLedgerEra ConwayEra  = L.ConwayEra  L.StandardCrypto
+type family LedgerEra era = ledgerera | ledgerera -> era where
+  LedgerEra ByronEra   = L.ByronEra   L.StandardCrypto
+  LedgerEra ShelleyEra = L.ShelleyEra L.StandardCrypto
+  LedgerEra AllegraEra = L.AllegraEra L.StandardCrypto
+  LedgerEra MaryEra    = L.MaryEra    L.StandardCrypto
+  LedgerEra AlonzoEra  = L.AlonzoEra  L.StandardCrypto
+  LedgerEra BabbageEra = L.BabbageEra L.StandardCrypto
+  LedgerEra ConwayEra  = L.ConwayEra  L.StandardCrypto

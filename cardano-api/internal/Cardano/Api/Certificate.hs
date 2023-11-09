@@ -116,14 +116,14 @@ data Certificate era where
      --   7. MIR certificates
      ShelleyRelatedCertificate
        :: ShelleyToBabbageEra era
-       -> Ledger.ShelleyTxCert (ShelleyLedgerEra era)
+       -> Ledger.ShelleyTxCert (LedgerEra era)
        -> Certificate era
 
      -- Conway onwards
      -- TODO: Add comments about the new types of certificates
      ConwayCertificate
        :: ConwayEraOnwards era
-       -> Ledger.ConwayTxCert (ShelleyLedgerEra era)
+       -> Ledger.ConwayTxCert (LedgerEra era)
        -> Certificate era
 
   deriving anyclass SerialiseAsCBOR
@@ -141,14 +141,14 @@ instance
   ) => ToCBOR (Certificate era) where
     toCBOR =
       shelleyBasedEraConstraints (shelleyBasedEra @era)
-        $ Ledger.toEraCBOR @(ShelleyLedgerEra era) . toShelleyCertificate
+        $ Ledger.toEraCBOR @(LedgerEra era) . toShelleyCertificate
 
 instance
   ( IsShelleyBasedEra era
   ) => FromCBOR (Certificate era) where
     fromCBOR =
       shelleyBasedEraConstraints (shelleyBasedEra @era)
-        $ fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(ShelleyLedgerEra era)
+        $ fromShelleyCertificate shelleyBasedEra <$> Ledger.fromEraCBOR @(LedgerEra era)
 
 
 instance
@@ -278,7 +278,7 @@ data StakeDelegationRequirements era where
   StakeDelegationRequirementsConwayOnwards
     :: ConwayEraOnwards era
     -> StakeCredential
-    -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Delegatee (EraCrypto (LedgerEra era))
     -> StakeDelegationRequirements era
 
   StakeDelegationRequirementsPreConway
@@ -302,12 +302,12 @@ makeStakeAddressDelegationCertificate = \case
 data StakePoolRegistrationRequirements era where
   StakePoolRegistrationRequirementsConwayOnwards
     :: ConwayEraOnwards era
-    -> Ledger.PoolParams (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.PoolParams (EraCrypto (LedgerEra era))
     -> StakePoolRegistrationRequirements era
 
   StakePoolRegistrationRequirementsPreConway
     :: ShelleyToBabbageEra era
-    -> Ledger.PoolParams (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.PoolParams (EraCrypto (LedgerEra era))
     -> StakePoolRegistrationRequirements era
 
 makeStakePoolRegistrationCertificate :: ()
@@ -369,7 +369,7 @@ data MirCertificateRequirements era where
   MirCertificateRequirements
     :: ShelleyToBabbageEra era
     -> Ledger.MIRPot
-    -> Ledger.MIRTarget (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.MIRTarget (EraCrypto (LedgerEra era))
     -> MirCertificateRequirements era
 
 makeMIRCertificate :: ()
@@ -382,14 +382,14 @@ makeMIRCertificate (MirCertificateRequirements atMostEra mirPot mirTarget) =
 data DRepRegistrationRequirements era where
   DRepRegistrationRequirements
     :: ConwayEraOnwards era
-    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
+    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (LedgerEra era)))
     -> Lovelace
     -> DRepRegistrationRequirements era
 
 
 makeDrepRegistrationCertificate :: ()
   => DRepRegistrationRequirements era
-  -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
+  -> Maybe (Ledger.Anchor (EraCrypto (LedgerEra era)))
   -> Certificate era
 makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcred deposit) anchor =
   ConwayCertificate conwayOnwards
@@ -402,8 +402,8 @@ makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcre
 data CommitteeHotKeyAuthorizationRequirements era where
   CommitteeHotKeyAuthorizationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.KeyHash Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
-    -> Ledger.KeyHash Ledger.HotCommitteeRole (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.KeyHash Ledger.ColdCommitteeRole (EraCrypto (LedgerEra era))
+    -> Ledger.KeyHash Ledger.HotCommitteeRole (EraCrypto (LedgerEra era))
     -> CommitteeHotKeyAuthorizationRequirements era
 
 makeCommitteeHotKeyAuthorizationCertificate :: ()
@@ -419,8 +419,8 @@ makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequire
 data CommitteeColdkeyResignationRequirements era where
   CommitteeColdkeyResignationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.KeyHash Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
-    -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
+    -> Ledger.KeyHash Ledger.ColdCommitteeRole (EraCrypto (LedgerEra era))
+    -> Maybe (Ledger.Anchor (EraCrypto (LedgerEra era)))
     -> CommitteeColdkeyResignationRequirements era
 
 makeCommitteeColdkeyResignationCertificate :: ()
@@ -436,7 +436,7 @@ makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequireme
 data DRepUnregistrationRequirements era where
   DRepUnregistrationRequirements
     :: ConwayEraOnwards era
-    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
+    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (LedgerEra era)))
     -> Lovelace
     -> DRepUnregistrationRequirements era
 
@@ -452,7 +452,7 @@ makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards 
 makeStakeAddressAndDRepDelegationCertificate :: ()
   => ConwayEraOnwards era
   -> StakeCredential
-  -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
+  -> Ledger.Delegatee (EraCrypto (LedgerEra era))
   -> Lovelace
   -> Certificate era
 makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
@@ -555,7 +555,7 @@ filterUnRegDRepCreds = \case
 
 toShelleyCertificate :: ()
   => Certificate era
-  -> Ledger.TxCert (ShelleyLedgerEra era)
+  -> Ledger.TxCert (LedgerEra era)
 toShelleyCertificate = \case
   ShelleyRelatedCertificate w c ->
     shelleyToBabbageEraConstraints w c
@@ -564,7 +564,7 @@ toShelleyCertificate = \case
 
 fromShelleyCertificate :: ()
   => ShelleyBasedEra era
-  -> Ledger.TxCert (ShelleyLedgerEra era)
+  -> Ledger.TxCert (LedgerEra era)
   -> Certificate era
 fromShelleyCertificate =
   caseShelleyToBabbageOrConwayEraOnwards ShelleyRelatedCertificate ConwayCertificate

@@ -122,13 +122,13 @@ queryPoolState sbe mPoolIds =
 
 queryProtocolParameters :: ()
   => ShelleyBasedEra era
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Ledger.PParams (ShelleyLedgerEra era))))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Ledger.PParams (LedgerEra era))))
 queryProtocolParameters sbe =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
 queryConstitutionHash :: ()
   => ShelleyBasedEra era
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (LedgerEra era)) L.AnchorData))))
 queryConstitutionHash sbe =
   (fmap . fmap . fmap . fmap) (L.anchorDataHash .  L.constitutionAnchor)
     $ queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
@@ -202,13 +202,13 @@ queryUtxo sbe utxoFilter =
 
 queryConstitution :: ()
   => ShelleyBasedEra era
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.Constitution (ShelleyLedgerEra era)))))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.Constitution (LedgerEra era)))))
 queryConstitution sbe =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
 
 queryGovState :: ()
   => ShelleyBasedEra era
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.GovState (ShelleyLedgerEra era))))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.GovState (LedgerEra era))))
 queryGovState sbe =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryGovState
 

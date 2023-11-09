@@ -28,7 +28,7 @@ module Cardano.Api.Eon.ShelleyBasedEra
   , requireShelleyBasedEra
 
     -- ** Mapping to era types from the Shelley ledger library
-  , ShelleyLedgerEra
+  , LedgerEra
   , eraProtVerLow
 
   , ShelleyBasedEraConstraints
@@ -50,8 +50,6 @@ import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
-import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
-                   StandardBabbage, StandardConway, StandardMary, StandardShelley)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import           Control.DeepSeq
@@ -192,23 +190,24 @@ instance IsShelleyBasedEra ConwayEra where
    shelleyBasedEra = ShelleyBasedEraConway
 
 type ShelleyBasedEraConstraints era =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
-  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (LedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (LedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
-  , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
-  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
+  , Consensus.ShelleyBlock (ConsensusProtocol era) (LedgerEra era) ~ ConsensusBlockForEra era
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (LedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
-  , L.Era (ShelleyLedgerEra era)
-  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-  , L.EraPParams (ShelleyLedgerEra era)
-  , L.EraTx (ShelleyLedgerEra era)
-  , L.EraTxBody (ShelleyLedgerEra era)
-  , L.EraTxOut (ShelleyLedgerEra era)
-  , L.EraUTxO (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
-  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
+  , L.Crypto (L.EraCrypto (LedgerEra era))
+  , L.Era (LedgerEra era)
+  , L.EraCrypto (LedgerEra era) ~ L.StandardCrypto
+  , L.EraPParams (LedgerEra era)
+  , L.EraTx (LedgerEra era)
+  , L.EraTxBody (LedgerEra era)
+  , L.EraTxOut (LedgerEra era)
+  , L.EraUTxO (LedgerEra era)
+  , L.HashAnnotated (L.TxBody (LedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ShelleyEraTxBody (LedgerEra era)
+  , L.ShelleyEraTxCert (LedgerEra era)
+
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , IsCardanoEra era
   , IsShelleyBasedEra era
@@ -309,25 +308,6 @@ shelleyBasedToCardanoEra ShelleyBasedEraMary    = MaryEra
 shelleyBasedToCardanoEra ShelleyBasedEraAlonzo  = AlonzoEra
 shelleyBasedToCardanoEra ShelleyBasedEraBabbage = BabbageEra
 shelleyBasedToCardanoEra ShelleyBasedEraConway  = ConwayEra
-
--- ----------------------------------------------------------------------------
--- Conversion to Shelley ledger library types
---
-
--- | A type family that connects our era type tags to equivalent type tags used
--- in the Shelley ledger library.
---
--- This type mapping  connect types from this API with types in the Shelley
--- ledger library which allows writing conversion functions in a more generic
--- way.
---
-type family ShelleyLedgerEra era = ledgerera | ledgerera -> era where
-  ShelleyLedgerEra ShelleyEra = Consensus.StandardShelley
-  ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
-  ShelleyLedgerEra MaryEra    = Consensus.StandardMary
-  ShelleyLedgerEra AlonzoEra  = Consensus.StandardAlonzo
-  ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
-  ShelleyLedgerEra ConwayEra  = Consensus.StandardConway
 
 -- | Lookup the lower major protocol version for the shelley based era. In other words
 -- this is the major protocol version that the era has started in.

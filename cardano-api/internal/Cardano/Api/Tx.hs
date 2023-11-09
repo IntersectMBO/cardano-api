@@ -109,7 +109,7 @@ data Tx era where
 
      ShelleyTx
        :: ShelleyBasedEra era
-       -> L.Tx (ShelleyLedgerEra era)
+       -> L.Tx (LedgerEra era)
        -> Tx era
 
 
@@ -393,12 +393,12 @@ encodeShelleyBasedBootstrapWitness wit =
     CBOR.encodeListLen 2 <> CBOR.encodeWord 1 <> CBOR.encCBOR wit
 
 decodeShelleyBasedWitness :: forall era.
-                             L.Era (ShelleyLedgerEra era)
+                             L.Era (LedgerEra era)
                           => ShelleyBasedEra era
                           -> ByteString
                           -> Either CBOR.DecoderError (KeyWitness era)
 decodeShelleyBasedWitness sbe =
-    CBOR.decodeFullAnnotator (L.eraProtVerLow @(ShelleyLedgerEra era))
+    CBOR.decodeFullAnnotator (L.eraProtVerLow @(LedgerEra era))
       "Shelley Witness" decode
     . LBS.fromStrict
   where
@@ -528,7 +528,7 @@ makeSignedTransaction witnesses (ShelleyTxBody sbe txbody
   where
     txCommon
       :: forall ledgerera.
-         ShelleyLedgerEra era ~ ledgerera
+         LedgerEra era ~ ledgerera
       => L.EraCrypto ledgerera ~ StandardCrypto
       => L.EraTx ledgerera
       => L.Tx ledgerera
@@ -547,7 +547,7 @@ makeSignedTransaction witnesses (ShelleyTxBody sbe txbody
 
     shelleySignedTransaction
       :: forall ledgerera.
-         ShelleyLedgerEra era ~ ledgerera
+         LedgerEra era ~ ledgerera
       => Ledger.EraCrypto ledgerera ~ StandardCrypto
       => Ledger.EraTx ledgerera
       => Tx era
@@ -555,7 +555,7 @@ makeSignedTransaction witnesses (ShelleyTxBody sbe txbody
 
     alonzoSignedTransaction
       :: forall ledgerera.
-         ShelleyLedgerEra era ~ ledgerera
+         LedgerEra era ~ ledgerera
       => Ledger.EraCrypto ledgerera ~ StandardCrypto
       => L.AlonzoEraTx ledgerera
       => Tx era
@@ -633,7 +633,7 @@ makeShelleyBootstrapWitness sbe nwOrAddr txBody sk =
 makeShelleyBasedBootstrapWitness :: forall era. ()
   => ShelleyBasedEra era
   -> WitnessNetworkIdOrByronAddress
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> SigningKey ByronKey
   -> KeyWitness era
 makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =

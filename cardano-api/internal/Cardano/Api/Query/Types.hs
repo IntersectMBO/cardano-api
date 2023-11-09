@@ -18,14 +18,14 @@ import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 
 newtype DebugLedgerState era = DebugLedgerState
-  { unDebugLedgerState :: Shelley.NewEpochState (ShelleyLedgerEra era)
+  { unDebugLedgerState :: Shelley.NewEpochState (LedgerEra era)
   }
 
 instance IsShelleyBasedEra era => FromCBOR (DebugLedgerState era) where
   fromCBOR =
     shelleyBasedEraConstraints (shelleyBasedEra @era) $
       DebugLedgerState <$>
-        (fromCBOR :: Plain.Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
+        (fromCBOR :: Plain.Decoder s (Shelley.NewEpochState (LedgerEra era)))
 
 instance IsShelleyBasedEra era => ToJSON (DebugLedgerState era) where
   toJSON =

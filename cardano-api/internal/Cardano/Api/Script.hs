@@ -418,7 +418,7 @@ instance HasTypeProxy lang => HasTypeProxy (Script lang) where
 
 instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
     serialiseToCBOR (SimpleScript s) =
-      CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock (ShelleyLedgerEra AllegraEra))
+      CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock (LedgerEra AllegraEra))
 
     serialiseToCBOR (PlutusScript PlutusScriptV1 s) =
       CBOR.serialize' s
@@ -432,8 +432,8 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
     deserialiseFromCBOR _ bs =
       case scriptLanguage :: ScriptLanguage lang of
         SimpleScriptLanguage ->
-          let version = Ledger.eraProtVerLow @(ShelleyLedgerEra AllegraEra)
-          in  SimpleScript . fromAllegraTimelock @(ShelleyLedgerEra AllegraEra)
+          let version = Ledger.eraProtVerLow @(LedgerEra AllegraEra)
+          in  SimpleScript . fromAllegraTimelock @(LedgerEra AllegraEra)
           <$> Binary.decodeFullAnnotator version "Script" Binary.decCBOR (LBS.fromStrict bs)
 
         PlutusScriptLanguage PlutusScriptV1 ->
@@ -975,25 +975,25 @@ hashScript (SimpleScript s) =
     -- We convert to the Allegra-era version specifically and hash that.
     -- Later ledger eras have to be compatible anyway.
     ScriptHash
-  . Ledger.hashScript @(ShelleyLedgerEra AllegraEra)
-  . (toAllegraTimelock :: SimpleScript -> Timelock.Timelock (ShelleyLedgerEra AllegraEra))
+  . Ledger.hashScript @(LedgerEra AllegraEra)
+  . (toAllegraTimelock :: SimpleScript -> Timelock.Timelock (LedgerEra AllegraEra))
   $ s
 
 hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
     -- For Plutus V1, we convert to the Alonzo-era version specifically and
     -- hash that. Later ledger eras have to be compatible anyway.
     ScriptHash
-  . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
+  . Ledger.hashScript @(LedgerEra AlonzoEra)
   $ AlonzoPlutusScript Alonzo.PlutusV1 script
 
 hashScript (PlutusScript PlutusScriptV2 (PlutusScriptSerialised script)) =
     ScriptHash
-  . Ledger.hashScript @(ShelleyLedgerEra BabbageEra)
+  . Ledger.hashScript @(LedgerEra BabbageEra)
   $ AlonzoPlutusScript Alonzo.PlutusV2 script
 
 hashScript (PlutusScript PlutusScriptV3 (PlutusScriptSerialised script)) =
     ScriptHash
-  . Ledger.hashScript @(ShelleyLedgerEra ConwayEra)
+  . Ledger.hashScript @(LedgerEra ConwayEra)
   $ AlonzoPlutusScript Alonzo.PlutusV3 script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
@@ -1100,7 +1100,7 @@ scriptArityForWitCtx WitCtxStake = 2
 -- Conversion functions
 --
 
-toShelleyScript :: ScriptInEra era -> Ledger.Script (ShelleyLedgerEra era)
+toShelleyScript :: ScriptInEra era -> Ledger.Script (LedgerEra era)
 toShelleyScript (ScriptInEra langInEra (SimpleScript script)) =
     case langInEra of
       SimpleScriptInShelley -> either (error . show) id (toShelleyMultiSig script)
@@ -1129,7 +1129,7 @@ toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV3
       PlutusScriptV3InConway  -> AlonzoPlutusScript Alonzo.PlutusV3 script
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
-                        -> Ledger.Script (ShelleyLedgerEra era)
+                        -> Ledger.Script (LedgerEra era)
                         -> ScriptInEra era
 fromShelleyBasedScript sbe script =
   case sbe of
@@ -1407,7 +1407,7 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
 refScriptToShelleyScript
   :: CardanoEra era
   -> ReferenceScript era
-  -> StrictMaybe (Ledger.Script (ShelleyLedgerEra era))
+  -> StrictMaybe (Ledger.Script (LedgerEra era))
 refScriptToShelleyScript era (ReferenceScript _ s) =
   case toScriptInEra era s of
     Just sInEra -> SJust $ toShelleyScript sInEra
@@ -1415,7 +1415,7 @@ refScriptToShelleyScript era (ReferenceScript _ s) =
 refScriptToShelleyScript _ ReferenceScriptNone = SNothing
 
 fromShelleyScriptToReferenceScript
-  :: ShelleyBasedEra era -> Ledger.Script (ShelleyLedgerEra era) -> ReferenceScript era
+  :: ShelleyBasedEra era -> Ledger.Script (LedgerEra era) -> ReferenceScript era
 fromShelleyScriptToReferenceScript sbe script =
    scriptInEraToRefScript $ fromShelleyBasedScript sbe script
 

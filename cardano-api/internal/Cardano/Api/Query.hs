@@ -246,7 +246,7 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (GenesisParameters ShelleyEra)
 
   QueryProtocolParameters
-    :: QueryInShelleyBasedEra era (Ledger.PParams (ShelleyLedgerEra era))
+    :: QueryInShelleyBasedEra era (Ledger.PParams (LedgerEra era))
 
   QueryProtocolParametersUpdate
     :: QueryInShelleyBasedEra era
@@ -301,10 +301,10 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace)
 
   QueryConstitution
-    :: QueryInShelleyBasedEra era (Maybe (L.Constitution (ShelleyLedgerEra era)))
+    :: QueryInShelleyBasedEra era (Maybe (L.Constitution (LedgerEra era)))
 
   QueryGovState
-    :: QueryInShelleyBasedEra era (L.GovState (ShelleyLedgerEra era))
+    :: QueryInShelleyBasedEra era (L.GovState (LedgerEra era))
 
   QueryDRepState
     :: Set (Shelley.Credential Shelley.DRepRole StandardCrypto)
@@ -404,7 +404,7 @@ instance (IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
             <*> parseJSON txOutVal
 
 newtype SerialisedDebugLedgerState era
-  = SerialisedDebugLedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))
+  = SerialisedDebugLedgerState (Serialised (Shelley.NewEpochState (LedgerEra era)))
 
 decodeDebugLedgerState :: forall era. ()
   => FromCBOR (DebugLedgerState era)
@@ -424,9 +424,9 @@ decodeProtocolState
 decodeProtocolState (ProtocolState (Serialised pbs)) = first (pbs,) $ Plain.decodeFull pbs
 
 newtype SerialisedCurrentEpochState era
-  = SerialisedCurrentEpochState (Serialised (Shelley.EpochState (ShelleyLedgerEra era)))
+  = SerialisedCurrentEpochState (Serialised (Shelley.EpochState (LedgerEra era)))
 
-newtype CurrentEpochState era = CurrentEpochState (Shelley.EpochState (ShelleyLedgerEra era))
+newtype CurrentEpochState era = CurrentEpochState (Shelley.EpochState (LedgerEra era))
 
 decodeCurrentEpochState
   :: ShelleyBasedEra era
@@ -436,28 +436,28 @@ decodeCurrentEpochState sbe (SerialisedCurrentEpochState (Serialised ls)) =
   shelleyBasedEraConstraints sbe $ CurrentEpochState <$> Plain.decodeFull ls
 
 newtype SerialisedPoolState era
-  = SerialisedPoolState (Serialised (Shelley.PState (ShelleyLedgerEra era)))
+  = SerialisedPoolState (Serialised (Shelley.PState (LedgerEra era)))
 
-newtype PoolState era = PoolState (Shelley.PState (ShelleyLedgerEra era))
+newtype PoolState era = PoolState (Shelley.PState (LedgerEra era))
 
 decodePoolState
   :: forall era. ()
-  => Core.Era (ShelleyLedgerEra era)
-  => DecCBOR (Shelley.PState (ShelleyLedgerEra era))
+  => Core.Era (LedgerEra era)
+  => DecCBOR (Shelley.PState (LedgerEra era))
   => SerialisedPoolState era
   -> Either DecoderError (PoolState era)
 decodePoolState (SerialisedPoolState (Serialised ls)) =
-  PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
+  PoolState <$> decodeFull (Core.eraProtVerLow @(LedgerEra era)) ls
 
 newtype SerialisedPoolDistribution era
-  = SerialisedPoolDistribution (Serialised (Shelley.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))))
+  = SerialisedPoolDistribution (Serialised (Shelley.PoolDistr (Core.EraCrypto (LedgerEra era))))
 
 newtype PoolDistribution era = PoolDistribution
-  { unPoolDistr :: Shelley.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))
+  { unPoolDistr :: Shelley.PoolDistr (Core.EraCrypto (LedgerEra era))
   }
 
 decodePoolDistribution
-  :: forall era. (Crypto (Core.EraCrypto (ShelleyLedgerEra era)))
+  :: forall era. (Crypto (Core.EraCrypto (LedgerEra era)))
   => ShelleyBasedEra era
   -> SerialisedPoolDistribution era
   -> Either DecoderError (PoolDistribution era)
@@ -465,13 +465,13 @@ decodePoolDistribution sbe (SerialisedPoolDistribution (Serialised ls)) =
   PoolDistribution <$> decodeFull (eraProtVerLow sbe) ls
 
 newtype SerialisedStakeSnapshots era
-  = SerialisedStakeSnapshots (Serialised (Consensus.StakeSnapshots (Core.EraCrypto (ShelleyLedgerEra era))))
+  = SerialisedStakeSnapshots (Serialised (Consensus.StakeSnapshots (Core.EraCrypto (LedgerEra era))))
 
-newtype StakeSnapshot era = StakeSnapshot (Consensus.StakeSnapshots (Core.EraCrypto (ShelleyLedgerEra era)))
+newtype StakeSnapshot era = StakeSnapshot (Consensus.StakeSnapshots (Core.EraCrypto (LedgerEra era)))
 
 decodeStakeSnapshot
   :: forall era. ()
-  => FromCBOR (Consensus.StakeSnapshots (Core.EraCrypto (ShelleyLedgerEra era)))
+  => FromCBOR (Consensus.StakeSnapshots (Core.EraCrypto (LedgerEra era)))
   => SerialisedStakeSnapshots era
   -> Either DecoderError (StakeSnapshot era)
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
@@ -492,7 +492,7 @@ toShelleyAddrSet era =
 toLedgerUTxO :: ()
   => ShelleyBasedEra era
   -> UTxO era
-  -> Shelley.UTxO (ShelleyLedgerEra era)
+  -> Shelley.UTxO (LedgerEra era)
 toLedgerUTxO sbe (UTxO utxo) =
   shelleyBasedEraConstraints sbe
     $ Shelley.UTxO
@@ -503,7 +503,7 @@ toLedgerUTxO sbe (UTxO utxo) =
 
 fromLedgerUTxO :: ()
   => ShelleyBasedEra era
-  -> Shelley.UTxO (ShelleyLedgerEra era)
+  -> Shelley.UTxO (LedgerEra era)
   -> UTxO era
 fromLedgerUTxO sbe (Shelley.UTxO utxo) =
   shelleyBasedEraConstraints sbe
@@ -578,8 +578,8 @@ toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
   shelleyBasedEraConstraints sbe $ toConsensusQueryShelleyBased sbe q
 
 toConsensusQueryShelleyBased :: forall era protocol block result. ()
-  => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
-  => Core.EraCrypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
+  => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (LedgerEra era)
+  => Core.EraCrypto (LedgerEra era) ~ Consensus.StandardCrypto
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
@@ -800,7 +800,7 @@ fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraConw
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera protocol result result'.
      HasCallStack
-  => ShelleyLedgerEra era ~ ledgerera
+  => LedgerEra era ~ ledgerera
   => Core.EraCrypto ledgerera ~ Consensus.StandardCrypto
   => ConsensusProtocol era ~ protocol
   => ShelleyBasedEra era

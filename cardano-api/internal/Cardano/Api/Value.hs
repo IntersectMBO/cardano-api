@@ -259,7 +259,7 @@ valueToList (Value m) = Map.toList m
 negateValue :: Value -> Value
 negateValue (Value m) = Value (Map.map negate m)
 
-negateLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> L.Value (ShelleyLedgerEra era)
+negateLedgerValue :: ShelleyBasedEra era -> L.Value (LedgerEra era) -> L.Value (LedgerEra era)
 negateLedgerValue sbe v =
   caseShelleyToAllegraOrMaryEraOnwards
     (\_ -> v & A.adaAssetL sbe %~ Shelley.Coin . negate . Shelley.unCoin)
@@ -311,10 +311,10 @@ toMaryValue v =
     toMaryAssetName :: AssetName -> Mary.AssetName
     toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
 
-toLedgerValue :: MaryEraOnwards era -> Value -> L.Value (ShelleyLedgerEra era)
+toLedgerValue :: MaryEraOnwards era -> Value -> L.Value (LedgerEra era)
 toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
 
-fromLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> Value
+fromLedgerValue :: ShelleyBasedEra era -> L.Value (LedgerEra era) -> Value
 fromLedgerValue sbe v =
   caseShelleyToAllegraOrMaryEraOnwards
     (const (coinToValue v))

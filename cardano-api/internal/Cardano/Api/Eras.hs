@@ -18,7 +18,6 @@ module Cardano.Api.Eras
   , InAnyCardanoEra(..)
   , inAnyCardanoEra
   , cardanoEraConstraints
-  , CardanoLedgerEra
   , ToCardanoEra(..)
 
     -- * IsEon

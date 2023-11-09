@@ -100,7 +100,7 @@ data Block era where
                 -> Block ByronEra
 
      ShelleyBlock :: ShelleyBasedEra era
-                  -> Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era)
+                  -> Consensus.ShelleyBlock (ConsensusProtocol era) (LedgerEra era)
                   -> Block era
 
 -- | A block consists of a header and a body containing transactions.
@@ -174,7 +174,7 @@ getBlockTxs = \case
 
 
 getShelleyBlockTxs :: forall era ledgerera blockheader.
-                      ShelleyLedgerEra era ~ ledgerera
+                      LedgerEra era ~ ledgerera
                    => Consensus.ShelleyCompatible (ConsensusProtocol era) ledgerera
                    => Consensus.ShelleyProtocolHeader (ConsensusProtocol era) ~ blockheader
                    => ShelleyBasedEra era

@@ -91,7 +91,7 @@ data GenesisParameters era =
 
        -- | The initial values of the updateable 'ProtocolParameters'.
        --
-       protocolInitialUpdateableProtocolParameters :: Ledger.PParams (ShelleyLedgerEra era)
+       protocolInitialUpdateableProtocolParameters :: Ledger.PParams (LedgerEra era)
      }
 
 
