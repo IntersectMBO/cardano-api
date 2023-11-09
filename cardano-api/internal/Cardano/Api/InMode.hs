@@ -227,7 +227,7 @@ data TxValidationError era where
 
      ShelleyTxValidationError
        :: ShelleyBasedEra era
-       -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
+       -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (LedgerEra era))
        -> TxValidationError era
 
 -- The GADT in the ShelleyTxValidationError case requires a custom instance

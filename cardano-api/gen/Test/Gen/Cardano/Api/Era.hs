@@ -24,9 +24,9 @@ import           Test.QuickCheck (Arbitrary (..))
 
 shelleyBasedEraTestConstraints :: ()
   => ShelleyBasedEra era
-  ->  ( ( Ledger.Era (ShelleyLedgerEra era)
-        , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-        , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
+  ->  ( ( Ledger.Era (LedgerEra era)
+        , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (LedgerEra era))
+        , Arbitrary (Ledger.PParamsHKD Ledger.Identity (LedgerEra era))
         )
       => a
       )
@@ -41,9 +41,9 @@ shelleyBasedEraTestConstraints = \case
 
 shelleyToBabbageEraTestConstraints :: ()
   => ShelleyToBabbageEra era
-  ->  ( ( Ledger.Era (ShelleyLedgerEra era)
-        , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-        , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
+  ->  ( ( Ledger.Era (LedgerEra era)
+        , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (LedgerEra era))
+        , Arbitrary (Ledger.PParamsHKD Ledger.Identity (LedgerEra era))
         )
       => a
       )
@@ -57,9 +57,9 @@ shelleyToBabbageEraTestConstraints = \case
 
 conwayEraOnwardsTestConstraints :: ()
   => ConwayEraOnwards era
-  ->  ( ( Ledger.Era (ShelleyLedgerEra era)
-        , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (ShelleyLedgerEra era))
-        , Arbitrary (Ledger.PParamsHKD Ledger.Identity (ShelleyLedgerEra era))
+  ->  ( ( Ledger.Era (LedgerEra era)
+        , Arbitrary (Ledger.PParamsHKD Ledger.StrictMaybe (LedgerEra era))
+        , Arbitrary (Ledger.PParamsHKD Ledger.Identity (LedgerEra era))
         )
       => a
       )

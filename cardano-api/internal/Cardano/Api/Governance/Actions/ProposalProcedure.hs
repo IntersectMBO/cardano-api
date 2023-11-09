@@ -63,12 +63,12 @@ data GovernanceAction era
       ProtVer
   | UpdatePParams
       (StrictMaybe (Ledger.PrevGovActionId Ledger.PParamUpdatePurpose StandardCrypto))
-      (Ledger.PParamsUpdate (ShelleyLedgerEra era))
+      (Ledger.PParamsUpdate (LedgerEra era))
 
 toGovernanceAction :: ()
   => ShelleyBasedEra era
   -> GovernanceAction era
-  -> Gov.GovAction (ShelleyLedgerEra era)
+  -> Gov.GovAction (LedgerEra era)
 toGovernanceAction sbe =
   shelleyBasedEraConstraints sbe $ \case
     MotionOfNoConfidence prevGovId ->
@@ -99,8 +99,8 @@ toGovernanceAction sbe =
       Gov.ParameterChange preGovId ppup
 
 fromGovernanceAction
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Gov.GovAction (ShelleyLedgerEra era)
+  :: EraCrypto (LedgerEra era) ~ StandardCrypto
+  => Gov.GovAction (LedgerEra era)
   -> GovernanceAction era
 fromGovernanceAction = \case
   Gov.NoConfidence prevGovId ->
@@ -125,7 +125,7 @@ fromGovernanceAction = \case
   Gov.InfoAction ->
     InfoAct
 
-newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era) }
+newtype Proposal era = Proposal { unProposal :: Gov.ProposalProcedure (LedgerEra era) }
 
 instance IsShelleyBasedEra era => Show (Proposal era) where
   show (Proposal pp) = do

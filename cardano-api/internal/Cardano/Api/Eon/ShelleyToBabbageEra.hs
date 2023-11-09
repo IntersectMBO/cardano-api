@@ -67,24 +67,24 @@ instance ToCardanoEra ShelleyToBabbageEra where
     ShelleyToBabbageEraBabbage  -> BabbageEra
 
 type ShelleyToBabbageEraConstraints era =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
-  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (LedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (LedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
-  , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
-  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
+  , Consensus.ShelleyBlock (ConsensusProtocol era) (LedgerEra era) ~ ConsensusBlockForEra era
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (LedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
-  , L.Era (ShelleyLedgerEra era)
-  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-  , L.EraPParams (ShelleyLedgerEra era)
-  , L.EraTx (ShelleyLedgerEra era)
-  , L.EraTxBody (ShelleyLedgerEra era)
-  , L.EraTxOut (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
-  , L.ProtVerAtMost (ShelleyLedgerEra era) 8
-  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
-  , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
+  , L.Crypto (L.EraCrypto (LedgerEra era))
+  , L.Era (LedgerEra era)
+  , L.EraCrypto (LedgerEra era) ~ L.StandardCrypto
+  , L.EraPParams (LedgerEra era)
+  , L.EraTx (LedgerEra era)
+  , L.EraTxBody (LedgerEra era)
+  , L.EraTxOut (LedgerEra era)
+  , L.HashAnnotated (L.TxBody (LedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.ProtVerAtMost (LedgerEra era) 8
+  , L.ShelleyEraTxBody (LedgerEra era)
+  , L.ShelleyEraTxCert (LedgerEra era)
+  , L.TxCert (LedgerEra era) ~ L.ShelleyTxCert (LedgerEra era)
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)

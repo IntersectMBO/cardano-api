@@ -154,7 +154,7 @@ import           Text.PrettyBy.Default (display)
 -- Era based ledger protocol parameters
 --
 newtype LedgerProtocolParameters era = LedgerProtocolParameters
-  { unLedgerProtocolParameters :: Ledger.PParams (ShelleyLedgerEra era)
+  { unLedgerProtocolParameters :: Ledger.PParams (LedgerEra era)
   }
 
 instance IsShelleyBasedEra era => Show (LedgerProtocolParameters era) where
@@ -179,7 +179,7 @@ convertToLedgerProtocolParameters sbe pp =
 createPParams
   :: ShelleyBasedEra era
   -> EraBasedProtocolParametersUpdate era
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> Ledger.PParams (LedgerEra era)
 createPParams sbe ebPParamsUpdate =
   shelleyBasedEraConstraints sbe $
     let ppUp = createEraBasedProtocolParamUpdate sbe ebPParamsUpdate
@@ -231,7 +231,7 @@ data EraBasedProtocolParametersUpdate era where
     :: CommonProtocolParametersUpdate
     -> AlonzoOnwardsPParams ConwayEra
     -> IntroducedInBabbagePParams ConwayEra
-    -> IntroducedInConwayPParams (ShelleyLedgerEra ConwayEra)
+    -> IntroducedInConwayPParams (LedgerEra ConwayEra)
     -> EraBasedProtocolParametersUpdate ConwayEra
 
 deriving instance Show (EraBasedProtocolParametersUpdate era)
@@ -269,7 +269,7 @@ createIntroducedInConwayPParams IntroducedInConwayPParams{..} =
 createEraBasedProtocolParamUpdate
   :: ShelleyBasedEra era
   -> EraBasedProtocolParametersUpdate era
-  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> Ledger.PParamsUpdate (LedgerEra era)
 createEraBasedProtocolParamUpdate sbe eraPParamsUpdate =
   case eraPParamsUpdate  of
     ShelleyEraBasedProtocolParametersUpdate c depAfterMary depAfterBabbage depAfterAlonzo ->
@@ -377,9 +377,9 @@ newtype DeprecatedAfterBabbagePParams ledgerera
 type MaxMaryEra ledgerera = Ledger.ProtVerAtMost ledgerera 4
 
 createDeprecatedAfterMaryPParams
-  :: EraPParams (ShelleyLedgerEra era)
-  => MaxMaryEra (ShelleyLedgerEra era)
-  => ShelleyBasedEra era -> DeprecatedAfterMaryPParams era -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  :: EraPParams (LedgerEra era)
+  => MaxMaryEra (LedgerEra era)
+  => ShelleyBasedEra era -> DeprecatedAfterMaryPParams era -> Ledger.PParamsUpdate (LedgerEra era)
 createDeprecatedAfterMaryPParams _ (DeprecatedAfterMaryPParams minUtxoVal) =
   Ledger.emptyPParamsUpdate & Ledger.ppuMinUTxOValueL .~ minUtxoVal
 
@@ -393,11 +393,11 @@ data ShelleyToAlonzoPParams ledgerera
 type MaxAlonzoEra ledgerera = Ledger.ProtVerAtMost ledgerera 6
 
 createDeprecatedAfterAlonzoPParams
-  :: EraPParams (ShelleyLedgerEra era)
-  => MaxAlonzoEra (ShelleyLedgerEra era)
+  :: EraPParams (LedgerEra era)
+  => MaxAlonzoEra (LedgerEra era)
   => ShelleyBasedEra era
   -> ShelleyToAlonzoPParams era
-  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> Ledger.PParamsUpdate (LedgerEra era)
 createDeprecatedAfterAlonzoPParams _ (ShelleyToAlonzoPParams extraEntropy decentralization) =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuExtraEntropyL .~ extraEntropy
@@ -419,7 +419,7 @@ data AlonzoOnwardsPParams ledgerera
 createPParamsUpdateIntroducedInAlonzo :: ()
   => AlonzoEraOnwards era
   -> AlonzoOnwardsPParams era
-  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> Ledger.PParamsUpdate (LedgerEra era)
 createPParamsUpdateIntroducedInAlonzo w (AlonzoOnwardsPParams {..})=
   alonzoEraOnwardsConstraints w $
     Ledger.emptyPParamsUpdate
@@ -439,7 +439,7 @@ newtype IntroducedInBabbagePParams era
 createIntroducedInBabbagePParams :: ()
   => BabbageEraOnwards era
   -> IntroducedInBabbagePParams era
-  -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+  -> Ledger.PParamsUpdate (LedgerEra era)
 createIntroducedInBabbagePParams w (IntroducedInBabbagePParams coinsPerUTxOByte) =
   babbageEraOnwardsConstraints w $
     Ledger.emptyPParamsUpdate & Ledger.ppuCoinsPerUTxOByteL .~ coinsPerUTxOByte
@@ -1175,21 +1175,21 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 toLedgerUpdate :: ()
   => ShelleyBasedEra era
   -> UpdateProposal
-  -> Either ProtocolParametersConversionError (Ledger.Update (ShelleyLedgerEra era))
+  -> Either ProtocolParametersConversionError (Ledger.Update (LedgerEra era))
 toLedgerUpdate sbe (UpdateProposal ppup epochno) =
   (`Ledger.Update` epochno) <$> toLedgerProposedPPUpdates sbe ppup
 
 toLedgerProposedPPUpdates :: ()
   => ShelleyBasedEra era
   -> Map (Hash GenesisKey) ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (Ledger.ProposedPPUpdates (ShelleyLedgerEra era))
+  -> Either ProtocolParametersConversionError (Ledger.ProposedPPUpdates (LedgerEra era))
 toLedgerProposedPPUpdates sbe m =
   shelleyBasedEraConstraints sbe $
     Ledger.ProposedPPUpdates . Map.mapKeysMonotonic (\(GenesisKeyHash kh) -> kh) <$> traverse (toLedgerPParamsUpdate sbe) m
 
 toLedgerPParamsUpdate :: ShelleyBasedEra era
                       -> ProtocolParametersUpdate
-                      -> Either ProtocolParametersConversionError (PParamsUpdate (ShelleyLedgerEra era))
+                      -> Either ProtocolParametersConversionError (PParamsUpdate (LedgerEra era))
 toLedgerPParamsUpdate ShelleyBasedEraShelley = toShelleyPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraAllegra = toShelleyPParamsUpdate
 toLedgerPParamsUpdate ShelleyBasedEraMary    = toShelleyPParamsUpdate
@@ -1374,7 +1374,7 @@ toConwayPParamsUpdate = toBabbageCommonPParamsUpdate
 --
 
 fromLedgerUpdate :: forall era ledgerera.
-                    ShelleyLedgerEra era ~ ledgerera
+                    LedgerEra era ~ ledgerera
                  => Ledger.EraCrypto ledgerera ~ StandardCrypto
                  => ShelleyBasedEra era
                  -> Ledger.Update ledgerera
@@ -1384,7 +1384,7 @@ fromLedgerUpdate sbe (Ledger.Update ppup epochno) =
 
 
 fromLedgerProposedPPUpdates :: forall era ledgerera.
-                               ShelleyLedgerEra era ~ ledgerera
+                               LedgerEra era ~ ledgerera
                             => Ledger.EraCrypto ledgerera ~ StandardCrypto
                             => ShelleyBasedEra era
                             -> Ledger.ProposedPPUpdates ledgerera
@@ -1396,7 +1396,7 @@ fromLedgerProposedPPUpdates sbe =
 
 
 fromLedgerPParamsUpdate :: ShelleyBasedEra era
-                        -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
+                        -> Ledger.PParamsUpdate (LedgerEra era)
                         -> ProtocolParametersUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraShelley = fromShelleyPParamsUpdate
 fromLedgerPParamsUpdate ShelleyBasedEraAllegra = fromShelleyPParamsUpdate
@@ -1526,7 +1526,7 @@ fromConwayPParamsUpdate = fromBabbageCommonPParamsUpdate
 toLedgerPParams
   :: ShelleyBasedEra era
   -> ProtocolParameters
-  -> Either ProtocolParametersConversionError (Ledger.PParams (ShelleyLedgerEra era))
+  -> Either ProtocolParametersConversionError (Ledger.PParams (LedgerEra era))
 toLedgerPParams ShelleyBasedEraShelley = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
 toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
@@ -1694,7 +1694,7 @@ toConwayPParams = toBabbagePParams
 
 fromLedgerPParams
   :: ShelleyBasedEra era
-  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> Ledger.PParams (LedgerEra era)
   -> ProtocolParameters
 fromLedgerPParams ShelleyBasedEraShelley = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAllegra = fromShelleyPParams

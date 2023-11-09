@@ -36,29 +36,29 @@ import qualified Data.Text.Encoding as Text
 import           GHC.Generics
 
 newtype GovernanceActionId era = GovernanceActionId
-  { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (ShelleyLedgerEra era))
+  { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (LedgerEra era))
   }
   deriving (Show, Eq, Ord)
 
 instance IsShelleyBasedEra era => ToCBOR (GovernanceActionId era) where
   toCBOR = \case
     GovernanceActionId v ->
-      shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(ShelleyLedgerEra era) v
+      shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(LedgerEra era) v
 
 instance IsShelleyBasedEra era => FromCBOR (GovernanceActionId era) where
   fromCBOR = do
-    !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
+    !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(LedgerEra era)
     return $ GovernanceActionId v
 
-newtype Voter era = Voter (Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era)))
+newtype Voter era = Voter (Ledger.Voter (L.EraCrypto (LedgerEra era)))
   deriving (Show, Eq, Ord)
 
 instance IsShelleyBasedEra era => ToCBOR (Voter era) where
-  toCBOR (Voter v) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(ShelleyLedgerEra era) v
+  toCBOR (Voter v) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(LedgerEra era) v
 
 instance IsShelleyBasedEra era => FromCBOR (Voter era) where
   fromCBOR = do
-    !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
+    !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(LedgerEra era)
     pure $ Voter v
 
 
@@ -88,15 +88,15 @@ createVotingProcedure eon vChoice mProposalAnchor =
           }
 
 newtype VotingProcedure era = VotingProcedure
-  { unVotingProcedure :: Ledger.VotingProcedure (ShelleyLedgerEra era)
+  { unVotingProcedure :: Ledger.VotingProcedure (LedgerEra era)
   } deriving (Show, Eq)
 
 instance IsShelleyBasedEra era => ToCBOR (VotingProcedure era) where
-  toCBOR (VotingProcedure vp) = shelleyBasedEraConstraints sbe $ L.toEraCBOR @(ShelleyLedgerEra era) vp
+  toCBOR (VotingProcedure vp) = shelleyBasedEraConstraints sbe $ L.toEraCBOR @(LedgerEra era) vp
     where sbe = shelleyBasedEra @era
 
 instance IsShelleyBasedEra era => FromCBOR (VotingProcedure era) where
-  fromCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) $ VotingProcedure <$> L.fromEraCBOR @(ShelleyLedgerEra era)
+  fromCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) $ VotingProcedure <$> L.fromEraCBOR @(LedgerEra era)
 
 instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedure era) where
   serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
@@ -110,7 +110,7 @@ instance HasTypeProxy era => HasTypeProxy (VotingProcedure era) where
   proxyToAsType _ = AsVote
 
 newtype VotingProcedures era = VotingProcedures
-  { unVotingProcedures  :: L.VotingProcedures (ShelleyLedgerEra era)
+  { unVotingProcedures  :: L.VotingProcedures (LedgerEra era)
   }
 
 deriving instance Eq (VotingProcedures era)
@@ -121,12 +121,12 @@ instance IsShelleyBasedEra era => ToCBOR (VotingProcedures era) where
   toCBOR = \case
     VotingProcedures vp ->
       shelleyBasedEraConstraints (shelleyBasedEra @era)
-        $ L.toEraCBOR @(ShelleyLedgerEra era) vp
+        $ L.toEraCBOR @(LedgerEra era) vp
 
 instance IsShelleyBasedEra era => FromCBOR (VotingProcedures era) where
   fromCBOR =
     shelleyBasedEraConstraints (shelleyBasedEra @era)
-      $ VotingProcedures <$> L.fromEraCBOR @(ShelleyLedgerEra era)
+      $ VotingProcedures <$> L.fromEraCBOR @(LedgerEra era)
 
 instance IsShelleyBasedEra era => SerialiseAsCBOR (VotingProcedures era) where
   serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
@@ -144,9 +144,9 @@ emptyVotingProcedures = VotingProcedures $ L.VotingProcedures Map.empty
 
 singletonVotingProcedures :: ()
   => ConwayEraOnwards era
-  -> L.Voter (L.EraCrypto (ShelleyLedgerEra era))
-  -> L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))
-  -> L.VotingProcedure (ShelleyLedgerEra era)
+  -> L.Voter (L.EraCrypto (LedgerEra era))
+  -> L.GovActionId (L.EraCrypto (LedgerEra era))
+  -> L.VotingProcedure (LedgerEra era)
   -> VotingProcedures era
 singletonVotingProcedures _ voter govActionId votingProcedure =
   VotingProcedures

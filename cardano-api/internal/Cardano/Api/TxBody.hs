@@ -693,7 +693,7 @@ toByronTxOut ByronEraOnlyByron = \case
 
 
 toShelleyTxOut :: forall era ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
+                  LedgerEra era ~ ledgerera
                => ShelleyBasedEra era
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
@@ -714,7 +714,7 @@ toShelleyTxOut sbe = \case -- jky simplify
 
 fromShelleyTxOut :: forall era ctx. ()
   => ShelleyBasedEra era
-  -> Core.TxOut (ShelleyLedgerEra era)
+  -> Core.TxOut (LedgerEra era)
   -> TxOut ctx era
 fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
   let txOutValue = TxOutValueShelleyBased sbe $ ledgerTxOut ^. A.valueTxOutL sbe
@@ -764,8 +764,8 @@ fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
         mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
 
 toBabbageTxOutDatum
-  :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
+  :: (L.Era (LedgerEra era), Ledger.EraCrypto (LedgerEra era) ~ StandardCrypto)
+  => TxOutDatum CtxUTxO era -> Babbage.Datum (LedgerEra era)
 toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
@@ -843,11 +843,11 @@ data TxOutValue era where
     -> TxOutValue era
 
   TxOutValueShelleyBased
-    ::  ( Eq (Ledger.Value (ShelleyLedgerEra era))
-        , Show (Ledger.Value (ShelleyLedgerEra era))
+    ::  ( Eq (Ledger.Value (LedgerEra era))
+        , Show (Ledger.Value (LedgerEra era))
         )
     => ShelleyBasedEra era
-    -> L.Value (ShelleyLedgerEra era)
+    -> L.Value (LedgerEra era)
     -> TxOutValue era
 
 deriving instance Eq   (TxOutValue era)
@@ -1325,11 +1325,11 @@ data TxBody era where
 
      ShelleyTxBody
        :: ShelleyBasedEra era
-       -> Ledger.TxBody (ShelleyLedgerEra era)
+       -> Ledger.TxBody (LedgerEra era)
 
           -- We include the scripts along with the tx body, rather than the
           -- witnesses set, since they need to be known when building the body.
-       -> [Ledger.Script (ShelleyLedgerEra era)]
+       -> [Ledger.Script (LedgerEra era)]
 
           -- The info for each use of each script: the script input data, both
           -- the UTxO input data (called the "datum") and the supplied input
@@ -1344,13 +1344,13 @@ data TxBody era where
           -- extra script data has to be passed to scripts and hence is needed
           -- for validation. It is thus part of the witness data, not the
           -- auxiliary data.
-       -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+       -> Maybe (L.TxAuxData (LedgerEra era))
 
        -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
 
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
-     -- The 'ShelleyLedgerEra' type family maps that to the era type from the
+     -- The 'LedgerEra' type family maps that to the era type from the
      -- ledger lib. The 'Ledger.TxBody' type family maps that to a specific
      -- tx body type, which is different for each Shelley-based era.
 
@@ -1358,12 +1358,12 @@ data TxBody era where
 data TxBodyScriptData era where
      TxBodyNoScriptData :: TxBodyScriptData era
      TxBodyScriptData   :: AlonzoEraOnwards era
-                        -> Alonzo.TxDats (ShelleyLedgerEra era)
-                        -> Alonzo.Redeemers (ShelleyLedgerEra era)
+                        -> Alonzo.TxDats (LedgerEra era)
+                        -> Alonzo.Redeemers (LedgerEra era)
                         -> TxBodyScriptData era
 
 deriving instance Eq   (TxBodyScriptData era)
-deriving instance L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto => Show (TxBodyScriptData era)
+deriving instance L.EraCrypto (LedgerEra era) ~ StandardCrypto => Show (TxBodyScriptData era)
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -1548,23 +1548,23 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
 -- same, but they can be handled generally with one overloaded implementation.
 serialiseShelleyBasedTxBody :: forall era. ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> [Ledger.Script (ShelleyLedgerEra era)]
+  -> Ledger.TxBody (LedgerEra era)
+  -> [Ledger.Script (LedgerEra era)]
   -> TxBodyScriptData era
-  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+  -> Maybe (L.TxAuxData (LedgerEra era))
   -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> ByteString
 serialiseShelleyBasedTxBody sbe txbody txscripts
                             TxBodyNoScriptData txmetadata scriptValidity =
   caseShelleyToMaryOrAlonzoEraOnwards
-    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+    (const $ CBOR.serialize' (L.eraProtVerLow @(LedgerEra era)) $ mconcat
       [ CBOR.encodeListLen 3
       , CBOR.encCBOR txbody
       , CBOR.encCBOR txscripts
       , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
       ]
     )
-    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+    (const $ CBOR.serialize' (L.eraProtVerLow @(LedgerEra era)) $ mconcat
       [ CBOR.encodeListLen 4
       , CBOR.encCBOR txbody
       , CBOR.encCBOR txscripts
@@ -1578,7 +1578,7 @@ serialiseShelleyBasedTxBody _ txbody txscripts
                             (TxBodyScriptData w datums redeemers)
                             txmetadata txBodyScriptValidity =
   alonzoEraOnwardsConstraints w $
-    CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
+    CBOR.serialize' (L.eraProtVerLow @(LedgerEra era)) $ mconcat
       [ CBOR.encodeListLen 6
       , CBOR.encCBOR txbody
       , CBOR.encCBOR txscripts
@@ -1595,7 +1595,7 @@ deserialiseShelleyBasedTxBody :: forall era. ()
 deserialiseShelleyBasedTxBody sbe bs =
   shelleyBasedEraConstraints sbe $
     CBOR.decodeFullAnnotator
-      (L.eraProtVerLow @(ShelleyLedgerEra era))
+      (L.eraProtVerLow @(LedgerEra era))
       "Shelley TxBody"
       decodeAnnotatedTuple
       (LBS.fromStrict bs)
@@ -1720,9 +1720,9 @@ getTxId (ShelleyTxBody sbe tx _ _ _ _) =
   shelleyBasedEraConstraints sbe $ getTxIdShelley sbe tx
 
 getTxIdShelley
-  :: Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Ledger.EraTxBody (ShelleyLedgerEra era)
-  => ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxId
+  :: Ledger.EraCrypto (LedgerEra era) ~ StandardCrypto
+  => Ledger.EraTxBody (LedgerEra era)
+  => ShelleyBasedEra era -> Ledger.TxBody (LedgerEra era) -> TxId
 getTxIdShelley _ tx =
     TxId
   . Crypto.castHash
@@ -1858,7 +1858,7 @@ getScriptIntegrityHash :: ()
   => BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
   -> Set Alonzo.Language
   -> TxBodyScriptData era
-  -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era)))
+  -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (LedgerEra era)))
 getScriptIntegrityHash apiProtocolParameters languages = \case
   TxBodyNoScriptData -> SNothing
   TxBodyScriptData w datums redeemers ->
@@ -2027,9 +2027,9 @@ getTxBodyContent = \case
 fromLedgerTxBody
   :: ShelleyBasedEra era
   -> TxScriptValidity era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxBodyScriptData era
-  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+  -> Maybe (L.TxAuxData (LedgerEra era))
   -> TxBodyContent ViewTx era
 fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     TxBodyContent
@@ -2059,7 +2059,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
 
 fromLedgerProposalProcedures
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era [Proposal era])
 fromLedgerProposalProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
@@ -2071,7 +2071,7 @@ fromLedgerProposalProcedures sbe body =
 
 fromLedgerVotingProcedures :: ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
 fromLedgerVotingProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
@@ -2083,14 +2083,14 @@ fromLedgerVotingProcedures sbe body =
 fromLedgerTxIns
   :: forall era.
      ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> [(TxIn,BuildTxWith ViewTx (Witness WitCtxTxIn era))]
 fromLedgerTxIns sbe body =
     [ (fromShelleyTxIn input, ViewTx)
     | input <- Set.toList (inputs_ sbe body) ]
   where
     inputs_ :: ShelleyBasedEra era
-           -> Ledger.TxBody (ShelleyLedgerEra era)
+           -> Ledger.TxBody (LedgerEra era)
            -> Set (Ledger.TxIn StandardCrypto)
     inputs_ ShelleyBasedEraShelley = view L.inputsTxBodyL
     inputs_ ShelleyBasedEraAllegra = view L.inputsTxBodyL
@@ -2103,7 +2103,7 @@ fromLedgerTxIns sbe body =
 fromLedgerTxInsCollateral
   :: forall era.
      ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxInsCollateral era
 fromLedgerTxInsCollateral sbe body =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -2112,7 +2112,7 @@ fromLedgerTxInsCollateral sbe body =
     sbe
 
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
+  :: ShelleyBasedEra era -> Ledger.TxBody (LedgerEra era) -> TxInsReference ViewTx era
 fromLedgerTxInsReference sbe txBody =
   caseShelleyToAlonzoOrBabbageEraOnwards
     (const TxInsReferenceNone)
@@ -2122,7 +2122,7 @@ fromLedgerTxInsReference sbe txBody =
 fromLedgerTxOuts
   :: forall era.
      ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxBodyScriptData era
   -> [TxOut CtxTx era]
 fromLedgerTxOuts sbe body scriptdata =
@@ -2165,7 +2165,7 @@ fromLedgerTxOuts sbe body scriptdata =
 
 fromAlonzoTxOut :: ()
   => AlonzoEraOnwards era
-  -> L.TxOut (ShelleyLedgerEra era)
+  -> L.TxOut (LedgerEra era)
   -> TxOut CtxTx era
 fromAlonzoTxOut w txOut =
   alonzoEraOnwardsConstraints w $
@@ -2179,8 +2179,8 @@ fromAlonzoTxOut w txOut =
 
 fromBabbageTxOut :: forall era. ()
   => BabbageEraOnwards era
-  -> Map (L.DataHash StandardCrypto) (L.Data (ShelleyLedgerEra era))
-  -> L.TxOut (ShelleyLedgerEra era)
+  -> Map (L.DataHash StandardCrypto) (L.Data (LedgerEra era))
+  -> L.TxOut (LedgerEra era)
   -> TxOut CtxTx era
 fromBabbageTxOut w txdatums txout =
   babbageEraOnwardsConstraints w $
@@ -2214,7 +2214,7 @@ fromBabbageTxOut w txdatums txout =
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxTotalCollateral era
 fromLedgerTxTotalCollateral sbe txbody =
   caseShelleyToAlonzoOrBabbageEraOnwards
@@ -2228,7 +2228,7 @@ fromLedgerTxTotalCollateral sbe txbody =
 
 fromLedgerTxReturnCollateral
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxReturnCollateral CtxTx era
 fromLedgerTxReturnCollateral sbe txbody =
   caseShelleyToAlonzoOrBabbageEraOnwards
@@ -2241,7 +2241,7 @@ fromLedgerTxReturnCollateral sbe txbody =
     sbe
 
 fromLedgerTxFee
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxFee era
+  :: ShelleyBasedEra era -> Ledger.TxBody (LedgerEra era) -> TxFee era
 fromLedgerTxFee sbe body =
   shelleyBasedEraConstraints sbe
     $ TxFeeExplicit sbe
@@ -2271,7 +2271,7 @@ fromLedgerTxValidityUpperBound sbe body =
 
 fromLedgerAuxiliaryData
   :: ShelleyBasedEra era
-  -> L.TxAuxData (ShelleyLedgerEra era)
+  -> L.TxAuxData (LedgerEra era)
   -> (Map Word64 TxMetadataValue, [ScriptInEra era])
 fromLedgerAuxiliaryData ShelleyBasedEraShelley (L.ShelleyTxAuxData metadata) =
   (fromShelleyMetadata metadata, [])
@@ -2301,7 +2301,7 @@ fromLedgerAuxiliaryData ShelleyBasedEraConway txAuxData =
 
 fromLedgerTxAuxiliaryData
   :: ShelleyBasedEra era
-  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+  -> Maybe (L.TxAuxData (LedgerEra era))
   -> (TxMetadataInEra era, TxAuxScripts era)
 fromLedgerTxAuxiliaryData _ Nothing = (TxMetadataNone, TxAuxScriptsNone)
 fromLedgerTxAuxiliaryData sbe (Just auxData) =
@@ -2324,7 +2324,7 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
 
 
 fromLedgerTxExtraKeyWitnesses :: ShelleyBasedEra era
-                              -> Ledger.TxBody (ShelleyLedgerEra era)
+                              -> Ledger.TxBody (LedgerEra era)
                               -> TxExtraKeyWitnesses era
 fromLedgerTxExtraKeyWitnesses sbe body =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -2343,7 +2343,7 @@ fromLedgerTxExtraKeyWitnesses sbe body =
 
 fromLedgerTxWithdrawals
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxWithdrawals ViewTx era
 fromLedgerTxWithdrawals sbe body =
   shelleyBasedEraConstraints sbe $
@@ -2354,7 +2354,7 @@ fromLedgerTxWithdrawals sbe body =
 
 fromLedgerTxCertificates
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxCertificates ViewTx era
 fromLedgerTxCertificates sbe body =
   shelleyBasedEraConstraints sbe $
@@ -2365,7 +2365,7 @@ fromLedgerTxCertificates sbe body =
 
 maybeFromLedgerTxUpdateProposal :: ()
   => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxUpdateProposal era
 maybeFromLedgerTxUpdateProposal sbe body =
   caseShelleyToBabbageOrConwayEraOnwards
@@ -2379,7 +2379,7 @@ maybeFromLedgerTxUpdateProposal sbe body =
 
 fromLedgerTxMintValue
   :: ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Ledger.TxBody (LedgerEra era)
   -> TxMintValue ViewTx era
 fromLedgerTxMintValue sbe body =
   case sbe of
@@ -2471,7 +2471,7 @@ convCollateralTxIns txInsCollateral =
 convReturnCollateral
   :: ShelleyBasedEra era
   -> TxReturnCollateral ctx era
-  -> StrictMaybe (Ledger.TxOut (ShelleyLedgerEra era))
+  -> StrictMaybe (Ledger.TxOut (LedgerEra era))
 convReturnCollateral sbe txReturnCollateral =
   case txReturnCollateral of
     TxReturnCollateralNone -> SNothing
@@ -2484,7 +2484,7 @@ convTotalCollateral txTotalCollateral =
     TxTotalCollateral _ totCollLovelace -> SJust $ toShelleyLovelace totCollLovelace
 
 convTxOuts
-  :: forall ctx era ledgerera. ShelleyLedgerEra era ~ ledgerera
+  :: forall ctx era ledgerera. LedgerEra era ~ ledgerera
   => ShelleyBasedEra era -> [TxOut ctx era] -> Seq.StrictSeq (Ledger.TxOut ledgerera)
 convTxOuts sbe txOuts = Seq.fromList $ map (toShelleyTxOutAny sbe) txOuts
 
@@ -2492,7 +2492,7 @@ convTxOuts sbe txOuts = Seq.fromList $ map (toShelleyTxOutAny sbe) txOuts
 convCertificates
   :: ShelleyBasedEra era
   -> TxCertificates build era
-  -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
+  -> Seq.StrictSeq (Shelley.TxCert (LedgerEra era))
 convCertificates _ = \case
   TxCertificatesNone    -> Seq.empty
   TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
@@ -2528,7 +2528,7 @@ convValidityUpperBound sbe = \case
 convTxUpdateProposal :: ()
   => ShelleyBasedEra era
   -> TxUpdateProposal era
-  -> Either TxBodyError (StrictMaybe (Ledger.Update (ShelleyLedgerEra era)))
+  -> Either TxBodyError (StrictMaybe (Ledger.Update (LedgerEra era)))
   -- ^ 'Left' when there's protocol params conversion error, 'Right' otherwise, 'Right SNothing' means that
   -- there's no update proposal
 convTxUpdateProposal sbe = \case
@@ -2552,7 +2552,7 @@ convExtraKeyWitnesses txExtraKeyWits =
                                    | PaymentKeyHash kh <- khs ]
 
 convScripts
-  :: ShelleyLedgerEra era ~ ledgerera
+  :: LedgerEra era ~ ledgerera
   => [(ScriptWitnessIndex, AnyScriptWitness era)]
   -> [Ledger.Script ledgerera]
 convScripts scriptWitnesses =
@@ -2600,10 +2600,10 @@ convScriptData sbe txOuts scriptWitnesses =
 convPParamsToScriptIntegrityHash :: ()
   => AlonzoEraOnwards era
   -> BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
-  -> Alonzo.Redeemers (ShelleyLedgerEra era)
-  -> Alonzo.TxDats (ShelleyLedgerEra era)
+  -> Alonzo.Redeemers (LedgerEra era)
+  -> Alonzo.TxDats (LedgerEra era)
   -> Set Alonzo.Language
-  -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era)))
+  -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (LedgerEra era)))
 convPParamsToScriptIntegrityHash w txProtocolParams redeemers datums languages =
   alonzoEraOnwardsConstraints w $
     case txProtocolParams of
@@ -2637,7 +2637,7 @@ mkCommonTxBody :: ()
   -> [TxOut ctx era]
   -> TxFee era
   -> TxWithdrawals build era
-  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+  -> Maybe (L.TxAuxData (LedgerEra era))
   -> A.TxBody era
 mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
   shelleyBasedEraConstraints sbe $ A.TxBody $
@@ -3094,7 +3094,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
 -- embedded datums (taking only their hash).
 --
 toShelleyTxOutAny :: forall ctx era ledgerera.
-                   ShelleyLedgerEra era ~ ledgerera
+                   LedgerEra era ~ ledgerera
                 => ShelleyBasedEra era
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
@@ -3115,8 +3115,8 @@ toShelleyTxOutAny sbe = \case
 
 -- TODO: Consolidate with alonzo function and rename
 toBabbageTxOutDatum'
-  :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
+  :: (L.Era (LedgerEra era), Ledger.EraCrypto (LedgerEra era) ~ StandardCrypto)
+  => TxOutDatum ctx era -> Babbage.Datum (LedgerEra era)
 toBabbageTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
 toBabbageTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
 toBabbageTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
@@ -3305,7 +3305,7 @@ toAuxiliaryData
   :: ShelleyBasedEra era
   -> TxMetadataInEra era
   -> TxAuxScripts era
-  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+  -> Maybe (L.TxAuxData (LedgerEra era))
 toAuxiliaryData sbe txMetadata txAuxScripts =
   let ms = case txMetadata of
              TxMetadataNone                     -> Map.empty

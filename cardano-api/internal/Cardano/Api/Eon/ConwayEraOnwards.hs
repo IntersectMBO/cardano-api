@@ -67,37 +67,37 @@ instance ToCardanoEra ConwayEraOnwards where
     ConwayEraOnwardsConway -> ConwayEra
 
 type ConwayEraOnwardsConstraints era =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
-  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
+  ( C.HashAlgorithm (L.HASH (L.EraCrypto (LedgerEra era)))
+  , C.Signable (L.VRF (L.EraCrypto (LedgerEra era))) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
-  , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
-  , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
+  , Consensus.ShelleyBlock (ConsensusProtocol era) (LedgerEra era) ~ ConsensusBlockForEra era
+  , Consensus.ShelleyCompatible (ConsensusProtocol era) (LedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.AlonzoEraTxOut (ShelleyLedgerEra era)
-  , L.BabbageEraTxBody (ShelleyLedgerEra era)
-  , L.ConwayEraGov (ShelleyLedgerEra era)
-  , L.ConwayEraPParams (ShelleyLedgerEra era)
-  , L.ConwayEraTxBody (ShelleyLedgerEra era)
-  , L.ConwayEraTxCert (ShelleyLedgerEra era)
-  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
-  , L.Era (ShelleyLedgerEra era)
-  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-  , L.EraGov (ShelleyLedgerEra era)
-  , L.EraPlutusContext 'L.PlutusV1 (ShelleyLedgerEra era)
-  , L.EraPParams (ShelleyLedgerEra era)
-  , L.EraTx (ShelleyLedgerEra era)
-  , L.EraTxBody (ShelleyLedgerEra era)
-  , L.EraTxOut (ShelleyLedgerEra era)
-  , L.EraUTxO (ShelleyLedgerEra era)
-  , L.ExtendedUTxO (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
-  , L.MaryEraTxBody (ShelleyLedgerEra era)
-  , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
-  , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
-  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
-  , L.ShelleyEraTxCert (ShelleyLedgerEra era)
-  , L.TxCert (ShelleyLedgerEra era) ~ L.ConwayTxCert (ShelleyLedgerEra era)
-  , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
+  , L.AlonzoEraTxOut (LedgerEra era)
+  , L.BabbageEraTxBody (LedgerEra era)
+  , L.ConwayEraGov (LedgerEra era)
+  , L.ConwayEraPParams (LedgerEra era)
+  , L.ConwayEraTxBody (LedgerEra era)
+  , L.ConwayEraTxCert (LedgerEra era)
+  , L.Crypto (L.EraCrypto (LedgerEra era))
+  , L.Era (LedgerEra era)
+  , L.EraCrypto (LedgerEra era) ~ L.StandardCrypto
+  , L.EraGov (LedgerEra era)
+  , L.EraPlutusContext 'L.PlutusV1 (LedgerEra era)
+  , L.EraPParams (LedgerEra era)
+  , L.EraTx (LedgerEra era)
+  , L.EraTxBody (LedgerEra era)
+  , L.EraTxOut (LedgerEra era)
+  , L.EraUTxO (LedgerEra era)
+  , L.ExtendedUTxO (LedgerEra era)
+  , L.HashAnnotated (L.TxBody (LedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.MaryEraTxBody (LedgerEra era)
+  , L.Script (LedgerEra era) ~ L.AlonzoScript (LedgerEra era)
+  , L.ScriptsNeeded (LedgerEra era) ~ L.AlonzoScriptsNeeded (LedgerEra era)
+  , L.ShelleyEraTxBody (LedgerEra era)
+  , L.ShelleyEraTxCert (LedgerEra era)
+  , L.TxCert (LedgerEra era) ~ L.ConwayTxCert (LedgerEra era)
+  , L.Value (LedgerEra era) ~ L.MaryValue L.StandardCrypto
 
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
