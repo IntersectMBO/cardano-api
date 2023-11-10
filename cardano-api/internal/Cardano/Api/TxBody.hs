@@ -699,7 +699,9 @@ toShelleyTxOut :: forall era ledgerera.
                -> Ledger.TxOut ledgerera
 toShelleyTxOut sbe = \case -- jky simplify
   TxOut _ (TxOutValueByron _) _ _ ->
-    case sbe of {}
+    -- TODO: Temporary until we have basic tx
+    -- construction functionality
+    error "toShelleyTxOut: Expected a Shelley value"
 
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     let cEra = shelleyBasedToCardanoEra sbe in
@@ -839,7 +841,7 @@ data TxOutValue era where
 
   TxOutValueByron
     :: Lovelace
-    -> TxOutValue ByronEra
+    -> TxOutValue era
 
   TxOutValueShelleyBased
     ::  ( Eq (Ledger.Value (ShelleyLedgerEra era))
@@ -3101,7 +3103,9 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 -> Ledger.TxOut ledgerera
 toShelleyTxOutAny sbe = \case
   TxOut _ (TxOutValueByron _) _ _ ->
-    case sbe of {}
+    -- TODO: Temporary until we have basic tx
+    -- construction functionality
+    error "toShelleyTxOutAny: Expected a Shelley value"
 
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     let cEra = shelleyBasedToCardanoEra sbe in
