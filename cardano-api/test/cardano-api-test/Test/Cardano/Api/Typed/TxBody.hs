@@ -26,7 +26,7 @@ prop_roundtrip_txbodycontent_txouts:: Property
 prop_roundtrip_txbodycontent_txouts =
   H.property $ do
     let era = BabbageEra
-    content <- H.forAll $ genTxBodyContent era
+    content <- H.forAll $ genTxBodyContent ShelleyBasedEraBabbage
     -- Create the ledger body & auxiliaries
     body <- case createAndValidateTransactionBody era content of
       Left err -> annotateShow err >> failure
