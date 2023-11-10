@@ -15,7 +15,13 @@ module Test.Gen.Cardano.Api.Typed
   ( genFeaturedInEra
   , genMaybeFeaturedInEra
 
+  -- * Byron
+  , genAddressInEraByron
   , genAddressByron
+  , genTxBodyByron
+  , genTxByron
+  , genWitnessesByron
+
   , genAddressInEra
   , genAddressShelley
   , genCertificate
@@ -185,8 +191,8 @@ genAddressShelley = makeShelleyAddress <$> genNetworkId
 genAddressInEra :: ShelleyBasedEra era -> Gen (AddressInEra era)
 genAddressInEra sbe = shelleyAddressInEra sbe <$> genAddressShelley
 
-_genByronAddressInEra :: Gen (AddressInEra era)
-_genByronAddressInEra = byronAddressInEra <$> genAddressByron
+_genAddressInEraByron :: Gen (AddressInEra era)
+_genAddressInEraByron = byronAddressInEra <$> genAddressByron
 
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
@@ -707,6 +713,40 @@ genTxFee =
     (pure . TxFeeImplicit)
     (\w -> TxFeeExplicit w <$> genLovelace)
 
+genAddressInEraByron :: Gen (AddressInEra ByronEra)
+genAddressInEraByron = byronAddressInEra <$> genAddressByron
+
+genTxByron :: Gen (Tx ByronEra)
+genTxByron =
+  makeSignedTransaction
+    <$> genWitnessesByron
+    <*> genTxBodyByron
+
+genTxOutValueByron :: Gen (TxOutValue ByronEra)
+genTxOutValueByron = TxOutValueByron <$> genPositiveLovelace
+
+genTxOutByron :: Gen (TxOut CtxTx ByronEra)
+genTxOutByron =
+  TxOut <$> genAddressInEraByron
+        <*> genTxOutValueByron
+        <*> pure TxOutDatumNone
+        <*> pure ReferenceScriptNone
+
+genTxBodyByron :: Gen (TxBody ByronEra)
+genTxBodyByron = do
+  txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
+  txOuts <- Gen.list (Range.constant 1 10) genTxOutByron
+  let byronTxBodyContent = (defaultTxBodyContent ByronEra)
+                             { Api.txIns
+                             , Api.txOuts
+                             }
+  case Api.createAndValidateTransactionBody ByronEra byronTxBodyContent of
+    Left err -> fail (displayError err)
+    Right txBody -> pure txBody
+
+genWitnessesByron :: Gen [KeyWitness ByronEra]
+genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
+
 genTxBody :: ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- Api.createAndValidateTransactionBody (toCardanoEra era) <$> genTxBodyContent era
@@ -781,8 +821,8 @@ genVerificationKeyHash :: ()
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken
 
-genByronKeyWitness :: ByronEraOnly era -> Gen (KeyWitness era)
-genByronKeyWitness ByronEraOnlyByron = do
+genByronKeyWitness :: Gen (KeyWitness ByronEra)
+genByronKeyWitness = do
   pmId <- genProtocolMagicId
   txinWitness <- genVKWitness pmId
   return $ ByronKeyWitness txinWitness

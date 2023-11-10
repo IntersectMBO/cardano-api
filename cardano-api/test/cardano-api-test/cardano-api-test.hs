@@ -4,6 +4,8 @@ import           Cardano.Crypto.Libsodium (sodiumInit)
 
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
+import qualified Test.Gen.Cardano.Api.Byron
+
 import qualified Test.Cardano.Api.Crypto
 import qualified Test.Cardano.Api.Eras
 import qualified Test.Cardano.Api.IO
@@ -34,7 +36,8 @@ main = do
 tests :: TestTree
 tests =
   testGroup "Cardano.Api"
-    [ Test.Cardano.Api.Crypto.tests
+    [ Test.Gen.Cardano.Api.Byron.tests
+    , Test.Cardano.Api.Crypto.tests
     , Test.Cardano.Api.Eras.tests
     , Test.Cardano.Api.IO.tests
     , Test.Cardano.Api.Json.tests
