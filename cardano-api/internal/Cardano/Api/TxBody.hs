@@ -158,6 +158,7 @@ import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
@@ -677,13 +678,13 @@ fromByronTxOut :: ByronEraOnly era -> Byron.TxOut -> TxOut ctx era
 fromByronTxOut ByronEraOnlyByron (Byron.TxOut addr value) =
   TxOut
     (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-    (TxOutValueByron ByronEraOnlyByron (fromByronLovelace value))
+    (TxOutValueByron (fromByronLovelace value))
      TxOutDatumNone ReferenceScriptNone
 
 
 toByronTxOut :: ByronEraOnly era -> TxOut ctx era -> Maybe Byron.TxOut
 toByronTxOut ByronEraOnlyByron = \case
-  TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutValueByron _ value) _ _ ->
+  TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutValueByron value) _ _ ->
     Byron.TxOut addr <$> toByronLovelace value
   TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValueShelleyBased w _) _ _ ->
     case w of {}
@@ -697,7 +698,7 @@ toShelleyTxOut :: forall era ledgerera.
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
 toShelleyTxOut sbe = \case -- jky simplify
-  TxOut _ (TxOutValueByron ByronEraOnlyByron _) _ _ ->
+  TxOut _ (TxOutValueByron _) _ _ ->
     case sbe of {}
 
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
@@ -837,9 +838,8 @@ deriving instance Show (TxInsReference build era)
 data TxOutValue era where
 
   TxOutValueByron
-    :: ByronEraOnly era
-    -> Lovelace
-    -> TxOutValue era
+    :: Lovelace
+    -> TxOutValue ByronEra
 
   TxOutValueShelleyBased
     ::  ( Eq (Ledger.Value (ShelleyLedgerEra era))
@@ -854,34 +854,30 @@ deriving instance Show (TxOutValue era)
 
 instance IsCardanoEra era => ToJSON (TxOutValue era) where
   toJSON = \case
-    TxOutValueByron _ ll ->
+    TxOutValueByron ll ->
       toJSON ll
     TxOutValueShelleyBased sbe val ->
       shelleyBasedEraConstraints sbe $ toJSON (fromLedgerValue sbe val)
 
-instance IsCardanoEra era => FromJSON (TxOutValue era) where
+instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
   parseJSON = withObject "TxOutValue" $ \o ->
-    caseByronOrShelleyBasedEra
-      (\bo -> do
+   caseShelleyToAllegraOrMaryEraOnwards
+      (\shelleyToAlleg ->  do
         ll <- o .: "lovelace"
-        pure $ TxOutValueByron bo $ selectLovelace ll
+        pure
+          $ shelleyBasedEraConstraints (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg)
+          $ TxOutValueShelleyBased (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg)
+          $ A.mkAdaValue (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg) $ lovelaceToCoin ll
       )
-      (\sbe ->
-        caseShelleyToAllegraOrMaryEraOnwards
-          (const $ do
-            ll <- o .: "lovelace"
-            pure
-              $ TxOutValueShelleyBased sbe
-              $ A.mkAdaValue sbe $ lovelaceToCoin ll
-          )
-          (\w -> do
-            let l = KeyMap.toList o
-            vals <- mapM decodeAssetId l
-            pure $ TxOutValueShelleyBased sbe $ toLedgerValue w $ mconcat vals
-          )
-          sbe
+      (\w -> do
+        let l = KeyMap.toList o
+        vals <- mapM decodeAssetId l
+        pure $ shelleyBasedEraConstraints (maryEraOnwardsToShelleyBasedEra w)
+             $ TxOutValueShelleyBased (maryEraOnwardsToShelleyBasedEra w)
+             $ toLedgerValue w $ mconcat vals
       )
-      cardanoEra
+      (shelleyBasedEra @era)
+
     where
      decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
      decodeAssetId (polid, Aeson.Object assetNameHm) = do
@@ -913,26 +909,28 @@ instance IsCardanoEra era => FromJSON (TxOutValue era) where
          Nothing -> fail $ "Expected a Bounded number but got: " <> show sci
      decodeQuantity wrong = fail $ "Expected aeson Number but got: " <> show wrong
 
+
 lovelaceToTxOutValue :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> Lovelace
   -> TxOutValue era
 lovelaceToTxOutValue era ll =
-  caseByronOrShelleyBasedEra
-    (\w -> TxOutValueByron w ll)
-    (\w -> TxOutValueShelleyBased w $ A.mkAdaValue w $ lovelaceToCoin ll)
-    era
+  shelleyBasedEraConstraints era
+    $ TxOutValueShelleyBased era
+    $ A.mkAdaValue era
+    $ lovelaceToCoin ll
+
 
 txOutValueToLovelace :: TxOutValue era -> Lovelace
 txOutValueToLovelace tv =
   case tv of
-    TxOutValueByron         _   l -> l
+    TxOutValueByron             l -> l
     TxOutValueShelleyBased  sbe v -> coinToLovelace $ v ^. A.adaAssetL sbe
 
 txOutValueToValue :: TxOutValue era -> Value
 txOutValueToValue tv =
   case tv of
-    TxOutValueByron         _   l -> lovelaceToValue l
+    TxOutValueByron             l -> lovelaceToValue l
     TxOutValueShelleyBased  sbe v -> fromLedgerValue sbe v
 
 prettyRenderTxOut :: TxOutInAnyEra -> Text
@@ -2427,7 +2425,7 @@ makeByronTransactionBody eon txIns txOuts = do
 classifyRangeError :: ByronEraOnly era -> TxOut CtxTx era -> TxBodyError
 classifyRangeError ByronEraOnlyByron txout =
   case txout of
-    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutValueByron ByronEraOnlyByron value) _ _
+    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutValueByron value) _ _
       | value < 0 -> TxBodyOutputNegative (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
       | otherwise -> TxBodyOutputOverflow (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
 
@@ -3102,7 +3100,7 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
 toShelleyTxOutAny sbe = \case
-  TxOut _ (TxOutValueByron ByronEraOnlyByron _) _ _ ->
+  TxOut _ (TxOutValueByron _) _ _ ->
     case sbe of {}
 
   TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
