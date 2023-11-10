@@ -4,7 +4,15 @@
 {- HLINT ignore "Eta reduce" -}
 
 module Cardano.Api.Ledger.Lens
-  ( strictMaybeL
+  ( -- *Types
+    TxBody(..)
+
+    -- * Constructors
+  , mkAdaOnlyTxOut
+  , mkAdaValue
+
+    -- * Lenses
+  , strictMaybeL
   , L.invalidBeforeL
   , L.invalidHereAfterL
   , invalidBeforeStrictL
@@ -14,7 +22,6 @@ module Cardano.Api.Ledger.Lens
   , ttlAsInvalidHereAfterTxBodyL
   , updateTxBodyL
 
-  , TxBody(..)
   , txBodyL
   , mintTxBodyL
   , scriptIntegrityHashTxBodyL
@@ -26,6 +33,10 @@ module Cardano.Api.Ledger.Lens
   , certsTxBodyL
   , votingProceduresTxBodyL
   , proposalProceduresTxBodyL
+  , adaAssetL
+  , multiAssetL
+  , valueTxOutL
+  , valueTxOutAdaAssetL
   ) where
 
 import           Cardano.Api.Eon.AllegraEraOnwards
@@ -35,6 +46,7 @@ import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
+import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 
@@ -165,3 +177,46 @@ votingProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.votingPr
 proposalProceduresTxBodyL :: ConwayEraOnwards era -> Lens' (TxBody era) (L.OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
 proposalProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.proposalProceduresTxBodyL
 
+mkAdaOnlyTxOut :: ShelleyBasedEra era -> L.Addr (L.EraCrypto (ShelleyLedgerEra era)) -> L.Coin -> L.TxOut (ShelleyLedgerEra era)
+mkAdaOnlyTxOut sbe addr coin =
+  mkBasicTxOut sbe addr (mkAdaValue sbe coin)
+
+mkBasicTxOut :: ShelleyBasedEra era -> L.Addr (L.EraCrypto (ShelleyLedgerEra era)) -> L.Value (ShelleyLedgerEra era) -> L.TxOut (ShelleyLedgerEra era)
+mkBasicTxOut sbe addr value =
+  shelleyBasedEraConstraints sbe $ L.mkBasicTxOut addr value
+
+mkAdaValue :: ShelleyBasedEra era -> L.Coin -> L.Value (ShelleyLedgerEra era)
+mkAdaValue sbe coin =
+  caseShelleyToAllegraOrMaryEraOnwards
+    (const coin)
+    (const (L.MaryValue (L.unCoin coin) mempty))
+    sbe
+
+adaAssetL :: ShelleyBasedEra era -> Lens' (L.Value (ShelleyLedgerEra era)) L.Coin
+adaAssetL sbe =
+  caseShelleyToAllegraOrMaryEraOnwards
+    adaAssetShelleyToAllegraEraL
+    adaAssetMaryEraOnwardsL
+    sbe
+
+adaAssetShelleyToAllegraEraL :: ShelleyToAllegraEra era -> Lens' (L.Value (ShelleyLedgerEra era)) L.Coin
+adaAssetShelleyToAllegraEraL w =
+  shelleyToAllegraEraConstraints w $ lens id const
+
+adaAssetMaryEraOnwardsL :: MaryEraOnwards era -> Lens' (L.MaryValue L.StandardCrypto) L.Coin
+adaAssetMaryEraOnwardsL w =
+  maryEraOnwardsConstraints w $ lens
+    (\(L.MaryValue c _) -> L.Coin c)
+    (\(L.MaryValue _ ma) (L.Coin c) -> L.MaryValue c ma)
+
+multiAssetL :: MaryEraOnwards era -> Lens' (L.MaryValue L.StandardCrypto) (L.MultiAsset L.StandardCrypto)
+multiAssetL w =
+  maryEraOnwardsConstraints w $ lens
+    (\(L.MaryValue _ ma) -> ma)
+    (\(L.MaryValue c _) ma -> L.MaryValue c ma)
+
+valueTxOutL :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) (L.Value (ShelleyLedgerEra era))
+valueTxOutL sbe = shelleyBasedEraConstraints sbe L.valueTxOutL
+
+valueTxOutAdaAssetL :: ShelleyBasedEra era -> Lens' (L.TxOut (ShelleyLedgerEra era)) L.Coin
+valueTxOutAdaAssetL sbe = valueTxOutL sbe . adaAssetL sbe

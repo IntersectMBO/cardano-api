@@ -41,6 +41,7 @@ module Cardano.Api.ReexposeLedger
   , PoolCert(..)
   , PParams(..)
   , PParamsUpdate
+  , Value
   , addDeltaCoin
   , toDeltaCoin
   , toEraCBOR
@@ -124,7 +125,7 @@ import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..)
                    Vote (..), Voter (..), VotingProcedure (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
                    ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
-import           Cardano.Ledger.Core (EraCrypto, PParams (..), PoolCert (..), fromEraCBOR,
+import           Cardano.Ledger.Core (EraCrypto, PParams (..), PoolCert (..), Value, fromEraCBOR,
                    toEraCBOR)
 import           Cardano.Ledger.Credential (Credential (..))
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
@@ -135,5 +136,3 @@ import           Cardano.Ledger.Shelley.TxCert (EraTxCert (..), GenesisDelegCert
                    MIRPot (..), MIRTarget (..), ShelleyDelegCert (..), ShelleyEraTxCert (..),
                    ShelleyTxCert (..))
 import           Cardano.Slotting.Slot (EpochNo (..))
-
-

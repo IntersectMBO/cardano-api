@@ -133,6 +133,8 @@ import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley
+import qualified Cardano.Api.Ledger as L
+import qualified Cardano.Api.Ledger.Lens as A
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -340,9 +342,8 @@ genPolicyId =
     ]
 
 genAssetId :: Gen AssetId
-genAssetId = Gen.choice [ AssetId <$> genPolicyId <*> genAssetName
-                        , return AdaAssetId
-                        ]
+genAssetId =
+  AssetId <$> genPolicyId <*> genAssetName
 
 genQuantity :: Range Integer -> Gen Quantity
 genQuantity range = fromInteger <$> Gen.integral range
@@ -364,34 +365,42 @@ genUnsignedQuantity = genQuantity (Range.constant 0 2)
 genPositiveQuantity :: Gen Quantity
 genPositiveQuantity = genQuantity (Range.constant 1 2)
 
-genValue :: Gen AssetId -> Gen Quantity -> Gen Value
-genValue genAId genQuant =
-  valueFromList <$>
+genValue :: MaryEraOnwards era -> Gen AssetId -> Gen Quantity -> Gen (L.Value (ShelleyLedgerEra era))
+genValue w genAId genQuant =
+  toLedgerValue w . valueFromList <$>
     Gen.list (Range.constant 0 10)
              ((,) <$> genAId <*> genQuant)
 
 -- | Generate a 'Value' with any asset ID and a positive or negative quantity.
-genValueDefault :: Gen Value
-genValueDefault = genValue genAssetId genSignedNonZeroQuantity
+genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
+genValueDefault w = genValue w genAssetId genSignedNonZeroQuantity
 
 -- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
 -- positive or negative quantity.
-genValueForMinting :: Gen Value
-genValueForMinting = genValue genAssetIdNoAda genSignedNonZeroQuantity
+genValueForMinting :: MaryEraOnwards era -> Gen Value
+genValueForMinting w =
+  fromLedgerValue sbe <$> genValue w genAssetIdNoAda genSignedNonZeroQuantity
   where
+    sbe = maryEraOnwardsToShelleyBasedEra w
     genAssetIdNoAda :: Gen AssetId
     genAssetIdNoAda = AssetId <$> genPolicyId <*> genAssetName
 
 -- | Generate a 'Value' suitable for usage in a transaction output, i.e. any
 -- asset ID and a positive quantity.
-genValueForTxOut :: Gen Value
-genValueForTxOut = do
-  -- Generate a potentially empty list with multi assets
-  val <- genValue genAssetId genPositiveQuantity
+genValueForTxOut :: ShelleyBasedEra era -> Gen (L.Value (ShelleyLedgerEra era))
+genValueForTxOut sbe = do
   -- Generate at least one positive ADA, without it Value in TxOut makes no sense
   -- and will fail deserialization starting with ConwayEra
-  ada <- (,) AdaAssetId <$> genPositiveQuantity
-  pure $ valueFromList (ada : valueToList val)
+  ada <- A.mkAdaValue sbe . L.Coin <$> Gen.integral (Range.constant 1 2)
+
+  -- Generate a potentially empty list with multi assets
+  caseShelleyToAllegraOrMaryEraOnwards
+    (const (pure ada))
+    (\w -> do
+      v <- genValue w genAssetId genPositiveQuantity
+      pure $ ada <> v
+    )
+    sbe
 
 
 -- Note that we expect to sometimes generate duplicate policy id keys since we
@@ -497,9 +506,9 @@ genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
 genTxOutValue =
-  caseByronToAllegraOrMaryEraOnwards
-    (\w -> TxOutAdaOnly w <$> genPositiveLovelace)
-    (\w -> TxOutValue w <$> genValueForTxOut)
+  caseByronOrShelleyBasedEra
+    (\w -> TxOutValueByron w <$> genPositiveLovelace)
+    (\sbe -> TxOutValueShelleyBased sbe <$> genValueForTxOut sbe)
 
 genTxOutTxContext :: CardanoEra era -> Gen (TxOut CtxTx era)
 genTxOutTxContext era =
@@ -617,12 +626,12 @@ genTxUpdateProposal sbe =
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue =
-  caseByronToAllegraOrMaryEraOnwards
-    (const (pure TxMintNone))
+  inEonForEra
+    (pure TxMintNone)
     (\supported ->
       Gen.choice
         [ pure TxMintNone
-        , TxMintValue supported <$> genValueForMinting <*> return (BuildTxWith mempty)
+        , TxMintValue supported <$> genValueForMinting supported <*> return (BuildTxWith mempty)
         ]
     )
 

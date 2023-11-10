@@ -79,6 +79,7 @@ type ShelleyToBabbageEraConstraints era =
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
+  , L.EraTxOut (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.ProtVerAtMost (ShelleyLedgerEra era) 8
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)

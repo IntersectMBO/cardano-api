@@ -51,10 +51,10 @@ import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
+import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -92,7 +92,7 @@ import           Data.Ratio
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Lens.Micro ((^.))
+import           Lens.Micro ((^.), (.~))
 import           Prettyprinter
 import           Prettyprinter.Render.String
 
@@ -571,10 +571,15 @@ evaluateTransactionBalance sbe _ _ _ _ _ (ByronTxBody ByronEraOnlyByron _) =
   case sbe of {}
 
 evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo (ShelleyTxBody _ txbody _ _ _ _) =
-    caseShelleyToAllegraOrMaryEraOnwards
-      evalAdaOnly
-      evalMultiAsset
-      sbe
+  shelleyBasedEraConstraints sbe
+    $ TxOutValueShelleyBased sbe
+    $ L.evalBalanceTxBody
+        pp
+        lookupDelegDeposit
+        lookupDRepDeposit
+        isRegPool
+        (toLedgerUTxO sbe utxo)
+        txbody
   where
     isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
     isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
@@ -590,30 +595,6 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
     lookupDRepDeposit drepCred =
       toShelleyLovelace <$>
       Map.lookup drepCred drepDelegDeposits
-
-    evalMultiAsset :: MaryEraOnwards era -> TxOutValue era
-    evalMultiAsset w =
-      maryEraOnwardsConstraints w
-        $ TxOutValue w . fromMaryValue
-        $ L.evalBalanceTxBody
-            pp
-            lookupDelegDeposit
-            lookupDRepDeposit
-            isRegPool
-            (toLedgerUTxO sbe utxo)
-            txbody
-
-    evalAdaOnly :: ShelleyToAllegraEra era -> TxOutValue era
-    evalAdaOnly w =
-      shelleyToAllegraEraConstraints w
-        $ TxOutAdaOnly (shelleyToAllegraEraToByronToAllegraEra w) . fromShelleyLovelace
-        $ L.evalBalanceTxBody
-            pp
-            lookupDelegDeposit
-            lookupDRepDeposit
-            isRegPool
-            (toLedgerUTxO sbe utxo)
-            txbody
 
 -- ----------------------------------------------------------------------------
 -- Automated transaction building
@@ -785,7 +766,8 @@ makeTransactionBodyAutoBalance :: forall era. ()
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
 makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParameters pp) poolids stakeDelegDeposits
-                            drepDelegDeposits utxo txbodycontent changeaddr mnkeys = do
+                            drepDelegDeposits utxo txbodycontent changeaddr mnkeys =
+  shelleyBasedEraConstraints sbe $ do
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
     -- 2. figure out the overall min fees
@@ -827,34 +809,28 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     -- of less than around 18 trillion ada  (2^64-1 lovelace).
     -- However, since at this point we know how much non-Ada change to give
     -- we can use the true values for that.
+    let maxLovelaceChange = Lovelace (2^(64 :: Integer)) - 1
+    let maxLovelaceFee = Lovelace (2^(32 :: Integer) - 1)
 
-    let outgoingNonAda = mconcat [filterValue isNotAda v | (TxOut _ (TxOutValue _ v) _ _) <- txOuts txbodycontent]
-    let incomingNonAda = mconcat [filterValue isNotAda v | (TxOut _ (TxOutValue _ v) _ _) <- Map.elems $ unUTxO utxo]
-    let mintedNonAda = case txMintValue txbodycontent1 of
+    let outgoing = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
+    let incoming = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- Map.elems $ unUTxO utxo]
+    let minted = case txMintValue txbodycontent1 of
           TxMintNone -> mempty
-          TxMintValue _ v _ -> v
-    let nonAdaChange = mconcat
-          [ incomingNonAda
-          , mintedNonAda
-          , negateValue outgoingNonAda
-          ]
-
-    let changeTxOut = caseByronToAllegraOrMaryEraOnwards
-          (const $ lovelaceToTxOutValue era $ Lovelace (2^(64 :: Integer)) - 1)
-          (\w -> TxOutValue w (lovelaceToValue (Lovelace (2^(64 :: Integer)) - 1) <> nonAdaChange))
-          era
+          TxMintValue w v _ -> toLedgerValue w v
+    let change = mconcat [incoming, minted, negateLedgerValue sbe outgoing]
+    let changeWithMaxLovelace = change & A.adaAssetL sbe .~ lovelaceToCoin maxLovelaceChange
+    let changeTxOut = forShelleyBasedEraInEon sbe
+          (lovelaceToTxOutValue era maxLovelaceChange)
+          (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                createAndValidateTransactionBody era txbodycontent1 {
-                 txFee  = TxFeeExplicit sbe $ Lovelace (2^(32 :: Integer) - 1),
-                 txOuts = TxOut changeaddr
-                                changeTxOut
-                                TxOutDatumNone ReferenceScriptNone
+                 txFee  = TxFeeExplicit sbe maxLovelaceFee,
+                 txOuts = TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone
                         : txOuts txbodycontent,
                  txReturnCollateral = dummyCollRet,
                  txTotalCollateral = dummyTotColl
-
                }
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)

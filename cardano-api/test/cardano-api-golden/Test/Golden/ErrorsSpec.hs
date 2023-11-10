@@ -39,6 +39,7 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Alonzo.TxInfo as Ledger
 import qualified Cardano.Ledger.Alonzo.TxWits as Ledger
+import qualified Cardano.Ledger.Coin as L
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus
 
@@ -116,7 +117,7 @@ changeaddr1 =
       (PaymentCredentialByKey (verificationKeyHash paymentVerKey1)) NoStakeAddress)
 
 txOutValue1 :: TxOutValue AllegraEra
-txOutValue1 = TxOutAdaOnly ByronToAllegraEraAllegra 1
+txOutValue1 = TxOutValueShelleyBased ShelleyBasedEraAllegra (L.Coin 1)
 
 txout1 :: TxOut ctx AllegraEra
 txout1 = TxOut changeaddr1 txOutValue1 TxOutDatumNone ReferenceScriptNone
