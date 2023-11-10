@@ -9,8 +9,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -92,7 +90,7 @@ import           Data.Ratio
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Lens.Micro ((^.), (.~))
+import           Lens.Micro ((.~), (^.))
 import           Prettyprinter
 import           Prettyprinter.Render.String
 
@@ -776,7 +774,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     txbody0 <-
       first TxBodyError $ createAndValidateTransactionBody era txbodycontent
         { txOuts = txOuts txbodycontent ++
-                   [TxOut changeaddr (lovelaceToTxOutValue era 0) TxOutDatumNone ReferenceScriptNone]
+                   [TxOut changeaddr (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone]
             --TODO: think about the size of the change output
             -- 1,2,4 or 8 bytes?
         }
@@ -820,7 +818,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     let change = mconcat [incoming, minted, negateLedgerValue sbe outgoing]
     let changeWithMaxLovelace = change & A.adaAssetL sbe .~ lovelaceToCoin maxLovelaceChange
     let changeTxOut = forShelleyBasedEraInEon sbe
-          (lovelaceToTxOutValue era maxLovelaceChange)
+          (lovelaceToTxOutValue sbe maxLovelaceChange)
           (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
@@ -902,7 +900,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
               let dummyRetCol =
                     TxReturnCollateral w
                     ( TxOut cAddr
-                        (lovelaceToTxOutValue era $ Lovelace (2^(64 :: Integer)) - 1)
+                        (lovelaceToTxOutValue sbe $ Lovelace (2^(64 :: Integer)) - 1)
                         TxOutDatumNone ReferenceScriptNone
                     )
                   dummyTotCol = TxTotalCollateral w (Lovelace (2^(32 :: Integer) - 1))
@@ -963,7 +961,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
                 then
                   ( TxReturnCollateral
                       retColSup
-                      (TxOut cAddr (lovelaceToTxOutValue era returnCollateral) TxOutDatumNone ReferenceScriptNone)
+                      (TxOut cAddr (lovelaceToTxOutValue sbe returnCollateral) TxOutDatumNone ReferenceScriptNone)
                   , totalCollateral
                   )
                 else (TxReturnCollateralNone, TxTotalCollateralNone)
