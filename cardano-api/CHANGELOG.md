@@ -1,5 +1,64 @@
 # Changelog for cardano-api
 
+## 8.31.0.0
+
+- Use ledger presentation of multi-asset values directly.  Lens to make this uniform over `ShelleyBasedEra`.
+  
+  Delete `ByronToAllegraEra`.
+  
+  New module `Cardano.Api.Ledger.Lens`.
+  
+  Modify `TxOutValue` to have `TxOutValueByron` and `TxOutValueShelleyBased` instead of `TxOutAdaOnly` and `TxOutValue` respectively.  `TxOutValueShelleyBased` now directly uses the ledger type instead of the `Value` type. 
+  
+  These functions have changed to either `L.Value (ShelleyLedgerEra era)` instead of `Value` or eons or both:
+  - `genValue`
+  - `genValueDefault`
+  - `genValueForMinting`
+  (breaking)
+  [PR 360](https://github.com/input-output-hk/cardano-api/pull/360)
+
+- Replace `IsCardanoEra` and `IsShelleyBasedEra` contraints in GADT constructors with `Typeable`
+  (breaking, improvement)
+  [PR 354](https://github.com/input-output-hk/cardano-api/pull/354)
+
+- Modify foldBlocks to recurse on ledger events instead of mapping over them. This allows finer grained control over when `foldBlocks` is stopped.
+  (optimisation)
+  [PR 353](https://github.com/input-output-hk/cardano-api/pull/353)
+
+- --protocol-(minor|major)-version cannot be changed via create-protocol-parameters-update command in conway
+  (breaking)
+  [PR 358](https://github.com/input-output-hk/cardano-api/pull/358)
+
+- Modify foldBlocks to allow the fold to terminate from the accumulator via the FoldStatus type.
+  
+  Modify foldBlocks to accumulate the chain tip rather than only immutable
+  blocks (blocks that are k blocks away from the tip).
+  
+  Add debug mode to foldBlocks which forces it to error with information 
+  about ledger states, client and server tip, number of requests in flight
+  and the current IORef state.
+  (feature, breaking)
+  [PR 350](https://github.com/input-output-hk/cardano-api/pull/350)
+
+- Delete types:
+  - ByronAndAllegraEraOnwards
+  - ByronToMaryEra
+  - MaryEraOnly
+  
+  Delete functions:
+  - allegraEraOnwardsToByronAndAllegraOnwardsEra
+  - byronAndAllegraEraOnwardsConstraints
+  - byronAndAllegraEraOnwardsToCardanoEra
+  - byronToMaryEraConstraints
+  - byronToMaryEraToCardanoEra
+  - caseByronToMaryOrAlonzoEraOnwards
+  - caseMaryEraOnlyOrAlonzoEraOnwards
+  - maryEraOnlyConstraints
+  - maryEraOnlyToCardanoEra
+  - maryEraOnlyToShelleyBasedEra
+  (breaking, improvement)
+  [PR 355](https://github.com/input-output-hk/cardano-api/pull/355)
+
 ## 8.30.0.0
 
 - Remove uses of `coerceKeyRole`, use asWitness when key role conversion is required 
