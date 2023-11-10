@@ -137,9 +137,9 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
-import           Cardano.Api.Pretty
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
+import           Cardano.Api.Pretty
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley
 import qualified Cardano.Api.Shelley as ShelleyApi
@@ -313,7 +313,8 @@ genScriptInEra era =
     Gen.choice
       [ ScriptInEra langInEra <$> genScript lang
       | AnyScriptLanguage lang <- [minBound..maxBound]
-      , Just langInEra <- [scriptLanguageSupportedInEra era lang] ]
+        -- TODO: scriptLanguageSupportedInEra should be parameterized on ShelleyBasedEra
+      , Just langInEra <- [scriptLanguageSupportedInEra (toCardanoEra era) lang] ]
 
 genScriptHash :: Gen ScriptHash
 genScriptHash = do
