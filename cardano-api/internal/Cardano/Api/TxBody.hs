@@ -859,27 +859,14 @@ instance IsCardanoEra era => FromJSON (TxOutValue era) where
       parseJsonTxOutValue :: CardanoEra era -> Aeson.Value -> Aeson.Parser (TxOutValue era)
       parseJsonTxOutValue era =
         withObject "TxOutValue" $ \o ->
-          caseByronOrShelleyBasedEra
-            (\bo -> do
+          caseByronToAllegraOrMaryEraOnwards
+            (const $ do
               ll <- o .: "lovelace"
-              pure
-                $ byronEraOnlyConstraints bo
-                $ TxOutValue (byronEraOnlyToCardanoEra bo)
-                $ lovelaceToCoin ll)
-            (\sbe ->
-              caseShelleyToAllegraOrMaryEraOnwards
-                (const $ do
-                  ll <- o .: "lovelace"
-                  pure
-                    $ TxOutValue (shelleyBasedToCardanoEra sbe)
-                    $ A.mkAdaValue (shelleyBasedToCardanoEra sbe) $ lovelaceToCoin ll
-                )
-                (\w -> do
-                  let l = KeyMap.toList o
-                  vals <- mapM decodeAssetId l
-                  pure $ TxOutValue era $ toLedgerValue w $ mconcat vals
-                )
-                sbe
+              pure $ TxOutValue era $ A.mkAdaValue era $ lovelaceToCoin ll
+            )
+            (\w -> do
+              vals <- mapM decodeAssetId $ KeyMap.toList o
+              pure $ TxOutValue era $ toLedgerValue w $ mconcat vals
             )
             era
 

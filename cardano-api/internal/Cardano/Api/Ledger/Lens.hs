@@ -42,11 +42,11 @@ module Cardano.Api.Ledger.Lens
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ByronToAllegraEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyEraOnly
-import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
@@ -188,29 +188,20 @@ mkBasicTxOut sbe addr value =
 
 mkAdaValue :: CardanoEra era -> L.Coin -> L.Value (LedgerEra era)
 mkAdaValue era coin =
-  caseByronOrShelleyBasedEra
+  caseByronToAllegraOrMaryEraOnwards
     (const coin)
-    (caseShelleyToAllegraOrMaryEraOnwards
-      (const coin)
-      (const (L.MaryValue (L.unCoin coin) mempty))
-    )
+    (const (L.MaryValue (L.unCoin coin) mempty))
     era
 
 adaAssetL :: CardanoEra era -> Lens' (L.Value (LedgerEra era)) L.Coin
 adaAssetL =
-  caseByronOrShelleyBasedEra
-    (const idLens)
-    (caseShelleyToAllegraOrMaryEraOnwards
-      adaAssetShelleyToAllegraEraL
-      adaAssetMaryEraOnwardsL
-    )
+  caseByronToAllegraOrMaryEraOnwards
+    adaAssetShelleyToAllegraEraL
+    adaAssetMaryEraOnwardsL
 
-idLens :: Lens' a a
-idLens = lens id const
-
-adaAssetShelleyToAllegraEraL :: ShelleyToAllegraEra era -> Lens' (L.Value (LedgerEra era)) L.Coin
+adaAssetShelleyToAllegraEraL :: ByronToAllegraEra era -> Lens' (L.Value (LedgerEra era)) L.Coin
 adaAssetShelleyToAllegraEraL w =
-  shelleyToAllegraEraConstraints w $ lens id const
+  byronToAllegraEraConstraints w $ lens id const
 
 adaAssetMaryEraOnwardsL :: MaryEraOnwards era -> Lens' (L.MaryValue L.StandardCrypto) L.Coin
 adaAssetMaryEraOnwardsL w =

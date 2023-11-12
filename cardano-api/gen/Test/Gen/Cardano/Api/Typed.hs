@@ -395,8 +395,7 @@ genValueForTxOut era = do
   ada <- A.mkAdaValue era . L.Coin <$> Gen.integral (Range.constant 1 2)
 
   -- Generate a potentially empty list with multi assets
-  caseByronOnlyOrShelleyToAllegraOrMaryEraOnwards
-    (const (pure ada))
+  caseByronToAllegraOrMaryEraOnwards
     (const (pure ada))
     (\w -> do
       v <- genValue w genAssetId genPositiveQuantity

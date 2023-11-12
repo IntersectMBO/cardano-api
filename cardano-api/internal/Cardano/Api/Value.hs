@@ -63,10 +63,8 @@ module Cardano.Api.Value
   , AsType(..)
   ) where
 
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error (displayError)
@@ -265,13 +263,10 @@ negateValue (Value m) = Value (Map.map negate m)
 
 negateLedgerValue :: CardanoEra era -> L.Value (LedgerEra era) -> L.Value (LedgerEra era)
 negateLedgerValue era v =
-  caseByronOrShelleyBasedEra
+  caseByronToAllegraOrMaryEraOnwards
     (\_ -> v & A.adaAssetL era %~ Shelley.Coin . negate . Shelley.unCoin)
-    (caseShelleyToAllegraOrMaryEraOnwards
-      (\_ -> v & A.adaAssetL era %~ Shelley.Coin . negate . Shelley.unCoin)
-      (\w -> v & A.multiAssetL w %~ invert)
-    )
-    era
+    (\w -> v & A.multiAssetL w %~ invert)
+  era
 
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
@@ -323,13 +318,10 @@ toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
 
 fromLedgerValue :: CardanoEra era -> L.Value (LedgerEra era) -> Value
 fromLedgerValue era v =
-  caseByronOrShelleyBasedEra
-    (\w -> byronEraOnlyConstraints w $ coinToValue v)
-    (caseShelleyToAllegraOrMaryEraOnwards
-      (\w -> shelleyToAllegraEraConstraints w $ coinToValue v)
-      (\w -> maryEraOnwardsConstraints w $ fromMaryValue w v)
-    )
-    era
+  caseByronToAllegraOrMaryEraOnwards
+    (const $ coinToValue v)
+    (\w -> fromMaryValue w v)
+  era
 
 fromMaryValue :: MaryEraOnwards era -> MaryValue StandardCrypto -> Value
 fromMaryValue _ (MaryValue lovelace other) =
