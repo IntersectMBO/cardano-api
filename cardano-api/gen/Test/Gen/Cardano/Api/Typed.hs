@@ -379,28 +379,30 @@ genValueDefault w = genValue w genAssetId genSignedNonZeroQuantity
 -- positive or negative quantity.
 genValueForMinting :: MaryEraOnwards era -> Gen Value
 genValueForMinting w =
-  fromLedgerValue sbe <$> genValue w genAssetIdNoAda genSignedNonZeroQuantity
+  fromLedgerValue era <$> genValue w genAssetIdNoAda genSignedNonZeroQuantity
   where
-    sbe = maryEraOnwardsToShelleyBasedEra w
+    era = maryEraOnwardsToCardanoEra w
+
     genAssetIdNoAda :: Gen AssetId
     genAssetIdNoAda = AssetId <$> genPolicyId <*> genAssetName
 
 -- | Generate a 'Value' suitable for usage in a transaction output, i.e. any
 -- asset ID and a positive quantity.
-genValueForTxOut :: ShelleyBasedEra era -> Gen (L.Value (LedgerEra era))
-genValueForTxOut sbe = do
+genValueForTxOut :: CardanoEra era -> Gen (L.Value (LedgerEra era))
+genValueForTxOut era = do
   -- Generate at least one positive ADA, without it Value in TxOut makes no sense
   -- and will fail deserialization starting with ConwayEra
-  ada <- A.mkAdaValue sbe . L.Coin <$> Gen.integral (Range.constant 1 2)
+  ada <- A.mkAdaValue era . L.Coin <$> Gen.integral (Range.constant 1 2)
 
   -- Generate a potentially empty list with multi assets
-  caseShelleyToAllegraOrMaryEraOnwards
+  caseByronOnlyOrShelleyToAllegraOrMaryEraOnwards
+    (const (pure ada))
     (const (pure ada))
     (\w -> do
       v <- genValue w genAssetId genPositiveQuantity
       pure $ ada <> v
     )
-    sbe
+    era
 
 
 -- Note that we expect to sometimes generate duplicate policy id keys since we
@@ -505,10 +507,8 @@ genTxIndex :: Gen TxIx
 genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
-genTxOutValue =
-  caseByronOrShelleyBasedEra
-    (\w -> TxOutValueByron w <$> genPositiveLovelace)
-    (\sbe -> TxOutValueShelleyBased sbe <$> genValueForTxOut sbe)
+genTxOutValue era =
+  TxOutValue era <$> genValueForTxOut era
 
 genTxOutTxContext :: CardanoEra era -> Gen (TxOut CtxTx era)
 genTxOutTxContext era =

@@ -2,7 +2,7 @@ module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
-import           Cardano.Api (MaryEraOnwards (..), ShelleyBasedEra (..), ValueNestedBundle (..),
+import           Cardano.Api (CardanoEra (..), MaryEraOnwards (..), ValueNestedBundle (..),
                    ValueNestedRep (..), fromLedgerValue, valueFromNestedRep, valueToNestedRep)
 
 import           Prelude
@@ -20,14 +20,13 @@ import           Test.Tasty.Hedgehog (testProperty)
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
   property $ do
-    v <- forAll $ fromLedgerValue ShelleyBasedEraConway <$> genValueDefault MaryEraOnwardsConway
+    v <- forAll $ fromLedgerValue ConwayEra <$> genValueDefault MaryEraOnwardsConway
     tripping v encode eitherDecode
-
 
 prop_roundtrip_Value_flatten_unflatten :: Property
 prop_roundtrip_Value_flatten_unflatten =
   property $ do
-    v <- forAll $ fromLedgerValue ShelleyBasedEraConway <$> genValueDefault MaryEraOnwardsConway
+    v <- forAll $ fromLedgerValue ConwayEra <$> genValueDefault MaryEraOnwardsConway
     valueFromNestedRep (valueToNestedRep v) === v
 
 prop_roundtrip_Value_unflatten_flatten :: Property

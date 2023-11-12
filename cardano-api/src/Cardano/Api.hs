@@ -131,6 +131,7 @@ module Cardano.Api (
 
     -- ** Case on CardanoEra
     caseByronOrShelleyBasedEra,
+    caseByronOnlyOrShelleyToAllegraOrMaryEraOnwards,
     caseByronToAlonzoOrBabbageEraOnwards,
 
     -- ** Case on ShelleyBasedEra
@@ -247,6 +248,8 @@ module Cardano.Api (
     -- * Currency values
     -- ** Ada \/ Lovelace
     Lovelace(..),
+    lovelaceToCoin,
+    coinToLovelace,
 
     -- ** Multi-asset values
     Quantity(..),

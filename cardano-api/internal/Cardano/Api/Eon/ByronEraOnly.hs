@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Eon.ByronEraOnly
   ( ByronEraOnly(..)
@@ -15,6 +16,9 @@ module Cardano.Api.Eon.ByronEraOnly
   ) where
 
 import           Cardano.Api.Eras.Core
+
+import           Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as L
 
 import           Data.Typeable (Typeable)
 
@@ -41,6 +45,7 @@ instance ToCardanoEra ByronEraOnly where
 type ByronEraOnlyConstraints era =
   ( IsCardanoEra era
   , Typeable era
+  , L.Value (LedgerEra era) ~ L.Coin
   )
 
 byronEraOnlyConstraints :: ()

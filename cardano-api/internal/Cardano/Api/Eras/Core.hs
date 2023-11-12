@@ -51,6 +51,8 @@ module Cardano.Api.Eras.Core
 import           Cardano.Api.HasTypeProxy
 
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as L
 
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Kind
@@ -58,6 +60,8 @@ import           Data.Maybe (isJust)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable, showsTypeRep, typeOf)
+
+type instance L.Value (L.ByronEra _c) = L.Coin
 
 -- ----------------------------------------------------------------------------
 -- Eras
@@ -296,6 +300,8 @@ instance IsCardanoEra ConwayEra where
 type CardanoEraConstraints era =
   ( Typeable era
   , IsCardanoEra era
+  , Eq (L.Value (LedgerEra era))
+  , Show (L.Value (LedgerEra era))
   )
 
 cardanoEraConstraints :: ()

@@ -7,6 +7,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
+{- HLINT ignore "Avoid lambda using `infix`" #-}
+
 -- | Currency values
 --
 module Cardano.Api.Value
@@ -61,9 +63,12 @@ module Cardano.Api.Value
   , AsType(..)
   ) where
 
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
 import qualified Cardano.Api.Ledger.Lens as A
@@ -258,12 +263,15 @@ valueToList (Value m) = Map.toList m
 negateValue :: Value -> Value
 negateValue (Value m) = Value (Map.map negate m)
 
-negateLedgerValue :: ShelleyBasedEra era -> L.Value (LedgerEra era) -> L.Value (LedgerEra era)
-negateLedgerValue sbe v =
-  caseShelleyToAllegraOrMaryEraOnwards
-    (\_ -> v & A.adaAssetL sbe %~ Shelley.Coin . negate . Shelley.unCoin)
-    (\w -> v & A.multiAssetL w %~ invert)
-    sbe
+negateLedgerValue :: CardanoEra era -> L.Value (LedgerEra era) -> L.Value (LedgerEra era)
+negateLedgerValue era v =
+  caseByronOrShelleyBasedEra
+    (\_ -> v & A.adaAssetL era %~ Shelley.Coin . negate . Shelley.unCoin)
+    (caseShelleyToAllegraOrMaryEraOnwards
+      (\_ -> v & A.adaAssetL era %~ Shelley.Coin . negate . Shelley.unCoin)
+      (\w -> v & A.multiAssetL w %~ invert)
+    )
+    era
 
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
@@ -313,15 +321,18 @@ toMaryValue v =
 toLedgerValue :: MaryEraOnwards era -> Value -> L.Value (LedgerEra era)
 toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
 
-fromLedgerValue :: ShelleyBasedEra era -> L.Value (LedgerEra era) -> Value
-fromLedgerValue sbe v =
-  caseShelleyToAllegraOrMaryEraOnwards
-    (const (coinToValue v))
-    (const (fromMaryValue v))
-    sbe
+fromLedgerValue :: CardanoEra era -> L.Value (LedgerEra era) -> Value
+fromLedgerValue era v =
+  caseByronOrShelleyBasedEra
+    (\w -> byronEraOnlyConstraints w $ coinToValue v)
+    (caseShelleyToAllegraOrMaryEraOnwards
+      (\w -> shelleyToAllegraEraConstraints w $ coinToValue v)
+      (\w -> maryEraOnwardsConstraints w $ fromMaryValue w v)
+    )
+    era
 
-fromMaryValue :: MaryValue StandardCrypto -> Value
-fromMaryValue (MaryValue lovelace other) =
+fromMaryValue :: MaryEraOnwards era -> MaryValue StandardCrypto -> Value
+fromMaryValue _ (MaryValue lovelace other) =
     Value $
       --TODO: write QC tests to show it's ok to use Map.fromAscList here
       Map.fromList $

@@ -572,7 +572,7 @@ evaluateTransactionBalance sbe _ _ _ _ _ (ByronTxBody ByronEraOnlyByron _) =
 
 evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo (ShelleyTxBody _ txbody _ _ _ _) =
   shelleyBasedEraConstraints sbe
-    $ TxOutValueShelleyBased sbe
+    $ TxOutValue (shelleyBasedToCardanoEra sbe)
     $ L.evalBalanceTxBody
         pp
         lookupDelegDeposit
@@ -812,16 +812,16 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     let maxLovelaceChange = Lovelace (2^(64 :: Integer)) - 1
     let maxLovelaceFee = Lovelace (2^(32 :: Integer) - 1)
 
-    let outgoing = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
-    let incoming = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- Map.elems $ unUTxO utxo]
+    let outgoing = mconcat [v | (TxOut _ (TxOutValue _ v) _ _) <- txOuts txbodycontent]
+    let incoming = mconcat [v | (TxOut _ (TxOutValue _ v) _ _) <- Map.elems $ unUTxO utxo]
     let minted = case txMintValue txbodycontent1 of
           TxMintNone -> mempty
           TxMintValue w v _ -> toLedgerValue w v
-    let change = mconcat [incoming, minted, negateLedgerValue sbe outgoing]
-    let changeWithMaxLovelace = change & A.adaAssetL sbe .~ lovelaceToCoin maxLovelaceChange
+    let change = mconcat [incoming, minted, negateLedgerValue era outgoing]
+    let changeWithMaxLovelace = change & A.adaAssetL era .~ lovelaceToCoin maxLovelaceChange
     let changeTxOut = forShelleyBasedEraInEon sbe
           (lovelaceToTxOutValue era maxLovelaceChange)
-          (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
+          (\w -> maryEraOnwardsConstraints w $ TxOutValue era changeWithMaxLovelace)
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now

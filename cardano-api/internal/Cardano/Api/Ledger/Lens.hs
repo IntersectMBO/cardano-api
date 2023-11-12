@@ -49,6 +49,7 @@ import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core
 
 import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Alonzo.Core as L
@@ -179,25 +180,33 @@ proposalProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.propos
 
 mkAdaOnlyTxOut :: ShelleyBasedEra era -> L.Addr (L.EraCrypto (LedgerEra era)) -> L.Coin -> L.TxOut (LedgerEra era)
 mkAdaOnlyTxOut sbe addr coin =
-  mkBasicTxOut sbe addr (mkAdaValue sbe coin)
+  mkBasicTxOut sbe addr (mkAdaValue (shelleyBasedToCardanoEra sbe) coin)
 
 mkBasicTxOut :: ShelleyBasedEra era -> L.Addr (L.EraCrypto (LedgerEra era)) -> L.Value (LedgerEra era) -> L.TxOut (LedgerEra era)
 mkBasicTxOut sbe addr value =
   shelleyBasedEraConstraints sbe $ L.mkBasicTxOut addr value
 
-mkAdaValue :: ShelleyBasedEra era -> L.Coin -> L.Value (LedgerEra era)
-mkAdaValue sbe coin =
-  caseShelleyToAllegraOrMaryEraOnwards
+mkAdaValue :: CardanoEra era -> L.Coin -> L.Value (LedgerEra era)
+mkAdaValue era coin =
+  caseByronOrShelleyBasedEra
     (const coin)
-    (const (L.MaryValue (L.unCoin coin) mempty))
-    sbe
+    (caseShelleyToAllegraOrMaryEraOnwards
+      (const coin)
+      (const (L.MaryValue (L.unCoin coin) mempty))
+    )
+    era
 
-adaAssetL :: ShelleyBasedEra era -> Lens' (L.Value (LedgerEra era)) L.Coin
-adaAssetL sbe =
-  caseShelleyToAllegraOrMaryEraOnwards
-    adaAssetShelleyToAllegraEraL
-    adaAssetMaryEraOnwardsL
-    sbe
+adaAssetL :: CardanoEra era -> Lens' (L.Value (LedgerEra era)) L.Coin
+adaAssetL =
+  caseByronOrShelleyBasedEra
+    (const idLens)
+    (caseShelleyToAllegraOrMaryEraOnwards
+      adaAssetShelleyToAllegraEraL
+      adaAssetMaryEraOnwardsL
+    )
+
+idLens :: Lens' a a
+idLens = lens id const
 
 adaAssetShelleyToAllegraEraL :: ShelleyToAllegraEra era -> Lens' (L.Value (LedgerEra era)) L.Coin
 adaAssetShelleyToAllegraEraL w =
@@ -219,4 +228,6 @@ valueTxOutL :: ShelleyBasedEra era -> Lens' (L.TxOut (LedgerEra era)) (L.Value (
 valueTxOutL sbe = shelleyBasedEraConstraints sbe L.valueTxOutL
 
 valueTxOutAdaAssetL :: ShelleyBasedEra era -> Lens' (L.TxOut (LedgerEra era)) L.Coin
-valueTxOutAdaAssetL sbe = valueTxOutL sbe . adaAssetL sbe
+valueTxOutAdaAssetL sbe =
+  let era = shelleyBasedToCardanoEra sbe in
+  valueTxOutL sbe . adaAssetL era
