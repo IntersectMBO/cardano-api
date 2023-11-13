@@ -320,6 +320,10 @@ data QueryInShelleyBasedEra era result where
     -> Set L.MemberStatus
     -> QueryInShelleyBasedEra era (Maybe (L.CommitteeMembersState StandardCrypto))
 
+  QueryStakeVoteDelegatees
+    :: Set StakeCredential
+    -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
+
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryEpoch = NodeToClientV_9
@@ -343,6 +347,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
   nodeToClientVersionOf QueryDRepStakeDistr{} = NodeToClientV_16
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
+  nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -672,6 +677,13 @@ toConsensusQueryShelleyBased sbe = \case
   QueryCommitteeMembersState coldCreds hotCreds statuses ->
     Some (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
 
+  QueryStakeVoteDelegatees creds ->
+    Some (consensusQueryInEraInMode era
+            (Consensus.GetFilteredVoteDelegatees creds'))
+    where
+      creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
+      creds' = Set.map toShelleyStakeCredential creds
+
   where
     era = shelleyBasedToCardanoEra sbe
 
@@ -931,6 +943,12 @@ fromConsensusQueryResultShelleyBased _ QueryCommitteeMembersState{} q' committee
   case q' of
     Consensus.GetCommitteeMembersState{} -> committeeMembersState'
     _                                    -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryStakeVoteDelegatees{} q' delegs' =
+    case q' of
+      Consensus.GetFilteredVoteDelegatees {}
+        -> Map.mapKeys fromShelleyStakeCredential delegs'
+      _ -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.
