@@ -992,6 +992,7 @@ module Cardano.Api (
     queryDRepState,
     queryDRepStakeDistribution,
     queryCommitteeMembersState,
+    queryStakeVoteDelegatees,
 
     -- ** Committee State Query
     MemberStatus (..),

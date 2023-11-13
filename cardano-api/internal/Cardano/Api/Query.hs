@@ -318,6 +318,10 @@ data QueryInShelleyBasedEra era result where
     -> Set L.MemberStatus
     -> QueryInShelleyBasedEra era (Maybe (L.CommitteeMembersState StandardCrypto))
 
+  QueryStakeVoteDelegatees
+    :: Set StakeCredential
+    -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
+
 
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryEpoch = NodeToClientV_9
@@ -341,6 +345,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
   nodeToClientVersionOf QueryDRepStakeDistr{} = NodeToClientV_16
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
+  nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -626,6 +631,12 @@ toConsensusQueryShelleyBased erainmode (QueryUTxO (QueryUTxOByAddress addrs)) =
   where
     addrs' :: Set (Shelley.Addr Consensus.StandardCrypto)
     addrs' = toShelleyAddrSet (eraInModeToEra erainmode) addrs
+
+toConsensusQueryShelleyBased erainmode (QueryStakeVoteDelegatees creds) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetFilteredVoteDelegatees creds'))
+  where
+    creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
+    creds' = Set.map toShelleyStakeCredential creds
 
 toConsensusQueryShelleyBased erainmode (QueryUTxO (QueryUTxOByTxIn txins)) =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetUTxOByTxIn txins'))
@@ -977,6 +988,12 @@ fromConsensusQueryResultShelleyBased _ QueryCommitteeMembersState{} q' committee
   case q' of
     Consensus.GetCommitteeMembersState{} -> committeeMembersState'
     _                                    -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryStakeVoteDelegatees{} q' delegs' =
+    case q' of
+      Consensus.GetFilteredVoteDelegatees {}
+        -> Map.mapKeys fromShelleyStakeCredential delegs'
+      _ -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.

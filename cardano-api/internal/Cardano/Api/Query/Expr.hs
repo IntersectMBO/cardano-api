@@ -32,6 +32,7 @@ module Cardano.Api.Query.Expr
   , queryDRepStakeDistribution
   , queryDRepState
   , queryGovState
+  , queryStakeVoteDelegatees
   ) where
 
 import           Cardano.Api.Address
@@ -271,3 +272,11 @@ queryCommitteeMembersState :: ()
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.CommitteeMembersState L.StandardCrypto))))
 queryCommitteeMembersState eraInMode sbe coldCreds hotCreds statuses =
   queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)
+
+queryStakeVoteDelegatees :: ()
+  => EraInMode era mode
+  -> ShelleyBasedEra era
+  -> Set StakeCredential
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map StakeCredential (L.DRep L.StandardCrypto))))
+queryStakeVoteDelegatees eraInMode sbe stakeCredentials =
+  queryExpr $ QueryInEra eraInMode $ QueryInShelleyBasedEra sbe $ QueryStakeVoteDelegatees stakeCredentials
