@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{- HLINT ignore "Avoid lambda using `infix`" #-}
+{- HLINT ignore "Avoid lambda using `infix`" -}
 
 -- | Currency values
 --
