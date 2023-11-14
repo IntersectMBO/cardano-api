@@ -2013,7 +2013,7 @@ maxTxOut :: Quantity
 maxTxOut = fromIntegral (maxBound :: Word64)
 
 createAndValidateTransactionBody :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createAndValidateTransactionBody era txBodyContent =
