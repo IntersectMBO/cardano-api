@@ -75,7 +75,7 @@ import           Cardano.Api.Utils (failEitherWith)
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Allegra.Core as L
-import qualified Cardano.Ledger.Coin as Shelley
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 import           Cardano.Ledger.Mary.Value (MaryValue (..))
@@ -127,15 +127,15 @@ toByronLovelace (Lovelace x) =
 fromByronLovelace :: Byron.Lovelace -> Lovelace
 fromByronLovelace = Lovelace . Byron.lovelaceToInteger
 
-toShelleyLovelace :: Lovelace -> Shelley.Coin
-toShelleyLovelace (Lovelace l) = Shelley.Coin l
+toShelleyLovelace :: Lovelace -> L.Coin
+toShelleyLovelace (Lovelace l) = L.Coin l
 --TODO: validate bounds
 
-fromShelleyLovelace :: Shelley.Coin -> Lovelace
-fromShelleyLovelace (Shelley.Coin l) = Lovelace l
+fromShelleyLovelace :: L.Coin -> Lovelace
+fromShelleyLovelace (L.Coin l) = Lovelace l
 
-fromShelleyDeltaLovelace :: Shelley.DeltaCoin -> Lovelace
-fromShelleyDeltaLovelace (Shelley.DeltaCoin d) = Lovelace d
+fromShelleyDeltaLovelace :: L.DeltaCoin -> Lovelace
+fromShelleyDeltaLovelace (L.DeltaCoin d) = Lovelace d
 
 
 -- ----------------------------------------------------------------------------
@@ -262,7 +262,7 @@ negateValue (Value m) = Value (Map.map negate m)
 negateLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> L.Value (ShelleyLedgerEra era)
 negateLedgerValue sbe v =
   caseShelleyToAllegraOrMaryEraOnwards
-    (\_ -> v & A.adaAssetL sbe %~ Shelley.Coin . negate . Shelley.unCoin)
+    (\_ -> v & A.adaAssetL sbe %~ L.Coin . negate . L.unCoin)
     (\w -> v & A.multiAssetL w %~ invert)
     sbe
 
@@ -275,13 +275,13 @@ selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
-lovelaceToCoin :: Lovelace -> Shelley.Coin
-lovelaceToCoin (Lovelace ll) = Shelley.Coin ll
+lovelaceToCoin :: Lovelace -> L.Coin
+lovelaceToCoin (Lovelace ll) = L.Coin ll
 
-coinToLovelace :: Shelley.Coin -> Lovelace
-coinToLovelace (Shelley.Coin ll) = Lovelace ll
+coinToLovelace :: L.Coin -> Lovelace
+coinToLovelace (L.Coin ll) = Lovelace ll
 
-coinToValue :: Shelley.Coin -> Value
+coinToValue :: L.Coin -> Value
 coinToValue = lovelaceToValue . coinToLovelace
 
 -- | Check if the 'Value' consists of /only/ 'Lovelace' and no other assets,
