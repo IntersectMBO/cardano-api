@@ -93,6 +93,7 @@ import qualified Data.ByteString.Short as Short
 import           Data.Data (Data)
 import           Data.Function ((&))
 import           Data.Group (invert)
+import qualified Data.List as List
 import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -410,25 +411,21 @@ instance FromJSON ValueNestedRep where
 --
 
 -- | Render a textual representation of a 'Value'.
---
 renderValue :: Value -> Text
-renderValue  v =
-    Text.intercalate
-      " + "
-      (map renderAssetIdQuantityPair vals)
-  where
-    vals :: [(AssetId, Quantity)]
-    vals = valueToList v
+renderValue = renderValueSep " + "
 
 -- | Render a \"prettified\" textual representation of a 'Value'.
 renderValuePretty :: Value -> Text
-renderValuePretty v =
-    Text.intercalate
-      ("\n" <> Text.replicate 4 " " <> "+ ")
-      (map renderAssetIdQuantityPair vals)
+renderValuePretty = renderValueSep $ "\n" <> Text.replicate 4 " " <> "+ "
+
+renderValueSep :: Text -> Value -> Text
+renderValueSep sep v =
+  if List.null valueList
+    then "0 lovelace"
+    else Text.intercalate sep (map renderAssetIdQuantityPair valueList)
   where
-    vals :: [(AssetId, Quantity)]
-    vals = valueToList v
+    valueList :: [(AssetId, Quantity)]
+    valueList = valueToList v
 
 renderAssetIdQuantityPair :: (AssetId, Quantity) -> Text
 renderAssetIdQuantityPair (aId, quant) =

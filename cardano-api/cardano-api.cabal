@@ -351,6 +351,7 @@ test-suite cardano-api-golden
                       , hedgehog >= 1.1
                       , hedgehog-extras ^>= 0.4.7.0
                       , microlens
+                      , parsec
                       , plutus-core ^>= 1.15
                       , plutus-ledger-api ^>= 1.15
                       , tasty
@@ -365,4 +366,6 @@ test-suite cardano-api-golden
   other-modules:        Test.Golden.Cardano.Api.Genesis
                       , Test.Golden.Cardano.Api.Ledger
                       , Test.Golden.Cardano.Api.Typed.Script
+                      , Test.Golden.Cardano.Api.Value
                       , Test.Golden.ErrorsSpec
+
