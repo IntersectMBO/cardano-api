@@ -70,7 +70,7 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Coin as Ledger
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
@@ -107,17 +107,17 @@ import           Prettyprinter.Render.String
 --
 transactionFee :: ()
   => ShelleyBasedEra era
-  -> Lovelace -- ^ The fixed tx fee
-  -> Lovelace -- ^ The tx fee per byte
+  -> L.Coin -- ^ The fixed tx fee
+  -> L.Coin -- ^ The tx fee per byte
   -> Tx era
-  -> Lovelace
+  -> L.Coin
 transactionFee sbe txFeeFixed txFeePerByte tx =
   let a = toInteger txFeePerByte
       b = toInteger txFeeFixed
   in
   case tx of
     ShelleyTx _ tx' ->
-      let x = shelleyBasedEraConstraints sbe $ tx' ^. L.sizeTxF in Lovelace (a * x + b)
+      let x = shelleyBasedEraConstraints sbe $ tx' ^. L.sizeTxF in L.Coin (a * x + b)
       --TODO: This can be made to work for Byron txs too.
     ByronTx ByronEraOnlyByron _ -> case sbe of {}
 
@@ -137,20 +137,20 @@ transactionFee sbe txFeeFixed txFeePerByte tx =
 estimateTransactionFee :: ()
   => ShelleyBasedEra era
   -> NetworkId
-  -> Lovelace -- ^ The fixed tx fee
-  -> Lovelace -- ^ The tx fee per byte
+  -> L.Coin -- ^ The fixed tx fee
+  -> L.Coin -- ^ The tx fee per byte
   -> Tx era
   -> Int -- ^ The number of extra UTxO transaction inputs
   -> Int -- ^ The number of extra transaction outputs
   -> Int -- ^ The number of extra Shelley key witnesses
   -> Int -- ^ The number of extra Byron key witnesses
-  -> Lovelace
+  -> L.Coin
 estimateTransactionFee sbe nw txFeeFixed txFeePerByte = \case
   -- TODO: This can be made to work for Byron txs too.
   ByronTx ByronEraOnlyByron _ ->
     case sbe of {}
   ShelleyTx era tx ->
-    let Lovelace baseFee = transactionFee sbe txFeeFixed txFeePerByte (ShelleyTx era tx)
+    let L.Coin baseFee = transactionFee sbe txFeeFixed txFeePerByte (ShelleyTx era tx)
     in \nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
       --TODO: this is fragile. Move something like this to the ledger and
       -- make it robust, based on the txsize calculation.
@@ -161,7 +161,7 @@ estimateTransactionFee sbe nw txFeeFixed txFeePerByte = \case
             + nByronKeyWitnesses    * sizeByronKeyWitnesses
             + nShelleyKeyWitnesses  * sizeShelleyKeyWitnesses
 
-      in Lovelace (baseFee + toInteger txFeePerByte * toInteger extraBytes)
+      in L.Coin (baseFee + toInteger txFeePerByte * toInteger extraBytes)
   where
     sizeInput               = smallArray + uint + hashObj
     sizeOutput              = smallArray + uint + address
@@ -210,7 +210,7 @@ evaluateTransactionFee :: forall era. ()
   -> TxBody era
   -> Word  -- ^ The number of Shelley key witnesses
   -> Word  -- ^ The number of Byron key witnesses
-  -> Lovelace
+  -> L.Coin
 evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
   error "evaluateTransactionFee: TODO support Byron key witnesses"
 
@@ -559,8 +559,8 @@ evaluateTransactionBalance :: forall era. ()
                            => ShelleyBasedEra era
                            -> Ledger.PParams (ShelleyLedgerEra era)
                            -> Set PoolId
-                           -> Map StakeCredential Lovelace
-                           -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) Lovelace
+                           -> Map StakeCredential L.Coin
+                           -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
                            -> UTxO era
                            -> TxBody era
                            -> TxOutValue era
@@ -583,13 +583,13 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
     isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
     lookupDelegDeposit ::
-      Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe Ledger.Coin
+      Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe L.Coin
     lookupDelegDeposit stakeCred =
       toShelleyLovelace <$>
       Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
     lookupDRepDeposit ::
-      Ledger.Credential 'Ledger.DRepRole L.StandardCrypto -> Maybe Ledger.Coin
+      Ledger.Credential 'Ledger.DRepRole L.StandardCrypto -> Maybe L.Coin
     lookupDRepDeposit drepCred =
       toShelleyLovelace <$>
       Map.lookup drepCred drepDelegDeposits
@@ -615,7 +615,7 @@ data TxBodyErrorAutoBalance =
        -- The transaction should be changed to provide more input ada, or
        -- otherwise adjusted to need less (e.g. outputs, script etc).
        --
-     | TxBodyErrorAdaBalanceNegative Lovelace
+     | TxBodyErrorAdaBalanceNegative L.Coin
 
        -- | There is enough ada to cover both the outputs and the fees, but the
        -- resulting change is too small: it is under the minimum value for
@@ -626,9 +626,9 @@ data TxBodyErrorAutoBalance =
          -- ^ Offending TxOut
          TxOutInAnyEra
          -- ^ Minimum UTxO
-         Lovelace
+         L.Coin
          -- ^ Tx balance
-         Lovelace
+         L.Coin
 
        -- | 'makeTransactionBodyAutoBalance' does not yet support the Byron era.
      | TxBodyErrorByronEraNotSupported
@@ -646,7 +646,7 @@ data TxBodyErrorAutoBalance =
          -- ^ Offending TxOut
          TxOutInAnyEra
          -- ^ Minimum UTxO
-         Lovelace
+         L.Coin
      | TxBodyErrorNonAdaAssetsUnbalanced Value
      | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
          ScriptWitnessIndex
@@ -721,7 +721,7 @@ data BalancedTxBody era
       (TxBodyContent BuildTx era)
       (TxBody era)
       (TxOut CtxTx era) -- ^ Transaction balance (change output)
-      Lovelace    -- ^ Estimated transaction fee
+      L.Coin    -- ^ Estimated transaction fee
 
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
@@ -752,10 +752,10 @@ makeTransactionBodyAutoBalance :: forall era. ()
   -> LedgerProtocolParameters era
   -> Set PoolId       -- ^ The set of registered stake pools, that are being
                       --   unregistered in this transaction.
-  -> Map StakeCredential Lovelace
+  -> Map StakeCredential L.Coin
                       -- ^ Map of all deposits for stake credentials that are being
                       --   unregistered in this transaction
-  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) Lovelace
+  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
                       -- ^ Map of all deposits for drep credentials that are being
                       --   unregistered in this transaction
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
@@ -807,8 +807,8 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     -- of less than around 18 trillion ada  (2^64-1 lovelace).
     -- However, since at this point we know how much non-Ada change to give
     -- we can use the true values for that.
-    let maxLovelaceChange = Lovelace (2^(64 :: Integer)) - 1
-    let maxLovelaceFee = Lovelace (2^(32 :: Integer) - 1)
+    let maxLovelaceChange = L.Coin (2^(64 :: Integer)) - 1
+    let maxLovelaceFee = L.Coin (2^(32 :: Integer) - 1)
 
     let outgoing = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
     let incoming = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- Map.elems $ unUTxO utxo]
@@ -900,10 +900,10 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
               let dummyRetCol =
                     TxReturnCollateral w
                     ( TxOut cAddr
-                        (lovelaceToTxOutValue sbe $ Lovelace (2^(64 :: Integer)) - 1)
+                        (lovelaceToTxOutValue sbe $ L.Coin (2^(64 :: Integer)) - 1)
                         TxOutDatumNone ReferenceScriptNone
                     )
-                  dummyTotCol = TxTotalCollateral w (Lovelace (2^(32 :: Integer) - 1))
+                  dummyTotCol = TxTotalCollateral w (L.Coin (2^(32 :: Integer) - 1))
               in case (txReturnCollateral, txTotalCollateral) of
                 (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) -> (rc, tc)
                 (rc@TxReturnCollateral{},TxTotalCollateralNone) -> (rc, dummyTotCol)
@@ -915,7 +915,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
    calcReturnAndTotalCollateral :: ()
       => Ledger.AlonzoEraPParams (ShelleyLedgerEra era)
       => BabbageEraOnwards era
-      -> Lovelace -- ^ Fee
+      -> L.Coin -- ^ Fee
       -> Ledger.PParams (ShelleyLedgerEra era)
       -> TxInsCollateral era -- ^ From the initial TxBodyContent
       -> TxReturnCollateral CtxTx era -- ^ From the initial TxBodyContent
@@ -933,17 +933,17 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
         -- collateral tx inputs to cover the tx
         let txOuts = catMaybes [ Map.lookup txin utxo' | txin <- collIns]
             totalCollateralLovelace = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) txOuts
-            requiredCollateral@(Lovelace reqAmt) = fromIntegral colPerc * fee
+            requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
             totalCollateral = TxTotalCollateral retColSup . fromShelleyLovelace
-                                                          . Ledger.rationalToCoinViaCeiling
+                                                          . L.rationalToCoinViaCeiling
                                                           $ reqAmt % 100
             -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
             -- We choose to multiply 100 rather than divide by 100 to make the calculation
             -- easier to manage. At the end of the calculation we then use % 100 to perform our division
             -- and round up.
             enoughCollateral = totalCollateralLovelace * 100 >= requiredCollateral
-            Lovelace amt = totalCollateralLovelace * 100 - requiredCollateral
-            returnCollateral = fromShelleyLovelace . Ledger.rationalToCoinViaFloor $ amt % 100
+            L.Coin amt = totalCollateralLovelace * 100 - requiredCollateral
+            returnCollateral = fromShelleyLovelace . L.rationalToCoinViaFloor $ amt % 100
 
         case (txReturnCollateral, txTotalCollateral) of
 #if MIN_VERSION_base(4,16,0)
@@ -977,7 +977,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
    accountForNoChange :: TxOut CtxTx era -> [TxOut CtxTx era] -> [TxOut CtxTx era]
    accountForNoChange change@(TxOut _ balance _ _) rest =
      case txOutValueToLovelace balance of
-       Lovelace 0 -> rest
+       L.Coin 0 -> rest
        -- We append change at the end so a client can predict the indexes
        -- of the outputs
        _ -> rest ++ [change]
@@ -1084,7 +1084,7 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
     mapScriptWitnessesWithdrawals (TxWithdrawals supported withdrawals) =
       let mappedWithdrawals
             :: [( StakeAddress
-                , Lovelace
+                , L.Coin
                 , Either TxBodyErrorAutoBalance (BuildTxWith BuildTx (Witness WitCtxStake era))
                 )]
           mappedWithdrawals =
@@ -1160,7 +1160,7 @@ calculateMinimumUTxO
   :: ShelleyBasedEra era
   -> TxOut CtxTx era
   -> Ledger.PParams (ShelleyLedgerEra era)
-  -> Lovelace
+  -> L.Coin
 calculateMinimumUTxO sbe txout pp =
   shelleyBasedEraConstraints sbe
     $ let txOutWithMinCoin = L.setMinCoinTxOut pp (toShelleyTxOutAny sbe txout)

@@ -197,11 +197,11 @@ _genAddressInEraByron = byronAddressInEra <$> genAddressByron
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 
-genLovelace :: Gen Lovelace
-genLovelace = Lovelace <$> Gen.integral (Range.linear 0 5000)
+genLovelace :: Gen L.Coin
+genLovelace = L.Coin <$> Gen.integral (Range.linear 0 5000)
 
-genPositiveLovelace :: Gen Lovelace
-genPositiveLovelace = Lovelace <$> Gen.integral (Range.linear 1 5000)
+genPositiveLovelace :: Gen L.Coin
+genPositiveLovelace = L.Coin <$> Gen.integral (Range.linear 1 5000)
 
 
 ----------------------------------------------------------------------------

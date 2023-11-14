@@ -10,7 +10,7 @@
 -- | Currency values
 --
 module Cardano.Api.Value
-  ( Lovelace(..)
+  ( L.Coin(..)
 
     -- * Multi-asset values
   , Quantity(..)
@@ -27,7 +27,7 @@ module Cardano.Api.Value
   , negateLedgerValue
   , calcMinimumDeposit
 
-    -- ** Ada \/ Lovelace specifically
+    -- ** Ada \/ L.Coin specifically
   , quantityToLovelace
   , lovelaceToQuantity
   , selectLovelace
@@ -68,7 +68,6 @@ import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
@@ -103,39 +102,24 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Lens.Micro ((%~))
 
--- ----------------------------------------------------------------------------
--- Lovelace
---
-
-newtype Lovelace = Lovelace Integer
-  deriving stock (Eq, Ord, Show)
-  deriving newtype (Enum, Real, Integral, Num, ToJSON, FromJSON, ToCBOR, FromCBOR)
-
-instance Semigroup Lovelace where
-  Lovelace a <> Lovelace b = Lovelace (a + b)
-
-instance Monoid Lovelace where
-  mempty = Lovelace 0
-
-
-toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
-toByronLovelace (Lovelace x) =
+toByronLovelace :: L.Coin -> Maybe Byron.Lovelace
+toByronLovelace (L.Coin x) =
     case Byron.integerToLovelace x of
       Left  _  -> Nothing
       Right x' -> Just x'
 
-fromByronLovelace :: Byron.Lovelace -> Lovelace
-fromByronLovelace = Lovelace . Byron.lovelaceToInteger
+fromByronLovelace :: Byron.Lovelace -> L.Coin
+fromByronLovelace = L.Coin . Byron.lovelaceToInteger
 
-toShelleyLovelace :: Lovelace -> L.Coin
-toShelleyLovelace (Lovelace l) = L.Coin l
+toShelleyLovelace :: L.Coin -> L.Coin
+toShelleyLovelace (L.Coin l) = L.Coin l
 --TODO: validate bounds
 
-fromShelleyLovelace :: L.Coin -> Lovelace
-fromShelleyLovelace (L.Coin l) = Lovelace l
+fromShelleyLovelace :: L.Coin -> L.Coin
+fromShelleyLovelace (L.Coin l) = L.Coin l
 
-fromShelleyDeltaLovelace :: L.DeltaCoin -> Lovelace
-fromShelleyDeltaLovelace (L.DeltaCoin d) = Lovelace d
+fromShelleyDeltaLovelace :: L.DeltaCoin -> L.Coin
+fromShelleyDeltaLovelace (L.DeltaCoin d) = L.Coin d
 
 
 -- ----------------------------------------------------------------------------
@@ -152,11 +136,11 @@ instance Semigroup Quantity where
 instance Monoid Quantity where
   mempty = Quantity 0
 
-lovelaceToQuantity :: Lovelace -> Quantity
-lovelaceToQuantity (Lovelace x) = Quantity x
+lovelaceToQuantity :: L.Coin -> Quantity
+lovelaceToQuantity (L.Coin x) = Quantity x
 
-quantityToLovelace :: Quantity -> Lovelace
-quantityToLovelace (Quantity x) = Lovelace x
+quantityToLovelace :: Quantity -> L.Coin
+quantityToLovelace (Quantity x) = L.Coin x
 
 
 newtype PolicyId = PolicyId { unPolicyId :: ScriptHash }
@@ -269,31 +253,31 @@ negateLedgerValue sbe v =
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
 
-selectLovelace :: Value -> Lovelace
+selectLovelace :: Value -> L.Coin
 selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 
-lovelaceToValue :: Lovelace -> Value
+lovelaceToValue :: L.Coin -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
-lovelaceToCoin :: Lovelace -> L.Coin
-lovelaceToCoin (Lovelace ll) = L.Coin ll
+lovelaceToCoin :: L.Coin -> L.Coin
+lovelaceToCoin (L.Coin ll) = L.Coin ll
 
-coinToLovelace :: L.Coin -> Lovelace
-coinToLovelace (L.Coin ll) = Lovelace ll
+coinToLovelace :: L.Coin -> L.Coin
+coinToLovelace (L.Coin ll) = L.Coin ll
 
 coinToValue :: L.Coin -> Value
 coinToValue = lovelaceToValue . coinToLovelace
 
--- | Check if the 'Value' consists of /only/ 'Lovelace' and no other assets,
--- and if so then return the Lovelace.
+-- | Check if the 'Value' consists of /only/ 'L.Coin' and no other assets,
+-- and if so then return the L.Coin.
 --
--- See also 'selectLovelace' to select the Lovelace quantity from the Value,
+-- See also 'selectLovelace' to select the L.Coin quantity from the Value,
 -- ignoring other assets.
 --
-valueToLovelace :: Value -> Maybe Lovelace
+valueToLovelace :: Value -> Maybe L.Coin
 valueToLovelace v =
     case valueToList v of
-      []                -> Just (Lovelace 0)
+      []                -> Just (L.Coin 0)
       [(AdaAssetId, q)] -> Just (quantityToLovelace q)
       _                 -> Nothing
 
@@ -338,7 +322,7 @@ fromMaryValue (MaryValue lovelace other) =
 
 -- | Calculate cost of making a UTxO entry for a given 'Value' and
 -- mininimum UTxO value derived from the 'ProtocolParameters'
-calcMinimumDeposit :: Value -> Lovelace -> Lovelace
+calcMinimumDeposit :: Value -> L.Coin -> L.Coin
 calcMinimumDeposit v minUTxo =
   fromShelleyLovelace $ Mary.scaledMinDeposit (toMaryValue v) (toShelleyLovelace minUTxo)
 

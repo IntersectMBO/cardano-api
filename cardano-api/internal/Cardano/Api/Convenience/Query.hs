@@ -34,6 +34,7 @@ import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.CertState (DRepState (..))
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
@@ -84,8 +85,8 @@ queryStateForBalancedTx :: ()
           , EraHistory
           , SystemStart
           , Set PoolId
-          , Map StakeCredential Lovelace
-          , Map (L.Credential L.DRepRole L.StandardCrypto) Lovelace))
+          , Map StakeCredential L.Coin
+          , Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin))
 queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   sbe <- requireShelleyBasedEra era
     & onNothing (left ByronEraNotSupported)

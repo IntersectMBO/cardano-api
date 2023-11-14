@@ -21,7 +21,7 @@ where
 import           Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
 import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Keys.Shelley (Hash (StakePoolKeyHash), StakePoolKey)
-import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
+import           Cardano.Api.Value (fromShelleyDeltaLovelace, fromShelleyLovelace)
 
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoEvent (..),
                    AlonzoUtxosEvent (FailedPlutusScriptsEvent, SuccessfulPlutusScriptsEvent),
@@ -29,7 +29,7 @@ import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoE
 import           Cardano.Ledger.Alonzo.TxInfo (PlutusDebug)
 import           Cardano.Ledger.Api.Era (AllegraEra, AlonzoEra, BabbageEra, ConwayEra, MaryEra,
                    ShelleyEra)
-import qualified Cardano.Ledger.Coin as Ledger
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Ledger.Core
 import qualified Cardano.Ledger.Credential as Ledger
@@ -147,21 +147,21 @@ toLedgerEventShelley evt = case unwrapLedgerEvent evt of
 --   are inverse; a transfer of 100 ADA in either direction will result in a net
 --   movement of 0, but we include both directions for assistance in debugging.
 data MIRDistributionDetails = MIRDistributionDetails
-  { mirddReservePayouts :: Map StakeCredential Lovelace,
-    mirddTreasuryPayouts :: Map StakeCredential Lovelace,
-    mirddReservesToTreasury :: Lovelace,
-    mirddTreasuryToReserves :: Lovelace
+  { mirddReservePayouts :: Map StakeCredential L.Coin,
+    mirddTreasuryPayouts :: Map StakeCredential L.Coin,
+    mirddReservesToTreasury :: L.Coin,
+    mirddTreasuryToReserves :: L.Coin
   } deriving Show
 
 data PoolReapDetails = PoolReapDetails
   { prdEpochNo :: EpochNo,
     -- | Refunded deposits. The pools referenced are now retired, and the
     --   'StakeCredential' accounts are credited with the deposits.
-    prdRefunded :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace),
+    prdRefunded :: Map StakeCredential (Map (Hash StakePoolKey) L.Coin),
     -- | Unclaimed deposits. The 'StakeCredential' referenced in this map is not
     -- actively registered at the time of the pool reaping, and as such the
     -- funds are returned to the treasury.
-    prdUnclaimed :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
+    prdUnclaimed :: Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
   } deriving Show
 
 --------------------------------------------------------------------------------
@@ -199,10 +199,10 @@ pattern LEMirTransfer ::
     Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ ShelleyNewEpochEvent ledgerera,
     Event (Ledger.Core.EraRule "MIR" ledgerera) ~ ShelleyMirEvent ledgerera
   ) =>
-  Map StakeCredential Lovelace ->
-  Map StakeCredential Lovelace ->
-  Lovelace ->
-  Lovelace ->
+  Map StakeCredential L.Coin ->
+  Map StakeCredential L.Coin ->
+  L.Coin ->
+  L.Coin ->
   AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
 pattern LEMirTransfer rp tp rtt ttr <-
   ShelleyLedgerEventTICK
@@ -226,8 +226,8 @@ pattern LERetiredPools ::
     Event (Ledger.Core.EraRule "EPOCH" ledgerera) ~ ShelleyEpochEvent ledgerera,
     Event (Ledger.Core.EraRule "POOLREAP" ledgerera) ~ ShelleyPoolreapEvent ledgerera
   ) =>
-  Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
-  Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
+  Map StakeCredential (Map (Hash StakePoolKey) L.Coin) ->
+  Map StakeCredential (Map (Hash StakePoolKey) L.Coin) ->
   EpochNo ->
   AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
 pattern LERetiredPools r u e <-
@@ -305,8 +305,8 @@ pattern LEPlutusFailure ds <-
       )
 
 convertRetiredPoolsMap ::
-     Map (Ledger.StakeCredential StandardCrypto) (Map (Ledger.KeyHash Ledger.StakePool StandardCrypto) Ledger.Coin)
-  -> Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
+     Map (Ledger.StakeCredential StandardCrypto) (Map (Ledger.KeyHash Ledger.StakePool StandardCrypto) L.Coin)
+  -> Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
 convertRetiredPoolsMap =
   Map.mapKeys fromShelleyStakeCredential
     . fmap (Map.mapKeys StakePoolKeyHash . fmap fromShelleyLovelace)

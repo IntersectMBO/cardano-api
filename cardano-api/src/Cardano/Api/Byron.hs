@@ -28,7 +28,6 @@ module Cardano.Api.Byron
     TxIn(TxIn),
     TxOut(TxOut),
     TxIx(TxIx),
-    Lovelace(Lovelace),
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.

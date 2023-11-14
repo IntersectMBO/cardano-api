@@ -5,7 +5,8 @@ module Cardano.Api.Rewards
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Value
+
+import qualified Cardano.Ledger.Coin as L
 
 import           Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -18,7 +19,7 @@ import qualified Data.Vector as Vector
 -- delegate to and their reward account balance.
 -- TODO: Move to cardano-api
 newtype DelegationsAndRewards
-  = DelegationsAndRewards (Map StakeAddress Lovelace, Map StakeAddress PoolId)
+  = DelegationsAndRewards (Map StakeAddress L.Coin, Map StakeAddress PoolId)
     deriving (Eq, Show)
 
 
@@ -27,7 +28,7 @@ instance ToJSON DelegationsAndRewards where
       Aeson.Array . Vector.fromList
         . map delegAndRwdToJson $ mergeDelegsAndRewards delegsAndRwds
     where
-      delegAndRwdToJson :: (StakeAddress, Maybe Lovelace, Maybe PoolId) -> Aeson.Value
+      delegAndRwdToJson :: (StakeAddress, Maybe L.Coin, Maybe PoolId) -> Aeson.Value
       delegAndRwdToJson (addr, mRewards, mPoolId) =
         Aeson.object
           [ "address" .= addr
@@ -41,7 +42,7 @@ instance FromJSON DelegationsAndRewards where
     decoded <- mapM decodeObject vals
     pure $ zipper decoded
     where
-      zipper :: [(StakeAddress, Maybe Lovelace, Maybe PoolId)]
+      zipper :: [(StakeAddress, Maybe L.Coin, Maybe PoolId)]
               -> DelegationsAndRewards
       zipper l = do
         let maps = [ ( maybe mempty (Map.singleton sa) delegAmt
@@ -56,7 +57,7 @@ instance FromJSON DelegationsAndRewards where
               maps
 
       decodeObject :: Aeson.Value
-                   -> Aeson.Parser (StakeAddress, Maybe Lovelace, Maybe PoolId)
+                   -> Aeson.Parser (StakeAddress, Maybe L.Coin, Maybe PoolId)
       decodeObject  = withObject "DelegationsAndRewards" $ \o -> do
         address <- o .: "address"
         delegation <- o .:? "delegation"
@@ -64,7 +65,7 @@ instance FromJSON DelegationsAndRewards where
         pure (address, rewardAccountBalance, delegation)
 
 
-mergeDelegsAndRewards :: DelegationsAndRewards -> [(StakeAddress, Maybe Lovelace, Maybe PoolId)]
+mergeDelegsAndRewards :: DelegationsAndRewards -> [(StakeAddress, Maybe L.Coin, Maybe PoolId)]
 mergeDelegsAndRewards (DelegationsAndRewards (rewardsMap, delegMap)) =
  [ (stakeAddr, Map.lookup stakeAddr rewardsMap, Map.lookup stakeAddr delegMap)
  | stakeAddr <- nub $ Map.keys rewardsMap ++ Map.keys delegMap

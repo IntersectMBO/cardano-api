@@ -244,10 +244,6 @@ module Cardano.Api (
     StakeKey,
     StakeExtendedKey,
 
-    -- * Currency values
-    -- ** Ada \/ Lovelace
-    Lovelace(..),
-
     -- ** Multi-asset values
     Quantity(..),
     PolicyId(..),

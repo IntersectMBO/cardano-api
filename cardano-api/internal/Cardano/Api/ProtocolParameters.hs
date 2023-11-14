@@ -126,6 +126,7 @@ import           Cardano.Ledger.Api.PParams
 import qualified Cardano.Ledger.Babbage.Core as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
@@ -515,29 +516,29 @@ data ProtocolParameters =
 
        -- | The constant factor for the minimum fee calculation.
        --
-       protocolParamTxFeeFixed :: Lovelace,
+       protocolParamTxFeeFixed :: L.Coin,
 
        -- | Per byte linear factor for the minimum fee calculation.
        --
-       protocolParamTxFeePerByte :: Lovelace,
+       protocolParamTxFeePerByte :: L.Coin,
 
        -- | The minimum permitted value for new UTxO entries, ie for
        -- transaction outputs.
        --
-       protocolParamMinUTxOValue :: Maybe Lovelace,
+       protocolParamMinUTxOValue :: Maybe L.Coin,
 
        -- | The deposit required to register a stake address.
        --
-       protocolParamStakeAddressDeposit :: Lovelace,
+       protocolParamStakeAddressDeposit :: L.Coin,
 
        -- | The deposit required to register a stake pool.
        --
-       protocolParamStakePoolDeposit :: Lovelace,
+       protocolParamStakePoolDeposit :: L.Coin,
 
        -- | The minimum value that stake pools are permitted to declare for
        -- their cost parameter.
        --
-       protocolParamMinPoolCost :: Lovelace,
+       protocolParamMinPoolCost :: L.Coin,
 
        -- | The maximum number of epochs into the future that stake pools
        -- are permitted to schedule a retirement.
@@ -608,7 +609,7 @@ data ProtocolParameters =
        -- | Cost in ada per byte of UTxO storage.
        --
        -- /Introduced in Babbage/
-       protocolParamUTxOCostPerByte :: Maybe Lovelace
+       protocolParamUTxOCostPerByte :: Maybe L.Coin
 
     }
   deriving (Eq, Generic, Show)
@@ -743,29 +744,29 @@ data ProtocolParametersUpdate =
 
        -- | The constant factor for the minimum fee calculation.
        --
-       protocolUpdateTxFeeFixed :: Maybe Lovelace,
+       protocolUpdateTxFeeFixed :: Maybe L.Coin,
 
        -- | The linear factor for the minimum fee calculation.
        --
-       protocolUpdateTxFeePerByte :: Maybe Lovelace,
+       protocolUpdateTxFeePerByte :: Maybe L.Coin,
 
        -- | The minimum permitted value for new UTxO entries, ie for
        -- transaction outputs.
        --
-       protocolUpdateMinUTxOValue :: Maybe Lovelace,
+       protocolUpdateMinUTxOValue :: Maybe L.Coin,
 
        -- | The deposit required to register a stake address.
        --
-       protocolUpdateStakeAddressDeposit :: Maybe Lovelace,
+       protocolUpdateStakeAddressDeposit :: Maybe L.Coin,
 
        -- | The deposit required to register a stake pool.
        --
-       protocolUpdateStakePoolDeposit :: Maybe Lovelace,
+       protocolUpdateStakePoolDeposit :: Maybe L.Coin,
 
        -- | The minimum value that stake pools are permitted to declare for
        -- their cost parameter.
        --
-       protocolUpdateMinPoolCost :: Maybe Lovelace,
+       protocolUpdateMinPoolCost :: Maybe L.Coin,
 
        -- | The maximum number of epochs into the future that stake pools
        -- are permitted to schedule a retirement.
@@ -838,7 +839,7 @@ data ProtocolParametersUpdate =
        -- | Cost in ada per byte of UTxO storage.
        --
        -- /Introduced in Babbage/
-       protocolUpdateUTxOCostPerByte :: Maybe Lovelace
+       protocolUpdateUTxOCostPerByte :: Maybe L.Coin
     }
   deriving (Eq, Show)
 
@@ -1010,7 +1011,7 @@ fromLedgerNonce (Ledger.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
 -- Script execution unit prices and cost models
 --
 
--- | The prices for 'ExecutionUnits' as a fraction of a 'Lovelace'.
+-- | The prices for 'ExecutionUnits' as a fraction of a 'L.Coin'.
 --
 -- These are used to determine the fee for the use of a script within a
 -- transaction, based on the 'ExecutionUnits' needed by the use of the script.

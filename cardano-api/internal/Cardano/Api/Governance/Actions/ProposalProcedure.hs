@@ -26,6 +26,7 @@ import           Cardano.Api.Value
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.Address as L
 import           Cardano.Ledger.BaseTypes
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
 import qualified Cardano.Ledger.Conway.Governance as Ledger
@@ -57,7 +58,7 @@ data GovernanceAction era
       (Map (Hash CommitteeColdKey) EpochNo) -- ^ New committee members with epoch number when each of them expires
       Rational -- ^ Quorum of the committee that is necessary for a successful vote
   | InfoAct
-  | TreasuryWithdrawal [(Network, StakeCredential, Lovelace)]
+  | TreasuryWithdrawal [(Network, StakeCredential, L.Coin)]
   | InitiateHardfork
       (StrictMaybe (Ledger.PrevGovActionId Ledger.HardForkPurpose StandardCrypto))
       ProtVer
@@ -156,7 +157,7 @@ instance HasTypeProxy era => HasTypeProxy (Proposal era) where
 createProposalProcedure
   :: ShelleyBasedEra era
   -> Network
-  -> Lovelace -- ^ Deposit
+  -> L.Coin -- ^ Deposit
   -> Hash StakeKey -- ^ Return address
   -> GovernanceAction era
   -> Ledger.Anchor StandardCrypto
@@ -173,7 +174,7 @@ createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
 fromProposalProcedure
   :: ShelleyBasedEra era
   -> Proposal era
-  -> (Lovelace, Hash StakeKey, GovernanceAction era)
+  -> (L.Coin, Hash StakeKey, GovernanceAction era)
 fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints sbe
     ( fromShelleyLovelace $ Gov.pProcDeposit pp

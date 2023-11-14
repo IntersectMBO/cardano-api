@@ -89,6 +89,8 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
 
+import qualified Cardano.Ledger.Coin as L
+
 import           Data.ByteString (ByteString)
 import qualified Data.Foldable as Foldable
 import           Data.IP (IPv4, IPv6)
@@ -189,10 +191,10 @@ data StakePoolParameters =
      StakePoolParameters {
        stakePoolId            :: PoolId,
        stakePoolVRF           :: Hash VrfKey,
-       stakePoolCost          :: Lovelace,
+       stakePoolCost          :: L.Coin,
        stakePoolMargin        :: Rational,
        stakePoolRewardAccount :: StakeAddress,
-       stakePoolPledge        :: Lovelace,
+       stakePoolPledge        :: L.Coin,
        stakePoolOwners        :: [Hash StakeKey],
        stakePoolRelays        :: [StakePoolRelay],
        stakePoolMetadata      :: Maybe StakePoolMetadataReference
@@ -241,7 +243,7 @@ data DRepMetadataReference =
 data StakeAddressRequirements era where
   StakeAddrRegistrationConway
     :: ConwayEraOnwards era
-    -> Lovelace
+    -> L.Coin
     -> StakeCredential
     -> StakeAddressRequirements era
 
@@ -383,7 +385,7 @@ data DRepRegistrationRequirements era where
   DRepRegistrationRequirements
     :: ConwayEraOnwards era
     -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
-    -> Lovelace
+    -> L.Coin
     -> DRepRegistrationRequirements era
 
 
@@ -437,7 +439,7 @@ data DRepUnregistrationRequirements era where
   DRepUnregistrationRequirements
     :: ConwayEraOnwards era
     -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
-    -> Lovelace
+    -> L.Coin
     -> DRepUnregistrationRequirements era
 
 makeDrepUnregistrationCertificate :: ()
@@ -453,7 +455,7 @@ makeStakeAddressAndDRepDelegationCertificate :: ()
   => ConwayEraOnwards era
   -> StakeCredential
   -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
-  -> Lovelace
+  -> L.Coin
   -> Certificate era
 makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
   conwayEraOnwardsConstraints w

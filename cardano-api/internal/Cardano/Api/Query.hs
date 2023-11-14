@@ -101,6 +101,7 @@ import qualified Cardano.Ledger.Api.State.Query as L
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.CertState as L
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
@@ -262,7 +263,7 @@ data QueryInShelleyBasedEra era result where
   QueryStakeAddresses
     :: Set StakeCredential
     -> NetworkId
-    -> QueryInShelleyBasedEra era (Map StakeAddress Lovelace, Map StakeAddress PoolId)
+    -> QueryInShelleyBasedEra era (Map StakeAddress L.Coin, Map StakeAddress PoolId)
 
   QueryStakePools
     :: QueryInShelleyBasedEra era (Set PoolId)
@@ -298,7 +299,7 @@ data QueryInShelleyBasedEra era result where
 
   QueryStakeDelegDeposits
     :: Set StakeCredential
-    -> QueryInShelleyBasedEra era (Map StakeCredential Lovelace)
+    -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
 
   QueryConstitution
     :: QueryInShelleyBasedEra era (Maybe (L.Constitution (ShelleyLedgerEra era)))
@@ -312,7 +313,7 @@ data QueryInShelleyBasedEra era result where
 
   QueryDRepStakeDistr
     :: Set (Ledger.DRep StandardCrypto)
-    -> QueryInShelleyBasedEra era (Map (Ledger.DRep StandardCrypto) Lovelace)
+    -> QueryInShelleyBasedEra era (Map (Ledger.DRep StandardCrypto) L.Coin)
 
   QueryCommitteeMembersState
     :: Set (Shelley.Credential Shelley.ColdCommitteeRole StandardCrypto)
@@ -536,7 +537,7 @@ fromShelleyDelegations =
   . Map.toList
 
 fromShelleyRewardAccounts :: Shelley.RewardAccounts Consensus.StandardCrypto
-                          -> Map StakeCredential Lovelace
+                          -> Map StakeCredential L.Coin
 fromShelleyRewardAccounts =
     --TODO: write an appropriate property to show it is safe to use
     -- Map.fromListAsc or to use Map.mapKeysMonotonic
