@@ -57,8 +57,6 @@ module Cardano.Api.Shelley
     toShelleyTxOut,
     fromShelleyTxOut,
     TxIx(TxIx),
-    toShelleyLovelace,
-    fromShelleyLovelace,
     toMaryValue,
     fromMaryValue,
     calcMinimumDeposit,

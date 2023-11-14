@@ -21,7 +21,6 @@ import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxIn
-import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.Address as L
@@ -92,7 +91,7 @@ toGovernanceAction sbe =
     InfoAct ->
       Gov.InfoAction
     TreasuryWithdrawal withdrawals ->
-      let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
+      let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), l) | (nw,sc,l) <- withdrawals]
       in Gov.TreasuryWithdrawals m
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
@@ -113,7 +112,7 @@ fromGovernanceAction = \case
   Gov.HardForkInitiation prevGovId pVer ->
     InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap ->
-    let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), fromShelleyLovelace coin)
+    let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), coin)
               | (rwdAcnt, coin) <- Map.toList withdrawlMap
               ]
     in TreasuryWithdrawal res
@@ -165,7 +164,7 @@ createProposalProcedure
 createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
   shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
-      { Gov.pProcDeposit = toShelleyLovelace dep
+      { Gov.pProcDeposit = dep
       , Gov.pProcReturnAddr = L.mkRwdAcnt nw (L.KeyHashObj retAddrh)
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
       , Gov.pProcAnchor = anchor
@@ -177,7 +176,7 @@ fromProposalProcedure
   -> (L.Coin, Hash StakeKey, GovernanceAction era)
 fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints sbe
-    ( fromShelleyLovelace $ Gov.pProcDeposit pp
+    ( Gov.pProcDeposit pp
     , case fromShelleyStakeCredential (L.getRwdCred (Gov.pProcReturnAddr pp)) of
           StakeCredentialByKey keyhash -> keyhash
           StakeCredentialByScript _scripthash ->

@@ -47,15 +47,11 @@ module Cardano.Api.Value
     -- * Internal conversion functions
   , toByronLovelace
   , fromByronLovelace
-  , toShelleyLovelace
-  , fromShelleyLovelace
   , fromShelleyDeltaLovelace
   , toMaryValue
   , fromMaryValue
   , fromLedgerValue
-  , lovelaceToCoin
   , toLedgerValue
-  , coinToLovelace
 
     -- * Data family instances
   , AsType(..)
@@ -110,13 +106,6 @@ toByronLovelace (L.Coin x) =
 
 fromByronLovelace :: Byron.Lovelace -> L.Coin
 fromByronLovelace = L.Coin . Byron.lovelaceToInteger
-
-toShelleyLovelace :: L.Coin -> L.Coin
-toShelleyLovelace (L.Coin l) = L.Coin l
---TODO: validate bounds
-
-fromShelleyLovelace :: L.Coin -> L.Coin
-fromShelleyLovelace (L.Coin l) = L.Coin l
 
 fromShelleyDeltaLovelace :: L.DeltaCoin -> L.Coin
 fromShelleyDeltaLovelace (L.DeltaCoin d) = L.Coin d
@@ -259,14 +248,8 @@ selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 lovelaceToValue :: L.Coin -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
-lovelaceToCoin :: L.Coin -> L.Coin
-lovelaceToCoin (L.Coin ll) = L.Coin ll
-
-coinToLovelace :: L.Coin -> L.Coin
-coinToLovelace (L.Coin ll) = L.Coin ll
-
 coinToValue :: L.Coin -> Value
-coinToValue = lovelaceToValue . coinToLovelace
+coinToValue = lovelaceToValue -- jky
 
 -- | Check if the 'Value' consists of /only/ 'L.Coin' and no other assets,
 -- and if so then return the L.Coin.
@@ -323,8 +306,8 @@ fromMaryValue (MaryValue lovelace other) =
 -- | Calculate cost of making a UTxO entry for a given 'Value' and
 -- mininimum UTxO value derived from the 'ProtocolParameters'
 calcMinimumDeposit :: Value -> L.Coin -> L.Coin
-calcMinimumDeposit v minUTxo =
-  fromShelleyLovelace $ Mary.scaledMinDeposit (toMaryValue v) (toShelleyLovelace minUTxo)
+calcMinimumDeposit v =
+  Mary.scaledMinDeposit (toMaryValue v)
 
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation

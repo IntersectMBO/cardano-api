@@ -261,7 +261,7 @@ makeStakeAddressRegistrationCertificate = \case
   StakeAddrRegistrationConway cOnwards deposit scred ->
     conwayEraOnwardsConstraints cOnwards
       $ ConwayCertificate cOnwards
-      $ Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) (toShelleyLovelace deposit)
+      $ Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
 makeStakeAddressUnregistrationCertificate :: StakeAddressRequirements era -> Certificate era
 makeStakeAddressUnregistrationCertificate req =
@@ -269,7 +269,7 @@ makeStakeAddressUnregistrationCertificate req =
     StakeAddrRegistrationConway cOnwards deposit scred ->
       conwayEraOnwardsConstraints cOnwards
         $ ConwayCertificate cOnwards
-        $ Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) (toShelleyLovelace deposit)
+        $ Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
     StakeAddrRegistrationPreConway atMostEra scred ->
       shelleyToBabbageEraConstraints atMostEra
@@ -396,10 +396,7 @@ makeDrepRegistrationCertificate :: ()
 makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcred deposit) anchor =
   ConwayCertificate conwayOnwards
     . Ledger.ConwayTxCertGov
-    $ Ledger.ConwayRegDRep
-        vcred
-        (toShelleyLovelace deposit)
-        (noInlineMaybeToStrictMaybe anchor)
+    $ Ledger.ConwayRegDRep vcred deposit (noInlineMaybeToStrictMaybe anchor)
 
 data CommitteeHotKeyAuthorizationRequirements era where
   CommitteeHotKeyAuthorizationRequirements
@@ -448,8 +445,7 @@ makeDrepUnregistrationCertificate :: ()
 makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards vcred deposit) =
   ConwayCertificate conwayOnwards
     . Ledger.ConwayTxCertGov
-    . Ledger.ConwayUnRegDRep vcred
-    $ toShelleyLovelace deposit
+    $ Ledger.ConwayUnRegDRep vcred deposit
 
 makeStakeAddressAndDRepDelegationCertificate :: ()
   => ConwayEraOnwards era
@@ -460,10 +456,7 @@ makeStakeAddressAndDRepDelegationCertificate :: ()
 makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
   conwayEraOnwardsConstraints w
     $ ConwayCertificate w
-    $ Ledger.mkRegDepositDelegTxCert
-        (toShelleyStakeCredential cred)
-        delegatee
-        (toShelleyLovelace deposit)
+    $ Ledger.mkRegDepositDelegTxCert (toShelleyStakeCredential cred) delegatee deposit
 
 -- ----------------------------------------------------------------------------
 -- Helper functions
@@ -588,8 +581,8 @@ toShelleyPoolParams StakePoolParameters {
     Ledger.PoolParams {
       Ledger.ppId      = poolkh
     , Ledger.ppVrf     = vrfkh
-    , Ledger.ppPledge  = toShelleyLovelace stakePoolPledge
-    , Ledger.ppCost    = toShelleyLovelace stakePoolCost
+    , Ledger.ppPledge  = stakePoolPledge
+    , Ledger.ppCost    = stakePoolCost
     , Ledger.ppMargin  = fromMaybe
                                (error "toShelleyPoolParams: invalid PoolMargin")
                                (Ledger.boundRational stakePoolMargin)
@@ -655,10 +648,10 @@ fromShelleyPoolParams
     StakePoolParameters {
       stakePoolId            = StakePoolKeyHash ppId
     , stakePoolVRF           = VrfKeyHash ppVrf
-    , stakePoolCost          = fromShelleyLovelace ppCost
+    , stakePoolCost          = ppCost
     , stakePoolMargin        = Ledger.unboundRational ppMargin
     , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAcnt
-    , stakePoolPledge        = fromShelleyLovelace ppPledge
+    , stakePoolPledge        = ppPledge
     , stakePoolOwners        = map StakeKeyHash (Set.toList ppOwners)
     , stakePoolRelays        = map fromShelleyStakePoolRelay
                                    (Foldable.toList ppRelays)

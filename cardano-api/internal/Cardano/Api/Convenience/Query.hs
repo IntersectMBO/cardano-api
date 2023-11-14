@@ -30,7 +30,6 @@ import           Cardano.Api.Query
 import           Cardano.Api.Query.Expr
 import           Cardano.Api.TxBody
 import           Cardano.Api.Utils
-import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.CertState (DRepState (..))
@@ -120,7 +119,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
 
   drepDelegDeposits <-
     forEraInEon @ConwayEraOnwards era (pure mempty) $ \_ ->
-      Map.map (fromShelleyLovelace . drepDeposit) <$>
+      Map.map drepDeposit <$>
       (lift (queryDRepState sbe drepCreds)
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch))

@@ -93,7 +93,6 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query.Types
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.TxBody
-import           Cardano.Api.Value
 
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Api as L
@@ -542,7 +541,7 @@ fromShelleyRewardAccounts =
     --TODO: write an appropriate property to show it is safe to use
     -- Map.fromListAsc or to use Map.mapKeysMonotonic
     Map.fromList
-  . map (bimap fromShelleyStakeCredential fromShelleyLovelace)
+  . map (first fromShelleyStakeCredential)
   . Map.toList
 
 
@@ -908,8 +907,7 @@ fromConsensusQueryResultShelleyBased _ QueryStakeSnapshot{} q' r' =
 
 fromConsensusQueryResultShelleyBased _ QueryStakeDelegDeposits{} q' stakeCreds' =
     case q' of
-      Consensus.GetStakeDelegDeposits{} -> Map.map fromShelleyLovelace
-                                         . Map.mapKeysMonotonic fromShelleyStakeCredential
+      Consensus.GetStakeDelegDeposits{} -> Map.mapKeysMonotonic fromShelleyStakeCredential
                                          $ stakeCreds'
       _                                 -> fromConsensusQueryResultMismatch
 
@@ -925,7 +923,7 @@ fromConsensusQueryResultShelleyBased _ QueryDRepState{} q' drepState'  =
 
 fromConsensusQueryResultShelleyBased _ QueryDRepStakeDistr{} q' stakeDistr' =
   case q' of
-    Consensus.GetDRepStakeDistr{} -> Map.map fromShelleyLovelace stakeDistr'
+    Consensus.GetDRepStakeDistr{} -> stakeDistr'
     _                             -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased _ QueryCommitteeMembersState{} q' committeeMembersState' =

@@ -21,7 +21,7 @@ where
 import           Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
 import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Keys.Shelley (Hash (StakePoolKeyHash), StakePoolKey)
-import           Cardano.Api.Value (fromShelleyDeltaLovelace, fromShelleyLovelace)
+import           Cardano.Api.Value (fromShelleyDeltaLovelace)
 
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoEvent (..),
                    AlonzoUtxosEvent (FailedPlutusScriptsEvent, SuccessfulPlutusScriptsEvent),
@@ -210,8 +210,8 @@ pattern LEMirTransfer rp tp rtt ttr <-
         ( MirEvent
             ( MirTransfer
                 ( InstantaneousRewards
-                    (Map.mapKeys fromShelleyStakeCredential . fmap fromShelleyLovelace -> rp)
-                    (Map.mapKeys fromShelleyStakeCredential . fmap fromShelleyLovelace -> tp)
+                    (Map.mapKeys fromShelleyStakeCredential -> rp)
+                    (Map.mapKeys fromShelleyStakeCredential -> tp)
                     (fromShelleyDeltaLovelace -> rtt)
                     (fromShelleyDeltaLovelace -> ttr)
                   )
@@ -309,4 +309,4 @@ convertRetiredPoolsMap ::
   -> Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
 convertRetiredPoolsMap =
   Map.mapKeys fromShelleyStakeCredential
-    . fmap (Map.mapKeys StakePoolKeyHash . fmap fromShelleyLovelace)
+    . fmap (Map.mapKeys StakePoolKeyHash)

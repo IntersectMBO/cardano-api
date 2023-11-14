@@ -218,7 +218,7 @@ evaluateTransactionFee sbe pp txbody keywitcount _byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ByronTx w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
-      ShelleyTx _ tx -> fromShelleyLovelace $ Ledger.evaluateTransactionFee pp tx keywitcount
+      ShelleyTx _ tx -> Ledger.evaluateTransactionFee pp tx keywitcount
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.
@@ -585,13 +585,11 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
     lookupDelegDeposit ::
       Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe L.Coin
     lookupDelegDeposit stakeCred =
-      toShelleyLovelace <$>
       Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
     lookupDRepDeposit ::
       Ledger.Credential 'Ledger.DRepRole L.StandardCrypto -> Maybe L.Coin
     lookupDRepDeposit drepCred =
-      toShelleyLovelace <$>
       Map.lookup drepCred drepDelegDeposits
 
 -- ----------------------------------------------------------------------------
@@ -816,7 +814,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
           TxMintNone -> mempty
           TxMintValue w v _ -> toLedgerValue w v
     let change = mconcat [incoming, minted, negateLedgerValue sbe outgoing]
-    let changeWithMaxLovelace = change & A.adaAssetL sbe .~ lovelaceToCoin maxLovelaceChange
+    let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
     let changeTxOut = forShelleyBasedEraInEon sbe
           (lovelaceToTxOutValue sbe maxLovelaceChange)
           (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
@@ -934,8 +932,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
         let txOuts = catMaybes [ Map.lookup txin utxo' | txin <- collIns]
             totalCollateralLovelace = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) txOuts
             requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
-            totalCollateral = TxTotalCollateral retColSup . fromShelleyLovelace
-                                                          . L.rationalToCoinViaCeiling
+            totalCollateral = TxTotalCollateral retColSup . L.rationalToCoinViaCeiling
                                                           $ reqAmt % 100
             -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
             -- We choose to multiply 100 rather than divide by 100 to make the calculation
@@ -943,7 +940,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
             -- and round up.
             enoughCollateral = totalCollateralLovelace * 100 >= requiredCollateral
             L.Coin amt = totalCollateralLovelace * 100 - requiredCollateral
-            returnCollateral = fromShelleyLovelace . L.rationalToCoinViaFloor $ amt % 100
+            returnCollateral = L.rationalToCoinViaFloor $ amt % 100
 
         case (txReturnCollateral, txTotalCollateral) of
 #if MIN_VERSION_base(4,16,0)
@@ -1164,4 +1161,4 @@ calculateMinimumUTxO
 calculateMinimumUTxO sbe txout pp =
   shelleyBasedEraConstraints sbe
     $ let txOutWithMinCoin = L.setMinCoinTxOut pp (toShelleyTxOutAny sbe txout)
-      in fromShelleyLovelace (txOutWithMinCoin ^. L.coinTxOutL)
+      in txOutWithMinCoin ^. L.coinTxOutL
