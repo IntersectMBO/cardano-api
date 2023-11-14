@@ -20,6 +20,7 @@ import qualified Cardano.Ledger.Alonzo.PParams as Ledger
 import qualified Cardano.Ledger.Babbage.PParams as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -55,6 +56,16 @@ deriving instance Data DecoderError
 deriving instance Data CBOR.DeserialiseFailure
 deriving instance Data Bech32.DecodingError
 deriving instance Data Bech32.CharPosition
+
+-- | These instances originally existed on the Lovelace type.
+-- As the Lovelace type is deleted and we use L.Coin instead,
+-- these instances are added to L.Coin.  The instances are
+-- purely for the convenience of writing expressions involving
+-- L.Coin but be aware that not all uses of these typeclasses
+-- are valid.
+deriving newtype instance Real L.Coin
+deriving newtype instance Integral L.Coin
+deriving newtype instance Num L.Coin
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
