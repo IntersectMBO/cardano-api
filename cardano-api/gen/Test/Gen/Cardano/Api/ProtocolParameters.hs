@@ -37,10 +37,12 @@ genCommonProtocolParametersUpdate =
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
-    <*> genStrictMaybe Q.arbitrary
 
 genDeprecatedAfterMaryPParams :: MonadGen m => m (DeprecatedAfterMaryPParams era)
 genDeprecatedAfterMaryPParams = DeprecatedAfterMaryPParams <$> genStrictMaybe Q.arbitrary
+
+genDeprecatedAfterBabbagePParams :: MonadGen m => m (DeprecatedAfterBabbagePParams era)
+genDeprecatedAfterBabbagePParams = DeprecatedAfterBabbagePParams <$> genStrictMaybe Q.arbitrary
 
 genShelleyToAlonzoPParams :: MonadGen m => m (ShelleyToAlonzoPParams era)
 genShelleyToAlonzoPParams =
@@ -79,6 +81,7 @@ genShelleyEraBasedProtocolParametersUpdate =
   ShelleyEraBasedProtocolParametersUpdate
      <$> genCommonProtocolParametersUpdate
      <*> genDeprecatedAfterMaryPParams
+     <*> genDeprecatedAfterBabbagePParams
      <*> genShelleyToAlonzoPParams
 
 genAllegraEraBasedProtocolParametersUpdate :: MonadGen m => m (EraBasedProtocolParametersUpdate AllegraEra)
@@ -87,6 +90,7 @@ genAllegraEraBasedProtocolParametersUpdate =
      <$> genCommonProtocolParametersUpdate
      <*> genDeprecatedAfterMaryPParams
      <*> genShelleyToAlonzoPParams
+     <*> genDeprecatedAfterBabbagePParams
 
 genMaryEraBasedProtocolParametersUpdate :: MonadGen m => m (EraBasedProtocolParametersUpdate MaryEra)
 genMaryEraBasedProtocolParametersUpdate =
@@ -94,6 +98,7 @@ genMaryEraBasedProtocolParametersUpdate =
      <$> genCommonProtocolParametersUpdate
      <*> genDeprecatedAfterMaryPParams
      <*> genShelleyToAlonzoPParams
+     <*> genDeprecatedAfterBabbagePParams
 
 genAlonzoEraBasedProtocolParametersUpdate :: MonadGen m => m (EraBasedProtocolParametersUpdate AlonzoEra)
 genAlonzoEraBasedProtocolParametersUpdate =
@@ -101,12 +106,14 @@ genAlonzoEraBasedProtocolParametersUpdate =
      <$> genCommonProtocolParametersUpdate
      <*> genShelleyToAlonzoPParams
      <*> genAlonzoOnwardsPParams
+     <*> genDeprecatedAfterBabbagePParams
 
 genBabbageEraBasedProtocolParametersUpdate :: MonadGen m => m (EraBasedProtocolParametersUpdate BabbageEra)
 genBabbageEraBasedProtocolParametersUpdate =
   BabbageEraBasedProtocolParametersUpdate
      <$> genCommonProtocolParametersUpdate
      <*> genAlonzoOnwardsPParams
+     <*> genDeprecatedAfterBabbagePParams
      <*> genIntroducedInBabbagePParams
 
 genConwayEraBasedProtocolParametersUpdate :: MonadGen m => m (EraBasedProtocolParametersUpdate ConwayEra)

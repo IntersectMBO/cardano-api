@@ -37,10 +37,11 @@ library
   hs-source-dirs:       src
   -- These modules should match those in cardano-api:gen
   exposed-modules:      Test.Gen.Cardano.Api.Empty
-  reexported-modules:   Test.Gen.Cardano.Api,
-                        Test.Gen.Cardano.Api.Metadata,
-                        Test.Gen.Cardano.Api.Typed,
-                        Test.Gen.Cardano.Crypto.Seed,
-                        Test.Hedgehog.Golden.ErrorMessage,
-                        Test.Hedgehog.Roundtrip.Bech32,
-                        Test.Hedgehog.Roundtrip.CBOR,
+  reexported-modules:   Test.Gen.Cardano.Api
+                      , Test.Gen.Cardano.Api.Metadata
+                      , Test.Gen.Cardano.Api.ProtocolParameters
+                      , Test.Gen.Cardano.Api.Typed
+                      , Test.Gen.Cardano.Crypto.Seed
+                      , Test.Hedgehog.Golden.ErrorMessage
+                      , Test.Hedgehog.Roundtrip.Bech32
+                      , Test.Hedgehog.Roundtrip.CBOR
