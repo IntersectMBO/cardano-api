@@ -63,7 +63,7 @@ prop_roundtrip_txbodycontent_txouts =
   matchRefScript :: MonadTest m => (ReferenceScript BabbageEra, ReferenceScript BabbageEra) -> m ()
   matchRefScript (a, b)
     | isSimpleScriptV2 a && isSimpleScriptV2 b =
-      refScriptToShelleyScript BabbageEra a === refScriptToShelleyScript BabbageEra b
+      refScriptToShelleyScript ShelleyBasedEraBabbage a === refScriptToShelleyScript ShelleyBasedEraBabbage b
     | otherwise =
       a === b
 

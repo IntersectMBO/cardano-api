@@ -697,20 +697,19 @@ toShelleyTxOut :: forall era ledgerera.
                => ShelleyBasedEra era
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
-toShelleyTxOut sbe = \case -- jky simplify
+toShelleyTxOut _ = \case -- jky simplify
   TxOut _ (TxOutValueByron _) _ _ ->
     -- TODO: Temporary until we have basic tx
     -- construction functionality
     error "toShelleyTxOut: Expected a Shelley value"
 
-  TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
-    let cEra = shelleyBasedToCardanoEra sbe in
+  TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
     caseShelleyToAlonzoOrBabbageEraOnwards
       (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
       (const $
         L.mkBasicTxOut (toShelleyAddr addr) value
           & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
-          & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
+          & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
       )
       sbe
 
@@ -3101,20 +3100,19 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 => ShelleyBasedEra era
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
-toShelleyTxOutAny sbe = \case
+toShelleyTxOutAny _ = \case
   TxOut _ (TxOutValueByron _) _ _ ->
     -- TODO: Temporary until we have basic tx
     -- construction functionality
     error "toShelleyTxOutAny: Expected a Shelley value"
 
-  TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
-    let cEra = shelleyBasedToCardanoEra sbe in
+  TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
     caseShelleyToAlonzoOrBabbageEraOnwards
       (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
       (const $
         L.mkBasicTxOut (toShelleyAddr addr) value
           & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata
-          & L.referenceScriptTxOutL .~ refScriptToShelleyScript cEra refScript
+          & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
       )
       sbe
 

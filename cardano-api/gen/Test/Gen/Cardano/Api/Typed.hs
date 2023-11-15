@@ -312,8 +312,7 @@ genScriptInEra era =
     Gen.choice
       [ ScriptInEra langInEra <$> genScript lang
       | AnyScriptLanguage lang <- [minBound..maxBound]
-        -- TODO: scriptLanguageSupportedInEra should be parameterized on ShelleyBasedEra
-      , Just langInEra <- [scriptLanguageSupportedInEra (toCardanoEra era) lang] ]
+      , Just langInEra <- [scriptLanguageSupportedInEra era lang] ]
 
 genScriptHash :: Gen ScriptHash
 genScriptHash = do
