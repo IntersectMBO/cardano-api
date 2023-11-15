@@ -578,45 +578,45 @@ instance HasTypeProxy era => HasTypeProxy (ScriptInEra era) where
 -- | Check if a given script language is supported in a given era, and if so
 -- return the evidence.
 --
-scriptLanguageSupportedInEra :: CardanoEra era
+scriptLanguageSupportedInEra :: ShelleyBasedEra era
                              -> ScriptLanguage lang
                              -> Maybe (ScriptLanguageInEra lang era)
 scriptLanguageSupportedInEra era lang =
     case (era, lang) of
-      (ShelleyEra, SimpleScriptLanguage) ->
+      (ShelleyBasedEraShelley, SimpleScriptLanguage) ->
         Just SimpleScriptInShelley
 
-      (AllegraEra, SimpleScriptLanguage) ->
+      (ShelleyBasedEraAllegra, SimpleScriptLanguage) ->
         Just SimpleScriptInAllegra
 
-      (MaryEra, SimpleScriptLanguage) ->
+      (ShelleyBasedEraMary, SimpleScriptLanguage) ->
         Just SimpleScriptInMary
 
-      (AlonzoEra, SimpleScriptLanguage) ->
+      (ShelleyBasedEraAlonzo, SimpleScriptLanguage) ->
         Just SimpleScriptInAlonzo
 
-      (BabbageEra, SimpleScriptLanguage) ->
+      (ShelleyBasedEraBabbage, SimpleScriptLanguage) ->
         Just SimpleScriptInBabbage
 
-      (ConwayEra, SimpleScriptLanguage) ->
+      (ShelleyBasedEraConway, SimpleScriptLanguage) ->
         Just SimpleScriptInConway
 
-      (AlonzoEra, PlutusScriptLanguage PlutusScriptV1) ->
+      (ShelleyBasedEraAlonzo, PlutusScriptLanguage PlutusScriptV1) ->
         Just PlutusScriptV1InAlonzo
 
-      (BabbageEra, PlutusScriptLanguage PlutusScriptV1) ->
+      (ShelleyBasedEraBabbage, PlutusScriptLanguage PlutusScriptV1) ->
         Just PlutusScriptV1InBabbage
 
-      (BabbageEra, PlutusScriptLanguage PlutusScriptV2) ->
+      (ShelleyBasedEraBabbage, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InBabbage
 
-      (ConwayEra, PlutusScriptLanguage PlutusScriptV1) ->
+      (ShelleyBasedEraConway, PlutusScriptLanguage PlutusScriptV1) ->
         Just PlutusScriptV1InConway
 
-      (ConwayEra, PlutusScriptLanguage PlutusScriptV2) ->
+      (ShelleyBasedEraConway, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InConway
 
-      (ConwayEra, PlutusScriptLanguage PlutusScriptV3) ->
+      (ShelleyBasedEraConway, PlutusScriptLanguage PlutusScriptV3) ->
         Just PlutusScriptV3InConway
 
       _ -> Nothing
@@ -664,7 +664,7 @@ eraOfScriptLanguageInEra langInEra =
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
 --
-toScriptInEra :: CardanoEra era -> ScriptInAnyLang -> Maybe (ScriptInEra era)
+toScriptInEra :: ShelleyBasedEra era -> ScriptInAnyLang -> Maybe (ScriptInEra era)
 toScriptInEra era (ScriptInAnyLang lang s) = do
     lang' <- scriptLanguageSupportedInEra era lang
     return (ScriptInEra lang' s)
@@ -1405,7 +1405,7 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
       (cardanoEra :: CardanoEra era)
 
 refScriptToShelleyScript
-  :: CardanoEra era
+  :: ShelleyBasedEra era
   -> ReferenceScript era
   -> StrictMaybe (Ledger.Script (ShelleyLedgerEra era))
 refScriptToShelleyScript era (ReferenceScript _ s) =
