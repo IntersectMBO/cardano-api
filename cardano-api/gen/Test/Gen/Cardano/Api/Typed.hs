@@ -15,7 +15,13 @@ module Test.Gen.Cardano.Api.Typed
   ( genFeaturedInEra
   , genMaybeFeaturedInEra
 
+  -- * Byron
+  , genAddressInEraByron
   , genAddressByron
+  , genTxBodyByron
+  , genTxByron
+  , genWitnessesByron
+
   , genAddressInEra
   , genAddressShelley
   , genCertificate
@@ -130,11 +136,12 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Governance.Actions.VotingProcedure
-import           Cardano.Api.Script (scriptInEraToRefScript)
-import           Cardano.Api.Shelley
+import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
+import           Cardano.Api.Script (scriptInEraToRefScript)
+import           Cardano.Api.Shelley
+import qualified Cardano.Api.Shelley as ShelleyApi
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -181,16 +188,11 @@ genAddressShelley = makeShelleyAddress <$> genNetworkId
                                        <*> genPaymentCredential
                                        <*> genStakeAddressReference
 
-genAddressInEra :: CardanoEra era -> Gen (AddressInEra era)
-genAddressInEra =
-  inEonForEra
-    (byronAddressInEra <$> genAddressByron)
-    (\sbe ->
-      Gen.choice
-        [ byronAddressInEra       <$> genAddressByron
-        , shelleyAddressInEra sbe <$> genAddressShelley
-        ]
-    )
+genAddressInEra :: ShelleyBasedEra era -> Gen (AddressInEra era)
+genAddressInEra sbe = shelleyAddressInEra sbe <$> genAddressShelley
+
+_genAddressInEraByron :: Gen (AddressInEra era)
+_genAddressInEraByron = byronAddressInEra <$> genAddressByron
 
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
@@ -305,12 +307,13 @@ genScriptInAnyLang =
       [ ScriptInAnyLang lang <$> genScript lang
       | AnyScriptLanguage lang <- [minBound..maxBound] ]
 
-genScriptInEra :: CardanoEra era -> Gen (ScriptInEra era)
+genScriptInEra :: ShelleyBasedEra era -> Gen (ScriptInEra era)
 genScriptInEra era =
     Gen.choice
       [ ScriptInEra langInEra <$> genScript lang
       | AnyScriptLanguage lang <- [minBound..maxBound]
-      , Just langInEra <- [scriptLanguageSupportedInEra era lang] ]
+        -- TODO: scriptLanguageSupportedInEra should be parameterized on ShelleyBasedEra
+      , Just langInEra <- [scriptLanguageSupportedInEra (toCardanoEra era) lang] ]
 
 genScriptHash :: Gen ScriptHash
 genScriptHash = do
@@ -463,7 +466,7 @@ genPaymentCredential = do
   vKey <- genVerificationKey AsPaymentKey
   return . PaymentCredentialByKey $ verificationKeyHash vKey
 
-genSigningKey :: Key keyrole => AsType keyrole -> Gen (SigningKey keyrole)
+genSigningKey :: Key keyrole => ShelleyApi.AsType keyrole -> Gen (SigningKey keyrole)
 genSigningKey roletoken = do
     seed <- genSeed (fromIntegral seedSize)
     let sk = deterministicSigningKey roletoken seed
@@ -504,34 +507,27 @@ genTxId = TxId <$> genShelleyHash
 genTxIndex :: Gen TxIx
 genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
-genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
-genTxOutValue =
-  caseByronOrShelleyBasedEra
-    (\w -> TxOutValueByron w <$> genPositiveLovelace)
-    (\sbe -> TxOutValueShelleyBased sbe <$> genValueForTxOut sbe)
+genTxOutValue :: ShelleyBasedEra era -> Gen (TxOutValue era)
+genTxOutValue sbe = shelleyBasedEraConstraints sbe $ TxOutValueShelleyBased sbe <$> genValueForTxOut sbe
 
-genTxOutTxContext :: CardanoEra era -> Gen (TxOut CtxTx era)
+genTxOutTxContext :: ShelleyBasedEra era -> Gen (TxOut CtxTx era)
 genTxOutTxContext era =
   TxOut <$> genAddressInEra era
         <*> genTxOutValue era
         <*> genTxOutDatumHashTxContext era
         <*> genReferenceScript era
 
-genTxOutUTxOContext :: CardanoEra era -> Gen (TxOut CtxUTxO era)
+genTxOutUTxOContext :: ShelleyBasedEra era -> Gen (TxOut CtxUTxO era)
 genTxOutUTxOContext era =
   TxOut <$> genAddressInEra era
         <*> genTxOutValue era
         <*> genTxOutDatumHashUTxOContext era
         <*> genReferenceScript era
 
-genReferenceScript :: CardanoEra era -> Gen (ReferenceScript era)
-genReferenceScript era =
-  caseByronToAlonzoOrBabbageEraOnwards
-    (const (return ReferenceScriptNone))
-    (const (scriptInEraToRefScript <$> genScriptInEra era))
-    era
+genReferenceScript :: ShelleyBasedEra era -> Gen (ReferenceScript era)
+genReferenceScript era = scriptInEraToRefScript <$> genScriptInEra era
 
-genUTxO :: CardanoEra era -> Gen (UTxO era)
+genUTxO :: ShelleyBasedEra era -> Gen (UTxO era)
 genUTxO era =
   UTxO <$> Gen.map (Range.constant 0 5) ((,) <$> genTxIn <*> (toCtxUTxOTxOut <$> genTxOutTxContext era))
 
@@ -566,11 +562,12 @@ genTxMetadataInEra =
         ]
     )
 
-genTxAuxScripts :: CardanoEra era -> Gen (TxAuxScripts era)
+genTxAuxScripts :: ShelleyBasedEra era -> Gen (TxAuxScripts era)
 genTxAuxScripts era =
-  forEraInEon era
+  forEraInEon (toCardanoEra era)
     (pure TxAuxScriptsNone)
-    (\w -> TxAuxScripts w <$> Gen.list (Range.linear 0 3) (genScriptInEra era))
+    (\w -> TxAuxScripts w <$> Gen.list (Range.linear 0 3)
+                                       (genScriptInEra (allegraEraOnwardsToShelleyBasedEra w)))
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals =
@@ -635,19 +632,20 @@ genTxMintValue =
         ]
     )
 
-genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
-genTxBodyContent era = do
+genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
+genTxBodyContent sbe = do
+  let era = shelleyBasedToCardanoEra sbe
   txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
   txInsReference <- genTxInsReference era
-  txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext era)
+  txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext sbe)
   txTotalCollateral <- genTxTotalCollateral era
-  txReturnCollateral <- genTxReturnCollateral era
+  txReturnCollateral <- genTxReturnCollateral sbe
   txFee <- genTxFee era
   txValidityLowerBound <- genTxValidityLowerBound era
   txValidityUpperBound <- genTxValidityUpperBound era
   txMetadata <- genTxMetadataInEra era
-  txAuxScripts <- genTxAuxScripts era
+  txAuxScripts <- genTxAuxScripts sbe
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
   txProtocolParams <- BuildTxWith <$> forEraInEon era (pure Nothing) (Gen.maybe . genValidProtocolParameters)
   txWithdrawals <- genTxWithdrawals era
@@ -680,6 +678,7 @@ genTxBodyContent era = do
     , Api.txVotingProcedures
     }
 
+
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
 genTxInsCollateral =
   inEonForEra
@@ -696,9 +695,9 @@ genTxInsReference =
     (const (pure TxInsReferenceNone))
     (\w -> TxInsReference w <$> Gen.list (Range.linear 0 10) genTxIn)
 
-genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
+genTxReturnCollateral :: ShelleyBasedEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
-  forEraInEon era
+  forEraInEon (toCardanoEra era)
     (pure TxReturnCollateralNone)
     (\w -> TxReturnCollateral w <$>  genTxOutTxContext era)
 
@@ -714,9 +713,43 @@ genTxFee =
     (pure . TxFeeImplicit)
     (\w -> TxFeeExplicit w <$> genLovelace)
 
-genTxBody :: CardanoEra era -> Gen (TxBody era)
+genAddressInEraByron :: Gen (AddressInEra ByronEra)
+genAddressInEraByron = byronAddressInEra <$> genAddressByron
+
+genTxByron :: Gen (Tx ByronEra)
+genTxByron =
+  makeSignedTransaction
+    <$> genWitnessesByron
+    <*> genTxBodyByron
+
+genTxOutValueByron :: Gen (TxOutValue ByronEra)
+genTxOutValueByron = TxOutValueByron <$> genPositiveLovelace
+
+genTxOutByron :: Gen (TxOut CtxTx ByronEra)
+genTxOutByron =
+  TxOut <$> genAddressInEraByron
+        <*> genTxOutValueByron
+        <*> pure TxOutDatumNone
+        <*> pure ReferenceScriptNone
+
+genTxBodyByron :: Gen (TxBody ByronEra)
+genTxBodyByron = do
+  txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
+  txOuts <- Gen.list (Range.constant 1 10) genTxOutByron
+  let byronTxBodyContent = (defaultTxBodyContent ByronEra)
+                             { Api.txIns
+                             , Api.txOuts
+                             }
+  case Api.createAndValidateTransactionBody ByronEra byronTxBodyContent of
+    Left err -> fail (displayError err)
+    Right txBody -> pure txBody
+
+genWitnessesByron :: Gen [KeyWitness ByronEra]
+genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
+
+genTxBody :: ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
-  res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
+  res <- Api.createAndValidateTransactionBody (toCardanoEra era) <$> genTxBodyContent era
   case res of
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
@@ -751,22 +784,19 @@ genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 
 genTx :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> Gen (Tx era)
 genTx era =
   makeSignedTransaction
     <$> genWitnesses era
     <*> genTxBody era
 
-genWitnesses :: CardanoEra era -> Gen [KeyWitness era]
-genWitnesses =
-  caseByronOrShelleyBasedEra
-    (Gen.list (Range.constant 1 10) . genByronKeyWitness)
-    (\sbe -> do
-      bsWits  <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
-      keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
-      return $ bsWits ++ keyWits
-    )
+genWitnesses :: ShelleyBasedEra era -> Gen [KeyWitness era]
+genWitnesses sbe = do
+  bsWits  <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
+  keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
+  return $ bsWits ++ keyWits
+
 
 genVerificationKey :: ()
 #if MIN_VERSION_base(4,17,0)
@@ -775,7 +805,7 @@ genVerificationKey :: ()
     => HasTypeProxy keyrole
 #endif
     => Key keyrole
-    => AsType keyrole
+    => ShelleyApi.AsType keyrole
     -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
@@ -786,13 +816,13 @@ genVerificationKeyHash :: ()
     => HasTypeProxy keyrole
 #endif
     => Key keyrole
-    => AsType keyrole
+    => ShelleyApi.AsType keyrole
     -> Gen (Hash keyrole)
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken
 
-genByronKeyWitness :: ByronEraOnly era -> Gen (KeyWitness era)
-genByronKeyWitness ByronEraOnlyByron = do
+genByronKeyWitness :: Gen (KeyWitness ByronEra)
+genByronKeyWitness = do
   pmId <- genProtocolMagicId
   txinWitness <- genVKWitness pmId
   return $ ByronKeyWitness txinWitness
@@ -810,7 +840,7 @@ genShelleyBootstrapWitness :: ()
 genShelleyBootstrapWitness sbe =
  makeShelleyBootstrapWitness sbe
    <$> genWitnessNetworkIdOrByronAddress
-   <*> genTxBody (shelleyBasedToCardanoEra sbe)
+   <*> genTxBody sbe
    <*> genSigningKey AsByronKey
 
 genShelleyKeyWitness :: ()
@@ -818,7 +848,7 @@ genShelleyKeyWitness :: ()
   -> Gen (KeyWitness era)
 genShelleyKeyWitness sbe =
   makeShelleyKeyWitness sbe
-    <$> genTxBody (shelleyBasedToCardanoEra sbe)
+    <$> genTxBody sbe
     <*> genShelleyWitnessSigningKey
 
 genShelleyWitness :: ()
@@ -841,9 +871,9 @@ genShelleyWitnessSigningKey =
              ]
 
 genCardanoKeyWitness :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> Gen (KeyWitness era)
-genCardanoKeyWitness = caseByronOrShelleyBasedEra genByronKeyWitness genShelleyWitness
+genCardanoKeyWitness = genShelleyWitness
 
 genSeed :: Int -> Gen Crypto.Seed
 genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
@@ -974,50 +1004,54 @@ genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
 genExecutionUnitPrices :: Gen ExecutionUnitPrices
 genExecutionUnitPrices = ExecutionUnitPrices <$> genRational <*> genRational
 
-genTxOutDatumHashTxContext :: CardanoEra era -> Gen (TxOutDatum CtxTx era)
+genTxOutDatumHashTxContext :: ShelleyBasedEra era -> Gen (TxOutDatum CtxTx era)
 genTxOutDatumHashTxContext era = case era of
-    ByronEra   -> pure TxOutDatumNone
-    ShelleyEra -> pure TxOutDatumNone
-    AllegraEra -> pure TxOutDatumNone
-    MaryEra    -> pure TxOutDatumNone
-    AlonzoEra  -> Gen.choice
-                    [ pure TxOutDatumNone
-                    , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
-                    , TxOutDatumInTx AlonzoEraOnwardsAlonzo <$> genHashableScriptData
-                    ]
-    BabbageEra -> Gen.choice
-                    [ pure TxOutDatumNone
-                    , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
-                    , TxOutDatumInTx AlonzoEraOnwardsBabbage <$> genHashableScriptData
-                    , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
-                    ]
-    ConwayEra -> Gen.choice
-                    [ pure TxOutDatumNone
-                    , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
-                    , TxOutDatumInTx AlonzoEraOnwardsConway <$> genHashableScriptData
-                    , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
-                    ]
+    ShelleyBasedEraShelley -> pure TxOutDatumNone
+    ShelleyBasedEraAllegra -> pure TxOutDatumNone
+    ShelleyBasedEraMary    -> pure TxOutDatumNone
+    ShelleyBasedEraAlonzo  ->
+      Gen.choice
+        [ pure TxOutDatumNone
+        , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
+        , TxOutDatumInTx AlonzoEraOnwardsAlonzo <$> genHashableScriptData
+        ]
+    ShelleyBasedEraBabbage ->
+      Gen.choice
+        [ pure TxOutDatumNone
+        , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
+        , TxOutDatumInTx AlonzoEraOnwardsBabbage <$> genHashableScriptData
+        , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
+        ]
+    ShelleyBasedEraConway ->
+      Gen.choice
+        [ pure TxOutDatumNone
+        , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
+        , TxOutDatumInTx AlonzoEraOnwardsConway <$> genHashableScriptData
+        , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
+        ]
 
-genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
+genTxOutDatumHashUTxOContext :: ShelleyBasedEra era -> Gen (TxOutDatum CtxUTxO era)
 genTxOutDatumHashUTxOContext era = case era of
-    ByronEra   -> pure TxOutDatumNone
-    ShelleyEra -> pure TxOutDatumNone
-    AllegraEra -> pure TxOutDatumNone
-    MaryEra    -> pure TxOutDatumNone
-    AlonzoEra  -> Gen.choice
-                    [ pure TxOutDatumNone
-                    , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
-                    ]
-    BabbageEra -> Gen.choice
-                    [ pure TxOutDatumNone
-                    , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
-                    , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
-                    ]
-    ConwayEra -> Gen.choice
-                    [ pure TxOutDatumNone
-                    , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
-                    , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
-                    ]
+    ShelleyBasedEraShelley -> pure TxOutDatumNone
+    ShelleyBasedEraAllegra -> pure TxOutDatumNone
+    ShelleyBasedEraMary    -> pure TxOutDatumNone
+    ShelleyBasedEraAlonzo  ->
+      Gen.choice
+        [ pure TxOutDatumNone
+        , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
+        ]
+    ShelleyBasedEraBabbage ->
+      Gen.choice
+        [ pure TxOutDatumNone
+        , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
+        , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
+        ]
+    ShelleyBasedEraConway ->
+      Gen.choice
+        [ pure TxOutDatumNone
+        , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
+        , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
+        ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
 mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR
@@ -1051,7 +1085,7 @@ genProposal :: ConwayEraOnwards era -> Gen (Proposal era)
 genProposal w =
   conwayEraOnwardsTestConstraints w $ fmap Proposal Q.arbitrary
 
-genVotingProcedures :: ConwayEraOnwards era -> Gen (VotingProcedures era)
+genVotingProcedures :: ConwayEraOnwards era -> Gen (ShelleyApi.VotingProcedures era)
 genVotingProcedures w =
   conwayEraOnwardsConstraints w
-    $ VotingProcedures <$> Q.arbitrary
+    $ ShelleyApi.VotingProcedures <$> Q.arbitrary

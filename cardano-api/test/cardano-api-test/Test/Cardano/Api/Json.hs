@@ -27,27 +27,27 @@ prop_json_roundtrip_alonzo_genesis = H.property $ do
 
 prop_json_roundtrip_utxo :: Property
 prop_json_roundtrip_utxo = H.property $ do
-  utxo <- forAll $ genUTxO BabbageEra
+  utxo <- forAll $ genUTxO ShelleyBasedEraBabbage
   tripping utxo encode eitherDecode
 
 prop_json_roundtrip_reference_scripts :: Property
 prop_json_roundtrip_reference_scripts = H.property $ do
-  rScript <- forAll $ genReferenceScript BabbageEra
+  rScript <- forAll $ genReferenceScript ShelleyBasedEraBabbage
   tripping rScript encode eitherDecode
 
 prop_json_roundtrip_txoutvalue :: Property
 prop_json_roundtrip_txoutvalue = H.property $ do
-  oVal <- forAll $ genTxOutValue BabbageEra
+  oVal <- forAll $ genTxOutValue ShelleyBasedEraBabbage
   tripping oVal encode eitherDecode
 
 prop_json_roundtrip_txout_tx_context :: Property
 prop_json_roundtrip_txout_tx_context = H.property $ do
-  txOut <- forAll $ genTxOutTxContext BabbageEra
+  txOut <- forAll $ genTxOutTxContext ShelleyBasedEraBabbage
   tripping txOut encode eitherDecode
 
 prop_json_roundtrip_txout_utxo_context :: Property
 prop_json_roundtrip_txout_utxo_context = H.property $ do
-  txOut <- forAll $ genTxOutUTxOContext BabbageEra
+  txOut <- forAll $ genTxOutUTxOContext ShelleyBasedEraBabbage
   tripping txOut encode eitherDecode
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property

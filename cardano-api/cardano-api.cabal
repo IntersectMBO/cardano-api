@@ -245,6 +245,7 @@ library gen
   hs-source-dirs:       gen
 
   exposed-modules:      Test.Gen.Cardano.Api
+                        Test.Gen.Cardano.Api.Byron
                         Test.Gen.Cardano.Api.Era
                         Test.Gen.Cardano.Api.Metadata
                         Test.Gen.Cardano.Api.Typed

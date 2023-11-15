@@ -69,8 +69,7 @@ data TxInMode where
   -- delegation certs.
   --
   TxInByronSpecial
-    :: ByronEraOnly era
-    -> Consensus.GenTx Consensus.ByronBlock
+    :: Consensus.GenTx Consensus.ByronBlock
     -> TxInMode
 
 deriving instance Show TxInMode
@@ -81,7 +80,7 @@ fromConsensusGenTx :: ()
   -> TxInMode
 fromConsensusGenTx = \case
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx')) ->
-    TxInByronSpecial ByronEraOnlyByron tx'
+    TxInByronSpecial tx'
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (Z tx'))) ->
     let Consensus.ShelleyTx _txid shelleyEraTx = tx'
     in TxInMode ShelleyEra (ShelleyTx ShelleyBasedEraShelley shelleyEraTx)
@@ -113,7 +112,7 @@ toConsensusGenTx (TxInMode w (ByronTx ByronEraOnlyByron tx)) =
     --TODO: add the above as mkByronTx to the consensus code,
     -- matching mkShelleyTx below
 
-toConsensusGenTx (TxInByronSpecial ByronEraOnlyByron gtx) =
+toConsensusGenTx (TxInByronSpecial gtx) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z gtx))
 
 toConsensusGenTx (TxInMode ShelleyEra (ShelleyTx _ tx)) =
