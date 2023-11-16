@@ -43,6 +43,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Class
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -65,7 +66,6 @@ import qualified Data.ByteString as BS
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Maybe
 import           Data.String (IsString (..))
-import qualified Data.Text as Text
 
 --
 -- Shelley payment keys
@@ -1469,8 +1469,10 @@ instance FromJSON (Hash StakePoolKey) where
   parseJSON = withText "PoolId" $ \str ->
     case deserialiseFromBech32 (AsHash AsStakePoolKey) str of
       Left err ->
-        fail $ "Error deserialising Hash StakePoolKey: " <> Text.unpack str <>
-               " Error: " <> displayError err
+        fail $ prettyToString $ mconcat
+          [ "Error deserialising Hash StakePoolKey: " <> pretty str
+          , " Error: " <> prettyError err
+          ]
       Right h -> pure h
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
@@ -1588,8 +1590,10 @@ instance FromJSON (Hash DRepKey) where
   parseJSON = withText "DRepId" $ \str ->
     case deserialiseFromBech32 (AsHash AsDRepKey) str of
       Left err ->
-        fail $ "Error deserialising Hash DRepKey: " <> Text.unpack str <>
-               " Error: " <> displayError err
+        fail $ prettyToString $ mconcat
+          [ "Error deserialising Hash DRepKey: " <> pretty str
+          , " Error: " <> prettyError err
+          ]
       Right h -> pure h
 
 instance HasTextEnvelope (VerificationKey DRepKey) where

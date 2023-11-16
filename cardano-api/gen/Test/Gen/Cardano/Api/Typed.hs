@@ -137,6 +137,7 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
+import           Cardano.Api.Pretty
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Script (scriptInEraToRefScript)
@@ -449,7 +450,7 @@ genOperationalCertificateWithCounter = do
     case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
       -- This case should be impossible as we clearly derive the verification
       -- key from the generated signing key.
-      Left err -> fail $ displayError err
+      Left err -> fail $ prettyToString $ prettyError err
       Right pair -> return pair
   where
     convert :: VerificationKey GenesisDelegateExtendedKey
@@ -741,7 +742,7 @@ genTxBodyByron = do
                              , Api.txOuts
                              }
   case Api.createAndValidateTransactionBody ByronEra byronTxBodyContent of
-    Left err -> fail (displayError err)
+    Left err -> fail $ prettyToString $ prettyError err
     Right txBody -> pure txBody
 
 genWitnessesByron :: Gen [KeyWitness ByronEra]
@@ -751,7 +752,7 @@ genTxBody :: ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- Api.createAndValidateTransactionBody (toCardanoEra era) <$> genTxBodyContent era
   case res of
-    Left err -> fail (displayError err)
+    Left err -> fail (prettyToString (prettyError err))
     Right txBody -> pure txBody
 
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.

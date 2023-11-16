@@ -3,7 +3,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -39,6 +41,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IO
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Utils (readFileBlocking)
 
@@ -129,22 +132,25 @@ data TextEnvelopeError
   deriving (Eq, Show, Data)
 
 instance Error TextEnvelopeError where
-  displayError tee =
-    case tee of
-      TextEnvelopeTypeError [TextEnvelopeType expType]
-                            (TextEnvelopeType actType) ->
-          "TextEnvelope type error: "
-       <> " Expected: " <> expType
-       <> " Actual: " <> actType
+  prettyError = \case
+    TextEnvelopeTypeError [TextEnvelopeType expType] (TextEnvelopeType actType) ->
+      mconcat
+        [ "TextEnvelope type error: "
+        , " Expected: " <> pretty expType
+        , " Actual: " <> pretty actType
+        ]
 
-      TextEnvelopeTypeError expTypes (TextEnvelopeType actType) ->
-          "TextEnvelope type error: "
-       <> " Expected one of: "
-       <> List.intercalate ", "
-            [ expType | TextEnvelopeType expType <- expTypes ]
-       <> " Actual: " <> actType
-      TextEnvelopeAesonDecodeError decErr -> "TextEnvelope aeson decode error: " <> decErr
-      TextEnvelopeDecodeError decErr -> "TextEnvelope decode error: " <> show decErr
+    TextEnvelopeTypeError expTypes (TextEnvelopeType actType) ->
+      mconcat
+        [ "TextEnvelope type error: "
+        , " Expected one of: "
+        , mconcat $ List.intersperse ", " [pretty expType | TextEnvelopeType expType <- expTypes]
+        , " Actual: " <> pretty actType
+        ]
+    TextEnvelopeAesonDecodeError decErr ->
+      "TextEnvelope aeson decode error: " <> pretty decErr
+    TextEnvelopeDecodeError decErr ->
+      "TextEnvelope decode error: " <> pshow decErr
 
 
 -- | Check that the \"type\" of the 'TextEnvelope' is as expected.

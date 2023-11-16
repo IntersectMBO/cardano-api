@@ -17,6 +17,7 @@ module Cardano.Api.SerialiseJSON
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
 
 import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
@@ -28,13 +29,12 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (Data)
 
-
 newtype JsonDecodeError = JsonDecodeError String
   deriving (Eq, Show, Data)
 
 instance Error JsonDecodeError where
-  displayError (JsonDecodeError err) = err
-
+  prettyError (JsonDecodeError err) =
+    pretty err
 
 serialiseToJSON :: ToJSON a => a -> ByteString
 serialiseToJSON = LBS.toStrict . Aeson.encode

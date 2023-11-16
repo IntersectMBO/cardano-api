@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -49,6 +50,7 @@ module Cardano.Api.Eras.Core
   ) where
 
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
 
 import qualified Cardano.Ledger.Api as L
 
@@ -236,9 +238,11 @@ data CardanoEra era where
      ConwayEra  :: CardanoEra ConwayEra
      -- when you add era here, change `instance Bounded AnyCardanoEra`
 
-deriving instance Eq   (CardanoEra era)
-deriving instance Ord  (CardanoEra era)
-deriving instance Show (CardanoEra era)
+deriving instance Eq    (CardanoEra era)
+deriving instance Ord   (CardanoEra era)
+deriving instance Show  (CardanoEra era)
+
+deriving via (ShowOf (CardanoEra era)) instance Pretty (CardanoEra era)
 
 instance ToJSON (CardanoEra era) where
    toJSON ByronEra   = "Byron"

@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Stake pool off-chain metadata
@@ -39,7 +40,7 @@ import           Data.Data (Data)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-
+import           Prettyprinter
 
 -- ----------------------------------------------------------------------------
 -- Stake pool metadata
@@ -146,13 +147,17 @@ data StakePoolMetadataValidationError
   deriving (Eq, Show, Data)
 
 instance Error StakePoolMetadataValidationError where
-    displayError (StakePoolMetadataJsonDecodeError errStr) = errStr
-    displayError (StakePoolMetadataInvalidLengthError maxLen actualLen) =
-         "Stake pool metadata must consist of at most "
-      <> show maxLen
-      <> " bytes, but it consists of "
-      <> show actualLen
-      <> " bytes."
+  prettyError = \case
+    StakePoolMetadataJsonDecodeError errStr ->
+      pretty errStr
+    StakePoolMetadataInvalidLengthError maxLen actualLen ->
+      mconcat
+        [ "Stake pool metadata must consist of at most "
+        , pretty maxLen
+        , " bytes, but it consists of "
+        , pretty actualLen
+        , " bytes."
+        ]
 
 -- | Decode and validate the provided JSON-encoded bytes as 'StakePoolMetadata'.
 -- Return the decoded metadata and the hash of the original bytes.
