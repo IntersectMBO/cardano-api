@@ -111,6 +111,7 @@ module Cardano.Api (
     shelleyBasedEraConstraints,
 
     -- ** From Allegra
+    AllegraEraOnwards(..),
 
     -- ** From Mary
     MaryEraOnly(..),
@@ -1026,6 +1027,7 @@ import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronAndAllegraEraOnwards
