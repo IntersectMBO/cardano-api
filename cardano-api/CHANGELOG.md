@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 8.32.0.0
+
+- Export `AllegraEraOnwards`
+  (compatible)
+  [PR 374](https://github.com/input-output-hk/cardano-api/pull/374)
+
+- Isolation of Byron era 1/n. Changes made to cardano-api where Byron era was never being called in the first place.
+  (breaking)
+  [PR 362](https://github.com/input-output-hk/cardano-api/pull/362)
+
+- Update and export `Test.Gen.Cardano.Api.ProtocolParameters`
+  (bugfix, test)
+  [PR 369](https://github.com/input-output-hk/cardano-api/pull/369)
+
+- Fix round trip for empty `Value`. Add tests.
+  (bugfix)
+  [PR 365](https://github.com/input-output-hk/cardano-api/pull/365)
+
 ## 8.31.0.0
 
 - Use ledger presentation of multi-asset values directly.  Lens to make this uniform over `ShelleyBasedEra`.
