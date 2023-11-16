@@ -100,9 +100,9 @@ data OperationalCertIssueError =
   deriving Show
 
 instance Error OperationalCertIssueError where
-    displayError (OperationalCertKeyMismatch _counterKey _signingKey) =
-      "Key mismatch: the signing key does not match the one that goes with the counter"
-      --TODO: include key ids
+  prettyError (OperationalCertKeyMismatch _counterKey _signingKey) =
+    "Key mismatch: the signing key does not match the one that goes with the counter"
+    --TODO: include key ids
 
 issueOperationalCertificate :: VerificationKey KesKey
                             -> Either (SigningKey StakePoolKey)

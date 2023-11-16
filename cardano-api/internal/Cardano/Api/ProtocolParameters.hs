@@ -106,6 +106,7 @@ import           Cardano.Api.Json (toRationalJSON)
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -144,11 +145,11 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.String (IsString)
+import           Data.Text (Text)
 import           GHC.Generics
 import           Lens.Micro
 import           Numeric.Natural
 import           Text.PrettyBy.Default (display)
-
 
 -- -----------------------------------------------------------------------------
 -- Era based ledger protocol parameters
@@ -1856,18 +1857,20 @@ data ProtocolParametersError
   deriving (Show)
 
 instance Error ProtocolParametersError where
-  displayError (PParamsErrorMissingMinUTxoValue (AnyCardanoEra era)) = mconcat
-    [ "The " <> show era <> " protocol parameters value is missing the following "
-    , "field: MinUTxoValue. Did you intend to use a " <> show era <> " protocol "
-    , "parameters value?"
-    ]
-  displayError PParamsErrorMissingAlonzoProtocolParameter = mconcat
-    [ "The Alonzo era protocol parameters in use is missing one or more of the "
-    , "following fields: UTxOCostPerWord, CostModels, Prices, MaxTxExUnits, "
-    , "MaxBlockExUnits, MaxValueSize, CollateralPercent, MaxCollateralInputs. Did "
-    , "you intend to use an Alonzo era protocol parameters value?"
-    ]
-
+  prettyError = \case
+    PParamsErrorMissingMinUTxoValue (AnyCardanoEra era) ->
+      mconcat
+        [ "The " <> pretty era <> " protocol parameters value is missing the following "
+        , "field: MinUTxoValue. Did you intend to use a " <> pretty era <> " protocol "
+        , "parameters value?"
+        ]
+    PParamsErrorMissingAlonzoProtocolParameter ->
+      mconcat
+        [ "The Alonzo era protocol parameters in use is missing one or more of the "
+        , "following fields: UTxOCostPerWord, CostModels, Prices, MaxTxExUnits, "
+        , "MaxBlockExUnits, MaxValueSize, CollateralPercent, MaxCollateralInputs. Did "
+        , "you intend to use an Alonzo era protocol parameters value?"
+        ]
 
 data ProtocolParametersConversionError
   = PpceOutOfBounds !ProtocolParameterName !Rational
@@ -1881,8 +1884,12 @@ type ProtocolParameterName = String
 type ProtocolParameterVersion = Natural
 
 instance Error ProtocolParametersConversionError where
-  displayError = \case
-    PpceOutOfBounds name r -> "Value for '" <> name <> "' is outside of bounds: " <> show (fromRational r :: Double)
-    PpceVersionInvalid majorProtVer -> "Major protocol version is invalid: " <> show majorProtVer
-    PpceInvalidCostModel cm err -> "Invalid cost model: " <> display err <> " Cost model: " <> show cm
-    PpceMissingParameter name -> "Missing parameter: " <> name
+  prettyError = \case
+    PpceOutOfBounds name r ->
+      "Value for '" <> pretty name <> "' is outside of bounds: " <> pretty (fromRational r :: Double)
+    PpceVersionInvalid majorProtVer ->
+      "Major protocol version is invalid: " <> pretty majorProtVer
+    PpceInvalidCostModel cm err ->
+      "Invalid cost model: " <> pretty @Text (display err) <> " Cost model: " <> pshow cm
+    PpceMissingParameter name ->
+      "Missing parameter: " <> pretty name

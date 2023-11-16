@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Raw binary serialisation
@@ -12,8 +13,9 @@ module Cardano.Api.SerialiseRaw
   , serialiseToRawBytesHexText
   ) where
 
-import           Cardano.Api.Error (Error, displayError)
+import           Cardano.Api.Error (Error, prettyError)
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
 
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
@@ -54,14 +56,14 @@ data RawBytesHexError
   deriving (Show)
 
 instance Error RawBytesHexError where
-  displayError = \case
+  prettyError = \case
     RawBytesHexErrorBase16DecodeFail input message ->
-      "Expected Base16-encoded bytestring, but got " ++ pretty input ++ "; "
-      ++ message
+      "Expected Base16-encoded bytestring, but got " <> pretty (toText input) <> "; "
+      <> pretty message
     RawBytesHexErrorRawBytesDecodeFail input asType (SerialiseAsRawBytesError e) ->
-      "Failed to deserialise " ++ pretty input ++ " as " ++ show asType ++ ". " ++ e
+      "Failed to deserialise " <> pretty (toText input) <> " as " <> pshow asType <> ". " <> pretty e
     where
-      pretty bs = case Text.decodeUtf8' bs of
+      toText bs = case Text.decodeUtf8' bs of
         Right t -> Text.unpack t
         Left _ -> show bs
 

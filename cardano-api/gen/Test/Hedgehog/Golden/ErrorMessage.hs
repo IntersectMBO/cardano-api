@@ -2,6 +2,7 @@
 module Test.Hedgehog.Golden.ErrorMessage where
 
 import           Cardano.Api (Error (..))
+import           Cardano.Api.Pretty
 
 import           Data.Data
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
@@ -77,4 +78,4 @@ testErrorMessage_ goldenFilesLocation moduleName typeName constructorName err = 
   let fqtn = moduleName <> "." <> typeName
   testProperty constructorName . withTests 1 . property $ do
     H.note_ "Incorrect error message in golden file"
-    displayError err `H.diffVsGoldenFile` (goldenFilesLocation </> fqtn </> constructorName <> ".txt")
+    H.diffVsGoldenFile (prettyToString (prettyError err)) (goldenFilesLocation </> fqtn </> constructorName <> ".txt")

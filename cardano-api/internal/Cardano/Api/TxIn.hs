@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 
@@ -37,6 +38,7 @@ module Cardano.Api.TxIn (
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
@@ -122,12 +124,14 @@ instance FromJSON TxIn where
 instance FromJSONKey TxIn where
   fromJSONKey = Aeson.FromJSONKeyTextParser $ runParsecParser parseTxIn
 
+deriving via (ShowOf TxIn) instance Pretty TxIn
+
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
   str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
   failEitherWith
-    (\e -> "Incorrect transaction id format: " ++ displayError e) $
-    deserialiseFromRawBytesHex AsTxId $ BSC.pack str
+    (\e -> prettyToString $ "Incorrect transaction id format: " <> prettyError e)
+    (deserialiseFromRawBytesHex AsTxId $ BSC.pack str)
 
 parseTxIn :: Parsec.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)

@@ -98,6 +98,7 @@ import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
 import           Cardano.Api.Modes (EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
+import           Cardano.Api.Pretty
 import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
                    ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
@@ -1486,25 +1487,32 @@ data LeadershipError = LeaderErrDecodeLedgerStateFailure
                      deriving Show
 
 instance Error LeadershipError where
-  displayError LeaderErrDecodeLedgerStateFailure =
-    "Failed to successfully decode ledger state"
-  displayError (LeaderErrDecodeProtocolStateFailure (_, decErr)) =
-    "Failed to successfully decode protocol state: " <> Text.unpack (LT.toStrict . toLazyText $ build decErr)
-  displayError LeaderErrGenesisSlot =
-    "Leadership schedule currently cannot be calculated from genesis"
-  displayError (LeaderErrStakePoolHasNoStake poolId) =
-    "The stake pool: " <> show poolId <> " has no stake"
-  displayError (LeaderErrDecodeProtocolEpochStateFailure decoderError) =
-    "Failed to successfully decode the current epoch state: " <> show decoderError
-  displayError (LeaderErrStakeDistribUnstable curSlot stableAfterSlot stabWindow predictedLastSlot) =
-    "The current stake distribution is currently unstable and therefore we cannot predict " <>
-    "the following epoch's leadership schedule. Please wait until : " <> show stableAfterSlot <>
-    " before running the leadership-schedule command again. \nCurrent slot: " <> show curSlot <>
-    " \nStability window: " <> show stabWindow <>
-    " \nCalculated last slot of current epoch: " <> show predictedLastSlot
-  displayError (LeaderErrSlotRangeCalculationFailure e) =
-    "Error while calculating the slot range: " <> Text.unpack e
-  displayError LeaderErrCandidateNonceStillEvolving = "Candidate nonce is still evolving"
+  prettyError = \case
+    LeaderErrDecodeLedgerStateFailure ->
+      "Failed to successfully decode ledger state"
+    LeaderErrDecodeProtocolStateFailure (_, decErr) ->
+      mconcat
+        [ "Failed to successfully decode protocol state: "
+        , pretty (LT.toStrict . toLazyText $ build decErr)
+        ]
+    LeaderErrGenesisSlot ->
+      "Leadership schedule currently cannot be calculated from genesis"
+    LeaderErrStakePoolHasNoStake poolId ->
+      "The stake pool: " <> pshow poolId <> " has no stake"
+    LeaderErrDecodeProtocolEpochStateFailure decoderError ->
+      "Failed to successfully decode the current epoch state: " <> pshow decoderError
+    LeaderErrStakeDistribUnstable curSlot stableAfterSlot stabWindow predictedLastSlot ->
+      mconcat
+        [ "The current stake distribution is currently unstable and therefore we cannot predict "
+        , "the following epoch's leadership schedule. Please wait until : " <> pshow stableAfterSlot
+        , " before running the leadership-schedule command again. \nCurrent slot: " <> pshow curSlot
+        , " \nStability window: " <> pshow stabWindow
+        , " \nCalculated last slot of current epoch: " <> pshow predictedLastSlot
+        ]
+    LeaderErrSlotRangeCalculationFailure e ->
+      "Error while calculating the slot range: " <> pretty e
+    LeaderErrCandidateNonceStillEvolving ->
+      "Candidate nonce is still evolving"
 
 nextEpochEligibleLeadershipSlots :: forall era. ()
   => ShelleyBasedEra era

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -50,6 +51,7 @@ module Cardano.Api.TxMetadata (
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
 
 import qualified Cardano.Ledger.Binary as CBOR
@@ -333,21 +335,22 @@ data TxMetadataRangeError =
   deriving (Eq, Show, Data)
 
 instance Error TxMetadataRangeError where
-  displayError (TxMetadataNumberOutOfRange n) =
+  prettyError = \case
+    TxMetadataNumberOutOfRange n ->
       "Numeric metadata value "
-        <> show n
+        <> pretty n
         <> " is outside the range -(2^64-1) .. 2^64-1."
-  displayError (TxMetadataTextTooLong actualLen) =
+    TxMetadataTextTooLong actualLen ->
       "Text string metadata value must consist of at most "
-        <> show txMetadataTextStringMaxByteLength
+        <> pretty txMetadataTextStringMaxByteLength
         <> " UTF8 bytes, but it consists of "
-        <> show actualLen
+        <> pretty actualLen
         <> " bytes."
-  displayError (TxMetadataBytesTooLong actualLen) =
+    TxMetadataBytesTooLong actualLen ->
       "Byte string metadata value must consist of at most "
-        <> show txMetadataByteStringMaxLength
+        <> pretty txMetadataByteStringMaxLength
         <> " bytes, but it consists of "
-        <> show actualLen
+        <> pretty actualLen
         <> " bytes."
 
 
@@ -675,41 +678,53 @@ data TxMetadataJsonSchemaError =
   deriving (Eq, Show, Data)
 
 instance Error TxMetadataJsonError where
-    displayError TxMetadataJsonToplevelNotMap =
-        "The JSON metadata top level must be a map (JSON object) from word to "
-     ++ "value."
-    displayError (TxMetadataJsonToplevelBadKey k) =
-        "The JSON metadata top level must be a map (JSON object) with unsigned "
-     ++ "integer keys.\nInvalid key: " ++ show k
-    displayError (TxMetadataJsonSchemaError k v detail) =
-        "JSON schema error within the metadata item " ++ show k ++ ": "
-     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
-    displayError (TxMetadataRangeError k v detail) =
-        "Value out of range within the metadata item " ++ show k ++ ": "
-     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
+  prettyError = \case
+    TxMetadataJsonToplevelNotMap ->
+      "The JSON metadata top level must be a map (JSON object) from word to value."
+    TxMetadataJsonToplevelBadKey k ->
+      mconcat
+        [ "The JSON metadata top level must be a map (JSON object) with unsigned "
+        , "integer keys.\nInvalid key: " <> pshow k
+        ]
+    TxMetadataJsonSchemaError k v detail ->
+      mconcat
+        [ "JSON schema error within the metadata item " <> pretty k <> ": "
+        , pretty (LBS.unpack (Aeson.encode v)) <> "\n" <> prettyError detail
+        ]
+    TxMetadataRangeError k v detail ->
+      mconcat
+        [ "Value out of range within the metadata item " <> pretty k <> ": "
+        , pretty (LBS.unpack (Aeson.encode v)) <> "\n" <> prettyError detail
+        ]
 
 instance Error TxMetadataJsonSchemaError where
-    displayError TxMetadataJsonNullNotAllowed =
-        "JSON null values are not supported."
-    displayError TxMetadataJsonBoolNotAllowed =
-        "JSON bool values are not supported."
-    displayError (TxMetadataJsonNumberNotInteger d) =
-        "JSON numbers must be integers. Unexpected value: " ++ show d
-    displayError (TxMetadataJsonNotObject v) =
-        "JSON object expected. Unexpected value: "
-     ++ LBS.unpack (Aeson.encode v)
-    displayError (TxMetadataJsonBadObject v) =
-        "JSON object does not match the schema.\nExpected a single field named "
-     ++ "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
-     ++ "Unexpected object field(s): "
-     ++ LBS.unpack (Aeson.encode (Aeson.object $ first Aeson.fromText <$> v))
-    displayError (TxMetadataJsonBadMapPair v) =
-        "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
-     ++ "\nUnexpected value: " ++ LBS.unpack (Aeson.encode v)
-    displayError (TxMetadataJsonTypeMismatch k v) =
-        "The value in the field " ++ show k ++ " does not have the type "
-     ++ "required by the schema.\nUnexpected value: "
-     ++ LBS.unpack (Aeson.encode v)
+  prettyError = \case
+    TxMetadataJsonNullNotAllowed ->
+      "JSON null values are not supported."
+    TxMetadataJsonBoolNotAllowed ->
+      "JSON bool values are not supported."
+    TxMetadataJsonNumberNotInteger d ->
+      "JSON numbers must be integers. Unexpected value: " <> pretty d
+    TxMetadataJsonNotObject v ->
+      "JSON object expected. Unexpected value: " <> pretty (LBS.unpack (Aeson.encode v))
+    TxMetadataJsonBadObject v ->
+      mconcat
+        [ "JSON object does not match the schema.\nExpected a single field named "
+        , "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
+        , "Unexpected object field(s): "
+        , pretty (LBS.unpack (Aeson.encode (Aeson.object $ first Aeson.fromText <$> v)))
+        ]
+    TxMetadataJsonBadMapPair v ->
+      mconcat
+        [ "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
+        , "\nUnexpected value: " <> pretty (LBS.unpack (Aeson.encode v))
+        ]
+    TxMetadataJsonTypeMismatch k v ->
+      mconcat
+        [ "The value in the field " <> pretty k <> " does not have the type "
+        , "required by the schema.\nUnexpected value: "
+        , pretty (LBS.unpack (Aeson.encode v))
+        ]
 
 
 -- ----------------------------------------------------------------------------

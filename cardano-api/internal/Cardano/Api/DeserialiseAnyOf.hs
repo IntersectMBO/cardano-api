@@ -44,9 +44,9 @@ import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Formatting (build, sformat, (%))
+import           Prettyprinter
 
 ------------------------------------------------------------------------------
 -- Formatted/encoded input deserialisation
@@ -78,18 +78,19 @@ data InputDecodeError
   -- ^ The provided data does not represent a valid value of the provided
   -- type.
   deriving (Eq, Show, Data)
+
 instance Error InputDecodeError where
-  displayError = Text.unpack . renderInputDecodeError
+  prettyError = renderInputDecodeError
 
 -- | Render an error message for a 'InputDecodeError'.
-renderInputDecodeError :: InputDecodeError -> Text
-renderInputDecodeError err =
-  case err of
-    InputTextEnvelopeError textEnvErr ->
-      Text.pack (displayError textEnvErr)
-    InputBech32DecodeError decodeErr ->
-      Text.pack (displayError decodeErr)
-    InputInvalidError -> "Invalid key."
+renderInputDecodeError :: InputDecodeError -> Doc ann
+renderInputDecodeError = \case
+  InputTextEnvelopeError textEnvErr ->
+    prettyError textEnvErr
+  InputBech32DecodeError decodeErr ->
+    prettyError decodeErr
+  InputInvalidError ->
+    "Invalid key."
 
 -- | The result of a deserialisation function.
 --

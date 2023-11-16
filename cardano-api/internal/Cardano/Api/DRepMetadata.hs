@@ -31,6 +31,7 @@ import qualified Cardano.Ledger.Keys as Shelley
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           Data.Either.Combinators (maybeToRight)
+import           Prettyprinter
 
 -- ----------------------------------------------------------------------------
 -- DRep metadata
@@ -68,13 +69,13 @@ data DRepMetadataValidationError
   deriving Show
 
 instance Error DRepMetadataValidationError where
-  displayError = \case
+  prettyError = \case
     DRepMetadataInvalidLengthError maxLen actualLen ->
       mconcat
         [ "DRep metadata must consist of at most "
-        , show maxLen
+        , pretty maxLen
         , " bytes, but it consists of "
-        , show actualLen
+        , pretty actualLen
         , " bytes."
         ]
 

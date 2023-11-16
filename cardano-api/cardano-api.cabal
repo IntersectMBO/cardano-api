@@ -105,6 +105,7 @@ library internal
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
+                        Cardano.Api.Pretty
                         Cardano.Api.Protocol
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
@@ -187,6 +188,7 @@ library internal
                       , parsec
                       , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>= 1.15
                       , prettyprinter
+                      , prettyprinter-ansi-terminal
                       , prettyprinter-configurable ^>= 1.15
                       , random
                       , scientific
@@ -224,6 +226,7 @@ library
                         Cardano.Api.Ledger
 
   reexported-modules:   Cardano.Api.Ledger.Lens
+                      , Cardano.Api.Pretty
 
   build-depends:        bytestring
                       , cardano-api:internal
