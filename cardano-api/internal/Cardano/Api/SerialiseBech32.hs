@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Bech32 Serialisation
@@ -14,6 +16,7 @@ module Cardano.Api.SerialiseBech32
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils
 
@@ -25,7 +28,6 @@ import qualified Data.List as List
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
-
 
 class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
 
@@ -147,25 +149,31 @@ data Bech32DecodeError =
   deriving (Eq, Show, Data)
 
 instance Error Bech32DecodeError where
-  displayError err = case err of
-    Bech32DecodingError decErr -> show decErr -- TODO
+  prettyError = \case
+    Bech32DecodingError decErr ->
+      pshow decErr -- TODO
 
     Bech32UnexpectedPrefix actual permitted ->
-        "Unexpected Bech32 prefix: the actual prefix is " <> show actual
-     <> ", but it was expected to be "
-     <> List.intercalate " or " (map show (Set.toList permitted))
+      mconcat
+        [ "Unexpected Bech32 prefix: the actual prefix is " <> pshow actual
+        , ", but it was expected to be "
+        , mconcat $ List.intersperse " or " (map pshow (Set.toList permitted))
+        ]
 
-    Bech32DataPartToBytesError _dataPart -> mconcat
-      [ "There was an error in extracting the bytes from the data part of the "
-      , "Bech32-encoded string."
-      ]
+    Bech32DataPartToBytesError _dataPart ->
+      mconcat
+        [ "There was an error in extracting the bytes from the data part of the "
+        , "Bech32-encoded string."
+        ]
 
-    Bech32DeserialiseFromBytesError _bytes -> mconcat
-      [ "There was an error in deserialising the data part of the "
-      , "Bech32-encoded string into a value of the expected type."
-      ]
+    Bech32DeserialiseFromBytesError _bytes ->
+      mconcat
+        [ "There was an error in deserialising the data part of the "
+        , "Bech32-encoded string into a value of the expected type."
+        ]
 
-    Bech32WrongPrefix actual expected -> mconcat
-      [ "Mismatch in the Bech32 prefix: the actual prefix is " <> show actual
-      , ", but the prefix for this payload value should be " <> show expected
-      ]
+    Bech32WrongPrefix actual expected ->
+      mconcat
+        [ "Mismatch in the Bech32 prefix: the actual prefix is " <> pshow actual
+        , ", but the prefix for this payload value should be " <> pshow expected
+        ]

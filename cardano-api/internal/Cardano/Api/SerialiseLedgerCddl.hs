@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -35,6 +36,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IO
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Tx
 import           Cardano.Api.Utils
@@ -54,9 +56,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (Data)
 import qualified Data.List as List
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-
 
 -- Why have we gone this route? The serialization format of `TxBody era`
 -- differs from the CDDL. We serialize to an intermediate type in order to simplify
@@ -107,21 +107,27 @@ data TextEnvelopeCddlError
   deriving (Show, Eq, Data)
 
 instance Error TextEnvelopeCddlError where
-  displayError (TextEnvelopeCddlErrCBORDecodingError decoderError) =
-    "TextEnvelopeCDDL CBOR decoding error: " <> show decoderError
-  displayError (TextEnvelopeCddlAesonDecodeError fp aesonErr) =
-    "Could not JSON decode TextEnvelopeCddl file at: " <> fp <> " Error: " <> aesonErr
-  displayError TextEnvelopeCddlUnknownKeyWitness =
-    "Unknown key witness specified"
-  displayError (TextEnvelopeCddlTypeError expTypes actType) =
-    "TextEnvelopeCddl type error: "
-       <> " Expected one of: "
-       <> List.intercalate ", " (map Text.unpack expTypes)
-       <> " Actual: " <> Text.unpack actType
-  displayError (TextEnvelopeCddlErrUnknownType unknownType) =
-    "Unknown TextEnvelopeCddl type: " <> Text.unpack unknownType
-  displayError TextEnvelopeCddlErrByronKeyWitnessUnsupported =
-    "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
+  prettyError = \case
+    TextEnvelopeCddlErrCBORDecodingError decoderError ->
+      "TextEnvelopeCDDL CBOR decoding error: " <> pshow decoderError
+    TextEnvelopeCddlAesonDecodeError fp aesonErr ->
+      mconcat
+        [ "Could not JSON decode TextEnvelopeCddl file at: " <> pretty fp
+        , " Error: " <> pretty aesonErr
+        ]
+    TextEnvelopeCddlUnknownKeyWitness ->
+      "Unknown key witness specified"
+    TextEnvelopeCddlTypeError expTypes actType ->
+      mconcat
+        [ "TextEnvelopeCddl type error: "
+        , " Expected one of: "
+        , mconcat $ List.intersperse ", " (map pretty expTypes)
+        , " Actual: " <> pretty actType
+        ]
+    TextEnvelopeCddlErrUnknownType unknownType ->
+      "Unknown TextEnvelopeCddl type: " <> pretty unknownType
+    TextEnvelopeCddlErrByronKeyWitnessUnsupported ->
+      "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 
 serialiseTxLedgerCddl :: CardanoEra era -> Tx era -> TextEnvelopeCddl
 serialiseTxLedgerCddl era tx =

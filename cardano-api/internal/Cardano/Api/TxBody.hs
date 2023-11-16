@@ -18,7 +18,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
-{- HLINT ignore "Move brackets to avoid $." -}
+{- HLINT ignore "Move brackets to avoid" -}
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use let" -}
 {- HLINT ignore "Use section" -}
@@ -172,6 +172,7 @@ import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
@@ -233,7 +234,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_, toList)
 import           Data.Function (on)
 import           Data.Functor (($>))
-import           Data.List (intercalate, sortBy)
+import           Data.List (sortBy)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
@@ -255,7 +256,6 @@ import           Lens.Micro.Extras (view)
 import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
-
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
@@ -340,6 +340,8 @@ instance Eq TxOutInAnyEra where
     case testEquality era1 era2 of
       Just Refl -> out1 == out2
       Nothing   -> False
+
+deriving via (ShowOf TxOutInAnyEra) instance Pretty TxOutInAnyEra
 
 -- | Convenience constructor for 'TxOutInAnyEra'
 txOutInAnyEra :: CardanoEra era -> TxOut CtxTx era -> TxOutInAnyEra
@@ -1747,34 +1749,40 @@ data TxBodyError =
      deriving (Eq, Show)
 
 instance Error TxBodyError where
-    displayError TxBodyEmptyTxIns  = "Transaction body has no inputs"
-    displayError TxBodyEmptyTxInsCollateral =
+  prettyError = \case
+    TxBodyEmptyTxIns ->
+      "Transaction body has no inputs"
+    TxBodyEmptyTxInsCollateral ->
       "Transaction body has no collateral inputs, but uses Plutus scripts"
-    displayError TxBodyEmptyTxOuts = "Transaction body has no outputs"
-    displayError (TxBodyOutputNegative (Quantity q) txout) =
-      "Negative quantity (" ++ show q ++ ") in transaction output: " ++
-      show txout
-    displayError (TxBodyOutputOverflow (Quantity q) txout) =
-      "Quantity too large (" ++ show q ++ " >= 2^64) in transaction output: " ++
-      show txout
-    displayError (TxBodyMetadataError [(k, err)]) =
-      "Error in metadata entry " ++ show k ++ ": " ++ displayError err
-    displayError (TxBodyMetadataError errs) =
-      "Error in metadata entries: " ++
-      intercalate "; "
-        [ show k ++ ": " ++ displayError err
-        | (k, err) <- errs ]
-    displayError TxBodyMintAdaError =
+    TxBodyEmptyTxOuts ->
+      "Transaction body has no outputs"
+    TxBodyOutputNegative (Quantity q) txout ->
+      "Negative quantity (" <> pretty q <> ") in transaction output: " <>
+      pretty txout
+    TxBodyOutputOverflow (Quantity q) txout ->
+      "Quantity too large (" <> pretty q <> " >= 2^64) in transaction output: " <>
+      pretty txout
+    TxBodyMetadataError [(k, err)] ->
+      "Error in metadata entry " <> pretty k <> ": " <> prettyError err
+    TxBodyMetadataError errs ->
+      mconcat
+        [ "Error in metadata entries: "
+        , mconcat $ List.intersperse "; "
+            [ pretty k <> ": " <> prettyError err
+            | (k, err) <- errs
+            ]
+        ]
+    TxBodyMintAdaError ->
       "Transaction cannot mint ada, only non-ada assets"
-    displayError TxBodyMissingProtocolParams =
-      "Transaction uses Plutus scripts but does not provide the protocol " ++
+    TxBodyMissingProtocolParams ->
+      "Transaction uses Plutus scripts but does not provide the protocol " <>
       "parameters to hash"
-    displayError (TxBodyInIxOverflow txin) =
-      "Transaction input index is too big, " ++
-      "acceptable value is up to 2^32-1, " ++
-      "in input " ++ show txin
-    displayError (TxBodyProtocolParamsConversionError ppces) =
-      "Errors in protocol parameters conversion: " ++ displayError ppces
+    TxBodyInIxOverflow txin ->
+      "Transaction input index is too big, " <>
+      "acceptable value is up to 2^32-1, " <>
+      "in input " <> pretty txin
+    TxBodyProtocolParamsConversionError ppces ->
+      "Errors in protocol parameters conversion: " <> prettyError ppces
 
 createTransactionBody :: ()
   => ShelleyBasedEra era

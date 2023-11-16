@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -47,6 +48,7 @@ import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
@@ -268,11 +270,12 @@ newtype ScriptDataRangeError =
   deriving (Eq, Show, Data)
 
 instance Error ScriptDataRangeError where
-  displayError (ScriptDataConstructorOutOfRange n) =
-      "Constructor numbers in script data value "
-        <> show n
-        <> " is outside the range 0 .. 2^64-1."
-
+  prettyError (ScriptDataConstructorOutOfRange n) =
+    mconcat
+      [ "Constructor numbers in script data value "
+      , pretty n
+      , " is outside the range 0 .. 2^64-1."
+      ]
 
 -- ----------------------------------------------------------------------------
 -- JSON conversion
@@ -472,10 +475,10 @@ data ScriptDataJsonBytesError
     deriving (Show, Data)
 
 instance Error ScriptDataJsonBytesError where
-  displayError (ScriptDataJsonBytesErrorValue e) =
-    "Error decoding ScriptData JSON value: " <> displayError e
-  displayError (ScriptDataJsonBytesErrorInvalid e) =
-    "ScriptData is invalid: " <> displayError e
+  prettyError (ScriptDataJsonBytesErrorValue e) =
+    "Error decoding ScriptData JSON value: " <> prettyError e
+  prettyError (ScriptDataJsonBytesErrorInvalid e) =
+    "ScriptData is invalid: " <> prettyError e
 
 
 -- | This allows us to take JSON formatted ScriptData and encode it in the CDDL format
@@ -601,33 +604,43 @@ data ScriptDataJsonSchemaError =
   deriving (Eq, Show, Data)
 
 instance Error ScriptDataJsonError where
-    displayError (ScriptDataJsonSchemaError v detail) =
-        "JSON schema error within the script data: "
-     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
-    displayError (ScriptDataRangeError v detail) =
-        "Value out of range within the script data: "
-     ++ LBS.unpack (Aeson.encode v) ++ "\n" ++ displayError detail
+  prettyError = \case
+    ScriptDataJsonSchemaError v detail ->
+      mconcat
+        [ "JSON schema error within the script data: "
+        , pretty (LBS.unpack (Aeson.encode v)) <> "\n" <> prettyError detail
+        ]
+    ScriptDataRangeError v detail ->
+      mconcat
+        [ "Value out of range within the script data: "
+        , pretty (LBS.unpack (Aeson.encode v)) <> "\n" <> prettyError detail
+        ]
 
 instance Error ScriptDataJsonSchemaError where
-    displayError ScriptDataJsonNullNotAllowed =
-        "JSON null values are not supported."
-    displayError ScriptDataJsonBoolNotAllowed =
-        "JSON bool values are not supported."
-    displayError (ScriptDataJsonNumberNotInteger d) =
-        "JSON numbers must be integers. Unexpected value: " ++ show d
-    displayError (ScriptDataJsonNotObject v) =
-        "JSON object expected. Unexpected value: "
-     ++ LBS.unpack (Aeson.encode v)
-    displayError (ScriptDataJsonBadObject v) =
-        "JSON object does not match the schema.\nExpected a single field named "
-     ++ "\"int\", \"bytes\", \"list\" or \"map\".\n"
-     ++ "Unexpected object field(s): "
-     ++ LBS.unpack (Aeson.encode (KeyMap.fromList $ first Aeson.fromText <$> v))
-    displayError (ScriptDataJsonBadMapPair v) =
-        "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
-     ++ "\nUnexpected value: " ++ LBS.unpack (Aeson.encode v)
-    displayError (ScriptDataJsonTypeMismatch k v) =
-        "The value in the field " ++ show k ++ " does not have the type "
-     ++ "required by the schema.\nUnexpected value: "
-     ++ LBS.unpack (Aeson.encode v)
-
+  prettyError = \case
+    ScriptDataJsonNullNotAllowed ->
+      "JSON null values are not supported."
+    ScriptDataJsonBoolNotAllowed ->
+      "JSON bool values are not supported."
+    ScriptDataJsonNumberNotInteger d ->
+      "JSON numbers must be integers. Unexpected value: " <> pretty d
+    ScriptDataJsonNotObject v ->
+      "JSON object expected. Unexpected value: " <> pretty (LBS.unpack (Aeson.encode v))
+    ScriptDataJsonBadObject v ->
+      mconcat
+        [ "JSON object does not match the schema.\nExpected a single field named "
+        , "\"int\", \"bytes\", \"list\" or \"map\".\n"
+        , "Unexpected object field(s): "
+        , pretty (LBS.unpack (Aeson.encode (KeyMap.fromList $ first Aeson.fromText <$> v)))
+        ]
+    ScriptDataJsonBadMapPair v ->
+      mconcat
+        [ "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
+        , "\nUnexpected value: " <> pretty (LBS.unpack (Aeson.encode v))
+        ]
+    ScriptDataJsonTypeMismatch k v ->
+      mconcat
+        [ "The value in the field " <> pshow k <> " does not have the type "
+        , "required by the schema.\nUnexpected value: "
+        , pretty (LBS.unpack (Aeson.encode v))
+        ]

@@ -6,6 +6,7 @@ module Test.Cardano.Api.IO
 
 import           Cardano.Api
 import           Cardano.Api.IO
+import           Cardano.Api.Pretty
 
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (liftIO)
@@ -25,7 +26,7 @@ prop_createVrfFileWithOwnerPermissions =
     result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions (File file) ""
 
     case result of
-      Left err -> failWith Nothing $ displayError @(FileError ()) err
+      Left err -> failWith Nothing $ prettyToString $ pretty @(FileError ()) err
       Right () -> return ()
 
     fResult <- liftIO . runExceptT $ checkVrfFilePermissions (File file)

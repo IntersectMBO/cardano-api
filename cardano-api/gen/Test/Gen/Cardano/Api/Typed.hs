@@ -131,9 +131,10 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Governance.Actions.VotingProcedure
+import           Cardano.Api.Pretty
+import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley
-import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
 
 import qualified Cardano.Binary as CBOR
@@ -446,7 +447,7 @@ genOperationalCertificateWithCounter = do
     case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
       -- This case should be impossible as we clearly derive the verification
       -- key from the generated signing key.
-      Left err -> fail $ displayError err
+      Left err -> fail $ prettyToString $ prettyError err
       Right pair -> return pair
   where
     convert :: VerificationKey GenesisDelegateExtendedKey
@@ -718,7 +719,7 @@ genTxBody :: CardanoEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
   case res of
-    Left err -> fail (displayError err)
+    Left err -> fail (prettyToString (prettyError err))
     Right txBody -> pure txBody
 
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
