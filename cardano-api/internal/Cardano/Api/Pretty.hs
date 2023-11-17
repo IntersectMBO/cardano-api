@@ -24,6 +24,8 @@ import qualified Data.Text.Lazy as TextLazy
 import           Prettyprinter
 import           Prettyprinter.Render.Terminal
 
+-- | 'Ann' is the prettyprinter annotation for cardano-api and cardano-cli to enable the printing
+-- of colored output. This is a type alias for AnsiStyle.
 type Ann = AnsiStyle
 
 newtype ShowOf a = ShowOf a
