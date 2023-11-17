@@ -1,5 +1,24 @@
 # Changelog for cardano-api
 
+## 8.33.0.0
+
+- `Error` instance for `FileError` instead of `Pretty`
+  Make `prettyToText` return strict `Text` and add `prettyToLazyText`
+  Export `Doc`
+  (feature, breaking)
+  [PR 375](https://github.com/input-output-hk/cardano-api/pull/375)
+
+- Use `Pretty` for rendering errors instead of `Show`
+  (breaking, improvement)
+  [PR 370](https://github.com/input-output-hk/cardano-api/pull/370)
+
+- Integrate ledger relocation of Plutus modules.
+  Eliminate `Ledger.Coin` wrapper in `MaryValue` uses.
+  Update consensus dependencies.
+  Use `Ledger.THKD` on `ConwayPParams`.
+  (breaking)
+  [PR 359](https://github.com/input-output-hk/cardano-api/pull/359)
+
 ## 8.32.0.0
 
 - Export `AllegraEraOnwards`
