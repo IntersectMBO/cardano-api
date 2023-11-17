@@ -26,7 +26,7 @@ prop_createVrfFileWithOwnerPermissions =
     result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions (File file) ""
 
     case result of
-      Left err -> failWith Nothing $ prettyToString $ pretty @(FileError ()) err
+      Left err -> failWith Nothing $ prettyToString $ prettyError @(FileError ()) err
       Right () -> return ()
 
     fResult <- liftIO . runExceptT $ checkVrfFilePermissions (File file)
