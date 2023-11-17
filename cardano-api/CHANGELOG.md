@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.29.1.0
+
+- Export `AllegraEraOnwards`
+  (compatible)
+  [PR 321](https://github.com/input-output-hk/cardano-api/pull/374)
+
 ## 8.29.0.0
 
 - Updated ledger, consensus and typed-protocol packages
