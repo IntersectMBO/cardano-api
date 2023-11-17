@@ -67,8 +67,8 @@ data FileError e = FileError FilePath e
                  | FileIOError FilePath IOException
   deriving (Show, Eq, Functor)
 
-instance Error e => Pretty (FileError e) where
-  pretty = \case
+instance Error e => Error (FileError e) where
+  prettyError = \case
     FileErrorTempFile targetPath tempPath h ->
       vsep
         [ "Error creating temporary file at: " <> pretty tempPath

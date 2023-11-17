@@ -1,8 +1,10 @@
 module Cardano.Api.Pretty
   ( Ann
+  , Doc
   , Pretty(..)
   , ShowOf(..)
   , viaShow
+  , prettyToLazyText
   , prettyToText
   , prettyToString
   , pshow
@@ -17,10 +19,13 @@ module Cardano.Api.Pretty
   , white
   ) where
 
+import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TextLazy
 import           Prettyprinter
 import           Prettyprinter.Render.Terminal
 
+-- | 'Ann' is the prettyprinter annotation for cardano-api and cardano-cli to enable the printing
+-- of colored output. This is a type alias for AnsiStyle.
 type Ann = AnsiStyle
 
 newtype ShowOf a = ShowOf a
@@ -34,8 +39,11 @@ instance Show a => Pretty (ShowOf a) where
 prettyToString :: Doc AnsiStyle -> String
 prettyToString =  show
 
-prettyToText :: Doc AnsiStyle -> TextLazy.Text
-prettyToText = renderLazy . layoutPretty defaultLayoutOptions
+prettyToLazyText :: Doc AnsiStyle -> TextLazy.Text
+prettyToLazyText = renderLazy . layoutPretty defaultLayoutOptions
+
+prettyToText :: Doc AnsiStyle -> Text.Text
+prettyToText = TextLazy.toStrict . prettyToLazyText
 
 black :: Doc AnsiStyle -> Doc AnsiStyle
 black = annotate (color Black)
