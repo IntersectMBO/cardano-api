@@ -193,7 +193,6 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Alonzo.Core as L
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
@@ -210,6 +209,7 @@ import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
+import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
@@ -1863,7 +1863,7 @@ createTransactionBody sbe bc =
 
 getScriptIntegrityHash :: ()
   => BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
-  -> Set Alonzo.Language
+  -> Set Plutus.Language
   -> TxBodyScriptData era
   -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era)))
 getScriptIntegrityHash apiProtocolParameters languages = \case
@@ -1936,7 +1936,7 @@ validateMetadata txMetadata =
 
 validateProtocolParameters
   :: BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
-  -> Set Alonzo.Language
+  -> Set Plutus.Language
   -> Either TxBodyError ()
 validateProtocolParameters txProtocolParams languages =
   case txProtocolParams of
@@ -1953,7 +1953,7 @@ validateTxIns txIns =
             ]
 
 validateTxInsCollateral
-  :: TxInsCollateral era -> Set Alonzo.Language -> Either TxBodyError ()
+  :: TxInsCollateral era -> Set Plutus.Language -> Either TxBodyError ()
 validateTxInsCollateral txInsCollateral languages =
   case txInsCollateral of
     TxInsCollateralNone ->
@@ -2404,7 +2404,7 @@ fromLedgerTxMintValue sbe body =
       | L.isZero mint = TxMintNone
       | otherwise     = TxMintValue maInEra (fromMaryValue mint) ViewTx
       where
-        mint = MaryValue 0 (txBody ^. L.mintTxBodyL)
+        mint = MaryValue (Ledger.Coin 0) (txBody ^. L.mintTxBodyL)
 
 
 makeByronTransactionBody :: ()
@@ -2613,7 +2613,7 @@ convPParamsToScriptIntegrityHash :: ()
   -> BuildTxWith BuildTx (Maybe (LedgerProtocolParameters era))
   -> Alonzo.Redeemers (ShelleyLedgerEra era)
   -> Alonzo.TxDats (ShelleyLedgerEra era)
-  -> Set Alonzo.Language
+  -> Set Plutus.Language
   -> StrictMaybe (L.ScriptIntegrityHash (Ledger.EraCrypto (ShelleyLedgerEra era)))
 convPParamsToScriptIntegrityHash w txProtocolParams redeemers datums languages =
   alonzoEraOnwardsConstraints w $
@@ -2622,7 +2622,7 @@ convPParamsToScriptIntegrityHash w txProtocolParams redeemers datums languages =
       BuildTxWith (Just (LedgerProtocolParameters pp)) ->
         Alonzo.hashScriptIntegrity (Set.map (L.getLanguageView pp) languages) redeemers datums
 
-convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Alonzo.Language
+convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Plutus.Language
 convLanguages witnesses =
   Set.fromList
     [ toAlonzoLanguage (AnyPlutusScriptVersion v)
@@ -2870,7 +2870,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
 
-    languages :: Set Alonzo.Language
+    languages :: Set Plutus.Language
     languages =
       Set.fromList
         [ toAlonzoLanguage (AnyPlutusScriptVersion v)
@@ -2974,14 +2974,14 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
 
-    languages :: Set Alonzo.Language
+    languages :: Set Plutus.Language
     languages =
       Set.fromList $ catMaybes
         [ getScriptLanguage sw
         | (_, AnyScriptWitness sw) <- witnesses
         ]
 
-    getScriptLanguage :: ScriptWitness witctx era -> Maybe Alonzo.Language
+    getScriptLanguage :: ScriptWitness witctx era -> Maybe Plutus.Language
     getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
       Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
     getScriptLanguage SimpleScriptWitness{} = Nothing
@@ -3084,14 +3084,14 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
           ]
 
-    languages :: Set Alonzo.Language
+    languages :: Set Plutus.Language
     languages =
       Set.fromList $ catMaybes
         [ getScriptLanguage sw
         | (_, AnyScriptWitness sw) <- witnesses
         ]
 
-    getScriptLanguage :: ScriptWitness witctx era -> Maybe Alonzo.Language
+    getScriptLanguage :: ScriptWitness witctx era -> Maybe Plutus.Language
     getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
       Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
     getScriptLanguage SimpleScriptWitness{} = Nothing

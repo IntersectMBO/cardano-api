@@ -65,16 +65,16 @@ import           Cardano.Api.Value
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as Ledger
 import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
+import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionFee)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
@@ -288,7 +288,7 @@ data ResolvablePointers where
     -> Map
          Alonzo.RdmrPtr
          ( Alonzo.ScriptPurpose (ShelleyLedgerEra era)
-         , Maybe (PlutusScriptBytes, Alonzo.Language)
+         , Maybe (PlutusScriptBytes, Plutus.Language)
          , Ledger.ScriptHash Ledger.StandardCrypto
          )
     -> ResolvablePointers
@@ -347,7 +347,7 @@ data ScriptExecutionError =
          ResolvablePointers -- A mapping a pointers that are possible to resolve
 
        -- | A cost model was missing for a language which was used.
-     | ScriptErrorMissingCostModel Alonzo.Language
+     | ScriptErrorMissingCostModel Plutus.Language
   deriving Show
 
 instance Error ScriptExecutionError where
@@ -548,9 +548,9 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
         L.MissingScript rdmrPtr resolveable ->
-          let cnv1 Alonzo.Plutus
-                { Alonzo.plutusLanguage = lang
-                , Alonzo.plutusScript = Alonzo.BinaryPlutus bytes
+          let cnv1 Plutus.Plutus
+                { Plutus.plutusLanguage = lang
+                , Plutus.plutusScript = Alonzo.BinaryPlutus bytes
                 } = (bytes, lang)
               cnv2 (purpose, mbScript, scriptHash) = (purpose, fmap cnv1 mbScript, scriptHash)
           in

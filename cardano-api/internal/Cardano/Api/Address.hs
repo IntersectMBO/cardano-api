@@ -94,11 +94,11 @@ import           Cardano.Api.Utils
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Plutus
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PlutusAPI
 
 import           Control.Applicative ((<|>))
 import           Control.DeepSeq (NFData (..), deepseq)
@@ -620,11 +620,11 @@ isKeyAddress (AddressInEra (ShelleyAddressInEra _) (ShelleyAddress _ pCred _)) =
     PaymentCredentialByScript _ -> False
 
 -- | Converts a Shelley payment address to a Plutus public key hash.
-shelleyPayAddrToPlutusPubKHash :: Address ShelleyAddr -> Maybe Plutus.PubKeyHash
+shelleyPayAddrToPlutusPubKHash :: Address ShelleyAddr -> Maybe PlutusAPI.PubKeyHash
 shelleyPayAddrToPlutusPubKHash (ShelleyAddress _ payCred _) =
   case payCred of
     Shelley.ScriptHashObj _ -> Nothing
-    Shelley.KeyHashObj kHash -> Just $ Alonzo.transKeyHash kHash
+    Shelley.KeyHashObj kHash -> Just $ Plutus.transKeyHash kHash
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions

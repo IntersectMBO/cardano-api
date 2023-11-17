@@ -119,7 +119,6 @@ import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Ledger
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Api.Era as Ledger
@@ -130,6 +129,7 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
+import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Cardano.Slotting.Slot (EpochNo (..))
 
@@ -243,7 +243,7 @@ data IntroducedInConwayPParams era
     { icPoolVotingThresholds :: StrictMaybe Ledger.PoolVotingThresholds
     , icDRepVotingThresholds :: StrictMaybe Ledger.DRepVotingThresholds
     , icMinCommitteeSize     :: StrictMaybe Natural
-    , icCommitteeTermLength  :: StrictMaybe Natural
+    , icCommitteeTermLength  :: StrictMaybe EpochNo
     , icGovActionLifetime    :: StrictMaybe EpochNo
     , icGovActionDeposit     :: StrictMaybe Ledger.Coin
     , icDRepDeposit          :: StrictMaybe Ledger.Coin
@@ -1097,7 +1097,7 @@ toAlonzoCostModels m = do
   f <- mapM conv $ Map.toList m
   Right (Alonzo.emptyCostModels { Alonzo.costModelsValid = Map.fromList f })
  where
-  conv :: (AnyPlutusScriptVersion, CostModel) -> Either ProtocolParametersConversionError (Alonzo.Language, Alonzo.CostModel)
+  conv :: (AnyPlutusScriptVersion, CostModel) -> Either ProtocolParametersConversionError (Plutus.Language, Alonzo.CostModel)
   conv (anySVer, cModel) = do
     alonzoCostModel <- toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
     Right (toAlonzoScriptLanguage anySVer, alonzoCostModel)
@@ -1110,17 +1110,17 @@ fromAlonzoCostModels (Alonzo.CostModels m _ _) =
   . map (bimap fromAlonzoScriptLanguage fromAlonzoCostModel)
   $ Map.toList m
 
-toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
-toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
-toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2
-toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV3) = Alonzo.PlutusV3
+toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Plutus.Language
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Plutus.PlutusV1
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Plutus.PlutusV2
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV3) = Plutus.PlutusV3
 
-fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
-fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
-fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
-fromAlonzoScriptLanguage Alonzo.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
+fromAlonzoScriptLanguage :: Plutus.Language -> AnyPlutusScriptVersion
+fromAlonzoScriptLanguage Plutus.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
+fromAlonzoScriptLanguage Plutus.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
+fromAlonzoScriptLanguage Plutus.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
 
-toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either ProtocolParametersConversionError Alonzo.CostModel
+toAlonzoCostModel :: CostModel -> Plutus.Language -> Either ProtocolParametersConversionError Alonzo.CostModel
 toAlonzoCostModel (CostModel m) l = first (PpceInvalidCostModel (CostModel m)) $ Alonzo.mkCostModel l m
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel

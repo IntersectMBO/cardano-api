@@ -57,11 +57,11 @@ import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Alonzo.Scripts.Data as Alonzo
 import           Cardano.Ledger.Core (Era)
+import qualified Cardano.Ledger.Plutus.Data as Plutus
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
-import qualified PlutusLedgerApi.V1 as Plutus
+import qualified PlutusLedgerApi.V1 as PlutusAPI
 
 import           Codec.Serialise.Class (Serialise (..))
 import           Control.Applicative (Alternative (..))
@@ -146,7 +146,7 @@ instance HasTypeProxy ScriptData where
 --
 
 newtype instance Hash ScriptData =
-    ScriptDataHash (Alonzo.DataHash StandardCrypto)
+    ScriptDataHash (Plutus.DataHash StandardCrypto)
   deriving stock (Eq, Ord)
   deriving (Show, IsString)         via UsingRawBytesHex (Hash ScriptData)
   deriving (ToJSON, FromJSON)       via UsingRawBytesHex (Hash ScriptData)
@@ -166,15 +166,15 @@ instance SerialiseAsCBOR ScriptData where
 
 
 instance ToCBOR ScriptData where
-  toCBOR = encode @Plutus.Data . toPlutusData
+  toCBOR = encode @PlutusAPI.Data . toPlutusData
 
 instance FromCBOR ScriptData where
   fromCBOR :: CBOR.Decoder s ScriptData
-  fromCBOR = fromPlutusData <$> decode @Plutus.Data
+  fromCBOR = fromPlutusData <$> decode @PlutusAPI.Data
 
 hashScriptDataBytes :: HashableScriptData -> Hash ScriptData
 hashScriptDataBytes  =
-  ScriptDataHash . Alonzo.hashData . (toAlonzoData :: HashableScriptData  -> Alonzo.Data StandardAlonzo)
+  ScriptDataHash . Plutus.hashData . (toAlonzoData :: HashableScriptData  -> Plutus.Data StandardAlonzo)
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions
@@ -188,43 +188,43 @@ newtype ScriptBytesError = ScriptBytesError String deriving Show
 -- data i.e differing script data hashes due to the re-encoding being slightly
 -- different to the original encoding. See: https://github.com/input-output-hk/cardano-ledger/issues/2943
 
-toAlonzoData :: Era ledgerera => HashableScriptData -> Alonzo.Data ledgerera
+toAlonzoData :: Era ledgerera => HashableScriptData -> Plutus.Data ledgerera
 toAlonzoData =
   either
   (\ e -> error $ "toAlonzoData: " <> show e)
-  Alonzo.binaryDataToData
-  . first ScriptBytesError . Alonzo.makeBinaryData . SB.toShort . getOriginalScriptDataBytes
+  Plutus.binaryDataToData
+  . first ScriptBytesError . Plutus.makeBinaryData . SB.toShort . getOriginalScriptDataBytes
 
-fromAlonzoData :: Alonzo.Data ledgerera -> HashableScriptData
+fromAlonzoData :: Plutus.Data ledgerera -> HashableScriptData
 fromAlonzoData d =
   HashableScriptData
     (Ledger.originalBytes d)
-    (fromPlutusData $ Alonzo.getPlutusData d)
+    (fromPlutusData $ Plutus.getPlutusData d)
 
-toPlutusData :: ScriptData -> Plutus.Data
+toPlutusData :: ScriptData -> PlutusAPI.Data
 toPlutusData (ScriptDataConstructor int xs)
-                                  = Plutus.Constr int
+                                  = PlutusAPI.Constr int
                                       [ toPlutusData x | x <- xs ]
-toPlutusData (ScriptDataMap  kvs) = Plutus.Map
+toPlutusData (ScriptDataMap  kvs) = PlutusAPI.Map
                                       [ (toPlutusData k, toPlutusData v)
                                       | (k,v) <- kvs ]
-toPlutusData (ScriptDataList  xs) = Plutus.List
+toPlutusData (ScriptDataList  xs) = PlutusAPI.List
                                       [ toPlutusData x | x <- xs ]
-toPlutusData (ScriptDataNumber n) = Plutus.I n
-toPlutusData (ScriptDataBytes bs) = Plutus.B bs
+toPlutusData (ScriptDataNumber n) = PlutusAPI.I n
+toPlutusData (ScriptDataBytes bs) = PlutusAPI.B bs
 
 
-fromPlutusData :: Plutus.Data -> ScriptData
-fromPlutusData (Plutus.Constr int xs)
+fromPlutusData :: PlutusAPI.Data -> ScriptData
+fromPlutusData (PlutusAPI.Constr int xs)
                                 = ScriptDataConstructor int
                                     [ fromPlutusData x | x <- xs ]
-fromPlutusData (Plutus.Map kvs) = ScriptDataMap
+fromPlutusData (PlutusAPI.Map kvs) = ScriptDataMap
                                     [ (fromPlutusData k, fromPlutusData v)
                                     | (k,v) <- kvs ]
-fromPlutusData (Plutus.List xs) = ScriptDataList
+fromPlutusData (PlutusAPI.List xs) = ScriptDataList
                                     [ fromPlutusData x | x <- xs ]
-fromPlutusData (Plutus.I     n) = ScriptDataNumber n
-fromPlutusData (Plutus.B    bs) = ScriptDataBytes bs
+fromPlutusData (PlutusAPI.I     n) = ScriptDataNumber n
+fromPlutusData (PlutusAPI.B    bs) = ScriptDataBytes bs
 
 
 -- ----------------------------------------------------------------------------
