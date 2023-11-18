@@ -220,20 +220,22 @@ toConsensusTxId (TxIdInMode ConwayEra txid) =
 --
 data TxValidationError era where
   ByronTxValidationError
-    :: Consensus.ApplyTxErr Consensus.ByronBlock
-    -> TxValidationError ByronEra
+    :: ByronEraOnly era
+    -> Consensus.ApplyTxErr Consensus.ByronBlock
+    -> TxValidationError era
 
   ShelleyTxValidationError
     :: ShelleyBasedEra era
     -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
     -> TxValidationError era
 
--- The GADT in the ShelleyTxValidationError case requires a custom instance
 instance Show (TxValidationError era) where
   showsPrec p = \case
-    ByronTxValidationError err ->
+    ByronTxValidationError w err ->
       showParen (p >= 11)
         ( showString "ByronTxValidationError "
+        . showString (show w)
+        . showString " "
         . showsPrec 11 err
         )
 
@@ -269,7 +271,7 @@ fromConsensusApplyTxErr :: ()
   -> TxValidationErrorInCardanoMode
 fromConsensusApplyTxErr = \case
   Consensus.ApplyTxErrByron err ->
-    TxValidationErrorInCardanoMode $ ByronTxValidationError err
+    TxValidationErrorInCardanoMode $ ByronTxValidationError ByronEraOnlyByron err
   Consensus.ApplyTxErrShelley err ->
     TxValidationErrorInCardanoMode $ ShelleyTxValidationError ShelleyBasedEraShelley err
   Consensus.ApplyTxErrAllegra err ->
