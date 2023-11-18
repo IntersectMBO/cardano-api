@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -30,6 +31,7 @@ import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 
@@ -43,8 +45,11 @@ import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 
+import           Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.SOP.Strict (NS (S, Z))
-
+import qualified Data.Text as Text
+import           GHC.Generics
 
 -- ----------------------------------------------------------------------------
 -- Transactions in the context of a consensus mode
@@ -229,6 +234,8 @@ data TxValidationError era where
     -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
     -> TxValidationError era
 
+deriving instance Generic (TxValidationError era)
+
 instance Show (TxValidationError era) where
   showsPrec p = \case
     ByronTxValidationError w err ->
@@ -247,6 +254,29 @@ instance Show (TxValidationError era) where
           . showString " "
           . showsPrec 11 err
           )
+
+instance ToJSON (TxValidationError era) where
+  toJSON = \case
+    ByronTxValidationError w err ->
+      byronEraOnlyConstraints w $
+        Aeson.object
+          [ "kind" .= Aeson.String "ByronTxValidationError"
+          , "era" .= toJSON (Text.pack (show w))
+          , "error" .= toJSON err
+          ]
+    ShelleyTxValidationError sbe err ->
+      shelleyBasedEraConstraints sbe $
+        Aeson.object
+          [ "kind" .= Aeson.String "ShelleyTxValidationError"
+          , "era" .= toJSON (Text.pack (show sbe))
+          , "error" .= appTxErrToJson sbe err
+          ]
+
+appTxErrToJson :: ()
+  => ShelleyBasedEra era
+  -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
+  -> Aeson.Value
+appTxErrToJson w e = shelleyBasedEraConstraints w $ toJSON e
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.
