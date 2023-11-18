@@ -219,59 +219,32 @@ toConsensusTxId (TxIdInMode ConwayEra txid) =
 -- transaction to a local node. The errors are specific to an era.
 --
 data TxValidationError era where
+  ByronTxValidationError
+    :: Consensus.ApplyTxErr Consensus.ByronBlock
+    -> TxValidationError ByronEra
 
-     ByronTxValidationError
-       :: Consensus.ApplyTxErr Consensus.ByronBlock
-       -> TxValidationError ByronEra
-
-     ShelleyTxValidationError
-       :: ShelleyBasedEra era
-       -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
-       -> TxValidationError era
+  ShelleyTxValidationError
+    :: ShelleyBasedEra era
+    -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
+    -> TxValidationError era
 
 -- The GADT in the ShelleyTxValidationError case requires a custom instance
 instance Show (TxValidationError era) where
-    showsPrec p (ByronTxValidationError err) =
+  showsPrec p = \case
+    ByronTxValidationError err ->
       showParen (p >= 11)
         ( showString "ByronTxValidationError "
         . showsPrec 11 err
         )
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraShelley err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraShelley "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAllegra err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraAllegra "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraMary err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraMary "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAlonzo err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraAlonzo "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraBabbage err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraBabbage "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraConway err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraConway "
-        . showsPrec 11 err
-        )
+    ShelleyTxValidationError sbe err ->
+      shelleyBasedEraConstraints sbe $
+        showParen (p >= 11)
+          ( showString "ShelleyTxValidationError "
+          . showString (show sbe)
+          . showString " "
+          . showsPrec 11 err
+          )
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.
