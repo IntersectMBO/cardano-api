@@ -225,8 +225,7 @@ toConsensusTxId (TxIdInMode ConwayEra txid) =
 --
 data TxValidationError era where
   ByronTxValidationError
-    :: ByronEraOnly era
-    -> Consensus.ApplyTxErr Consensus.ByronBlock
+    :: Consensus.ApplyTxErr Consensus.ByronBlock
     -> TxValidationError era
 
   ShelleyTxValidationError
@@ -238,11 +237,9 @@ deriving instance Generic (TxValidationError era)
 
 instance Show (TxValidationError era) where
   showsPrec p = \case
-    ByronTxValidationError w err ->
+    ByronTxValidationError err ->
       showParen (p >= 11)
         ( showString "ByronTxValidationError "
-        . showString (show w)
-        . showString " "
         . showsPrec 11 err
         )
 
@@ -257,11 +254,9 @@ instance Show (TxValidationError era) where
 
 instance ToJSON (TxValidationError era) where
   toJSON = \case
-    ByronTxValidationError w err ->
-      byronEraOnlyConstraints w $
+    ByronTxValidationError err ->
         Aeson.object
           [ "kind" .= Aeson.String "ByronTxValidationError"
-          , "era" .= toJSON (Text.pack (show w))
           , "error" .= toJSON err
           ]
     ShelleyTxValidationError sbe err ->
@@ -301,7 +296,7 @@ fromConsensusApplyTxErr :: ()
   -> TxValidationErrorInCardanoMode
 fromConsensusApplyTxErr = \case
   Consensus.ApplyTxErrByron err ->
-    TxValidationErrorInCardanoMode $ ByronTxValidationError ByronEraOnlyByron err
+    TxValidationErrorInCardanoMode $ ByronTxValidationError err
   Consensus.ApplyTxErrShelley err ->
     TxValidationErrorInCardanoMode $ ShelleyTxValidationError ShelleyBasedEraShelley err
   Consensus.ApplyTxErrAllegra err ->
