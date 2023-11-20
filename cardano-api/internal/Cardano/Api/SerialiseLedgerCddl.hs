@@ -26,11 +26,13 @@ module Cardano.Api.SerialiseLedgerCddl
   -- Exported for testing
   , serialiseTxLedgerCddl
   , deserialiseTxLedgerCddl
+  , deserialiseByronTxCddl
   , serialiseWitnessLedgerCddl
   , deserialiseWitnessLedgerCddl
   )
   where
 
+import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
@@ -49,7 +51,7 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
-import           Data.Bifunctor (first)
+import           Data.Bifunctor (bimap, first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
@@ -155,21 +157,26 @@ serialiseTxLedgerCddl era tx =
       ConwayEra -> "Tx ConwayEra"
 
 deserialiseTxLedgerCddl :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> TextEnvelopeCddl
   -> Either TextEnvelopeCddlError (Tx era)
 deserialiseTxLedgerCddl era tec =
   first TextEnvelopeCddlErrCBORDecodingError . deserialiseTx era $ teCddlRawCBOR tec
 
+deserialiseByronTxCddl :: TextEnvelopeCddl -> Either TextEnvelopeCddlError (Tx ByronEra)
+deserialiseByronTxCddl tec =
+  bimap TextEnvelopeCddlErrCBORDecodingError (ByronTx ByronEraOnlyByron)
+    $ CBOR.decodeFullAnnotatedBytes
+        CBOR.byronProtVer "Byron Tx"
+        CBOR.decCBOR (LBS.fromStrict $ teCddlRawCBOR tec)
+
 deserialiseTx :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> ByteString
   -> Either DecoderError (Tx era)
-deserialiseTx era bs =
-  caseByronOrShelleyBasedEra
-    (\w -> ByronTx w <$> CBOR.decodeFullAnnotatedBytes CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs))
-    (const $ cardanoEraConstraints era $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy)) bs)
-    era
+deserialiseTx sbe =
+  cardanoEraConstraints (toCardanoEra sbe)
+    $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy))
 
 serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelopeCddl
 serialiseWitnessLedgerCddl sbe kw =
@@ -252,12 +259,12 @@ textEnvelopeCddlJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
 data FromSomeTypeCDDL c b where
   FromCDDLTx
     :: Text -- ^ CDDL type that we want
-    -> (InAnyCardanoEra Tx -> b)
+    -> (InAnyShelleyBasedEra Tx -> b)
     -> FromSomeTypeCDDL TextEnvelopeCddl b
 
   FromCDDLWitness
     :: Text -- ^ CDDL type that we want
-    -> (InAnyCardanoEra KeyWitness -> b)
+    -> (InAnyShelleyBasedEra KeyWitness -> b)
     -> FromSomeTypeCDDL TextEnvelopeCddl b
 
 deserialiseFromTextEnvelopeCddlAnyOf
@@ -270,14 +277,12 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
         Left (TextEnvelopeCddlTypeError expectedTypes actualType)
 
       Just (FromCDDLTx ttoken f) -> do
-        AnyCardanoEra era <- cddlTypeToEra ttoken
-        f . InAnyCardanoEra era <$> deserialiseTxLedgerCddl era teCddl
+        AnyShelleyBasedEra era <- cddlTypeToEra ttoken
+        f . InAnyShelleyBasedEra era <$> deserialiseTxLedgerCddl era teCddl
 
       Just (FromCDDLWitness ttoken f) -> do
-         AnyCardanoEra era <- cddlTypeToEra ttoken
-         forEraInEon era
-           (Left TextEnvelopeCddlErrByronKeyWitnessUnsupported)
-           (\sbe -> f . InAnyCardanoEra era <$> deserialiseWitnessLedgerCddl sbe teCddl)
+         AnyShelleyBasedEra era <- cddlTypeToEra ttoken
+         f . InAnyShelleyBasedEra era <$> deserialiseWitnessLedgerCddl era teCddl
   where
    actualType :: Text
    actualType = teCddlType teCddl
@@ -292,28 +297,27 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 -- Parse the text into types because this will increase code readability and
 -- will make it easier to keep track of the different Cddl descriptions via
 -- a single sum data type.
-cddlTypeToEra :: Text -> Either TextEnvelopeCddlError AnyCardanoEra
-cddlTypeToEra "Witnessed Tx ByronEra" = return $ AnyCardanoEra ByronEra
-cddlTypeToEra "Witnessed Tx ShelleyEra" = return $ AnyCardanoEra ShelleyEra
-cddlTypeToEra "Witnessed Tx AllegraEra" = return $ AnyCardanoEra AllegraEra
-cddlTypeToEra "Witnessed Tx MaryEra" = return $ AnyCardanoEra MaryEra
-cddlTypeToEra "Witnessed Tx AlonzoEra" = return $ AnyCardanoEra AlonzoEra
-cddlTypeToEra "Witnessed Tx BabbageEra" = return $ AnyCardanoEra BabbageEra
-cddlTypeToEra "Witnessed Tx ConwayEra" = return $ AnyCardanoEra ConwayEra
-cddlTypeToEra "Unwitnessed Tx ByronEra" = return $ AnyCardanoEra ByronEra
-cddlTypeToEra "Unwitnessed Tx ShelleyEra" = return $ AnyCardanoEra ShelleyEra
-cddlTypeToEra "Unwitnessed Tx AllegraEra" = return $ AnyCardanoEra AllegraEra
-cddlTypeToEra "Unwitnessed Tx MaryEra" = return $ AnyCardanoEra MaryEra
-cddlTypeToEra "Unwitnessed Tx AlonzoEra" = return $ AnyCardanoEra AlonzoEra
-cddlTypeToEra "Unwitnessed Tx BabbageEra" = return $ AnyCardanoEra BabbageEra
-cddlTypeToEra "Unwitnessed Tx ConwayEra" = return $ AnyCardanoEra ConwayEra
-cddlTypeToEra "TxWitness ShelleyEra" = return $ AnyCardanoEra ShelleyEra
-cddlTypeToEra "TxWitness AllegraEra" = return $ AnyCardanoEra AllegraEra
-cddlTypeToEra "TxWitness MaryEra" = return $ AnyCardanoEra MaryEra
-cddlTypeToEra "TxWitness AlonzoEra" = return $ AnyCardanoEra AlonzoEra
-cddlTypeToEra "TxWitness BabbageEra" = return $ AnyCardanoEra BabbageEra
-cddlTypeToEra "TxWitness ConwayEra" = return $ AnyCardanoEra ConwayEra
-cddlTypeToEra unknownCddlType = Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
+cddlTypeToEra :: Text -> Either TextEnvelopeCddlError AnyShelleyBasedEra
+cddlTypeToEra = \case
+  "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+  "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+  "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+  "Witnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+  "Witnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+  "Witnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+  "Unwitnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+  "Unwitnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+  "Unwitnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+  "Unwitnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+  "Unwitnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+  "Unwitnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+  "TxWitness ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+  "TxWitness AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+  "TxWitness MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+  "TxWitness AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+  "TxWitness BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+  "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+  unknownCddlType -> Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
 
 readFileTextEnvelopeCddlAnyOf
   :: [FromSomeTypeCDDL TextEnvelopeCddl b]
