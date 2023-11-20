@@ -73,6 +73,10 @@ module Cardano.Api.ReexposeLedger
   , drepDepositL
   , csCommitteeCredsL
 
+  -- Byron
+  , Annotated
+  , Byron.Tx(..)
+
   -- Babbage
   , CoinPerByte (..)
 
@@ -103,6 +107,7 @@ module Cardano.Api.ReexposeLedger
   , EpochNo(..)
   ) where
 
+import qualified Cardano.Chain.UTxO as Byron
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..), PParamsUpdate (..))
 import           Cardano.Ledger.Alonzo.Scripts (Prices (..))
@@ -116,6 +121,7 @@ import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (..), Url,
                    boundRational, dnsToText, maybeToStrictMaybe, portToWord16, strictMaybeToMaybe,
                    textToDns, textToUrl, unboundRational, urlToText)
+import           Cardano.Ledger.Binary (Annotated (..))
 import           Cardano.Ledger.CertState (DRepState, csCommitteeCredsL)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVotingThresholds (..),
