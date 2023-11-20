@@ -233,7 +233,7 @@ library
                       , cryptonite
                       , deepseq
                       , memory
-                      , nothunks
+                      , nothunks < 0.1.5
                       , ouroboros-network-protocols
                       , typed-protocols ^>= 0.1.1
 
