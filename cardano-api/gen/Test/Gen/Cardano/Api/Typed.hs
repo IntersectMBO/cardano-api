@@ -134,9 +134,10 @@ module Test.Gen.Cardano.Api.Typed
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness), Tx (ByronTx),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
+import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Pretty
@@ -314,7 +315,7 @@ genScriptInEra era =
       [ ScriptInEra langInEra <$> genScript lang
       | AnyScriptLanguage lang <- [minBound..maxBound]
         -- TODO: scriptLanguageSupportedInEra should be parameterized on ShelleyBasedEra
-      , Just langInEra <- [scriptLanguageSupportedInEra (toCardanoEra era) lang] ]
+      , Just langInEra <- [scriptLanguageSupportedInEra era lang] ]
 
 genScriptHash :: Gen ScriptHash
 genScriptHash = do
@@ -718,10 +719,11 @@ genAddressInEraByron :: Gen (AddressInEra ByronEra)
 genAddressInEraByron = byronAddressInEra <$> genAddressByron
 
 genTxByron :: Gen (Tx ByronEra)
-genTxByron =
-  makeSignedTransaction
-    <$> genWitnessesByron
-    <*> genTxBodyByron
+genTxByron = do
+  tx <- makeSignedByronTransaction
+          <$> genWitnessesByron
+          <*> genTxBodyByron
+  return $ ByronTx ByronEraOnlyByron tx
 
 genTxOutValueByron :: Gen (TxOutValue ByronEra)
 genTxOutValueByron = TxOutValueByron <$> genPositiveLovelace
@@ -733,16 +735,12 @@ genTxOutByron =
         <*> pure TxOutDatumNone
         <*> pure ReferenceScriptNone
 
-genTxBodyByron :: Gen (TxBody ByronEra)
+genTxBodyByron :: Gen (L.Annotated L.Tx ByteString)
 genTxBodyByron = do
   txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txOuts <- Gen.list (Range.constant 1 10) genTxOutByron
-  let byronTxBodyContent = (defaultTxBodyContent ByronEra)
-                             { Api.txIns
-                             , Api.txOuts
-                             }
-  case Api.createAndValidateTransactionBody ByronEra byronTxBodyContent of
-    Left err -> fail $ prettyToString $ prettyError err
+  case Api.makeByronTransactionBody txIns txOuts of
+    Left err -> fail (displayError err)
     Right txBody -> pure txBody
 
 genWitnessesByron :: Gen [KeyWitness ByronEra]
@@ -750,7 +748,7 @@ genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
 
 genTxBody :: ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
-  res <- Api.createAndValidateTransactionBody (toCardanoEra era) <$> genTxBodyContent era
+  res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
   case res of
     Left err -> fail (prettyToString (prettyError err))
     Right txBody -> pure txBody
