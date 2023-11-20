@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -30,6 +31,7 @@ import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 
@@ -43,8 +45,11 @@ import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 
+import           Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as Aeson
 import           Data.SOP.Strict (NS (S, Z))
-
+import qualified Data.Text as Text
+import           GHC.Generics
 
 -- ----------------------------------------------------------------------------
 -- Transactions in the context of a consensus mode
@@ -219,59 +224,54 @@ toConsensusTxId (TxIdInMode ConwayEra txid) =
 -- transaction to a local node. The errors are specific to an era.
 --
 data TxValidationError era where
+  ByronTxValidationError
+    :: Consensus.ApplyTxErr Consensus.ByronBlock
+    -> TxValidationError era
 
-     ByronTxValidationError
-       :: Consensus.ApplyTxErr Consensus.ByronBlock
-       -> TxValidationError ByronEra
+  ShelleyTxValidationError
+    :: ShelleyBasedEra era
+    -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
+    -> TxValidationError era
 
-     ShelleyTxValidationError
-       :: ShelleyBasedEra era
-       -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
-       -> TxValidationError era
+deriving instance Generic (TxValidationError era)
 
--- The GADT in the ShelleyTxValidationError case requires a custom instance
 instance Show (TxValidationError era) where
-    showsPrec p (ByronTxValidationError err) =
+  showsPrec p = \case
+    ByronTxValidationError err ->
       showParen (p >= 11)
         ( showString "ByronTxValidationError "
         . showsPrec 11 err
         )
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraShelley err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraShelley "
-        . showsPrec 11 err
-        )
+    ShelleyTxValidationError sbe err ->
+      shelleyBasedEraConstraints sbe $
+        showParen (p >= 11)
+          ( showString "ShelleyTxValidationError "
+          . showString (show sbe)
+          . showString " "
+          . showsPrec 11 err
+          )
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAllegra err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraAllegra "
-        . showsPrec 11 err
-        )
+instance ToJSON (TxValidationError era) where
+  toJSON = \case
+    ByronTxValidationError err ->
+        Aeson.object
+          [ "kind" .= Aeson.String "ByronTxValidationError"
+          , "error" .= toJSON err
+          ]
+    ShelleyTxValidationError sbe err ->
+      shelleyBasedEraConstraints sbe $
+        Aeson.object
+          [ "kind" .= Aeson.String "ShelleyTxValidationError"
+          , "era" .= toJSON (Text.pack (show sbe))
+          , "error" .= appTxErrToJson sbe err
+          ]
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraMary err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraMary "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAlonzo err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraAlonzo "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraBabbage err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraBabbage "
-        . showsPrec 11 err
-        )
-
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraConway err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraConway "
-        . showsPrec 11 err
-        )
+appTxErrToJson :: ()
+  => ShelleyBasedEra era
+  -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
+  -> Aeson.Value
+appTxErrToJson w e = shelleyBasedEraConstraints w $ toJSON e
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.

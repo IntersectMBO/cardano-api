@@ -131,6 +131,7 @@ library internal
                         Cardano.Api.Utils
                         Cardano.Api.Value
                         Cardano.Api.ValueParser
+                        Cardano.Api.Via.ShowOf
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
                         -- in this module
