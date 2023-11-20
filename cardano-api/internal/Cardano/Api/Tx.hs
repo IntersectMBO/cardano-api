@@ -25,6 +25,7 @@ module Cardano.Api.Tx (
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(.., Tx),
     getTxBody,
+    getByronTxBody,
     getTxWitnesses,
     ScriptValidity(..),
 
@@ -35,6 +36,7 @@ module Cardano.Api.Tx (
     signShelleyTransaction,
 
     -- ** Incremental signing and separate witnesses
+    makeSignedByronTransaction,
     makeSignedTransaction,
     makeSignedTransaction',
     KeyWitness(..),
@@ -118,6 +120,16 @@ instance Show (InAnyCardanoEra Tx) where
 
 instance Eq (InAnyCardanoEra Tx) where
     (==) (InAnyCardanoEra eraA txA) (InAnyCardanoEra eraB txB) =
+      case testEquality eraA eraB of
+        Nothing -> False
+        Just Refl -> txA == txB
+
+
+instance Show (InAnyShelleyBasedEra Tx) where
+    show (InAnyShelleyBasedEra _ tx) = show tx
+
+instance Eq (InAnyShelleyBasedEra Tx) where
+    (==) (InAnyShelleyBasedEra eraA txA) (InAnyShelleyBasedEra eraB txB) =
       case testEquality eraA eraB of
         Nothing -> False
         Just Refl -> txA == txB
@@ -433,9 +445,16 @@ pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
 getTxBodyAndWitnesses :: Tx era -> (TxBody era, [KeyWitness era])
 getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)
 
-getTxBody :: forall era. Tx era -> TxBody era
-getTxBody (ByronTx eon Byron.ATxAux { Byron.aTaTx = txbody }) =
-    ByronTxBody eon txbody
+getByronTxBody :: Tx ByronEra -> Annotated Byron.Tx ByteString
+getByronTxBody (ByronTx _eon Byron.ATxAux { Byron.aTaTx = txbody }) = txbody
+getByronTxBody (ShelleyTx sbe _) = case sbe :: ShelleyBasedEra ByronEra of {}
+
+-- NB: This is called in getTxBodyAndWitnesses which is fine as
+-- getTxBodyAndWitnesses is only called in the context of a
+-- shelley based era anyways. ByronTx will eventually be removed.
+getTxBody :: Tx era -> TxBody era
+getTxBody (ByronTx _eon Byron.ATxAux { Byron.aTaTx = _txbody }) =
+  error "getTxBody: Use getByronTxBody instead"
 
 getTxBody (ShelleyTx sbe tx) =
   caseShelleyToMaryOrAlonzoEraOnwards
@@ -501,17 +520,17 @@ makeSignedTransaction' :: ()
   -> Tx era
 makeSignedTransaction' _ = makeSignedTransaction
 
+makeSignedByronTransaction :: [KeyWitness era] -> Annotated Byron.Tx ByteString -> Byron.ATxAux ByteString
+makeSignedByronTransaction witnesses txbody =
+  Byron.annotateTxAux
+    $ Byron.mkTxAux
+        (unAnnotated txbody)
+        (Vector.fromList [ w | ByronKeyWitness w <- witnesses ])
+
 makeSignedTransaction :: forall era.
      [KeyWitness era]
   -> TxBody era
   -> Tx era
-makeSignedTransaction witnesses (ByronTxBody eon txbody) =
-    ByronTx eon
-  . Byron.annotateTxAux
-  $ Byron.mkTxAux
-      (unAnnotated txbody)
-      (Vector.fromList [ w | ByronKeyWitness w <- witnesses ])
-
 makeSignedTransaction witnesses (ShelleyTxBody sbe txbody
                                                txscripts
                                                txscriptdata
@@ -574,11 +593,10 @@ makeSignedTransaction witnesses (ShelleyTxBody sbe txbody
 makeByronKeyWitness :: forall key.
                        IsByronKey key
                     => NetworkId
-                    -> TxBody ByronEra
+                    -> Annotated Byron.Tx ByteString
                     -> SigningKey key
                     -> KeyWitness ByronEra
-makeByronKeyWitness _ (ShelleyTxBody sbe _ _ _ _ _) = case sbe of {}
-makeByronKeyWitness nw (ByronTxBody _ txbody) =
+makeByronKeyWitness nw txbody =
     let txhash :: Byron.Hash Byron.Tx
         txhash = Byron.hashDecoded txbody
 
@@ -627,7 +645,6 @@ makeShelleyBootstrapWitness :: forall era. ()
   -> KeyWitness era
 makeShelleyBootstrapWitness sbe nwOrAddr txBody sk =
   case txBody of
-    ByronTxBody ByronEraOnlyByron _ -> case sbe of {}
     ShelleyTxBody _ txbody _ _ _ _ -> makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody sk
 
 makeShelleyBasedBootstrapWitness :: forall era. ()
@@ -744,7 +761,6 @@ makeShelleyKeyWitness sbe = \case
               signature = makeShelleySignature txhash sk
           in ShelleyKeyWitness sbe $
                 L.WitVKey vk signature
-  ByronTxBody ByronEraOnlyByron _ -> case sbe of {}
 
 
 -- | We support making key witnesses with both normal and extended signing keys.
@@ -838,11 +854,11 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
 
 -- order of signing keys must match txins
 signByronTransaction :: NetworkId
-                     -> TxBody ByronEra
+                     -> Annotated Byron.Tx ByteString
                      -> [SigningKey ByronKey]
                      -> Tx ByronEra
 signByronTransaction nw txbody sks =
-    makeSignedTransaction witnesses txbody
+    ByronTx ByronEraOnlyByron $ makeSignedByronTransaction witnesses txbody
   where
     witnesses = map (makeByronKeyWitness nw txbody) sks
 
