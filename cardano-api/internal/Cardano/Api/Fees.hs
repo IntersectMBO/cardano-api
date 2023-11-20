@@ -579,10 +579,6 @@ evaluateTransactionBalance :: forall era. ()
                            -> UTxO era
                            -> TxBody era
                            -> TxOutValue era
-evaluateTransactionBalance sbe _ _ _ _ _ (ByronTxBody ByronEraOnlyByron _) =
-  -- TODO: we could actually support Byron here, it'd be different but simpler
-  case sbe of {}
-
 evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo (ShelleyTxBody _ txbody _ _ _ _) =
   shelleyBasedEraConstraints sbe
     $ TxOutValueShelleyBased sbe
@@ -803,7 +799,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     -- 3. update tx with fees
     -- 4. balance the transaction and update tx change output
     txbody0 <-
-      first TxBodyError $ createAndValidateTransactionBody era txbodycontent
+      first TxBodyError $ createAndValidateTransactionBody sbe txbodycontent
         { txOuts = txOuts txbodycontent ++
                    [TxOut changeaddr (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone]
             --TODO: think about the size of the change output
@@ -854,7 +850,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
 
     let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
-               createAndValidateTransactionBody era txbodycontent1 {
+               createAndValidateTransactionBody sbe txbodycontent1 {
                  txFee  = TxFeeExplicit sbe maxLovelaceFee,
                  txOuts = TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone
                         : txOuts txbodycontent,
@@ -880,7 +876,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     -- Here we do not want to start with any change output, since that's what
     -- we need to calculate.
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
-               createAndValidateTransactionBody era txbodycontent1 {
+               createAndValidateTransactionBody sbe txbodycontent1 {
                  txFee = TxFeeExplicit sbe fee,
                  txReturnCollateral = retColl,
                  txTotalCollateral = reqCol
@@ -913,7 +909,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
       first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
                           -- that simply creates a transaction body because we have already
                           -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-        createAndValidateTransactionBody era finalTxBodyContent
+        createAndValidateTransactionBody sbe finalTxBodyContent
     return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
    -- Essentially we check for the existence of collateral inputs. If they exist we
