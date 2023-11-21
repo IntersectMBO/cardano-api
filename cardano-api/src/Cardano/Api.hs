@@ -301,9 +301,11 @@ module Cardano.Api (
     -- | Constructing and inspecting transactions
 
     -- ** Transaction bodies
-    TxBody(TxBody),
+    TxBody(..),
     createAndValidateTransactionBody,
+    makeByronTransactionBody,
     TxBodyContent(..),
+    getByronTxBodyContent,
     getTxBodyContent,
 
     -- ** Transaction body builders
@@ -338,6 +340,7 @@ module Cardano.Api (
     -- ** Transaction Ids
     TxId(..),
     getTxId,
+    getTxIdByron,
 
     -- ** Transaction inputs
     TxIn(TxIn),
@@ -419,6 +422,7 @@ module Cardano.Api (
     signShelleyTransaction,
 
     -- ** Incremental signing and separate witnesses
+    makeSignedByronTransaction,
     makeSignedTransaction,
     KeyWitness,
     makeByronKeyWitness,
@@ -668,6 +672,7 @@ module Cardano.Api (
     writeTxWitnessFileTextEnvelopeCddl,
     serialiseTxLedgerCddl,
     deserialiseTxLedgerCddl,
+    deserialiseByronTxCddl,
     serialiseWitnessLedgerCddl,
     deserialiseWitnessLedgerCddl,
     TextEnvelopeCddl(..), -- TODO: Deprecate this when we stop supporting the cli's

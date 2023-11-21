@@ -25,8 +25,8 @@ import           Test.Tasty.Hedgehog (testProperty)
 prop_roundtrip_txbodycontent_txouts:: Property
 prop_roundtrip_txbodycontent_txouts =
   H.property $ do
-    let era = BabbageEra
-    content <- H.forAll $ genTxBodyContent ShelleyBasedEraBabbage
+    let era = ShelleyBasedEraBabbage
+    content <- H.forAll $ genTxBodyContent era
     -- Create the ledger body & auxiliaries
     body <- case createAndValidateTransactionBody era content of
       Left err -> annotateShow err >> failure
@@ -63,7 +63,7 @@ prop_roundtrip_txbodycontent_txouts =
   matchRefScript :: MonadTest m => (ReferenceScript BabbageEra, ReferenceScript BabbageEra) -> m ()
   matchRefScript (a, b)
     | isSimpleScriptV2 a && isSimpleScriptV2 b =
-      refScriptToShelleyScript BabbageEra a === refScriptToShelleyScript BabbageEra b
+      refScriptToShelleyScript ShelleyBasedEraBabbage a === refScriptToShelleyScript ShelleyBasedEraBabbage b
     | otherwise =
       a === b
 

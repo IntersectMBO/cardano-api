@@ -27,12 +27,11 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
-
 prop_roundtrip_txbody_CBOR :: Property
 prop_roundtrip_txbody_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
   x <- H.forAll $ makeSignedTransaction [] <$> genTxBody era
-  H.tripping x (serialiseTxLedgerCddl $ toCardanoEra era) (deserialiseTxLedgerCddl $ toCardanoEra era)
+  H.tripping x (serialiseTxLedgerCddl $ toCardanoEra era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
@@ -171,7 +170,7 @@ prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
   AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
   x <- forAll $ genTx era
-  H.tripping x (serialiseTxLedgerCddl $ toCardanoEra era) (deserialiseTxLedgerCddl $ toCardanoEra era)
+  H.tripping x (serialiseTxLedgerCddl $ toCardanoEra era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do

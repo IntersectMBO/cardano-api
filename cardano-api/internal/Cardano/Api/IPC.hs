@@ -77,6 +77,7 @@ module Cardano.Api.IPC (
   ) where
 
 import           Cardano.Api.Block
+import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
 import           Cardano.Api.IO
@@ -85,7 +86,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol
 import           Cardano.Api.Query
-import           Cardano.Api.Tx (getTxBody)
+import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 
 import qualified Cardano.Ledger.Api as L
@@ -630,7 +631,11 @@ instance ToJSON LocalTxMonitoringResult where
           ]
         where
           txId = case txInMode of
-            Just (TxInMode _ tx) -> Just $ getTxId $ getTxBody tx
+            Just (TxInMode e tx) ->
+              case e of
+                -- NB: Local tx protocol is not possible in the Byron era
+                ByronEra -> error "ToJSON LocalTxMonitoringResult: Byron era not supported"
+                _ -> Just $ getTxId $ getTxBody tx
             -- TODO: support fetching the ID of a Byron Era transaction
             _ -> Nothing
       LocalTxMonitoringMempoolSizeAndCapacity mempool slot ->

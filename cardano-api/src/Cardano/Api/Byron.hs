@@ -23,7 +23,6 @@ module Cardano.Api.Byron
 
     -- * Building transactions
     -- | Constructing and inspecting transactions
-    TxBody(ByronTxBody),
     TxId(TxId),
     TxIn(TxIn),
     TxOut(TxOut),

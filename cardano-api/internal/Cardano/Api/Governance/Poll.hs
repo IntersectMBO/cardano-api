@@ -36,6 +36,7 @@ module Cardano.Api.Governance.Poll(
     verifyPollAnswer,
   ) where
 
+import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
@@ -326,9 +327,9 @@ renderGovernancePollError err =
 -- (the existence of the transaction in the ledger provides this guarantee).
 verifyPollAnswer
   :: GovernancePoll
-  -> InAnyCardanoEra Tx
+  -> InAnyShelleyBasedEra Tx
   -> Either GovernancePollError [Hash PaymentKey]
-verifyPollAnswer poll (InAnyCardanoEra _era (getTxBody -> TxBody body)) = do
+verifyPollAnswer poll (InAnyShelleyBasedEra _era (getTxBody -> TxBody body)) = do
   answer <- extractPollAnswer (txMetadata body)
   answer `hasMatchingHash` hashGovernancePoll poll
   answer `isAmongAcceptableChoices` govPollAnswers poll
