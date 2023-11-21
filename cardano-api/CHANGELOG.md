@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.34.0.0
+
+- Parameterize `createAndValidateTransactionBody` on `ShelleyBasedEra era`
+  (breaking)
+  [PR 378](https://github.com/input-output-hk/cardano-api/pull/378)
+
+- Add `QueryStakeVoteDelegatees` to return the vote delegatee associated to a stake credential
+  (feature, compatible)
+  [PR 367](https://github.com/input-output-hk/cardano-api/pull/367)
+
+- `ToJSON` instance for `TxValidationError`
+  (feature, compatible)
+  [PR 379](https://github.com/input-output-hk/cardano-api/pull/379)
+  
 ## 8.33.0.0
 
 - `Error` instance for `FileError` instead of `Pretty`
