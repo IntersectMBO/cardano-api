@@ -1150,7 +1150,7 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
               [ (stakecred, ScriptWitness ctx <$> witness')
                 -- The certs are indexed in list order
               | (ix, cert) <- zip [0..] certs
-              , stakecred  <- maybeToList (selectStakeCredential cert)
+              , stakecred  <- maybeToList (selectStakeCredentialWitness cert)
               , ScriptWitness ctx witness
                            <- maybeToList (Map.lookup stakecred witnesses)
               , let witness' = f (ScriptWitnessIndexCertificate ix) witness
