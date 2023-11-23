@@ -867,6 +867,7 @@ module Cardano.Api (
     makeGenesisKeyDelegationCertificate,
     MIRTarget (..),
     MIRPot(..),
+    selectStakeCredentialWitness,
 
     -- * Protocol parameter updates
     UpdateProposal(..),

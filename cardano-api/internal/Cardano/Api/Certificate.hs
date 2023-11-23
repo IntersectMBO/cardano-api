@@ -55,6 +55,7 @@ module Cardano.Api.Certificate (
     makeGenesisKeyDelegationCertificate,
     Ledger.MIRTarget (..),
     Ledger.MIRPot(..),
+    selectStakeCredentialWitness,
 
     -- * Internal conversion functions
     toShelleyCertificate,
@@ -62,13 +63,13 @@ module Cardano.Api.Certificate (
     toShelleyPoolParams,
     fromShelleyPoolParams,
 
+
     -- * Data family instances
     AsType(..),
 
     -- * Internal functions
     filterUnRegCreds,
     filterUnRegDRepCreds,
-    selectStakeCredential,
   ) where
 
 import           Cardano.Api.Address
@@ -467,19 +468,21 @@ makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
 -- Helper functions
 --
 
-selectStakeCredential
-  :: Certificate era -> Maybe StakeCredential
-selectStakeCredential = fmap fromShelleyStakeCredential . \case
+-- | Get the stake credential witness for a certificate that requires it.
+-- Only stake address deregistration and delegation requires witnessing (witness can be script or key).
+selectStakeCredentialWitness
+  :: Certificate era
+  -> Maybe StakeCredential
+selectStakeCredentialWitness = fmap fromShelleyStakeCredential . \case
   ShelleyRelatedCertificate stbEra shelleyCert -> shelleyToBabbageEraConstraints stbEra $
     case shelleyCert of
-      Ledger.RegTxCert sCred           -> Just sCred
+      Ledger.RegTxCert _               -> Nothing -- contains stake cred
       Ledger.UnRegTxCert sCred         -> Just sCred
       Ledger.DelegStakeTxCert sCred _  -> Just sCred
       -- StakePool is always controlled by key, i.e. it is never a script. In other words,
       -- @Credential StakePool@ cannot exist, because @ScriptHashObj@ constructor can't be used for that type.
       Ledger.RegPoolTxCert _           -> Nothing -- contains StakePool key which cannot be a credential
       Ledger.RetirePoolTxCert _ _      -> Nothing -- contains StakePool key which cannot be a credential
-
       Ledger.MirTxCert _               -> Nothing
       Ledger.GenesisDelegTxCert{}      -> Nothing
 
@@ -487,9 +490,9 @@ selectStakeCredential = fmap fromShelleyStakeCredential . \case
     case conwayCert of
       Ledger.RegPoolTxCert _                 -> Nothing -- contains StakePool key which cannot be a credential
       Ledger.RetirePoolTxCert _ _            -> Nothing -- contains StakePool key which cannot be a credential
-      Ledger.RegTxCert sCred                 -> Just sCred
+      Ledger.RegTxCert{}                     -> Nothing -- contains stake cred
       Ledger.UnRegTxCert sCred               -> Just sCred
-      Ledger.RegDepositTxCert sCred _        -> Just sCred
+      Ledger.RegDepositTxCert{}              -> Nothing -- contains stake cred
       Ledger.UnRegDepositTxCert sCred _      -> Just sCred
       Ledger.DelegTxCert sCred _             -> Just sCred
       Ledger.RegDepositDelegTxCert sCred _ _ -> Just sCred
@@ -498,6 +501,7 @@ selectStakeCredential = fmap fromShelleyStakeCredential . \case
       Ledger.RegDRepTxCert{}                 -> Nothing
       Ledger.UnRegDRepTxCert{}               -> Nothing
       Ledger.UpdateDRepTxCert{}              -> Nothing
+
 
 filterUnRegCreds
   :: Certificate era -> Maybe StakeCredential
@@ -523,7 +527,7 @@ filterUnRegCreds = fmap fromShelleyStakeCredential . \case
       Ledger.DelegTxCert _ _             -> Nothing
       Ledger.RegDepositDelegTxCert{}     -> Nothing
       Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
-      Ledger.ResignCommitteeColdTxCert _ _ -> Nothing
+      Ledger.ResignCommitteeColdTxCert{} -> Nothing
       Ledger.RegDRepTxCert{}             -> Nothing
       Ledger.UnRegDRepTxCert{}           -> Nothing
       Ledger.UpdateDRepTxCert{}          -> Nothing
@@ -544,7 +548,7 @@ filterUnRegDRepCreds = \case
       Ledger.DelegTxCert _ _             -> Nothing
       Ledger.RegDepositDelegTxCert{}     -> Nothing
       Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
-      Ledger.ResignCommitteeColdTxCert _ _ -> Nothing
+      Ledger.ResignCommitteeColdTxCert{} -> Nothing
       Ledger.RegDRepTxCert{}             -> Nothing
       Ledger.UnRegDRepTxCert cred _      -> Just cred
       Ledger.UpdateDRepTxCert{}          -> Nothing

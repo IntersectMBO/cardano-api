@@ -263,6 +263,7 @@ import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
+
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
   = ScriptInvalid -- ^ Script is expected to fail validation.
@@ -1815,7 +1816,8 @@ createTransactionBody sbe bc =
           mkCommonTxBody sbe (txIns bc) (txOuts bc) (txFee bc) (txWithdrawals bc) txAuxData
             & A.certsTxBodyL sbe            .~ certs
             & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe (txValidityUpperBound bc)
-            & ( appEndo $ mconcat
+            & appEndo
+                ( mconcat
                   [ setUpdateProposal
                   , setInvalidBefore
                   , setMint
@@ -1826,7 +1828,7 @@ createTransactionBody sbe bc =
                   , setCollateralReturn
                   , setTotalCollateral
                   ]
-              )
+                )
 
     -- TODO: NetworkId for hardware wallets. We don't always want this
     -- & L.networkIdTxBodyL .~ ...
@@ -3227,7 +3229,7 @@ collectTxBodyScriptWitnesses _ TxBodyContent {
           -- The certs are indexed in list order
         | (ix, cert) <- zip [0..] certs
         , ScriptWitness _ witness <- maybeToList $ do
-                                       stakecred <- selectStakeCredential cert
+                                       stakecred <- selectStakeCredentialWitness cert
                                        Map.lookup stakecred witnesses
         ]
 
