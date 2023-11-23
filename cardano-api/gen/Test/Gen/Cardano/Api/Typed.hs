@@ -641,7 +641,7 @@ genTxBodyContent sbe = do
   txReturnCollateral <- genTxReturnCollateral sbe
   txFee <- genTxFee sbe
   txValidityLowerBound <- genTxValidityLowerBound era
-  txValidityUpperBound <- genTxValidityUpperBound era
+  txValidityUpperBound <- genTxValidityUpperBound sbe
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts sbe
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes

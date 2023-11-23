@@ -55,10 +55,6 @@ module Cardano.Api (
 
     -- ** From Byron
 
-    ByronEraOnly(..),
-    byronEraOnlyConstraints,
-    byronEraOnlyToCardanoEra,
-
     ByronToAlonzoEra(..),
     byronToAlonzoEraConstraints,
     byronToAlonzoEraToCardanoEra,
@@ -1001,7 +997,6 @@ import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAlonzoEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
