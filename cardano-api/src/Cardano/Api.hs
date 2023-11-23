@@ -305,7 +305,6 @@ module Cardano.Api (
     createAndValidateTransactionBody,
     makeByronTransactionBody,
     TxBodyContent(..),
-    getByronTxBodyContent,
     getTxBodyContent,
 
     -- ** Transaction body builders

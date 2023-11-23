@@ -151,7 +151,6 @@ module Cardano.Api.TxBody (
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
 
-    getByronTxBodyContent,
     getTxBodyContent,
   ) where
 
@@ -1031,18 +1030,13 @@ parseHash asType = do
 --
 
 data TxFee era where
-  TxFeeImplicit :: ByronEraOnly era -> TxFee era
-
   TxFeeExplicit :: ShelleyBasedEra era -> Lovelace -> TxFee era
 
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
 
-defaultTxFee :: CardanoEra era -> TxFee era
-defaultTxFee =
-  caseByronOrShelleyBasedEra
-    TxFeeImplicit
-    (\w -> TxFeeExplicit w mempty)
+defaultTxFee :: ShelleyBasedEra era -> TxFee era
+defaultTxFee w = TxFeeExplicit w mempty
 
 -- ----------------------------------------------------------------------------
 -- Transaction validity range
@@ -2408,34 +2402,6 @@ classifyRangeError txout =
     TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValueShelleyBased w _) _ _ -> case w of {}
     TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ -> case sbe of {}
 
-getByronTxBodyContent :: ()
-  => ByronEraOnly era
-  -> Annotated Byron.Tx ByteString
-  -> TxBodyContent ViewTx era
-getByronTxBodyContent ByronEraOnlyByron (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
-  TxBodyContent
-  { txIns                 = [(fromByronTxIn input, ViewTx) | input <- toList txInputs]
-  , txInsCollateral       = TxInsCollateralNone
-  , txInsReference        = TxInsReferenceNone
-  , txOuts                = fromByronTxOut ByronEraOnlyByron <$> toList txOutputs
-  , txReturnCollateral    = TxReturnCollateralNone
-  , txTotalCollateral     = TxTotalCollateralNone
-  , txFee                 = TxFeeImplicit ByronEraOnlyByron
-  , txValidityLowerBound  = TxValidityNoLowerBound
-  , txValidityUpperBound  = TxValidityNoUpperBound ByronEraOnlyByron
-  , txMetadata            = TxMetadataNone
-  , txAuxScripts          = TxAuxScriptsNone
-  , txExtraKeyWits        = TxExtraKeyWitnessesNone
-  , txProtocolParams      = ViewTx
-  , txWithdrawals         = TxWithdrawalsNone
-  , txCertificates        = TxCertificatesNone
-  , txUpdateProposal      = TxUpdateProposalNone
-  , txMintValue           = TxMintNone
-  , txScriptValidity      = TxScriptValidityNone
-  , txProposalProcedures  = Nothing
-  , txVotingProcedures    = Nothing
-  }
-
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
 convTxIns txIns = Set.fromList (map (toShelleyTxIn . fst) txIns)
 
@@ -2482,8 +2448,7 @@ convWithdrawals txWithdrawals =
     TxWithdrawals _ ws -> toShelleyWithdrawal ws
 
 convTransactionFee :: ShelleyBasedEra era -> TxFee era -> Ledger.Coin
-convTransactionFee sbe = \case
-  TxFeeImplicit w  -> disjointByronEraOnlyAndShelleyBasedEra w sbe
+convTransactionFee _ = \case
   TxFeeExplicit _ fee -> toShelleyLovelace fee
 
 convValidityLowerBound :: ()

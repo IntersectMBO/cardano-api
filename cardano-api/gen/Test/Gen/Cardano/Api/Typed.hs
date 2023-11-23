@@ -644,7 +644,7 @@ genTxBodyContent sbe = do
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext sbe)
   txTotalCollateral <- genTxTotalCollateral era
   txReturnCollateral <- genTxReturnCollateral sbe
-  txFee <- genTxFee era
+  txFee <- genTxFee sbe
   txValidityLowerBound <- genTxValidityLowerBound era
   txValidityUpperBound <- genTxValidityUpperBound era
   txMetadata <- genTxMetadataInEra era
@@ -710,11 +710,8 @@ genTxTotalCollateral =
     (pure TxTotalCollateralNone)
     (\w -> TxTotalCollateral w <$> genPositiveLovelace)
 
-genTxFee :: CardanoEra era -> Gen (TxFee era)
-genTxFee =
-  caseByronOrShelleyBasedEra
-    (pure . TxFeeImplicit)
-    (\w -> TxFeeExplicit w <$> genLovelace)
+genTxFee :: ShelleyBasedEra era -> Gen (TxFee era)
+genTxFee w = TxFeeExplicit w <$> genLovelace
 
 genAddressInEraByron :: Gen (AddressInEra ByronEra)
 genAddressInEraByron = byronAddressInEra <$> genAddressByron
