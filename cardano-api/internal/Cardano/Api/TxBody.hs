@@ -159,7 +159,6 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -682,14 +681,6 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxUTxO era) where
                         <*> return (TxOutDatumHash w dHash)
                         <*> return ReferenceScriptNone
 
-fromByronTxOut :: ByronEraOnly era -> Byron.TxOut -> TxOut ctx era
-fromByronTxOut ByronEraOnlyByron (Byron.TxOut addr value) =
-  TxOut
-    (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-    (TxOutValueByron (fromByronLovelace value))
-     TxOutDatumNone ReferenceScriptNone
-
-
 toByronTxOut :: TxOut ctx ByronEra -> Maybe Byron.TxOut
 toByronTxOut = \case
   TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) (TxOutValueByron value) _ _ ->
@@ -1045,10 +1036,6 @@ defaultTxFee w = TxFeeExplicit w mempty
 -- | This was formerly known as the TTL.
 --
 data TxValidityUpperBound era where
-  TxValidityNoUpperBound
-    :: ByronEraOnly era
-    -> TxValidityUpperBound era
-
   TxValidityUpperBound
     :: ShelleyBasedEra era
     -> Maybe SlotNo
@@ -1058,12 +1045,9 @@ deriving instance Eq   (TxValidityUpperBound era)
 deriving instance Show (TxValidityUpperBound era)
 
 defaultTxValidityUpperBound :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> TxValidityUpperBound era
-defaultTxValidityUpperBound =
-  caseByronOrShelleyBasedEra
-    TxValidityNoUpperBound
-    (\sbe -> TxValidityUpperBound sbe Nothing)
+defaultTxValidityUpperBound sbe = TxValidityUpperBound sbe Nothing
 
 data TxValidityLowerBound era where
 
@@ -1222,7 +1206,7 @@ data TxBodyContent build era =
      deriving (Eq, Show)
 
 defaultTxBodyContent :: ()
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
 defaultTxBodyContent era = TxBodyContent
     { txIns = []
@@ -2462,8 +2446,7 @@ convValidityUpperBound :: ()
   => ShelleyBasedEra era
   -> TxValidityUpperBound era
   -> Maybe SlotNo
-convValidityUpperBound sbe = \case
-  TxValidityNoUpperBound w -> disjointByronEraOnlyAndShelleyBasedEra w sbe
+convValidityUpperBound _ = \case
   TxValidityUpperBound _ ms -> ms
 
 -- | Convert transaction update proposal into ledger update proposal
