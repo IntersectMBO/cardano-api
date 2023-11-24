@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.34.1.0
+
+- Expose `stakeCredentialWitness` function, which returns only stake credentials for the certificates requiring witnessing: delegation and deregistration.
+  (compatible, bugfix)
+  [PR 383](https://github.com/input-output-hk/cardano-api/pull/383)
+
 ## 8.34.0.0
 
 - Parameterize `createAndValidateTransactionBody` on `ShelleyBasedEra era`
@@ -13,7 +19,7 @@
 - `ToJSON` instance for `TxValidationError`
   (feature, compatible)
   [PR 379](https://github.com/input-output-hk/cardano-api/pull/379)
-  
+
 ## 8.33.0.0
 
 - `Error` instance for `FileError` instead of `Pretty`
@@ -54,13 +60,13 @@
 ## 8.31.0.0
 
 - Use ledger presentation of multi-asset values directly.  Lens to make this uniform over `ShelleyBasedEra`.
-  
+
   Delete `ByronToAllegraEra`.
-  
+
   New module `Cardano.Api.Ledger.Lens`.
-  
-  Modify `TxOutValue` to have `TxOutValueByron` and `TxOutValueShelleyBased` instead of `TxOutAdaOnly` and `TxOutValue` respectively.  `TxOutValueShelleyBased` now directly uses the ledger type instead of the `Value` type. 
-  
+
+  Modify `TxOutValue` to have `TxOutValueByron` and `TxOutValueShelleyBased` instead of `TxOutAdaOnly` and `TxOutValue` respectively.  `TxOutValueShelleyBased` now directly uses the ledger type instead of the `Value` type.
+
   These functions have changed to either `L.Value (ShelleyLedgerEra era)` instead of `Value` or eons or both:
   - `genValue`
   - `genValueDefault`
@@ -81,11 +87,11 @@
   [PR 358](https://github.com/input-output-hk/cardano-api/pull/358)
 
 - Modify foldBlocks to allow the fold to terminate from the accumulator via the FoldStatus type.
-  
+
   Modify foldBlocks to accumulate the chain tip rather than only immutable
   blocks (blocks that are k blocks away from the tip).
-  
-  Add debug mode to foldBlocks which forces it to error with information 
+
+  Add debug mode to foldBlocks which forces it to error with information
   about ledger states, client and server tip, number of requests in flight
   and the current IORef state.
   (feature, breaking)
@@ -95,7 +101,7 @@
   - ByronAndAllegraEraOnwards
   - ByronToMaryEra
   - MaryEraOnly
-  
+
   Delete functions:
   - allegraEraOnwardsToByronAndAllegraOnwardsEra
   - byronAndAllegraEraOnwardsConstraints
@@ -112,7 +118,7 @@
 
 ## 8.30.0.0
 
-- Remove uses of `coerceKeyRole`, use asWitness when key role conversion is required 
+- Remove uses of `coerceKeyRole`, use asWitness when key role conversion is required
   (feature, breaking)
   [PR 341](https://github.com/input-output-hk/cardano-api/pull/341)
 
