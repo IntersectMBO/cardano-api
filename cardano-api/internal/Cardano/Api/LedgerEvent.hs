@@ -4,10 +4,11 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Api.LedgerEvent
@@ -30,6 +31,8 @@ import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoE
 import           Cardano.Ledger.Api.Era (AllegraEra, AlonzoEra, BabbageEra, ConwayEra, MaryEra,
                    ShelleyEra)
 import qualified Cardano.Ledger.Coin as Ledger
+import qualified Cardano.Ledger.Conway.Governance as Ledger
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Ledger.Core
 import qualified Cardano.Ledger.Credential as Ledger
@@ -43,10 +46,14 @@ import           Cardano.Ledger.Shelley.Rules (RupdEvent (..), ShelleyBbodyEvent
                    ShelleyUtxowEvent (UtxoEvent))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyLedgerEvent (UtxowEvent),
                    ShelleyLedgersEvent (LedgerEvent))
+import qualified Cardano.Ledger.TxIn as Ledger
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (HardForkBlock)
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (getOneEraLedgerEvent)
 import           Ouroboros.Consensus.Ledger.Basics (AuxLedgerEvent)
+import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
+import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger (LedgerState, ShelleyBlock,
                    ShelleyLedgerEvent (ShelleyLedgerEventBBODY, ShelleyLedgerEventTICK))
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (unwrapLedgerEvent))
@@ -55,10 +62,18 @@ import           Control.State.Transition (Event)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Proxy (Proxy (Proxy))
 import           Data.Set (Set)
-import           Data.SOP (All, K (K))
 import           Data.SOP.Strict
+
+data AnyProposals
+  = forall era. Ledger.Core.EraPParams era => AnyProposals (Ledger.Proposals era)
+
+deriving instance Show AnyProposals
+
+data AnyRatificationState
+  = forall era.  Ledger.Core.EraPParams era => AnyRatificationState (Ledger.RatifyState era)
+
+deriving instance Show AnyRatificationState
 
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.
@@ -77,6 +92,16 @@ data LedgerEvent
   | SuccessfulPlutusScript (NonEmpty PlutusDebug)
     -- | A number of failed Plutus script evaluations.
   | FailedPlutusScript (NonEmpty PlutusDebug)
+
+
+  -- Only events available on the Conway Era.
+  -- TODO: Update the above constructors to work in the conway era.
+  -- See toLedgerEventConway
+    -- | Newly submittted governance proposals in a single transaction.
+  | NewGovernanceProposals (Ledger.TxId StandardCrypto) AnyProposals
+    -- | The current state of governance matters at the epoch boundary.
+    -- I.E the current constitution, committee, protocol parameters, etc.
+  | EpochBoundaryRatificationState AnyRatificationState
   deriving Show
 
 class ConvertLedgerEvent blk where
@@ -107,14 +132,56 @@ instance ConvertLedgerEvent (ShelleyBlock protocol (BabbageEra StandardCrypto)) 
     _ -> toLedgerEventShelley evt
 
 instance ConvertLedgerEvent (ShelleyBlock protocol (ConwayEra StandardCrypto)) where
-  toLedgerEvent _evt = Nothing -- LEDGER rule is defined anew in Conway
+  toLedgerEvent = toLedgerEventConway
+  -- LEDGER rule is defined anew in Conway
 
-instance All ConvertLedgerEvent xs => ConvertLedgerEvent (HardForkBlock xs) where
-  toLedgerEvent =
-    hcollapse
-      . hcmap (Proxy @ConvertLedgerEvent) (K . toLedgerEvent)
-      . getOneEraLedgerEvent
-      . unwrapLedgerEvent
+instance ConvertLedgerEvent (HardForkBlock (Consensus.CardanoEras StandardCrypto)) where
+  toLedgerEvent wrappedLedgerEvent =
+    case getOneEraLedgerEvent $ unwrapLedgerEvent wrappedLedgerEvent of
+      ShelleyLedgerEvent ledgerEvent -> toLedgerEvent ledgerEvent
+      AllegraLedgerEvent ledgerEvent -> toLedgerEvent ledgerEvent
+      MaryLedgerEvent ledgerEvent -> toLedgerEvent ledgerEvent
+      AlonzoLedgerEvent ledgerEvent -> toLedgerEvent ledgerEvent
+      BabbageLedgerEvent ledgerEvent -> toLedgerEvent ledgerEvent
+      ConwayLedgerEvent ledgerEvent -> toLedgerEvent ledgerEvent
+
+{-# COMPLETE ShelleyLedgerEvent,
+             AllegraLedgerEvent,
+             MaryLedgerEvent,
+             AlonzoLedgerEvent,
+             BabbageLedgerEvent,
+             ConwayLedgerEvent #-}
+
+
+pattern ShelleyLedgerEvent
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (ShelleyEra StandardCrypto))
+  -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
+pattern ShelleyLedgerEvent x =  S (Z x)
+
+pattern AllegraLedgerEvent
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (AllegraEra StandardCrypto))
+  -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
+pattern AllegraLedgerEvent x =  S (S (Z x))
+
+pattern MaryLedgerEvent
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (MaryEra StandardCrypto))
+  -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
+pattern MaryLedgerEvent x =  S (S (S (Z x)))
+
+pattern AlonzoLedgerEvent
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (AlonzoEra StandardCrypto))
+  -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
+pattern AlonzoLedgerEvent x =  S (S (S (S (Z x))))
+
+pattern BabbageLedgerEvent
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.Praos StandardCrypto) (BabbageEra StandardCrypto))
+  -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
+pattern BabbageLedgerEvent x =  S (S (S (S (S (Z x)))))
+
+pattern ConwayLedgerEvent
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.Praos StandardCrypto) (ConwayEra StandardCrypto))
+  -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
+pattern ConwayLedgerEvent x =  S (S (S (S (S (S (Z x))))))
 
 toLedgerEventShelley ::
   ( EraCrypto ledgerera ~ StandardCrypto,
@@ -135,6 +202,18 @@ toLedgerEventShelley evt = case unwrapLedgerEvent evt of
       MIRDistribution $
         MIRDistributionDetails rp rt rtt ttr
   LERetiredPools r u e -> Just $ PoolReap $ PoolReapDetails e r u
+  _ -> Nothing
+
+-- TODO: Extract era specific events to their own modules and use the COMPLETE paramsAllegra
+toLedgerEventConway
+  :: WrapLedgerEvent (ShelleyBlock protocol (ConwayEra StandardCrypto))
+  -> Maybe LedgerEvent
+toLedgerEventConway evt = case unwrapLedgerEvent evt of
+-- TODO: Return all existing ledger events
+  LEGovNewProposals txid proposals ->
+    Just $ NewGovernanceProposals txid (AnyProposals proposals)
+  LEEpochBoundaryRatificationState ratState ->
+    Just $ EpochBoundaryRatificationState (AnyRatificationState ratState)
   _ -> Nothing
 
 --------------------------------------------------------------------------------
@@ -167,6 +246,38 @@ data PoolReapDetails = PoolReapDetails
 --------------------------------------------------------------------------------
 -- Patterns for event access
 --------------------------------------------------------------------------------
+
+pattern LEGovNewProposals ::
+  ( EraCrypto ledgerera ~ StandardCrypto
+  , Event (Ledger.Core.EraRule "LEDGERS" ledgerera) ~ Shelley.ShelleyLedgersEvent ledgerera
+  , Event (Ledger.Core.EraRule "BBODY" ledgerera) ~ AlonzoBbodyEvent ledgerera
+  , Event (Ledger.Core.EraRule "LEDGER" ledgerera) ~ Conway.ConwayLedgerEvent ledgerera
+  , Event (Ledger.Core.EraRule "GOV" ledgerera) ~ Conway.ConwayGovEvent ledgerera
+  ) => Ledger.TxId StandardCrypto
+    -> Ledger.Proposals ledgerera
+    -> AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
+pattern LEGovNewProposals txid props <-
+  ShelleyLedgerEventBBODY
+    (ShelleyInAlonzoEvent
+      (LedgersEvent
+        (Shelley.LedgerEvent
+          (Conway.GovEvent
+            (Conway.GovNewProposals txid props)
+          )
+        )
+      )
+    )
+
+pattern LEEpochBoundaryRatificationState
+  :: ( EraCrypto ledgerera ~ StandardCrypto
+     , Event (Ledger.Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera
+     , Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ Conway.ConwayNewEpochEvent ledgerera
+     , Event (Ledger.Core.EraRule "EPOCH" ledgerera) ~ Conway.ConwayEpochEvent ledgerera
+     ) => Ledger.RatifyState ledgerera
+  -> AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
+pattern LEEpochBoundaryRatificationState ratifyState <-
+  ShelleyLedgerEventTICK (TickNewEpochEvent (Conway.EpochEvent (Conway.EpochBoundaryRatifyState ratifyState)))
+
 
 pattern LERewardEvent ::
   ( EraCrypto ledgerera ~ StandardCrypto,
