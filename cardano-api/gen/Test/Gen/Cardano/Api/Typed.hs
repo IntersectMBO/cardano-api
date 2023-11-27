@@ -451,7 +451,7 @@ genOperationalCertificateWithCounter = do
     case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
       -- This case should be impossible as we clearly derive the verification
       -- key from the generated signing key.
-      Left err -> fail $ prettyToString $ prettyError err
+      Left err -> fail $ docToString $ prettyError err
       Right pair -> return pair
   where
     convert :: VerificationKey GenesisDelegateExtendedKey
@@ -750,7 +750,7 @@ genTxBody :: ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
   case res of
-    Left err -> fail (prettyToString (prettyError err))
+    Left err -> fail (docToString (prettyError err))
     Right txBody -> pure txBody
 
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.

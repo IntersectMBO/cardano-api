@@ -1469,7 +1469,7 @@ instance FromJSON (Hash StakePoolKey) where
   parseJSON = withText "PoolId" $ \str ->
     case deserialiseFromBech32 (AsHash AsStakePoolKey) str of
       Left err ->
-        fail $ prettyToString $ mconcat
+        fail $ docToString $ mconcat
           [ "Error deserialising Hash StakePoolKey: " <> pretty str
           , " Error: " <> prettyError err
           ]
@@ -1590,7 +1590,7 @@ instance FromJSON (Hash DRepKey) where
   parseJSON = withText "DRepId" $ \str ->
     case deserialiseFromBech32 (AsHash AsDRepKey) str of
       Left err ->
-        fail $ prettyToString $ mconcat
+        fail $ docToString $ mconcat
           [ "Error deserialising Hash DRepKey: " <> pretty str
           , " Error: " <> prettyError err
           ]

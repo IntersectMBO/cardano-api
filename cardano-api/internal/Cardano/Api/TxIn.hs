@@ -130,7 +130,7 @@ parseTxId :: Parsec.Parser TxId
 parseTxId = do
   str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
   failEitherWith
-    (\e -> prettyToString $ "Incorrect transaction id format: " <> prettyError e)
+    (\e -> docToString $ "Incorrect transaction id format: " <> prettyError e)
     (deserialiseFromRawBytesHex AsTxId $ BSC.pack str)
 
 parseTxIn :: Parsec.Parser TxIn
