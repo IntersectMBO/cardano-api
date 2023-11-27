@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -325,6 +324,10 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
 
 
+-- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
+-- information about queries versioning can be found:
+--   * https://input-output-hk.github.io/ouroboros-network/ouroboros-network/Ouroboros-Network-NodeToClient.html#t:NodeToClientVersion
+--   * https://input-output-hk.github.io/ouroboros-consensus/docs/for-developers/QueryVersioning/#implementation
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryEpoch = NodeToClientV_9
   nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_9
@@ -338,10 +341,12 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryDebugLedgerState = NodeToClientV_9
   nodeToClientVersionOf QueryProtocolState = NodeToClientV_9
   nodeToClientVersionOf QueryCurrentEpochState = NodeToClientV_9
+  -- Babbage >= v13
   nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_14
   nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_15
+  -- Conway >= v16
   nodeToClientVersionOf QueryConstitution = NodeToClientV_16
   nodeToClientVersionOf QueryGovState = NodeToClientV_16
   nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16

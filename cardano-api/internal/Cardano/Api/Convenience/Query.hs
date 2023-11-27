@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Convenience query functions
@@ -18,7 +17,6 @@ module Cardano.Api.Convenience.Query (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eon.ConwayEraOnwards (ConwayEraOnwards)
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.IO
@@ -113,14 +111,15 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     & onLeft (left . QueryEraMismatch)
 
   stakeDelegDeposits <-
-    lift (queryStakeDelegDeposits sbe stakeCreds)
-      & onLeft (left . QceUnsupportedNtcVersion)
-      & onLeft (left . QueryEraMismatch)
+    monoidForEraInEonA era $ \beo ->
+      lift (queryStakeDelegDeposits beo stakeCreds)
+        & onLeft (left . QceUnsupportedNtcVersion)
+        & onLeft (left . QueryEraMismatch)
 
   drepDelegDeposits <-
-    forEraInEon @ConwayEraOnwards era (pure mempty) $ \_ ->
+    monoidForEraInEonA era $ \con ->
       Map.map (fromShelleyLovelace . drepDeposit) <$>
-      (lift (queryDRepState sbe drepCreds)
+      (lift (queryDRepState con drepCreds)
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch))
 
