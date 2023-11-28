@@ -46,7 +46,6 @@ module Cardano.Api.Fees (
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
@@ -118,9 +117,6 @@ transactionFee sbe txFeeFixed txFeePerByte tx =
   case tx of
     ShelleyTx _ tx' ->
       let x = shelleyBasedEraConstraints sbe $ tx' ^. L.sizeTxF in Lovelace (a * x + b)
-      --TODO: This can be made to work for Byron txs too.
-    ByronTx ByronEraOnlyByron _ -> case sbe of {}
-
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
 --TODO: in the Byron case the per-byte is non-integral, would need different
@@ -146,9 +142,6 @@ estimateTransactionFee :: ()
   -> Int -- ^ The number of extra Byron key witnesses
   -> Lovelace
 estimateTransactionFee sbe nw txFeeFixed txFeePerByte = \case
-  -- TODO: This can be made to work for Byron txs too.
-  ByronTx ByronEraOnlyByron _ ->
-    case sbe of {}
   ShelleyTx era tx ->
     let Lovelace baseFee = transactionFee sbe txFeeFixed txFeePerByte (ShelleyTx era tx)
     in \nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
@@ -217,7 +210,6 @@ evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
 evaluateTransactionFee sbe pp txbody keywitcount _byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
-      ByronTx w _ -> disjointByronEraOnlyAndShelleyBasedEra w sbe
       ShelleyTx _ tx -> fromShelleyLovelace $ Ledger.evaluateTransactionFee pp tx keywitcount
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
@@ -478,14 +470,7 @@ evaluateTransactionExecutionUnits :: forall era. ()
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
 evaluateTransactionExecutionUnits era systemstart epochInfo pp utxo txbody =
     case makeSignedTransaction' era [] txbody of
-      ByronTx {}        -> evalPreAlonzo
       ShelleyTx sbe tx' -> evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx'
-  where
-    -- | Pre-Alonzo eras do not support languages with execution unit accounting.
-    evalPreAlonzo :: Either TransactionValidityError
-                            (Map ScriptWitnessIndex
-                                  (Either ScriptExecutionError ExecutionUnits))
-    evalPreAlonzo = Right Map.empty
 
 evaluateTransactionExecutionUnitsShelley :: forall era. ()
   => ShelleyBasedEra era

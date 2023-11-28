@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -16,10 +15,6 @@ module Cardano.Api.Eras.Case
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
 
-    -- Proofs
-  , noByronEraInShelleyBasedEra
-  , disjointByronEraOnlyAndShelleyBasedEra
-
     -- Conversions
   , shelleyToAlonzoEraToShelleyToBabbageEra
   , alonzoEraOnwardsToMaryEraOnwards
@@ -30,7 +25,6 @@ module Cardano.Api.Eras.Case
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ByronToAlonzoEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
@@ -42,14 +36,17 @@ import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
 import           Cardano.Api.Eras.Core
 
--- | @caseByronOrShelleyBasedEra f g era@ applies @f@ to byron and @g@ to other eras.
+-- | @caseByronOrShelleyBasedEra f g era@ returns @f@ in Byron and applies @g@ to Shelley-based eras.
 caseByronOrShelleyBasedEra :: ()
-  => (ByronEraOnly era -> a)
+  => a
   -> (ShelleyBasedEraConstraints era => ShelleyBasedEra era -> a)
   -> CardanoEra era
   -> a
 caseByronOrShelleyBasedEra l r = \case
-  ByronEra   -> l ByronEraOnlyByron
+  ByronEra   -> l -- We no longer provide the witness because Byron is isolated.
+                  -- This function will be deleted shortly after build-raw --byron-era is
+                  -- deprecated in cardano-cli
+
   ShelleyEra -> r ShelleyBasedEraShelley
   AllegraEra -> r ShelleyBasedEraAllegra
   MaryEra    -> r ShelleyBasedEraMary
@@ -147,13 +144,6 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraAlonzo  -> l ShelleyToBabbageEraAlonzo
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway  -> r ConwayEraOnwardsConway
-
-{-# DEPRECATED noByronEraInShelleyBasedEra "Use disjointByronEraOnlyAndShelleyBasedEra instead" #-}
-noByronEraInShelleyBasedEra :: ShelleyBasedEra era -> ByronEraOnly era -> a
-noByronEraInShelleyBasedEra = flip disjointByronEraOnlyAndShelleyBasedEra
-
-disjointByronEraOnlyAndShelleyBasedEra :: ByronEraOnly era -> ShelleyBasedEra era -> a
-disjointByronEraOnlyAndShelleyBasedEra ByronEraOnlyByron sbe = case sbe of {}
 
 shelleyToAlonzoEraToShelleyToBabbageEra :: ()
   => ShelleyToAlonzoEra era

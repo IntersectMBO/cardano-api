@@ -49,7 +49,6 @@ module Cardano.Api.Block (
     makeChainTip,
   ) where
 
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Hash
@@ -60,8 +59,6 @@ import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Tx
 
-import qualified Cardano.Chain.Block as Byron
-import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Ledger.Api as L
@@ -159,15 +156,10 @@ instance Show (Block era) where
 
 getBlockTxs :: forall era . Block era -> [Tx era]
 getBlockTxs = \case
-  ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw } ->
-    case byronBlockRaw of
-      Byron.ABOBBoundary{} -> [] -- no txs in EBBs
-      Byron.ABOBBlock Byron.ABlock {
-          Byron.blockBody =
-            Byron.ABody {
-              Byron.bodyTxPayload = Byron.ATxPayload txs
-            }
-        } -> map (ByronTx ByronEraOnlyByron) txs
+  -- In the context of foldBlocks we don't care about the Byron era.
+  -- Testing leans on ledger events which is a Shelley onwards feature.
+  ByronBlock Consensus.ByronBlock{} -> []
+
   ShelleyBlock sbe Consensus.ShelleyBlock{Consensus.shelleyBlockRaw} ->
     shelleyBasedEraConstraints sbe $
       getShelleyBlockTxs sbe shelleyBlockRaw

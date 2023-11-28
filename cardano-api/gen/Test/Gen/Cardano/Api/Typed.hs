@@ -134,8 +134,9 @@ module Test.Gen.Cardano.Api.Typed
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness), Tx (ByronTx),
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
+import qualified Cardano.Api.Byron as Byron
 import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
 import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
@@ -544,14 +545,9 @@ genTxValidityLowerBound =
     (\w -> TxValidityLowerBound w <$> genTtl)
 
 -- TODO: Accept a range for generating ttl.
-genTxValidityUpperBound :: CardanoEra era -> Gen (TxValidityUpperBound era)
-genTxValidityUpperBound era =
-  forEraInEon era
-    ( forEraInEon era
-        (error "genTxValidityUpperBound: unexpected era support combination")
-        (pure . TxValidityNoUpperBound)
-    )
-    (\w -> TxValidityUpperBound w <$> Gen.maybe genTtl)
+genTxValidityUpperBound :: ShelleyBasedEra era -> Gen (TxValidityUpperBound era)
+genTxValidityUpperBound sbe =
+  TxValidityUpperBound sbe <$> Gen.maybe genTtl
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
@@ -643,9 +639,9 @@ genTxBodyContent sbe = do
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext sbe)
   txTotalCollateral <- genTxTotalCollateral era
   txReturnCollateral <- genTxReturnCollateral sbe
-  txFee <- genTxFee era
+  txFee <- genTxFee sbe
   txValidityLowerBound <- genTxValidityLowerBound era
-  txValidityUpperBound <- genTxValidityUpperBound era
+  txValidityUpperBound <- genTxValidityUpperBound sbe
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts sbe
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
@@ -709,21 +705,17 @@ genTxTotalCollateral =
     (pure TxTotalCollateralNone)
     (\w -> TxTotalCollateral w <$> genPositiveLovelace)
 
-genTxFee :: CardanoEra era -> Gen (TxFee era)
-genTxFee =
-  caseByronOrShelleyBasedEra
-    (pure . TxFeeImplicit)
-    (\w -> TxFeeExplicit w <$> genLovelace)
+genTxFee :: ShelleyBasedEra era -> Gen (TxFee era)
+genTxFee w = TxFeeExplicit w <$> genLovelace
 
 genAddressInEraByron :: Gen (AddressInEra ByronEra)
 genAddressInEraByron = byronAddressInEra <$> genAddressByron
 
-genTxByron :: Gen (Tx ByronEra)
+genTxByron :: Gen (Byron.ATxAux ByteString)
 genTxByron = do
-  tx <- makeSignedByronTransaction
-          <$> genWitnessesByron
-          <*> genTxBodyByron
-  return $ ByronTx ByronEraOnlyByron tx
+  makeSignedByronTransaction
+    <$> genWitnessesByron
+    <*> genTxBodyByron
 
 genTxOutValueByron :: Gen (TxOutValue ByronEra)
 genTxOutValueByron = TxOutValueByron <$> genPositiveLovelace
