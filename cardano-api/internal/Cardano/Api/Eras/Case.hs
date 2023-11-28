@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -37,14 +36,17 @@ import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eon.ShelleyToMaryEra
 import           Cardano.Api.Eras.Core
 
--- | @caseByronOrShelleyBasedEra f g era@ applies @f@ to byron and @g@ to other eras.
+-- | @caseByronOrShelleyBasedEra f g era@ returns @f@ in Byron and applies @g@ to Shelley-based eras.
 caseByronOrShelleyBasedEra :: ()
   => a
   -> (ShelleyBasedEraConstraints era => ShelleyBasedEra era -> a)
   -> CardanoEra era
   -> a
 caseByronOrShelleyBasedEra l r = \case
-  ByronEra   -> l
+  ByronEra   -> l -- We no longer provide the witness because Byron is isolated.
+                  -- This function will be deleted shortly after build-raw --byron-era is
+                  -- deprecated in cardano-cli
+
   ShelleyEra -> r ShelleyBasedEraShelley
   AllegraEra -> r ShelleyBasedEraAllegra
   MaryEra    -> r ShelleyBasedEraMary

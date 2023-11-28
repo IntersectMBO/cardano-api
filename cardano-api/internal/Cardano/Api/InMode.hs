@@ -61,14 +61,14 @@ import           GHC.Generics
 -- LocalTxSubmission protocol.
 --
 data TxInMode where
-  -- | Shelley based transations.
+  -- | Shelley based transactions.
   --
   TxInMode
     :: ShelleyBasedEra era
     -> Tx era
     -> TxInMode
 
-  -- | Legacy Byron transactions. Byron has various things we can
+  -- | Legacy Byron transactions and things we can
   -- post to the chain which are not actually transactions.
   -- This covers: update proposals, votes and delegation certs.
   --
@@ -104,8 +104,6 @@ fromConsensusGenTx = \case
     let Consensus.ShelleyTx _txid shelleyEraTx = tx'
     in TxInMode ShelleyBasedEraConway (ShelleyTx ShelleyBasedEraConway shelleyEraTx)
 
-
--- mkByronTx = Consensus.ByronTx (Consensus.byronIdTx tx) tx
 
 toConsensusGenTx :: ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block

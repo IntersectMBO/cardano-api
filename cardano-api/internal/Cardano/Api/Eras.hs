@@ -38,7 +38,7 @@ module Cardano.Api.Eras
 
     -- * Era case handling
 
-  -- ** Case on CardanoEra
+    -- ** Case on CardanoEra
   , caseByronOrShelleyBasedEra
 
     -- ** Case on ShelleyBasedEra
