@@ -112,7 +112,7 @@ instance SerialiseAsBech32 a => IsString (UsingBech32 a) where
       case deserialiseFromBech32 ttoken (Text.pack str) of
         Right x  -> UsingBech32 x
         Left  e ->
-          error $ prettyToString $
+          error $ docToString $
             "fromString: " <> pretty str <> ": " <> prettyError e
       where
         ttoken :: AsType a
@@ -126,7 +126,7 @@ instance SerialiseAsBech32 a => FromJSON (UsingBech32 a) where
       Aeson.withText tname $ \str ->
         case deserialiseFromBech32 ttoken str of
           Right x -> return (UsingBech32 x)
-          Left  e -> fail $ prettyToString $ pretty str <> ": " <> prettyError e
+          Left  e -> fail $ docToString $ pretty str <> ": " <> prettyError e
       where
         ttoken = proxyToAsType (Proxy :: Proxy a)
         tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)

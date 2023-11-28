@@ -4,9 +4,9 @@ module Cardano.Api.Pretty
   , Pretty(..)
   , ShowOf(..)
   , viaShow
-  , prettyToLazyText
-  , prettyToText
-  , prettyToString
+  , docToLazyText
+  , docToText
+  , docToString
   , pshow
 
   , black
@@ -30,14 +30,14 @@ import           Prettyprinter.Render.Terminal
 -- of colored output. This is a type alias for AnsiStyle.
 type Ann = AnsiStyle
 
-prettyToString :: Doc AnsiStyle -> String
-prettyToString =  show
+docToString :: Doc AnsiStyle -> String
+docToString =  show
 
-prettyToLazyText :: Doc AnsiStyle -> TextLazy.Text
-prettyToLazyText = renderLazy . layoutPretty defaultLayoutOptions
+docToLazyText :: Doc AnsiStyle -> TextLazy.Text
+docToLazyText = renderLazy . layoutPretty defaultLayoutOptions
 
-prettyToText :: Doc AnsiStyle -> Text.Text
-prettyToText = TextLazy.toStrict . prettyToLazyText
+docToText :: Doc AnsiStyle -> Text.Text
+docToText = TextLazy.toStrict . docToLazyText
 
 black :: Doc AnsiStyle -> Doc AnsiStyle
 black = annotate (color Black)
@@ -64,4 +64,4 @@ white :: Doc AnsiStyle -> Doc AnsiStyle
 white = annotate (color White)
 
 pshow :: Show a => a -> Doc ann
-pshow = pretty . show
+pshow = viaShow

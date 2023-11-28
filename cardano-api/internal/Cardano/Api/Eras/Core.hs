@@ -57,6 +57,7 @@ import qualified Cardano.Ledger.Api as L
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Kind
 import           Data.Maybe (isJust)
+import           Data.String (IsString)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable, showsTypeRep, typeOf)
@@ -177,8 +178,8 @@ monoidForEraInEon :: ()
 monoidForEraInEon sbe = forEraInEon sbe mempty
 
 monoidForEraInEonA :: ()
-  => Applicative f
   => Eon eon
+  => Applicative f
   => Monoid a
   => CardanoEra era
   -> (eon era -> f a)
@@ -242,16 +243,11 @@ deriving instance Eq    (CardanoEra era)
 deriving instance Ord   (CardanoEra era)
 deriving instance Show  (CardanoEra era)
 
-deriving via (ShowOf (CardanoEra era)) instance Pretty (CardanoEra era)
+instance Pretty (CardanoEra era) where
+  pretty = cardanoEraToStringLike
 
 instance ToJSON (CardanoEra era) where
-   toJSON ByronEra   = "Byron"
-   toJSON ShelleyEra = "Shelley"
-   toJSON AllegraEra = "Allegra"
-   toJSON MaryEra    = "Mary"
-   toJSON AlonzoEra  = "Alonzo"
-   toJSON BabbageEra = "Babbage"
-   toJSON ConwayEra  = "Conway"
+  toJSON = cardanoEraToStringLike
 
 instance TestEquality CardanoEra where
     testEquality ByronEra   ByronEra   = Just Refl
@@ -323,6 +319,9 @@ data AnyCardanoEra where
 
 deriving instance Show AnyCardanoEra
 
+instance Pretty AnyCardanoEra where
+  pretty (AnyCardanoEra e) = pretty e
+
 -- | Assumes that 'CardanoEra era' are singletons
 instance Eq AnyCardanoEra where
     AnyCardanoEra era == AnyCardanoEra era' =
@@ -363,17 +362,35 @@ instance ToJSON AnyCardanoEra where
    toJSON (AnyCardanoEra era) = toJSON era
 
 instance FromJSON AnyCardanoEra where
-   parseJSON = withText "AnyCardanoEra"
-     $ \case
-        "Byron" -> pure $ AnyCardanoEra ByronEra
-        "Shelley" -> pure $ AnyCardanoEra ShelleyEra
-        "Allegra" -> pure $ AnyCardanoEra AllegraEra
-        "Mary" -> pure $ AnyCardanoEra MaryEra
-        "Alonzo" -> pure $ AnyCardanoEra AlonzoEra
-        "Babbage" -> pure $ AnyCardanoEra BabbageEra
-        "Conway" -> pure $ AnyCardanoEra ConwayEra
-        wrong -> fail $ "Failed to parse unknown era: " <> Text.unpack wrong
+  parseJSON = withText "AnyCardanoEra"
+    $ (\case
+        Right era -> pure era
+        Left era -> fail $ "Failed to parse unknown era: " <> Text.unpack era
+      ) . anyCardanoEraFromStringLike
 
+
+cardanoEraToStringLike :: IsString a => CardanoEra era -> a
+{-# INLINE cardanoEraToStringLike #-}
+cardanoEraToStringLike = \case
+  ByronEra   -> "Byron"
+  ShelleyEra -> "Shelley"
+  AllegraEra -> "Allegra"
+  MaryEra    -> "Mary"
+  AlonzoEra  -> "Alonzo"
+  BabbageEra -> "Babbage"
+  ConwayEra  -> "Conway"
+
+anyCardanoEraFromStringLike :: (IsString a, Eq a) => a -> Either a AnyCardanoEra
+{-# INLINE anyCardanoEraFromStringLike #-}
+anyCardanoEraFromStringLike = \case
+  "Byron" -> pure $ AnyCardanoEra ByronEra
+  "Shelley" -> pure $ AnyCardanoEra ShelleyEra
+  "Allegra" -> pure $ AnyCardanoEra AllegraEra
+  "Mary" -> pure $ AnyCardanoEra MaryEra
+  "Alonzo" -> pure $ AnyCardanoEra AlonzoEra
+  "Babbage" -> pure $ AnyCardanoEra BabbageEra
+  "Conway" -> pure $ AnyCardanoEra ConwayEra
+  wrong -> Left wrong
 
 -- | Like the 'AnyCardanoEra' constructor but does not demand a 'IsCardanoEra'
 -- class constraint.

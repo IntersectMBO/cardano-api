@@ -22,7 +22,6 @@ module Cardano.Api.Utils
   , note
   , parseFilePath
   , readFileBlocking
-  , renderEra
   , runParsecParser
   , textShow
   , modifyWith
@@ -30,8 +29,6 @@ module Cardano.Api.Utils
     -- ** CLI option parsing
   , bounded
   ) where
-
-import           Cardano.Api.Eras
 
 import           Cardano.Ledger.Shelley ()
 
@@ -117,15 +114,6 @@ readFileBlocking path = bracket
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show
-
-renderEra :: AnyCardanoEra -> Text
-renderEra (AnyCardanoEra ByronEra)   = "Byron"
-renderEra (AnyCardanoEra ShelleyEra) = "Shelley"
-renderEra (AnyCardanoEra AllegraEra) = "Allegra"
-renderEra (AnyCardanoEra MaryEra)    = "Mary"
-renderEra (AnyCardanoEra AlonzoEra)  = "Alonzo"
-renderEra (AnyCardanoEra BabbageEra) = "Babbage"
-renderEra (AnyCardanoEra ConwayEra)  = "Conway"
 
 bounded :: forall a. (Bounded a, Integral a, Show a) => String -> ReadM a
 bounded t = eitherReader $ \s -> do

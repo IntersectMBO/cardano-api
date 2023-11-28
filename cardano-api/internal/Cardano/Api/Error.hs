@@ -47,14 +47,14 @@ instance Error ErrorAsException where
 
 instance Show ErrorAsException where
   show (ErrorAsException e) =
-    prettyToString $ prettyError e
+    docToString $ prettyError e
 
 instance Exception ErrorAsException where
   displayException (ErrorAsException e) =
-    prettyToString $ prettyError e
+    docToString $ prettyError e
 
 displayError :: Error a => a -> String
-displayError = prettyToString . prettyError
+displayError = docToString . prettyError
 
 data FileError e = FileError FilePath e
                  | FileErrorTempFile

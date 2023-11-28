@@ -78,4 +78,4 @@ testErrorMessage_ goldenFilesLocation moduleName typeName constructorName err = 
   let fqtn = moduleName <> "." <> typeName
   testProperty constructorName . withTests 1 . property $ do
     H.note_ "Incorrect error message in golden file"
-    H.diffVsGoldenFile (prettyToString (prettyError err)) (goldenFilesLocation </> fqtn </> constructorName <> ".txt")
+    H.diffVsGoldenFile (docToString (prettyError err)) (goldenFilesLocation </> fqtn </> constructorName <> ".txt")
