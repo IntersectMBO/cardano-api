@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -24,9 +23,11 @@ module Cardano.Api.Tx (
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(.., Tx),
+    Byron.ATxAux(..),
     getTxBody,
     getByronTxBody,
     getTxWitnesses,
+    getTxWitnessesByron,
     ScriptValidity(..),
 
     -- ** Signing in one go
@@ -56,7 +57,6 @@ module Cardano.Api.Tx (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eon.ByronEraOnly
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -103,16 +103,10 @@ import           Lens.Micro
 --
 
 data Tx era where
-
-     ByronTx
-       :: ByronEraOnly era
-       -> Byron.ATxAux ByteString
-       -> Tx era
-
-     ShelleyTx
-       :: ShelleyBasedEra era
-       -> L.Tx (ShelleyLedgerEra era)
-       -> Tx era
+  ShelleyTx
+    :: ShelleyBasedEra era
+    -> L.Tx (ShelleyLedgerEra era)
+    -> Tx era
 
 
 instance Show (InAnyCardanoEra Tx) where
@@ -136,23 +130,12 @@ instance Eq (InAnyShelleyBasedEra Tx) where
 
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Eq (Tx era) where
-    (==) (ByronTx _ txA)
-         (ByronTx _ txB) = txA == txB
-
     (==) (ShelleyTx sbe txA)
          (ShelleyTx _   txB) =
       shelleyBasedEraConstraints sbe $ txA == txB
 
-    (==) (ByronTx ByronEraOnlyByron _) (ShelleyTx sbe _) = case sbe of {}
-    (==) (ShelleyTx sbe _) (ByronTx ByronEraOnlyByron _) = case sbe of {}
-
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Show (Tx era) where
-    showsPrec p (ByronTx _ tx) =
-      showParen (p >= 11) $
-        showString "ByronTx ByronEraOnlyByron "
-      . showsPrec 11 tx
-
     showsPrec p (ShelleyTx ShelleyBasedEraShelley tx) =
       showParen (p >= 11) $
         showString "ShelleyTx ShelleyBasedEraShelley "
@@ -209,20 +192,13 @@ pattern AsAlonzoTx :: AsType (Tx AlonzoEra)
 pattern AsAlonzoTx = AsTx AsAlonzoEra
 {-# COMPLETE AsAlonzoTx #-}
 
-instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
-    serialiseToCBOR (ByronTx _ tx) = CBOR.recoverBytes tx
-
+instance IsShelleyBasedEra era => SerialiseAsCBOR (Tx era) where
     serialiseToCBOR (ShelleyTx sbe tx) =
       shelleyBasedEraConstraints sbe $ serialiseShelleyBasedTx tx
 
     deserialiseFromCBOR _ bs =
-      caseByronOrShelleyBasedEra
-        (\w -> ByronTx w <$>
-          CBOR.decodeFullAnnotatedBytes
-            CBOR.byronProtVer "Byron Tx" CBOR.decCBOR (LBS.fromStrict bs)
-        )
-        (\sbe -> deserialiseShelleyBasedTx (ShelleyTx sbe) bs)
-        (cardanoEra :: CardanoEra era)
+      shelleyBasedEraConstraints (shelleyBasedEra :: ShelleyBasedEra era)
+        $ deserialiseShelleyBasedTx (ShelleyTx shelleyBasedEra) bs
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
@@ -243,16 +219,15 @@ deserialiseShelleyBasedTx mkTx bs =
                (L.eraProtVerLow @ledgerera) "Shelley Tx" CBOR.decCBOR (LBS.fromStrict bs)
 
 
-instance IsCardanoEra era => HasTextEnvelope (Tx era) where
+instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
     textEnvelopeType _ =
-      case cardanoEra :: CardanoEra era of
-        ByronEra   -> "TxSignedByron"
-        ShelleyEra -> "TxSignedShelley"
-        AllegraEra -> "Tx AllegraEra"
-        MaryEra    -> "Tx MaryEra"
-        AlonzoEra  -> "Tx AlonzoEra"
-        BabbageEra -> "Tx BabbageEra"
-        ConwayEra  -> "Tx ConwayEra"
+      case shelleyBasedEra :: ShelleyBasedEra era of
+        ShelleyBasedEraShelley -> "TxSignedShelley"
+        ShelleyBasedEraAllegra -> "Tx AllegraEra"
+        ShelleyBasedEraMary    -> "Tx MaryEra"
+        ShelleyBasedEraAlonzo  -> "Tx AlonzoEra"
+        ShelleyBasedEraBabbage -> "Tx BabbageEra"
+        ShelleyBasedEraConway  -> "Tx ConwayEra"
 
 data KeyWitness era where
 
@@ -445,17 +420,13 @@ pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
 getTxBodyAndWitnesses :: Tx era -> (TxBody era, [KeyWitness era])
 getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)
 
-getByronTxBody :: Tx ByronEra -> Annotated Byron.Tx ByteString
-getByronTxBody (ByronTx _eon Byron.ATxAux { Byron.aTaTx = txbody }) = txbody
-getByronTxBody (ShelleyTx sbe _) = case sbe :: ShelleyBasedEra ByronEra of {}
+getByronTxBody :: Byron.ATxAux ByteString -> Annotated Byron.Tx ByteString
+getByronTxBody (Byron.ATxAux { Byron.aTaTx = txbody }) = txbody
 
 -- NB: This is called in getTxBodyAndWitnesses which is fine as
 -- getTxBodyAndWitnesses is only called in the context of a
 -- shelley based era anyways. ByronTx will eventually be removed.
 getTxBody :: Tx era -> TxBody era
-getTxBody (ByronTx _eon Byron.ATxAux { Byron.aTaTx = _txbody }) =
-  error "getTxBody: Use getByronTxBody instead"
-
 getTxBody (ShelleyTx sbe tx) =
   caseShelleyToMaryOrAlonzoEraOnwards
     ( const $
@@ -483,14 +454,14 @@ getTxBody (ShelleyTx sbe tx) =
     )
     sbe
 
-
-getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
-getTxWitnesses (ByronTx ByronEraOnlyByron Byron.ATxAux { Byron.aTaWitness = witnesses }) =
+getTxWitnessesByron :: Byron.ATxAux ByteString -> [KeyWitness ByronEra]
+getTxWitnessesByron (Byron.ATxAux { Byron.aTaWitness = witnesses }) =
     map ByronKeyWitness
   . Vector.toList
   . unAnnotated
   $ witnesses
 
+getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
 getTxWitnesses (ShelleyTx sbe tx') =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (getShelleyTxWitnesses tx'))
@@ -856,9 +827,9 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
 signByronTransaction :: NetworkId
                      -> Annotated Byron.Tx ByteString
                      -> [SigningKey ByronKey]
-                     -> Tx ByronEra
+                     -> Byron.ATxAux ByteString
 signByronTransaction nw txbody sks =
-    ByronTx ByronEraOnlyByron $ makeSignedByronTransaction witnesses txbody
+    makeSignedByronTransaction witnesses txbody
   where
     witnesses = map (makeByronKeyWitness nw txbody) sks
 
