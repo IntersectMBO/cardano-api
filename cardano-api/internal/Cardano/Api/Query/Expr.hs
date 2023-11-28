@@ -37,6 +37,8 @@ module Cardano.Api.Query.Expr
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
@@ -108,17 +110,19 @@ queryGenesisParameters sbe =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryGenesisParameters
 
 queryPoolDistribution :: ()
-  => ShelleyBasedEra era
+  => BabbageEraOnwards era
   -> Maybe (Set PoolId)
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolDistribution era)))
-queryPoolDistribution sbe mPoolIds =
+queryPoolDistribution era mPoolIds = do
+  let sbe = babbageEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryPoolDistribution mPoolIds
 
 queryPoolState :: ()
-  => ShelleyBasedEra era
+  => BabbageEraOnwards era
   -> Maybe (Set PoolId)
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolState era)))
-queryPoolState sbe mPoolIds =
+queryPoolState era mPoolIds = do
+  let sbe = babbageEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryPoolState mPoolIds
 
 queryProtocolParameters :: ()
@@ -155,12 +159,14 @@ queryStakeAddresses sbe stakeCredentials networkId =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeCredentials networkId
 
 queryStakeDelegDeposits :: ()
-  => ShelleyBasedEra era
+  => BabbageEraOnwards era
   -> Set StakeCredential
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either Consensus.EraMismatch (Map StakeCredential Lovelace)))
-queryStakeDelegDeposits sbe stakeCreds
+queryStakeDelegDeposits era stakeCreds
   | S.null stakeCreds = pure . pure $ pure mempty
-  | otherwise         = queryExpr $ QueryInEra . QueryInShelleyBasedEra sbe $ QueryStakeDelegDeposits stakeCreds
+  | otherwise         = do
+    let sbe = babbageEraOnwardsToShelleyBasedEra era
+    queryExpr $ QueryInEra . QueryInShelleyBasedEra sbe $ QueryStakeDelegDeposits stakeCreds
 
 queryStakeDistribution :: ()
   => ShelleyBasedEra era
@@ -183,10 +189,11 @@ queryStakePools sbe =
   queryExpr $ QueryInEra . QueryInShelleyBasedEra sbe $ QueryStakePools
 
 queryStakeSnapshot :: ()
-  => ShelleyBasedEra era
+  => BabbageEraOnwards era
   -> Maybe (Set PoolId)
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedStakeSnapshots era)))
-queryStakeSnapshot sbe mPoolIds =
+queryStakeSnapshot era mPoolIds = do
+  let sbe = babbageEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeSnapshot mPoolIds
 
 querySystemStart :: ()
@@ -202,45 +209,53 @@ queryUtxo sbe utxoFilter =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryUTxO utxoFilter
 
 queryConstitution :: ()
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.Constitution (ShelleyLedgerEra era)))))
-queryConstitution sbe =
+queryConstitution era = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
 
 queryGovState :: ()
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.GovState (ShelleyLedgerEra era))))
-queryGovState sbe =
+queryGovState era = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryGovState
 
 queryDRepState :: ()
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> Set (L.Credential L.DRepRole L.StandardCrypto)
   -- ^ An empty credentials set means that states for all DReps will be returned
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto))))
-queryDRepState sbe drepCreds = queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
+queryDRepState era drepCreds = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
 
 queryDRepStakeDistribution :: ()
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> Set (L.DRep L.StandardCrypto)
   -- ^ An empty DRep set means that distributions for all DReps will be returned
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
-queryDRepStakeDistribution sbe dreps = queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
+queryDRepStakeDistribution era dreps = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
 
 -- | Returns info about committee members filtered by: cold credentials, hot credentials and statuses.
 -- If empty sets are passed as filters, then no filtering is done.
 queryCommitteeMembersState :: ()
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
   -> Set (L.Credential L.HotCommitteeRole L.StandardCrypto)
   -> Set L.MemberStatus
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.CommitteeMembersState L.StandardCrypto))))
-queryCommitteeMembersState sbe coldCreds hotCreds statuses =
+queryCommitteeMembersState era coldCreds hotCreds statuses = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)
 
 queryStakeVoteDelegatees :: ()
-  => ShelleyBasedEra era
+  => ConwayEraOnwards era
   -> Set StakeCredential
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map StakeCredential (L.DRep L.StandardCrypto))))
-queryStakeVoteDelegatees sbe stakeCredentials =
+queryStakeVoteDelegatees era stakeCredentials = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeVoteDelegatees stakeCredentials
