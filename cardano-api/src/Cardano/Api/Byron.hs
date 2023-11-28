@@ -31,7 +31,7 @@ module Cardano.Api.Byron
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
-    Tx(ByronTx),
+    ATxAux(..),
 
     -- ** Incremental signing and separate witnesses
     KeyWitness (ByronKeyWitness),
@@ -82,13 +82,18 @@ module Cardano.Api.Byron
     -- * Hardcoded configuration parameters
     applicationName,
     applicationVersion,
-    softwareVersion
+    softwareVersion,
+
+    -- * Serialization
+    serializeByronTx,
+    writeByronTxFileTextEnvelopeCddl,
   ) where
 
 import           Cardano.Api
 import           Cardano.Api.Address
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId
+import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SpecialByron
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody

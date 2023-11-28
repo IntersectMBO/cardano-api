@@ -17,7 +17,6 @@ module Cardano.Api.Eras.Case
   , caseShelleyToBabbageOrConwayEraOnwards
 
     -- Proofs
-  , noByronEraInShelleyBasedEra
   , disjointByronEraOnlyAndShelleyBasedEra
 
     -- Conversions
@@ -147,10 +146,6 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraAlonzo  -> l ShelleyToBabbageEraAlonzo
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway  -> r ConwayEraOnwardsConway
-
-{-# DEPRECATED noByronEraInShelleyBasedEra "Use disjointByronEraOnlyAndShelleyBasedEra instead" #-}
-noByronEraInShelleyBasedEra :: ShelleyBasedEra era -> ByronEraOnly era -> a
-noByronEraInShelleyBasedEra = flip disjointByronEraOnlyAndShelleyBasedEra
 
 disjointByronEraOnlyAndShelleyBasedEra :: ByronEraOnly era -> ShelleyBasedEra era -> a
 disjointByronEraOnlyAndShelleyBasedEra ByronEraOnlyByron sbe = case sbe of {}
