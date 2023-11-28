@@ -134,8 +134,9 @@ module Test.Gen.Cardano.Api.Typed
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness), Tx (ByronTx),
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
+import qualified Cardano.Api.Byron as Byron
 import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
 import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
@@ -718,12 +719,11 @@ genTxFee =
 genAddressInEraByron :: Gen (AddressInEra ByronEra)
 genAddressInEraByron = byronAddressInEra <$> genAddressByron
 
-genTxByron :: Gen (Tx ByronEra)
+genTxByron :: Gen (Byron.ATxAux ByteString)
 genTxByron = do
-  tx <- makeSignedByronTransaction
-          <$> genWitnessesByron
-          <*> genTxBodyByron
-  return $ ByronTx ByronEraOnlyByron tx
+  makeSignedByronTransaction
+    <$> genWitnessesByron
+    <*> genTxBodyByron
 
 genTxOutValueByron :: Gen (TxOutValue ByronEra)
 genTxOutValueByron = TxOutValueByron <$> genPositiveLovelace
