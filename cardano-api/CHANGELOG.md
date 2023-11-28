@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.35.0.0
+
+- Remove `renderEra` Use `docToText . pretty` instead. Rename `prettyTo*` functions to `docTo*`.
+  (breaking, improvement)
+  [PR 387](https://github.com/input-output-hk/cardano-api/pull/387)
+
+- Expose NewGovernanceProposals and EpochBoundaryRatificationState ledger events in Conway era
+  (feature, compatible)
+  [PR 388](https://github.com/input-output-hk/cardano-api/pull/388)
+
+- Guard queries with their respective eras
+  (breaking, improvement)
+  [PR 386](https://github.com/input-output-hk/cardano-api/pull/386)
+
 ## 8.34.1.0
 
 - Expose `stakeCredentialWitness` function, which returns only stake credentials for the certificates requiring witnessing: delegation and deregistration.
