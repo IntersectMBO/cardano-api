@@ -744,6 +744,8 @@ module Cardano.Api (
 
     -- *** Ledger Events
     LedgerEvent(..),
+    AnyProposals(..),
+    AnyRatificationState(..),
     MIRDistributionDetails(..),
     PoolReapDetails(..),
     toLedgerEvent,
