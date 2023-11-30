@@ -15,6 +15,8 @@ module Cardano.Api.LedgerEvent
   ( LedgerEvent (..),
     MIRDistributionDetails (..),
     PoolReapDetails (..),
+    AnyProposals(..),
+    AnyRatificationState(..),
     toLedgerEvent,
   )
 where
