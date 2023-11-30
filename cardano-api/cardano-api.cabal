@@ -40,8 +40,14 @@ common maybe-Win32
   if os(windows)
     build-depends:      Win32
 
+common text
+  if impl(ghc == 8.10.7) && os(darwin) && arch(aarch64)
+    build-depends: text >= 1.2.5.0
+  else
+    build-depends: text >= 2.0
+
 library internal
-  import:               project-config, maybe-unix, maybe-Win32
+  import:               project-config, maybe-unix, maybe-Win32, text
 
   visibility:           public
 
@@ -177,7 +183,7 @@ library internal
                       , mtl
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-consensus ^>= 0.13
+                      , ouroboros-consensus ^>= 0.14
                       , ouroboros-consensus-cardano ^>= 0.12
                       , ouroboros-consensus-diffusion ^>= 0.9
                       , ouroboros-consensus-protocol ^>= 0.6
@@ -197,7 +203,6 @@ library internal
                       , sop-core
                       , stm
                       , strict-sop-core
-                      , text >= 2.0
                       , time
                       , transformers
                       , transformers-except ^>= 0.1.3
@@ -373,4 +378,3 @@ test-suite cardano-api-golden
                       , Test.Golden.Cardano.Api.Typed.Script
                       , Test.Golden.Cardano.Api.Value
                       , Test.Golden.ErrorsSpec
-
