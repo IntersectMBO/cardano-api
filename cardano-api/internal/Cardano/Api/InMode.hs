@@ -33,6 +33,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
+import           Cardano.Api.Utils (textShow)
 
 import qualified Cardano.Ledger.Api as L
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
@@ -279,6 +280,18 @@ data TxValidationErrorInCardanoMode where
 
 deriving instance Show TxValidationErrorInCardanoMode
 
+instance ToJSON TxValidationErrorInCardanoMode where
+  toJSON = \case
+    TxValidationErrorInCardanoMode err ->
+      Aeson.object
+        [ "tag" .= Aeson.String "TxValidationErrorInCardanoMode"
+        , "contents" .= toJSON err
+        ]
+    TxValidationEraMismatch err ->
+      Aeson.object
+        [ "tag" .= Aeson.String "TxValidationEraMismatch"
+        , "contents" .= toJSON (textShow err)
+        ]
 
 fromConsensusApplyTxErr :: ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
