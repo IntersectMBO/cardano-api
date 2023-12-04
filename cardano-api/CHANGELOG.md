@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.36.1.0
+
+- Expose AnyProposals and AnyRatificationState
+  (feature, compatible)
+  [PR 395](https://github.com/input-output-hk/cardano-api/pull/395)
+
 ## 8.36.0.0
 
 - New `ToJSON` instance for `TxValidationErrorInCardanoMode`
