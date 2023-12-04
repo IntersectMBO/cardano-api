@@ -1,5 +1,17 @@
 # Changelog for cardano-api
 
+## 8.36.0.0
+
+- New `ToJSON` instance for `TxValidationErrorInCardanoMode`
+  (feature)
+  [PR 393](https://github.com/input-output-hk/cardano-api/pull/393)
+
+- Remove `ByronTx` data constructor from `data Tx era`
+  Delete Cardano.Api.Eon.ByronEraOnly module
+  Remove `TxFeeImplicit` and `TxValidityNoUpperBound`
+  (breaking)
+  [PR 382](https://github.com/input-output-hk/cardano-api/pull/382)
+
 ## 8.35.0.0
 
 - Remove `renderEra` Use `docToText . pretty` instead. Rename `prettyTo*` functions to `docTo*`.
