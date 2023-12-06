@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.36.1.1
+
+- Restore the inclusion of datum hashes in Alonzo era tx bodies
+  (bugfix)
+  [PR 398](https://github.com/input-output-hk/cardano-api/pull/398)
+
 ## 8.36.1.0
 
 - Expose AnyProposals and AnyRatificationState
