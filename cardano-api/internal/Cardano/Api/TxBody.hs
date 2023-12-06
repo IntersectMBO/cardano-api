@@ -213,6 +213,7 @@ import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
+import qualified Cardano.Ledger.Plutus.Data as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Ledger
@@ -703,14 +704,37 @@ toShelleyTxOut _ = \case -- jky simplify
     error "toShelleyTxOut: Expected a Shelley value"
 
   TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
-    caseShelleyToAlonzoOrBabbageEraOnwards
-      (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
-      (const $
-        L.mkBasicTxOut (toShelleyAddr addr) value
-          & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
-          & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
+    caseShelleyToMaryOrAlonzoEraOnwards
+      (const $ L.mkBasicTxOut (toShelleyAddr addr) value
+      )
+      (\case
+          AlonzoEraOnwardsAlonzo ->
+            L.mkBasicTxOut (toShelleyAddr addr) value
+              & L.dataHashTxOutL .~ toAlonzoTxOutDatumHashUTxO txoutdata
+          AlonzoEraOnwardsBabbage ->
+            L.mkBasicTxOut (toShelleyAddr addr) value
+              & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
+              & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
+          AlonzoEraOnwardsConway ->
+            L.mkBasicTxOut (toShelleyAddr addr) value
+              & L.datumTxOutL .~ toBabbageTxOutDatumUTxO txoutdata
+              & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
       )
       sbe
+
+toAlonzoTxOutDatumHashUTxO
+  :: TxOutDatum CtxUTxO era -> StrictMaybe (Plutus.DataHash StandardCrypto)
+toAlonzoTxOutDatumHashUTxO TxOutDatumNone = SNothing
+toAlonzoTxOutDatumHashUTxO (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
+toAlonzoTxOutDatumHashUTxO (TxOutDatumInline{}) = SNothing
+
+toBabbageTxOutDatumUTxO
+  :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
+  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatumUTxO  TxOutDatumNone = Babbage.NoDatum
+toBabbageTxOutDatumUTxO (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
+toBabbageTxOutDatumUTxO (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
+
 
 fromShelleyTxOut :: forall era ctx. ()
   => ShelleyBasedEra era
@@ -763,12 +787,20 @@ fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
         datum = ledgerTxOut ^. L.datumTxOutL
         mRefScript = ledgerTxOut ^. L.referenceScriptTxOutL
 
+toAlonzoTxOutDatumHash
+  :: TxOutDatum ctx era -> StrictMaybe (Plutus.DataHash StandardCrypto)
+toAlonzoTxOutDatumHash TxOutDatumNone = SNothing
+toAlonzoTxOutDatumHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
+toAlonzoTxOutDatumHash (TxOutDatumInline{}) = SNothing
+toAlonzoTxOutDatumHash (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
+
 toBabbageTxOutDatum
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
+  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
 toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
+toBabbageTxOutDatum (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
 
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
@@ -3030,23 +3062,23 @@ toShelleyTxOutAny _ = \case
     error "toShelleyTxOutAny: Expected a Shelley value"
 
   TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
-    caseShelleyToAlonzoOrBabbageEraOnwards
-      (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
-      (const $
-        L.mkBasicTxOut (toShelleyAddr addr) value
-          & L.datumTxOutL .~ toBabbageTxOutDatum' txoutdata
-          & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
+    caseShelleyToMaryOrAlonzoEraOnwards
+      (const $ L.mkBasicTxOut (toShelleyAddr addr) value
+      )
+      (\case
+          AlonzoEraOnwardsAlonzo ->
+            L.mkBasicTxOut (toShelleyAddr addr) value
+              & L.dataHashTxOutL .~ toAlonzoTxOutDatumHash txoutdata
+          AlonzoEraOnwardsBabbage ->
+            L.mkBasicTxOut (toShelleyAddr addr) value
+              & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
+              & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
+          AlonzoEraOnwardsConway ->
+            L.mkBasicTxOut (toShelleyAddr addr) value
+              & L.datumTxOutL .~ toBabbageTxOutDatum txoutdata
+              & L.referenceScriptTxOutL .~ refScriptToShelleyScript sbe refScript
       )
       sbe
-
--- TODO: Consolidate with alonzo function and rename
-toBabbageTxOutDatum'
-  :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
-toBabbageTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
-toBabbageTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
-toBabbageTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
-toBabbageTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
 
 
 -- ----------------------------------------------------------------------------
