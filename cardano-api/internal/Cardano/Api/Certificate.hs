@@ -155,7 +155,8 @@ instance
 instance
   ( IsShelleyBasedEra era
   ) => HasTextEnvelope (Certificate era) where
-    textEnvelopeType _ = "CertificateShelley"
+    textEnvelopeType _ =
+      forEraInEon @ConwayEraOnwards (cardanoEra :: CardanoEra era) "CertificateShelley" (const "CertificateConway")
     textEnvelopeDefaultDescr cert = case cert of
       ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyRegCert{}) -> "Stake address registration"
       ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyUnRegCert{}) -> "Stake address deregistration"
