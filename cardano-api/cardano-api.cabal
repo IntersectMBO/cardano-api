@@ -157,7 +157,7 @@ library internal
                       , cardano-ledger-alonzo >= 1.5.0
                       , cardano-ledger-allegra >= 1.2.3.1
                       , cardano-ledger-api ^>= 1.7
-                      , cardano-ledger-babbage >= 1.5.0
+                      , cardano-ledger-babbage >= 1.6.0
                       , cardano-ledger-binary
                       , cardano-ledger-byron >= 1.0.0.2
                       , cardano-ledger-conway >= 1.10.0
