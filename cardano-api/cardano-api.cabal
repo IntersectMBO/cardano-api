@@ -105,8 +105,14 @@ library internal
                         Cardano.Api.Keys.Read
                         Cardano.Api.Keys.Shelley
                         Cardano.Api.Ledger.Lens
-                        Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
+                        Cardano.Api.LedgerEvents.ConvertLedgerEvent
+                        Cardano.Api.LedgerEvents.Rule.BBODY.DELEGS
+                        Cardano.Api.LedgerEvents.Rule.BBODY.LEDGER
+                        Cardano.Api.LedgerEvents.Rule.TICK.NEWEPOCH
+                        Cardano.Api.LedgerEvents.Rule.TICK.RUPD
+                        Cardano.Api.LedgerEvents.Rule.BBODY.UTXOW
+                        Cardano.Api.LedgerEvents.LedgerEvent
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
