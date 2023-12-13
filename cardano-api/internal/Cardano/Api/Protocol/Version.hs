@@ -58,6 +58,60 @@ protocolVersionToSbe
 protocolVersionToSbe CurrentProtocolVersion = ShelleyBasedEraBabbage
 protocolVersionToSbe ExperimentalProtocolVersion = ShelleyBasedEraConway
 
-createSingleProtVerProxy
-  :: Proxy version -> SingleProtVer version
-createSingleProtVerProxy _ = SingleProtVer
+-- An Example
+validateTxBodyContent'
+  :: ShelleyBasedEra era
+  -> TxBodyContent BuildTx era
+  -> Either TxBodyError ()
+validateTxBodyContent' sbe txBodContent@TxBodyContent {
+                             txIns,
+                             txInsCollateral,
+                             txOuts,
+                             txProtocolParams,
+                             txMintValue,
+                             txMetadata} =
+  let witnesses = collectTxBodyScriptWitnesses sbe txBodContent
+      languages = Set.fromList
+                    [ toAlonzoLanguage (AnyPlutusScriptVersion v)
+                    | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
+                    ]
+  in case sbe of
+       ShelleyBasedEraShelley -> do
+         validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
+         validateTxOuts sbe txOuts
+         validateMetadata txMetadata
+       ShelleyBasedEraAllegra -> do
+         validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
+         validateTxOuts sbe txOuts
+         validateMetadata txMetadata
+       ShelleyBasedEraMary -> do
+         validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
+         validateTxOuts sbe txOuts
+         validateMetadata txMetadata
+         validateMintValue txMintValue
+       ShelleyBasedEraAlonzo -> do
+         validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
+         validateTxOuts sbe txOuts
+         validateMetadata txMetadata
+         validateMintValue txMintValue
+         validateTxInsCollateral txInsCollateral languages
+         validateProtocolParameters txProtocolParams languages
+       ShelleyBasedEraBabbage -> do
+         validateTxIns txIns
+         guardShelleyTxInsOverflow (map fst txIns)
+         validateTxOuts sbe txOuts
+         validateMetadata txMetadata
+         validateMintValue txMintValue
+         validateTxInsCollateral txInsCollateral languages
+         validateProtocolParameters txProtocolParams languages
+       ShelleyBasedEraConway -> do
+         validateTxIns txIns
+         validateTxOuts sbe txOuts
+         validateMetadata txMetadata
+         validateMintValue txMintValue
+         validateTxInsCollateral txInsCollateral languages
+         validateProtocolParameters txProtocolParams languages
