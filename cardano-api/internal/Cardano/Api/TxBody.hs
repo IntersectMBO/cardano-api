@@ -152,6 +152,15 @@ module Cardano.Api.TxBody (
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
 
     getTxBodyContent,
+
+    -- Temp
+    validateTxIns,
+    guardShelleyTxInsOverflow,
+    validateTxOuts,
+    validateMetadata,
+    validateMintValue,
+    validateTxInsCollateral,
+    validateProtocolParameters,
   ) where
 
 import           Cardano.Api.Address

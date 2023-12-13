@@ -118,6 +118,7 @@ library internal
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.Pretty
                         Cardano.Api.Protocol
+                        Cardano.Api.Protocol.Version
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Query.Expr
