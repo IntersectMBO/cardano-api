@@ -52,66 +52,40 @@ type family VersionToEra version where
   VersionToEra ConwayEra = Api.ConwayEra
 
 protocolVersionToSbe
-  :: VersionToEra version ~ era
-  => SomeProtocolVersion version
-  -> ShelleyBasedEra era
+  :: SomeProtocolVersion version
+  -> ShelleyBasedEra (VersionToEra version)
 protocolVersionToSbe CurrentProtocolVersion = ShelleyBasedEraBabbage
 protocolVersionToSbe ExperimentalProtocolVersion = ShelleyBasedEraConway
 
 -- An Example
 validateTxBodyContent'
-  :: ShelleyBasedEra era
-  -> TxBodyContent BuildTx era
+  :: SomeProtocolVersion version
+  -> TxBodyContent BuildTx (VersionToEra version)
   -> Either TxBodyError ()
-validateTxBodyContent' sbe txBodContent@TxBodyContent {
+validateTxBodyContent' p txBodContent@TxBodyContent {
                              txIns,
                              txInsCollateral,
                              txOuts,
                              txProtocolParams,
                              txMintValue,
-                             txMetadata} =
-  let witnesses = collectTxBodyScriptWitnesses sbe txBodContent
+                             txMetadata} = do
+
+  let sbe = protocolVersionToSbe p
+      witnesses = collectTxBodyScriptWitnesses sbe txBodContent
       languages = Set.fromList
                     [ toAlonzoLanguage (AnyPlutusScriptVersion v)
                     | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
                     ]
-  in case sbe of
-       ShelleyBasedEraShelley -> do
-         validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
-         validateTxOuts sbe txOuts
-         validateMetadata txMetadata
-       ShelleyBasedEraAllegra -> do
-         validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
-         validateTxOuts sbe txOuts
-         validateMetadata txMetadata
-       ShelleyBasedEraMary -> do
-         validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
-         validateTxOuts sbe txOuts
-         validateMetadata txMetadata
-         validateMintValue txMintValue
-       ShelleyBasedEraAlonzo -> do
-         validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
-         validateTxOuts sbe txOuts
-         validateMetadata txMetadata
-         validateMintValue txMintValue
-         validateTxInsCollateral txInsCollateral languages
-         validateProtocolParameters txProtocolParams languages
-       ShelleyBasedEraBabbage -> do
-         validateTxIns txIns
-         guardShelleyTxInsOverflow (map fst txIns)
-         validateTxOuts sbe txOuts
-         validateMetadata txMetadata
-         validateMintValue txMintValue
-         validateTxInsCollateral txInsCollateral languages
-         validateProtocolParameters txProtocolParams languages
-       ShelleyBasedEraConway -> do
-         validateTxIns txIns
-         validateTxOuts sbe txOuts
-         validateMetadata txMetadata
-         validateMintValue txMintValue
-         validateTxInsCollateral txInsCollateral languages
-         validateProtocolParameters txProtocolParams languages
+
+  validateTxIns txIns
+  validateTxOuts sbe txOuts
+  validateMetadata txMetadata
+  validateMintValue txMintValue
+  validateTxInsCollateral txInsCollateral languages
+  validateProtocolParameters txProtocolParams languages
+
+  case p of
+    CurrentProtocolVersion ->
+      guardShelleyTxInsOverflow (map fst txIns)
+    ExperimentalProtocolVersion -> pure ()
+
