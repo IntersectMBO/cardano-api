@@ -218,6 +218,13 @@ module Cardano.Api.Shelley
     -- ** Shelley based eras
     ShelleyLedgerEra,
 
+    -- *** Ledger Events
+    LedgerEvent(..),
+    AnyProposals(..),
+    AnyRatificationState(..),
+    MIRDistributionDetails(..),
+    PoolReapDetails(..),
+    toLedgerEvent,
 
     -- ** Local State Query
     DebugLedgerState(..),
@@ -297,6 +304,8 @@ import           Cardano.Api.InMode
 import           Cardano.Api.IPC
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.LedgerEvents.ConvertLedgerEvent
+import           Cardano.Api.LedgerEvents.LedgerEvent
 import           Cardano.Api.LedgerState
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate

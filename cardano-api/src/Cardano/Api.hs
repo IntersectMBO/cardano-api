@@ -737,14 +737,6 @@ module Cardano.Api (
     applyBlock,
     ValidationMode(..),
 
-    -- *** Ledger Events
-    LedgerEvent(..),
-    AnyProposals(..),
-    AnyRatificationState(..),
-    MIRDistributionDetails(..),
-    PoolReapDetails(..),
-    toLedgerEvent,
-
     -- *** Traversing the block chain
     foldBlocks,
     FoldStatus(..),
@@ -1026,7 +1018,6 @@ import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Class
 import           Cardano.Api.Keys.Read
 import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId

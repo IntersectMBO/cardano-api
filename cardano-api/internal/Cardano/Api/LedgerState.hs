@@ -94,7 +94,7 @@ import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
 import           Cardano.Api.Keys.Praos
-import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
+import           Cardano.Api.LedgerEvents.ConvertLedgerEvent (LedgerEvent, toLedgerEvent)
 import           Cardano.Api.Modes (EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
