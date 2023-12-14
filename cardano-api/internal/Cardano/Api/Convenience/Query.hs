@@ -45,7 +45,7 @@ import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
+import           Data.Text (Text, pack)
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
@@ -67,6 +67,8 @@ renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionErro
   "Unsupported feature for the node-to-client protocol version.\n" <>
   "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
   "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedBlockQuery queryStr)) =
+  "Unsupported query: " <> pack queryStr <> "\n"
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx

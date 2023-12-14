@@ -30,5 +30,10 @@ class NodeToClientVersionOf a where
 
 type MinNodeToClientVersion = NodeToClientVersion
 
-data UnsupportedNtcVersionError = UnsupportedNtcVersionError !MinNodeToClientVersion !NodeToClientVersion
+-- | Show-ed query
+type QueryStr = String
+
+data UnsupportedNtcVersionError
+  = UnsupportedNtcVersionError !MinNodeToClientVersion !NodeToClientVersion
+  | UnsupportedBlockQuery !QueryStr
   deriving (Eq, Show)
