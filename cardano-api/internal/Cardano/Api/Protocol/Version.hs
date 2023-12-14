@@ -4,14 +4,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 
 
 
 module Cardano.Api.Protocol.Version where
 
-import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
 import qualified Cardano.Api.Eras.Core as Api
 import           Cardano.Api.Script
 import           Cardano.Api.TxBody
@@ -32,17 +32,22 @@ type MaxSupportedVersion = 9 :: Nat
 
 type BabbageEra = 8 :: Nat
 type ConwayEra = 9 :: Nat
+type PostConwayEra = 10 :: Nat
 
 type SupportedProtocolVersionRange version =
     ( MinSupportedVersion <= version
     , version <= MaxSupportedVersion
     )
 
+-- Will eventually disappear
+type family RequiresCurrent version = era | era -> version where
+  RequiresCurrent BabbageEra = Api.BabbageEra
+
 data SomeProtocolVersion version where
   CurrentProtocolVersion
     :: SupportedProtocolVersionRange BabbageEra
     => SomeProtocolVersion BabbageEra
-  ExperimentalProtocolVersion
+  UpcomingProtocolVersion
     :: SupportedProtocolVersionRange ConwayEra
     => SomeProtocolVersion ConwayEra
 
@@ -55,9 +60,9 @@ protocolVersionToSbe
   :: SomeProtocolVersion version
   -> ShelleyBasedEra (VersionToEra version)
 protocolVersionToSbe CurrentProtocolVersion = ShelleyBasedEraBabbage
-protocolVersionToSbe ExperimentalProtocolVersion = ShelleyBasedEraConway
+protocolVersionToSbe UpcomingProtocolVersion = ShelleyBasedEraConway
 
--- An Example
+-- An Example. Functions exposed to users should be generic in version.
 validateTxBodyContent'
   :: SomeProtocolVersion version
   -> TxBodyContent BuildTx (VersionToEra version)
@@ -85,7 +90,41 @@ validateTxBodyContent' p txBodContent@TxBodyContent {
   validateProtocolParameters txProtocolParams languages
 
   case p of
-    CurrentProtocolVersion ->
+    CurrentProtocolVersion -> do
       guardShelleyTxInsOverflow (map fst txIns)
-    ExperimentalProtocolVersion -> pure ()
+      validateTxIns' p txIns
+    UpcomingProtocolVersion -> pure ()
 
+-- RequiresCurrent allows modification of existing cardano-api until the
+-- refactor is complete. Note that functions which are not era dependent will
+-- not have SomeProtocolVersion as a parameter.
+validateTxIns'
+  :: SomeProtocolVersion BabbageEra
+  -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn (RequiresCurrent BabbageEra)))]
+  -> Either TxBodyError ()
+validateTxIns' _ _txIns =
+  sequence_ [
+            ]
+
+
+newtype UpdatedWitness (version :: Nat) = UpdatedWitness ()
+
+-- For functionality specific to an era we use concrete types
+futureValidateTxIns
+  :: SomeProtocolVersion BabbageEra
+  -> [(TxIn, BuildTxWith BuildTx (UpdatedWitness BabbageEra))]
+  -> Either TxBodyError ()
+futureValidateTxIns p _txIns =
+  case p of
+    CurrentProtocolVersion -> sequence_ []
+
+-- This will give a type error when we update CurrentProtocolVersion BabbageEra
+-- to CurrentProtocolVersion ConwayEra
+example
+  :: SomeProtocolVersion version
+  -> [(TxIn, BuildTxWith BuildTx (UpdatedWitness version))]
+  -> Either TxBodyError ()
+example p' txins =
+  case p' of
+    CurrentProtocolVersion -> futureValidateTxIns p' txins
+    UpcomingProtocolVersion -> pure ()
