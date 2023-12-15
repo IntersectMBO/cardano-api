@@ -34,16 +34,16 @@ type BabbageEra = 8 :: Nat
 type ConwayEra = 9 :: Nat
 type PostConwayEra = 10 :: Nat
 
-type SupportedProtocolVersionRange version =
+type SupportedProtocolVersionRange (version :: Nat) =
     ( MinSupportedVersion <= version
     , version <= MaxSupportedVersion
     )
 
 -- Will eventually disappear
-type family RequiresCurrent version = era | era -> version where
+type family RequiresCurrent (version :: Nat) = era | era -> version where
   RequiresCurrent BabbageEra = Api.BabbageEra
 
-data SomeProtocolVersion version where
+data SomeProtocolVersion (version :: Nat) where
   CurrentProtocolVersion
     :: SupportedProtocolVersionRange BabbageEra
     => SomeProtocolVersion BabbageEra
@@ -52,7 +52,7 @@ data SomeProtocolVersion version where
     => SomeProtocolVersion ConwayEra
 
 
-type family VersionToEra version where
+type family VersionToEra (version :: Nat) where
   VersionToEra BabbageEra = Api.BabbageEra
   VersionToEra ConwayEra = Api.ConwayEra
 
