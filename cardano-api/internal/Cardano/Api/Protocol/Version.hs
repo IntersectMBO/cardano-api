@@ -1,9 +1,11 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -128,3 +130,27 @@ example p' txins =
   case p' of
     CurrentProtocolVersion -> futureValidateTxIns p' txins
     UpcomingProtocolVersion -> pure ()
+
+-------------------------------------------------------------------------
+
+-- We also want to expose a class interface to users
+
+class UseProtocolVersion (version :: Nat) where
+  getProtocolVersion :: SomeProtocolVersion version
+
+instance UseProtocolVersion BabbageEra where
+  getProtocolVersion = CurrentProtocolVersion
+
+instance UseProtocolVersion ConwayEra where
+  getProtocolVersion = UpcomingProtocolVersion
+
+-- For the wallet team. Exposing a class interface side by side should be easy.
+classExample
+  :: UseProtocolVersion version
+  => [(TxIn, BuildTxWith BuildTx (UpdatedWitness version))]
+  -> Either TxBodyError ()
+classExample = example getProtocolVersion
+
+
+classExampleUsage :: Either TxBodyError ()
+classExampleUsage = classExample @BabbageEra []
