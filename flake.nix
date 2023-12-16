@@ -10,7 +10,7 @@
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror";
     cardano-mainnet-mirror.flake = false;
 
-    CHaP.url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+    CHaP.url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
     CHaP.flake = false;
 
     # non-flake nix compatibility
@@ -64,7 +64,7 @@
           #  nix flake lock --update-input CHaP
           #
           inputMap = {
-            "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
+            "https://chap.intersectmbo.org/" = inputs.CHaP;
           };
           # Also currently needed to make `nix flake lock --update-input CHaP` work.
           cabalProjectLocal = ''

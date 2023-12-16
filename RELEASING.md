@@ -9,7 +9,7 @@ When making a new release, firstly you have to decide on a new version number fo
 
 In order to decide which version number needs to be bumped up, it is necessary to know what was the latest released version of a package.
 Three simple ways are:
-* look at the latest version on [`cardano-haskell-packages` (aka **CHaP**)](https://input-output-hk.github.io/cardano-haskell-packages/index.html) - the most reliable way
+* look at the latest version on [`cardano-haskell-packages` (aka **CHaP**)](https://chap.intersectmbo.org/index.html) - the most reliable way
 * current version in the changelog
 * look at the latest git tag for the version
 
@@ -111,7 +111,7 @@ Please note that the tagging process will fail if:
 
 ### Releasing to `cardano-haskell-packages`
 After the `cardano-api` version gets tagged, it needs to be pushed into `cardano-haskell-packages` (aka **CHaP**).
-Detailed description of the release process is described in [CHaP repository README](https://github.com/input-output-hk/cardano-haskell-packages#how-to-add-a-new-package-version).
+Detailed description of the release process is described in [CHaP repository README](https://github.com/intersectmbo/cardano-haskell-packages#how-to-add-a-new-package-version).
 Briefly speaking, it requires executing of the following steps:
 
 1. :four_leaf_clover:  Clone `cardano-haskell-packages`:
@@ -128,11 +128,11 @@ Briefly speaking, it requires executing of the following steps:
     The script will create a separate commit for each package.
 
 1. Push your `HEAD` to a new branch, and create a PR in CHaP.
-    An example release PR which you might want to use as a reference: https://github.com/input-output-hk/cardano-haskell-packages/pull/345 .
+    An example release PR which you might want to use as a reference: https://github.com/intersectmbo/cardano-haskell-packages/pull/345 .
 
 1. Merge the PR - you don't need additional approvals for that if you belong to the correct GitHub access group.
 
-After package gets released, you can check the released version at: https://input-output-hk.github.io/cardano-haskell-packages/all-package-versions/ and update the version in the dependant packages, in their cabal files, for example: `cardano-api ^>= 8.3`
+After package gets released, you can check the released version at: https://chap.intersectmbo.org/all-package-versions/ and update the version in the dependant packages, in their cabal files, for example: `cardano-api ^>= 8.3`
 
 ## Troubleshooting
 
@@ -156,7 +156,7 @@ This issue happens due to frequent cache collisions in the [`cabal-cache`](https
 ## References
 1. https://github.com/input-output-hk/cardano-updates/tree/main/scripts
 1. https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md
-1. https://input-output-hk.github.io/cardano-haskell-packages/index.html
+1. https://chap.intersectmbo.org/index.html
 1. https://input-output-hk.github.io/cardano-engineering-handbook/policy/haskell/packaging/versioning.html
 
 <!-- vim: set spell textwidth=0: -->

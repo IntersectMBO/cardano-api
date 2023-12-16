@@ -8,10 +8,10 @@ cabal.project                                                 @Jimbo4350 @newhog
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
 
-*.nix                                                         @input-output-hk/core-tech-release
-flake.lock                                                    @input-output-hk/core-tech-release
+*.nix                                                         @intersectmbo/core-tech-release
+flake.lock                                                    @intersectmbo/core-tech-release
 
 # Technical writers
 README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk @disassembler @CarlosLopezDeLara
 
-.github                                                       @Jimbo4350 @newhoggy @carbolymer @input-output-hk/core-tech-release
+.github                                                       @Jimbo4350 @newhoggy @carbolymer @intersectmbo/core-tech-release
