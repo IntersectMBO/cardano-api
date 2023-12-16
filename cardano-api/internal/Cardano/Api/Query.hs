@@ -326,8 +326,8 @@ data QueryInShelleyBasedEra era result where
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
---   * https://input-output-hk.github.io/ouroboros-network/ouroboros-network/Ouroboros-Network-NodeToClient.html#t:NodeToClientVersion
---   * https://input-output-hk.github.io/ouroboros-consensus/docs/for-developers/QueryVersioning/#implementation
+--   * https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-NodeToClient.html#t:NodeToClientVersion
+--   * https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/QueryVersioning/#implementation
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryEpoch = NodeToClientV_9
   nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_9

@@ -1732,7 +1732,7 @@ None
 - Improved tests for Byron era legacy key formats (#2259)
 - More precise error cases for tx outputs that are out of range (#2217)
 - Host up-to-date generated API documentation via github
-  https://input-output-hk.github.io/cardano-node/ (#2273, #2276, #2278)
+  https://cardano-node.cardano.intersectmbo.org/ (#2273, #2276, #2278)
 
 ## 1.24.2 -- December 2020
 
