@@ -111,7 +111,7 @@ Please note that the tagging process will fail if:
 
 ### Releasing to `cardano-haskell-packages`
 After the `cardano-api` version gets tagged, it needs to be pushed into `cardano-haskell-packages` (aka **CHaP**).
-Detailed description of the release process is described in [CHaP repository README](https://github.com/input-output-hk/cardano-haskell-packages#how-to-add-a-new-package-version).
+Detailed description of the release process is described in [CHaP repository README](https://github.com/intersectmbo/cardano-haskell-packages#how-to-add-a-new-package-version).
 Briefly speaking, it requires executing of the following steps:
 
 1. :four_leaf_clover:  Clone `cardano-haskell-packages`:
@@ -128,7 +128,7 @@ Briefly speaking, it requires executing of the following steps:
     The script will create a separate commit for each package.
 
 1. Push your `HEAD` to a new branch, and create a PR in CHaP.
-    An example release PR which you might want to use as a reference: https://github.com/input-output-hk/cardano-haskell-packages/pull/345 .
+    An example release PR which you might want to use as a reference: https://github.com/intersectmbo/cardano-haskell-packages/pull/345 .
 
 1. Merge the PR - you don't need additional approvals for that if you belong to the correct GitHub access group.
 
