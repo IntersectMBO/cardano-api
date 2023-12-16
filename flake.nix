@@ -10,7 +10,7 @@
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror";
     cardano-mainnet-mirror.flake = false;
 
-    CHaP.url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+    CHaP.url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
     CHaP.flake = false;
 
     # non-flake nix compatibility
