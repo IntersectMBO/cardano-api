@@ -64,7 +64,7 @@
           #  nix flake lock --update-input CHaP
           #
           inputMap = {
-            "https://chap.intersectmbo.org" = inputs.CHaP;
+            "https://chap.intersectmbo.org/" = inputs.CHaP;
           };
           # Also currently needed to make `nix flake lock --update-input CHaP` work.
           cabalProjectLocal = ''
