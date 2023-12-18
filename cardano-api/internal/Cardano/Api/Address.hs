@@ -94,10 +94,10 @@ import           Cardano.Api.Utils
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Plutus
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Plutus.TxInfo as Plutus
 import qualified PlutusLedgerApi.V1 as PlutusAPI
 
 import           Control.Applicative ((<|>))

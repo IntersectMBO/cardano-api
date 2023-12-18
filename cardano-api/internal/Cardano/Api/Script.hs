@@ -925,8 +925,8 @@ fromAlonzoExUnits Alonzo.ExUnits{Alonzo.exUnitsSteps, Alonzo.exUnitsMem} =
 -- Alonzo mediator pattern
 --
 
-pattern AlonzoPlutusScript :: Plutus.Language -> ShortByteString -> Alonzo.AlonzoScript era
-pattern AlonzoPlutusScript lang script = Alonzo.PlutusScript (Plutus.Plutus {Plutus.plutusLanguage = lang, Plutus.plutusScript = Alonzo.BinaryPlutus script})
+-- pattern AlonzoPlutusScript :: Plutus.Language -> ShortByteString -> Alonzo.AlonzoScript era
+-- pattern AlonzoPlutusScript lang script = Alonzo.PlutusScript (Plutus.Plutus {Plutus.plutusLanguage = lang, Plutus.plutusScript = Alonzo.BinaryPlutus script})
 
 pattern AlonzoTimelockScript :: Timelock.Timelock era -> Alonzo.AlonzoScript era
 pattern AlonzoTimelockScript script = Alonzo.TimelockScript script
@@ -936,12 +936,12 @@ pattern AlonzoTimelockScript script = Alonzo.TimelockScript script
 -- This exists solely to cause an pattern match checker warning if
 -- 'Alonzo.AlonzoScript' changes, which would mean the following @COMPLETE@
 -- pramga may need to be updated.
-_completenessProof :: Alonzo.AlonzoScript era -> ()
-_completenessProof = \case
-    Alonzo.TimelockScript _ -> ()
-    Alonzo.PlutusScript (Plutus.Plutus _ (Alonzo.BinaryPlutus _)) -> ()
+--_completenessProof :: Alonzo.AlonzoScript era -> ()
+--_completenessProof = \case
+--    Alonzo.TimelockScript _ -> ()
+--    Alonzo.PlutusScript (Plutus.Plutus _ (Alonzo.BinaryPlutus _)) -> ()
 
-{-# COMPLETE AlonzoTimelockScript, AlonzoPlutusScript #-}
+--{-# COMPLETE AlonzoTimelockScript, AlonzoPlutusScript #-}
 
 -- ----------------------------------------------------------------------------
 -- Script Hash
@@ -1147,42 +1147,42 @@ fromShelleyBasedScript sbe script =
         AlonzoTimelockScript s ->
           ScriptInEra SimpleScriptInAlonzo
             . SimpleScript $ fromAllegraTimelock s
-        AlonzoPlutusScript Plutus.PlutusV1 s ->
-          ScriptInEra PlutusScriptV1InAlonzo
-            . PlutusScript PlutusScriptV1
-            $ PlutusScriptSerialised s
-        AlonzoPlutusScript Plutus.PlutusV2 _ ->
-          error "fromShelleyBasedScript: PlutusV2 not supported in Alonzo era"
-        AlonzoPlutusScript Plutus.PlutusV3 _ ->
-          error "fromShelleyBasedScript: PlutusV3 not supported in Alonzo era"
+        --AlonzoPlutusScript Plutus.PlutusV1 s ->
+        --  ScriptInEra PlutusScriptV1InAlonzo
+        --    . PlutusScript PlutusScriptV1
+        --    $ PlutusScriptSerialised s
+        --AlonzoPlutusScript Plutus.PlutusV2 _ ->
+        --  error "fromShelleyBasedScript: PlutusV2 not supported in Alonzo era"
+        --AlonzoPlutusScript Plutus.PlutusV3 _ ->
+        --  error "fromShelleyBasedScript: PlutusV3 not supported in Alonzo era"
     ShelleyBasedEraBabbage ->
       case script of
         AlonzoTimelockScript s ->
           ScriptInEra SimpleScriptInBabbage
             . SimpleScript $ fromAllegraTimelock  s
-        AlonzoPlutusScript Plutus.PlutusV1 s ->
-          ScriptInEra PlutusScriptV1InBabbage
-            . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Plutus.PlutusV2 s ->
-          ScriptInEra PlutusScriptV2InBabbage
-            . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Plutus.PlutusV3 _ ->
-          error "fromShelleyBasedScript: PlutusV3 not supported in Babbage era"
+        --AlonzoPlutusScript Plutus.PlutusV1 s ->
+        --  ScriptInEra PlutusScriptV1InBabbage
+        --    . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
+        --AlonzoPlutusScript Plutus.PlutusV2 s ->
+        --  ScriptInEra PlutusScriptV2InBabbage
+        --    . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
+        --AlonzoPlutusScript Plutus.PlutusV3 _ ->
+        --  error "fromShelleyBasedScript: PlutusV3 not supported in Babbage era"
 
     ShelleyBasedEraConway ->
       case script of
         AlonzoTimelockScript s ->
           ScriptInEra SimpleScriptInConway
             . SimpleScript $ fromAllegraTimelock  s
-        AlonzoPlutusScript Plutus.PlutusV1 s ->
-          ScriptInEra PlutusScriptV1InConway
-            . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Plutus.PlutusV2 s ->
-          ScriptInEra PlutusScriptV2InConway
-            . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
-        AlonzoPlutusScript Plutus.PlutusV3 s ->
-          ScriptInEra PlutusScriptV3InConway
-            . PlutusScript PlutusScriptV3 $ PlutusScriptSerialised s
+        --AlonzoPlutusScript Plutus.PlutusV1 s ->
+        --  ScriptInEra PlutusScriptV1InConway
+        --    . PlutusScript PlutusScriptV1 $ PlutusScriptSerialised s
+        --AlonzoPlutusScript Plutus.PlutusV2 s ->
+        --  ScriptInEra PlutusScriptV2InConway
+        --    . PlutusScript PlutusScriptV2 $ PlutusScriptSerialised s
+        --AlonzoPlutusScript Plutus.PlutusV3 s ->
+        --  ScriptInEra PlutusScriptV3InConway
+        --    . PlutusScript PlutusScriptV3 $ PlutusScriptSerialised s
 
 
 data MultiSigError = MultiSigErrorTimelockNotsupported deriving Show

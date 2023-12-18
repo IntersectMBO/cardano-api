@@ -154,9 +154,9 @@ library internal
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data >= 1.0
-                      , cardano-ledger-alonzo >= 1.5.0
+                      , cardano-ledger-alonzo >= 1.6.0
                       , cardano-ledger-allegra >= 1.2.3.1
-                      , cardano-ledger-api ^>= 1.7
+                      , cardano-ledger-api ^>= 1.8
                       , cardano-ledger-babbage >= 1.6.0
                       , cardano-ledger-binary
                       , cardano-ledger-byron >= 1.0.0.2
@@ -192,10 +192,10 @@ library internal
                       , ouroboros-network-framework
                       , ouroboros-network-protocols
                       , parsec
-                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>= 1.15
+                      , plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>= 1.18
                       , prettyprinter
                       , prettyprinter-ansi-terminal
-                      , prettyprinter-configurable ^>= 1.15
+                      , prettyprinter-configurable ^>= 1.18
                       , random
                       , scientific
                       , serialise
@@ -271,7 +271,7 @@ library gen
                       , cardano-binary >= 1.6 && < 1.8
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-crypto-test ^>= 1.5
-                      , cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >= 1.5.0
+                      , cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >= 1.6.0
                       , cardano-ledger-byron-test >= 1.5
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8.0
                       , cardano-ledger-shelley >= 1.7.0
@@ -301,7 +301,7 @@ test-suite cardano-api-test
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
-                      , cardano-ledger-api ^>= 1.7
+                      , cardano-ledger-api ^>= 1.8
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , containers
                       , directory
@@ -350,7 +350,7 @@ test-suite cardano-api-golden
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-data >= 1.0
                       , cardano-ledger-alonzo
-                      , cardano-ledger-api ^>= 1.7
+                      , cardano-ledger-api ^>= 1.8
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , cardano-ledger-shelley
                       , cardano-ledger-shelley-test >= 1.2.0.1
@@ -359,11 +359,11 @@ test-suite cardano-api-golden
                       , errors
                       , filepath
                       , hedgehog >= 1.1
-                      , hedgehog-extras ^>= 0.4.7.0
+                      , hedgehog-extras ^>= 0.5.0.0
                       , microlens
                       , parsec
-                      , plutus-core ^>= 1.15
-                      , plutus-ledger-api ^>= 1.15
+                      , plutus-core ^>= 1.18
+                      , plutus-ledger-api ^>= 1.18
                       , tasty
                       , tasty-hedgehog
                       , time

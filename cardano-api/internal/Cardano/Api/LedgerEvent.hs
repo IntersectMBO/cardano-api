@@ -26,7 +26,6 @@ import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Keys.Shelley (Hash (StakePoolKeyHash), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
 
-import           Cardano.Ledger.Alonzo.Plutus.TxInfo (PlutusDebug)
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..), AlonzoUtxoEvent (..),
                    AlonzoUtxosEvent (FailedPlutusScriptsEvent, SuccessfulPlutusScriptsEvent),
                    AlonzoUtxowEvent (..))

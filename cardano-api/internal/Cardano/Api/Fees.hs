@@ -69,6 +69,7 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as Ledger
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
@@ -415,7 +416,7 @@ data TransactionValidityError =
     -- of their validity interval more than 36 hours into the future.
     TransactionValidityIntervalError Consensus.PastHorizonException
 
-  | TransactionValidityTranslationError (Alonzo.TranslationError Ledger.StandardCrypto)
+ -- | TransactionValidityTranslationError (Ledger.TranslationError Ledger.StandardCrypto (Ledger.Tx Ledger.StandardCrypto))
 
   | TransactionValidityCostModelError (Map AnyPlutusScriptVersion CostModel) String
 
@@ -443,8 +444,8 @@ instance Error TransactionValidityError where
 
           | otherwise
           = 0 -- This should be impossible.
-    TransactionValidityTranslationError errmsg ->
-      "Error translating the transaction context: " <> pshow errmsg
+   -- TransactionValidityTranslationError errmsg ->
+   --   "Error translating the transaction context: " <> pshow errmsg
 
     TransactionValidityCostModelError cModels err ->
       mconcat
@@ -483,10 +484,10 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (Right Map.empty))
-    (\_ ->
-      case L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
-        Left err    -> Left (TransactionValidityTranslationError err)
-        Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+    (\_ -> error ""
+      -- case L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
+      --   Left err    -> error " --" -- Left (TransactionValidityTranslationError err)
+      --   Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
     )
     sbe
   where
@@ -511,36 +512,36 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
         L.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'
                                          where txin' = fromShelleyTxIn txin
         L.MissingDatum      dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
-        L.ValidationFailure (L.ValidationFailedV1 err logs _) ->
-          ScriptErrorEvaluationFailed err logs
-        L.ValidationFailure (L.ValidationFailedV2 err logs _) ->
-          ScriptErrorEvaluationFailed err logs
-        L.ValidationFailure (L.ValidationFailedV3 err logs _) ->
-          ScriptErrorEvaluationFailed err logs
+        --L.ValidationFailure _ ->
+        --  ScriptErrorEvaluationFailed err logs
+        -- L.ValidationFailure _ ->
+        --   ScriptErrorEvaluationFailed err logs
+        --L.ValidationFailure _ ->
+        --  ScriptErrorEvaluationFailed err logs
         L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
         -- This is only possible for spending scripts and occurs when
         -- we attempt to spend a key witnessed tx input with a Plutus
         -- script witness.
-        L.RedeemerNotNeeded rdmrPtr scriptHash ->
-          ScriptErrorNotPlutusWitnessedTxIn
-            (fromAlonzoRdmrPtr rdmrPtr)
-            (fromShelleyScriptHash scriptHash)
+      --  L.RedeemerNotNeeded rdmrPtr scriptHash ->
+      --    ScriptErrorNotPlutusWitnessedTxIn
+      --      (fromAlonzoRdmrPtr rdmrPtr)
+      --      (fromShelleyScriptHash scriptHash)
         L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
           ScriptErrorRedeemerPointsToUnknownScriptHash $ fromAlonzoRdmrPtr rdmrPtr
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
-        L.MissingScript rdmrPtr resolveable ->
-          let cnv1 Plutus.Plutus
-                { Plutus.plutusLanguage = lang
-                , Plutus.plutusScript = Alonzo.BinaryPlutus bytes
-                } = (bytes, lang)
-              cnv2 (purpose, mbScript, scriptHash) = (purpose, fmap cnv1 mbScript, scriptHash)
-          in
-            ScriptErrorMissingScript rdmrPtr
-          $ ResolvablePointers sbe
-          $ Map.map cnv2 resolveable
+        --L.MissingScript rdmrPtr resolveable ->
+        --  let cnv1 Plutus.Plutus
+        --        { Plutus.plutusLanguage = lang
+        --        , Plutus.plutusScript = Alonzo.BinaryPlutus bytes
+        --        } = (bytes, lang)
+        --      cnv2 (purpose, mbScript, scriptHash) = (purpose, fmap cnv1 mbScript, scriptHash)
+        --  in
+        --    ScriptErrorMissingScript rdmrPtr
+        --  $ ResolvablePointers sbe
+        --  $ Map.map cnv2 resolveable
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 
