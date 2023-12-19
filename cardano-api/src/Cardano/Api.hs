@@ -297,7 +297,6 @@ module Cardano.Api (
     -- ** Transaction body builders
     defaultTxBodyContent,
     defaultTxFee,
-    defaultTxValidityUpperBound,
     setTxIns,
     modTxIns,
     addTxIn,

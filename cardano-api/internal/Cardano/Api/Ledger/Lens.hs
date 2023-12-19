@@ -15,11 +15,8 @@ module Cardano.Api.Ledger.Lens
   , strictMaybeL
   , L.invalidBeforeL
   , L.invalidHereAfterL
-  , invalidBeforeStrictL
-  , invalidHereAfterStrictL
   , invalidBeforeTxBodyL
   , invalidHereAfterTxBodyL
-  , ttlAsInvalidHereAfterTxBodyL
   , updateTxBodyL
 
   , txBodyL
@@ -98,43 +95,8 @@ invalidBeforeTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.vldtTxBody
 --
 -- 'invalidHereAfterTxBodyL' lens over both with a 'Maybe SlotNo' type representation.  Withing the
 -- Shelley era, setting Nothing will set the ttl to 'maxBound' in the underlying ledger type.
-invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (TxBody era) (Maybe SlotNo)
-invalidHereAfterTxBodyL sbe =
-  forShelleyBasedEraInEon sbe
-    ttlAsInvalidHereAfterTxBodyL
-    (\w -> babbageEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL)
-
--- | Compatibility lens over 'ttlTxBodyL' which represents 'maxBound' as Nothing and all other values as 'Just'.
-ttlAsInvalidHereAfterTxBodyL :: Lens' (TxBody era) (Maybe SlotNo)
-ttlAsInvalidHereAfterTxBodyL = lens g s
-  where
-    g :: TxBody era -> Maybe SlotNo
-    g _ = Nothing
-
-    s :: TxBody era -> Maybe SlotNo -> TxBody era
-    s txBody _ = txBody -- Refuse to set the ttl as we don't support it anymore
-
--- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
--- Ideally this should be defined in cardano-ledger
-invalidBeforeStrictL :: Lens' L.ValidityInterval (StrictMaybe SlotNo)
-invalidBeforeStrictL = lens g s
-  where
-    g :: L.ValidityInterval -> StrictMaybe SlotNo
-    g (L.ValidityInterval a _) = a
-
-    s :: L.ValidityInterval -> StrictMaybe SlotNo -> L.ValidityInterval
-    s (L.ValidityInterval _ b) a = L.ValidityInterval a b
-
--- | Lens to access the 'invalidHereAfter' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
--- Ideally this should be defined in cardano-ledger
-invalidHereAfterStrictL :: Lens' L.ValidityInterval (StrictMaybe SlotNo)
-invalidHereAfterStrictL = lens g s
-  where
-    g :: L.ValidityInterval -> StrictMaybe SlotNo
-    g (L.ValidityInterval _ b) = b
-
-    s :: L.ValidityInterval -> StrictMaybe SlotNo -> L.ValidityInterval
-    s (L.ValidityInterval a _) b = L.ValidityInterval a b
+invalidHereAfterTxBodyL :: BabbageEraOnwards era -> Lens' (TxBody era) (Maybe SlotNo)
+invalidHereAfterTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL
 
 updateTxBodyL :: ShelleyToBabbageEra era -> Lens' (TxBody era) (StrictMaybe (L.Update (ShelleyLedgerEra era)))
 updateTxBodyL w = shelleyToBabbageEraConstraints w $ txBodyL . L.updateTxBodyL

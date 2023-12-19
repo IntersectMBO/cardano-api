@@ -544,9 +544,9 @@ genTxValidityLowerBound =
     (\w -> TxValidityLowerBound w <$> genTtl)
 
 -- TODO: Accept a range for generating ttl.
-genTxValidityUpperBound :: ShelleyBasedEra era -> Gen (TxValidityUpperBound era)
-genTxValidityUpperBound sbe =
-  TxValidityUpperBound sbe <$> Gen.maybe genTtl
+genTxValidityUpperBound :: BabbageEraOnwards era -> Gen (TxValidityUpperBound era)
+genTxValidityUpperBound w =
+  TxValidityUpperBound w <$> genTtl
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
@@ -640,7 +640,7 @@ genTxBodyContent sbe = do
   txReturnCollateral <- genTxReturnCollateral sbe
   txFee <- genTxFee sbe
   txValidityLowerBound <- genTxValidityLowerBound era
-  txValidityUpperBound <- genTxValidityUpperBound sbe
+  txValidityUpperBound <- forShelleyBasedEraInEon sbe (pure TxValidityNoUpperBound) genTxValidityUpperBound
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts sbe
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
