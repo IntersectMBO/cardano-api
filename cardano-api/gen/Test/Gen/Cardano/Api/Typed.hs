@@ -137,7 +137,6 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Byron as Byron
-import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
 import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
@@ -565,7 +564,7 @@ genTxAuxScripts era =
   forEraInEon (toCardanoEra era)
     (pure TxAuxScriptsNone)
     (\w -> TxAuxScripts w <$> Gen.list (Range.linear 0 3)
-                                       (genScriptInEra (allegraEraOnwardsToShelleyBasedEra w)))
+                                       (genScriptInEra (babbageEraOnwardsToShelleyBasedEra w)))
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals =

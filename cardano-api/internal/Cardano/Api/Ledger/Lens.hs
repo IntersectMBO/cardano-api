@@ -39,7 +39,6 @@ module Cardano.Api.Ledger.Lens
   , valueTxOutAdaAssetL
   ) where
 
-import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
@@ -82,8 +81,8 @@ strictMaybeL = lens g s
 txBodyL :: Lens' (TxBody era) (L.TxBody (ShelleyLedgerEra era))
 txBodyL = lens unTxBody (\_ x -> TxBody x)
 
-invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (TxBody era) (Maybe SlotNo)
-invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL
+invalidBeforeTxBodyL :: BabbageEraOnwards era -> Lens' (TxBody era) (Maybe SlotNo)
+invalidBeforeTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL
 
 -- | Compatibility lens that provides a consistent interface over 'ttlTxBodyL' and
 -- 'vldtTxBodyL . invalidHereAfterStrictL' across all shelley based eras.

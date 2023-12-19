@@ -156,7 +156,6 @@ module Cardano.Api.TxBody (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
@@ -1087,7 +1086,7 @@ data TxValidityLowerBound era where
     :: TxValidityLowerBound era
 
   TxValidityLowerBound
-    :: AllegraEraOnwards era
+    :: BabbageEraOnwards era
     -> SlotNo
     -> TxValidityLowerBound era
 
@@ -1121,7 +1120,7 @@ data TxAuxScripts era where
     :: TxAuxScripts era
 
   TxAuxScripts
-    :: AllegraEraOnwards era
+    :: BabbageEraOnwards era
     -> [ScriptInEra era]
     -> TxAuxScripts era
 
@@ -2240,15 +2239,11 @@ fromLedgerTxValidityLowerBound
   -> A.TxBody era
   -> TxValidityLowerBound era
 fromLedgerTxValidityLowerBound sbe body =
-  caseShelleyEraOnlyOrAllegraEraOnwards
-    (const TxValidityNoLowerBound)
-    (\w ->
-      let mInvalidBefore = body ^. A.invalidBeforeTxBodyL w in
-      case mInvalidBefore of
-        Nothing -> TxValidityNoLowerBound
-        Just s  -> TxValidityLowerBound w s
-    )
-    sbe
+  forShelleyBasedEraInEon sbe TxValidityNoLowerBound $ \w ->
+    let mInvalidBefore = body ^. A.invalidBeforeTxBodyL w in
+    case mInvalidBefore of
+      Nothing -> TxValidityNoLowerBound
+      Just s  -> TxValidityLowerBound w s
 
 fromLedgerTxValidityUpperBound
   :: ShelleyBasedEra era
@@ -2299,14 +2294,10 @@ fromLedgerTxAuxiliaryData sbe (Just auxData) =
     metadata = if null ms then TxMetadataNone else TxMetadataInEra sbe $ TxMetadata ms
 
     auxdata =
-      caseShelleyEraOnlyOrAllegraEraOnwards
-        (const TxAuxScriptsNone)
-        (\w ->
-          case ss of
-              [] -> TxAuxScriptsNone
-              _  -> TxAuxScripts w ss
-        )
-        sbe
+      forShelleyBasedEraInEon sbe TxAuxScriptsNone $ \w ->
+        case ss of
+          [] -> TxAuxScriptsNone
+          _  -> TxAuxScripts w ss
 
     (ms, ss) = fromLedgerAuxiliaryData sbe auxData
 
@@ -2653,7 +2644,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAllegra
                              txIns,
                              txOuts,
                              txFee,
-                             txValidityLowerBound,
                              txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
@@ -2661,14 +2651,12 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAllegra
                              txCertificates,
                              txUpdateProposal
                            } = do
-    let aOn = AllegraEraOnwardsAllegra
     let s2b = ShelleyToBabbageEraAllegra
     validateTxBodyContent sbe txbodycontent
     update <- convTxUpdateProposal sbe txUpdateProposal
     let txbody =
           (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
             & A.certsTxBodyL sbe            .~ convCertificates sbe txCertificates
-            & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound txValidityLowerBound
             & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe txValidityUpperBound
             & A.updateTxBodyL s2b           .~ update
           ) ^. A.txBodyL
@@ -2695,7 +2683,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraMary
                              txIns,
                              txOuts,
                              txFee,
-                             txValidityLowerBound,
                              txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
@@ -2704,7 +2691,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraMary
                              txUpdateProposal,
                              txMintValue
                            } = do
-    let aOn = AllegraEraOnwardsMary
     let s2b = ShelleyToBabbageEraMary
     let mOn = MaryEraOnwardsMary
     validateTxBodyContent sbe txbodycontent
@@ -2712,7 +2698,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraMary
     let txbody =
           (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
             & A.certsTxBodyL sbe            .~ convCertificates sbe txCertificates
-            & A.invalidBeforeTxBodyL aOn    .~ convValidityLowerBound txValidityLowerBound
             & A.invalidHereAfterTxBodyL sbe .~ convValidityUpperBound sbe txValidityUpperBound
             & A.updateTxBodyL s2b           .~ update
             & A.mintTxBodyL mOn             .~ convMintValue txMintValue
@@ -2741,7 +2726,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
                              txInsCollateral,
                              txOuts,
                              txFee,
-                             txValidityLowerBound,
                              txValidityUpperBound,
                              txMetadata,
                              txAuxScripts,
@@ -2753,7 +2737,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
                              txMintValue,
                              txScriptValidity
                            } = do
-    let aOn = AllegraEraOnwardsAlonzo
     let s2b = ShelleyToBabbageEraAlonzo
     let mOn = MaryEraOnwardsAlonzo
     let azOn = AlonzoEraOnwardsAlonzo
@@ -2765,7 +2748,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
           (mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
             & A.collateralInputsTxBodyL azOn    .~ convCollateralTxIns txInsCollateral
             & A.certsTxBodyL sbe                .~ convCertificates sbe txCertificates
-            & A.invalidBeforeTxBodyL aOn        .~ convValidityLowerBound txValidityLowerBound
             & A.invalidHereAfterTxBodyL sbe     .~ convValidityUpperBound sbe txValidityUpperBound
             & A.updateTxBodyL s2b               .~ update
             & A.reqSignerHashesTxBodyL azOn     .~ convExtraKeyWitnesses txExtraKeyWits
@@ -2847,7 +2829,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
                              txMintValue,
                              txScriptValidity
                            } = do
-    let aOn = AllegraEraOnwardsBabbage
     let mOn = MaryEraOnwardsBabbage
     let azOn = AlonzoEraOnwardsBabbage
     let bOn = BabbageEraOnwardsBabbage
@@ -2866,7 +2847,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
             & A.collateralReturnTxBodyL bOn     .~ convReturnCollateral sbe txReturnCollateral
             & A.totalCollateralTxBodyL bOn      .~ convTotalCollateral txTotalCollateral
             & A.certsTxBodyL sbe                .~ convCertificates sbe txCertificates
-            & A.invalidBeforeTxBodyL aOn        .~ convValidityLowerBound txValidityLowerBound
+            & A.invalidBeforeTxBodyL bOn        .~ convValidityLowerBound txValidityLowerBound
             & A.invalidHereAfterTxBodyL sbe     .~ convValidityUpperBound sbe txValidityUpperBound
             & A.updateTxBodyL s2b               .~ update
             & A.reqSignerHashesTxBodyL azOn     .~ convExtraKeyWitnesses txExtraKeyWits
@@ -2958,7 +2939,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                              txProposalProcedures,
                              txVotingProcedures
                            } = do
-    let aOn = AllegraEraOnwardsConway
     let cOn = ConwayEraOnwardsConway
     let mOn = MaryEraOnwardsConway
     let bOn = BabbageEraOnwardsConway
@@ -2976,7 +2956,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
             & A.collateralReturnTxBodyL bOn     .~ convReturnCollateral sbe txReturnCollateral
             & A.totalCollateralTxBodyL bOn      .~ convTotalCollateral txTotalCollateral
             & A.certsTxBodyL sbe                .~ convCertificates sbe txCertificates
-            & A.invalidBeforeTxBodyL aOn        .~ convValidityLowerBound txValidityLowerBound
+            & A.invalidBeforeTxBodyL bOn        .~ convValidityLowerBound txValidityLowerBound
             & A.invalidHereAfterTxBodyL sbe     .~ convValidityUpperBound sbe txValidityUpperBound
             & A.reqSignerHashesTxBodyL azOn     .~ convExtraKeyWitnesses txExtraKeyWits
             & A.mintTxBodyL mOn                 .~ convMintValue txMintValue
