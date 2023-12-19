@@ -61,11 +61,6 @@ module Cardano.Api (
 
     -- ** From Shelley
 
-    ShelleyEraOnly(..),
-    shelleyEraOnlyConstraints,
-    shelleyEraOnlyToCardanoEra,
-    shelleyEraOnlyToShelleyBasedEra,
-
     ShelleyToAllegraEra(..),
     shelleyToAllegraEraConstraints,
     shelleyToAllegraEraToCardanoEra,
@@ -131,7 +126,6 @@ module Cardano.Api (
     caseByronToAlonzoOrBabbageEraOnwards,
 
     -- ** Case on ShelleyBasedEra
-    caseShelleyEraOnlyOrAllegraEraOnwards,
     caseShelleyToAllegraOrMaryEraOnwards,
     caseShelleyToMaryOrAlonzoEraOnwards,
     caseShelleyToAlonzoOrBabbageEraOnwards,
@@ -995,7 +989,6 @@ import           Cardano.Api.Eon.ByronToAlonzoEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
