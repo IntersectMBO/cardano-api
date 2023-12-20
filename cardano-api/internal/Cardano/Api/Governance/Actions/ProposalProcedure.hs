@@ -91,7 +91,7 @@ toGovernanceAction sbe =
     InfoAct ->
       Gov.InfoAction
     TreasuryWithdrawal withdrawals ->
-      let m = Map.fromList [(L.mkRwdAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
+      let m = Map.fromList [(L.RewardAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
       in Gov.TreasuryWithdrawals m
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
@@ -165,7 +165,7 @@ createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
   shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
-      , Gov.pProcReturnAddr = L.mkRwdAcnt nw (L.KeyHashObj retAddrh)
+      , Gov.pProcReturnAddr = L.RewardAcnt nw (L.KeyHashObj retAddrh)
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
       , Gov.pProcAnchor = anchor
       }
