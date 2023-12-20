@@ -1,7 +1,7 @@
 ## Overview of the `cardano-api` repository
 
-Integration of the [`ledger`](https://github.com/input-output-hk/cardano-ledger), [`consensus`](https://github.com/input-output-hk/ouroboros-consensus) and
-[networking](https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network) repositories.
+Integration of the [`ledger`](https://github.com/IntersectMBO/cardano-ledger), [`consensus`](https://github.com/IntersectMBO/ouroboros-consensus) and
+[networking](https://github.com/IntersectMBO/ouroboros-network/tree/master/ouroboros-network) repositories.
 
 ## Contributing
 
@@ -17,4 +17,4 @@ See the [Contributing guide](CONTRIBUTING.md) for how to contribute to this proj
 
 Development documentation can be found in [Cardano Node Wiki](https://github.com/input-output-hk/cardano-node-wiki/wiki).
 
-Haddock documentation is available at: https://cardano-api.cardano.intersectmbo.org/
+Haddock documentation is available at: https://intersectmbo.github.io/cardano-api/
