@@ -198,6 +198,9 @@ deriving instance Data CBOR.DeserialiseFailure
 deriving instance Data Bech32.DecodingError
 deriving instance Data Bech32.CharPosition
 
+deriving newtype instance ToCBOR Ledger.EpochInterval
+deriving newtype instance FromCBOR Ledger.EpochInterval
+
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 

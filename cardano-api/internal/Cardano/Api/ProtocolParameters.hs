@@ -18,6 +18,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE InstanceSigs #-}
 
 {- HLINT ignore "Redundant ==" -}
 {- HLINT ignore "Use mapM" -}
@@ -244,10 +245,10 @@ data IntroducedInConwayPParams era
     , icDRepVotingThresholds :: StrictMaybe Ledger.DRepVotingThresholds
     , icMinCommitteeSize     :: StrictMaybe Natural
     , icCommitteeTermLength  :: StrictMaybe EpochNo
-    , icGovActionLifetime    :: StrictMaybe EpochNo
+    , icGovActionLifetime    :: StrictMaybe Ledger.EpochInterval
     , icGovActionDeposit     :: StrictMaybe Ledger.Coin
     , icDRepDeposit          :: StrictMaybe Ledger.Coin
-    , icDRepActivity         :: StrictMaybe EpochNo
+    , icDRepActivity         :: StrictMaybe Ledger.EpochInterval
     } deriving Show
 
 
@@ -327,7 +328,7 @@ data CommonProtocolParametersUpdate
     , cppMaxBlockHeaderSize :: StrictMaybe Natural
     , cppKeyDeposit :: StrictMaybe Ledger.Coin
     , cppPoolDeposit :: StrictMaybe Ledger.Coin
-    , cppPoolRetireMaxEpoch :: StrictMaybe EpochNo
+    , cppPoolRetireMaxEpoch :: StrictMaybe Ledger.EpochInterval
     , cppStakePoolTargetNum :: StrictMaybe Natural
     , cppPoolPledgeInfluence :: StrictMaybe Ledger.NonNegativeInterval
     , cppTreasuryExpansion :: StrictMaybe Ledger.UnitInterval
@@ -543,7 +544,7 @@ data ProtocolParameters =
        -- | The maximum number of epochs into the future that stake pools
        -- are permitted to schedule a retirement.
        --
-       protocolParamPoolRetireMaxEpoch :: EpochNo,
+       protocolParamPoolRetireMaxEpoch :: Ledger.EpochInterval,
 
        -- | The equilibrium target number of stake pools.
        --
@@ -771,7 +772,7 @@ data ProtocolParametersUpdate =
        -- | The maximum number of epochs into the future that stake pools
        -- are permitted to schedule a retirement.
        --
-       protocolUpdatePoolRetireMaxEpoch :: Maybe EpochNo,
+       protocolUpdatePoolRetireMaxEpoch :: Maybe Ledger.EpochInterval,
 
        -- | The equilibrium target number of stake pools.
        --
@@ -914,6 +915,7 @@ instance Monoid ProtocolParametersUpdate where
       }
 
 instance ToCBOR ProtocolParametersUpdate where
+    toCBOR :: ProtocolParametersUpdate -> CBOR.Encoding
     toCBOR ProtocolParametersUpdate{..} =
         CBOR.encodeListLen 26
      <> toCBOR protocolUpdateProtocolVersion
@@ -941,7 +943,6 @@ instance ToCBOR ProtocolParametersUpdate where
      <> toCBOR protocolUpdateCollateralPercent
      <> toCBOR protocolUpdateMaxCollateralInputs
      <> toCBOR protocolUpdateUTxOCostPerByte
-
 instance FromCBOR ProtocolParametersUpdate where
     fromCBOR = do
       CBOR.enforceSize "ProtocolParametersUpdate" 26
