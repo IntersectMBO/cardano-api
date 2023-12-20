@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -44,6 +45,7 @@ module Cardano.Api.Fees (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -63,7 +65,7 @@ import           Cardano.Api.Value
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
@@ -395,7 +397,7 @@ instance Error ScriptExecutionError where
     ScriptErrorMissingCostModel language ->
       "No cost model was found for language " <> pshow language
 
-data TransactionValidityError =
+data TransactionValidityError era  where
     -- | The transaction validity interval is too far into the future.
     --
     -- Transactions with Plutus scripts need to have a validity interval that is
@@ -412,15 +414,20 @@ data TransactionValidityError =
     -- hours beyond the current time. This effectively means we cannot submit
     -- check or submit transactions that use Plutus scripts that have the end
     -- of their validity interval more than 36 hours into the future.
-    TransactionValidityIntervalError Consensus.PastHorizonException
+    TransactionValidityIntervalError
+      :: Consensus.PastHorizonException -> TransactionValidityError era
 
-  | TransactionValidityTranslationError (Alonzo.TranslationError Ledger.StandardCrypto)
+    TransactionValidityTranslationError
+      :: Plutus.EraPlutusContext (ShelleyLedgerEra era)
+      => Plutus.ContextError (ShelleyLedgerEra era)
+      -> TransactionValidityError era
 
-  | TransactionValidityCostModelError (Map AnyPlutusScriptVersion CostModel) String
+    TransactionValidityCostModelError
+      :: (Map AnyPlutusScriptVersion CostModel) -> String -> TransactionValidityError era
 
-deriving instance Show TransactionValidityError
+deriving instance Show (TransactionValidityError era)
 
-instance Error TransactionValidityError where
+instance Error (TransactionValidityError era) where
   prettyError = \case
     TransactionValidityIntervalError pastTimeHorizon ->
       mconcat
@@ -464,7 +471,7 @@ evaluateTransactionExecutionUnits :: forall era. ()
   -> LedgerProtocolParameters era
   -> UTxO era
   -> TxBody era
-  -> Either TransactionValidityError
+  -> Either (TransactionValidityError era)
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
 evaluateTransactionExecutionUnits era systemstart epochInfo pp utxo txbody =
     case makeSignedTransaction' era [] txbody of
@@ -477,22 +484,23 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
   -> LedgerProtocolParameters era
   -> UTxO era
   -> L.Tx (ShelleyLedgerEra era)
-  -> Either TransactionValidityError
+  -> Either (TransactionValidityError era)
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (Right Map.empty))
-    (\_ ->
-      case L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
-        Left err    -> Left (TransactionValidityTranslationError err)
-        Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+    (\w -> case alonzoEraOnwardsPlutusConstraints w $ L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
+             Left err    -> Left $ alonzoEraOnwardsPlutusConstraints w
+                                 $ TransactionValidityTranslationError err
+             Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
     )
     sbe
   where
     LedgerEpochInfo ledgerEpochInfo = epochInfo
 
     fromLedgerScriptExUnitsMap
-      :: Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure (ShelleyLedgerEra era))
+      :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
+      => Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure (ShelleyLedgerEra era))
                                     Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap exmap =
@@ -501,8 +509,10 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
            bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
-    fromAlonzoScriptExecutionError :: L.TransactionScriptFailure (ShelleyLedgerEra era)
-                                   -> ScriptExecutionError
+    fromAlonzoScriptExecutionError
+      :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
+      => L.TransactionScriptFailure (ShelleyLedgerEra era)
+      -> ScriptExecutionError
     fromAlonzoScriptExecutionError =
       shelleyBasedEraConstraints sbe $ \case
         L.UnknownTxIn     txin -> ScriptErrorMissingTxIn txin'
@@ -510,38 +520,34 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
         L.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'
                                          where txin' = fromShelleyTxIn txin
         L.MissingDatum      dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
-        L.ValidationFailure (L.ValidationFailedV1 err logs _) ->
-          ScriptErrorEvaluationFailed err logs
-        L.ValidationFailure (L.ValidationFailedV2 err logs _) ->
-          ScriptErrorEvaluationFailed err logs
-        L.ValidationFailure (L.ValidationFailedV3 err logs _) ->
-          ScriptErrorEvaluationFailed err logs
+        L.ValidationFailure _ evalErr logs _ ->
+          -- TODO: Include additional information from ValidationFailure
+          ScriptErrorEvaluationFailed evalErr logs
+
         L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
-        -- This is only possible for spending scripts and occurs when
-        -- we attempt to spend a key witnessed tx input with a Plutus
-        -- script witness.
-        L.RedeemerNotNeeded rdmrPtr scriptHash ->
-          ScriptErrorNotPlutusWitnessedTxIn
-            (fromAlonzoRdmrPtr rdmrPtr)
-            (fromShelleyScriptHash scriptHash)
         L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
           ScriptErrorRedeemerPointsToUnknownScriptHash $ fromAlonzoRdmrPtr rdmrPtr
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
         L.MissingScript rdmrPtr resolveable ->
-          let cnv1 Plutus.Plutus
-                { Plutus.plutusLanguage = lang
-                , Plutus.plutusScript = Alonzo.BinaryPlutus bytes
-                } = (bytes, lang)
-              cnv2 (purpose, mbScript, scriptHash) = (purpose, fmap cnv1 mbScript, scriptHash)
+          let cnv2 (purpose, mbScript, scriptHash) = (purpose, fmap extractPlutusScriptAndLanguage mbScript, scriptHash)
           in
             ScriptErrorMissingScript rdmrPtr
-          $ ResolvablePointers sbe
-          $ Map.map cnv2 resolveable
+              $ ResolvablePointers sbe
+              $ Map.map cnv2 resolveable
 
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
+
+extractPlutusScriptAndLanguage
+  :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
+  => Alonzo.PlutusScript (ShelleyLedgerEra era)
+  -> (PlutusScriptBytes, Plutus.Language)
+extractPlutusScriptAndLanguage p =
+  let bin = Plutus.unPlutusBinary $ Alonzo.plutusScriptBinary p
+      l = Alonzo.plutusScriptLanguage p
+  in (bin, l)
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance
@@ -594,7 +600,7 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
 
 -- | The possible errors that can arise from 'makeTransactionBodyAutoBalance'.
 --
-data TxBodyErrorAutoBalance =
+data TxBodyErrorAutoBalance era =
 
        -- | The same errors that can arise from 'makeTransactionBody'.
        TxBodyError TxBodyError
@@ -633,7 +639,7 @@ data TxBodyErrorAutoBalance =
 
        -- | The transaction validity interval is too far into the future.
        -- See 'TransactionValidityIntervalError' for details.
-     | TxBodyErrorValidityInterval TransactionValidityError
+     | TxBodyErrorValidityInterval (TransactionValidityError era)
 
        -- | The minimum spendable UTxO threshold has not been met.
      | TxBodyErrorMinUTxONotMet
@@ -649,7 +655,7 @@ data TxBodyErrorAutoBalance =
   deriving Show
 
 
-instance Error TxBodyErrorAutoBalance where
+instance Error (TxBodyErrorAutoBalance era) where
   prettyError = \case
     TxBodyError err ->
       prettyError err
@@ -715,7 +721,7 @@ handleExUnitsErrors ::
      ScriptValidity -- ^ Mark script as expected to pass or fail validation
   -> Map ScriptWitnessIndex ScriptExecutionError
   -> Map ScriptWitnessIndex ExecutionUnits
-  -> Either TxBodyErrorAutoBalance (Map ScriptWitnessIndex ExecutionUnits)
+  -> Either (TxBodyErrorAutoBalance era) (Map ScriptWitnessIndex ExecutionUnits)
 handleExUnitsErrors ScriptValid failuresMap exUnitsMap =
     if null failures
       then Right exUnitsMap
@@ -772,7 +778,7 @@ makeTransactionBodyAutoBalance :: forall era. ()
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
-  -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
+  -> Either (TxBodyErrorAutoBalance era) (BalancedTxBody era)
 makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParameters pp) poolids stakeDelegDeposits
                             drepDelegDeposits utxo txbodycontent changeaddr mnkeys =
   shelleyBasedEraConstraints sbe $ do
@@ -992,7 +998,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
        -- of the outputs
        _ -> rest ++ [change]
 
-   balanceCheck :: Ledger.PParams (ShelleyLedgerEra era) -> TxOutValue era -> Either TxBodyErrorAutoBalance ()
+   balanceCheck :: Ledger.PParams (ShelleyLedgerEra era) -> TxOutValue era -> Either (TxBodyErrorAutoBalance era) ()
    balanceCheck bpparams balance
     | txOutValueToLovelace balance == 0 && onlyAda (txOutValueToValue balance) = return ()
     | txOutValueToLovelace balance < 0 =
@@ -1014,7 +1020,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
    checkMinUTxOValue
      :: TxOut CtxTx era
      -> Ledger.PParams (ShelleyLedgerEra era)
-     -> Either TxBodyErrorAutoBalance ()
+     -> Either (TxBodyErrorAutoBalance era) ()
    checkMinUTxOValue txout@(TxOut _ v _ _) bpp = do
       let minUTxO = calculateMinimumUTxO sbe txout bpp
       if txOutValueToLovelace v >= minUTxO
@@ -1023,13 +1029,13 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
 
 substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
                          -> TxBodyContent BuildTx era
-                         -> Either TxBodyErrorAutoBalance (TxBodyContent BuildTx era)
+                         -> Either (TxBodyErrorAutoBalance era) (TxBodyContent BuildTx era)
 substituteExecutionUnits exUnitsMap =
     mapTxScriptWitnesses f
   where
     f :: ScriptWitnessIndex
       -> ScriptWitness witctx era
-      -> Either TxBodyErrorAutoBalance (ScriptWitness witctx era)
+      -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era)
     f _   wit@SimpleScriptWitness{} = Right wit
     f idx (PlutusScriptWitness langInEra version script datum redeemer _) =
       case Map.lookup idx exUnitsMap of
@@ -1041,9 +1047,9 @@ mapTxScriptWitnesses
   :: forall era.
       (forall witctx. ScriptWitnessIndex
                    -> ScriptWitness witctx era
-                   -> Either TxBodyErrorAutoBalance (ScriptWitness witctx era))
+                   -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era))
   -> TxBodyContent BuildTx era
-  -> Either TxBodyErrorAutoBalance (TxBodyContent BuildTx era)
+  -> Either (TxBodyErrorAutoBalance era) (TxBodyContent BuildTx era)
 mapTxScriptWitnesses f txbodycontent@TxBodyContent {
                          txIns,
                          txWithdrawals,
@@ -1064,11 +1070,11 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
   where
     mapScriptWitnessesTxIns
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-      -> Either TxBodyErrorAutoBalance [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+      -> Either (TxBodyErrorAutoBalance era) [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
     mapScriptWitnessesTxIns txins  =
       let mappedScriptWitnesses
             :: [ ( TxIn
-                 , Either TxBodyErrorAutoBalance (BuildTxWith BuildTx (Witness WitCtxTxIn era))
+                 , Either (TxBodyErrorAutoBalance era) (BuildTxWith BuildTx (Witness WitCtxTxIn era))
                  )
                ]
           mappedScriptWitnesses =
@@ -1089,13 +1095,13 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
 
     mapScriptWitnessesWithdrawals
       :: TxWithdrawals BuildTx era
-      -> Either TxBodyErrorAutoBalance (TxWithdrawals BuildTx era)
+      -> Either (TxBodyErrorAutoBalance era) (TxWithdrawals BuildTx era)
     mapScriptWitnessesWithdrawals  TxWithdrawalsNone = Right TxWithdrawalsNone
     mapScriptWitnessesWithdrawals (TxWithdrawals supported withdrawals) =
       let mappedWithdrawals
             :: [( StakeAddress
                 , Lovelace
-                , Either TxBodyErrorAutoBalance (BuildTxWith BuildTx (Witness WitCtxStake era))
+                , Either (TxBodyErrorAutoBalance era) (BuildTxWith BuildTx (Witness WitCtxStake era))
                 )]
           mappedWithdrawals =
               [ (addr, withdrawal, BuildTxWith <$> mappedWitness)
@@ -1111,20 +1117,20 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
                         ) mappedWithdrawals
       where
         adjustWitness
-          :: (ScriptWitness witctx era -> Either TxBodyErrorAutoBalance (ScriptWitness witctx era))
+          :: (ScriptWitness witctx era -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era))
           -> Witness witctx era
-          -> Either TxBodyErrorAutoBalance (Witness witctx era)
+          -> Either (TxBodyErrorAutoBalance era) (Witness witctx era)
         adjustWitness _ (KeyWitness ctx) = Right $ KeyWitness ctx
         adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
 
     mapScriptWitnessesCertificates
       :: TxCertificates BuildTx era
-      -> Either TxBodyErrorAutoBalance (TxCertificates BuildTx era)
+      -> Either (TxBodyErrorAutoBalance era) (TxCertificates BuildTx era)
     mapScriptWitnessesCertificates TxCertificatesNone = Right TxCertificatesNone
     mapScriptWitnessesCertificates (TxCertificates supported certs
                                                    (BuildTxWith witnesses)) =
       let mappedScriptWitnesses
-           :: [(StakeCredential, Either TxBodyErrorAutoBalance (Witness WitCtxStake era))]
+           :: [(StakeCredential, Either (TxBodyErrorAutoBalance era) (Witness WitCtxStake era))]
           mappedScriptWitnesses =
               [ (stakecred, ScriptWitness ctx <$> witness')
                 -- The certs are indexed in list order
@@ -1143,13 +1149,13 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era
-      -> Either TxBodyErrorAutoBalance (TxMintValue BuildTx era)
+      -> Either (TxBodyErrorAutoBalance era) (TxMintValue BuildTx era)
     mapScriptWitnessesMinting  TxMintNone = Right TxMintNone
     mapScriptWitnessesMinting (TxMintValue supported value
                                            (BuildTxWith witnesses)) =
       --TxMintValue supported value $ BuildTxWith $ Map.fromList
       let mappedScriptWitnesses
-            :: [(PolicyId, Either TxBodyErrorAutoBalance (ScriptWitness WitCtxMint era))]
+            :: [(PolicyId, Either (TxBodyErrorAutoBalance era) (ScriptWitness WitCtxMint era))]
           mappedScriptWitnesses =
             [ (policyid, witness')
               -- The minting policies are indexed in policy id order in the value

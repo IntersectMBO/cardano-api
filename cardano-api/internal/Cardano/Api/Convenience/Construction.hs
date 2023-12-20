@@ -54,7 +54,7 @@ constructBalancedTx :: ()
   -> Map.Map StakeCredential Lovelace
   -> Map.Map (L.Credential L.DRepRole L.StandardCrypto) Lovelace
   -> [ShelleyWitnessSigningKey]
-  -> Either TxBodyErrorAutoBalance (Tx era)
+  -> Either (TxBodyErrorAutoBalance era) (Tx era)
 constructBalancedTx sbe txbodcontent changeAddr mOverrideWits utxo lpp
                     ledgerEpochInfo systemStart stakePools
                     stakeDelegDeposits drepDelegDeposits shelleyWitSigningKeys = do
