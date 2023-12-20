@@ -94,10 +94,10 @@ import           Cardano.Api.Utils
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Plutus
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Plutus.TxInfo as Plutus
 import qualified PlutusLedgerApi.V1 as PlutusAPI
 
 import           Control.Applicative ((<|>))
@@ -224,7 +224,7 @@ instance SerialiseAsRawBytes (Address ByronAddr) where
       $ addr
 
     deserialiseFromRawBytes (AsAddress AsByronAddr) bs =
-        case Shelley.deserialiseAddr bs :: Maybe (Shelley.Addr StandardCrypto) of
+        case Shelley.decodeAddr bs :: Maybe (Shelley.Addr StandardCrypto) of
           Nothing             -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
           Just Shelley.Addr{} -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
           Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
@@ -235,7 +235,7 @@ instance SerialiseAsRawBytes (Address ShelleyAddr) where
         Shelley.serialiseAddr (Shelley.Addr nw pc scr)
 
     deserialiseFromRawBytes (AsAddress AsShelleyAddr) bs =
-        case Shelley.deserialiseAddr bs of
+        case Shelley.decodeAddr bs of
           Nothing                       -> Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
           Just Shelley.AddrBootstrap{}  -> Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
           Just (Shelley.Addr nw pc scr) -> Right (ShelleyAddress nw pc scr)
@@ -330,7 +330,7 @@ instance SerialiseAsRawBytes AddressAny where
     serialiseToRawBytes (AddressShelley addr) = serialiseToRawBytes addr
 
     deserialiseFromRawBytes AsAddressAny bs =
-      case Shelley.deserialiseAddr bs of
+      case Shelley.decodeAddr bs of
         Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise AddressAny")
         Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
           Right (AddressByron (ByronAddress addr))
