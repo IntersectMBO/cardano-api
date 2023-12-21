@@ -17,4 +17,4 @@ See the [Contributing guide](CONTRIBUTING.md) for how to contribute to this proj
 
 Development documentation can be found in [Cardano Node Wiki](https://github.com/input-output-hk/cardano-node-wiki/wiki).
 
-Haddock documentation is available at: https://cardano-api.cardano.intersectmbo.github.io/
+Haddock documentation is available at: https://cardano-api.cardano.intersectmbo.org/
