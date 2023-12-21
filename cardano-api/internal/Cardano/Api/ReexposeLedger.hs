@@ -94,6 +94,7 @@ module Cardano.Api.ReexposeLedger
   , urlToText
   , textToUrl
   , portToWord16
+  , ProtVer(..)
   , strictMaybeToMaybe
   , maybeToStrictMaybe
 
@@ -118,9 +119,9 @@ import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern ResignCommitteeColdTxCert, pattern RetirePoolTxCert,
                    pattern UnRegDRepTxCert, pattern UnRegDepositTxCert, pattern UnRegTxCert)
 import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
-import           Cardano.Ledger.BaseTypes (DnsName, Network (..), StrictMaybe (..), Url,
-                   boundRational, dnsToText, maybeToStrictMaybe, portToWord16, strictMaybeToMaybe,
-                   textToDns, textToUrl, unboundRational, urlToText)
+import           Cardano.Ledger.BaseTypes (DnsName, Network (..), ProtVer (..), StrictMaybe (..),
+                   Url, boundRational, dnsToText, maybeToStrictMaybe, portToWord16,
+                   strictMaybeToMaybe, textToDns, textToUrl, unboundRational, urlToText)
 import           Cardano.Ledger.Binary (Annotated (..))
 import           Cardano.Ledger.CertState (DRepState, csCommitteeCredsL)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)

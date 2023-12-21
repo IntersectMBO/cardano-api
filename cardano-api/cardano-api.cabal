@@ -118,6 +118,7 @@ library internal
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.Pretty
                         Cardano.Api.Protocol
+                        Cardano.Api.Protocol.Version
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Query.Expr
@@ -230,6 +231,7 @@ library
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.Experimental
                         Cardano.Api.Shelley
                         -- TODO: Eliminate Cardano.Api.Ledger when
                         -- cardano-api only depends on modules
