@@ -195,6 +195,7 @@ module Cardano.Api (
     -- used in many other places.
     Hash,
     castHash,
+    renderSafeHashAsHex,
 
     -- * Payment addresses
     -- | Constructing and inspecting normal payment addresses
