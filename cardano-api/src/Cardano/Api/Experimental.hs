@@ -1,14 +1,15 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Cardano.Api.Experimental
   ( -- * New Era interface
     BabbageEra
   , ConwayEra
   , Era
-  , MaxSupportedVersion
-  , MinSupportedVersion
-  , SupportedProtocolVersionRange
+  , pattern CurrentEra
+  , pattern UpcomingEra
   , UseEra
   , VersionToSbe
-  , getProtocolVersion
+  , useEra
   , protocolVersionToSbe
   ) where
 
