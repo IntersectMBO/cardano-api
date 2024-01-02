@@ -1,62 +1,89 @@
 # Changelog for cardano-api
 
+## 8.37.0.0
+
+- Expose CurrentEra and UpcomingEra pattern synonyms
+  (feature, breaking, compatible)
+  [PR 414](https://github.com/IntersectMBO/cardano-api/pull/414)
+
+- Add renderSafeHashAsHex, which we want to remove from cardano-node and use in cardano-cli
+  (feature, compatible)
+  [PR 410](https://github.com/IntersectMBO/cardano-api/pull/410)
+
+- Implement Era GADT and UseEra class as an alternative to the existing era handling code
+  (feature, compatible)
+  [PR 402](https://github.com/IntersectMBO/cardano-api/pull/402)
+
+- Make it possible to merge again, by fixing dead links
+  (improvement)
+  [PR 411](https://github.com/IntersectMBO/cardano-api/pull/411)
+
+- Expose all ledger events and convert the pattern synonyms to functions so GHC will warn us if we haven't handled a particular ledger event.
+  (feature, breaking, improvement)
+  [PR 400](https://github.com/IntersectMBO/cardano-api/pull/400)
+
+- split cases in textEnvelopeType
+  account for eras after conway using forEraInEon
+  (breaking, bugfix)
+  [PR 390](https://github.com/IntersectMBO/cardano-api/pull/390)
+
 ## 8.36.1.1
 
 - Restore the inclusion of datum hashes in Alonzo era tx bodies
   (bugfix)
-  [PR 398](https://github.com/input-output-hk/cardano-api/pull/398)
+  [PR 398](https://github.com/IntersectMBO/cardano-api/pull/398)
 
 ## 8.36.1.0
 
 - Expose AnyProposals and AnyRatificationState
   (feature, compatible)
-  [PR 395](https://github.com/input-output-hk/cardano-api/pull/395)
+  [PR 395](https://github.com/IntersectMBO/cardano-api/pull/395)
 
 ## 8.36.0.0
 
 - New `ToJSON` instance for `TxValidationErrorInCardanoMode`
   (feature)
-  [PR 393](https://github.com/input-output-hk/cardano-api/pull/393)
+  [PR 393](https://github.com/IntersectMBO/cardano-api/pull/393)
 
 - Remove `ByronTx` data constructor from `data Tx era`
   Delete Cardano.Api.Eon.ByronEraOnly module
   Remove `TxFeeImplicit` and `TxValidityNoUpperBound`
   (breaking)
-  [PR 382](https://github.com/input-output-hk/cardano-api/pull/382)
+  [PR 382](https://github.com/IntersectMBO/cardano-api/pull/382)
 
 ## 8.35.0.0
 
 - Remove `renderEra` Use `docToText . pretty` instead. Rename `prettyTo*` functions to `docTo*`.
   (breaking, improvement)
-  [PR 387](https://github.com/input-output-hk/cardano-api/pull/387)
+  [PR 387](https://github.com/IntersectMBO/cardano-api/pull/387)
 
 - Expose NewGovernanceProposals and EpochBoundaryRatificationState ledger events in Conway era
   (feature, compatible)
-  [PR 388](https://github.com/input-output-hk/cardano-api/pull/388)
+  [PR 388](https://github.com/IntersectMBO/cardano-api/pull/388)
 
 - Guard queries with their respective eras
   (breaking, improvement)
-  [PR 386](https://github.com/input-output-hk/cardano-api/pull/386)
+  [PR 386](https://github.com/IntersectMBO/cardano-api/pull/386)
 
 ## 8.34.1.0
 
 - Expose `stakeCredentialWitness` function, which returns only stake credentials for the certificates requiring witnessing: delegation and deregistration.
   (compatible, bugfix)
-  [PR 383](https://github.com/input-output-hk/cardano-api/pull/383)
+  [PR 383](https://github.com/IntersectMBO/cardano-api/pull/383)
 
 ## 8.34.0.0
 
 - Parameterize `createAndValidateTransactionBody` on `ShelleyBasedEra era`
   (breaking)
-  [PR 378](https://github.com/input-output-hk/cardano-api/pull/378)
+  [PR 378](https://github.com/IntersectMBO/cardano-api/pull/378)
 
 - Add `QueryStakeVoteDelegatees` to return the vote delegatee associated to a stake credential
   (feature, compatible)
-  [PR 367](https://github.com/input-output-hk/cardano-api/pull/367)
+  [PR 367](https://github.com/IntersectMBO/cardano-api/pull/367)
 
 - `ToJSON` instance for `TxValidationError`
   (feature, compatible)
-  [PR 379](https://github.com/input-output-hk/cardano-api/pull/379)
+  [PR 379](https://github.com/IntersectMBO/cardano-api/pull/379)
 
 ## 8.33.0.0
 
@@ -64,36 +91,36 @@
   Make `prettyToText` return strict `Text` and add `prettyToLazyText`
   Export `Doc`
   (feature, breaking)
-  [PR 375](https://github.com/input-output-hk/cardano-api/pull/375)
+  [PR 375](https://github.com/IntersectMBO/cardano-api/pull/375)
 
 - Use `Pretty` for rendering errors instead of `Show`
   (breaking, improvement)
-  [PR 370](https://github.com/input-output-hk/cardano-api/pull/370)
+  [PR 370](https://github.com/IntersectMBO/cardano-api/pull/370)
 
 - Integrate ledger relocation of Plutus modules.
   Eliminate `Ledger.Coin` wrapper in `MaryValue` uses.
   Update consensus dependencies.
   Use `Ledger.THKD` on `ConwayPParams`.
   (breaking)
-  [PR 359](https://github.com/input-output-hk/cardano-api/pull/359)
+  [PR 359](https://github.com/IntersectMBO/cardano-api/pull/359)
 
 ## 8.32.0.0
 
 - Export `AllegraEraOnwards`
   (compatible)
-  [PR 374](https://github.com/input-output-hk/cardano-api/pull/374)
+  [PR 374](https://github.com/IntersectMBO/cardano-api/pull/374)
 
 - Isolation of Byron era 1/n. Changes made to cardano-api where Byron era was never being called in the first place.
   (breaking)
-  [PR 362](https://github.com/input-output-hk/cardano-api/pull/362)
+  [PR 362](https://github.com/IntersectMBO/cardano-api/pull/362)
 
 - Update and export `Test.Gen.Cardano.Api.ProtocolParameters`
   (bugfix, test)
-  [PR 369](https://github.com/input-output-hk/cardano-api/pull/369)
+  [PR 369](https://github.com/IntersectMBO/cardano-api/pull/369)
 
 - Fix round trip for empty `Value`. Add tests.
   (bugfix)
-  [PR 365](https://github.com/input-output-hk/cardano-api/pull/365)
+  [PR 365](https://github.com/IntersectMBO/cardano-api/pull/365)
 
 ## 8.31.0.0
 
@@ -110,19 +137,19 @@
   - `genValueDefault`
   - `genValueForMinting`
   (breaking)
-  [PR 360](https://github.com/input-output-hk/cardano-api/pull/360)
+  [PR 360](https://github.com/IntersectMBO/cardano-api/pull/360)
 
 - Replace `IsCardanoEra` and `IsShelleyBasedEra` contraints in GADT constructors with `Typeable`
   (breaking, improvement)
-  [PR 354](https://github.com/input-output-hk/cardano-api/pull/354)
+  [PR 354](https://github.com/IntersectMBO/cardano-api/pull/354)
 
 - Modify foldBlocks to recurse on ledger events instead of mapping over them. This allows finer grained control over when `foldBlocks` is stopped.
   (optimisation)
-  [PR 353](https://github.com/input-output-hk/cardano-api/pull/353)
+  [PR 353](https://github.com/IntersectMBO/cardano-api/pull/353)
 
 - --protocol-(minor|major)-version cannot be changed via create-protocol-parameters-update command in conway
   (breaking)
-  [PR 358](https://github.com/input-output-hk/cardano-api/pull/358)
+  [PR 358](https://github.com/IntersectMBO/cardano-api/pull/358)
 
 - Modify foldBlocks to allow the fold to terminate from the accumulator via the FoldStatus type.
 
@@ -133,7 +160,7 @@
   about ledger states, client and server tip, number of requests in flight
   and the current IORef state.
   (feature, breaking)
-  [PR 350](https://github.com/input-output-hk/cardano-api/pull/350)
+  [PR 350](https://github.com/IntersectMBO/cardano-api/pull/350)
 
 - Delete types:
   - ByronAndAllegraEraOnwards
@@ -152,13 +179,13 @@
   - maryEraOnlyToCardanoEra
   - maryEraOnlyToShelleyBasedEra
   (breaking, improvement)
-  [PR 355](https://github.com/input-output-hk/cardano-api/pull/355)
+  [PR 355](https://github.com/IntersectMBO/cardano-api/pull/355)
 
 ## 8.30.0.0
 
 - Remove uses of `coerceKeyRole`, use asWitness when key role conversion is required
   (feature, breaking)
-  [PR 341](https://github.com/input-output-hk/cardano-api/pull/341)
+  [PR 341](https://github.com/IntersectMBO/cardano-api/pull/341)
 
 - Delete `ByronMode` and `ShelleyMode`
   Delete `anyEraInModeToAnyEra`
@@ -262,22 +289,22 @@
   Delete `EraConsensusModeMismatch`
   Delete `CardanoMode` and `ConsensusMode`.
   (breaking)
-  [PR 342](https://github.com/input-output-hk/cardano-api/pull/342)
+  [PR 342](https://github.com/IntersectMBO/cardano-api/pull/342)
 
 - Switch to use lens and eons for txbody construction
   (improvement)
-  [PR 334](https://github.com/input-output-hk/cardano-api/pull/334)
+  [PR 334](https://github.com/IntersectMBO/cardano-api/pull/334)
 
 - Simplify `createTransactionBody`
   (improvement)
-  [PR 333](https://github.com/input-output-hk/cardano-api/pull/333)
+  [PR 333](https://github.com/IntersectMBO/cardano-api/pull/333)
 
 - In `Tx`, `ByronTx` now carries additional `ByronEraOnly` witness
   In `TxBody`, `TxBodyByron` now carries additional `ByronEraOnly` witness
   Delete `CardanoEraStyle` because eons solve the same problem more generally
   Delete `cardanoEraStyle`
   (breaking)
-  [PR 335](https://github.com/input-output-hk/cardano-api/pull/335)
+  [PR 335](https://github.com/IntersectMBO/cardano-api/pull/335)
 
 ## 8.29.0.0
 
@@ -290,76 +317,76 @@
   Adjust to type change of proposalProceduresTxBodyL
   Remove invalidBeforeL and invalidHereAfterL defined in ledger
   (breaking, maintenance)
-  [PR 321](https://github.com/input-output-hk/cardano-api/pull/321)
+  [PR 321](https://github.com/IntersectMBO/cardano-api/pull/321)
 
 - Expose `PlutusScriptV3`
   (bugfix)
-  [PR 343](https://github.com/input-output-hk/cardano-api/pull/343)
+  [PR 343](https://github.com/IntersectMBO/cardano-api/pull/343)
 
 - Add support for simple scripts in Conway
   (bugfix)
-  [PR 344](https://github.com/input-output-hk/cardano-api/pull/344)
+  [PR 344](https://github.com/IntersectMBO/cardano-api/pull/344)
 
 - Delete `ProtocolUTXOCostPerWord` feature
   (breaking)
-  [PR 339](https://github.com/input-output-hk/cardano-api/pull/339)
+  [PR 339](https://github.com/IntersectMBO/cardano-api/pull/339)
 
 - Delete `ProtocolUTxOCostPerByteFeature`
   (breaking)
-  [PR 340](https://github.com/input-output-hk/cardano-api/pull/340)
+  [PR 340](https://github.com/IntersectMBO/cardano-api/pull/340)
 
 - Add Show instance for FoldBlocksError
   (feature, compatible)
-  [PR 338](https://github.com/input-output-hk/cardano-api/pull/338)
+  [PR 338](https://github.com/IntersectMBO/cardano-api/pull/338)
 
 - Split the `txValidityRange` field into two fields.
   New function `allegraEraOnwardsToByronAndAllegraOnwardsEra`
   (breaking, improvement)
-  [PR 332](https://github.com/input-output-hk/cardano-api/pull/332)
+  [PR 332](https://github.com/IntersectMBO/cardano-api/pull/332)
 
 - Add support for Plutus V1 in Conway
   (bugfix)
-  [PR 323](https://github.com/input-output-hk/cardano-api/pull/323)
+  [PR 323](https://github.com/IntersectMBO/cardano-api/pull/323)
 
 - DRep extended key: add CastVerificationKeyRole
   (compatible)
-  [PR 327](https://github.com/input-output-hk/cardano-api/pull/327)
+  [PR 327](https://github.com/IntersectMBO/cardano-api/pull/327)
 
 ## 8.28.0.0
 
 - Delete `AlonzoEraOnly`.
   Export `caseMaryEraOnlyOrAlonzoEraOnwards`
   (feature, breaking)
-  [PR 330](https://github.com/input-output-hk/cardano-api/pull/330)
+  [PR 330](https://github.com/IntersectMBO/cardano-api/pull/330)
 
 - New `shelleyToAlonzoEraToShelleyToBabbageEra` function
   (feature, compatible)
-  [PR 329](https://github.com/input-output-hk/cardano-api/pull/329)
+  [PR 329](https://github.com/IntersectMBO/cardano-api/pull/329)
 
 - Delete unnecessary calls to `shelleyBasedEraConstraints`
   (improvement)
-  [PR 325](https://github.com/input-output-hk/cardano-api/pull/325)
+  [PR 325](https://github.com/IntersectMBO/cardano-api/pull/325)
 
 ## 8.27.0.0
 
 - Remove `IsShelleyBasedEra` and `IsCardanoEra` from all functions and types.
   Use `ShelleyBasedEra` and `CardanoEra` instead.
   (breaking)
-  [PR 313](https://github.com/input-output-hk/cardano-api/pull/313)
+  [PR 313](https://github.com/IntersectMBO/cardano-api/pull/313)
 
 ## 8.26.0.0
 
 - Add support for DRep extended keys
   (feature, compatible)
-  [PR 320](https://github.com/input-output-hk/cardano-api/pull/320)
+  [PR 320](https://github.com/IntersectMBO/cardano-api/pull/320)
 
 - Parameterize GovernanceAction on era
   (breaking)
-  [PR 322](https://github.com/input-output-hk/cardano-api/pull/322)
+  [PR 322](https://github.com/IntersectMBO/cardano-api/pull/322)
 
 - Haddock-document the `case*` functions
   (compatible, improvement)
-  [PR 314](https://github.com/input-output-hk/cardano-api/pull/314)
+  [PR 314](https://github.com/IntersectMBO/cardano-api/pull/314)
 
 - New `MaryEraOnly` eon
   New functions:
@@ -369,49 +396,49 @@
   Deprecate:
   - `noByronEraInShelleyBasedEra`.  Use `disjointByronEraOnlyAndShelleyBasedEra` instead.
   (feature, breaking)
-  [PR 312](https://github.com/input-output-hk/cardano-api/pull/312)
+  [PR 312](https://github.com/IntersectMBO/cardano-api/pull/312)
 
 - Delete `EraCast` type class
   (breaking)
-  [PR 308](https://github.com/input-output-hk/cardano-api/pull/308)
+  [PR 308](https://github.com/IntersectMBO/cardano-api/pull/308)
 
 - Fewer constraints in functions
   (compatible)
-  [PR 310](https://github.com/input-output-hk/cardano-api/pull/310)
+  [PR 310](https://github.com/IntersectMBO/cardano-api/pull/310)
 
 - Introduce anchor newtypes for drep registration certificate
   (feature, compatible)
-  [PR 305](https://github.com/input-output-hk/cardano-api/pull/305)
+  [PR 305](https://github.com/IntersectMBO/cardano-api/pull/305)
 
 - Reduce constraint usage with eons
   (compatible, improvement)
-  [PR 299](https://github.com/input-output-hk/cardano-api/pull/299)
+  [PR 299](https://github.com/IntersectMBO/cardano-api/pull/299)
 
 - Delete `EraCast` instance for `Certificate`
   (breaking)
-  [PR 307](https://github.com/input-output-hk/cardano-api/pull/307)
+  [PR 307](https://github.com/IntersectMBO/cardano-api/pull/307)
 
 - Add certs to txbody of Conway transactions
   (feature, compatible)
-  [PR 306](https://github.com/input-output-hk/cardano-api/pull/306)
+  [PR 306](https://github.com/IntersectMBO/cardano-api/pull/306)
 
 - Add `BabbageEraOnly`
   (feature, compatible)
-  [PR 304](https://github.com/input-output-hk/cardano-api/pull/304)
+  [PR 304](https://github.com/IntersectMBO/cardano-api/pull/304)
 
 ## 8.25.2.0
 
 - Add support for committee hot key witnesses
   (feature, compatible)
-  [PR 300](https://github.com/input-output-hk/cardano-api/pull/300)
+  [PR 300](https://github.com/IntersectMBO/cardano-api/pull/300)
 
 - Delete `withShelleyBasedEraConstraintsForLedger`. Use `shelleyBasedEraConstraints` instead.
   (breaking, improvement)
-  [PR 297](https://github.com/input-output-hk/cardano-api/pull/297)
+  [PR 297](https://github.com/IntersectMBO/cardano-api/pull/297)
 
 - Simplify `DebugLedgerState` with eons
   (breaking, improvement)
-  [PR 296](https://github.com/input-output-hk/cardano-api/pull/296)
+  [PR 296](https://github.com/IntersectMBO/cardano-api/pull/296)
 
 ## 8.25.0.1
 
@@ -422,7 +449,7 @@
 
 - Rename `AnyEraInEon` to `EraInEon`
   (breaking, improvement)
-  [PR 289](https://github.com/input-output-hk/cardano-api/pull/289)
+  [PR 289](https://github.com/IntersectMBO/cardano-api/pull/289)
 
 - Require conway onwards for voting.
   Functions with modified type signatures:
@@ -430,40 +457,40 @@
   - `toVotingCredential`
   - `singletonVotingProcedures`
   (breaking, improvement)
-  [PR 293](https://github.com/input-output-hk/cardano-api/pull/293)
+  [PR 293](https://github.com/IntersectMBO/cardano-api/pull/293)
 
 - Add witness committee cold key
   (feature, compatible)
-  [PR 292](https://github.com/input-output-hk/cardano-api/pull/292)
+  [PR 292](https://github.com/IntersectMBO/cardano-api/pull/292)
 
 - More use of ReexposeLedger
   (improvement)
-  [PR 290](https://github.com/input-output-hk/cardano-api/pull/290)
+  [PR 290](https://github.com/IntersectMBO/cardano-api/pull/290)
 
 ## 8.24.0.0
 
 - Expose Conway drep registration certificate anchor
   (breaking, improvement)
-  [PR 284](https://github.com/input-output-hk/cardano-api/pull/284)
+  [PR 284](https://github.com/IntersectMBO/cardano-api/pull/284)
 
 - Parameterize `AnyEraInEon`. Add `AnyEon`
   (breaking)
-  [PR 287](https://github.com/input-output-hk/cardano-api/pull/287)
+  [PR 287](https://github.com/IntersectMBO/cardano-api/pull/287)
 
 - Add support for conway era protocol parameters.
   Adapted `GenesisCardano` to upstream Ledger/Consensus changes.
   (feature, breaking)
-  [PR 270](https://github.com/input-output-hk/cardano-api/pull/270)
+  [PR 270](https://github.com/IntersectMBO/cardano-api/pull/270)
 
 ## 8.23.0.0
 
 - New `caseAlonzoOnlyOrBabbageEraOnwards` and `alonzoEraOnlyToAlonzoEraOnwards` functions
   (feature, compatible)
-  [PR 282](https://github.com/input-output-hk/cardano-api/pull/282)
+  [PR 282](https://github.com/IntersectMBO/cardano-api/pull/282)
 
 - Delete `AuxScriptsSupportedInEra`.  Use `AllegraEraOnwards` instead.
   (breaking, improvement)
-  [PR 273](https://github.com/input-output-hk/cardano-api/pull/273)
+  [PR 273](https://github.com/IntersectMBO/cardano-api/pull/273)
 
 - - Rename `inShelleyBasedEraEonMaybe` to `forShelleyBasedEraInEonMaybe`
   - Rename `inShelleyBasedEraEon` to `forShelleyBasedEraInEon`
@@ -474,18 +501,18 @@
   - New `inEonForEraMaybe` function
   - New `inEonForShelleyBasedEraMaybe` function
   (feature, breaking)
-  [PR 281](https://github.com/input-output-hk/cardano-api/pull/281)
+  [PR 281](https://github.com/IntersectMBO/cardano-api/pull/281)
 
 - Remove `CollateralSupportedInEra`.  Use `AlonzoEraOnwards` instead.
   Remove `collateralSupportedInEra`.  Use `inEonForEra` instead.
   (breaking)
-  [PR 271](https://github.com/input-output-hk/cardano-api/pull/271)
+  [PR 271](https://github.com/IntersectMBO/cardano-api/pull/271)
 
 - Replace `TxScriptValiditySupportedInEra`.  Use AlonzoEraOnwards instead.
   Delete `txScriptValiditySupportedInCardanoEra`. Use `forEraInEra` instead.
   Delete `txScriptValiditySupportedInShelleyBasedEra`. Use `forEraInEra` instead.
   (breaking)
-  [PR 261](https://github.com/input-output-hk/cardano-api/pull/261)
+  [PR 261](https://github.com/IntersectMBO/cardano-api/pull/261)
 
 - Delete `ValidityUpperBoundSupportedInEra`.  Use `ShelleyBasedEra` instead.
   Delete `ValidityNoUpperBoundSupportedInEra`. Use `ByronAndAllegraEraOnwards` instead.
@@ -498,7 +525,7 @@
   Delete `IsByronToMaryEra`.
   Delete `IsByronToAlonzoEra`.
   (breaking, improvement)
-  [PR 272](https://github.com/input-output-hk/cardano-api/pull/272)
+  [PR 272](https://github.com/IntersectMBO/cardano-api/pull/272)
 
 - New `AnyEraInEon`.
   Delete:
@@ -518,75 +545,75 @@
   * AnyConwayEraOnwards
   Use `AnyEraInEon` instead.
   (feature, breaking)
-  [PR 280](https://github.com/input-output-hk/cardano-api/pull/280)
+  [PR 280](https://github.com/IntersectMBO/cardano-api/pull/280)
 
 - Delete `ValidityLowerBoundSupportedInEra`.  Use `AllegraEraOnwards` instead
   Delete `validityLowerBoundSupportedInEra`.  Use `inEonForEra` or equivalent instead
   (breaking, improvement)
-  [PR 279](https://github.com/input-output-hk/cardano-api/pull/279)
+  [PR 279](https://github.com/IntersectMBO/cardano-api/pull/279)
 
 - Delete `TxExtraKeyWitnessesSupportedInEra`.  Use `AlonzoEraOnwards` instead.
   Delete `extraKeyWitnessesSupportedInEra`.  Use `inEonForEra` or related instead.
   (breaking, improvement)
-  [PR 278](https://github.com/input-output-hk/cardano-api/pull/278)
+  [PR 278](https://github.com/IntersectMBO/cardano-api/pull/278)
 
 - Delete `TxTotalAndReturnCollateralSupportedInEra`.  Use `BabbageEraOnwards` instead.
   Delete `totalAndReturnCollateralSupportedInEra`.  Use `inEonForEra` or related instead.
   (breaking, improvement)
-  [PR 275](https://github.com/input-output-hk/cardano-api/pull/275)
+  [PR 275](https://github.com/IntersectMBO/cardano-api/pull/275)
 
 - Explicit pattern match on all ledger certificates constructors.
   Remove `getIsCardanoEraConstraint`. Use `cardanoEraConstraints` instead.
   (breaking, improvement)
-  [PR 277](https://github.com/input-output-hk/cardano-api/pull/277)
+  [PR 277](https://github.com/IntersectMBO/cardano-api/pull/277)
 
 ## 8.22.0.0
 
 - A prior refactor accidentally defaulted to `isLeadingSlotsTPraos` regardless of the era
   (compatible, bugfix)
-  [PR 274](https://github.com/input-output-hk/cardano-api/pull/274)
+  [PR 274](https://github.com/IntersectMBO/cardano-api/pull/274)
 
 - Fix missing redeemers in certificate deregistration
   (bugfix)
-  [PR 268](https://github.com/input-output-hk/cardano-api/pull/268)
+  [PR 268](https://github.com/IntersectMBO/cardano-api/pull/268)
 
 - Delete `WithdrawalsSupportedInEra`.  Use `ShelleyBasedEra` instead.
   Delete `withdrawalsSupportedInEra`.  Use `inEonForEra` instead.
   (breaking, improvement)
-  [PR 260](https://github.com/input-output-hk/cardano-api/pull/260)
+  [PR 260](https://github.com/IntersectMBO/cardano-api/pull/260)
 
 - Replace `UpdateproposalSupportedInEra` with `ShelleyToBabbageEra`
   (breaking)
-  [PR 258](https://github.com/input-output-hk/cardano-api/pull/258)
+  [PR 258](https://github.com/IntersectMBO/cardano-api/pull/258)
 
 - Delete `TxMetadataSupportedInEra`. Use `ShelleyBasedEra` instead.
   Delete `txMetadataSupportedInEra`.  Use `inEonForEra` instead.
   (breaking, improvement)
-  [PR 263](https://github.com/input-output-hk/cardano-api/pull/263)
+  [PR 263](https://github.com/IntersectMBO/cardano-api/pull/263)
 
 - New functions `alonzoEraOnwardsToMaryEraOnwards` and `shelleyToAllegraEraToByronToAllegraEra`
   (feature, compatible)
-  [PR 266](https://github.com/input-output-hk/cardano-api/pull/266)
+  [PR 266](https://github.com/IntersectMBO/cardano-api/pull/266)
 
 - Export `getTxBodyContent`
   (feature, compatible)
-  [PR 267](https://github.com/input-output-hk/cardano-api/pull/267)
+  [PR 267](https://github.com/IntersectMBO/cardano-api/pull/267)
 
 - Delete `CertificatesSupportedInEra`.  Use `ShelleyBasedEra` instead.
   Delete `certificatesSupportedInEra`.  Use `inEonForEra` instead.
   (breaking)
-  [PR 259](https://github.com/input-output-hk/cardano-api/pull/259)
+  [PR 259](https://github.com/IntersectMBO/cardano-api/pull/259)
 
 ## 8.21.0.0
 
 - Make ProposeNewCommittee use the appropriate type of key
   (breaking, improvement)
-  [PR 264](https://github.com/input-output-hk/cardano-api/pull/264)
+  [PR 264](https://github.com/IntersectMBO/cardano-api/pull/264)
 
 - - Organise eon re-exports from `Cardano.Api`.
   - Export `MaryEraOnwards`
   (feature, compatible)
-  [PR 265](https://github.com/input-output-hk/cardano-api/pull/265)
+  [PR 265](https://github.com/IntersectMBO/cardano-api/pull/265)
 
 - - Delete `AdaSupportedInEra`.  Use `ByronToAllegraEra` instead.
   - Delete `MultiAssetSupportedInEra`.  Use `MaryEraOnwards` instead.
@@ -599,7 +626,7 @@
     - `caseShelleyToMaryOrAlonzoEraOnwards`
     - `shelleyToAllegraEraToByronToAllegraEra`
   (breaking, improvement)
-  [PR 254](https://github.com/input-output-hk/cardano-api/pull/254)
+  [PR 254](https://github.com/IntersectMBO/cardano-api/pull/254)
 
 - Delete unused eon type classes:
   - `IsAlonzoEraOnly`
@@ -613,21 +640,21 @@
   - `IsShelleyToBabbageEra`
   - `IsShelleyToMaryEra`
   (breaking)
-  [PR 256](https://github.com/input-output-hk/cardano-api/pull/256)
+  [PR 256](https://github.com/IntersectMBO/cardano-api/pull/256)
 
 - Export `ByronEraOnly`
   (feature)
-  [PR 255](https://github.com/input-output-hk/cardano-api/pull/255)
+  [PR 255](https://github.com/IntersectMBO/cardano-api/pull/255)
 
 - Update to the pre-commit script, so that it fails on hlint errors
   (improvement)
-  [PR 253](https://github.com/input-output-hk/cardano-api/pull/253)
+  [PR 253](https://github.com/IntersectMBO/cardano-api/pull/253)
 
 - Delete `TxFeesExplicitInEra` and `TxFeesImplicitInEra`
   New `ByronEraOnly` feature
   Move `ShelleyBasedEra` into its own module as it is a legitimate feature
   (breaking, improvement)
-  [PR 244](https://github.com/input-output-hk/cardano-api/pull/244)
+  [PR 244](https://github.com/IntersectMBO/cardano-api/pull/244)
 
 - - Rename `FeatureInEra` to `Eon`
   - Rename the following modules:
@@ -650,41 +677,41 @@
     - `inShelleyBasedEraFeatureMaybe -> inShelleyBasedEraEonMaybe`
     - `maybeFeatureInShelleyBasedEra -> maybeEonInShelleyBasedEra`
   (breaking, improvement)
-  [PR 247](https://github.com/input-output-hk/cardano-api/pull/247)
+  [PR 247](https://github.com/IntersectMBO/cardano-api/pull/247)
 
 ## 8.20.2.0
 
 - Add JSON instance for `Hash GenesisKey`
   (improvement)
-  [PR 249](https://github.com/input-output-hk/cardano-api/pull/249)
+  [PR 249](https://github.com/IntersectMBO/cardano-api/pull/249)
 
 - Support more ledger constraints
   (feature, compatible)
-  [PR 248](https://github.com/input-output-hk/cardano-api/pull/248)
+  [PR 248](https://github.com/IntersectMBO/cardano-api/pull/248)
 
 ## 8.20.1.0
 
 - Fix typos in some deserialization error messages
   (bugfix)
-  [PR 243](https://github.com/input-output-hk/cardano-api/pull/243)
+  [PR 243](https://github.com/IntersectMBO/cardano-api/pull/243)
 
 - Fix DRep Stake and DRep Stake queries for empty lists
   (bugfix)
-  [PR 245](https://github.com/input-output-hk/cardano-api/pull/245)
+  [PR 245](https://github.com/IntersectMBO/cardano-api/pull/245)
 
 - Fix querying for dreps in `transaction build` in eras before conway
   (bugfix)
-  [PR 240](https://github.com/input-output-hk/cardano-api/pull/240)
+  [PR 240](https://github.com/IntersectMBO/cardano-api/pull/240)
 
 - Fix Query error in QueryStakeDelegDeposits when executing transaction build
   (bugfix)
-  [PR 239](https://github.com/input-output-hk/cardano-api/pull/239)
+  [PR 239](https://github.com/IntersectMBO/cardano-api/pull/239)
 
 ## 8.20.0.0
 
 - Expose constraints from casing functions
   (feature, compatible)
-  [PR 237](https://github.com/input-output-hk/cardano-api/pull/237)
+  [PR 237](https://github.com/IntersectMBO/cardano-api/pull/237)
 
 - New functions:
   * `caseByronOrShelleyBasedEra`
@@ -692,14 +719,14 @@
   * `caseShelleyToAlonzoOrBabbageEraOnwards`
   Renamed `caseShelleyToBabbageAndConwayEraOnwards` to `caseShelleyToBabbageOrConwayEraOnwards`
   (breaking)
-  [PR 232](https://github.com/input-output-hk/cardano-api/pull/232)
+  [PR 232](https://github.com/IntersectMBO/cardano-api/pull/232)
 
 - Fix existing test constraints functions.  Type signatures changed on:
   * `shelleyBasedEraTestConstraints`
   * `shelleyToBabbageEraTestConstraints`
   * `conwayEraOnwardsTestConstraints`
   (breaking, bugfix)
-  [PR 233](https://github.com/input-output-hk/cardano-api/pull/233)
+  [PR 233](https://github.com/IntersectMBO/cardano-api/pull/233)
 
 - Add the following features:
   * `AlonzoEraOnly`
@@ -709,11 +736,11 @@
   * `ShelleyToMaryEra`
   * `ShelleyToAlonzoEra`
   (feature)
-  [PR 220](https://github.com/input-output-hk/cardano-api/pull/220)
+  [PR 220](https://github.com/IntersectMBO/cardano-api/pull/220)
 
 - New `caseShelleyToBabbageAndConwayEraOnwards` function
   (feature, compatible)
-  [PR 231](https://github.com/input-output-hk/cardano-api/pull/231)
+  [PR 231](https://github.com/IntersectMBO/cardano-api/pull/231)
 
 - Delete deprecated functions and types:
   * `Allegra`
@@ -730,34 +757,34 @@
   * `makeTransactionBody`
   * `queryPparams`
   (breaking, improvement)
-  [PR 230](https://github.com/input-output-hk/cardano-api/pull/230)
+  [PR 230](https://github.com/IntersectMBO/cardano-api/pull/230)
 
 - Updated to `cardano-ledger-conway-1.18`.
-  [PR 227](https://github.com/input-output-hk/cardano-api/pull/227)
+  [PR 227](https://github.com/IntersectMBO/cardano-api/pull/227)
 
 ## 8.19.0.0
 
 - New `foldSomeAddressVerification` key function
   (feature, compatible)
-  [PR 225](https://github.com/input-output-hk/cardano-api/pull/225)
+  [PR 225](https://github.com/IntersectMBO/cardano-api/pull/225)
 
 - `FeatureInEra` instances for `CardanoEra` and `ShelleyBasedEra`
   (feature, compatible)
-  [PR 226](https://github.com/input-output-hk/cardano-api/pull/226)
+  [PR 226](https://github.com/IntersectMBO/cardano-api/pull/226)
 
 - Fix type signature of `queryGenesisParameters` so that it can be queried in any era
   (breaking, bugfix)
-  [PR 224](https://github.com/input-output-hk/cardano-api/pull/224)
+  [PR 224](https://github.com/IntersectMBO/cardano-api/pull/224)
 
 ## 8.18.0.0
 
 - Fix exception when executing drep queries
   (bugfix)
-  [PR 221](https://github.com/input-output-hk/cardano-api/pull/221)
+  [PR 221](https://github.com/IntersectMBO/cardano-api/pull/221)
 
 - Use `newtype` instead of `GADT` for `LedgerProtocolParameters`
   (breaking, improvement)
-  [PR 218](https://github.com/input-output-hk/cardano-api/pull/218)
+  [PR 218](https://github.com/IntersectMBO/cardano-api/pull/218)
 
 - Changes:
   * Deleted `TxGovernanceActions`
@@ -765,39 +792,39 @@
   * New test constraints functions: `shelleyBasedEraTestConstraints`, `shelleyToBabbageEraTestConstraints`, `conwayEraOnwardsTestConstraints`
   * New era functions: `inEraFeatureMaybe`, `inShelleyBasedEraFeatureMaybe`, `maybeFeatureInShelleyBasedEra`
   (breaking, improvement)
-  [PR 217](https://github.com/input-output-hk/cardano-api/pull/217)
+  [PR 217](https://github.com/IntersectMBO/cardano-api/pull/217)
 
 - Replace ProtocolParameters usage with ledger's PParams
   (breaking)
-  [PR 214](https://github.com/input-output-hk/cardano-api/pull/214)
+  [PR 214](https://github.com/IntersectMBO/cardano-api/pull/214)
 
 ## 8.17.0.0
 
 - Delete `TxVotes` and `VotingEntry` and use `VotingProcedures` instead
   (breaking)
-  [PR 209](https://github.com/input-output-hk/cardano-api/pull/209)
+  [PR 209](https://github.com/IntersectMBO/cardano-api/pull/209)
 
 - New functions `emptyVotingProcedures`, `singletonVotingProcedures` and `mergeVotingProcedures`
   (feature, compatible)
-  [PR 208](https://github.com/input-output-hk/cardano-api/pull/208)
+  [PR 208](https://github.com/IntersectMBO/cardano-api/pull/208)
 
 - Expose ledger lenses for governance types: `drepExpiryL`, `drepAnchorL`, `drepDepositL`, `csCommitteeCredsL`
   (feature, compatible)
-  [PR 206](https://github.com/input-output-hk/cardano-api/pull/206)
+  [PR 206](https://github.com/IntersectMBO/cardano-api/pull/206)
 
 - New `makeStakeAddressAndDRepDelegationCertificate` function
   (feature, compatible)
-  [PR 207](https://github.com/input-output-hk/cardano-api/pull/207)
+  [PR 207](https://github.com/IntersectMBO/cardano-api/pull/207)
 
 - Use injective type families to improve type inference
   (compatible)
-  [PR 210](https://github.com/input-output-hk/cardano-api/pull/210)
+  [PR 210](https://github.com/IntersectMBO/cardano-api/pull/210)
 
 ## 8.16.1.0
 
 - Add `VotingProcedures` type.
   (feature, compatible)
-  [PR 204](https://github.com/input-output-hk/cardano-api/pull/204)
+  [PR 204](https://github.com/IntersectMBO/cardano-api/pull/204)
 
 ## 8.16.0.0
 
@@ -808,11 +835,11 @@
     - GetCommitteeState
     - GetConstitution
   (feature, compatible)
-  [PR 196](https://github.com/input-output-hk/cardano-api/pull/196)
+  [PR 196](https://github.com/IntersectMBO/cardano-api/pull/196)
 
 - Update createAnchor to use hashAnchorData
   (feature, breaking)
-  [PR 200](https://github.com/input-output-hk/cardano-api/pull/200)
+  [PR 200](https://github.com/IntersectMBO/cardano-api/pull/200)
 
 ## 8.15.0.0
 
@@ -829,114 +856,114 @@
     Cardano.Ledger.Api no longer export EraCrypto
     Introduced (internal) pattern synonyms for scripts to coverup a change in the corresponding ledger types.
   (feature, breaking)
-  [PR 179](https://github.com/input-output-hk/cardano-api/pull/179)
+  [PR 179](https://github.com/IntersectMBO/cardano-api/pull/179)
 
 - New `VotingEntry` type
   (compatible)
-  [PR 194](https://github.com/input-output-hk/cardano-api/pull/194)
+  [PR 194](https://github.com/IntersectMBO/cardano-api/pull/194)
 
 - Fix parameterisation of `GovernanceActionId`
   (breaking)
-  [PR 192](https://github.com/input-output-hk/cardano-api/pull/192)
+  [PR 192](https://github.com/IntersectMBO/cardano-api/pull/192)
 
 - Implement createPParams and begin propagating Ledger.PParams in cardano-api
   (feature)
-  [PR 190](https://github.com/input-output-hk/cardano-api/pull/190)
+  [PR 190](https://github.com/IntersectMBO/cardano-api/pull/190)
 
 - Delete deprecated functions and types
   (improvement)
-  [PR 173](https://github.com/input-output-hk/cardano-api/pull/173)
+  [PR 173](https://github.com/IntersectMBO/cardano-api/pull/173)
 
 ## 8.14.0.0
 
 - Fix parameterisation of `GovernanceActionId`
   (breaking)
-  [PR 192](https://github.com/input-output-hk/cardano-api/pull/192)
+  [PR 192](https://github.com/IntersectMBO/cardano-api/pull/192)
 
 - Implement createPParams and begin propagating Ledger.PParams in cardano-api
   (feature)
-  [PR 190](https://github.com/input-output-hk/cardano-api/pull/190)
+  [PR 190](https://github.com/IntersectMBO/cardano-api/pull/190)
 
 - Delete deprecated functions and types
   (improvement)
-  [PR 173](https://github.com/input-output-hk/cardano-api/pull/173)
+  [PR 173](https://github.com/IntersectMBO/cardano-api/pull/173)
 
 ## 8.13.1.0
 
 - Implement `EraBasedProtocolParametersUpdate`
   (feature)
-  [PR 180](https://github.com/input-output-hk/cardano-api/pull/180)
+  [PR 180](https://github.com/IntersectMBO/cardano-api/pull/180)
 
 ## 8.13.0.0
 
 - Modify `queryGenesisParameters` so that its type advertises it only returns genesis parameters for the Shelley era
   (breaking)
-  [PR 181](https://github.com/input-output-hk/cardano-api/pull/181)
+  [PR 181](https://github.com/IntersectMBO/cardano-api/pull/181)
 
 ## 8.12.0.0
 
 - Fix `EraCast Certificate`
   (bugfix; no-api-changes)
-  [PR 170](https://github.com/input-output-hk/cardano-api/pull/170)
+  [PR 170](https://github.com/IntersectMBO/cardano-api/pull/170)
 
 - Fix committee hot keys
   (feature; breaking)
-  [PR 167](https://github.com/input-output-hk/cardano-api/pull/167)
+  [PR 167](https://github.com/IntersectMBO/cardano-api/pull/167)
 
 - New `inEraFeature` and `inShelleyBasedEraFeature` functions
   (feature; compatible)
-  [PR 162](https://github.com/input-output-hk/cardano-api/pull/162)
+  [PR 162](https://github.com/IntersectMBO/cardano-api/pull/162)
 
 - Add `SerialiseAsBech32 (Hash CommitteeHotKey)` instance
   (feature; no-api-changes)
-  [PR 160](https://github.com/input-output-hk/cardano-api/pull/160)
+  [PR 160](https://github.com/IntersectMBO/cardano-api/pull/160)
 
 ## 8.11.1.0
 
 - Fix typo: `Constitional` -> `Constitutional`
   (bugfix; no-api-changes)
-  [PR 163](https://github.com/input-output-hk/cardano-api/pull/163)
+  [PR 163](https://github.com/IntersectMBO/cardano-api/pull/163)
 
 ## 8.11.0.0
 
 - Add parent feature constraints. New `IsShelleyToBabbageEra` and `ConwayEraOnwards` type classes.
   (feature; compatible)
-  [PR 159](https://github.com/input-output-hk/cardano-api/pull/159)
+  [PR 159](https://github.com/IntersectMBO/cardano-api/pull/159)
 
 - Deprecate `TxVotesSupportedInEra`
   (feature; breaking)
-  [PR 154](https://github.com/input-output-hk/cardano-api/pull/154)
+  [PR 154](https://github.com/IntersectMBO/cardano-api/pull/154)
 
 - Deprecate `shelleyCertificateConstraints` and `conwayCertificateConstraints`
   (feature; breaking)
-  [PR 155](https://github.com/input-output-hk/cardano-api/pull/155)
+  [PR 155](https://github.com/IntersectMBO/cardano-api/pull/155)
 
 - More shelleyBasedEraConstraint constraints
   (feature; compatible)
-  [PR 149](https://github.com/input-output-hk/cardano-api/pull/149)
+  [PR 149](https://github.com/IntersectMBO/cardano-api/pull/149)
 
 - Deprecate `TxGovernanceActionSupportedInEra`
   (feature; breaking)
-  [PR 150](https://github.com/input-output-hk/cardano-api/pull/150)
+  [PR 150](https://github.com/IntersectMBO/cardano-api/pull/150)
 
 - Deprecate some constraint functions
   (feature; breaking)
-  [PR 151](https://github.com/input-output-hk/cardano-api/pull/151)
+  [PR 151](https://github.com/IntersectMBO/cardano-api/pull/151)
 
 - Add SerialiseAsBech32 instances for committee cold and hot keys
   Remove CommitteeKey as it was redundant
   (feature; breaking)
-  [PR 152](https://github.com/input-output-hk/cardano-api/pull/152)
+  [PR 152](https://github.com/IntersectMBO/cardano-api/pull/152)
 
 - Clean up constraints on Proposal and Vote instances, add their generators for tests
   (bugfix; compatible)
-  [PR 118](https://github.com/input-output-hk/cardano-api/pull/118)
+  [PR 118](https://github.com/IntersectMBO/cardano-api/pull/118)
 
 ## 8.10.2.0
 
 - Expose shelleyCertificateConstraints and conwayCertificateConstraints
   (feature; compatible)
-  [PR 147](https://github.com/input-output-hk/cardano-api/pull/147)
+  [PR 147](https://github.com/IntersectMBO/cardano-api/pull/147)
 
 - Provide additional constraints in `shelleyBasedEraConstraints`.  This will obsolete the following:
   - `obtainEraCryptoConstraints`
@@ -945,17 +972,17 @@
   - `obtainSafeToHashConstraint`
   Also provide additional constraints in `conwayEraOnwardsConstraints` and `shelleyToBabbageEraConstraints`
   (feature; compatible)
-  [PR 143](https://github.com/input-output-hk/cardano-api/pull/143)
+  [PR 143](https://github.com/IntersectMBO/cardano-api/pull/143)
 
 - Expose `shelleyCertificateConstraints` and `conwayCertificateConstraints`
   (feature; compatible)
-  [PR 147](https://github.com/input-output-hk/cardano-api/pull/147)
+  [PR 147](https://github.com/IntersectMBO/cardano-api/pull/147)
 
 ## 8.10.1.0
 
 - Fix permissions of file written using handleFileForWritingWithOwnerPermissionImpl
   (bugfix; no-api-changes)
-  [PR 141](https://github.com/input-output-hk/cardano-api/pull/141)
+  [PR 141](https://github.com/IntersectMBO/cardano-api/pull/141)
 
 - Support more constraints for Conway witnesses
   - `conwayEraOnwardsConstraints`
@@ -964,11 +991,11 @@
   - AnyConwayEraOnwards
   - AnyShelleyToBabbageEra
   (feature; compatible)
-  [PR 137](https://github.com/input-output-hk/cardano-api/pull/137)
+  [PR 137](https://github.com/IntersectMBO/cardano-api/pull/137)
 
 - Expose functions for errors messages testing in golden files
   (feature; compatible)
-  [PR 126](https://github.com/input-output-hk/cardano-api/pull/126)
+  [PR 126](https://github.com/IntersectMBO/cardano-api/pull/126)
 
 ## 8.10.0.0
 
@@ -992,87 +1019,87 @@
   - `asFeatureValue`
   - `asFeatureValueInShelleyBasedEra`
   (feature; breaking)
-  [PR 128](https://github.com/input-output-hk/cardano-api/pull/128)
+  [PR 128](https://github.com/IntersectMBO/cardano-api/pull/128)
 
 - Expose `toShelleyPoolParams` for Conway integration
   (feature; compatible)
-  [PR 134](https://github.com/input-output-hk/cardano-api/pull/134)
+  [PR 134](https://github.com/IntersectMBO/cardano-api/pull/134)
 
 - `FeatureInEra` instance for `ShelleyBasedEra`
   (feature; compatible)
-  [PR 131](https://github.com/input-output-hk/cardano-api/pull/131)
+  [PR 131](https://github.com/IntersectMBO/cardano-api/pull/131)
 
 ## 8.9.0.0
 
 - Expose more functionality from cardano-api
   (feature; compatible)
-  [PR 130](https://github.com/input-output-hk/cardano-api/pull/130)
+  [PR 130](https://github.com/IntersectMBO/cardano-api/pull/130)
 
 - Rename `AtMostBabbageEra` to `ShelleyToBabbageEra` and add `FeatureInEra` instances to `ShelleyToBabbageEra` and `ConwayEraOnwards`.
   (feature; breaking)
-  [PR 127](https://github.com/input-output-hk/cardano-api/pull/127)
+  [PR 127](https://github.com/IntersectMBO/cardano-api/pull/127)
 
 - Incorporate remaining conway certificate types into cardano-api
   (feature; breaking)
-  [PR 119](https://github.com/input-output-hk/cardano-api/pull/119)
+  [PR 119](https://github.com/IntersectMBO/cardano-api/pull/119)
 
 - Wire up remaining Conway governance actions
   (feature; compatible)
-  [PR 112](https://github.com/input-output-hk/cardano-api/pull/112)
+  [PR 112](https://github.com/IntersectMBO/cardano-api/pull/112)
 
 - Fix ghc version CPP
   (bugfix; compatible)
-  [PR 123](https://github.com/input-output-hk/cardano-api/pull/123)
+  [PR 123](https://github.com/IntersectMBO/cardano-api/pull/123)
 
 ## 8.8.1.1
 
 - Add a HasTypeProxy constraint to getVerificationKey
   (feature; compatible)
-  [PR 122](https://github.com/input-output-hk/cardano-api/pull/122)
+  [PR 122](https://github.com/IntersectMBO/cardano-api/pull/122)
 
 ## 8.8.1.0
 
 - Make it build with ghc-9.6
   (feature; no-api-changes)
-  [PR 104](https://github.com/input-output-hk/cardano-api/pull/104)
+  [PR 104](https://github.com/IntersectMBO/cardano-api/pull/104)
 
 - Fix Show and Eq instances for Proposal type
   (bugfix; no-api-changes)
-  [PR 115](https://github.com/input-output-hk/cardano-api/pull/115)
+  [PR 115](https://github.com/IntersectMBO/cardano-api/pull/115)
 
 - Export `withShelleyBasedEraConstraintsForLedger`
   Use the ^>= version range operator for ledger and consensus libraries to avoid breaking changes affecting builds.
   (feature; compatible)
-  [PR 108](https://github.com/input-output-hk/cardano-api/pull/108)
+  [PR 108](https://github.com/IntersectMBO/cardano-api/pull/108)
 
 - -  Update to the latest ledger and consensus
   -  Introduce CommitteeKey
   (feature; breaking)
-  [PR 99](https://github.com/input-output-hk/cardano-api/pull/99)
+  [PR 99](https://github.com/IntersectMBO/cardano-api/pull/99)
 
 ## 8.8.0.0
 
 - Add CastVerificationKeyRole StakePoolKey StakeKey instance
   (feature; compatible)
-  [PR 101](https://github.com/input-output-hk/cardano-api/pull/101)
+  [PR 101](https://github.com/IntersectMBO/cardano-api/pull/101)
 
 - New `shelleyBasedEraConstraints` function
   (feature; compatible)
-  [PR 103](https://github.com/input-output-hk/cardano-api/pull/103)
+  [PR 103](https://github.com/IntersectMBO/cardano-api/pull/103)
 
 - Propagate ledger's TxCert type family throughout the api
   (feature; breaking)
-  [PR 97](https://github.com/input-output-hk/cardano-api/pull/97)
+  [PR 97](https://github.com/IntersectMBO/cardano-api/pull/97)
 
 - Parameterise `Certificate` with `era`
   (feature; breaking)
-  [PR 84](https://github.com/input-output-hk/cardano-api/pull/84)
+  [PR 84](https://github.com/IntersectMBO/cardano-api/pull/84)
 
 ## 8.7.0.0
 
 - Update VotingCredential to be parameterized on cardano-api's era type
   (feature; breaking)
-  [PR 85](https://github.com/input-output-hk/cardano-api/pull/85)
+  [PR 85](https://github.com/IntersectMBO/cardano-api/pull/85)
 
 ## 8.6.0.0
 
@@ -1093,25 +1120,25 @@
     - `PoolRegistration`
     - `PoolReRegistration`
   (feature; breaking)
-  [PR 83](https://github.com/input-output-hk/cardano-api/pull/83)
+  [PR 83](https://github.com/IntersectMBO/cardano-api/pull/83)
 
 - - Conway related
   - Incorporate the ability to specify votes and governance actions in transactions
   - Introduce TxVotes and TxGovernanceActions types
   (feature; breaking)
-  [PR 41](https://github.com/input-output-hk/cardano-api/pull/41)
+  [PR 41](https://github.com/IntersectMBO/cardano-api/pull/41)
 
 ## 8.5.2.0
 
 - New `requireShelleyBasedEra` function
   (feature; compatible)
-  [PR 58](https://github.com/input-output-hk/cardano-api/pull/58)
+  [PR 58](https://github.com/IntersectMBO/cardano-api/pull/58)
 
 ## 8.5.1.0
 
 - New `queryEpoch` function
   (feature; compatible)
-  [PR 56](https://github.com/input-output-hk/cardano-api/pull/56)
+  [PR 56](https://github.com/IntersectMBO/cardano-api/pull/56)
 
 ## 8.5.0.0
 
@@ -1131,7 +1158,7 @@
   Deprecate:
   * `queryPparams`
   (feature; breaking)
-  [PR 53](https://github.com/input-output-hk/cardano-api/pull/53)
+  [PR 53](https://github.com/IntersectMBO/cardano-api/pull/53)
 
 ## 8.4.0.0
 
@@ -1139,7 +1166,7 @@
   * It no longer invokes `executeQueryCardanoMode` `queryNodeLocalState, allowing it to run over a single connection
   * It no longer takes `socketPath` and `networkId` parameters
   (feature; breaking)
-  [PR 47](https://github.com/input-output-hk/cardano-api/pull/47)
+  [PR 47](https://github.com/IntersectMBO/cardano-api/pull/47)
 
 ## 8.3.0.0
 
@@ -1148,7 +1175,7 @@
   Having functions as our public API rather than data allows us to export non-primitive functions as well as
   afford us the ability to refactor our query data types without breaking user code
   (feature; compatible)
-  [PR 48](https://github.com/input-output-hk/cardano-api/pull/48)
+  [PR 48](https://github.com/IntersectMBO/cardano-api/pull/48)
 
 - Generate fields only if they make sense for the given era.
   Changes:
@@ -1164,7 +1191,7 @@
     - `asFeatureValueInShelleyBasedEra`
   - `genProtocolParameters` and `genValidProtocolParameters` functions take additional `era` argument
   (feature; breaking)
-  [PR 40](https://github.com/input-output-hk/cardano-api/pull/40)
+  [PR 40](https://github.com/IntersectMBO/cardano-api/pull/40)
 
 ## 8.2.0.0
 
@@ -1174,40 +1201,40 @@
   - Added a `query` field to `LocalNodeConnectInfo`
   - Field added to `LocalNodeConnectInfo`
   (feature; breaking)
-  [PR 24](https://github.com/input-output-hk/cardano-api/pull/24)
+  [PR 24](https://github.com/IntersectMBO/cardano-api/pull/24)
 
 - Crypto pinning via `iohkNix` overlay
   (bugfix; no-api-changes)
-  [PR 27](https://github.com/input-output-hk/cardano-api/pull/27)
+  [PR 27](https://github.com/IntersectMBO/cardano-api/pull/27)
 
 ## 8.1.1.1
 
 - Make `cardano-api:internal` component public
   (feature; compatible)
-  [PR 26](https://github.com/input-output-hk/cardano-api/pull/26)
+  [PR 26](https://github.com/IntersectMBO/cardano-api/pull/26)
 
 ## 8.1.1.0
 
 - Expose `toAlonzoCostModels` function from `Cardano.Api`
   (feature; compatible)
-  [PR 17](https://github.com/input-output-hk/cardano-api/pull/17)
+  [PR 17](https://github.com/IntersectMBO/cardano-api/pull/17)
 
 - Add `Eq` and `Data` instances to various error types
   (feature; compatible)
-  [PR 9](https://github.com/input-output-hk/cardano-api/pull/9)
+  [PR 9](https://github.com/IntersectMBO/cardano-api/pull/9)
 
 - Remove support for reading `ApplicationName` and `ApplicationVersion` from node configuration and replace with hardcoded values.
   (feature; breaking)
-  [PR 8](https://github.com/input-output-hk/cardano-api/pull/8)
+  [PR 8](https://github.com/IntersectMBO/cardano-api/pull/8)
 
 - Add new `checkVrfFilePermissions` function
   (feature; compatible)
-  [PR 11](https://github.com/input-output-hk/cardano-api/pull/11)
+  [PR 11](https://github.com/IntersectMBO/cardano-api/pull/11)
 
 - Added `genValidProtocolParameters` generator producing `ProtocolParameters` which do pass
   validations in `Cardano.Api.ProtocolParameters` module.  Remove `Cardano.Api.Orphans` from public API.
   (feature, test; breaking)
-  [PR 1](https://github.com/input-output-hk/cardano-api/pull/1)
+  [PR 1](https://github.com/IntersectMBO/cardano-api/pull/1)
 
 ## 8.1.0
 

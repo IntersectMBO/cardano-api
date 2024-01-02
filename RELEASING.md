@@ -14,7 +14,7 @@ Three simple ways are:
 * look at the latest git tag for the version
 
 When you found out the current version of `cardano-api`, the next step is to find out if the changes within the scope of the release are breaking or not.
-To make this process easier, each pull request has information about that - [see the `compatibility` field in the example changelog here](https://github.com/input-output-hk/cardano-api/pull/53).
+To make this process easier, each pull request has information about that - [see the `compatibility` field in the example changelog here](https://github.com/IntersectMBO/cardano-api/pull/53).
 This information becomes available in the next step of the process, in the changelog preparation after executing `generate-pr-changelogs.sh` script.
 You can defer decision about the version bump to that point.
 
@@ -29,7 +29,7 @@ After deciding on the version number, set the correct `version` field in all cab
 
 ### Changelog preparation
 The changelog preparation workflow is using `cardano-updates` to gather all information and produce the changelog in markdown format.
-The full documentation for scripts is located in [`cardano-updates` repository](https://github.com/input-output-hk/cardano-updates/blob/main/scripts/README.md).
+The full documentation for scripts is located in [`cardano-updates` repository](https://github.com/IntersectMBO/cardano-updates/blob/main/scripts/README.md).
 
 This part requires user to have the following tools installed on your local machine:
 * https://github.com/cli/cli
@@ -67,7 +67,7 @@ In order to generate changelog files in markdown format use the following steps:
 1. Download all PRs data from the `cardano-api` repo.
     This will take some time if the number of all PRs is large. From `cardano-api` directory, run:
     ```bash
-    ../cardano-dev/scripts/download-prs.sh input-output-hk/cardano-api
+    ../cardano-dev/scripts/download-prs.sh IntersectMBO/cardano-api
     ```
     It would be advisable to make changelog entries corrections in the descriptions of GitHub PRs itself, as this would let us use GitHub PRs as a single source of truth for the changelog generation process.
     This also means, that after making a change to a changelog in a PR description, the whole procedure needs to be restarted from this download step.
@@ -84,7 +84,7 @@ In order to generate changelog files in markdown format use the following steps:
 1. Generate markdown changelogs from yaml detail file providing the hash of the previous release tag in the command line argument.
     For example for the changelog between the tag `cardano-api-8.2.0.0` and `HEAD`:
     ```bash
-    ../cardano-dev/scripts/generate-pr-changelogs.sh input-output-hk/cardano-api 89fd11781d8ba19ce50f516ecef30607d2e704e8..HEAD
+    ../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api 89fd11781d8ba19ce50f516ecef30607d2e704e8..HEAD
     ```
     This will process downloaded PRs and use those marked with `feature` or `bug` to produce the changelog to the standard output.
 
@@ -122,7 +122,7 @@ Briefly speaking, it requires executing of the following steps:
 
 1.  Run the following script, replacing `<commit-hash>` with the just tagged commit hash:
     ```bash
-    ./scripts/add-from-github.sh https://github.com/input-output-hk/cardano-api <commit-hash> cardano-api cardano-api-gen
+    ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-api <commit-hash> cardano-api cardano-api-gen
     ```
     List all packages names for release in the script invocation, after the commit hash like in the example above.
     The script will create a separate commit for each package.
@@ -155,7 +155,7 @@ This issue happens due to frequent cache collisions in the [`cabal-cache`](https
 
 ## References
 1. https://github.com/input-output-hk/cardano-updates/tree/main/scripts
-1. https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md
+1. https://github.com/IntersectMBO/cardano-ledger/blob/master/RELEASING.md
 1. https://chap.intersectmbo.org/index.html
 1. https://input-output-hk.github.io/cardano-engineering-handbook/policy/haskell/packaging/versioning.html
 
