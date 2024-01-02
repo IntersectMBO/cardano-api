@@ -1,5 +1,32 @@
 # Changelog for cardano-api
 
+## 8.37.0.0
+
+- Expose CurrentEra and UpcomingEra pattern synonyms
+  (feature, breaking, compatible)
+  [PR 414](https://github.com/IntersectMBO/cardano-api/pull/414)
+
+- Add renderSafeHashAsHex, which we want to remove from cardano-node and use in cardano-cli
+  (feature, compatible)
+  [PR 410](https://github.com/IntersectMBO/cardano-api/pull/410)
+
+- Implement Era GADT and UseEra class as an alternative to the existing era handling code
+  (feature, compatible)
+  [PR 402](https://github.com/IntersectMBO/cardano-api/pull/402)
+
+- Make it possible to merge again, by fixing dead links
+  (improvement)
+  [PR 411](https://github.com/IntersectMBO/cardano-api/pull/411)
+
+- Expose all ledger events and convert the pattern synonyms to functions so GHC will warn us if we haven't handled a particular ledger event.
+  (feature, breaking, improvement)
+  [PR 400](https://github.com/IntersectMBO/cardano-api/pull/400)
+
+- split cases in textEnvelopeType
+  account for eras after conway using forEraInEon
+  (breaking, bugfix)
+  [PR 390](https://github.com/IntersectMBO/cardano-api/pull/390)
+
 ## 8.36.1.1
 
 - Restore the inclusion of datum hashes in Alonzo era tx bodies
