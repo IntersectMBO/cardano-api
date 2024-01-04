@@ -8,6 +8,7 @@ module Cardano.Api.LedgerEvents.LedgerEvent
   ( LedgerEvent(..)
   , AnyProposals(..)
   , AnyRatificationState(..)
+  , DRepRegistrationKind (..)
   , MIRDistributionDetails(..)
   , PoolReapDetails(..)
   , convertRetiredPoolsMap
@@ -44,6 +45,9 @@ data AnyRatificationState
 
 deriving instance Show AnyRatificationState
 
+data DRepRegistrationKind = Registration | Unregistration
+  deriving Show
+
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.
     PoolRegistration
@@ -71,6 +75,7 @@ data LedgerEvent
     -- | The current state of governance matters at the epoch boundary.
     -- I.E the current constitution, committee, protocol parameters, etc.
   | EpochBoundaryRatificationState AnyRatificationState
+  | DRepRegistration DRepRegistrationKind
   deriving Show
 
 

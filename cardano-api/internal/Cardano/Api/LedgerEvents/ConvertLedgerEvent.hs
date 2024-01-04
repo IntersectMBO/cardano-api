@@ -14,6 +14,7 @@ module Cardano.Api.LedgerEvents.ConvertLedgerEvent
   ) where
 
 import           Cardano.Api.LedgerEvents.LedgerEvent
+import qualified Cardano.Api.LedgerEvents.LedgerEvent as LE
 import           Cardano.Api.LedgerEvents.Rule.BBODY.DELEGS
 import           Cardano.Api.LedgerEvents.Rule.BBODY.LEDGER
 import           Cardano.Api.LedgerEvents.Rule.BBODY.UTXOW
@@ -163,7 +164,15 @@ toLedgerEventConway evt =
     ShelleyLedgerEventBBODY (ShelleyInAlonzoEvent (LedgersEvent (Shelley.LedgerEvent conwayLedgerEvent))) ->
       case conwayLedgerEvent of
         Conway.UtxowEvent{} -> Nothing
-        Conway.CertsEvent{} -> Nothing
+        Conway.CertsEvent certsE ->
+          case certsE of
+            Conway.CertEvent ce ->
+              case ce of
+                Conway.GovCertEvent gce ->
+                  case gce of
+                    Conway.DRepRegistration {} -> Just $ LE.DRepRegistration LE.Registration
+                    Conway.DRepUnregistration {} -> Just $ LE.DRepRegistration LE.Unregistration
+                _ -> Nothing
         Conway.GovEvent govEvent ->
           case govEvent of
             Conway.GovNewProposals txid props ->
