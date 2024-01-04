@@ -3,6 +3,9 @@ name: Haskell CI
 on:
   merge_group:
   pull_request:
+  push:
+    branches:
+      - smelc/new-drep-ledger-event
 
 jobs:
   build:
