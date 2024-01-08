@@ -961,6 +961,7 @@ module Cardano.Api (
     CommitteeMembersState (..),
     -- ** DReps
     DRepKey,
+    DRepExtendedKey,
     DRepMetadata,
     DRepMetadataReference,
     DRepMetadataValidationError,

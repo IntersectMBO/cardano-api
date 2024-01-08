@@ -711,6 +711,8 @@ data ShelleyWitnessSigningKey =
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
      | WitnessCommitteeColdKey   (SigningKey CommitteeColdKey)
      | WitnessCommitteeHotKey    (SigningKey CommitteeHotKey)
+     | WitnessDRepKey            (SigningKey DRepKey)
+     | WitnessDRepExtendedKey    (SigningKey DRepExtendedKey)
 
 
 makeShelleyKeyWitness :: forall era. ()
@@ -751,27 +753,22 @@ toShelleySigningKey key = case key of
   WitnessStakePoolKey   (StakePoolSigningKey   sk) -> ShelleyNormalSigningKey sk
   WitnessGenesisKey     (GenesisSigningKey     sk) -> ShelleyNormalSigningKey sk
   WitnessGenesisUTxOKey (GenesisUTxOSigningKey sk) -> ShelleyNormalSigningKey sk
-  WitnessGenesisDelegateKey (GenesisDelegateSigningKey sk) ->
-    ShelleyNormalSigningKey sk
+  WitnessGenesisDelegateKey (GenesisDelegateSigningKey sk) -> ShelleyNormalSigningKey sk
+  WitnessCommitteeColdKey   (CommitteeColdSigningKey sk)   -> ShelleyNormalSigningKey sk
+  WitnessCommitteeHotKey    (CommitteeHotSigningKey sk)    -> ShelleyNormalSigningKey sk
+  WitnessDRepKey            (DRepSigningKey sk)            -> ShelleyNormalSigningKey sk
 
   -- The cases for extended keys
   WitnessPaymentExtendedKey (PaymentExtendedSigningKey sk) ->
     ShelleyExtendedSigningKey sk
-
   WitnessStakeExtendedKey (StakeExtendedSigningKey sk) ->
     ShelleyExtendedSigningKey sk
-
   WitnessGenesisExtendedKey (GenesisExtendedSigningKey sk) ->
     ShelleyExtendedSigningKey sk
-
   WitnessGenesisDelegateExtendedKey (GenesisDelegateExtendedSigningKey sk) ->
     ShelleyExtendedSigningKey sk
-
-  WitnessCommitteeColdKey (CommitteeColdSigningKey sk) ->
-    ShelleyNormalSigningKey sk
-
-  WitnessCommitteeHotKey (CommitteeHotSigningKey sk) ->
-    ShelleyNormalSigningKey sk
+  WitnessDRepExtendedKey (DRepExtendedSigningKey sk) ->
+    ShelleyExtendedSigningKey sk
 
 
 getShelleyKeyWitnessVerificationKey
