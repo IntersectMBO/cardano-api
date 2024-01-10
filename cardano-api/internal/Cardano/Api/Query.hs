@@ -419,9 +419,9 @@ newtype SerialisedDebugLedgerState era
 decodeDebugLedgerState :: forall era. ()
   => FromCBOR (DebugLedgerState era)
   => SerialisedDebugLedgerState era
-  -> Either LBS.ByteString (DebugLedgerState era)
+  -> Either (LBS.ByteString, DecoderError) (DebugLedgerState era)
 decodeDebugLedgerState (SerialisedDebugLedgerState (Serialised ls)) =
-  first (const ls) (Plain.decodeFull ls)
+  first (ls,) (Plain.decodeFull ls)
 
 newtype ProtocolState era
   = ProtocolState (Serialised (Consensus.ChainDepState (ConsensusProtocol era)))
