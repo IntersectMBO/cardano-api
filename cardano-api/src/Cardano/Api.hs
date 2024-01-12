@@ -744,6 +744,10 @@ module Cardano.Api (
     chainSyncClientWithLedgerState,
     chainSyncClientPipelinedWithLedgerState,
 
+    -- *** Ledger state conditions
+    LedgerStateCondition(..),
+    checkLedgerStateCondition,
+
     -- *** Errors
     LedgerStateError(..),
     FoldBlocksError(..),
