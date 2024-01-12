@@ -39,6 +39,10 @@ module Cardano.Api.LedgerState
   , chainSyncClientWithLedgerState
   , chainSyncClientPipelinedWithLedgerState
 
+   -- * Ledger state conditions
+  , LedgerStateCondition(..)
+  , checkLedgerStateCondition
+
    -- * Errors
   , LedgerStateError(..)
   , FoldBlocksError(..)
@@ -94,7 +98,8 @@ import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
 import           Cardano.Api.Keys.Praos
-import           Cardano.Api.LedgerEvents.ConvertLedgerEvent (LedgerEvent, toLedgerEvent)
+import           Cardano.Api.LedgerEvents.ConvertLedgerEvent
+import           Cardano.Api.LedgerEvents.LedgerEvent
 import           Cardano.Api.Modes (EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
@@ -190,7 +195,7 @@ import           Data.IORef
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (mapMaybe)
+import           Data.Maybe
 import           Data.Proxy (Proxy (Proxy))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -243,6 +248,9 @@ data LedgerStateError
   -- ^ Encountered a rollback larger than the security parameter.
       SlotNo     -- ^ Oldest known slot number that we can roll back to.
       ChainPoint -- ^ Rollback was attempted to this point.
+  | TerminationEpochReached EpochNo
+  -- ^ The ledger state condition you were interested in was not met
+  -- prior to the termination epoch.
   | DebugError !String
   deriving (Show)
 
@@ -259,6 +267,10 @@ renderLedgerStateError = \case
       <> textShow rollbackPoint
       <> ", but oldest supported slot is "
       <> textShow oldestSupported
+  TerminationEpochReached epochNo -> mconcat
+    [ "The ledger state condition you were interested in was not met "
+    , "prior to the termination epoch: " <> textShow epochNo
+    ]
 
 -- | Get the environment and initial ledger state.
 initialLedgerState
@@ -1708,3 +1720,217 @@ constructGlobals
   -> Globals
 constructGlobals sGen eInfo (Ledger.ProtVer majorPParamsVer _) =
   Ledger.mkShelleyGlobals sGen eInfo majorPParamsVer
+
+
+
+--------------------------------------------------------------------------
+
+data LedgerStateCondition
+  = ConditionMet
+  | ConditionNotMet
+  deriving (Show, Eq)
+--
+-- | Reconstructs the ledger state and applies a supplied condition to it
+-- for every block. This function only terminations if the condition
+-- is met or we have reached the termination epoch. We need to provide
+-- a termination epoch otherwise blockes would be applied indefinitely
+-- as long as the chain tip is increasing.
+checkLedgerStateCondition
+  :: NodeConfigFile 'In
+  -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
+  -> SocketPath
+  -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
+  -> ValidationMode
+  -- ^ The initial accumulator state.
+  -> EpochNo
+  -- ^ Terminatation epoch
+  -> (LedgerState -> LedgerStateCondition)
+  -- ^ Condition you want to check against the new ledger state.
+  --
+  --
+  -- Note: This function can safely assume no rollback will occur even though
+  -- internally this is implemented with a client protocol that may require
+  -- rollback. This is achieved by only calling the accumulator on states/blocks
+  -- that are older than the security parameter, k. This has the side effect of
+  -- truncating the last k blocks before the node's tip.
+  -> ExceptT FoldBlocksError IO LedgerStateCondition
+  -- ^ The final state
+checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminationEpoch condition = do
+  -- NOTE this was originally implemented with a non-pipelined client then
+  -- changed to a pipelined client for a modest speedup:
+  --  * Non-pipelined: 1h  0m  19s
+  --  * Pipelined:        46m  23s
+
+  (env, ledgerState) <- withExceptT FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
+
+  -- Place to store the accumulated state
+  -- This is a bit ugly, but easy.
+  errorIORef <- lift $ newIORef Nothing
+  stateIORef <- lift $ newIORef ConditionNotMet
+
+  -- Derive the NetworkId as described in network-magic.md from the
+  -- cardano-ledger-specs repo.
+  let byronConfig
+        = (\(Consensus.WrapPartialLedgerConfig (Consensus.ByronPartialLedgerConfig bc _) :* _) -> bc)
+        . HFC.getPerEraLedgerConfig
+        . HFC.hardForkLedgerConfigPerEra
+        $ envLedgerConfig env
+
+      networkMagic
+        = NetworkMagic
+        $ unProtocolMagicId
+        $ Cardano.Chain.Genesis.gdProtocolMagicId
+        $ Cardano.Chain.Genesis.configGenesisData byronConfig
+
+      networkId' = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
+        RequiresNoMagic -> Mainnet
+        RequiresMagic -> Testnet networkMagic
+
+      cardanoModeParams = CardanoModeParams . EpochSlots $ 10 * envSecurityParam env
+
+  -- Connect to the node.
+  let connectInfo = LocalNodeConnectInfo
+        { localConsensusModeParams  = cardanoModeParams
+        , localNodeNetworkId        = networkId'
+        , localNodeSocketPath       = socketPath
+        }
+
+  lift $ connectToLocalNode
+    connectInfo
+    (protocols stateIORef errorIORef env ledgerState)
+
+  lift (readIORef errorIORef) >>= \case
+    Just err -> throwE (FoldBlocksApplyBlockError err)
+    Nothing -> lift $ readIORef stateIORef
+  where
+
+    protocols :: ()
+      => IORef LedgerStateCondition
+      -> IORef (Maybe LedgerStateError)
+      -> Env
+      -> LedgerState
+      -> LocalNodeClientProtocolsInMode
+    protocols stateIORef errorIORef env ledgerState =
+        LocalNodeClientProtocols {
+          localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef errorIORef env ledgerState),
+          localTxSubmissionClient = Nothing,
+          localStateQueryClient   = Nothing,
+          localTxMonitoringClient = Nothing
+        }
+
+    -- | Defines the client side of the chain sync protocol.
+    chainSyncClient :: Word32
+                    -- ^ The maximum number of concurrent requests.
+                    -> IORef LedgerStateCondition
+                    -- ^ State accumulator. Written to on every block.
+                    -> IORef (Maybe LedgerStateError)
+                    -- ^ Resulting error if any. Written to once on protocol
+                    -- completion.
+                    -> Env
+                    -> LedgerState
+                    -> CSP.ChainSyncClientPipelined
+                        BlockInMode
+                        ChainPoint
+                        ChainTip
+                        IO ()
+                    -- ^ Client returns maybe an error.
+    chainSyncClient pipelineSize stateIORef errorIORef' env ledgerState0
+      = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
+      where
+          initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
+
+          clientIdle_RequestMoreN
+            :: WithOrigin BlockNo
+            -> WithOrigin BlockNo
+            -> Nat n -- Number of requests inflight.
+            -> LedgerStateHistory
+            -> CSP.ClientPipelinedStIdle n BlockInMode ChainPoint ChainTip IO ()
+          clientIdle_RequestMoreN clientTip serverTip n knownLedgerStates
+            = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
+                Collect -> case n of
+                  Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownLedgerStates)
+                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
+
+          clientNextN
+            :: Nat n -- Number of requests inflight.
+            -> LedgerStateHistory
+            -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
+          clientNextN n knownLedgerStates =
+            CSP.ClientStNext {
+                CSP.recvMsgRollForward = \blockInMode@(BlockInMode _ block@(Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
+                  let newLedgerStateE = applyBlock
+                        env
+                        (maybe
+                          (error "Impossible! Missing Ledger state")
+                          (\(_,(ledgerState, _),_) -> ledgerState)
+                          (Seq.lookup 0 knownLedgerStates)
+                        )
+                        validationMode
+                        block
+                  case newLedgerStateE of
+                    Left err -> clientIdle_DoneNwithMaybeError n (Just err)
+                    Right new@(newLedgerState, ledgerEvents) -> do
+                      let (knownLedgerStates', _) = pushLedgerState env knownLedgerStates slotNo new blockInMode
+                          newClientTip = At currBlockNo
+                          newServerTip = fromChainTip serverChainTip
+
+                      atomicModifyIORef' stateIORef $ const (condition newLedgerState, ())
+                      -- Have we reached the termination epoch?
+                      case atTerminationEpoch terminationEpoch ledgerEvents of
+                        Just !currentEpoch -> do
+                           -- confirmed this works: error $ "atTerminationEpoch: Terminated at: " <> show currentEpoch
+                           let !err = Just $ TerminationEpochReached currentEpoch
+                           clientIdle_DoneNwithMaybeError n err
+                        Nothing -> do
+                          case condition newLedgerState of
+                            ConditionMet ->
+                               let !noError = Nothing
+                               in clientIdle_DoneNwithMaybeError n noError
+                            ConditionNotMet -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
+
+              , CSP.recvMsgRollBackward = \chainPoint serverChainTip -> do
+                  let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
+                      newServerTip = fromChainTip serverChainTip
+                      truncatedKnownLedgerStates = case chainPoint of
+                          ChainPointAtGenesis -> initialLedgerStateHistory
+                          ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
+                  return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
+              }
+
+
+          clientIdle_DoneNwithMaybeError
+            :: Nat n -- Number of requests inflight.
+            -> Maybe LedgerStateError -- Return value (maybe an error)
+            -> IO (CSP.ClientPipelinedStIdle n BlockInMode ChainPoint ChainTip IO ())
+          clientIdle_DoneNwithMaybeError n errorMay = case n of
+            Succ predN -> do
+              return (CSP.CollectResponse Nothing (clientNext_DoneNwithMaybeError predN errorMay)) -- Ignore remaining message responses
+            Zero -> do
+              atomicModifyIORef' errorIORef' . const $ (errorMay, ())
+              return (CSP.SendMsgDone ())
+
+          clientNext_DoneNwithMaybeError
+            :: Nat n -- Number of requests inflight.
+            -> Maybe LedgerStateError -- Return value (maybe an error)
+            -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
+          clientNext_DoneNwithMaybeError n errorMay =
+            CSP.ClientStNext {
+                CSP.recvMsgRollForward = \_ _ -> clientIdle_DoneNwithMaybeError n errorMay
+              , CSP.recvMsgRollBackward = \_ _ -> clientIdle_DoneNwithMaybeError n errorMay
+              }
+
+          fromChainTip :: ChainTip -> WithOrigin BlockNo
+          fromChainTip ct = case ct of
+            ChainTipAtGenesis -> Origin
+            ChainTip _ _ bno -> At bno
+
+
+atTerminationEpoch :: EpochNo -> [LedgerEvent] -> Maybe EpochNo
+atTerminationEpoch terminationEpoch events = do
+   let currentEpoch = [ currentEpoch' | PoolReap poolReapDets <- events
+                      , let currentEpoch' = prdEpochNo poolReapDets
+                      , currentEpoch' >= terminationEpoch
+                      ]
+   if not $ List.null currentEpoch
+   then Just $ List.head currentEpoch
+   else Nothing
