@@ -1,10 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Api.Genesis
   ( ShelleyGenesis(..)
   , shelleyGenesisDefaults
+  , conwayGenesisDefaults
 
   -- ** Configuration
   , ByronGenesisConfig
@@ -26,6 +26,7 @@ module Cardano.Api.Genesis
   ) where
 
 import           Cardano.Api.IO
+import           Cardano.Api.Utils (unsafeBoundedRational)
 
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Crypto.Hash.Blake2b
@@ -42,11 +43,14 @@ import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 
 import           Data.ByteString (ByteString)
+import qualified Data.Default.Class as DefaultClass
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Ratio
 import           Data.Text (Text)
 import qualified Data.Time as Time
+import           Data.Typeable
+import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 
 data ShelleyConfig = ShelleyConfig
@@ -102,9 +106,7 @@ shelleyGenesisDefaults =
 
       -- consensus protocol parameters
     , sgSlotLength            = 1.0 :: NominalDiffTimeMicro -- 1s slots
-    , sgActiveSlotsCoeff      = fromMaybe
-                                  (error "shelleyGenesisDefaults: impossible")
-                                  (Ledger.boundRational (1/20))  -- 20s block times on average
+    , sgActiveSlotsCoeff      = unsafeBR (1 % 20)   -- f ; 1/f = 20s block times on average
     , sgSecurityParam         = k
     , sgEpochLength           = Ledger.EpochSize (k * 10 * 20) -- 10k/f
     , sgSlotsPerKESPeriod     = 60 * 60 * 36        -- 1.5 days with 1s slots
@@ -121,6 +123,9 @@ shelleyGenesisDefaults =
         & ppEMaxL      .~ EpochInterval 18
         & ppMinFeeAL   .~ Coin 1                -- The linear factor for the minimum fee calculation
         & ppMinFeeBL   .~ Coin 0                -- The constant factor for the minimum fee calculation
+                                                -- pot = tx_fees + ρ * remaining_reserves
+        & ppRhoL       .~ unsafeBR (1 % 10)     -- How much of reserves goes into pot
+        & ppTauL       .~ unsafeBR (1 % 10)     -- τ * remaining_reserves is sent to treasury every epoch
 
       -- genesis keys and initial funds
     , sgGenDelegs             = Map.empty
@@ -131,3 +136,10 @@ shelleyGenesisDefaults =
   where
     k = 2160
     zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
+    unsafeBR :: (HasCallStack, Typeable r, BoundedRational r) => Rational -> r
+    unsafeBR = unsafeBoundedRational
+
+
+conwayGenesisDefaults :: ConwayGenesis StandardCrypto
+conwayGenesisDefaults = DefaultClass.def
+

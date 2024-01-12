@@ -9,6 +9,7 @@ module Cardano.Api.Shelley
     -- * Genesis
     ShelleyGenesis(..),
     shelleyGenesisDefaults,
+    conwayGenesisDefaults,
 
     -- * Cryptographic key interface
     -- $keys

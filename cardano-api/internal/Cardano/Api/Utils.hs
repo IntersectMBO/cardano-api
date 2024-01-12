@@ -28,8 +28,10 @@ module Cardano.Api.Utils
 
     -- ** CLI option parsing
   , bounded
+  , unsafeBoundedRational
   ) where
 
+import           Cardano.Ledger.BaseTypes
 import           Cardano.Ledger.Shelley ()
 
 import           Control.Exception (bracket)
@@ -38,10 +40,12 @@ import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Maybe.Strict
+import           Data.Maybe
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Typeable
 import           GHC.IO.Handle.FD (openFileBlocking)
+import           GHC.Stack
 import           Options.Applicative (ReadM)
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Builder (eitherReader)
@@ -129,3 +133,12 @@ modifyWith :: ()
   -> (a -> a)
 modifyWith = id
 
+
+
+-- | Convert Rational to a bounded rational. Throw an exception when the rational is out of bounds.
+unsafeBoundedRational :: forall r. (HasCallStack, Typeable r, BoundedRational r)
+                      => Rational
+                      -> r
+unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
+  where
+    errMessage = show (typeRep (Proxy @r)) <> " is out of bounds: " <> show x

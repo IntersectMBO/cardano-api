@@ -988,6 +988,7 @@ module Cardano.Api (
 
     ResolvablePointers(..),
 
+    unsafeBoundedRational,
     -- ** Supporting modules
     module Cardano.Api.Monad.Error,
     module Cardano.Api.Pretty
