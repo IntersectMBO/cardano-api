@@ -25,7 +25,6 @@ module Cardano.Api.Utils
   , runParsecParser
   , textShow
   , modifyWith
-  , modifyError
 
     -- ** CLI option parsing
   , bounded
@@ -35,8 +34,6 @@ import           Cardano.Ledger.Shelley ()
 
 import           Control.Exception (bracket)
 import           Control.Monad (when)
-import           Control.Monad.Except (ExceptT, MonadError)
-import qualified Control.Monad.Except as Except
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as Builder
@@ -132,12 +129,3 @@ modifyWith :: ()
   -> (a -> a)
 modifyWith = id
 
-#if MIN_VERSION_mtl(2,3,1)
--- | See 'Except.modifyError'
-modifyError :: MonadError e' m => (e -> e') -> ExceptT e m a -> m a
-modifyError = Except.modifyError
-#else
--- | See 'Except.modifyError'
-modifyError :: MonadError e' m => (e -> e') -> ExceptT e m a -> m a
-modifyError f m = Except.runExceptT m >>= either (Except.throwError . f) pure
-#endif
