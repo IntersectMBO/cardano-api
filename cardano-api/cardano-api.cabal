@@ -208,6 +208,7 @@ library internal
                       , serialise
                       , small-steps ^>= 1.0
                       , sop-core
+                      , sop-extras
                       , stm
                       , strict-sop-core
                       , time

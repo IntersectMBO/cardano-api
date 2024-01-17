@@ -39,6 +39,10 @@ module Cardano.Api.LedgerState
   , chainSyncClientWithLedgerState
   , chainSyncClientPipelinedWithLedgerState
 
+   -- * Ledger state conditions
+  , LedgerStateCondition(..)
+  , checkLedgerStateCondition
+
    -- * Errors
   , LedgerStateError(..)
   , FoldBlocksError(..)
@@ -86,7 +90,8 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Error
+import           Cardano.Api.Eras.Core (Eon (inEonForEra))
+import           Cardano.Api.Error as Api
 import           Cardano.Api.Genesis
 import           Cardano.Api.IO
 import           Cardano.Api.IPC (ConsensusModeParams (..),
@@ -94,7 +99,8 @@ import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
 import           Cardano.Api.Keys.Praos
-import           Cardano.Api.LedgerEvents.ConvertLedgerEvent (LedgerEvent, toLedgerEvent)
+import           Cardano.Api.LedgerEvents.ConvertLedgerEvent
+import           Cardano.Api.LedgerEvents.LedgerEvent
 import           Cardano.Api.Modes (EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
@@ -149,12 +155,14 @@ import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as HFC
+import           Ouroboros.Consensus.HardFork.Combinator.State.Types
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
+import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
@@ -177,7 +185,8 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import           Data.Aeson as Aeson
+import           Data.Aeson as Aeson (FromJSON (parseJSON), Object, eitherDecodeStrict', withObject,
+                   (.:), (.:?))
 import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor
 import           Data.ByteArray (ByteArrayAccess)
@@ -192,7 +201,7 @@ import           Data.IORef
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (mapMaybe)
+import           Data.Maybe
 import           Data.Proxy (Proxy (Proxy))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -200,6 +209,8 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.SOP (K (K), (:.:) (Comp))
 import           Data.SOP.Strict (NP (..), fn)
+import           Data.SOP.Strict.NS
+import qualified Data.SOP.Telescope as Telescope
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -245,6 +256,15 @@ data LedgerStateError
   -- ^ Encountered a rollback larger than the security parameter.
       SlotNo     -- ^ Oldest known slot number that we can roll back to.
       ChainPoint -- ^ Rollback was attempted to this point.
+  | TerminationEpochReached EpochNo
+  -- ^ The ledger state condition you were interested in was not met
+  -- prior to the termination epoch.
+  | UnexpectedLedgerState
+      AnyShelleyBasedEra
+      -- ^ Expected era
+      (NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto))
+      -- ^ Ledgerstate from an unexpected era
+  | ByronEraUnsupported
   | DebugError !String
   deriving (Show)
 
@@ -261,6 +281,17 @@ renderLedgerStateError = \case
       <> textShow rollbackPoint
       <> ", but oldest supported slot is "
       <> textShow oldestSupported
+  TerminationEpochReached epochNo -> mconcat
+    [ "The ledger state condition you were interested in was not met "
+    , "prior to the termination epoch: " <> textShow epochNo
+    ]
+  UnexpectedLedgerState expectedEra unexpectedLS ->
+    mconcat [ "Expected ledger state from the "
+            , textShow expectedEra
+            , " era, but got "
+            , textShow unexpectedLS
+            ]
+  ByronEraUnsupported -> "Byron era is not supported"
 
 -- | Get the environment and initial ledger state.
 initialLedgerState
@@ -1018,6 +1049,86 @@ newtype LedgerState = LedgerState
                     (Consensus.CardanoEras Consensus.StandardCrypto))
   } deriving Show
 
+getNewEpochState
+  :: ShelleyBasedEra era
+  -> Consensus.LedgerState (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
+  -> Either LedgerStateError (ShelleyAPI.NewEpochState (ShelleyLedgerEra era))
+getNewEpochState era x = do
+  let tip = Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x
+      err = UnexpectedLedgerState (shelleyBasedEraConstraints era $ AnyShelleyBasedEra era) tip
+  case era of
+    ShelleyBasedEraShelley ->
+      case tip of
+        ShelleyLedgerState shelleyCurrent ->
+          pure $ Shelley.shelleyLedgerState $ currentState shelleyCurrent
+        _ -> Left err
+    ShelleyBasedEraAllegra ->
+      case tip of
+        AllegraLedgerState allegraCurrent ->
+          pure $ Shelley.shelleyLedgerState $ currentState allegraCurrent
+        _ -> Left err
+    ShelleyBasedEraMary ->
+      case tip of
+        MaryLedgerState maryCurrent ->
+          pure $ Shelley.shelleyLedgerState $ currentState maryCurrent
+        _ -> Left err
+    ShelleyBasedEraAlonzo ->
+      case tip of
+        AlonzoLedgerState alonzoCurrent ->
+          pure $ Shelley.shelleyLedgerState $ currentState alonzoCurrent
+        _ -> Left err
+    ShelleyBasedEraBabbage ->
+      case tip of
+        BabbageLedgerState babbageCurrent ->
+          pure $ Shelley.shelleyLedgerState $ currentState babbageCurrent
+        _ -> Left err
+    ShelleyBasedEraConway ->
+      case tip of
+        ConwayLedgerState conwayCurrent ->
+          pure $ Shelley.shelleyLedgerState $ currentState conwayCurrent
+        _ -> Left err
+
+{-# COMPLETE ShelleyLedgerState,
+             AllegraLedgerState,
+              MaryLedgerState,
+              AlonzoLedgerState,
+              BabbageLedgerState,
+              ConwayLedgerState
+             #-}
+
+pattern ShelleyLedgerState
+  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Shelley.StandardCrypto) (Shelley.ShelleyEra Shelley.StandardCrypto))
+  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern ShelleyLedgerState x = S (Z x)
+
+pattern AllegraLedgerState
+  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Shelley.StandardCrypto) (Shelley.AllegraEra Shelley.StandardCrypto))
+  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern AllegraLedgerState x = S (S (Z x))
+
+pattern MaryLedgerState
+  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Shelley.StandardCrypto) (Shelley.MaryEra Shelley.StandardCrypto))
+  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern MaryLedgerState x =  S (S (S (Z x)))
+
+
+pattern AlonzoLedgerState
+  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Shelley.StandardCrypto) (Shelley.AlonzoEra Shelley.StandardCrypto))
+  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern AlonzoLedgerState x =  S (S (S (S (Z x))))
+
+
+pattern BabbageLedgerState
+  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (Consensus.Praos Shelley.StandardCrypto) (Shelley.BabbageEra Shelley.StandardCrypto))
+  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern BabbageLedgerState x =  S (S (S (S (S (Z x)))))
+
+pattern ConwayLedgerState
+  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (Consensus.Praos Shelley.StandardCrypto) (Shelley.ConwayEra Shelley.StandardCrypto))
+  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern ConwayLedgerState x =  S (S (S (S (S (S (Z x))))))
+
+
 encodeLedgerState :: LedgerState -> CBOR.Encoding
 encodeLedgerState (LedgerState (HFC.HardForkLedgerState st)) =
   HFC.encodeTelescope
@@ -1517,7 +1628,7 @@ data LeadershipError = LeaderErrDecodeLedgerStateFailure
                      | LeaderErrCandidateNonceStillEvolving
                      deriving Show
 
-instance Error LeadershipError where
+instance Api.Error LeadershipError where
   prettyError = \case
     LeaderErrDecodeLedgerStateFailure ->
       "Failed to successfully decode ledger state"
@@ -1739,3 +1850,233 @@ constructGlobals
   -> Globals
 constructGlobals sGen eInfo (Ledger.ProtVer majorPParamsVer _) =
   Ledger.mkShelleyGlobals sGen eInfo majorPParamsVer
+
+
+
+--------------------------------------------------------------------------
+
+data LedgerStateCondition
+  = ConditionMet
+  | ConditionNotMet
+  deriving (Show, Eq)
+
+data AnyNewEpochState where
+  AnyNewEpochState
+    :: ShelleyBasedEra era
+    -> ShelleyAPI.NewEpochState (ShelleyLedgerEra era)
+    -> AnyNewEpochState
+
+
+-- | Reconstructs the ledger state and applies a supplied condition to it
+-- for every block. This function only terminates if the condition
+-- is met or we have reached the termination epoch. We need to provide
+-- a termination epoch otherwise blocks would be applied indefinitely.
+checkLedgerStateCondition
+  :: MonadError FoldBlocksError m
+  => MonadIO m
+  => NodeConfigFile 'In
+  -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
+  -> SocketPath
+  -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
+  -> ValidationMode
+  -> EpochNo
+  -- ^ Termination epoch
+  -> (AnyNewEpochState -> LedgerStateCondition)
+  -- ^ Condition you want to check against the new ledger state.
+  --
+  --
+  -- Note: This function can safely assume no rollback will occur even though
+  -- internally this is implemented with a client protocol that may require
+  -- rollback. This is achieved by only calling the accumulator on states/blocks
+  -- that are older than the security parameter, k. This has the side effect of
+  -- truncating the last k blocks before the node's tip.
+  -> m LedgerStateCondition
+  -- ^ The final state
+checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminationEpoch condition = do
+  -- NOTE this was originally implemented with a non-pipelined client then
+  -- changed to a pipelined client for a modest speedup:
+  --  * Non-pipelined: 1h  0m  19s
+  --  * Pipelined:        46m  23s
+
+  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError
+                          $ initialLedgerState nodeConfigFilePath
+
+  -- Place to store the accumulated state
+  -- This is a bit ugly, but easy.
+  errorIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef Nothing
+  stateIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef ConditionNotMet
+
+  -- Derive the NetworkId as described in network-magic.md from the
+  -- cardano-ledger-specs repo.
+  let byronConfig
+        = (\(Consensus.WrapPartialLedgerConfig (Consensus.ByronPartialLedgerConfig bc _) :* _) -> bc)
+        . HFC.getPerEraLedgerConfig
+        . HFC.hardForkLedgerConfigPerEra
+        $ envLedgerConfig env
+
+      networkMagic
+        = NetworkMagic
+        $ unProtocolMagicId
+        $ Cardano.Chain.Genesis.gdProtocolMagicId
+        $ Cardano.Chain.Genesis.configGenesisData byronConfig
+
+      networkId' = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
+        RequiresNoMagic -> Mainnet
+        RequiresMagic -> Testnet networkMagic
+
+      cardanoModeParams = CardanoModeParams . EpochSlots $ 10 * envSecurityParam env
+
+  -- Connect to the node.
+  let connectInfo = LocalNodeConnectInfo
+        { localConsensusModeParams  = cardanoModeParams
+        , localNodeNetworkId        = networkId'
+        , localNodeSocketPath       = socketPath
+        }
+
+  modifyError FoldBlocksIOException $ liftIO $ connectToLocalNode
+    connectInfo
+    (protocols stateIORef errorIORef env ledgerState)
+
+  liftIO (readIORef errorIORef) >>= \case
+    Just err -> throwError $ FoldBlocksApplyBlockError err
+    Nothing -> modifyError FoldBlocksIOException . liftIO $ readIORef stateIORef
+  where
+    protocols :: ()
+      => IORef LedgerStateCondition
+      -> IORef (Maybe LedgerStateError)
+      -> Env
+      -> LedgerState
+      -> LocalNodeClientProtocolsInMode
+    protocols stateIORef errorIORef env ledgerState =
+        LocalNodeClientProtocols {
+          localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef errorIORef env ledgerState),
+          localTxSubmissionClient = Nothing,
+          localStateQueryClient   = Nothing,
+          localTxMonitoringClient = Nothing
+        }
+
+    -- | Defines the client side of the chain sync protocol.
+    chainSyncClient :: Word32
+                    -- ^ The maximum number of concurrent requests.
+                    -> IORef LedgerStateCondition
+                    -- ^ State accumulator. Written to on every block.
+                    -> IORef (Maybe LedgerStateError)
+                    -- ^ Resulting error if any. Written to once on protocol
+                    -- completion.
+                    -> Env
+                    -> LedgerState
+                    -> CSP.ChainSyncClientPipelined
+                        BlockInMode
+                        ChainPoint
+                        ChainTip
+                        IO ()
+                    -- ^ Client returns maybe an error.
+    chainSyncClient pipelineSize stateIORef errorIORef' env ledgerState0
+      = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
+      where
+          initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
+
+          clientIdle_RequestMoreN
+            :: WithOrigin BlockNo
+            -> WithOrigin BlockNo
+            -> Nat n -- Number of requests inflight.
+            -> LedgerStateHistory
+            -> CSP.ClientPipelinedStIdle n BlockInMode ChainPoint ChainTip IO ()
+          clientIdle_RequestMoreN clientTip serverTip n knownLedgerStates
+            = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
+                Collect -> case n of
+                  Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownLedgerStates)
+                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
+
+          clientNextN
+            :: Nat n -- Number of requests inflight.
+            -> LedgerStateHistory
+            -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
+          clientNextN n knownLedgerStates =
+            CSP.ClientStNext {
+                CSP.recvMsgRollForward = \blockInMode@(BlockInMode era block@(Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
+                  let newLedgerStateE = applyBlock
+                        env
+                        (maybe
+                          (error "Impossible! Missing Ledger state")
+                          (\(_,(ledgerState, _),_) -> ledgerState)
+                          (Seq.lookup 0 knownLedgerStates)
+                        )
+                        validationMode
+                        block
+                  case inEonForEra Nothing Just era of
+                    Nothing -> let !err = Just ByronEraUnsupported
+                               in clientIdle_DoneNwithMaybeError n err
+                    Just sbe ->
+                      case newLedgerStateE of
+                        Left err -> clientIdle_DoneNwithMaybeError n (Just err)
+                        Right new@(newLedgerState, ledgerEvents) -> do
+                          let (knownLedgerStates', _) = pushLedgerState env knownLedgerStates slotNo new blockInMode
+                              newClientTip = At currBlockNo
+                              newServerTip = fromChainTip serverChainTip
+                          case getNewEpochState sbe $ clsState newLedgerState of
+                            Left e ->
+                              let !err = Just e
+                              in clientIdle_DoneNwithMaybeError n err
+                            Right lState -> do
+                              atomicModifyIORef' stateIORef $ const (condition $ AnyNewEpochState sbe lState, ())
+                              -- Have we reached the termination epoch?
+                              case atTerminationEpoch terminationEpoch ledgerEvents of
+                                Just !currentEpoch -> do
+                                   -- confirmed this works: error $ "atTerminationEpoch: Terminated at: " <> show currentEpoch
+                                   let !err = Just $ TerminationEpochReached currentEpoch
+                                   clientIdle_DoneNwithMaybeError n err
+                                Nothing -> do
+                                  case condition $ AnyNewEpochState sbe lState of
+                                    ConditionMet ->
+                                       let !noError = Nothing
+                                       in clientIdle_DoneNwithMaybeError n noError
+                                    ConditionNotMet -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
+
+              , CSP.recvMsgRollBackward = \chainPoint serverChainTip -> do
+                  let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
+                      newServerTip = fromChainTip serverChainTip
+                      truncatedKnownLedgerStates = case chainPoint of
+                          ChainPointAtGenesis -> initialLedgerStateHistory
+                          ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
+                  return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
+              }
+
+
+
+          clientIdle_DoneNwithMaybeError
+            :: Nat n -- Number of requests inflight.
+            -> Maybe LedgerStateError -- Return value (maybe an error)
+            -> IO (CSP.ClientPipelinedStIdle n BlockInMode ChainPoint ChainTip IO ())
+          clientIdle_DoneNwithMaybeError n errorMay = case n of
+            Succ predN -> do
+              return (CSP.CollectResponse Nothing (clientNext_DoneNwithMaybeError predN errorMay)) -- Ignore remaining message responses
+            Zero -> do
+              atomicModifyIORef' errorIORef' . const $ (errorMay, ())
+              return (CSP.SendMsgDone ())
+
+          clientNext_DoneNwithMaybeError
+            :: Nat n -- Number of requests inflight.
+            -> Maybe LedgerStateError -- Return value (maybe an error)
+            -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
+          clientNext_DoneNwithMaybeError n errorMay =
+            CSP.ClientStNext {
+                CSP.recvMsgRollForward = \_ _ -> clientIdle_DoneNwithMaybeError n errorMay
+              , CSP.recvMsgRollBackward = \_ _ -> clientIdle_DoneNwithMaybeError n errorMay
+              }
+
+          fromChainTip :: ChainTip -> WithOrigin BlockNo
+          fromChainTip ct = case ct of
+            ChainTipAtGenesis -> Origin
+            ChainTip _ _ bno -> At bno
+
+
+atTerminationEpoch :: EpochNo -> [LedgerEvent] -> Maybe EpochNo
+atTerminationEpoch terminationEpoch events = do
+   let currentEpoch = [ currentEpoch' | PoolReap poolReapDets <- events
+                      , let currentEpoch' = prdEpochNo poolReapDets
+                      , currentEpoch' >= terminationEpoch
+                      ]
+   if not $ List.null currentEpoch
+   then Just $ List.head currentEpoch
+   else Nothing
