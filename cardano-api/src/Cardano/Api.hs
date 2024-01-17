@@ -745,6 +745,7 @@ module Cardano.Api (
     chainSyncClientPipelinedWithLedgerState,
 
     -- *** Ledger state conditions
+    AnyNewEpochState(..),
     LedgerStateCondition(..),
     checkLedgerStateCondition,
 

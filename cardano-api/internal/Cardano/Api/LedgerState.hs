@@ -40,6 +40,7 @@ module Cardano.Api.LedgerState
   , chainSyncClientPipelinedWithLedgerState
 
    -- * Ledger state conditions
+  , AnyNewEpochState(..)
   , LedgerStateCondition(..)
   , checkLedgerStateCondition
 
@@ -1037,41 +1038,40 @@ newtype LedgerState = LedgerState
   }
 
 getNewEpochState
-  :: Maybe (ShelleyBasedEra era)
+  :: ShelleyBasedEra era
   -> Consensus.LedgerState (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
   -> Either LedgerStateError (ShelleyAPI.NewEpochState (ShelleyLedgerEra era))
-getNewEpochState Nothing _ = Left ByronEraUnsupported
-getNewEpochState (Just era) x =
+getNewEpochState era x =
   case era of
     ShelleyBasedEraShelley ->
       case Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x of
         ShelleyLedgerState shelleyCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState shelleyCurrent
+          pure . Shelley.shelleyLedgerState $ currentState shelleyCurrent
         _ -> Left UnexpectedLedgerState
     ShelleyBasedEraAllegra ->
       case Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x of
         AllegraLedgerState allegraCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState allegraCurrent
+          pure . Shelley.shelleyLedgerState $ currentState allegraCurrent
         _ -> Left UnexpectedLedgerState
     ShelleyBasedEraMary ->
       case Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x of
         MaryLedgerState maryCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState maryCurrent
+          pure . Shelley.shelleyLedgerState $ currentState maryCurrent
         _ -> Left UnexpectedLedgerState
     ShelleyBasedEraAlonzo ->
       case Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x of
         AlonzoLedgerState alonzoCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState alonzoCurrent
+          pure . Shelley.shelleyLedgerState $ currentState alonzoCurrent
         _ -> Left UnexpectedLedgerState
     ShelleyBasedEraBabbage ->
       case Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x of
         BabbageLedgerState babbageCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState babbageCurrent
+          pure . Shelley.shelleyLedgerState $ currentState babbageCurrent
         _ -> Left UnexpectedLedgerState
     ShelleyBasedEraConway ->
       case Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x of
         ConwayLedgerState conwayCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState conwayCurrent
+          pure . Shelley.shelleyLedgerState $ currentState conwayCurrent
         _ -> Left UnexpectedLedgerState
 
 {-# COMPLETE ShelleyLedgerState,
@@ -1844,9 +1844,18 @@ constructGlobals sGen eInfo (Ledger.ProtVer majorPParamsVer _) =
 
 data LedgerStateCondition
   = ConditionMet
+    -- ^ The condition was met before the termination epoch.
   | ConditionNotMet
+    -- ^ The condition was not met before the termination epoch.
   deriving (Show, Eq)
---
+
+data AnyNewEpochState where
+  AnyNewEpochState
+    :: ShelleyBasedEra era
+    -> ShelleyAPI.NewEpochState (ShelleyLedgerEra era)
+    -> AnyNewEpochState
+
+
 -- | Reconstructs the ledger state and applies a supplied condition to it
 -- for every block. This function only terminates if the condition
 -- is met or we have reached the termination epoch. We need to provide
@@ -1861,7 +1870,7 @@ checkLedgerStateCondition
   -> ValidationMode
   -> EpochNo
   -- ^ Termination epoch
-  -> (forall era. ShelleyAPI.NewEpochState (ShelleyLedgerEra era) -> LedgerStateCondition)
+  -> (AnyNewEpochState -> LedgerStateCondition)
   -- ^ Condition you want to check against the new ledger state.
   --
   --
@@ -1984,31 +1993,34 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
                         )
                         validationMode
                         block
-                  let mSbe = inEonForEra Nothing Just era
-                  case newLedgerStateE of
-                    Left err -> clientIdle_DoneNwithMaybeError n (Just err)
-                    Right new@(newLedgerState, ledgerEvents) -> do
-                      let (knownLedgerStates', _) = pushLedgerState env knownLedgerStates slotNo new blockInMode
-                          newClientTip = At currBlockNo
-                          newServerTip = fromChainTip serverChainTip
-                      case getNewEpochState mSbe $ clsState newLedgerState of
-                        Left e ->
-                          let !err = Just e
-                          in clientIdle_DoneNwithMaybeError n err
-                        Right lState -> do
-                          atomicModifyIORef' stateIORef $ const (condition lState, ())
-                          -- Have we reached the termination epoch?
-                          case atTerminationEpoch terminationEpoch ledgerEvents of
-                            Just !currentEpoch -> do
-                               -- confirmed this works: error $ "atTerminationEpoch: Terminated at: " <> show currentEpoch
-                               let !err = Just $ TerminationEpochReached currentEpoch
-                               clientIdle_DoneNwithMaybeError n err
-                            Nothing -> do
-                              case condition lState of
-                                ConditionMet ->
-                                   let !noError = Nothing
-                                   in clientIdle_DoneNwithMaybeError n noError
-                                ConditionNotMet -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
+                  case inEonForEra Nothing Just era of
+                    Nothing -> let !err = Just ByronEraUnsupported
+                               in clientIdle_DoneNwithMaybeError n err
+                    Just sbe ->
+                      case newLedgerStateE of
+                        Left err -> clientIdle_DoneNwithMaybeError n (Just err)
+                        Right new@(newLedgerState, ledgerEvents) -> do
+                          let (knownLedgerStates', _) = pushLedgerState env knownLedgerStates slotNo new blockInMode
+                              newClientTip = At currBlockNo
+                              newServerTip = fromChainTip serverChainTip
+                          case getNewEpochState sbe $ clsState newLedgerState of
+                            Left e ->
+                              let !err = Just e
+                              in clientIdle_DoneNwithMaybeError n err
+                            Right lState -> do
+                              atomicModifyIORef' stateIORef $ const (condition $ AnyNewEpochState sbe lState, ())
+                              -- Have we reached the termination epoch?
+                              case atTerminationEpoch terminationEpoch ledgerEvents of
+                                Just !currentEpoch -> do
+                                   -- confirmed this works: error $ "atTerminationEpoch: Terminated at: " <> show currentEpoch
+                                   let !err = Just $ TerminationEpochReached currentEpoch
+                                   clientIdle_DoneNwithMaybeError n err
+                                Nothing -> do
+                                  case condition $ AnyNewEpochState sbe lState of
+                                    ConditionMet ->
+                                       let !noError = Nothing
+                                       in clientIdle_DoneNwithMaybeError n noError
+                                    ConditionNotMet -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
 
               , CSP.recvMsgRollBackward = \chainPoint serverChainTip -> do
                   let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
