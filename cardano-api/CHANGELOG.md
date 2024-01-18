@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.37.1.0
+
+- Implement checkLedgerStateConditions. This new function gives direct access to the `NewEpochState` which contains the ledger state. It also requires an `EpochNo` upon which it will terminate if the supplied condition is not met.
+  (feature, compatible)
+  [PR 424](https://github.com/IntersectMBO/cardano-api/pull/424)
+
+- Use MonadError for 'LedgerState'. Add `Show LedgerState`, `IOException` handling in `foldBlocks`
+  (compatible, improvement)
+  [PR 422](https://github.com/IntersectMBO/cardano-api/pull/422)
+
+- Support signing with drep extended key
+  (compatible)
+  [PR 419](https://github.com/IntersectMBO/cardano-api/pull/419)
+
 ## 8.37.0.0
 
 - Expose CurrentEra and UpcomingEra pattern synonyms
