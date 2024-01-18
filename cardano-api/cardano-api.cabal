@@ -114,6 +114,7 @@ library internal
                         Cardano.Api.LedgerEvents.Rule.BBODY.UTXOW
                         Cardano.Api.LedgerEvents.LedgerEvent
                         Cardano.Api.Modes
+                        Cardano.Api.Monad.Error
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
                         Cardano.Api.Pretty
@@ -204,6 +205,7 @@ library internal
                       , prettyprinter-ansi-terminal
                       , prettyprinter-configurable ^>= 1.15
                       , random
+                      , safe-exceptions
                       , scientific
                       , serialise
                       , small-steps ^>= 1.0

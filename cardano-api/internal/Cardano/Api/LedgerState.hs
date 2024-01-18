@@ -103,6 +103,7 @@ import           Cardano.Api.LedgerEvents.ConvertLedgerEvent
 import           Cardano.Api.LedgerEvents.LedgerEvent
 import           Cardano.Api.Modes (EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
+import           Cardano.Api.Monad.Error
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.Pretty
 import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
@@ -110,7 +111,7 @@ import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (un
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SpecialByron as Byron
-import           Cardano.Api.Utils (modifyError, textShow)
+import           Cardano.Api.Utils (textShow)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Genesis
@@ -178,13 +179,8 @@ import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
 import           Control.DeepSeq
 import           Control.Error.Util (note)
-import           Control.Exception
+import           Control.Exception.Safe
 import           Control.Monad
-import           Control.Monad.Except (MonadError (..), liftEither)
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson (FromJSON (parseJSON), Object, eitherDecodeStrict', withObject,
                    (.:), (.:?))
 import           Data.Aeson.Types (Parser)
@@ -295,11 +291,10 @@ renderLedgerStateError = \case
 
 -- | Get the environment and initial ledger state.
 initialLedgerState
-  :: MonadError InitialLedgerStateError m
-  => MonadIO m
+  :: MonadIOTransError InitialLedgerStateError t m
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  -> m (Env, LedgerState)
+  -> t m (Env, LedgerState)
   -- ^ The environment and initial ledger state
 initialLedgerState nodeConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
@@ -399,10 +394,9 @@ data FoldStatus
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
-  :: forall a m. ()
+  :: forall a t m. ()
   => Show a
-  => MonadError FoldBlocksError m
-  => MonadIO m
+  => MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
@@ -429,7 +423,7 @@ foldBlocks
   -- rollback. This is achieved by only calling the accumulator on states/blocks
   -- that are older than the security parameter, k. This has the side effect of
   -- truncating the last k blocks before the node's tip.
-  -> m a
+  -> t m a
   -- ^ The final state
 foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
@@ -437,12 +431,12 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
-  (env, ledgerState) <- withExceptT FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
+  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
-  errorIORef <- lift $ newIORef Nothing
-  stateIORef <- lift $ newIORef state0
+  errorIORef <- liftIO $ newIORef Nothing
+  stateIORef <- liftIO $ newIORef state0
 
   -- Derive the NetworkId as described in network-magic.md from the
   -- cardano-ledger-specs repo.
@@ -471,17 +465,14 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
         , localNodeSocketPath       = socketPath
         }
 
-  lift $ connectToLocalNode
+  liftIO $ connectToLocalNode
     connectInfo
     (protocols stateIORef errorIORef env ledgerState)
 
-  lift (readIORef errorIORef) >>= \case
-    Just err -> throwE (FoldBlocksApplyBlockError err)
-    Nothing -> lift $ readIORef stateIORef
+  liftIO (readIORef errorIORef) >>= \case
+    Just err -> throwError (FoldBlocksApplyBlockError err)
+    Nothing -> liftIO $ readIORef stateIORef
   where
-    handleIOExceptions :: ExceptT FoldBlocksError IO c -> m c
-    handleIOExceptions = liftEither <=< liftIO . fmap (join . first FoldBlocksIOException) . try . runExceptT
-
     protocols :: ()
       => IORef a
       -> IORef (Maybe LedgerStateError)
@@ -1255,10 +1246,9 @@ shelleyPraosNonce genesisHash =
   Ledger.Nonce (Cardano.Crypto.Hash.Class.castHash $ unGenesisHashShelley genesisHash)
 
 readCardanoGenesisConfig
-  :: MonadError GenesisConfigError m
-  => MonadIO m
+  :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
-  -> m GenesisConfig
+  -> t m GenesisConfig
 readCardanoGenesisConfig enc = do
   byronGenesis <- readByronGenesisConfig enc
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
@@ -1305,54 +1295,49 @@ renderGenesisConfigError ne =
         ]
 
 readByronGenesisConfig
-  :: MonadError GenesisConfigError m
-  => MonadIO m
+  :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
-  -> m Cardano.Chain.Genesis.Config
+  -> t m Cardano.Chain.Genesis.Config
 readByronGenesisConfig enc = do
   let file = unFile $ ncByronGenesisFile enc
   genHash <- liftEither
                 . first NEError
                 $ Cardano.Crypto.Hashing.decodeAbstractHash (unGenesisHashByron $ ncByronGenesisHash enc)
   modifyError (NEByronConfig file)
-                $ Cardano.Chain.Genesis.mkConfigFromFile (ncRequiresNetworkMagic enc) file genHash
+              $ Cardano.Chain.Genesis.mkConfigFromFile (ncRequiresNetworkMagic enc) file genHash
 
 readShelleyGenesisConfig
-  :: MonadError GenesisConfigError m
-  => MonadIO m
+  :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
-  -> m ShelleyConfig
+  -> t m ShelleyConfig
 readShelleyGenesisConfig enc = do
   let file = ncShelleyGenesisFile enc
   modifyError (NEShelleyConfig (unFile file) . renderShelleyGenesisError)
     $ readShelleyGenesis file (ncShelleyGenesisHash enc)
 
 readAlonzoGenesisConfig
-  :: MonadError GenesisConfigError m
-  => MonadIO m
+  :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
-  -> m AlonzoGenesis
+  -> t m AlonzoGenesis
 readAlonzoGenesisConfig enc = do
   let file = ncAlonzoGenesisFile enc
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
     $ readAlonzoGenesis file (ncAlonzoGenesisHash enc)
 
 readConwayGenesisConfig
-  :: MonadError GenesisConfigError m
-  => MonadIO m
+  :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
-  -> m (ConwayGenesis Shelley.StandardCrypto)
+  -> t m (ConwayGenesis Shelley.StandardCrypto)
 readConwayGenesisConfig enc = do
   let file = ncConwayGenesisFile enc
   modifyError (NEConwayConfig (unFile file) . renderConwayGenesisError)
     $ readConwayGenesis file (ncConwayGenesisHash enc)
 
 readShelleyGenesis
-  :: forall m. MonadError ShelleyGenesisError m
-  => MonadIO m
+  :: forall m t. MonadIOTransError ShelleyGenesisError t m
   => ShelleyGenesisFile 'In
   -> GenesisHashShelley
-  -> m ShelleyConfig
+  -> t m ShelleyConfig
 readShelleyGenesis (File file) expectedGenesisHash = do
     content <- modifyError id $ handleIOExceptT (ShelleyGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashShelley (Cardano.Crypto.Hash.Class.hashWith id content)
@@ -1362,7 +1347,7 @@ readShelleyGenesis (File file) expectedGenesisHash = do
                   $ Aeson.eitherDecodeStrict' content
     pure $ ShelleyConfig genesis genesisHash
   where
-    checkExpectedGenesisHash :: GenesisHashShelley -> m ()
+    checkExpectedGenesisHash :: GenesisHashShelley -> t m ()
     checkExpectedGenesisHash actual =
       when (actual /= expectedGenesisHash) $
         throwError (ShelleyGenesisHashMismatch actual expectedGenesisHash)
@@ -1398,18 +1383,17 @@ renderShelleyGenesisError sge =
           ]
 
 readAlonzoGenesis
-  :: forall m. MonadError AlonzoGenesisError m
-  => MonadIO m
+  :: forall m t. MonadIOTransError AlonzoGenesisError t m
   => File AlonzoGenesis 'In
   -> GenesisHashAlonzo
-  -> m AlonzoGenesis
+  -> t m AlonzoGenesis
 readAlonzoGenesis (File file) expectedGenesisHash = do
     content <- modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
     liftEither . first (AlonzoGenesisDecodeError file . Text.pack) $ Aeson.eitherDecodeStrict' content
   where
-    checkExpectedGenesisHash :: GenesisHashAlonzo -> m ()
+    checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
     checkExpectedGenesisHash actual =
       when (actual /= expectedGenesisHash) $
         throwError (AlonzoGenesisHashMismatch actual expectedGenesisHash)
@@ -1445,18 +1429,17 @@ renderAlonzoGenesisError sge =
           ]
 
 readConwayGenesis
-  :: forall m. MonadError ConwayGenesisError m
-  => MonadIO m
+  :: forall m t. MonadIOTransError ConwayGenesisError t m
   => ConwayGenesisFile 'In
   -> GenesisHashConway
-  -> m (ConwayGenesis Shelley.StandardCrypto)
+  -> t m (ConwayGenesis Shelley.StandardCrypto)
 readConwayGenesis (File file) expectedGenesisHash = do
     content <- modifyError id $ handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
     liftEither . first (ConwayGenesisDecodeError file . Text.pack) $ Aeson.eitherDecodeStrict' content
   where
-    checkExpectedGenesisHash :: GenesisHashConway -> m ()
+    checkExpectedGenesisHash :: GenesisHashConway -> t m ()
     checkExpectedGenesisHash actual =
       when (actual /= expectedGenesisHash) $
         throwError (ConwayGenesisHashMismatch actual expectedGenesisHash)
@@ -1872,8 +1855,7 @@ data AnyNewEpochState where
 -- is met or we have reached the termination epoch. We need to provide
 -- a termination epoch otherwise blocks would be applied indefinitely.
 checkLedgerStateCondition
-  :: MonadError FoldBlocksError m
-  => MonadIO m
+  :: MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
@@ -1890,9 +1872,9 @@ checkLedgerStateCondition
   -- rollback. This is achieved by only calling the accumulator on states/blocks
   -- that are older than the security parameter, k. This has the side effect of
   -- truncating the last k blocks before the node's tip.
-  -> m LedgerStateCondition
+  -> t m LedgerStateCondition
   -- ^ The final state
-checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminationEpoch condition = do
+checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminationEpoch condition = handleIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -2080,3 +2062,7 @@ atTerminationEpoch terminationEpoch events = do
    if not $ List.null currentEpoch
    then Just $ List.head currentEpoch
    else Nothing
+
+handleIOExceptions :: MonadIOTransError FoldBlocksError t m => ExceptT FoldBlocksError IO a -> t m a
+handleIOExceptions = liftEither <=< liftIO . fmap (join . first FoldBlocksIOException) . try . runExceptT
+
