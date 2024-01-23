@@ -17,7 +17,8 @@
 module Cardano.Api.Block (
 
     -- * Blocks in the context of an era
-    Block(.., Block),
+    Block(..),
+    pattern Block,
     BlockHeader(..),
     getBlockHeader,
 
