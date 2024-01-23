@@ -32,6 +32,7 @@ module Cardano.Api.LedgerState
   , applyBlock
   , ValidationMode(..)
   , applyBlockWithEvents
+  , AnyNewEpochState(..)
 
     -- * Traversing the block chain
   , foldBlocks
@@ -181,6 +182,7 @@ import           Control.DeepSeq
 import           Control.Error.Util (note)
 import           Control.Exception.Safe
 import           Control.Monad
+import           Control.Monad.State.Strict
 import           Data.Aeson as Aeson (FromJSON (parseJSON), Object, eitherDecodeStrict', withObject,
                    (.:), (.:?))
 import           Data.Aeson.Types (Parser)
@@ -1855,7 +1857,7 @@ data AnyNewEpochState where
 -- is met or we have reached the termination epoch. We need to provide
 -- a termination epoch otherwise blocks would be applied indefinitely.
 checkLedgerStateCondition
-  :: MonadIOTransError FoldBlocksError t m
+  :: forall t m s. MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
@@ -1863,7 +1865,11 @@ checkLedgerStateCondition
   -> ValidationMode
   -> EpochNo
   -- ^ Termination epoch
-  -> (AnyNewEpochState -> LedgerStateCondition)
+  -> s
+  -- ^ an initial value for the condition state
+  -> ( AnyNewEpochState -- ^ current epoch state
+      -> State s LedgerStateCondition
+     )
   -- ^ Condition you want to check against the new ledger state.
   --
   --
@@ -1872,9 +1878,9 @@ checkLedgerStateCondition
   -- rollback. This is achieved by only calling the accumulator on states/blocks
   -- that are older than the security parameter, k. This has the side effect of
   -- truncating the last k blocks before the node's tip.
-  -> t m LedgerStateCondition
+  -> t m (LedgerStateCondition, s)
   -- ^ The final state
-checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminationEpoch condition = handleIOExceptions $ do
+checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -1886,7 +1892,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
   errorIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef Nothing
-  stateIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef ConditionNotMet
+  stateIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef (ConditionNotMet, initialResult)
 
   -- Derive the NetworkId as described in network-magic.md from the
   -- cardano-ledger-specs repo.
@@ -1924,7 +1930,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
     Nothing -> modifyError FoldBlocksIOException . liftIO $ readIORef stateIORef
   where
     protocols :: ()
-      => IORef LedgerStateCondition
+      => IORef (LedgerStateCondition, s)
       -> IORef (Maybe LedgerStateError)
       -> Env
       -> LedgerState
@@ -1940,7 +1946,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
     -- | Defines the client side of the chain sync protocol.
     chainSyncClient :: Word32
                     -- ^ The maximum number of concurrent requests.
-                    -> IORef LedgerStateCondition
+                    -> IORef (LedgerStateCondition, s)
                     -- ^ State accumulator. Written to on every block.
                     -> IORef (Maybe LedgerStateError)
                     -- ^ Resulting error if any. Written to once on protocol
@@ -2001,7 +2007,10 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
                               let !err = Just e
                               in clientIdle_DoneNwithMaybeError n err
                             Right lState -> do
-                              atomicModifyIORef' stateIORef $ const (condition $ AnyNewEpochState sbe lState, ())
+                              let newEpochState = AnyNewEpochState sbe lState
+                              condition <- atomicModifyIORef' stateIORef $ \(_prevCondition, previousState) -> do
+                                let updatedState@(!newCondition, !_) = runState (checkCondition newEpochState) previousState
+                                (updatedState, newCondition)
                               -- Have we reached the termination epoch?
                               case atTerminationEpoch terminationEpoch ledgerEvents of
                                 Just !currentEpoch -> do
@@ -2009,7 +2018,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
                                    let !err = Just $ TerminationEpochReached currentEpoch
                                    clientIdle_DoneNwithMaybeError n err
                                 Nothing -> do
-                                  case condition $ AnyNewEpochState sbe lState of
+                                  case condition of
                                     ConditionMet ->
                                        let !noError = Nothing
                                        in clientIdle_DoneNwithMaybeError n noError
@@ -2054,14 +2063,12 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
 
 
 atTerminationEpoch :: EpochNo -> [LedgerEvent] -> Maybe EpochNo
-atTerminationEpoch terminationEpoch events = do
-   let currentEpoch = [ currentEpoch' | PoolReap poolReapDets <- events
-                      , let currentEpoch' = prdEpochNo poolReapDets
-                      , currentEpoch' >= terminationEpoch
-                      ]
-   if not $ List.null currentEpoch
-   then Just $ List.head currentEpoch
-   else Nothing
+atTerminationEpoch terminationEpoch events =
+  listToMaybe
+    [ currentEpoch' | PoolReap poolReapDets <- events
+    , let currentEpoch' = prdEpochNo poolReapDets
+    , currentEpoch' >= terminationEpoch
+    ]
 
 handleIOExceptions :: MonadIOTransError FoldBlocksError t m => ExceptT FoldBlocksError IO a -> t m a
 handleIOExceptions = liftEither <=< liftIO . fmap (join . first FoldBlocksIOException) . try . runExceptT
