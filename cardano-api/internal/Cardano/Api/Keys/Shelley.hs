@@ -773,12 +773,12 @@ instance SerialiseAsBech32 (Hash CommitteeHotKey) where
     bech32PrefixesPermitted _ = ["committee_hot"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeHotKey) where
-    bech32PrefixFor         _ =  "drep_vk"
-    bech32PrefixesPermitted _ = ["drep_vk"]
+    bech32PrefixFor         _ =  "cc_hot_vk"
+    bech32PrefixesPermitted _ = ["cc_hot_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeHotKey) where
-    bech32PrefixFor         _ =  "drep_sk"
-    bech32PrefixesPermitted _ = ["drep_sk"]
+    bech32PrefixFor         _ =  "cc_hot_sk"
+    bech32PrefixesPermitted _ = ["cc_hot_sk"]
 
 --
 -- Constitutional Committee Cold Keys
@@ -881,12 +881,12 @@ instance SerialiseAsBech32 (Hash CommitteeColdKey) where
     bech32PrefixesPermitted _ = ["committee_cold"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdKey) where
-    bech32PrefixFor         _ =  "drep_vk"
-    bech32PrefixesPermitted _ = ["drep_vk"]
+    bech32PrefixFor         _ =  "cc_cold_vk"
+    bech32PrefixesPermitted _ = ["cc_cold_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeColdKey) where
-    bech32PrefixFor         _ =  "drep_sk"
-    bech32PrefixesPermitted _ = ["drep_sk"]
+    bech32PrefixFor         _ =  "cc_cold_sk"
+    bech32PrefixesPermitted _ = ["cc_cold_sk"]
 
 --
 -- Shelley genesis extended ed25519 keys
