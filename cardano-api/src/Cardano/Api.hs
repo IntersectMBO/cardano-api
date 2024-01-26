@@ -837,6 +837,7 @@ module Cardano.Api (
 
     -- * Constitutional Committee keys
     CommitteeColdKey,
+    CommitteeColdExtendedKey,
     CommitteeHotKey,
 
     -- * Genesis file
