@@ -747,6 +747,7 @@ module Cardano.Api (
     -- *** Ledger state conditions
     LedgerStateCondition(..),
     checkLedgerStateCondition,
+    AnyNewEpochState(..),
 
     -- *** Errors
     LedgerStateError(..),
