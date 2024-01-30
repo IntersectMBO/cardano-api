@@ -370,7 +370,7 @@ test-suite cardano-api-golden
                       , errors
                       , filepath
                       , hedgehog >= 1.1
-                      , hedgehog-extras ^>= 0.6.0.1
+                      , hedgehog-extras ^>= 0.6.0.2
                       , microlens
                       , parsec
                       , plutus-core ^>= 1.15
