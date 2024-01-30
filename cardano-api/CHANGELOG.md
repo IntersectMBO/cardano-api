@@ -1,5 +1,10 @@
 # Changelog for cardano-api
 
+## 8.39.2.0
+
+- Bump dependencies version bounds
+  Integrate changes
+
 ## 8.39.1.0
 
 - Enable deposit return script addresses
