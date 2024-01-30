@@ -33,6 +33,7 @@ module Cardano.Api.LedgerState
   , ValidationMode(..)
   , applyBlockWithEvents
   , AnyNewEpochState(..)
+  , getAnyNewEpochState
 
     -- * Traversing the block chain
   , foldBlocks
@@ -49,10 +50,6 @@ module Cardano.Api.LedgerState
   , FoldBlocksError(..)
   , GenesisConfigError(..)
   , InitialLedgerStateError(..)
-  , renderLedgerStateError
-  , renderFoldBlocksError
-  , renderGenesisConfigError
-  , renderInitialLedgerStateError
 
   -- * Leadership schedule
   , LeadershipError(..)
@@ -91,7 +88,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Core (Eon (inEonForEra))
+import           Cardano.Api.Eras.Core (forEraMaybeEon)
 import           Cardano.Api.Error as Api
 import           Cardano.Api.Genesis
 import           Cardano.Api.IO
@@ -232,16 +229,14 @@ data InitialLedgerStateError
 
 instance Exception InitialLedgerStateError
 
-renderInitialLedgerStateError :: InitialLedgerStateError -> Text
-renderInitialLedgerStateError ilse = case ilse of
-  ILSEConfigFile err ->
-    "Failed to read or parse the network config file: " <> err
-  ILSEGenesisFile err ->
-    "Failed to read or parse a genesis file linked from the network config file: "
-    <> renderGenesisConfigError err
-  ILSELedgerConsensusConfig err ->
-    "Failed to derive the Ledger or Consensus config: "
-    <> renderGenesisConfigError err
+instance Error InitialLedgerStateError where
+  prettyError = \case
+    ILSEConfigFile err ->
+      "Failed to read or parse the network config file:" <+> pretty err
+    ILSEGenesisFile err ->
+      "Failed to read or parse a genesis file linked from the network config file:" <+> prettyError err
+    ILSELedgerConsensusConfig err ->
+      "Failed to derive the Ledger or Consensus config:" <+> prettyError err
 
 data LedgerStateError
   = ApplyBlockHashMismatch Text
@@ -268,28 +263,27 @@ data LedgerStateError
 
 instance Exception LedgerStateError
 
-
-renderLedgerStateError :: LedgerStateError -> Text
-renderLedgerStateError = \case
-  DebugError e -> Text.pack e
-  ApplyBlockHashMismatch err -> "Applying a block did not result in the expected block hash: " <> err
-  ApplyBlockError hardForkLedgerError -> "Applying a block resulted in an error: " <> textShow hardForkLedgerError
-  InvalidRollback oldestSupported rollbackPoint ->
-      "Encountered a rollback larger than the security parameter. Attempted to roll back to "
-      <> textShow rollbackPoint
-      <> ", but oldest supported slot is "
-      <> textShow oldestSupported
-  TerminationEpochReached epochNo -> mconcat
-    [ "The ledger state condition you were interested in was not met "
-    , "prior to the termination epoch: " <> textShow epochNo
-    ]
-  UnexpectedLedgerState expectedEra unexpectedLS ->
-    mconcat [ "Expected ledger state from the "
-            , textShow expectedEra
-            , " era, but got "
-            , textShow unexpectedLS
-            ]
-  ByronEraUnsupported -> "Byron era is not supported"
+instance Error LedgerStateError where
+  prettyError = \case
+    DebugError e -> pretty e
+    ApplyBlockHashMismatch err -> "Applying a block did not result in the expected block hash:" <+> pretty err
+    ApplyBlockError hardForkLedgerError -> "Applying a block resulted in an error:" <+> pshow hardForkLedgerError
+    InvalidRollback oldestSupported rollbackPoint ->
+        "Encountered a rollback larger than the security parameter. Attempted to roll back to"
+        <+> pshow rollbackPoint
+        <> ", but oldest supported slot is"
+        <+> pshow oldestSupported
+    TerminationEpochReached epochNo -> mconcat
+      [ "The ledger state condition you were interested in was not met "
+      , "prior to the termination epoch:" <+> pshow epochNo
+      ]
+    UnexpectedLedgerState expectedEra unexpectedLS ->
+      mconcat [ "Expected ledger state from the "
+              , pshow expectedEra
+              , " era, but got "
+              , pshow unexpectedLS
+              ]
+    ByronEraUnsupported -> "Byron era is not supported"
 
 -- | Get the environment and initial ledger state.
 initialLedgerState
@@ -379,11 +373,11 @@ data FoldBlocksError
   | FoldBlocksIOException !IOException
   deriving Show
 
-renderFoldBlocksError :: FoldBlocksError -> Text
-renderFoldBlocksError fbe = case fbe of
-  FoldBlocksInitialLedgerStateError err -> renderInitialLedgerStateError err
-  FoldBlocksApplyBlockError err -> "Failed when applying a block: " <> renderLedgerStateError err
-  FoldBlocksIOException err -> "IOException: " <> Text.pack (displayException err)
+instance Error FoldBlocksError where
+  prettyError = \case
+    FoldBlocksInitialLedgerStateError err -> prettyError err
+    FoldBlocksApplyBlockError err -> "Failed when applying a block:" <+> prettyError err
+    FoldBlocksIOException err -> "IOException:" <+> prettyException err
 
 -- | Type that lets us decide whether to continue or stop
 -- the fold from within our accumulation function.
@@ -1042,6 +1036,15 @@ newtype LedgerState = LedgerState
                     (Consensus.CardanoEras Consensus.StandardCrypto))
   } deriving Show
 
+
+-- | Retrieve new epoch state from the ledger state, or an error on failure
+getAnyNewEpochState
+  :: ShelleyBasedEra era
+  -> LedgerState
+  -> Either LedgerStateError AnyNewEpochState
+getAnyNewEpochState sbe (LedgerState ls) =
+  AnyNewEpochState sbe <$> getNewEpochState sbe ls
+
 getNewEpochState
   :: ShelleyBasedEra era
   -> Consensus.LedgerState (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
@@ -1270,30 +1273,29 @@ data GenesisConfigError
 
 instance Exception GenesisConfigError
 
-renderGenesisConfigError :: GenesisConfigError -> Text
-renderGenesisConfigError ne =
-  case ne of
-    NEError t -> "Error: " <> t
+instance Error GenesisConfigError where
+  prettyError = \case
+    NEError t -> "Error:" <+> pretty t
     NEByronConfig fp ce ->
       mconcat
-        [ "Failed reading Byron genesis file ", textShow fp, ": ", textShow ce
+        [ "Failed reading Byron genesis file ", pretty fp, ": ", pshow ce
         ]
     NEShelleyConfig fp txt ->
       mconcat
-        [ "Failed reading Shelley genesis file ", textShow fp, ": ", txt
+        [ "Failed reading Shelley genesis file ", pretty fp, ": ", pretty txt
         ]
     NEAlonzoConfig fp txt ->
       mconcat
-        [ "Failed reading Alonzo genesis file ", textShow fp, ": ", txt
+        [ "Failed reading Alonzo genesis file ", pretty fp, ": ", pretty txt
         ]
     NEConwayConfig fp txt ->
       mconcat
-        [ "Failed reading Conway genesis file ", textShow fp, ": ", txt
+        [ "Failed reading Conway genesis file ", pretty fp, ": ", pretty txt
         ]
     NECardanoConfig err ->
       mconcat
         [ "With Cardano protocol, Byron/Shelley config mismatch:\n"
-        , "   ", err
+        , "   ", pretty err
         ]
 
 readByronGenesisConfig
@@ -1851,6 +1853,10 @@ data AnyNewEpochState where
     -> ShelleyAPI.NewEpochState (ShelleyLedgerEra era)
     -> AnyNewEpochState
 
+instance Show AnyNewEpochState where
+  showsPrec p (AnyNewEpochState sbe ledgerNewEpochState) =
+    shelleyBasedEraConstraints sbe $ showsPrec p ledgerNewEpochState
+
 
 -- | Reconstructs the ledger state and applies a supplied condition to it
 -- for every block. This function only terminates if the condition
@@ -1992,7 +1998,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
                         )
                         validationMode
                         block
-                  case inEonForEra Nothing Just era of
+                  case forEraMaybeEon era of
                     Nothing -> let !err = Just ByronEraUnsupported
                                in clientIdle_DoneNwithMaybeError n err
                     Just sbe ->

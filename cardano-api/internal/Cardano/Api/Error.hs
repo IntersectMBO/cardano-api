@@ -22,7 +22,6 @@ import           Control.Monad.Except (throwError)
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Prettyprinter
 import           System.Directory (doesFileExist)
 import           System.IO (Handle)
 

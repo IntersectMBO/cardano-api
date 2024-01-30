@@ -212,7 +212,7 @@ import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import           Cardano.Ledger.Binary (Annotated (..), reAnnotate)
+import           Cardano.Ledger.Binary (Annotated (..))
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Block as Ledger
 import           Cardano.Ledger.Core ()
@@ -2409,7 +2409,7 @@ makeByronTransactionBody txIns txOuts = do
                 (\out -> toByronTxOut out ?! classifyRangeError out)
                 outs'
     return $
-      reAnnotate CBOR.byronProtVer $
+      CBOR.reAnnotate CBOR.byronProtVer $
         Annotated
           (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
           ()
