@@ -746,18 +746,15 @@ module Cardano.Api (
 
     -- *** Ledger state conditions
     LedgerStateCondition(..),
-    checkLedgerStateCondition,
     AnyNewEpochState(..),
+    checkLedgerStateCondition,
+    getAnyNewEpochState,
 
     -- *** Errors
     LedgerStateError(..),
     FoldBlocksError(..),
     GenesisConfigError(..),
     InitialLedgerStateError(..),
-    renderLedgerStateError,
-    renderFoldBlocksError,
-    renderGenesisConfigError,
-    renderInitialLedgerStateError,
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,

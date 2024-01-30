@@ -90,7 +90,6 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lens.Micro ((.~), (^.))
-import           Prettyprinter
 
 {- HLINT ignore "Redundant return" -}
 --- ----------------------------------------------------------------------------
