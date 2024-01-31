@@ -118,7 +118,7 @@ shelleyGenesisDefaults =
         & ppMaxBHSizeL .~ 1100                  -- TODO: compute from crypto
         & ppMaxBBSizeL .~ 64 * 1024             -- max 64kb blocks
         & ppMaxTxSizeL .~ 16 * 1024             -- max 16kb txs
-        & ppEMaxL      .~ 18
+        & ppEMaxL      .~ EpochInterval 18
         & ppMinFeeAL   .~ Coin 1                -- The linear factor for the minimum fee calculation
         & ppMinFeeBL   .~ Coin 0                -- The constant factor for the minimum fee calculation
 
@@ -131,4 +131,3 @@ shelleyGenesisDefaults =
   where
     k = 2160
     zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
-

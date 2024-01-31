@@ -95,6 +95,6 @@ import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SpecialByron
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Value
