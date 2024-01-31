@@ -82,7 +82,6 @@ type MaryEraOnwardsConstraints era =
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.MaryEraTxBody (ShelleyLedgerEra era)
-  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
 
