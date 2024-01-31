@@ -151,6 +151,8 @@ import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
@@ -161,9 +163,11 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Maybe
+import           Data.OSet.Strict (OSet)
+import qualified Data.OSet.Strict as OSet
 import           Data.Ratio (Ratio, (%))
 import           Data.String
-import           Data.Word (Word64)
+import           Data.Word (Word16, Word32, Word64)
 import           Numeric.Natural (Natural)
 
 import           Test.Gen.Cardano.Api.Era
@@ -872,6 +876,12 @@ genSeed n = Crypto.mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 genNat :: Gen Natural
 genNat = Gen.integral (Range.linear 0 10)
 
+genWord16 :: Gen Word16
+genWord16 = Gen.integral (Range.linear 0 10)
+
+genWord32 :: Gen Word32
+genWord32 = Gen.integral (Range.linear 0 10)
+
 genRational :: Gen Rational
 genRational =
     (\d -> ratioToRational (1 % d)) <$> genDenominator
@@ -897,6 +907,9 @@ genRationalInt64 =
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
 
+genEpochInterval :: Gen Ledger.EpochInterval
+genEpochInterval = Ledger.EpochInterval <$> Gen.word32 (Range.linear 0 10)
+
 genPraosNonce :: Gen PraosNonce
 genPraosNonce = makePraosNonce <$> Gen.bytes (Range.linear 0 32)
 
@@ -917,7 +930,7 @@ genProtocolParameters era = do
   protocolParamStakeAddressDeposit <- genLovelace
   protocolParamStakePoolDeposit <- genLovelace
   protocolParamMinPoolCost <- genLovelace
-  protocolParamPoolRetireMaxEpoch <- genEpochNo
+  protocolParamPoolRetireMaxEpoch <- genEpochInterval
   protocolParamStakePoolTargetNum <- genNat
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
@@ -944,16 +957,16 @@ genProtocolParametersUpdate era = do
   protocolUpdateProtocolVersion     <- Gen.maybe ((,) <$> genNat <*> genNat)
   protocolUpdateDecentralization    <- Gen.maybe genRational
   protocolUpdateExtraPraosEntropy   <- Gen.maybe genMaybePraosNonce
-  protocolUpdateMaxBlockHeaderSize  <- Gen.maybe genNat
-  protocolUpdateMaxBlockBodySize    <- Gen.maybe genNat
-  protocolUpdateMaxTxSize           <- Gen.maybe genNat
+  protocolUpdateMaxBlockHeaderSize  <- Gen.maybe genWord16
+  protocolUpdateMaxBlockBodySize    <- Gen.maybe genWord32
+  protocolUpdateMaxTxSize           <- Gen.maybe genWord32
   protocolUpdateTxFeeFixed          <- Gen.maybe genLovelace
   protocolUpdateTxFeePerByte        <- Gen.maybe genLovelace
   protocolUpdateMinUTxOValue        <- Gen.maybe genLovelace
   protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
   protocolUpdateStakePoolDeposit    <- Gen.maybe genLovelace
   protocolUpdateMinPoolCost         <- Gen.maybe genLovelace
-  protocolUpdatePoolRetireMaxEpoch  <- Gen.maybe genEpochNo
+  protocolUpdatePoolRetireMaxEpoch  <- Gen.maybe genEpochInterval
   protocolUpdateStakePoolTargetNum  <- Gen.maybe genNat
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
@@ -1066,17 +1079,26 @@ genGovernancePollAnswer =
    genGovernancePollHash =
      GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
 
-genProposals :: forall era. ConwayEraOnwards era -> Gen [Proposal era]
+genProposals :: ConwayEraOnwards era -> Gen (TxProposalProcedures BuildTx era)
 genProposals w =
-  conwayEraOnwardsTestConstraints w
-    $ Gen.list (Range.constant 1 10)
-    $ genProposal w
+  conwayEraOnwardsConstraints w
+    $ TxProposalProcedures
+        <$> genTxProposalsOSet w
+        <*> return (BuildTxWith mempty)
 
-genProposal :: ConwayEraOnwards era -> Gen (Proposal era)
+genTxProposalsOSet
+  :: ConwayEraOnwards era
+  -> Gen (OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
+genTxProposalsOSet w =
+  conwayEraOnwardsConstraints w
+    $ OSet.fromFoldable <$> Gen.list (Range.constant 1 10) (genProposal w)
+
+genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =
-  conwayEraOnwardsTestConstraints w $ fmap Proposal Q.arbitrary
+  conwayEraOnwardsTestConstraints w Q.arbitrary
 
-genVotingProcedures :: ConwayEraOnwards era -> Gen (ShelleyApi.VotingProcedures era)
+-- TODO: Generate map of script witnesses
+genVotingProcedures :: ConwayEraOnwards era -> Gen (Api.TxVotingProcedures BuildTx era)
 genVotingProcedures w =
   conwayEraOnwardsConstraints w
-    $ ShelleyApi.VotingProcedures <$> Q.arbitrary
+    $ Api.TxVotingProcedures <$> Q.arbitrary <*> return (BuildTxWith mempty)
