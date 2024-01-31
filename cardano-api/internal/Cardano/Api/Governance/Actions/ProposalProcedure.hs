@@ -47,23 +47,26 @@ data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 -- TODO: Conway - Transitiion to Ledger.GovAction
 data GovernanceAction era
   = MotionOfNoConfidence
-      (StrictMaybe (Ledger.PrevGovActionId Ledger.CommitteePurpose StandardCrypto))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
   | ProposeNewConstitution
-      (StrictMaybe (Ledger.PrevGovActionId Ledger.ConstitutionPurpose StandardCrypto))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose (ShelleyLedgerEra era)))
       (Ledger.Anchor StandardCrypto)
   | ProposeNewCommittee
-      (StrictMaybe (Ledger.PrevGovActionId Ledger.CommitteePurpose StandardCrypto))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
       [Hash CommitteeColdKey] -- ^ Old constitutional committee
       (Map (Hash CommitteeColdKey) EpochNo) -- ^ New committee members with epoch number when each of them expires
       Rational -- ^ Quorum of the committee that is necessary for a successful vote
   | InfoAct
-  | TreasuryWithdrawal [(Network, StakeCredential, Lovelace)]
+  | TreasuryWithdrawal
+      [(Network, StakeCredential, Lovelace)]
+      !(StrictMaybe (Shelley.ScriptHash StandardCrypto)) -- ^ Governance policy
   | InitiateHardfork
-      (StrictMaybe (Ledger.PrevGovActionId Ledger.HardForkPurpose StandardCrypto))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.HardForkPurpose (ShelleyLedgerEra era)))
       ProtVer
   | UpdatePParams
-      (StrictMaybe (Ledger.PrevGovActionId Ledger.PParamUpdatePurpose StandardCrypto))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.PParamUpdatePurpose (ShelleyLedgerEra era)))
       (Ledger.PParamsUpdate (ShelleyLedgerEra era))
+      !(StrictMaybe (Shelley.ScriptHash StandardCrypto)) -- ^ Governance policy
 
 toGovernanceAction :: ()
   => ShelleyBasedEra era
@@ -90,13 +93,13 @@ toGovernanceAction sbe =
               $ boundRational @UnitInterval quor)
     InfoAct ->
       Gov.InfoAction
-    TreasuryWithdrawal withdrawals ->
+    TreasuryWithdrawal withdrawals govPol ->
       let m = Map.fromList [(L.RewardAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
-      in Gov.TreasuryWithdrawals m
+      in Gov.TreasuryWithdrawals m govPol
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
-    UpdatePParams preGovId ppup ->
-      Gov.ParameterChange preGovId ppup
+    UpdatePParams preGovId ppup govPol ->
+      Gov.ParameterChange preGovId ppup govPol
 
 fromGovernanceAction
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
@@ -107,15 +110,15 @@ fromGovernanceAction = \case
     MotionOfNoConfidence prevGovId
   Gov.NewConstitution prevGovId constitution ->
     ProposeNewConstitution prevGovId $ Gov.constitutionAnchor constitution
-  Gov.ParameterChange prevGovId pparams ->
-    UpdatePParams prevGovId pparams
+  Gov.ParameterChange prevGovId pparams govPolicy ->
+    UpdatePParams prevGovId pparams govPolicy
   Gov.HardForkInitiation prevGovId pVer ->
     InitiateHardfork prevGovId pVer
-  Gov.TreasuryWithdrawals withdrawlMap ->
+  Gov.TreasuryWithdrawals withdrawlMap govPolicy ->
     let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), fromShelleyLovelace coin)
               | (rwdAcnt, coin) <- Map.toList withdrawlMap
               ]
-    in TreasuryWithdrawal res
+    in TreasuryWithdrawal res govPolicy
   Gov.UpdateCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
     ProposeNewCommittee
       prevGovId
@@ -186,11 +189,12 @@ fromProposalProcedure sbe (Proposal pp) =
 
 
 createPreviousGovernanceActionId
-  :: TxId
+  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => TxId
   -> Word32 -- ^ Governance action transation index
-  -> Ledger.PrevGovActionId  (r :: Ledger.GovActionPurpose) StandardCrypto
+  -> Ledger.GovPurposeId (r :: Ledger.GovActionPurpose) (ShelleyLedgerEra era)
 createPreviousGovernanceActionId  txid index =
-   Ledger.PrevGovActionId $ createGovernanceActionId txid index
+   Ledger.GovPurposeId $ createGovernanceActionId txid index
 
 
 createGovernanceActionId :: TxId -> Word32 -> Gov.GovActionId StandardCrypto
