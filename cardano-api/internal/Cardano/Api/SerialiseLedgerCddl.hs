@@ -42,7 +42,7 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IO
 import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.Tx
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 
 import qualified Cardano.Chain.UTxO as Byron

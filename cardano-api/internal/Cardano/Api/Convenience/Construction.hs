@@ -21,8 +21,8 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Fees
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
