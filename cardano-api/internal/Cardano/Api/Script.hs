@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -693,7 +692,7 @@ data WitCtxMint
 -- | A tag type for the context in which a script is used in a transaction.
 --
 -- This type tags the context as being to witness the use of stake addresses in
--- both certificates and withdrawals.
+-- certificates, withdrawals, voting and proposals.
 --
 data WitCtxStake
 
@@ -713,7 +712,11 @@ data WitCtx witctx where
 -- or to mint tokens. This datatype encapsulates this concept.
 data PlutusScriptOrReferenceInput lang
   = PScript (PlutusScript lang)
-  | PReferenceScript TxIn (Maybe ScriptHash)
+  | PReferenceScript
+      TxIn
+      (Maybe ScriptHash) -- ^ Needed to construct the redeemer pointer map
+                         -- in the case of minting reference scripts where we don't
+                         -- have direct access to the script
   deriving (Eq, Show)
 
 

@@ -58,8 +58,8 @@ import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Script
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
@@ -67,15 +67,12 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as Ledger
 import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Plutus.Language as Plutus
-import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionFee)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
 
@@ -207,10 +204,11 @@ evaluateTransactionFee :: forall era. ()
 evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
   error "evaluateTransactionFee: TODO support Byron key witnesses"
 
-evaluateTransactionFee sbe pp txbody keywitcount _byronwitcount =
+evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
-      ShelleyTx _ tx -> fromShelleyLovelace $ Ledger.evaluateTransactionFee pp tx keywitcount
+      ShelleyTx _ tx ->
+        fromShelleyLovelace $ L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount)
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.
@@ -274,15 +272,18 @@ type PlutusScriptBytes = ShortByteString
 data ResolvablePointers where
   ResolvablePointers ::
       ( Ledger.Era (ShelleyLedgerEra era)
-      , Show (Ledger.TxCert (ShelleyLedgerEra era))
+      , Show (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+      , Show (L.PlutusPurpose L.AsItem (ShelleyLedgerEra era))
+      , Show (Alonzo.PlutusScript (ShelleyLedgerEra era))
       )
     => ShelleyBasedEra era
-    -> Map
-         Alonzo.RdmrPtr
-         ( Alonzo.ScriptPurpose (ShelleyLedgerEra era)
-         , Maybe (PlutusScriptBytes, Plutus.Language)
-         , Ledger.ScriptHash Ledger.StandardCrypto
-         )
+    -> !(Map
+          (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+          ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
+          , Maybe (PlutusScriptBytes, Plutus.Language)
+          , Ledger.ScriptHash Ledger.StandardCrypto
+          )
+        )
     -> ResolvablePointers
 
 deriving instance Show ResolvablePointers
@@ -293,6 +294,7 @@ deriving instance Show ResolvablePointers
 -- The first three of these are about failures before we even get to execute
 -- the script, and two are the result of execution.
 --
+-- TODO: This will eventually need to be parameterized on the era
 data ScriptExecutionError =
 
        -- | The script depends on a 'TxIn' that has not been provided in the
@@ -335,7 +337,7 @@ data ScriptExecutionError =
 
        -- | A redeemer pointer points to a script that does not exist.
      | ScriptErrorMissingScript
-         Alonzo.RdmrPtr -- The invalid pointer
+         ScriptWitnessIndex -- The invalid pointer
          ResolvablePointers -- A mapping a pointers that are possible to resolve
 
        -- | A cost model was missing for a language which was used.
@@ -492,7 +494,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
     (\w -> case alonzoEraOnwardsPlutusConstraints w $ L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
              Left err    -> Left $ alonzoEraOnwardsPlutusConstraints w
                                  $ TransactionValidityTranslationError err
-             Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+             Right exmap -> Right (fromLedgerScriptExUnitsMap w exmap)
     )
     sbe
   where
@@ -500,20 +502,22 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
 
     fromLedgerScriptExUnitsMap
       :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
-      => Map Alonzo.RdmrPtr (Either (L.TransactionScriptFailure (ShelleyLedgerEra era))
-                                    Alonzo.ExUnits)
+      => AlonzoEraOnwards era
+      -> Map (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+             (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
-    fromLedgerScriptExUnitsMap exmap =
+    fromLedgerScriptExUnitsMap aOnwards exmap =
       Map.fromList
-        [ (fromAlonzoRdmrPtr rdmrptr,
-           bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
+        [ (toScriptIndex aOnwards rdmrptr,
+           bimap (fromAlonzoScriptExecutionError aOnwards) fromAlonzoExUnits exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
     fromAlonzoScriptExecutionError
       :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
-      => L.TransactionScriptFailure (ShelleyLedgerEra era)
+      => AlonzoEraOnwards era
+      -> L.TransactionScriptFailure (ShelleyLedgerEra era)
       -> ScriptExecutionError
-    fromAlonzoScriptExecutionError =
+    fromAlonzoScriptExecutionError aOnwards =
       shelleyBasedEraConstraints sbe $ \case
         L.UnknownTxIn     txin -> ScriptErrorMissingTxIn txin'
                                          where txin' = fromShelleyTxIn txin
@@ -527,18 +531,30 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
         L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
         L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
-          ScriptErrorRedeemerPointsToUnknownScriptHash $ fromAlonzoRdmrPtr rdmrPtr
+          ScriptErrorRedeemerPointsToUnknownScriptHash $ toScriptIndex aOnwards rdmrPtr
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
-        L.MissingScript rdmrPtr resolveable ->
-          let cnv2 (purpose, mbScript, scriptHash) = (purpose, fmap extractPlutusScriptAndLanguage mbScript, scriptHash)
-          in
-            ScriptErrorMissingScript rdmrPtr
-              $ ResolvablePointers sbe
-              $ Map.map cnv2 resolveable
-
+        L.MissingScript indexOfScriptWitnessedItem resolveable ->
+          let scriptWitnessedItemIndex = toScriptIndex aOnwards indexOfScriptWitnessedItem
+          in ScriptErrorMissingScript scriptWitnessedItemIndex
+               $ ResolvablePointers sbe $ Map.map extractScriptBytesAndLanguage resolveable
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
+
+
+extractScriptBytesAndLanguage
+  :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
+  => ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
+     , Maybe (Alonzo.PlutusScript (ShelleyLedgerEra era))
+     , L.ScriptHash Ledger.StandardCrypto
+     )
+  -> ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
+     , Maybe (PlutusScriptBytes, Plutus.Language)
+     , Ledger.ScriptHash Ledger.StandardCrypto
+     )
+extractScriptBytesAndLanguage (purpose, mbScript, scriptHash) =
+  (purpose, fmap extractPlutusScriptAndLanguage mbScript, scriptHash)
+
 
 extractPlutusScriptAndLanguage
   :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
@@ -548,7 +564,6 @@ extractPlutusScriptAndLanguage p =
   let bin = Plutus.unPlutusBinary $ Alonzo.plutusScriptBinary p
       l = Alonzo.plutusScriptLanguage p
   in (bin, l)
-
 -- ----------------------------------------------------------------------------
 -- Transaction balance
 --
