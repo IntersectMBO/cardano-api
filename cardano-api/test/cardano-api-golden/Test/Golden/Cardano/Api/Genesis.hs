@@ -44,8 +44,8 @@ exampleShelleyGenesis =
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams = emptyPParams
         & ppDL .~ unsafeBoundRational 1.9e-2
-        & ppMaxBBSizeL .~ 239857
-        & ppMaxBHSizeL .~ 217569
+        & ppMaxBBSizeL .~ 65535
+        & ppMaxBHSizeL .~ 65535
     , sgGenDelegs = Map.fromList
                       [( genesisVerKeyHash
                        , GenDelegPair delegVerKeyHash delegVrfKeyHash)
