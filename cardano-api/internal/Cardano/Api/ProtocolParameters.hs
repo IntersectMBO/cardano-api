@@ -130,6 +130,7 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
+import qualified Cardano.Ledger.Plutus.CostModels as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Cardano.Slotting.Slot (EpochNo (..))
@@ -147,6 +148,7 @@ import           Data.Maybe (isJust)
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.String (IsString)
 import           Data.Text (Text)
+import           Data.Word
 import           GHC.Generics
 import           Lens.Micro
 import           Numeric.Natural
@@ -244,7 +246,7 @@ data IntroducedInConwayPParams era
     { icPoolVotingThresholds :: StrictMaybe Ledger.PoolVotingThresholds
     , icDRepVotingThresholds :: StrictMaybe Ledger.DRepVotingThresholds
     , icMinCommitteeSize     :: StrictMaybe Natural
-    , icCommitteeTermLength  :: StrictMaybe EpochNo
+    , icCommitteeTermLength  :: StrictMaybe Ledger.EpochInterval
     , icGovActionLifetime    :: StrictMaybe Ledger.EpochInterval
     , icGovActionDeposit     :: StrictMaybe Ledger.Coin
     , icDRepDeposit          :: StrictMaybe Ledger.Coin
@@ -323,9 +325,9 @@ data CommonProtocolParametersUpdate
   = CommonProtocolParametersUpdate
     { cppMinFeeA :: StrictMaybe Ledger.Coin
     , cppMinFeeB :: StrictMaybe Ledger.Coin
-    , cppMaxBlockBodySize ::  StrictMaybe Natural
-    , cppMaxTxSize :: StrictMaybe Natural
-    , cppMaxBlockHeaderSize :: StrictMaybe Natural
+    , cppMaxBlockBodySize ::  StrictMaybe Word32
+    , cppMaxTxSize :: StrictMaybe Word32
+    , cppMaxBlockHeaderSize :: StrictMaybe Word16
     , cppKeyDeposit :: StrictMaybe Ledger.Coin
     , cppPoolDeposit :: StrictMaybe Ledger.Coin
     , cppPoolRetireMaxEpoch :: StrictMaybe Ledger.EpochInterval
@@ -720,7 +722,7 @@ data ProtocolParametersUpdate =
        -- Caution: setting this to be smaller than legitimate block headers is
        -- a sure way to brick the system!
        --
-       protocolUpdateMaxBlockHeaderSize :: Maybe Natural,
+       protocolUpdateMaxBlockHeaderSize :: Maybe Word16,
 
        -- | The maximum permitted size of the block body (that is, the block
        -- payload, without the block header).
@@ -732,7 +734,7 @@ data ProtocolParametersUpdate =
        -- Caution: setting this to be smaller than a transaction that can
        -- change the protocol parameters is a sure way to brick the system!
        --
-       protocolUpdateMaxBlockBodySize :: Maybe Natural,
+       protocolUpdateMaxBlockBodySize :: Maybe Word32,
 
        -- | The maximum permitted size of a transaction.
        --
@@ -741,7 +743,7 @@ data ProtocolParametersUpdate =
        -- the current implementation does not use any sophisticated box packing
        -- algorithm.
        --
-       protocolUpdateMaxTxSize :: Maybe Natural,
+       protocolUpdateMaxTxSize :: Maybe Word32,
 
        -- | The constant factor for the minimum fee calculation.
        --
@@ -1096,7 +1098,7 @@ toAlonzoCostModels
   -> Either ProtocolParametersConversionError Alonzo.CostModels
 toAlonzoCostModels m = do
   f <- mapM conv $ Map.toList m
-  Right (Alonzo.emptyCostModels { Alonzo.costModelsValid = Map.fromList f })
+  Right $ Plutus.mkCostModels $ Map.fromList f
  where
   conv :: (AnyPlutusScriptVersion, CostModel) -> Either ProtocolParametersConversionError (Plutus.Language, Alonzo.CostModel)
   conv (anySVer, cModel) = do
@@ -1104,12 +1106,12 @@ toAlonzoCostModels m = do
     Right (toAlonzoScriptLanguage anySVer, alonzoCostModel)
 
 fromAlonzoCostModels
-  :: Alonzo.CostModels
+  :: Plutus.CostModels
   -> Map AnyPlutusScriptVersion CostModel
-fromAlonzoCostModels (Alonzo.CostModels m _ _) =
+fromAlonzoCostModels cModels =
     Map.fromList
   . map (bimap fromAlonzoScriptLanguage fromAlonzoCostModel)
-  $ Map.toList m
+  $ Map.toList $ Plutus.costModelsValid cModels
 
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Plutus.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Plutus.PlutusV1
@@ -1565,9 +1567,9 @@ toShelleyCommonPParams
         emptyPParams
         & ppMinFeeAL         .~ toShelleyLovelace protocolParamTxFeePerByte
         & ppMinFeeBL         .~ toShelleyLovelace protocolParamTxFeeFixed
-        & ppMaxBBSizeL       .~ protocolParamMaxBlockBodySize
-        & ppMaxTxSizeL       .~ protocolParamMaxTxSize
-        & ppMaxBHSizeL       .~ protocolParamMaxBlockHeaderSize
+        & ppMaxBBSizeL       .~ fromIntegral protocolParamMaxBlockBodySize
+        & ppMaxTxSizeL       .~ fromIntegral protocolParamMaxTxSize
+        & ppMaxBHSizeL       .~ fromIntegral protocolParamMaxBlockHeaderSize
         & ppKeyDepositL      .~ toShelleyLovelace protocolParamStakeAddressDeposit
         & ppPoolDepositL     .~ toShelleyLovelace protocolParamStakePoolDeposit
         & ppEMaxL            .~ protocolParamPoolRetireMaxEpoch
@@ -1713,9 +1715,9 @@ fromShelleyCommonPParams pp =
     ProtocolParameters {
       protocolParamProtocolVersion     = case pp ^. ppProtocolVersionL of
                                            Ledger.ProtVer a b -> (Ledger.getVersion a, b)
-    , protocolParamMaxBlockHeaderSize  = pp ^. ppMaxBHSizeL
-    , protocolParamMaxBlockBodySize    = pp ^. ppMaxBBSizeL
-    , protocolParamMaxTxSize           = pp ^. ppMaxTxSizeL
+    , protocolParamMaxBlockHeaderSize  = fromIntegral $ pp ^. ppMaxBHSizeL
+    , protocolParamMaxBlockBodySize    = fromIntegral $ pp ^. ppMaxBBSizeL
+    , protocolParamMaxTxSize           = fromIntegral $ pp ^. ppMaxTxSizeL
     , protocolParamTxFeeFixed          = fromShelleyLovelace (pp ^. ppMinFeeBL)
     , protocolParamTxFeePerByte        = fromShelleyLovelace (pp ^. ppMinFeeAL)
     , protocolParamStakeAddressDeposit = fromShelleyLovelace (pp ^. ppKeyDepositL)
