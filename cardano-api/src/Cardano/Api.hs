@@ -373,6 +373,8 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
+    TxVotingProcedures(..),
+    TxProposalProcedures(..),
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),
@@ -404,7 +406,6 @@ module Cardano.Api (
     TxBodyErrorAutoBalance(..),
     TxScriptValidity(..),
     ScriptValidity(..),
-    scriptValidityToTxScriptValidity,
     txScriptValidityToScriptValidity,
 
     -- * Signing transactions
@@ -1042,8 +1043,8 @@ import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
