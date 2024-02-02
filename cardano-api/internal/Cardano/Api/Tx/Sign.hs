@@ -324,36 +324,18 @@ data TxBody era where
 instance Eq (TxBody era) where
     (==) (ShelleyTxBody sbe txbodyA txscriptsA redeemersA txmetadataA scriptValidityA)
          (ShelleyTxBody _   txbodyB txscriptsB redeemersB txmetadataB scriptValidityB) =
-         case sbe of
-           ShelleyBasedEraShelley -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && txmetadataA == txmetadataB
+         caseShelleyToMaryOrAlonzoEraOnwards
+           (const $ txbodyA     == txbodyB
+                 && txscriptsA  == txscriptsB
+                 && txmetadataA == txmetadataB
+           )
+           (const $ txbodyA         == txbodyB
+                 && txscriptsA      == txscriptsB
+                 && redeemersA      == redeemersB
+                 && txmetadataA     == txmetadataB
+                 && scriptValidityA == scriptValidityB
+           ) sbe
 
-           ShelleyBasedEraAllegra -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && txmetadataA == txmetadataB
-
-           ShelleyBasedEraMary    -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && txmetadataA == txmetadataB
-
-           ShelleyBasedEraAlonzo  -> txbodyA         == txbodyB
-                                  && txscriptsA      == txscriptsB
-                                  && redeemersA      == redeemersB
-                                  && txmetadataA     == txmetadataB
-                                  && scriptValidityA == scriptValidityB
-
-           ShelleyBasedEraBabbage -> txbodyA         == txbodyB
-                                  && txscriptsA      == txscriptsB
-                                  && redeemersA      == redeemersB
-                                  && txmetadataA     == txmetadataB
-                                  && scriptValidityA == scriptValidityB
-
-           ShelleyBasedEraConway  -> txbodyA         == txbodyB
-                                  && txscriptsA      == txscriptsB
-                                  && redeemersA      == redeemersB
-                                  && txmetadataA     == txmetadataB
-                                  && scriptValidityA == scriptValidityB
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
 instance Show (TxBody era) where

@@ -294,7 +294,9 @@ deriving instance Show ResolvablePointers
 -- The first three of these are about failures before we even get to execute
 -- the script, and two are the result of execution.
 --
--- TODO: This will eventually need to be parameterized on the era
+-- TODO: We should replace ScriptWitnessIndex with ledger's
+-- PlutusPurpose AsIndex ledgerera. This would necessitate the
+-- parameterization of ScriptExecutionError.
 data ScriptExecutionError =
 
        -- | The script depends on a 'TxIn' that has not been provided in the
@@ -491,8 +493,8 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (Right Map.empty))
-    (\w -> case alonzoEraOnwardsPlutusConstraints w $ L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
-             Left err    -> Left $ alonzoEraOnwardsPlutusConstraints w
+    (\w -> case alonzoEraOnwardsConstraints w $ L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
+             Left err    -> Left $ alonzoEraOnwardsConstraints w
                                  $ TransactionValidityTranslationError err
              Right exmap -> Right (fromLedgerScriptExUnitsMap w exmap)
     )
