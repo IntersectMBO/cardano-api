@@ -839,6 +839,7 @@ module Cardano.Api (
     CommitteeColdKey,
     CommitteeColdExtendedKey,
     CommitteeHotKey,
+    CommitteeHotExtendedKey,
 
     -- * Genesis file
     -- | Types and functions needed to inspect or create a genesis file.
