@@ -137,7 +137,6 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Byron as Byron
-import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
 import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
@@ -545,9 +544,9 @@ genTxValidityLowerBound =
     (\w -> TxValidityLowerBound w <$> genTtl)
 
 -- TODO: Accept a range for generating ttl.
-genTxValidityUpperBound :: ShelleyBasedEra era -> Gen (TxValidityUpperBound era)
-genTxValidityUpperBound sbe =
-  TxValidityUpperBound sbe <$> Gen.maybe genTtl
+genTxValidityUpperBound :: BabbageEraOnwards era -> Gen (TxValidityUpperBound era)
+genTxValidityUpperBound w =
+  TxValidityUpperBound w <$> genTtl
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
@@ -565,7 +564,7 @@ genTxAuxScripts era =
   forEraInEon (toCardanoEra era)
     (pure TxAuxScriptsNone)
     (\w -> TxAuxScripts w <$> Gen.list (Range.linear 0 3)
-                                       (genScriptInEra (allegraEraOnwardsToShelleyBasedEra w)))
+                                       (genScriptInEra (babbageEraOnwardsToShelleyBasedEra w)))
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals =
@@ -641,7 +640,7 @@ genTxBodyContent sbe = do
   txReturnCollateral <- genTxReturnCollateral sbe
   txFee <- genTxFee sbe
   txValidityLowerBound <- genTxValidityLowerBound era
-  txValidityUpperBound <- genTxValidityUpperBound sbe
+  txValidityUpperBound <- forShelleyBasedEraInEon sbe (pure TxValidityNoUpperBound) genTxValidityUpperBound
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts sbe
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes

@@ -15,11 +15,8 @@ module Cardano.Api.Ledger.Lens
   , strictMaybeL
   , L.invalidBeforeL
   , L.invalidHereAfterL
-  , invalidBeforeStrictL
-  , invalidHereAfterStrictL
   , invalidBeforeTxBodyL
   , invalidHereAfterTxBodyL
-  , ttlAsInvalidHereAfterTxBodyL
   , updateTxBodyL
 
   , txBodyL
@@ -39,13 +36,11 @@ module Cardano.Api.Ledger.Lens
   , valueTxOutAdaAssetL
   ) where
 
-import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
@@ -82,8 +77,8 @@ strictMaybeL = lens g s
 txBodyL :: Lens' (TxBody era) (L.TxBody (ShelleyLedgerEra era))
 txBodyL = lens unTxBody (\_ x -> TxBody x)
 
-invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (TxBody era) (Maybe SlotNo)
-invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL
+invalidBeforeTxBodyL :: BabbageEraOnwards era -> Lens' (TxBody era) (Maybe SlotNo)
+invalidBeforeTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL
 
 -- | Compatibility lens that provides a consistent interface over 'ttlTxBodyL' and
 -- 'vldtTxBodyL . invalidHereAfterStrictL' across all shelley based eras.
@@ -100,49 +95,8 @@ invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBody
 --
 -- 'invalidHereAfterTxBodyL' lens over both with a 'Maybe SlotNo' type representation.  Withing the
 -- Shelley era, setting Nothing will set the ttl to 'maxBound' in the underlying ledger type.
-invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (TxBody era) (Maybe SlotNo)
-invalidHereAfterTxBodyL =
-  caseShelleyEraOnlyOrAllegraEraOnwards
-    ttlAsInvalidHereAfterTxBodyL
-    (const $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL)
-
--- | Compatibility lens over 'ttlTxBodyL' which represents 'maxBound' as Nothing and all other values as 'Just'.
-ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (TxBody era) (Maybe SlotNo)
-ttlAsInvalidHereAfterTxBodyL w = lens (g w) (s w)
-  where
-    g :: ShelleyEraOnly era -> TxBody era -> Maybe SlotNo
-    g w' txBody =
-      shelleyEraOnlyConstraints w' $
-        let ttl = txBody ^. txBodyL . L.ttlTxBodyL in if ttl == maxBound then Nothing else Just ttl
-
-    s :: ShelleyEraOnly era -> TxBody era -> Maybe SlotNo -> TxBody era
-    s w' txBody mSlotNo =
-      shelleyEraOnlyConstraints w' $
-        case mSlotNo of
-          Nothing -> txBody & txBodyL . L.ttlTxBodyL .~ maxBound
-          Just ttl -> txBody & txBodyL . L.ttlTxBodyL .~ ttl
-
--- | Lens to access the 'invalidBefore' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
--- Ideally this should be defined in cardano-ledger
-invalidBeforeStrictL :: Lens' L.ValidityInterval (StrictMaybe SlotNo)
-invalidBeforeStrictL = lens g s
-  where
-    g :: L.ValidityInterval -> StrictMaybe SlotNo
-    g (L.ValidityInterval a _) = a
-
-    s :: L.ValidityInterval -> StrictMaybe SlotNo -> L.ValidityInterval
-    s (L.ValidityInterval _ b) a = L.ValidityInterval a b
-
--- | Lens to access the 'invalidHereAfter' field of a 'ValidityInterval' as a 'StrictMaybe SlotNo'.
--- Ideally this should be defined in cardano-ledger
-invalidHereAfterStrictL :: Lens' L.ValidityInterval (StrictMaybe SlotNo)
-invalidHereAfterStrictL = lens g s
-  where
-    g :: L.ValidityInterval -> StrictMaybe SlotNo
-    g (L.ValidityInterval _ b) = b
-
-    s :: L.ValidityInterval -> StrictMaybe SlotNo -> L.ValidityInterval
-    s (L.ValidityInterval a _) b = L.ValidityInterval a b
+invalidHereAfterTxBodyL :: BabbageEraOnwards era -> Lens' (TxBody era) (Maybe SlotNo)
+invalidHereAfterTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL
 
 updateTxBodyL :: ShelleyToBabbageEra era -> Lens' (TxBody era) (StrictMaybe (L.Update (ShelleyLedgerEra era)))
 updateTxBodyL w = shelleyToBabbageEraConstraints w $ txBodyL . L.updateTxBodyL

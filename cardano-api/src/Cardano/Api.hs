@@ -61,11 +61,6 @@ module Cardano.Api (
 
     -- ** From Shelley
 
-    ShelleyEraOnly(..),
-    shelleyEraOnlyConstraints,
-    shelleyEraOnlyToCardanoEra,
-    shelleyEraOnlyToShelleyBasedEra,
-
     ShelleyToAllegraEra(..),
     shelleyToAllegraEraConstraints,
     shelleyToAllegraEraToCardanoEra,
@@ -93,9 +88,6 @@ module Cardano.Api (
     inAnyShelleyBasedEra,
     shelleyBasedToCardanoEra,
     shelleyBasedEraConstraints,
-
-    -- ** From Allegra
-    AllegraEraOnwards(..),
 
     -- ** From Mary
     MaryEraOnwards(..),
@@ -131,7 +123,6 @@ module Cardano.Api (
     caseByronToAlonzoOrBabbageEraOnwards,
 
     -- ** Case on ShelleyBasedEra
-    caseShelleyEraOnlyOrAllegraEraOnwards,
     caseShelleyToAllegraOrMaryEraOnwards,
     caseShelleyToMaryOrAlonzoEraOnwards,
     caseShelleyToAlonzoOrBabbageEraOnwards,
@@ -307,7 +298,6 @@ module Cardano.Api (
     -- ** Transaction body builders
     defaultTxBodyContent,
     defaultTxFee,
-    defaultTxValidityUpperBound,
     setTxIns,
     modTxIns,
     addTxIn,
@@ -992,14 +982,12 @@ import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.DRepMetadata
-import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronToAlonzoEra
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
