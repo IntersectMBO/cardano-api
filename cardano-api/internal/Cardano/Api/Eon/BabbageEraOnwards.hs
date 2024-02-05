@@ -26,7 +26,6 @@ import           Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as L
 import qualified Cardano.Ledger.Alonzo.Scripts as L
 import qualified Cardano.Ledger.Alonzo.UTxO as L
 import qualified Cardano.Ledger.Api as L
@@ -34,7 +33,6 @@ import qualified Cardano.Ledger.Babbage.TxOut as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.Mary.Value as L
-import qualified Cardano.Ledger.Plutus.Language as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
@@ -80,13 +78,11 @@ type BabbageEraOnwardsConstraints era =
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
   , L.Era (ShelleyLedgerEra era)
   , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-  , L.EraPlutusContext 'L.PlutusV1 (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
-  , L.ExtendedUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
