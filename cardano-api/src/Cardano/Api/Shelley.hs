@@ -144,7 +144,6 @@ module Cardano.Api.Shelley
     fromAlonzoPrices,
     toAlonzoExUnits,
     fromAlonzoExUnits,
-    toScriptIndex,
     scriptDataFromJsonDetailedSchema,
     scriptDataToJsonDetailedSchema,
     calculateExecutionUnitsLovelace,
