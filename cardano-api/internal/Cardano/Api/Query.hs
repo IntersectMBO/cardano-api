@@ -82,6 +82,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.IPC.Version
@@ -91,7 +92,7 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query.Types
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
 import           Cardano.Api.Value
 
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
@@ -599,7 +600,10 @@ toConsensusQueryShelleyBased sbe = \case
     Some (consensusQueryInEraInMode era Consensus.GetEpochNo)
 
   QueryConstitution ->
-    Some (consensusQueryInEraInMode era Consensus.GetConstitution)
+    caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "toConsensusQueryShelleyBased: QueryConstitution is only available in the Conway era")
+    (const $ Some (consensusQueryInEraInMode era Consensus.GetConstitution))
+    sbe
 
   QueryGenesisParameters ->
     Some (consensusQueryInEraInMode era Consensus.GetGenesisConfig)
@@ -674,17 +678,29 @@ toConsensusQueryShelleyBased sbe = \case
     Some (consensusQueryInEraInMode era Consensus.GetGovState)
 
   QueryDRepState creds ->
-    Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds))
+    caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
+    (const $ Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds)))
+    sbe
 
   QueryDRepStakeDistr dreps ->
-    Some (consensusQueryInEraInMode era (Consensus.GetDRepStakeDistr dreps))
+    caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "toConsensusQueryShelleyBased: QueryDRepStakeDistr is only available in the Conway era")
+    (const $ Some (consensusQueryInEraInMode era (Consensus.GetDRepStakeDistr dreps)))
+    sbe
 
   QueryCommitteeMembersState coldCreds hotCreds statuses ->
-    Some (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
+    caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available in the Conway era")
+    (const $ Some (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses)))
+    sbe
 
   QueryStakeVoteDelegatees creds ->
-    Some (consensusQueryInEraInMode era
-            (Consensus.GetFilteredVoteDelegatees creds'))
+    caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "toConsensusQueryShelleyBased: QueryStakeVoteDelegatees is only available in the Conway era")
+    (const $ Some (consensusQueryInEraInMode era
+            (Consensus.GetFilteredVoteDelegatees creds')))
+    sbe
     where
       creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
       creds' = Set.map toShelleyStakeCredential creds

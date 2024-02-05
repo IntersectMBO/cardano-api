@@ -31,6 +31,7 @@ handleAlonzoOnwardsUTxOWEvent (WrappedShelleyEraEvent (Shelley.UtxoEvent (UtxosE
    Alonzo.TotalDeposits{} -> Nothing
    Alonzo.SuccessfulPlutusScriptsEvent e -> Just $ SuccessfulPlutusScript e
    Alonzo.FailedPlutusScriptsEvent e -> Just $ FailedPlutusScript e
+   Alonzo.TxUTxODiff _ _ -> Nothing
 
 handlePreAlonzoUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ Shelley.UtxoEvent ledgerera
@@ -40,6 +41,7 @@ handlePreAlonzoUTxOWEvent (Shelley.UtxoEvent e)=
   case e of
     Shelley.TotalDeposits{} -> Nothing
     Shelley.UpdateEvent (Shelley.NewEpoch _) -> Nothing
+    Shelley.TxUTxODiff _ _ -> Nothing
 
 
 handleAllegraMaryUTxOWEvent
@@ -50,3 +52,4 @@ handleAllegraMaryUTxOWEvent (Shelley.UtxoEvent e)=
   case e of
     Allegra.TotalDeposits{} -> Nothing
     Allegra.UpdateEvent (Shelley.NewEpoch _) -> Nothing
+    Allegra.TxUTxODiff _ _ -> Nothing

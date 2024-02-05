@@ -144,8 +144,7 @@ module Cardano.Api.Shelley
     fromAlonzoPrices,
     toAlonzoExUnits,
     fromAlonzoExUnits,
-    toAlonzoRdmrPtr,
-    fromAlonzoRdmrPtr,
+    toScriptIndex,
     scriptDataFromJsonDetailedSchema,
     scriptDataToJsonDetailedSchema,
     calculateExecutionUnitsLovelace,
@@ -314,7 +313,7 @@ import           Cardano.Api.Query
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
 import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Value

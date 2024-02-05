@@ -26,7 +26,7 @@ import           Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as L
+import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus
 import qualified Cardano.Ledger.Alonzo.Scripts as L
 import qualified Cardano.Ledger.Alonzo.Tx as L
 import qualified Cardano.Ledger.Alonzo.TxWits as L
@@ -35,7 +35,6 @@ import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.Mary.Value as L
-import qualified Cardano.Ledger.Plutus.Language as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
@@ -84,18 +83,16 @@ type AlonzoEraOnwardsConstraints era =
   , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
   , L.Era (ShelleyLedgerEra era)
   , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-  , L.EraPlutusContext 'L.PlutusV1 (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
-  , L.ExtendedUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.MaryEraTxBody (ShelleyLedgerEra era)
+  , Plutus.EraPlutusContext (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)
   , L.ScriptsNeeded (ShelleyLedgerEra era) ~ L.AlonzoScriptsNeeded (ShelleyLedgerEra era)
-  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
 
@@ -107,8 +104,8 @@ type AlonzoEraOnwardsConstraints era =
   , Typeable era
   )
 
-alonzoEraOnwardsConstraints :: ()
-  => AlonzoEraOnwards era
+alonzoEraOnwardsConstraints
+  :: AlonzoEraOnwards era
   -> (AlonzoEraOnwardsConstraints era => a)
   -> a
 alonzoEraOnwardsConstraints = \case

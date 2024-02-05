@@ -21,8 +21,8 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Fees
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
@@ -54,7 +54,7 @@ constructBalancedTx :: ()
   -> Map.Map StakeCredential Lovelace
   -> Map.Map (L.Credential L.DRepRole L.StandardCrypto) Lovelace
   -> [ShelleyWitnessSigningKey]
-  -> Either TxBodyErrorAutoBalance (Tx era)
+  -> Either (TxBodyErrorAutoBalance era) (Tx era)
 constructBalancedTx sbe txbodcontent changeAddr mOverrideWits utxo lpp
                     ledgerEpochInfo systemStart stakePools
                     stakeDelegDeposits drepDelegDeposits shelleyWitSigningKeys = do

@@ -36,9 +36,9 @@ import           Cardano.Api.Shelley
 import           Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Ledger
-import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
-import qualified Cardano.Ledger.Alonzo.TxWits as Ledger
+import qualified Cardano.Ledger.Api.Era as Ledger
 import qualified Cardano.Ledger.Coin as L
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus hiding (PlutusV2)
@@ -243,7 +243,7 @@ test_ScriptExecutionError =
     , ("ScriptErrorExecutionUnitsOverflow", ScriptErrorExecutionUnitsOverflow)
     , ("ScriptErrorNotPlutusWitnessedTxIn", ScriptErrorNotPlutusWitnessedTxIn (ScriptWitnessIndexTxIn 0) scriptHash)
     , ("ScriptErrorRedeemerPointsToUnknownScriptHash", ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0))
-    , ("ScriptErrorMissingScript", ScriptErrorMissingScript (Ledger.RdmrPtr Ledger.Mint 0) (ResolvablePointers ShelleyBasedEraBabbage Map.empty)) -- TODO CIP-1694 make work in all eras
+    , ("ScriptErrorMissingScript", ScriptErrorMissingScript (ScriptWitnessIndexMint 0) (ResolvablePointers ShelleyBasedEraBabbage Map.empty)) -- TODO CIP-1694 make work in all eras
     , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Plutus.PlutusV2)
     ]
 
@@ -273,10 +273,13 @@ test_TextEnvelopeError =
     , TextEnvelopeAesonDecodeError string
     ]
 
+testPastHorizonValue :: Ledger.AlonzoContextError (Ledger.AlonzoEra StandardCrypto)
+testPastHorizonValue = Ledger.TimeTranslationPastHorizon text
+
 test_TransactionValidityError :: TestTree
 test_TransactionValidityError =
   testAllErrorMessages_ "Cardano.Api.Fees" "TransactionValidityError"
-    [ ("TransactionValidityTranslationError", TransactionValidityTranslationError $ Ledger.TimeTranslationPastHorizon text)
+    [ ("TransactionValidityTranslationError", TransactionValidityTranslationError testPastHorizonValue)
     , ("TransactionValidityCostModelError", TransactionValidityCostModelError
         (Map.fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
         string)
@@ -293,7 +296,7 @@ test_TransactionValidityError =
 
 test_TxBodyError :: TestTree
 test_TxBodyError =
-  testAllErrorMessages_ "Cardano.Api.TxBody" "TxBodyError"
+  testAllErrorMessages_ "Cardano.Api.Tx.Body" "TxBodyError"
     [ ("TxBodyEmptyTxIns", TxBodyEmptyTxIns)
     , ("TxBodyEmptyTxInsCollateral", TxBodyEmptyTxInsCollateral)
     , ("TxBodyEmptyTxOuts", TxBodyEmptyTxOuts)

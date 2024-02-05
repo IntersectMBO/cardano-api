@@ -18,13 +18,13 @@ import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Keys.Shelley (Hash (..), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyLovelace)
 
-import           Cardano.Ledger.Alonzo.Plutus.TxInfo (PlutusDebug)
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import qualified Cardano.Ledger.Core as Ledger.Core
 import qualified Cardano.Ledger.Credential as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
+import           Cardano.Ledger.Plutus.Evaluate (PlutusWithContext)
 import           Cardano.Ledger.Shelley.Rewards (Reward)
 import qualified Cardano.Ledger.TxIn as Ledger
 
@@ -58,9 +58,9 @@ data LedgerEvent
   | -- | Pools have been reaped and deposits refunded.
     PoolReap PoolReapDetails
     -- | A number of succeeded Plutus script evaluations.
-  | SuccessfulPlutusScript (NonEmpty PlutusDebug)
+  | SuccessfulPlutusScript (NonEmpty PlutusWithContext)
     -- | A number of failed Plutus script evaluations.
-  | FailedPlutusScript (NonEmpty PlutusDebug)
+  | FailedPlutusScript  (NonEmpty PlutusWithContext)
 
 
   -- Only events available on the Conway Era.

@@ -208,14 +208,11 @@ type ShelleyBasedEraConstraints era =
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
-  , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , IsCardanoEra era
   , IsShelleyBasedEra era
-  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" (ShelleyLedgerEra era)))
-  , ToJSON (L.PredicateFailure (L.EraRule "UTXOW" (ShelleyLedgerEra era)))
   , Typeable era
   )
 

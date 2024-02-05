@@ -29,7 +29,7 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.Tx
+import           Cardano.Api.Tx.Sign
 
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley

@@ -484,7 +484,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
         }
 
     -- | Defines the client side of the chain sync protocol.
-    chainSyncClient :: Word32
+    chainSyncClient :: Word16
                     -- ^ The maximum number of concurrent requests.
                     -> IORef a
                     -- ^ State accumulator. Written to on every block.
@@ -1950,7 +1950,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
         }
 
     -- | Defines the client side of the chain sync protocol.
-    chainSyncClient :: Word32
+    chainSyncClient :: Word16
                     -- ^ The maximum number of concurrent requests.
                     -> IORef (LedgerStateCondition, s)
                     -- ^ State accumulator. Written to on every block.
@@ -2078,4 +2078,3 @@ atTerminationEpoch terminationEpoch events =
 
 handleIOExceptions :: MonadIOTransError FoldBlocksError t m => ExceptT FoldBlocksError IO a -> t m a
 handleIOExceptions = liftEither <=< liftIO . fmap (join . first FoldBlocksIOException) . try . runExceptT
-
