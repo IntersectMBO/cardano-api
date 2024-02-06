@@ -1091,13 +1091,13 @@ toShelleySigningKey key = case key of
   WitnessDRepKey            (DRepSigningKey sk)            -> ShelleyNormalSigningKey sk
 
   -- The cases for extended keys
-  WitnessPaymentExtendedKey (PaymentExtendedSigningKey sk) ->                 ShelleyExtendedSigningKey sk
-  WitnessStakeExtendedKey   (StakeExtendedSigningKey sk)   ->                 ShelleyExtendedSigningKey sk
-  WitnessGenesisExtendedKey (GenesisExtendedSigningKey sk) ->                 ShelleyExtendedSigningKey sk
+  WitnessPaymentExtendedKey (PaymentExtendedSigningKey sk)                 -> ShelleyExtendedSigningKey sk
+  WitnessStakeExtendedKey   (StakeExtendedSigningKey sk)                   -> ShelleyExtendedSigningKey sk
+  WitnessGenesisExtendedKey (GenesisExtendedSigningKey sk)                 -> ShelleyExtendedSigningKey sk
   WitnessGenesisDelegateExtendedKey (GenesisDelegateExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
   WitnessCommitteeColdExtendedKey   (CommitteeColdExtendedSigningKey sk)   -> ShelleyExtendedSigningKey sk
   WitnessCommitteeHotExtendedKey    (CommitteeHotExtendedSigningKey sk)    -> ShelleyExtendedSigningKey sk
-  WitnessDRepExtendedKey (DRepExtendedSigningKey sk)       ->                 ShelleyExtendedSigningKey sk
+  WitnessDRepExtendedKey            (DRepExtendedSigningKey sk)            -> ShelleyExtendedSigningKey sk
 
 getShelleyKeyWitnessVerificationKey
   :: ShelleySigningKey
