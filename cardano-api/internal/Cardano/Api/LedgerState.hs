@@ -1873,10 +1873,10 @@ checkLedgerStateCondition
   -- ^ Termination epoch
   -> s
   -- ^ an initial value for the condition state
-  -> ( AnyNewEpochState -- ^ current epoch state
+  -> ( AnyNewEpochState
       -> State s LedgerStateCondition
      )
-  -- ^ Condition you want to check against the new ledger state.
+  -- ^ Condition you want to check against the new ledger state. The argument is the current epoch state.
   --
   --
   -- Note: This function can safely assume no rollback will occur even though
