@@ -1079,6 +1079,8 @@ genGovernancePollAnswer =
    genGovernancePollHash =
      GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
 
+-- TODO: Left off here. Fix this then get back to incorporating proposal procedure
+-- script witnesses in the api and then propagate to the cli
 genProposals :: ConwayEraOnwards era -> Gen (TxProposalProcedures BuildTx era)
 genProposals w =
   conwayEraOnwardsConstraints w

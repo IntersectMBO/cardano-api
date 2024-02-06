@@ -378,9 +378,8 @@ data LocalNodeClientProtocolsForBlock block =
 
 -- | Convert from the mode-parametrised style to the block-parametrised style.
 --
-mkLocalNodeClientParams :: forall block. ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => ConsensusModeParams
+mkLocalNodeClientParams ::
+     ConsensusModeParams
   -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
   -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =
