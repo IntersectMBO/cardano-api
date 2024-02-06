@@ -769,8 +769,8 @@ instance CastVerificationKeyRole CommitteeHotKey PaymentKey where
       PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeHotKey) where
-    bech32PrefixFor         _ =  "committee_hot"
-    bech32PrefixesPermitted _ = ["committee_hot"]
+    bech32PrefixFor         _ =  "cc_hot"
+    bech32PrefixesPermitted _ = ["cc_hot"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeHotKey) where
     bech32PrefixFor         _ =  "cc_hot_vk"
@@ -877,8 +877,8 @@ instance CastVerificationKeyRole CommitteeColdKey PaymentKey where
       PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeColdKey) where
-    bech32PrefixFor         _ =  "committee_cold"
-    bech32PrefixesPermitted _ = ["committee_cold"]
+    bech32PrefixFor         _ =  "cc_cold"
+    bech32PrefixesPermitted _ = ["cc_cold"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdKey) where
     bech32PrefixFor         _ =  "cc_cold_vk"
