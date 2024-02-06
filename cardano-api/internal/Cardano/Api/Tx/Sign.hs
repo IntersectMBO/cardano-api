@@ -738,9 +738,11 @@ data ShelleyWitnessSigningKey =
                                  (SigningKey GenesisDelegateExtendedKey)
      | WitnessGenesisUTxOKey     (SigningKey GenesisUTxOKey)
      | WitnessCommitteeColdKey   (SigningKey CommitteeColdKey)
-     | WitnessCommitteeHotKey    (SigningKey CommitteeHotKey)
-     | WitnessDRepKey            (SigningKey DRepKey)
-     | WitnessDRepExtendedKey    (SigningKey DRepExtendedKey)
+     | WitnessCommitteeColdExtendedKey (SigningKey CommitteeColdExtendedKey)
+     | WitnessCommitteeHotKey          (SigningKey CommitteeHotKey)
+     | WitnessCommitteeHotExtendedKey  (SigningKey CommitteeHotExtendedKey)
+     | WitnessDRepKey                  (SigningKey DRepKey)
+     | WitnessDRepExtendedKey          (SigningKey DRepExtendedKey)
 
 
 -- | We support making key witnesses with both normal and extended signing keys.
@@ -1051,6 +1053,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
         (Byron.aaNetworkMagic . unAddrAttrs)
         eitherNwOrAddr
 
+
 makeShelleyKeyWitness :: forall era. ()
   => ShelleyBasedEra era
   -> TxBody era
@@ -1088,16 +1091,13 @@ toShelleySigningKey key = case key of
   WitnessDRepKey            (DRepSigningKey sk)            -> ShelleyNormalSigningKey sk
 
   -- The cases for extended keys
-  WitnessPaymentExtendedKey (PaymentExtendedSigningKey sk) ->
-    ShelleyExtendedSigningKey sk
-  WitnessStakeExtendedKey (StakeExtendedSigningKey sk) ->
-    ShelleyExtendedSigningKey sk
-  WitnessGenesisExtendedKey (GenesisExtendedSigningKey sk) ->
-    ShelleyExtendedSigningKey sk
-  WitnessGenesisDelegateExtendedKey (GenesisDelegateExtendedSigningKey sk) ->
-    ShelleyExtendedSigningKey sk
-  WitnessDRepExtendedKey (DRepExtendedSigningKey sk) ->
-    ShelleyExtendedSigningKey sk
+  WitnessPaymentExtendedKey (PaymentExtendedSigningKey sk)                 -> ShelleyExtendedSigningKey sk
+  WitnessStakeExtendedKey   (StakeExtendedSigningKey sk)                   -> ShelleyExtendedSigningKey sk
+  WitnessGenesisExtendedKey (GenesisExtendedSigningKey sk)                 -> ShelleyExtendedSigningKey sk
+  WitnessGenesisDelegateExtendedKey (GenesisDelegateExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
+  WitnessCommitteeColdExtendedKey   (CommitteeColdExtendedSigningKey sk)   -> ShelleyExtendedSigningKey sk
+  WitnessCommitteeHotExtendedKey    (CommitteeHotExtendedSigningKey sk)    -> ShelleyExtendedSigningKey sk
+  WitnessDRepExtendedKey            (DRepExtendedSigningKey sk)            -> ShelleyExtendedSigningKey sk
 
 getShelleyKeyWitnessVerificationKey
   :: ShelleySigningKey
