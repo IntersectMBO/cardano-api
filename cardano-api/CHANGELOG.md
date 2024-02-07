@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.38.0.1
+
+- Make it build with ghc-9.8
+  (maintenance, compatible)
+  [PR 436](https://github.com/IntersectMBO/cardano-api/pull/436)
+
 ## 8.38.0.0
 
 - Make committee keys able to sign transactions
