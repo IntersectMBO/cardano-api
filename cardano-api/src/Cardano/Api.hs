@@ -979,10 +979,12 @@ module Cardano.Api (
     CommitteeHotKeyAuthorizationRequirements(..),
     DRepRegistrationRequirements(..),
     DRepUnregistrationRequirements(..),
+    DRepUpdateRequirements(..),
     makeCommitteeColdkeyResignationCertificate,
     makeCommitteeHotKeyAuthorizationCertificate,
     makeDrepRegistrationCertificate,
     makeDrepUnregistrationCertificate,
+    makeDrepUpdateCertificate,
 
     ResolvablePointers(..),
   ) where

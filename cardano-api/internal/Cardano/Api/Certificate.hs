@@ -37,10 +37,12 @@ module Cardano.Api.Certificate (
     CommitteeHotKeyAuthorizationRequirements(..),
     DRepRegistrationRequirements(..),
     DRepUnregistrationRequirements(..),
+    DRepUpdateRequirements(..),
     makeCommitteeColdkeyResignationCertificate,
     makeCommitteeHotKeyAuthorizationCertificate,
     makeDrepRegistrationCertificate,
     makeDrepUnregistrationCertificate,
+    makeDrepUpdateCertificate,
 
     makeStakeAddressAndDRepDelegationCertificate,
 
@@ -465,6 +467,21 @@ makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
         (toShelleyStakeCredential cred)
         delegatee
         (toShelleyLovelace deposit)
+
+data DRepUpdateRequirements era where
+  DRepUpdateRequirements
+    :: ConwayEraOnwards era
+    -> Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era))
+    -> DRepUpdateRequirements era
+
+makeDrepUpdateCertificate
+  :: DRepUpdateRequirements era
+  -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
+  -> Certificate era
+makeDrepUpdateCertificate (DRepUpdateRequirements conwayOnwards vcred) mAnchor =
+  ConwayCertificate conwayOnwards
+    . Ledger.ConwayTxCertGov
+    $ Ledger.ConwayUpdateDRep vcred (noInlineMaybeToStrictMaybe mAnchor)
 
 -- ----------------------------------------------------------------------------
 -- Helper functions
