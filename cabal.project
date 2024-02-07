@@ -43,8 +43,8 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 73b09e455675484340f3477c35bbbc92d38e8f32
-  --sha256: 1i4zn94a694sxgqlk2gn8n9kp3n5hx3bvg41mq33psaygayvzq9n
+  tag: 100fbf18c562756205b64c45afc85206d076efb0
+  --sha256: 1zkdg3jafh7p66slbi2q5lscla42zwygi2ivxliv0z4irdz67qcb
   subdir:
    ouroboros-consensus
    ouroboros-consensus-cardano
