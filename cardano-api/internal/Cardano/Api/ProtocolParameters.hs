@@ -251,6 +251,7 @@ data IntroducedInConwayPParams era
     , icGovActionDeposit     :: StrictMaybe Ledger.Coin
     , icDRepDeposit          :: StrictMaybe Ledger.Coin
     , icDRepActivity         :: StrictMaybe Ledger.EpochInterval
+    , minFeeRefScriptsCoinsPerByte :: StrictMaybe Ledger.NonNegativeInterval
     } deriving Show
 
 
