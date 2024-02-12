@@ -151,7 +151,7 @@ import qualified Cardano.Chain.UTxO as Byron
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..), PParamsUpdate (..), ppPricesL)
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Alonzo.Scripts (CostModels (..), Prices (..))
+import           Cardano.Ledger.Alonzo.Scripts (CostModels, Prices (..))
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,
                    pattern MirTxCert, pattern RegDRepTxCert, pattern RegDepositDelegTxCert,
