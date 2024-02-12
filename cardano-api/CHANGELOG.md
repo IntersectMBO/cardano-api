@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.38.0.2
+
+- Support constructing DRep update certificates
+  (feature, compatible)
+  [PR 421](https://github.com/IntersectMBO/cardano-api/pull/421)
+
 ## 8.38.0.1
 
 - Make it build with ghc-9.8
