@@ -45,8 +45,8 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 

@@ -85,8 +85,8 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol
 import           Cardano.Api.Query
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 
 import qualified Cardano.Ledger.Api as L
 import qualified Ouroboros.Consensus.Block as Consensus
@@ -378,9 +378,8 @@ data LocalNodeClientProtocolsForBlock block =
 
 -- | Convert from the mode-parametrised style to the block-parametrised style.
 --
-mkLocalNodeClientParams :: forall block. ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
-  => ConsensusModeParams
+mkLocalNodeClientParams ::
+     ConsensusModeParams
   -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
   -> LocalNodeClientParams
 mkLocalNodeClientParams modeparams clients =
@@ -533,7 +532,7 @@ toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
 
 queryNodeLocalState :: forall result. ()
   => LocalNodeConnectInfo
-  -> Maybe ChainPoint
+  -> Net.Query.Target ChainPoint
   -> QueryInMode result
   -> IO (Either AcquiringFailure result)
 queryNodeLocalState connctInfo mpoint query = do
@@ -549,7 +548,7 @@ queryNodeLocalState connctInfo mpoint query = do
     atomically (takeTMVar resultVar)
   where
     singleQuery
-      :: Maybe ChainPoint
+      :: Net.Query.Target ChainPoint
       -> TMVar (Either AcquiringFailure result)
       -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
     singleQuery mPointVar' resultVar' =

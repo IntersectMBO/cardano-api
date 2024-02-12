@@ -24,7 +24,7 @@ testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a)
 testAllErrorMessages goldenFilesLocation errs = withFrozenCallStack $ do
   -- 'err' here is only needed for its 'Data' instance and it's never evaluated
   -- it's equivalent of having @err = undefined :: a@
-  let err = head errs
+  let err = undefined :: a
       typeName = show $ typeOf err
       testedConstructors = map toConstr errs
       allConstructors = dataTypeConstrs $ dataTypeOf err

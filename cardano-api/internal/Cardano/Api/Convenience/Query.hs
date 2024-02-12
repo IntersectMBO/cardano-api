@@ -26,7 +26,7 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Query.Expr
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
@@ -35,6 +35,7 @@ import           Cardano.Ledger.CertState (DRepState (..))
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
 import           Control.Monad.Trans (MonadTrans (..))
 import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
@@ -130,7 +131,7 @@ determineEra :: ()
   => LocalNodeConnectInfo
   -> IO (Either AcquiringFailure AnyCardanoEra)
 determineEra localNodeConnInfo =
-  queryNodeLocalState localNodeConnInfo Nothing QueryCurrentEra
+  queryNodeLocalState localNodeConnInfo VolatileTip QueryCurrentEra
 
 -- | Execute a query against the local node. The local
 -- node must be in CardanoMode.
@@ -155,6 +156,6 @@ executeQueryAnyMode :: forall result. ()
   -> QueryInMode (Either EraMismatch result)
   -> IO (Either QueryConvenienceError result)
 executeQueryAnyMode localNodeConnInfo q = runExceptT $ do
-  lift (queryNodeLocalState localNodeConnInfo Nothing q)
+  lift (queryNodeLocalState localNodeConnInfo VolatileTip q)
     & onLeft (left . AcqFailure)
     & onLeft (left . QueryEraMismatch)

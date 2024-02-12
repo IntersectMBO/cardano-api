@@ -18,7 +18,9 @@ module Cardano.Api.Keys.Shelley (
 
     -- * Key types
     CommitteeColdKey,
+    CommitteeColdExtendedKey,
     CommitteeHotKey,
+    CommitteeHotExtendedKey,
     DRepKey,
     DRepExtendedKey,
     PaymentKey,
@@ -769,16 +771,16 @@ instance CastVerificationKeyRole CommitteeHotKey PaymentKey where
       PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeHotKey) where
-    bech32PrefixFor         _ =  "committee_hot"
-    bech32PrefixesPermitted _ = ["committee_hot"]
+    bech32PrefixFor         _ =  "cc_hot"
+    bech32PrefixesPermitted _ = ["cc_hot"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeHotKey) where
-    bech32PrefixFor         _ =  "drep_vk"
-    bech32PrefixesPermitted _ = ["drep_vk"]
+    bech32PrefixFor         _ =  "cc_hot_vk"
+    bech32PrefixesPermitted _ = ["cc_hot_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeHotKey) where
-    bech32PrefixFor         _ =  "drep_sk"
-    bech32PrefixesPermitted _ = ["drep_sk"]
+    bech32PrefixFor         _ =  "cc_hot_sk"
+    bech32PrefixesPermitted _ = ["cc_hot_sk"]
 
 --
 -- Constitutional Committee Cold Keys
@@ -877,16 +879,274 @@ instance CastVerificationKeyRole CommitteeColdKey PaymentKey where
       PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeColdKey) where
-    bech32PrefixFor         _ =  "committee_cold"
-    bech32PrefixesPermitted _ = ["committee_cold"]
+    bech32PrefixFor         _ =  "cc_cold"
+    bech32PrefixesPermitted _ = ["cc_cold"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdKey) where
-    bech32PrefixFor         _ =  "drep_vk"
-    bech32PrefixesPermitted _ = ["drep_vk"]
+    bech32PrefixFor         _ =  "cc_cold_vk"
+    bech32PrefixesPermitted _ = ["cc_cold_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeColdKey) where
-    bech32PrefixFor         _ =  "drep_sk"
-    bech32PrefixesPermitted _ = ["drep_sk"]
+    bech32PrefixFor         _ =  "cc_cold_sk"
+    bech32PrefixesPermitted _ = ["cc_cold_sk"]
+
+---
+--- Committee cold extended keys
+---
+data CommitteeColdExtendedKey
+
+instance HasTypeProxy CommitteeColdExtendedKey where
+    data AsType CommitteeColdExtendedKey = AsCommitteeColdExtendedKey
+    proxyToAsType _ = AsCommitteeColdExtendedKey
+
+instance Key CommitteeColdExtendedKey where
+
+    newtype VerificationKey CommitteeColdExtendedKey =
+        CommitteeColdExtendedVerificationKey Crypto.HD.XPub
+      deriving stock (Eq)
+      deriving anyclass SerialiseAsCBOR
+      deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
+
+    newtype SigningKey CommitteeColdExtendedKey =
+        CommitteeColdExtendedSigningKey Crypto.HD.XPrv
+      deriving anyclass SerialiseAsCBOR
+      deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
+
+    deterministicSigningKey :: AsType CommitteeColdExtendedKey
+                            -> Crypto.Seed
+                            -> SigningKey CommitteeColdExtendedKey
+    deterministicSigningKey AsCommitteeColdExtendedKey seed =
+        CommitteeColdExtendedSigningKey
+          (Crypto.HD.generate seedbs BS.empty)
+      where
+       (seedbs, _) = Crypto.getBytesFromSeedT 32 seed
+
+    deterministicSigningKeySeedSize :: AsType CommitteeColdExtendedKey -> Word
+    deterministicSigningKeySeedSize AsCommitteeColdExtendedKey = 32
+
+    getVerificationKey :: SigningKey CommitteeColdExtendedKey
+                       -> VerificationKey CommitteeColdExtendedKey
+    getVerificationKey (CommitteeColdExtendedSigningKey sk) =
+        CommitteeColdExtendedVerificationKey (Crypto.HD.toXPub sk)
+
+    -- | We use the hash of the normal non-extended pub key so that it is
+    -- consistent with the one used in addresses and signatures.
+    --
+    verificationKeyHash :: VerificationKey CommitteeColdExtendedKey
+                        -> Hash CommitteeColdExtendedKey
+    verificationKeyHash (CommitteeColdExtendedVerificationKey vk) =
+        CommitteeColdExtendedKeyHash
+      . Shelley.KeyHash
+      . Crypto.castHash
+      $ Crypto.hashWith Crypto.HD.xpubPublicKey vk
+
+newtype instance Hash CommitteeColdExtendedKey =
+    CommitteeColdExtendedKeyHash { unCommitteeColdExtendedKeyHash :: Shelley.KeyHash Shelley.ColdCommitteeRole StandardCrypto }
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeColdKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeColdKey)
+  deriving anyclass SerialiseAsCBOR
+
+instance ToCBOR (VerificationKey CommitteeColdExtendedKey) where
+    toCBOR (CommitteeColdExtendedVerificationKey xpub) =
+      toCBOR (Crypto.HD.unXPub xpub)
+
+instance FromCBOR (VerificationKey CommitteeColdExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . CommitteeColdExtendedVerificationKey)
+             (Crypto.HD.xpub (bs :: ByteString))
+
+instance ToCBOR (SigningKey CommitteeColdExtendedKey) where
+    toCBOR (CommitteeColdExtendedSigningKey xprv) =
+      toCBOR (Crypto.HD.unXPrv xprv)
+
+instance FromCBOR (SigningKey CommitteeColdExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . CommitteeColdExtendedSigningKey)
+             (Crypto.HD.xprv (bs :: ByteString))
+
+instance SerialiseAsRawBytes (VerificationKey CommitteeColdExtendedKey) where
+    serialiseToRawBytes (CommitteeColdExtendedVerificationKey xpub) =
+      Crypto.HD.unXPub xpub
+
+    deserialiseFromRawBytes (AsVerificationKey AsCommitteeColdExtendedKey) bs =
+      first
+        (const (SerialiseAsRawBytesError "Unable to deserialise VerificationKey CommitteeColdExtendedKey"))
+        (CommitteeColdExtendedVerificationKey <$> Crypto.HD.xpub bs)
+
+instance SerialiseAsRawBytes (SigningKey CommitteeColdExtendedKey) where
+    serialiseToRawBytes (CommitteeColdExtendedSigningKey xprv) =
+      Crypto.HD.unXPrv xprv
+
+    deserialiseFromRawBytes (AsSigningKey AsCommitteeColdExtendedKey) bs =
+      first
+        (const (SerialiseAsRawBytesError "Unable to deserialise SigningKey CommitteeColdExtendedKey"))
+        (CommitteeColdExtendedSigningKey <$> Crypto.HD.xprv bs)
+
+instance SerialiseAsRawBytes (Hash CommitteeColdExtendedKey) where
+    serialiseToRawBytes (CommitteeColdExtendedKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.hashToBytes vkh
+
+    deserialiseFromRawBytes (AsHash AsCommitteeColdExtendedKey) bs =
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash CommitteeColdExtendedKey") $
+        CommitteeColdExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
+instance HasTextEnvelope (VerificationKey CommitteeColdExtendedKey) where
+    textEnvelopeType _ = "ConstitutionalCommitteeColdExtendedVerificationKey_ed25519_bip32"
+
+instance HasTextEnvelope (SigningKey CommitteeColdExtendedKey) where
+    textEnvelopeType _ = "ConstitutionalCommitteeColdExtendedSigningKey_ed25519_bip32"
+
+instance SerialiseAsBech32 (VerificationKey CommitteeColdExtendedKey) where
+    bech32PrefixFor         _ =  "cc_cold_xvk"
+    bech32PrefixesPermitted _ = ["cc_cold_xvk"]
+
+instance SerialiseAsBech32 (SigningKey CommitteeColdExtendedKey) where
+    bech32PrefixFor         _ =  "cc_cold_xsk"
+    bech32PrefixesPermitted _ = ["cc_cold_xsk"]
+
+instance CastVerificationKeyRole CommitteeColdExtendedKey CommitteeColdKey where
+    castVerificationKey (CommitteeColdExtendedVerificationKey vk) =
+        CommitteeColdVerificationKey
+      . Shelley.VKey
+      . fromMaybe impossible
+      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.HD.xpubPublicKey
+      $ vk
+      where
+        impossible =
+          error "castVerificationKey (CommitteeCold): byron and shelley key sizes do not match!"
+
+---
+--- Committee hot extended keys
+---
+data CommitteeHotExtendedKey
+
+instance HasTypeProxy CommitteeHotExtendedKey where
+    data AsType CommitteeHotExtendedKey = AsCommitteeHotExtendedKey
+    proxyToAsType _ = AsCommitteeHotExtendedKey
+
+instance Key CommitteeHotExtendedKey where
+
+    newtype VerificationKey CommitteeHotExtendedKey =
+        CommitteeHotExtendedVerificationKey Crypto.HD.XPub
+      deriving stock (Eq)
+      deriving anyclass SerialiseAsCBOR
+      deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
+
+    newtype SigningKey CommitteeHotExtendedKey =
+        CommitteeHotExtendedSigningKey Crypto.HD.XPrv
+      deriving anyclass SerialiseAsCBOR
+      deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
+
+    deterministicSigningKey :: AsType CommitteeHotExtendedKey
+                            -> Crypto.Seed
+                            -> SigningKey CommitteeHotExtendedKey
+    deterministicSigningKey AsCommitteeHotExtendedKey seed =
+        CommitteeHotExtendedSigningKey
+          (Crypto.HD.generate seedbs BS.empty)
+      where
+       (seedbs, _) = Crypto.getBytesFromSeedT 32 seed
+
+    deterministicSigningKeySeedSize :: AsType CommitteeHotExtendedKey -> Word
+    deterministicSigningKeySeedSize AsCommitteeHotExtendedKey = 32
+
+    getVerificationKey :: SigningKey CommitteeHotExtendedKey
+                       -> VerificationKey CommitteeHotExtendedKey
+    getVerificationKey (CommitteeHotExtendedSigningKey sk) =
+        CommitteeHotExtendedVerificationKey (Crypto.HD.toXPub sk)
+
+    -- | We use the hash of the normal non-extended pub key so that it is
+    -- consistent with the one used in addresses and signatures.
+    --
+    verificationKeyHash :: VerificationKey CommitteeHotExtendedKey
+                        -> Hash CommitteeHotExtendedKey
+    verificationKeyHash (CommitteeHotExtendedVerificationKey vk) =
+        CommitteeHotExtendedKeyHash
+      . Shelley.KeyHash
+      . Crypto.castHash
+      $ Crypto.hashWith Crypto.HD.xpubPublicKey vk
+
+newtype instance Hash CommitteeHotExtendedKey =
+    CommitteeHotExtendedKeyHash { unCommitteeHotExtendedKeyHash :: Shelley.KeyHash Shelley.HotCommitteeRole StandardCrypto }
+  deriving stock (Eq, Ord)
+  deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeHotKey)
+  deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeHotKey)
+  deriving anyclass SerialiseAsCBOR
+
+instance ToCBOR (VerificationKey CommitteeHotExtendedKey) where
+    toCBOR (CommitteeHotExtendedVerificationKey xpub) =
+      toCBOR (Crypto.HD.unXPub xpub)
+
+instance FromCBOR (VerificationKey CommitteeHotExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . CommitteeHotExtendedVerificationKey)
+             (Crypto.HD.xpub (bs :: ByteString))
+
+instance ToCBOR (SigningKey CommitteeHotExtendedKey) where
+    toCBOR (CommitteeHotExtendedSigningKey xprv) =
+      toCBOR (Crypto.HD.unXPrv xprv)
+
+instance FromCBOR (SigningKey CommitteeHotExtendedKey) where
+    fromCBOR = do
+      bs <- fromCBOR
+      either fail (return . CommitteeHotExtendedSigningKey)
+             (Crypto.HD.xprv (bs :: ByteString))
+
+instance SerialiseAsRawBytes (VerificationKey CommitteeHotExtendedKey) where
+    serialiseToRawBytes (CommitteeHotExtendedVerificationKey xpub) =
+      Crypto.HD.unXPub xpub
+
+    deserialiseFromRawBytes (AsVerificationKey AsCommitteeHotExtendedKey) bs =
+      first
+        (const (SerialiseAsRawBytesError "Unable to deserialise VerificationKey CommitteeHotExtendedKey"))
+        (CommitteeHotExtendedVerificationKey <$> Crypto.HD.xpub bs)
+
+instance SerialiseAsRawBytes (SigningKey CommitteeHotExtendedKey) where
+    serialiseToRawBytes (CommitteeHotExtendedSigningKey xprv) =
+      Crypto.HD.unXPrv xprv
+
+    deserialiseFromRawBytes (AsSigningKey AsCommitteeHotExtendedKey) bs =
+      first
+        (const (SerialiseAsRawBytesError "Unable to deserialise SigningKey CommitteeHotExtendedKey"))
+        (CommitteeHotExtendedSigningKey <$> Crypto.HD.xprv bs)
+
+instance SerialiseAsRawBytes (Hash CommitteeHotExtendedKey) where
+    serialiseToRawBytes (CommitteeHotExtendedKeyHash (Shelley.KeyHash vkh)) =
+      Crypto.hashToBytes vkh
+
+    deserialiseFromRawBytes (AsHash AsCommitteeHotExtendedKey) bs =
+      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash CommitteeHotExtendedKey") $
+        CommitteeHotExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
+instance HasTextEnvelope (VerificationKey CommitteeHotExtendedKey) where
+    textEnvelopeType _ = "ConstitutionalCommitteeHotExtendedVerificationKey_ed25519_bip32"
+
+instance HasTextEnvelope (SigningKey CommitteeHotExtendedKey) where
+    textEnvelopeType _ = "ConstitutionalCommitteeHotExtendedSigningKey_ed25519_bip32"
+
+instance SerialiseAsBech32 (VerificationKey CommitteeHotExtendedKey) where
+    bech32PrefixFor         _ =  "cc_hot_xvk"
+    bech32PrefixesPermitted _ = ["cc_hot_xvk"]
+
+instance SerialiseAsBech32 (SigningKey CommitteeHotExtendedKey) where
+    bech32PrefixFor         _ =  "cc_hot_xsk"
+    bech32PrefixesPermitted _ = ["cc_hot_xsk"]
+
+instance CastVerificationKeyRole CommitteeHotExtendedKey CommitteeHotKey where
+    castVerificationKey (CommitteeHotExtendedVerificationKey vk) =
+        CommitteeHotVerificationKey
+      . Shelley.VKey
+      . fromMaybe impossible
+      . Crypto.rawDeserialiseVerKeyDSIGN
+      . Crypto.HD.xpubPublicKey
+      $ vk
+      where
+        impossible =
+          error "castVerificationKey (CommitteeHot): byron and shelley key sizes do not match!"
 
 --
 -- Shelley genesis extended ed25519 keys

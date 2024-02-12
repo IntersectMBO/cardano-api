@@ -24,7 +24,7 @@
 
 -- | Transaction bodies
 --
-module Cardano.Api.TxBody (
+module Cardano.Api.Tx.Body (
     parseTxId,
     -- * Transaction bodies
     TxBody(.., TxBody),
@@ -68,7 +68,6 @@ module Cardano.Api.TxBody (
     ScriptValidity(..),
     scriptValidityToIsValid,
     isValidToScriptValidity,
-    scriptValidityToTxScriptValidity,
     txScriptValidityToIsValid,
     txScriptValidityToScriptValidity,
 
@@ -113,6 +112,8 @@ module Cardano.Api.TxBody (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
+    TxVotingProcedures(..),
+    TxProposalProcedures(..),
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),
@@ -124,6 +125,7 @@ module Cardano.Api.TxBody (
     ScriptWitnessIndex(..),
     renderScriptWitnessIndex,
     collectTxBodyScriptWitnesses,
+    toScriptIndex,
 
     -- * Conversion to inline data
     scriptDataToInlineDatum,
@@ -137,8 +139,6 @@ module Cardano.Api.TxBody (
     fromShelleyTxId,
     fromShelleyTxIn,
     fromShelleyTxOut,
-    toAlonzoRdmrPtr,
-    fromAlonzoRdmrPtr,
     fromByronTxIn,
     fromLedgerTxOuts,
     renderTxIn,
@@ -175,12 +175,9 @@ import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
-import           Cardano.Api.Error
+import           Cardano.Api.Error (Error (..), displayError)
 import           Cardano.Api.Feature
-import           Cardano.Api.Governance.Actions.ProposalProcedure
-import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
 import qualified Cardano.Api.Ledger.Lens as A
@@ -190,10 +187,9 @@ import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
-import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.TxIn
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
@@ -210,11 +206,9 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import           Cardano.Ledger.Binary (Annotated (..), reAnnotate)
+import           Cardano.Ledger.Binary (Annotated (..))
 import qualified Cardano.Ledger.Binary as CBOR
-import qualified Cardano.Ledger.Block as Ledger
 import           Cardano.Ledger.Core ()
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -244,7 +238,6 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_, toList)
 import           Data.Function (on)
 import           Data.Functor (($>))
@@ -255,6 +248,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Monoid
+import           Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
@@ -271,60 +265,6 @@ import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
-
--- | Indicates whether a script is expected to fail or pass validation.
-data ScriptValidity
-  = ScriptInvalid -- ^ Script is expected to fail validation.
-                  -- Transactions marked as such can include scripts that fail validation.
-                  -- Such transactions may be submitted to the chain, in which case the
-                  -- collateral will be taken upon on chain script validation failure.
-
-  | ScriptValid   -- ^ Script is expected to pass validation.
-                  -- Transactions marked as such cannot include scripts that fail validation.
-
-  deriving (Eq, Show)
-
-instance CBOR.EncCBOR ScriptValidity where
-  encCBOR = CBOR.encCBOR . scriptValidityToIsValid
-
-instance CBOR.DecCBOR ScriptValidity where
-  decCBOR = isValidToScriptValidity <$> CBOR.decCBOR
-
-scriptValidityToIsValid :: ScriptValidity -> L.IsValid
-scriptValidityToIsValid ScriptInvalid = L.IsValid False
-scriptValidityToIsValid ScriptValid = L.IsValid True
-
-isValidToScriptValidity :: L.IsValid -> ScriptValidity
-isValidToScriptValidity (L.IsValid False) = ScriptInvalid
-isValidToScriptValidity (L.IsValid True) = ScriptValid
-
--- | A representation of whether the era supports tx script validity.
---
--- The Alonzo and subsequent eras support script validity.
---
-data TxScriptValidity era where
-  TxScriptValidityNone
-    :: TxScriptValidity era
-
-  -- | Tx script validity is supported in transactions in the 'Alonzo' era onwards.
-  TxScriptValidity
-    :: AlonzoEraOnwards era
-    -> ScriptValidity
-    -> TxScriptValidity era
-
-deriving instance Eq   (TxScriptValidity era)
-deriving instance Show (TxScriptValidity era)
-
-txScriptValidityToScriptValidity :: TxScriptValidity era -> ScriptValidity
-txScriptValidityToScriptValidity TxScriptValidityNone = ScriptValid
-txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptValidity
-
-scriptValidityToTxScriptValidity :: ShelleyBasedEra era -> ScriptValidity -> TxScriptValidity era
-scriptValidityToTxScriptValidity sbe scriptValidity =
-  forShelleyBasedEraInEon sbe TxScriptValidityNone $ \w -> TxScriptValidity w scriptValidity
-
-txScriptValidityToIsValid :: TxScriptValidity era -> L.IsValid
-txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
 
 -- ----------------------------------------------------------------------------
 -- Transaction outputs
@@ -739,9 +679,9 @@ toAlonzoTxOutDatumHashUTxO (TxOutDatumInline{}) = SNothing
 
 toBabbageTxOutDatumUTxO
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
-toBabbageTxOutDatumUTxO  TxOutDatumNone = Babbage.NoDatum
-toBabbageTxOutDatumUTxO (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
+  => TxOutDatum CtxUTxO era -> Plutus.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatumUTxO  TxOutDatumNone = Plutus.NoDatum
+toBabbageTxOutDatumUTxO (TxOutDatumHash _ (ScriptDataHash dh)) = Plutus.DatumHash dh
 toBabbageTxOutDatumUTxO (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
 
 
@@ -805,22 +745,22 @@ toAlonzoTxOutDatumHash (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
 
 toBabbageTxOutDatum
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
-toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
-toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
+  => TxOutDatum ctx era -> Plutus.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatum  TxOutDatumNone = Plutus.NoDatum
+toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Plutus.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
-toBabbageTxOutDatum (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
+toBabbageTxOutDatum (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Plutus.DatumHash dh
 
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
   => AlonzoEraOnwards era
   -> BabbageEraOnwards era
-  -> Babbage.Datum ledgerera
+  -> Plutus.Datum ledgerera
   -> TxOutDatum ctx era
-fromBabbageTxOutDatum _ _ Babbage.NoDatum = TxOutDatumNone
-fromBabbageTxOutDatum w _ (Babbage.DatumHash dh) =
+fromBabbageTxOutDatum _ _ Plutus.NoDatum = TxOutDatumNone
+fromBabbageTxOutDatum w _ (Plutus.DatumHash dh) =
   TxOutDatumHash w $ ScriptDataHash dh
-fromBabbageTxOutDatum _ w (Babbage.Datum binData) =
+fromBabbageTxOutDatum _ w (Plutus.Datum binData) =
   TxOutDatumInline w $ binaryDataToScriptData w binData
 
 
@@ -1218,6 +1158,39 @@ deriving instance Eq   (TxMintValue build era)
 deriving instance Show (TxMintValue build era)
 
 -- ----------------------------------------------------------------------------
+-- Votes within transactions (era-dependent)
+--
+
+data TxVotingProcedures build era where
+  TxVotingProceduresNone :: TxVotingProcedures build era
+  TxVotingProcedures
+    :: L.VotingProcedures (ShelleyLedgerEra era)
+    -> BuildTxWith build (Map (Ledger.Voter (Ledger.EraCrypto (ShelleyLedgerEra era))) (ScriptWitness WitCtxStake era))
+    -> TxVotingProcedures build era
+
+
+deriving instance Eq (TxVotingProcedures build era)
+deriving instance Show (TxVotingProcedures build era)
+
+
+-- ----------------------------------------------------------------------------
+-- Proposals within transactions (era-dependent)
+--
+
+data TxProposalProcedures build era where
+  TxProposalProceduresNone :: TxProposalProcedures build era
+  TxProposalProcedures
+    :: Ledger.EraPParams (ShelleyLedgerEra era)
+    => OSet (L.ProposalProcedure (ShelleyLedgerEra era))
+    -> BuildTxWith build (Map (L.ProposalProcedure (ShelleyLedgerEra era)) (ScriptWitness WitCtxStake era))
+    -> TxProposalProcedures build era
+
+
+deriving instance Eq (TxProposalProcedures build era)
+deriving instance Show (TxProposalProcedures build era)
+
+
+-- ----------------------------------------------------------------------------
 -- Transaction body content
 --
 
@@ -1241,8 +1214,8 @@ data TxBodyContent build era =
        txUpdateProposal     :: TxUpdateProposal era,
        txMintValue          :: TxMintValue    build era,
        txScriptValidity     :: TxScriptValidity era,
-       txProposalProcedures :: Maybe (Featured ConwayEraOnwards era [Proposal era]),
-       txVotingProcedures   :: Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
+       txProposalProcedures :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)),
+       txVotingProcedures   :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))
      }
      deriving (Eq, Show)
 
@@ -1338,360 +1311,7 @@ setTxMintValue v txBodyContent = txBodyContent { txMintValue = v }
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent { txScriptValidity = v }
 
--- ----------------------------------------------------------------------------
--- Transaction bodies
---
 
-data TxBody era where
-     ShelleyTxBody
-       :: ShelleyBasedEra era
-       -> Ledger.TxBody (ShelleyLedgerEra era)
-
-          -- We include the scripts along with the tx body, rather than the
-          -- witnesses set, since they need to be known when building the body.
-       -> [Ledger.Script (ShelleyLedgerEra era)]
-
-          -- The info for each use of each script: the script input data, both
-          -- the UTxO input data (called the "datum") and the supplied input
-          -- data (called the "redeemer") and the execution units.
-       -> TxBodyScriptData era
-
-          -- The 'L.TxAuxData' consists of one or several things,
-          -- depending on era:
-          -- + transaction metadata  (in Shelley and later)
-          -- + auxiliary scripts     (in Allegra and later)
-          -- Note that there is no auxiliary script data as such, because the
-          -- extra script data has to be passed to scripts and hence is needed
-          -- for validation. It is thus part of the witness data, not the
-          -- auxiliary data.
-       -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
-
-       -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
-
-       -> TxBody era
-     -- The 'ShelleyBasedEra' GADT tells us what era we are in.
-     -- The 'ShelleyLedgerEra' type family maps that to the era type from the
-     -- ledger lib. The 'Ledger.TxBody' type family maps that to a specific
-     -- tx body type, which is different for each Shelley-based era.
-
-
-data TxBodyScriptData era where
-     TxBodyNoScriptData :: TxBodyScriptData era
-     TxBodyScriptData   :: AlonzoEraOnwards era
-                        -> Alonzo.TxDats (ShelleyLedgerEra era)
-                        -> Alonzo.Redeemers (ShelleyLedgerEra era)
-                        -> TxBodyScriptData era
-
-deriving instance Eq   (TxBodyScriptData era)
-deriving instance L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto => Show (TxBodyScriptData era)
-
-
--- The GADT in the ShelleyTxBody case requires a custom instance
-instance Eq (TxBody era) where
-    (==) (ShelleyTxBody sbe txbodyA txscriptsA redeemersA txmetadataA scriptValidityA)
-         (ShelleyTxBody _   txbodyB txscriptsB redeemersB txmetadataB scriptValidityB) =
-         case sbe of
-           ShelleyBasedEraShelley -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && txmetadataA == txmetadataB
-
-           ShelleyBasedEraAllegra -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && txmetadataA == txmetadataB
-
-           ShelleyBasedEraMary    -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && txmetadataA == txmetadataB
-
-           ShelleyBasedEraAlonzo  -> txbodyA         == txbodyB
-                                  && txscriptsA      == txscriptsB
-                                  && redeemersA      == redeemersB
-                                  && txmetadataA     == txmetadataB
-                                  && scriptValidityA == scriptValidityB
-
-           ShelleyBasedEraBabbage -> txbodyA         == txbodyB
-                                  && txscriptsA      == txscriptsB
-                                  && redeemersA      == redeemersB
-                                  && txmetadataA     == txmetadataB
-                                  && scriptValidityA == scriptValidityB
-
-           ShelleyBasedEraConway  -> txbodyA         == txbodyB
-                                  && txscriptsA      == txscriptsB
-                                  && redeemersA      == redeemersB
-                                  && txmetadataA     == txmetadataB
-                                  && scriptValidityA == scriptValidityB
-
--- The GADT in the ShelleyTxBody case requires a custom instance
-instance Show (TxBody era) where
-    showsPrec p (ShelleyTxBody ShelleyBasedEraShelley
-                               txbody txscripts redeemers txmetadata scriptValidity) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxBody ShelleyBasedEraShelley "
-        . showsPrec 11 txbody
-        . showChar ' '
-        . showsPrec 11 txscripts
-        . showChar ' '
-        . showsPrec 11 redeemers
-        . showChar ' '
-        . showsPrec 11 txmetadata
-        . showChar ' '
-        . showsPrec 11 scriptValidity
-        )
-
-    showsPrec p (ShelleyTxBody ShelleyBasedEraAllegra
-                               txbody txscripts redeemers txmetadata scriptValidity) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxBody ShelleyBasedEraAllegra "
-        . showsPrec 11 txbody
-        . showChar ' '
-        . showsPrec 11 txscripts
-        . showChar ' '
-        . showsPrec 11 redeemers
-        . showChar ' '
-        . showsPrec 11 txmetadata
-        . showChar ' '
-        . showsPrec 11 scriptValidity
-        )
-
-    showsPrec p (ShelleyTxBody ShelleyBasedEraMary
-                               txbody txscripts redeemers txmetadata scriptValidity) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxBody ShelleyBasedEraMary "
-        . showsPrec 11 txbody
-        . showChar ' '
-        . showsPrec 11 txscripts
-        . showChar ' '
-        . showsPrec 11 redeemers
-        . showChar ' '
-        . showsPrec 11 txmetadata
-        . showChar ' '
-        . showsPrec 11 scriptValidity
-        )
-
-    showsPrec p (ShelleyTxBody ShelleyBasedEraAlonzo
-                               txbody txscripts redeemers txmetadata scriptValidity) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxBody ShelleyBasedEraAlonzo "
-        . showsPrec 11 txbody
-        . showChar ' '
-        . showsPrec 11 txscripts
-        . showChar ' '
-        . showsPrec 11 redeemers
-        . showChar ' '
-        . showsPrec 11 txmetadata
-        . showChar ' '
-        . showsPrec 11 scriptValidity
-        )
-
-    showsPrec p (ShelleyTxBody ShelleyBasedEraBabbage
-                               txbody txscripts redeemers txmetadata scriptValidity) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxBody ShelleyBasedEraBabbage "
-        . showsPrec 11 txbody
-        . showChar ' '
-        . showsPrec 11 txscripts
-        . showChar ' '
-        . showsPrec 11 redeemers
-        . showChar ' '
-        . showsPrec 11 txmetadata
-        . showChar ' '
-        . showsPrec 11 scriptValidity
-        )
-
-    showsPrec p (ShelleyTxBody ShelleyBasedEraConway
-                               txbody txscripts redeemers txmetadata scriptValidity) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxBody ShelleyBasedEraConway "
-        . showsPrec 11 txbody
-        . showChar ' '
-        . showsPrec 11 txscripts
-        . showChar ' '
-        . showsPrec 11 redeemers
-        . showChar ' '
-        . showsPrec 11 txmetadata
-        . showChar ' '
-        . showsPrec 11 scriptValidity
-        )
-
-
-instance HasTypeProxy era => HasTypeProxy (TxBody era) where
-    data AsType (TxBody era) = AsTxBody (AsType era)
-    proxyToAsType _ = AsTxBody (proxyToAsType (Proxy :: Proxy era))
-
-pattern AsByronTxBody :: AsType (TxBody ByronEra)
-pattern AsByronTxBody   = AsTxBody AsByronEra
-{-# COMPLETE AsByronTxBody #-}
-
-pattern AsShelleyTxBody :: AsType (TxBody ShelleyEra)
-pattern AsShelleyTxBody = AsTxBody AsShelleyEra
-{-# COMPLETE AsShelleyTxBody #-}
-
-pattern AsMaryTxBody :: AsType (TxBody MaryEra)
-pattern AsMaryTxBody = AsTxBody AsMaryEra
-{-# COMPLETE AsMaryTxBody #-}
-
-instance IsShelleyBasedEra era => SerialiseAsCBOR (TxBody era) where
-    serialiseToCBOR (ShelleyTxBody sbe txbody txscripts redeemers txmetadata scriptValidity) =
-      serialiseShelleyBasedTxBody sbe txbody txscripts redeemers txmetadata scriptValidity
-
-    deserialiseFromCBOR _ = deserialiseShelleyBasedTxBody shelleyBasedEra
-
--- | The serialisation format for the different Shelley-based eras are not the
--- same, but they can be handled generally with one overloaded implementation.
-serialiseShelleyBasedTxBody :: forall era. ()
-  => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> [Ledger.Script (ShelleyLedgerEra era)]
-  -> TxBodyScriptData era
-  -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
-  -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
-  -> ByteString
-serialiseShelleyBasedTxBody sbe txbody txscripts
-                            TxBodyNoScriptData txmetadata scriptValidity =
-  caseShelleyToMaryOrAlonzoEraOnwards
-    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
-      [ CBOR.encodeListLen 3
-      , CBOR.encCBOR txbody
-      , CBOR.encCBOR txscripts
-      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
-      ]
-    )
-    (const $ CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
-      [ CBOR.encodeListLen 4
-      , CBOR.encCBOR txbody
-      , CBOR.encCBOR txscripts
-      , CBOR.encCBOR (txScriptValidityToScriptValidity scriptValidity)
-      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
-      ]
-    )
-    sbe
-
-serialiseShelleyBasedTxBody _ txbody txscripts
-                            (TxBodyScriptData w datums redeemers)
-                            txmetadata txBodyScriptValidity =
-  alonzoEraOnwardsConstraints w $
-    CBOR.serialize' (L.eraProtVerLow @(ShelleyLedgerEra era)) $ mconcat
-      [ CBOR.encodeListLen 6
-      , CBOR.encCBOR txbody
-      , CBOR.encCBOR txscripts
-      , CBOR.encCBOR datums
-      , CBOR.encCBOR redeemers
-      , CBOR.encCBOR (txScriptValidityToScriptValidity txBodyScriptValidity)
-      , CBOR.encodeNullMaybe CBOR.encCBOR txmetadata
-      ]
-
-deserialiseShelleyBasedTxBody :: forall era. ()
-  => ShelleyBasedEra era
-  -> ByteString
-  -> Either CBOR.DecoderError (TxBody era)
-deserialiseShelleyBasedTxBody sbe bs =
-  shelleyBasedEraConstraints sbe $
-    CBOR.decodeFullAnnotator
-      (L.eraProtVerLow @(ShelleyLedgerEra era))
-      "Shelley TxBody"
-      decodeAnnotatedTuple
-      (LBS.fromStrict bs)
-  where
-    decodeAnnotatedTuple :: CBOR.Decoder s (CBOR.Annotator (TxBody era))
-    decodeAnnotatedTuple = shelleyBasedEraConstraints sbe $ do
-      len <- CBOR.decodeListLen
-
-      case len of
-        -- Backwards compat for pre-Alonzo era tx body files
-        2 -> do
-          txbody     <- CBOR.decCBOR
-          txmetadata <- CBOR.decodeNullMaybe CBOR.decCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody sbe
-              (flip CBOR.runAnnotator fbs txbody)
-              [] -- scripts
-              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
-        3 -> do
-          txbody     <- CBOR.decCBOR
-          txscripts  <- CBOR.decCBOR
-          txmetadata <- CBOR.decodeNullMaybe CBOR.decCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody sbe
-              (flip CBOR.runAnnotator fbs txbody)
-              (map (flip CBOR.runAnnotator fbs) txscripts)
-              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
-        4 -> do
-          sValiditySupported <-
-            forShelleyBasedEraInEon sbe
-              ( fail $ mconcat
-                  [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
-                  , "script validity flag but got: "
-                  , show sbe
-                  ]
-              )
-              pure
-
-          txbody     <- CBOR.decCBOR
-          txscripts  <- CBOR.decCBOR
-          scriptValidity <- CBOR.decCBOR
-          txmetadata <- CBOR.decodeNullMaybe CBOR.decCBOR
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody sbe
-              (flip CBOR.runAnnotator fbs txbody)
-              (map (flip CBOR.runAnnotator fbs) txscripts)
-              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
-        6 -> do
-          sDataSupported <-
-            forEraInEon (shelleyBasedToCardanoEra sbe)
-              ( fail $ mconcat
-                  [ "deserialiseShelleyBasedTxBody: Expected an era that supports script"
-                  , " data but got: "
-                  , show sbe
-                  ]
-              )
-              pure
-
-          sValiditySupported <-
-            forShelleyBasedEraInEon sbe
-              ( fail $ mconcat
-                  [ "deserialiseShelleyBasedTxBody: Expected an era that supports the "
-                  , "script validity flag but got: "
-                  , show sbe
-                  ]
-              )
-              pure
-
-          txbody    <- CBOR.decCBOR
-          txscripts <- CBOR.decCBOR
-          datums    <- CBOR.decCBOR
-          redeemers <- CBOR.decCBOR
-          scriptValidity <- CBOR.decCBOR
-          txmetadata <- CBOR.decodeNullMaybe CBOR.decCBOR
-
-          let txscriptdata = CBOR.Annotator $ \fbs ->
-                               TxBodyScriptData sDataSupported
-                                 (flip CBOR.runAnnotator fbs datums)
-                                 (flip CBOR.runAnnotator fbs redeemers)
-
-          return $ CBOR.Annotator $ \fbs ->
-            ShelleyTxBody sbe
-              (flip CBOR.runAnnotator fbs txbody)
-              (map (flip CBOR.runAnnotator fbs) txscripts)
-              (flip CBOR.runAnnotator fbs txscriptdata)
-              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
-        _ -> fail $ "expected tx body tuple of size 2, 3, 4 or 6, got " <> show len
-
-instance IsShelleyBasedEra era => HasTextEnvelope (TxBody era) where
-    textEnvelopeType _ =
-      case shelleyBasedEra :: ShelleyBasedEra era of
-        ShelleyBasedEraShelley -> "TxUnsignedShelley"
-        ShelleyBasedEraAllegra -> "TxBodyAllegra"
-        ShelleyBasedEraMary    -> "TxBodyMary"
-        ShelleyBasedEraAlonzo  -> "TxBodyAlonzo"
-        ShelleyBasedEraBabbage -> "TxBodyBabbage"
-        ShelleyBasedEraConway  -> "TxBodyConway"
 
 
 getTxIdByron :: Byron.ATxAux ByteString -> TxId
@@ -1720,7 +1340,7 @@ getTxIdShelley _ tx =
     TxId
   . Crypto.castHash
   . (\(Ledger.TxId txhash) -> SafeHash.extractHash txhash)
-  $ Ledger.txid tx
+  $ Ledger.txIdTxBody tx
 
 -- ----------------------------------------------------------------------------
 -- Constructing transaction bodies
@@ -2057,25 +1677,26 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
 fromLedgerProposalProcedures
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> Maybe (Featured ConwayEraOnwards era [Proposal era])
+  -> Maybe (Featured ConwayEraOnwards era (TxProposalProcedures ViewTx era))
 fromLedgerProposalProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
-      $ fmap Proposal
-      $ toList
-      $ body ^. L.proposalProceduresTxBodyL
+      $ TxProposalProcedures
+         (body ^. L.proposalProceduresTxBodyL)
+         ViewTx
 
 fromLedgerVotingProcedures :: ()
   => ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> Maybe (Featured ConwayEraOnwards era (VotingProcedures era))
+  -> Maybe (Featured ConwayEraOnwards era (TxVotingProcedures ViewTx era))
 fromLedgerVotingProcedures sbe body =
   forShelleyBasedEraInEonMaybe sbe $ \w ->
     conwayEraOnwardsConstraints w
       $ Featured w
-      $ VotingProcedures
-      $ body ^. L.votingProceduresTxBodyL
+      $ TxVotingProcedures
+          (body ^. L.votingProceduresTxBodyL)
+          ViewTx
 
 fromLedgerTxIns
   :: forall era.
@@ -2156,9 +1777,13 @@ fromLedgerTxOuts sbe body scriptdata =
       | let txdatums = selectTxDatums scriptdata
       , txouts <- toList (body ^. L.outputsTxBodyL)
       ]
-  where
-    selectTxDatums  TxBodyNoScriptData                            = Map.empty
-    selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
+
+selectTxDatums
+  :: TxBodyScriptData era
+  -> Map (L.DataHash StandardCrypto) (L.Data (ShelleyLedgerEra era))
+selectTxDatums TxBodyNoScriptData = Map.empty
+selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
+
 
 fromAlonzoTxOut :: ()
   => AlonzoEraOnwards era
@@ -2409,7 +2034,7 @@ makeByronTransactionBody txIns txOuts = do
                 (\out -> toByronTxOut out ?! classifyRangeError out)
                 outs'
     return $
-      reAnnotate CBOR.byronProtVer $
+      CBOR.reAnnotate CBOR.byronProtVer $
         Annotated
           (Byron.UnsafeTx ins'' outs'' (Byron.mkAttributes ()))
           ()
@@ -2540,10 +2165,12 @@ convScriptData sbe txOuts scriptWitnesses =
       let redeemers =
             Alonzo.Redeemers $
               Map.fromList
-                [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+                [ (i, (toAlonzoData d, toAlonzoExUnits e))
                 | (idx, AnyScriptWitness
                           (PlutusScriptWitness _ _ _ _ d e)) <- scriptWitnesses
+                , Just i <- [fromScriptWitnessIndex w idx]
                 ]
+
           datums =
             Alonzo.TxDats $
               Map.fromList
@@ -2589,6 +2216,16 @@ convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
     TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
+
+convProposalProcedures :: TxProposalProcedures build era -> OSet (L.ProposalProcedure (ShelleyLedgerEra era))
+convProposalProcedures TxProposalProceduresNone = OSet.empty
+convProposalProcedures (TxProposalProcedures procedures _) = procedures
+
+convVotingProcedures :: TxVotingProcedures build era -> L.VotingProcedures (ShelleyLedgerEra era)
+convVotingProcedures txVotingProcedures =
+  case txVotingProcedures of
+    TxVotingProceduresNone -> L.VotingProcedures Map.empty
+    TxVotingProcedures vps _ -> vps
 
 guardShelleyTxInsOverflow :: [TxIn] -> Either TxBodyError ()
 guardShelleyTxInsOverflow txIns = do
@@ -2765,7 +2402,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
     let aOn = AllegraEraOnwardsAlonzo
     let s2b = ShelleyToBabbageEraAlonzo
     let mOn = MaryEraOnwardsAlonzo
-    let azOn = AlonzoEraOnwardsAlonzo
     validateTxBodyContent sbe txbodycontent
     update <- convTxUpdateProposal sbe txUpdateProposal
     let scriptIntegrityHash =
@@ -2791,6 +2427,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
         txAuxData
         txScriptValidity
   where
+    azOn = AlonzoEraOnwardsAlonzo
+
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses sbe txbodycontent
 
@@ -2820,9 +2458,10 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
     redeemers =
       Alonzo.Redeemers $
         Map.fromList
-          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+          [ (i, (toAlonzoData d, toAlonzoExUnits e))
           | (idx, AnyScriptWitness
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
+          , Just i <- [fromScriptWitnessIndex azOn idx]
           ]
 
     languages :: Set Plutus.Language
@@ -2858,7 +2497,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
                            } = do
     let aOn = AllegraEraOnwardsBabbage
     let mOn = MaryEraOnwardsBabbage
-    let azOn = AlonzoEraOnwardsBabbage
     let bOn = BabbageEraOnwardsBabbage
     let s2b = ShelleyToBabbageEraBabbage
     validateTxBodyContent sbe txbodycontent
@@ -2893,6 +2531,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
         txAuxData
         txScriptValidity
   where
+    azOn = AlonzoEraOnwardsBabbage
+
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness BabbageEra)]
     witnesses = collectTxBodyScriptWitnesses sbe txbodycontent
 
@@ -2924,9 +2564,10 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
     redeemers =
       Alonzo.Redeemers $
         Map.fromList
-          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+          [ (i, (toAlonzoData d, toAlonzoExUnits e))
           | (idx, AnyScriptWitness
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
+          , Just i <- [fromScriptWitnessIndex azOn idx]
           ]
 
     languages :: Set Plutus.Language
@@ -2971,7 +2612,6 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
     let cOn = ConwayEraOnwardsConway
     let mOn = MaryEraOnwardsConway
     let bOn = BabbageEraOnwardsConway
-    let azOn = AlonzoEraOnwardsConway
     validateTxBodyContent sbe txbodycontent
     let scriptIntegrityHash =
           convPParamsToScriptIntegrityHash AlonzoEraOnwardsConway txProtocolParams redeemers datums languages
@@ -2990,8 +2630,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
             & A.reqSignerHashesTxBodyL azOn     .~ convExtraKeyWitnesses txExtraKeyWits
             & A.mintTxBodyL mOn                 .~ convMintValue txMintValue
             & A.scriptIntegrityHashTxBodyL azOn .~ scriptIntegrityHash
-            & A.votingProceduresTxBodyL cOn     .~ unVotingProcedures @era (maybe emptyVotingProcedures unFeatured txVotingProcedures)
-            & A.proposalProceduresTxBodyL cOn   .~ OSet.fromSet (Set.fromList (fmap unProposal (maybe [] unFeatured txProposalProcedures)))
+            & A.votingProceduresTxBodyL cOn     .~ convVotingProcedures (maybe TxVotingProceduresNone unFeatured txVotingProcedures)
+            & A.proposalProceduresTxBodyL cOn   .~ convProposalProcedures (maybe TxProposalProceduresNone unFeatured txProposalProcedures)
             -- TODO Conway: support optional network id in TxBodyContent
             -- & L.networkIdTxBodyL .~ SNothing
           ) ^. A.txBodyL
@@ -3004,6 +2644,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
         txAuxData
         txScriptValidity
   where
+    azOn = AlonzoEraOnwardsConway
+
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness ConwayEra)]
     witnesses = collectTxBodyScriptWitnesses sbe txbodycontent
 
@@ -3034,9 +2676,10 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
     redeemers =
       Alonzo.Redeemers $
         Map.fromList
-          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+          [ (i, (toAlonzoData d, toAlonzoExUnits e))
           | (idx, AnyScriptWitness
                     (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
+          , Just i <- [fromScriptWitnessIndex azOn idx]
           ]
 
     languages :: Set Plutus.Language
@@ -3111,41 +2754,56 @@ deriving instance Show (AnyScriptWitness era)
 data ScriptWitnessIndex =
 
      -- | The n'th transaction input, in the order of the 'TxId's.
-     ScriptWitnessIndexTxIn !Word
+     ScriptWitnessIndexTxIn !Word32
 
      -- | The n'th minting 'PolicyId', in the order of the 'PolicyId's.
-   | ScriptWitnessIndexMint !Word
+   | ScriptWitnessIndexMint !Word32
 
      -- | The n'th certificate, in the list order of the certificates.
-   | ScriptWitnessIndexCertificate !Word
+   | ScriptWitnessIndexCertificate !Word32
 
      -- | The n'th withdrawal, in the order of the 'StakeAddress's.
-   | ScriptWitnessIndexWithdrawal !Word
+   | ScriptWitnessIndexWithdrawal !Word32
+
+     -- | The n'th vote, in the order of the votes.
+   | ScriptWitnessIndexVoting !Word32
+
+      -- | The n'th proposal, in the order of the proposals.
+   | ScriptWitnessIndexProposing !Word32
   deriving (Eq, Ord, Show)
 
 instance ToJSON ScriptWitnessIndex where
   toJSON = \case
     ScriptWitnessIndexTxIn n ->
       object
-      [ "kind" .= Aeson.String "ScriptWitnessIndexTxIn"
-      , "value" .= n
-      ]
+        [ "kind" .= Aeson.String "ScriptWitnessIndexTxIn"
+        , "value" .= n
+        ]
     ScriptWitnessIndexMint n ->
       object
-      [ "kind" .= Aeson.String "ScriptWitnessIndexMint"
-      , "value" .= n
-      ]
+        [ "kind" .= Aeson.String "ScriptWitnessIndexMint"
+        , "value" .= n
+        ]
     ScriptWitnessIndexCertificate n ->
       object
-      [ "kind" .= Aeson.String "ScriptWitnessIndexCertificate"
-      , "value" .= n
-      ]
+        [ "kind" .= Aeson.String "ScriptWitnessIndexCertificate"
+        , "value" .= n
+        ]
     ScriptWitnessIndexWithdrawal n ->
       object
-      [ "kind" .= Aeson.String "ScriptWitnessIndexWithdrawal"
-      , "value" .= n
-      ]
-
+        [ "kind" .= Aeson.String "ScriptWitnessIndexWithdrawal"
+        , "value" .= n
+        ]
+    ScriptWitnessIndexVoting n ->
+      object
+        [ "kind" .= Aeson.String "ScriptWitnessIndexVoting"
+        , "value" .= n
+        ]
+    ScriptWitnessIndexProposing n ->
+      object
+        [ "kind" .= Aeson.String "ScriptWitnessIndexProposing"
+        , "value" .= n
+        ]
 renderScriptWitnessIndex :: ScriptWitnessIndex -> String
 renderScriptWitnessIndex (ScriptWitnessIndexTxIn index) =
   "transaction input " <> show index <> " (in ascending order of the TxIds)"
@@ -3155,22 +2813,82 @@ renderScriptWitnessIndex (ScriptWitnessIndexCertificate index) =
   "certificate " <> show index <> " (in the list order of the certificates)"
 renderScriptWitnessIndex (ScriptWitnessIndexWithdrawal index) =
   "withdrawal " <> show index <> " (in ascending order of the StakeAddresses)"
+renderScriptWitnessIndex (ScriptWitnessIndexVoting index) =
+  "vote " <> show index <> " (in ascending order of the votes)"
+renderScriptWitnessIndex (ScriptWitnessIndexProposing index) =
+  "proposal " <> show index <> " (in ascending order of the proposals)"
 
-toAlonzoRdmrPtr :: ScriptWitnessIndex -> Alonzo.RdmrPtr
-toAlonzoRdmrPtr widx =
-    case widx of
-      ScriptWitnessIndexTxIn        n -> Alonzo.RdmrPtr Alonzo.Spend (fromIntegral n)
-      ScriptWitnessIndexMint        n -> Alonzo.RdmrPtr Alonzo.Mint  (fromIntegral n)
-      ScriptWitnessIndexCertificate n -> Alonzo.RdmrPtr Alonzo.Cert  (fromIntegral n)
-      ScriptWitnessIndexWithdrawal  n -> Alonzo.RdmrPtr Alonzo.Rewrd (fromIntegral n)
+fromScriptWitnessIndex
+  :: AlonzoEraOnwards era
+  -> ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+fromScriptWitnessIndex aOnwards widx =
+  case aOnwards of
+    AlonzoEraOnwardsAlonzo -> fromScriptWitnessIndexAlonzo widx
+    AlonzoEraOnwardsBabbage -> fromScriptWitnessIndexBabbage widx
+    AlonzoEraOnwardsConway  -> fromScriptWitnessIndexConway widx
 
-fromAlonzoRdmrPtr :: Alonzo.RdmrPtr -> ScriptWitnessIndex
-fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
-    case tag of
-      Alonzo.Spend -> ScriptWitnessIndexTxIn        (fromIntegral n)
-      Alonzo.Mint  -> ScriptWitnessIndexMint        (fromIntegral n)
-      Alonzo.Cert  -> ScriptWitnessIndexCertificate (fromIntegral n)
-      Alonzo.Rewrd -> ScriptWitnessIndexWithdrawal  (fromIntegral n)
+fromScriptWitnessIndexAlonzo
+  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra AlonzoEra))
+fromScriptWitnessIndexAlonzo i =
+  case i of
+    ScriptWitnessIndexTxIn        n -> Just $ L.AlonzoSpending (L.AsIndex n)
+    ScriptWitnessIndexMint        n -> Just $ L.AlonzoMinting (L.AsIndex n)
+    ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIndex n)
+    ScriptWitnessIndexWithdrawal  n -> Just $ L.AlonzoRewarding (L.AsIndex n)
+    _                               -> Nothing
+
+fromScriptWitnessIndexBabbage
+  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra BabbageEra))
+fromScriptWitnessIndexBabbage i =
+  case i of
+    ScriptWitnessIndexTxIn        n -> Just $ L.AlonzoSpending (L.AsIndex n)
+    ScriptWitnessIndexMint        n -> Just $ L.AlonzoMinting (L.AsIndex n)
+    ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIndex n)
+    ScriptWitnessIndexWithdrawal  n -> Just $ L.AlonzoRewarding (L.AsIndex n)
+    _                               -> Nothing
+
+fromScriptWitnessIndexConway
+  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra ConwayEra))
+fromScriptWitnessIndexConway i =
+  case i of
+    ScriptWitnessIndexTxIn        n -> Just $ L.ConwaySpending (L.AsIndex n)
+    ScriptWitnessIndexMint        n -> Just $ L.ConwayMinting (L.AsIndex n)
+    ScriptWitnessIndexCertificate n -> Just $ L.ConwayCertifying (L.AsIndex n)
+    ScriptWitnessIndexWithdrawal  n -> Just $ L.ConwayRewarding (L.AsIndex n)
+    ScriptWitnessIndexVoting      n -> Just $ L.ConwayVoting (L.AsIndex n)
+    ScriptWitnessIndexProposing   n -> Just $ L.ConwayProposing (L.AsIndex n)
+
+toScriptIndex
+  :: AlonzoEraOnwards era
+  -> L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era)
+  -> ScriptWitnessIndex
+toScriptIndex sbe scriptPurposeIndex =
+  case sbe of
+    AlonzoEraOnwardsAlonzo -> toScriptIndexAlonzo scriptPurposeIndex
+    AlonzoEraOnwardsBabbage -> toScriptIndexAlonzo scriptPurposeIndex
+    AlonzoEraOnwardsConway  -> toScriptIndexConway scriptPurposeIndex
+
+toScriptIndexAlonzo
+  :: L.AlonzoPlutusPurpose L.AsIndex (ShelleyLedgerEra era)
+  -> ScriptWitnessIndex
+toScriptIndexAlonzo scriptPurposeIndex =
+  case scriptPurposeIndex of
+    L.AlonzoSpending (L.AsIndex i) -> ScriptWitnessIndexTxIn i
+    L.AlonzoMinting (L.AsIndex i) -> ScriptWitnessIndexMint i
+    L.AlonzoCertifying (L.AsIndex i) -> ScriptWitnessIndexCertificate i
+    L.AlonzoRewarding (L.AsIndex i) -> ScriptWitnessIndexWithdrawal i
+
+toScriptIndexConway
+  :: L.ConwayPlutusPurpose L.AsIndex (ShelleyLedgerEra era)
+  -> ScriptWitnessIndex
+toScriptIndexConway scriptPurposeIndex =
+  case scriptPurposeIndex of
+    L.ConwaySpending (L.AsIndex i) -> ScriptWitnessIndexTxIn i
+    L.ConwayMinting (L.AsIndex i) -> ScriptWitnessIndexMint i
+    L.ConwayCertifying (L.AsIndex i) -> ScriptWitnessIndexCertificate i
+    L.ConwayRewarding (L.AsIndex i) -> ScriptWitnessIndexWithdrawal i
+    L.ConwayVoting (L.AsIndex i) -> ScriptWitnessIndexVoting i
+    L.ConwayProposing (L.AsIndex i) -> ScriptWitnessIndexProposing i
 
 collectTxBodyScriptWitnesses :: forall era. ShelleyBasedEra era
                              -> TxBodyContent BuildTx era
@@ -3179,13 +2897,17 @@ collectTxBodyScriptWitnesses _ TxBodyContent {
                                txIns,
                                txWithdrawals,
                                txCertificates,
-                               txMintValue
+                               txMintValue,
+                               txVotingProcedures,
+                               txProposalProcedures
                              } =
     concat
       [ scriptWitnessesTxIns        txIns
       , scriptWitnessesWithdrawals  txWithdrawals
       , scriptWitnessesCertificates txCertificates
       , scriptWitnessesMinting      txMintValue
+      , scriptWitnessesVoting       (maybe TxVotingProceduresNone unFeatured txVotingProcedures)
+      , scriptWitnessesProposing    (maybe TxProposalProceduresNone unFeatured txProposalProcedures)
       ]
   where
     scriptWitnessesTxIns
@@ -3234,6 +2956,32 @@ collectTxBodyScriptWitnesses _ TxBodyContent {
         , witness <- maybeToList (Map.lookup policyid witnesses)
         ]
 
+    scriptWitnessesVoting
+      :: TxVotingProcedures BuildTx era
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
+    scriptWitnessesVoting TxVotingProceduresNone = []
+    scriptWitnessesVoting (TxVotingProcedures (L.VotingProcedures votes) (BuildTxWith witnesses)) =
+      [ (ScriptWitnessIndexVoting ix, AnyScriptWitness witness)
+      | let voterList = Map.toList votes
+      , (ix, (voter, _) ) <- zip [0..] voterList
+      , witness <- maybeToList (Map.lookup voter witnesses)
+      ]
+
+    scriptWitnessesProposing
+      :: TxProposalProcedures BuildTx era
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
+    scriptWitnessesProposing TxProposalProceduresNone = []
+    scriptWitnessesProposing (TxProposalProcedures proposalProcedures (BuildTxWith mScriptWitnesses))
+      | Map.null mScriptWitnesses = []
+      | otherwise =
+        [ (ScriptWitnessIndexProposing ix, AnyScriptWitness witness)
+        | let proposalsList = Set.toList $ OSet.toSet proposalProcedures
+        , (ix, proposal) <- zip [0..] proposalsList
+        , witness <- maybeToList (Map.lookup proposal mScriptWitnesses)
+        ]
+
+
+
 -- This relies on the TxId Ord instance being consistent with the
 -- Ledger.TxId Ord instance via the toShelleyTxId conversion
 -- This is checked by prop_ord_distributive_TxId
@@ -3246,7 +2994,7 @@ orderTxIns = sortBy (compare `on` fst)
 orderStakeAddrs :: [(StakeAddress, x, v)] -> [(StakeAddress, x, v)]
 orderStakeAddrs = sortBy (compare `on` (\(k, _, _) -> k))
 
-
+-- TODO: Investigate if we need
 toShelleyWithdrawal :: [(StakeAddress, Lovelace, a)] -> L.Withdrawals StandardCrypto
 toShelleyWithdrawal withdrawals =
     L.Withdrawals $

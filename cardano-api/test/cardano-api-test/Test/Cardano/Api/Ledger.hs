@@ -8,8 +8,8 @@ module Test.Cardano.Api.Ledger
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
 import qualified Cardano.Ledger.Api as L
+import           Cardano.Ledger.Api.Tx.Address
 import           Cardano.Ledger.Crypto
 import           Cardano.Ledger.SafeHash
 
@@ -32,7 +32,7 @@ prop_roundtrip_Address_CBOR :: Property
 prop_roundtrip_Address_CBOR = H.property $ do
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   addr <- H.forAll (arbitrary @(L.Addr StandardCrypto))
-  H.tripping addr serialiseAddr deserialiseAddr
+  H.tripping addr serialiseAddr decodeAddrEither
 
 -- prop_original_scriptdata_bytes_preserved and prop_roundtrip_scriptdata_plutusdata
 -- allow us to generate a 'HashableScriptData' value from JSON with the original bytes being

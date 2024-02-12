@@ -1,5 +1,70 @@
 # Changelog for cardano-api
 
+## 8.38.0.1
+
+- Make it build with ghc-9.8
+  (maintenance, compatible)
+  [PR 436](https://github.com/IntersectMBO/cardano-api/pull/436)
+
+## 8.38.0.0
+
+- Make committee keys able to sign transactions
+  (feature, compatible)
+  [PR 441](https://github.com/IntersectMBO/cardano-api/pull/441)
+
+- bech32 prefixes for committee keys hashes were incorrect. This PR fixes that, in accordance with CIP-5: https://github.com/cardano-foundation/CIPs/blob/master/CIP-0005/README.md?plain=1#L111
+  (breaking)
+  [PR 440](https://github.com/IntersectMBO/cardano-api/pull/440)
+
+- Bump CHaP for cardano node 8.8 release
+  Parameterize `TransactionValidityError` and `TxBodyErrorAutoBalance` on era
+  Data constructor `TransactionValidityTranslationError` is now parameterized on `ContextError (ShelleyLedgerEra era)`
+  `cppPoolRetireMaxEpoch`, `protocolParamPoolRetireMaxEpoch`,  `icCommitteeTermLength` and `protocolUpdatePoolRetireMaxEpoch` records are updated to `Ledger.EpochInterval`
+  Records `cppMaxBlockBodySize`, `cppMaxTxSize`, `protocolUpdateMaxBlockBodySize`, `protocolUpdateMaxTxSize` have been updated to `StrictMaybe Word32`
+  Records`cppMaxBlockHeaderSize`, `protocolUpdateMaxBlockHeaderSize` has been updated to `StrictMaybe Word16`
+  Inhabitants `SuccessfulPlutusScript` and `FailedPlutusScript` of `LedgerEvent` are now parameterized on `NonEmpty PlutusWithContext`
+  `queryNodeLocalState` are now `executeLocalStateQueryExpr` parameterized on `Target ChainPoint`
+  `ResolvablePointers` data constructor has been updated with associated data types `PlutusPurpose AsIndex (ShelleyLedgerEra era)` and `PlutusPurpose AsItem (ShelleyLedgerEra era)`
+  Replace `PrevGovActionId` with `GovPurposeId`
+  Implement `TxProposalProcedures` and `TxVotingProcedures` which enables Plutus script witnessing of proposals and votes.
+  Remove support for intermediate tx body format.
+  (feature, breaking)
+  [PR 407](https://github.com/IntersectMBO/cardano-api/pull/407)
+
+- Expose getAnyNewEpochState. Simplify rendering LedgerState errors
+  (breaking, improvement)
+  [PR 439](https://github.com/IntersectMBO/cardano-api/pull/439)
+
+- Add return value to `checkLedgerStateCondition`
+  (breaking)
+  [PR 433](https://github.com/IntersectMBO/cardano-api/pull/433)
+
+- Fix that bech32 prefixes for CC keys were incorrect
+  (breaking, bugfix)
+  [PR 435](https://github.com/IntersectMBO/cardano-api/pull/435)
+
+- Bump hedgehog-extras to 0.6.0.1 to benefit of this fix: https://github.com/input-output-hk/hedgehog-extras/pull/58
+  (compatible, test, release)
+  [PR 434](https://github.com/IntersectMBO/cardano-api/pull/434)
+
+- Better `MonadError` handling to avoid nesting `ExceptT` in `modifyError`
+  (compatible, improvement)
+  [PR 431](https://github.com/IntersectMBO/cardano-api/pull/431)
+
+## 8.37.1.0
+
+- Implement checkLedgerStateConditions. This new function gives direct access to the `NewEpochState` which contains the ledger state. It also requires an `EpochNo` upon which it will terminate if the supplied condition is not met.
+  (feature, compatible)
+  [PR 424](https://github.com/IntersectMBO/cardano-api/pull/424)
+
+- Use MonadError for 'LedgerState'. Add `Show LedgerState`, `IOException` handling in `foldBlocks`
+  (compatible, improvement)
+  [PR 422](https://github.com/IntersectMBO/cardano-api/pull/422)
+
+- Support signing with drep extended key
+  (compatible)
+  [PR 419](https://github.com/IntersectMBO/cardano-api/pull/419)
+
 ## 8.37.0.0
 
 - Expose CurrentEra and UpcomingEra pattern synonyms
@@ -1759,7 +1824,7 @@ None
 - Improved tests for Byron era legacy key formats (#2259)
 - More precise error cases for tx outputs that are out of range (#2217)
 - Host up-to-date generated API documentation via github
-  https://cardano-node.cardano.intersectmbo.org (#2273, #2276, #2278)
+  https://github.com/IntersectMBO/cardano-node (#2273, #2276, #2278)
 
 ## 1.24.2 -- December 2020
 

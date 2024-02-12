@@ -373,6 +373,8 @@ module Cardano.Api (
     TxCertificates(..),
     TxUpdateProposal(..),
     TxMintValue(..),
+    TxVotingProcedures(..),
+    TxProposalProcedures(..),
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),
@@ -404,7 +406,6 @@ module Cardano.Api (
     TxBodyErrorAutoBalance(..),
     TxScriptValidity(..),
     ScriptValidity(..),
-    scriptValidityToTxScriptValidity,
     txScriptValidityToScriptValidity,
 
     -- * Signing transactions
@@ -744,15 +745,17 @@ module Cardano.Api (
     chainSyncClientWithLedgerState,
     chainSyncClientPipelinedWithLedgerState,
 
+    -- *** Ledger state conditions
+    LedgerStateCondition(..),
+    AnyNewEpochState(..),
+    checkLedgerStateCondition,
+    getAnyNewEpochState,
+
     -- *** Errors
     LedgerStateError(..),
     FoldBlocksError(..),
     GenesisConfigError(..),
     InitialLedgerStateError(..),
-    renderLedgerStateError,
-    renderFoldBlocksError,
-    renderGenesisConfigError,
-    renderInitialLedgerStateError,
 
     -- ** Low level protocol interaction with a Cardano node
     connectToLocalNode,
@@ -834,7 +837,9 @@ module Cardano.Api (
 
     -- * Constitutional Committee keys
     CommitteeColdKey,
+    CommitteeColdExtendedKey,
     CommitteeHotKey,
+    CommitteeHotExtendedKey,
 
     -- * Genesis file
     -- | Types and functions needed to inspect or create a genesis file.
@@ -974,10 +979,12 @@ module Cardano.Api (
     CommitteeHotKeyAuthorizationRequirements(..),
     DRepRegistrationRequirements(..),
     DRepUnregistrationRequirements(..),
+    DRepUpdateRequirements(..),
     makeCommitteeColdkeyResignationCertificate,
     makeCommitteeHotKeyAuthorizationCertificate,
     makeDrepRegistrationCertificate,
     makeDrepUnregistrationCertificate,
+    makeDrepUpdateCertificate,
 
     ResolvablePointers(..),
   ) where
@@ -1040,8 +1047,8 @@ import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.Tx
-import           Cardano.Api.TxBody
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value

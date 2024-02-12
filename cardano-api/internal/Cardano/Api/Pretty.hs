@@ -3,11 +3,15 @@ module Cardano.Api.Pretty
   , Doc
   , Pretty(..)
   , ShowOf(..)
-  , viaShow
   , docToLazyText
   , docToText
   , docToString
   , pshow
+  , prettyException
+
+  , hsep
+  , vsep
+  , (<+>)
 
   , black
   , red
@@ -21,6 +25,7 @@ module Cardano.Api.Pretty
 
 import           Cardano.Api.Via.ShowOf
 
+import           Control.Exception.Safe
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TextLazy
 import           Prettyprinter
@@ -63,5 +68,10 @@ cyan = annotate (color Cyan)
 white :: Doc AnsiStyle -> Doc AnsiStyle
 white = annotate (color White)
 
+-- | Short hand for 'viaShow'.
 pshow :: Show a => a -> Doc ann
 pshow = viaShow
+
+-- | Short hand for @'pretty' . 'displayException'@
+prettyException :: Exception a => a -> Doc ann
+prettyException = pretty . displayException

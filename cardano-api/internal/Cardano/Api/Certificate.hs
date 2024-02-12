@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -38,10 +37,12 @@ module Cardano.Api.Certificate (
     CommitteeHotKeyAuthorizationRequirements(..),
     DRepRegistrationRequirements(..),
     DRepUnregistrationRequirements(..),
+    DRepUpdateRequirements(..),
     makeCommitteeColdkeyResignationCertificate,
     makeCommitteeHotKeyAuthorizationCertificate,
     makeDrepRegistrationCertificate,
     makeDrepUnregistrationCertificate,
+    makeDrepUpdateCertificate,
 
     makeStakeAddressAndDRepDelegationCertificate,
 
@@ -91,12 +92,14 @@ import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
 
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.Foldable as Foldable
 import           Data.IP (IPv4, IPv6)
 import           Data.Maybe
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable
 import           Network.Socket (PortNumber)
@@ -465,6 +468,21 @@ makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
         delegatee
         (toShelleyLovelace deposit)
 
+data DRepUpdateRequirements era where
+  DRepUpdateRequirements
+    :: ConwayEraOnwards era
+    -> Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era))
+    -> DRepUpdateRequirements era
+
+makeDrepUpdateCertificate
+  :: DRepUpdateRequirements era
+  -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
+  -> Certificate era
+makeDrepUpdateCertificate (DRepUpdateRequirements conwayOnwards vcred) mAnchor =
+  ConwayCertificate conwayOnwards
+    . Ledger.ConwayTxCertGov
+    $ Ledger.ConwayUpdateDRep vcred (noInlineMaybeToStrictMaybe mAnchor)
+
 -- ----------------------------------------------------------------------------
 -- Helper functions
 --
@@ -632,13 +650,15 @@ toShelleyPoolParams StakePoolParameters {
       }
 
     toShelleyDnsName :: ByteString -> Ledger.DnsName
-    toShelleyDnsName = fromMaybe (error "toShelleyDnsName: invalid dns name. TODO: proper validation")
-                     . Ledger.textToDns
-                     . Text.decodeLatin1
+    toShelleyDnsName name =
+      fromMaybe (error "toShelleyDnsName: invalid dns name. TODO: proper validation")
+        . Ledger.textToDns (BS.length name)
+        $ Text.decodeLatin1 name
 
     toShelleyUrl :: Text -> Ledger.Url
-    toShelleyUrl = fromMaybe (error "toShelleyUrl: invalid url. TODO: proper validation")
-                 . Ledger.textToUrl
+    toShelleyUrl url =
+      fromMaybe (error "toShelleyUrl: invalid url. TODO: proper validation")
+        $ Ledger.textToUrl (Text.length url) url
 
 
 fromShelleyPoolParams :: Ledger.PoolParams StandardCrypto

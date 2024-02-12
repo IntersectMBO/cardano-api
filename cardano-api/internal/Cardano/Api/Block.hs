@@ -57,7 +57,7 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.Tx
+import           Cardano.Api.Tx.Sign
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing

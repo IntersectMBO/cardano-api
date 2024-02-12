@@ -125,11 +125,6 @@ deriving anyclass instance ToJSON L.UTxOValidationError
 deriving anyclass instance ToJSON L.Voting.Error
 deriving anyclass instance ToJSON L.VotingPeriod
 
-deriving anyclass instance ToJSON (L.GenesisDelegCert L.StandardCrypto)
-deriving anyclass instance ToJSON (L.MIRCert          L.StandardCrypto)
-deriving anyclass instance ToJSON (L.MIRTarget        L.StandardCrypto)
-deriving anyclass instance ToJSON (L.PoolCert         L.StandardCrypto)
-deriving anyclass instance ToJSON (L.ShelleyDelegCert L.StandardCrypto)
 
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "UTXOW" ledgerera))
@@ -149,33 +144,22 @@ deriving anyclass instance
 deriving anyclass instance
   ( L.Crypto (L.EraCrypto ledgerera)
   , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
-  , ToJSON (L.ScriptPurpose ledgerera)
+  , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
+  , ToJSON (L.PlutusPurpose L.AsIndex ledgerera)
   ) => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
 
 deriving anyclass instance
   ( L.Crypto (L.EraCrypto ledgerera)
   , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   , ToJSON (L.TxCert ledgerera)
+  , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
+  , ToJSON (L.PlutusPurpose L.AsIndex ledgerera)
   ) => ToJSON (L.BabbageUtxowPredFailure ledgerera)
-
-deriving anyclass instance
-  ( L.Crypto (L.EraCrypto ledgerera)
-  , ToJSON (L.GenesisDelegCert (Consensus.EraCrypto ledgerera))
-  , ToJSON (L.MIRCert (Consensus.EraCrypto ledgerera))
-  , ToJSON (L.PoolCert (Consensus.EraCrypto ledgerera))
-  , ToJSON (L.ShelleyDelegCert (Consensus.EraCrypto ledgerera))
-  ) => ToJSON (L.ShelleyTxCert ledgerera)
-
-deriving anyclass instance
-  ( L.Crypto (L.EraCrypto ledgerera)
-  , ToJSON (L.TxCert ledgerera)
-  ) => ToJSON (L.ScriptPurpose ledgerera)
 
 deriving anyclass instance
   ( ToJSON (L.PredicateFailure (L.EraRule "LEDGER" ledgerera))
   ) => ToJSON (L.ApplyTxError ledgerera)
 
-deriving via ShowOf (L.ConwayTxCert             c) instance Show (L.ConwayTxCert c)   => ToJSON (L.ConwayTxCert c)
 deriving via ShowOf (L.Keys.VKey L.Keys.Witness c) instance L.Crypto c                => ToJSON (L.Keys.VKey L.Keys.Witness c)
 
 deriving via ShowOf (L.AllegraUtxoPredFailure   ledgerera) instance Show (L.AllegraUtxoPredFailure    ledgerera) => ToJSON (L.AllegraUtxoPredFailure    ledgerera)
@@ -187,9 +171,7 @@ deriving via ShowOf (L.ShelleyUtxoPredFailure   ledgerera) instance Show (L.Shel
 
 deriving instance ToJSON a => ToJSON (L.Registration.TooLarge a)
 
-deriving via ShowOf L.MIRPot          instance ToJSON L.MIRPot
 deriving via ShowOf L.KeyHash         instance ToJSON L.KeyHash
-deriving via ShowOf L.RdmrPtr         instance ToJSON L.RdmrPtr
 
 deriving via ShowOf L.ApplicationName instance ToJSONKey L.ApplicationName
 

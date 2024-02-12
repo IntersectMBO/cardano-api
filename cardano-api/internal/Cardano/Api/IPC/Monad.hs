@@ -14,6 +14,7 @@ import           Cardano.Api.IPC.Version
 
 import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
+import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
 import           Control.Concurrent.STM
 import           Control.Monad
@@ -42,10 +43,10 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
 -- | Execute a local state query expression.
 executeLocalStateQueryExpr :: ()
   => LocalNodeConnectInfo
-  -> Maybe ChainPoint
+  -> Net.Query.Target ChainPoint
   -> LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
   -> IO (Either AcquiringFailure a)
-executeLocalStateQueryExpr connectInfo mpoint f = do
+executeLocalStateQueryExpr connectInfo target f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
 
@@ -54,7 +55,7 @@ executeLocalStateQueryExpr connectInfo mpoint f = do
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState ntcVersion f
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult target tmvResultLocalState ntcVersion f
       , localTxSubmissionClient = Nothing
       , localTxMonitoringClient = Nothing
       }
@@ -68,7 +69,7 @@ setupLocalStateQueryExpr ::
      -- ^ An STM expression that only returns when all protocols are complete.
      -- Protocols must wait until 'waitDone' returns because premature exit will
      -- cause other incomplete protocols to abort which may lead to deadlock.
-  -> Maybe ChainPoint
+  -> Net.Query.Target ChainPoint
   -> TMVar (Either AcquiringFailure a)
   -> NodeToClientVersion
   -> LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a

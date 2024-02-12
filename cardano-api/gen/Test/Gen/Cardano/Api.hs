@@ -13,6 +13,7 @@ import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
+import qualified Cardano.Ledger.Plutus.CostModels as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Alonzo
 import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 
@@ -82,10 +83,7 @@ genExUnits = do
 genCostModels :: Gen Alonzo.CostModels
 genCostModels = do
   alonzoCostModel <- genCostModel
-  Alonzo.CostModels
-    <$> (conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel))
-    <*> pure mempty
-    <*> pure mempty
+  Plutus.mkCostModels . conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel)
  where
   conv :: [Alonzo.CostModel] -> Map.Map Alonzo.Language Alonzo.CostModel
   conv [] = mempty
@@ -105,7 +103,7 @@ genAlonzoGenesis = do
 
   return Alonzo.AlonzoGenesis
     { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
-    , Alonzo.agCostModels = Alonzo.CostModels mempty mempty mempty
+    , Alonzo.agCostModels = mempty
     , Alonzo.agPrices = prices'
     , Alonzo.agMaxTxExUnits = maxTxExUnits'
     , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
