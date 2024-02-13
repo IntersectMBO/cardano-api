@@ -988,7 +988,7 @@ hashScript (PlutusScript PlutusScriptV2 (PlutusScriptSerialised script)) =
 hashScript (PlutusScript PlutusScriptV3 (PlutusScriptSerialised script)) =
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra ConwayEra)
-  . Alonzo.PlutusScript . Conway.ConwayPlutusV1 . Plutus.Plutus
+  . Alonzo.PlutusScript . Conway.ConwayPlutusV3 . Plutus.Plutus
   $ Plutus.PlutusBinary script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
