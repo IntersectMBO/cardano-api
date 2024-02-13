@@ -45,8 +45,8 @@ module Cardano.Api.ReexposeLedger
 
   -- Core
   , Coin (..)
-  , EraCrypto
-  , Era
+  , EraPParams (..)
+  , Era (..)
   , Network(..)
   , PoolCert(..)
   , PParams(..)
@@ -117,6 +117,7 @@ module Cardano.Api.ReexposeLedger
   , unboundRational
   , DnsName
   , dnsToText
+  , EpochInterval(..)
   , textToDns
   , Url
   , urlToText
@@ -159,7 +160,7 @@ import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern ResignCommitteeColdTxCert, pattern RetirePoolTxCert,
                    pattern UnRegDRepTxCert, pattern UnRegDepositTxCert, pattern UnRegTxCert)
 import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
-import           Cardano.Ledger.BaseTypes (AnchorData (..), DnsName, Network (..),
+import           Cardano.Ledger.BaseTypes (AnchorData (..), DnsName, EpochInterval (..), Network (..),
                    NonNegativeInterval, ProtVer (..), StrictMaybe (..), UnitInterval, Url,
                    boundRational, dnsToText, hashAnchorData, maybeToStrictMaybe, mkVersion,
                    portToWord16, strictMaybeToMaybe, textToDns, textToUrl, unboundRational,
@@ -178,8 +179,8 @@ import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..)
                    VotingProcedures (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
                    ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
-import           Cardano.Ledger.Core (Era, EraCrypto, PParams (..), PoolCert (..), Value,
-                   fromEraCBOR, ppMinUTxOValueL, toEraCBOR)
+import           Cardano.Ledger.Core (Era (..), EraPParams(..), PParams (..), PoolCert (..),
+                   Value, fromEraCBOR, ppMinUTxOValueL, toEraCBOR)
 import           Cardano.Ledger.Credential (Credential (..), credToText)
 import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
