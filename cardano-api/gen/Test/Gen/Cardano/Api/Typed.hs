@@ -152,7 +152,6 @@ import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
