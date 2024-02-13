@@ -6,10 +6,7 @@ module Test.Cardano.Api.IO
 
 import           Cardano.Api
 import           Cardano.Api.IO
-import           Cardano.Api.Pretty
 
-import           Control.Monad.Except (runExceptT)
-import           Control.Monad.IO.Class (liftIO)
 import           System.Directory (removeFile)
 
 import           Hedgehog

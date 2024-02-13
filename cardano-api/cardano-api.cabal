@@ -242,7 +242,6 @@ library
                         Cardano.Api.Ledger
 
   reexported-modules:   Cardano.Api.Ledger.Lens
-                      , Cardano.Api.Pretty
 
   build-depends:        bytestring
                       , cardano-api:internal
