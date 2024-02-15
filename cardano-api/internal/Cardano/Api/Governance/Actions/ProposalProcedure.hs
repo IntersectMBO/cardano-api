@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -41,6 +42,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import           Data.Word
+import           Lens.Micro ((^.))
 
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 
@@ -51,6 +53,7 @@ data GovernanceAction era
   | ProposeNewConstitution
       (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose (ShelleyLedgerEra era)))
       (Ledger.Anchor StandardCrypto)
+      (StrictMaybe (Shelley.ScriptHash (EraCrypto (ShelleyLedgerEra era))))
   | ProposeNewCommittee
       (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
       [Hash CommitteeColdKey] -- ^ Old constitutional committee
@@ -76,11 +79,9 @@ toGovernanceAction sbe =
   shelleyBasedEraConstraints sbe $ \case
     MotionOfNoConfidence prevGovId ->
       Gov.NoConfidence prevGovId
-    ProposeNewConstitution prevGovAction anchor ->
+    ProposeNewConstitution prevGovAction constitutionAnchor constitutionScript ->
       Gov.NewConstitution prevGovAction Gov.Constitution
-        { Gov.constitutionAnchor = anchor
-        , Gov.constitutionScript = SNothing   -- TODO: Conway era
-        }
+        { Gov.constitutionAnchor , Gov.constitutionScript }
     ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
       Gov.UpdateCommittee
         prevGovId -- previous governance action id
@@ -109,7 +110,10 @@ fromGovernanceAction = \case
   Gov.NoConfidence prevGovId ->
     MotionOfNoConfidence prevGovId
   Gov.NewConstitution prevGovId constitution ->
-    ProposeNewConstitution prevGovId $ Gov.constitutionAnchor constitution
+    ProposeNewConstitution
+      prevGovId
+      (Gov.constitutionAnchor constitution)
+      (constitution ^. Ledger.constitutionScriptL)
   Gov.ParameterChange prevGovId pparams govPolicy ->
     UpdatePParams prevGovId pparams govPolicy
   Gov.HardForkInitiation prevGovId pVer ->
