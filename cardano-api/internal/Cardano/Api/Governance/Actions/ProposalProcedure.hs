@@ -160,15 +160,15 @@ createProposalProcedure
   :: ShelleyBasedEra era
   -> Network
   -> Lovelace -- ^ Deposit
-  -> Hash StakeKey -- ^ Return address
+  -> StakeCredential -- ^ Credential to return the deposit to.
   -> GovernanceAction era
   -> Ledger.Anchor StandardCrypto
   -> Proposal era
-createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
+createProposalProcedure sbe nw dep cred govAct anchor =
   shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
-      , Gov.pProcReturnAddr = L.RewardAcnt nw (L.KeyHashObj retAddrh)
+      , Gov.pProcReturnAddr = L.RewardAcnt nw $ toShelleyStakeCredential cred
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
       , Gov.pProcAnchor = anchor
       }
