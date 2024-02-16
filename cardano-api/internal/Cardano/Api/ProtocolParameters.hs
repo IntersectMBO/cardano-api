@@ -1632,22 +1632,9 @@ toAlonzoPParams
       protocolParamDecentralization
     } = do
   ppAlonzoCommon <- toAlonzoCommonPParams protocolParameters
-  -- QUESTION? This is strange, why do we need to construct Alonzo Tx with Babbage PParams?
-  -- This feels to me like an issue with the api design, as there should never be such an
-  -- inconsistency, because PParams affect the validity of the transaction.
-  d <- case protocolParamDecentralization of
-         -- The decentralization parameter is deprecated in Babbage
-         -- so we default to 0 if no decentralization parameter is found
-         -- in the api's 'ProtocolParameter' type. If we don't do this
-         -- we won't be able to construct an Alonzo tx using the Babbage
-         -- era's protocol parameter because our only other option is to
-         -- error.
-         Nothing -> Right minBound
-         Just dParam -> boundRationalEither "D" dParam
-  -- This is the correct implementation that should be the used instead:
-  -- d <- requireParam "protocolParamDecentralization"
-  --                   (boundRationalEither "D")
-  --                   protocolParamDecentralization
+  d <- requireParam "protocolParamDecentralization"
+                    (boundRationalEither "D")
+                    protocolParamDecentralization
   let ppAlonzo =
         ppAlonzoCommon
         & ppDL .~ d
@@ -1685,7 +1672,7 @@ fromLedgerPParams
 fromLedgerPParams ShelleyBasedEraShelley = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAllegra = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraMary    = fromShelleyPParams
-fromLedgerPParams ShelleyBasedEraAlonzo  = fromAlonzoPParams
+fromLedgerPParams ShelleyBasedEraAlonzo  = fromExactlyAlonzoPParams
 fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
 fromLedgerPParams ShelleyBasedEraConway  = fromConwayPParams
 
@@ -1743,6 +1730,7 @@ fromAlonzoPParams :: AlonzoEraPParams ledgerera
 fromAlonzoPParams pp =
   (fromShelleyCommonPParams pp) {
       protocolParamCostModels          = fromAlonzoCostModels $ pp ^. ppCostModelsL
+    , protocolParamDecentralization    = Just . Ledger.unboundRational $ pp ^. ppDG
     , protocolParamPrices              = Just . fromAlonzoPrices $ pp ^. ppPricesL
     , protocolParamMaxTxExUnits        = Just . fromAlonzoExUnits $ pp ^. ppMaxTxExUnitsL
     , protocolParamMaxBlockExUnits     = Just . fromAlonzoExUnits $ pp ^. ppMaxBlockExUnitsL
@@ -1751,13 +1739,23 @@ fromAlonzoPParams pp =
     , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
     }
 
+fromExactlyAlonzoPParams :: (AlonzoEraPParams ledgerera, Ledger.ExactEra Ledger.AlonzoEra ledgerera)
+                        => PParams ledgerera
+                        -> ProtocolParameters
+fromExactlyAlonzoPParams pp =
+  (fromAlonzoPParams pp) {
+      protocolParamUTxOCostPerByte = Just . fromShelleyLovelace . unCoinPerWord $
+                                       pp ^. ppCoinsPerUTxOWordL
+  }
+
 fromBabbagePParams :: BabbageEraPParams ledgerera
                    => PParams ledgerera
                    -> ProtocolParameters
 fromBabbagePParams pp =
   (fromAlonzoPParams pp)
     { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
-    }
+  , protocolParamDecentralization = Nothing
+  }
 
 fromConwayPParams :: BabbageEraPParams ledgerera
                   => PParams ledgerera

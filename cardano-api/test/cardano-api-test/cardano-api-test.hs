@@ -13,6 +13,7 @@ import qualified Test.Cardano.Api.Json
 import qualified Test.Cardano.Api.KeysByron
 import qualified Test.Cardano.Api.Ledger
 import qualified Test.Cardano.Api.Metadata
+import qualified Test.Cardano.Api.ProtocolParameters
 import qualified Test.Cardano.Api.Typed.Address
 import qualified Test.Cardano.Api.Typed.Bech32
 import qualified Test.Cardano.Api.Typed.CBOR
@@ -44,6 +45,7 @@ tests =
     , Test.Cardano.Api.KeysByron.tests
     , Test.Cardano.Api.Ledger.tests
     , Test.Cardano.Api.Metadata.tests
+    , Test.Cardano.Api.ProtocolParameters.tests
     , Test.Cardano.Api.Typed.Address.tests
     , Test.Cardano.Api.Typed.Bech32.tests
     , Test.Cardano.Api.Typed.CBOR.tests
