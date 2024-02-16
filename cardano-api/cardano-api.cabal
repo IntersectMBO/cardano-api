@@ -333,6 +333,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.KeysByron
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.Metadata
+                        Test.Cardano.Api.ProtocolParameters
                         Test.Cardano.Api.Typed.Address
                         Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
@@ -358,11 +359,13 @@ test-suite cardano-api-golden
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
+                      , cardano-api:internal
                       , cardano-binary
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-data >= 1.0
                       , cardano-ledger-alonzo
                       , cardano-ledger-api ^>= 1.9
+                      , cardano-ledger-babbage >= 1.6.0
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , cardano-ledger-shelley
                       , cardano-ledger-shelley-test >= 1.2.0.1
@@ -389,4 +392,5 @@ test-suite cardano-api-golden
                       , Test.Golden.Cardano.Api.Ledger
                       , Test.Golden.Cardano.Api.Typed.Script
                       , Test.Golden.Cardano.Api.Value
+                      , Test.Golden.Cardano.Api.ProtocolParameters
                       , Test.Golden.ErrorsSpec

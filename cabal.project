@@ -23,6 +23,43 @@ packages:
 program-options
   ghc-options: -Werror
 
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  subdir: eras/alonzo/impl
+  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  subdir: eras/babbage/impl
+  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  subdir: eras/shelley/impl
+  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  subdir: eras/conway/impl
+  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger.git
+  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  subdir: libs/cardano-ledger-core
+  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+
+
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
