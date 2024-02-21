@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.39.0.0
+
+- Allow `checkLedgerStateCondition` check to run in IO. Rename to `foldEpochState`.
+  (feature, breaking)
+  [PR 453](https://github.com/IntersectMBO/cardano-api/pull/453)
+
+- Fix Conway script hash mismatch
+  (bugfix)
+  [PR 452](https://github.com/IntersectMBO/cardano-api/pull/452)
+
+- add types for reexport
+  (improvement)
+  [PR 420](https://github.com/IntersectMBO/cardano-api/pull/420)
+
 ## 8.38.0.2
 
 - Support constructing DRep update certificates
