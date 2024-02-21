@@ -80,7 +80,7 @@ toGovernanceAction sbe =
     ProposeNewConstitution prevGovAction anchor mConstitutionScriptHash ->
       Gov.NewConstitution prevGovAction Gov.Constitution
         { Gov.constitutionAnchor = anchor
-        , Gov.constitutionScript = mConstitutionScriptHash   -- TODO: Conway era
+        , Gov.constitutionScript = mConstitutionScriptHash
         }
     ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
       Gov.UpdateCommittee
