@@ -85,6 +85,7 @@ type ConwayEraOnwardsConstraints era =
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
+  , L.GovState (ShelleyLedgerEra era) ~ L.ConwayGovState (ShelleyLedgerEra era)
   , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.Script (ShelleyLedgerEra era) ~ L.AlonzoScript (ShelleyLedgerEra era)

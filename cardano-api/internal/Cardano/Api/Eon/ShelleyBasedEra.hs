@@ -38,6 +38,7 @@ module Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty (Pretty)
 
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
@@ -60,6 +61,7 @@ import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
+import           Text.Pretty (Pretty (..))
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 inEonForShelleyBasedEra :: ()
@@ -135,6 +137,9 @@ instance NFData (ShelleyBasedEra era) where
 deriving instance Eq   (ShelleyBasedEra era)
 deriving instance Ord  (ShelleyBasedEra era)
 deriving instance Show (ShelleyBasedEra era)
+
+instance Pretty (ShelleyBasedEra era) where
+  pretty = pretty . shelleyBasedToCardanoEra
 
 instance ToJSON (ShelleyBasedEra era) where
    toJSON = toJSON . shelleyBasedToCardanoEra

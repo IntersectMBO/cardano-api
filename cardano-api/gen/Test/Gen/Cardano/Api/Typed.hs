@@ -141,7 +141,6 @@ import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBa
 import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
-import           Cardano.Api.Pretty
 import           Cardano.Api.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley
 import qualified Cardano.Api.Shelley as ShelleyApi

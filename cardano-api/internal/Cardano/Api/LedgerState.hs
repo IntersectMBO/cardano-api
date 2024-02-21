@@ -43,7 +43,7 @@ module Cardano.Api.LedgerState
 
    -- * Ledger state conditions
   , LedgerStateCondition(..)
-  , checkLedgerStateCondition
+  , foldEpochState
 
    -- * Errors
   , LedgerStateError(..)
@@ -175,6 +175,7 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
+import           Control.Concurrent
 import           Control.DeepSeq
 import           Control.Error.Util (note)
 import           Control.Exception.Safe
@@ -1858,11 +1859,10 @@ instance Show AnyNewEpochState where
     shelleyBasedEraConstraints sbe $ showsPrec p ledgerNewEpochState
 
 
--- | Reconstructs the ledger state and applies a supplied condition to it
--- for every block. This function only terminates if the condition
--- is met or we have reached the termination epoch. We need to provide
--- a termination epoch otherwise blocks would be applied indefinitely.
-checkLedgerStateCondition
+-- | Reconstructs the ledger's new epoch state and applies a supplied condition to it for every block. This
+-- function only terminates if the condition is met or we have reached the termination epoch. We need to
+-- provide a termination epoch otherwise blocks would be applied indefinitely.
+foldEpochState
   :: forall t m s. MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
@@ -1874,9 +1874,9 @@ checkLedgerStateCondition
   -> s
   -- ^ an initial value for the condition state
   -> ( AnyNewEpochState
-      -> State s LedgerStateCondition
+      -> StateT s IO LedgerStateCondition
      )
-  -- ^ Condition you want to check against the new ledger state. The argument is the current epoch state.
+  -- ^ Condition you want to check against the new epoch state.
   --
   --
   -- Note: This function can safely assume no rollback will occur even though
@@ -1886,7 +1886,7 @@ checkLedgerStateCondition
   -- truncating the last k blocks before the node's tip.
   -> t m (LedgerStateCondition, s)
   -- ^ The final state
-checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleIOExceptions $ do
+foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -1898,7 +1898,9 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
   errorIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef Nothing
-  stateIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef (ConditionNotMet, initialResult)
+  -- This needs to be a full MVar by default. It serves as a mutual exclusion lock when executing
+  -- 'checkCondition' to ensure that states 's' are processed in order. This is assured by MVar fairness.
+  stateMv <- modifyError FoldBlocksIOException . liftIO $ newMVar (ConditionNotMet, initialResult)
 
   -- Derive the NetworkId as described in network-magic.md from the
   -- cardano-ledger-specs repo.
@@ -1929,21 +1931,21 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
 
   modifyError FoldBlocksIOException $ liftIO $ connectToLocalNode
     connectInfo
-    (protocols stateIORef errorIORef env ledgerState)
+    (protocols stateMv errorIORef env ledgerState)
 
   liftIO (readIORef errorIORef) >>= \case
     Just err -> throwError $ FoldBlocksApplyBlockError err
-    Nothing -> modifyError FoldBlocksIOException . liftIO $ readIORef stateIORef
+    Nothing -> modifyError FoldBlocksIOException . liftIO $ readMVar stateMv
   where
     protocols :: ()
-      => IORef (LedgerStateCondition, s)
+      => MVar (LedgerStateCondition, s)
       -> IORef (Maybe LedgerStateError)
       -> Env
       -> LedgerState
       -> LocalNodeClientProtocolsInMode
-    protocols stateIORef errorIORef env ledgerState =
+    protocols stateMv errorIORef env ledgerState =
         LocalNodeClientProtocols {
-          localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef errorIORef env ledgerState),
+          localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateMv errorIORef env ledgerState),
           localTxSubmissionClient = Nothing,
           localStateQueryClient   = Nothing,
           localTxMonitoringClient = Nothing
@@ -1952,7 +1954,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
     -- | Defines the client side of the chain sync protocol.
     chainSyncClient :: Word16
                     -- ^ The maximum number of concurrent requests.
-                    -> IORef (LedgerStateCondition, s)
+                    -> MVar (LedgerStateCondition, s)
                     -- ^ State accumulator. Written to on every block.
                     -> IORef (Maybe LedgerStateError)
                     -- ^ Resulting error if any. Written to once on protocol
@@ -1965,7 +1967,7 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
                         ChainTip
                         IO ()
                     -- ^ Client returns maybe an error.
-    chainSyncClient pipelineSize stateIORef errorIORef' env ledgerState0
+    chainSyncClient pipelineSize stateMv errorIORef' env ledgerState0
       = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
       where
           initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
@@ -2014,9 +2016,13 @@ checkLedgerStateCondition nodeConfigFilePath socketPath validationMode terminati
                               in clientIdle_DoneNwithMaybeError n err
                             Right lState -> do
                               let newEpochState = AnyNewEpochState sbe lState
-                              condition <- atomicModifyIORef' stateIORef $ \(_prevCondition, previousState) -> do
-                                let updatedState@(!newCondition, !_) = runState (checkCondition newEpochState) previousState
-                                (updatedState, newCondition)
+                              -- Run the condition function in an exclusive lock.
+                              -- There can be only one place where `takeMVar stateMv` exists otherwise this
+                              -- code will deadlock!
+                              condition <- bracket (takeMVar stateMv) (tryPutMVar stateMv) $ \(_prevCondition, previousState) -> do
+                                updatedState@(!newCondition, !_) <- runStateT (checkCondition newEpochState) previousState
+                                putMVar stateMv updatedState
+                                pure newCondition
                               -- Have we reached the termination epoch?
                               case atTerminationEpoch terminationEpoch ledgerEvents of
                                 Just !currentEpoch -> do
