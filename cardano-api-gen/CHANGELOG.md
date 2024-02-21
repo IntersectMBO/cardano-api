@@ -1,5 +1,12 @@
 # Changelog for cardano-api-gen
 
+## 8.2.1.0
+
+- Allow `checkLedgerStateCondition` check to run in IO. Rename to `foldEpochState`.
+  (feature, breaking)
+  [PR 453](https://github.com/IntersectMBO/cardano-api/pull/453)
+
+
 ## 8.2.0.0
 
 - Deprecate `TxVotesSupportedInEra`
