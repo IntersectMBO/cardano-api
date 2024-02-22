@@ -42,7 +42,8 @@ nix develop
 ```
 in `cardano-api` directory.
 
->[!NOTE]
+>:bulb: **Tip**
+>
 > Steps which are only required when performing this process for the first time are marked with :four_leaf_clover: .
 
 In order to generate changelog files in markdown format use the following steps:
@@ -57,48 +58,51 @@ In order to generate changelog files in markdown format use the following steps:
     ```
     If you're not authenticated, follow the steps shown on the command output.
 
-1. Create a new branch in `cardano-api`, for example:
+1. Create a release branch in `cardano-api`, for example:
     ```bash
-    git checkout -b <github-user-name>/new-version-cardano-api-8.3.0.0
+    git checkout -b release/cardano-api-8.3.0.0
     ```
-    It does not matter much, as after the merge to `main` branch, this branch will be deleted.
-    Make sure that it is up to date with main branch in github.
+    >:high_brightness: **Note**
+    >
+    >A separate branch needs to be created for every cabal package you're planning to release.
+    >For example if you'd like to release both `cardano-api` and `cardano-api-gen` you need to create two branches (with correct version numbers): `release/cardano-api-8.3.0.0` and `release/cardano-api-gen-8.1.0.0`.
 
 1. Download all PRs data from the `cardano-api` repo.
     This will take some time if the number of all PRs is large. From `cardano-api` directory, run:
     ```bash
     ../cardano-dev/scripts/download-prs.sh IntersectMBO/cardano-api
     ```
-    It would be advisable to make changelog entries corrections in the descriptions of GitHub PRs itself, as this would let us use GitHub PRs as a single source of truth for the changelog generation process.
-    This also means, that after making a change to a changelog in a PR description, the whole procedure needs to be restarted from this download step.
-    The output changelog can be reviewed in the next step.
-
     The downloaded PRs can be inspected in `~/.cache/cardano-updates/` directory.
 
-1. Find out the hash of the previous tag.
-    You can list all the tags and their hashes using the following command:
-    ```bash
-    git show-ref --tags --dereference | sort -V -t '/' -k 3,3
-    ```
+    >:high_brightness: **Note**
+    >
+    >It would be advisable to make changelog entries corrections in the descriptions of GitHub PRs itself, as this would let us use GitHub PRs as a single source of truth for the changelog generation process.
+    >This also means, that after making a change to a changelog in a PR description, the whole procedure needs to be restarted from this download step.
+    >The output changelog can be reviewed in the next step.
 
-1. Generate markdown changelogs from yaml detail file providing the hash of the previous release tag in the command line argument.
+1. Generate markdown changelogs from Yaml detail file providing the hash of the previous release tag in the command line argument.
     For example for the changelog between the tag `cardano-api-8.2.0.0` and `HEAD`:
     ```bash
-    ../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api 89fd11781d8ba19ce50f516ecef30607d2e704e8..HEAD
+    ../cardano-dev/scripts/generate-pr-changelogs.sh IntersectMBO/cardano-api cardano-api-8.2.0.0..HEAD
     ```
     This will process downloaded PRs and use those marked with `feature` or `bug` to produce the changelog to the standard output.
 
+    >:bulb: **Tip**
+    >
+    >You can sort all tags ascendingly using: `git show-ref --tags --dereference | sort -V -t '/' -k 3,3`
+
 1. Add generated changelog in the previous step to `CHANGELOG.md` file in respective cabal package in `cardano-api` repository, near the top of the file, adding a new section for the version being prepared, for example: `## 8.3.0.0`.
-    After doing that, create a PR from a new branch back to main.
+    After doing that, create a PR from a new branch back to `main`.
     Make sure that the release PR contains:
     * updated changelogs
     * bumped version fields in cabal files
 
 ### Tagging the commit
-**After merging of the release PR** into the `main` or release branch, prepare the tag.
+**After verifying the release PR diff** that it contains the correct contents, prepare the tag.
+
 Firstly, make sure that:
 1. Your `HEAD` is on the commit which you are planning to make a release from.
-1. Your `HEAD` is included in `main` or in `release/packagename-version.x` branch history on the origin remote.
+1. Your `HEAD` is in `release/packagename-version.x` branch history on the origin remote (the `.x` suffix is optional).
 
 Then you can use the following script to prepare the tag:
 ```bash
@@ -109,8 +113,9 @@ Please note that the tagging process will fail if:
 1. The tag already exists on the origin remote
 1. The `packagename/CHANGELOG.md` does not contain entry for the new version.
 
+
 ### Releasing to `cardano-haskell-packages`
-After the `cardano-api` version gets tagged, it needs to be pushed into `cardano-haskell-packages` (aka **CHaP**).
+After the `cardano-api` version gets tagged, it needs to be uploaded to `cardano-haskell-packages` (aka **CHaP**).
 Detailed description of the release process is described in [CHaP repository README](https://github.com/intersectmbo/cardano-haskell-packages#how-to-add-a-new-package-version).
 Briefly speaking, it requires executing of the following steps:
 
@@ -132,7 +137,15 @@ Briefly speaking, it requires executing of the following steps:
 
 1. Merge the PR - you don't need additional approvals for that if you belong to the correct GitHub access group.
 
-After package gets released, you can check the released version at: https://chap.intersectmbo.org/all-package-versions/ and update the version in the dependant packages, in their cabal files, for example: `cardano-api ^>= 8.3`
+    After package gets released, you can check the released version at: https://chap.intersectmbo.org/all-package-versions/ and update the version in the dependant packages, in their cabal files, for example: `cardano-api ^>= 8.3`
+    Don't forget to bump the CHaP index in cabal.project and flake.lock too.
+    See [`CONTRIBUTING.md` section on updating dependencies](https://github.com/IntersectMBO/cardano-cli/blob/main/CONTRIBUTING.md#updating-dependencies) how to to do so.
+
+1. After successful CI build in CHaP, the release PR (in the `cardano-api` repo) can be enqueued to merge.
+    >:bulb: **Tip**
+    >
+    >CHaP CI build can fail due to various reasons, like invalid haddock syntax.
+    >Merging the release PR later allows easier adjusting of the tag to include the fix for the potential issues.
 
 ## Troubleshooting
 
