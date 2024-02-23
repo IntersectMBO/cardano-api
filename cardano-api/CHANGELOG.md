@@ -1,5 +1,12 @@
 # Changelog for cardano-api
 
+## 8.39.1.0
+
+- Enable deposit return script addresses
+  Enable constitutional scripts
+  (bugfix, compatible, feature)
+  [PR 456](https://github.com/IntersectMBO/cardano-api/pull/456)
+
 ## 8.39.0.0
 
 - Allow `checkLedgerStateCondition` check to run in IO. Rename to `foldEpochState`.
