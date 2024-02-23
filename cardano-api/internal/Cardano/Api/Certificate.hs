@@ -85,11 +85,14 @@ import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ReexposeLedger (EraCrypto, StandardCrypto)
 import qualified Cardano.Api.ReexposeLedger as Ledger
+import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
+
+import qualified Cardano.Ledger.Keys as Ledger
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -487,40 +490,27 @@ makeDrepUpdateCertificate (DRepUpdateRequirements conwayOnwards vcred) mAnchor =
 -- Helper functions
 --
 
+getTxCertWitness
+  :: ShelleyBasedEra era
+  -> Ledger.TxCert (ShelleyLedgerEra era)
+  -> Maybe StakeCredential
+getTxCertWitness sbe ledgerCert = shelleyBasedEraConstraints sbe $
+  case Ledger.getVKeyWitnessTxCert ledgerCert of
+    Just keyHash -> Just $ StakeCredentialByKey $ StakeKeyHash $ Ledger.coerceKeyRole keyHash
+    Nothing ->
+      StakeCredentialByScript . fromShelleyScriptHash
+        <$> Ledger.getScriptWitnessTxCert ledgerCert
+
 -- | Get the stake credential witness for a certificate that requires it.
 -- Only stake address deregistration and delegation requires witnessing (witness can be script or key).
 selectStakeCredentialWitness
   :: Certificate era
   -> Maybe StakeCredential
-selectStakeCredentialWitness = fmap fromShelleyStakeCredential . \case
+selectStakeCredentialWitness = \case
   ShelleyRelatedCertificate stbEra shelleyCert -> shelleyToBabbageEraConstraints stbEra $
-    case shelleyCert of
-      Ledger.RegTxCert _               -> Nothing -- contains stake cred
-      Ledger.UnRegTxCert sCred         -> Just sCred
-      Ledger.DelegStakeTxCert sCred _  -> Just sCred
-      -- StakePool is always controlled by key, i.e. it is never a script. In other words,
-      -- @Credential StakePool@ cannot exist, because @ScriptHashObj@ constructor can't be used for that type.
-      Ledger.RegPoolTxCert _           -> Nothing -- contains StakePool key which cannot be a credential
-      Ledger.RetirePoolTxCert _ _      -> Nothing -- contains StakePool key which cannot be a credential
-      Ledger.MirTxCert _               -> Nothing
-      Ledger.GenesisDelegTxCert{}      -> Nothing
-
+    getTxCertWitness (shelleyToBabbageEraToShelleyBasedEra stbEra) shelleyCert
   ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
-    case conwayCert of
-      Ledger.RegPoolTxCert _                 -> Nothing -- contains StakePool key which cannot be a credential
-      Ledger.RetirePoolTxCert _ _            -> Nothing -- contains StakePool key which cannot be a credential
-      Ledger.RegTxCert{}                     -> Nothing -- contains stake cred
-      Ledger.UnRegTxCert sCred               -> Just sCred
-      Ledger.RegDepositTxCert{}              -> Nothing -- contains stake cred
-      Ledger.UnRegDepositTxCert sCred _      -> Just sCred
-      Ledger.DelegTxCert sCred _             -> Just sCred
-      Ledger.RegDepositDelegTxCert sCred _ _ -> Just sCred
-      Ledger.AuthCommitteeHotKeyTxCert{}     -> Nothing
-      Ledger.ResignCommitteeColdTxCert _ _   -> Nothing
-      Ledger.RegDRepTxCert{}                 -> Nothing
-      Ledger.UnRegDRepTxCert{}               -> Nothing
-      Ledger.UpdateDRepTxCert{}              -> Nothing
-
+    getTxCertWitness (conwayEraOnwardsToShelleyBasedEra cEra) conwayCert
 
 filterUnRegCreds
   :: Certificate era -> Maybe StakeCredential

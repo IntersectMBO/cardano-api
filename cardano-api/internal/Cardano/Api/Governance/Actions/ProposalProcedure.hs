@@ -51,6 +51,7 @@ data GovernanceAction era
   | ProposeNewConstitution
       (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose (ShelleyLedgerEra era)))
       (Ledger.Anchor StandardCrypto)
+      (StrictMaybe (Shelley.ScriptHash StandardCrypto))
   | ProposeNewCommittee
       (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
       [Hash CommitteeColdKey] -- ^ Old constitutional committee
@@ -76,10 +77,10 @@ toGovernanceAction sbe =
   shelleyBasedEraConstraints sbe $ \case
     MotionOfNoConfidence prevGovId ->
       Gov.NoConfidence prevGovId
-    ProposeNewConstitution prevGovAction anchor ->
+    ProposeNewConstitution prevGovAction anchor mConstitutionScriptHash ->
       Gov.NewConstitution prevGovAction Gov.Constitution
         { Gov.constitutionAnchor = anchor
-        , Gov.constitutionScript = SNothing   -- TODO: Conway era
+        , Gov.constitutionScript = mConstitutionScriptHash
         }
     ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
       Gov.UpdateCommittee
@@ -109,7 +110,9 @@ fromGovernanceAction = \case
   Gov.NoConfidence prevGovId ->
     MotionOfNoConfidence prevGovId
   Gov.NewConstitution prevGovId constitution ->
-    ProposeNewConstitution prevGovId $ Gov.constitutionAnchor constitution
+    ProposeNewConstitution prevGovId
+      (Gov.constitutionAnchor constitution)
+      (Gov.constitutionScript constitution)
   Gov.ParameterChange prevGovId pparams govPolicy ->
     UpdatePParams prevGovId pparams govPolicy
   Gov.HardForkInitiation prevGovId pVer ->
@@ -160,15 +163,15 @@ createProposalProcedure
   :: ShelleyBasedEra era
   -> Network
   -> Lovelace -- ^ Deposit
-  -> Hash StakeKey -- ^ Return address
+  -> StakeCredential -- ^ Credential to return the deposit to.
   -> GovernanceAction era
   -> Ledger.Anchor StandardCrypto
   -> Proposal era
-createProposalProcedure sbe nw dep (StakeKeyHash retAddrh) govAct anchor =
+createProposalProcedure sbe nw dep cred govAct anchor =
   shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = toShelleyLovelace dep
-      , Gov.pProcReturnAddr = L.RewardAcnt nw (L.KeyHashObj retAddrh)
+      , Gov.pProcReturnAddr = L.RewardAcnt nw $ toShelleyStakeCredential cred
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
       , Gov.pProcAnchor = anchor
       }
