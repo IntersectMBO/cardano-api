@@ -121,7 +121,7 @@ Briefly speaking, it requires executing of the following steps:
 
 1. :four_leaf_clover:  Clone `cardano-haskell-packages`:
     ```bash
-    git clone git@github.com:input-output-hk/cardano-haskell-packages.git
+    git clone https://github.com/IntersectMBO/cardano-haskell-packages
     cd cardano-haskell-packages
     ```
 
