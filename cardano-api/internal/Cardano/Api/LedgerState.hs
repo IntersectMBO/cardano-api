@@ -515,7 +515,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
             = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
                 Collect -> case n of
                   Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownLedgerStates)
-                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
+                _ -> CSP.SendMsgRequestNextPipelined (pure ()) (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
 
           clientNextN
             :: Nat n -- Number of requests inflight.
@@ -667,7 +667,7 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
       -> CS.ClientStIdle (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
       -> CS.ClientStIdle  BlockInMode                                                        ChainPoint ChainTip m a
     goClientStIdle history client = case client of
-      CS.SendMsgRequestNext a b -> CS.SendMsgRequestNext (goClientStNext history a) (goClientStNext history <$> b)
+      CS.SendMsgRequestNext a b -> CS.SendMsgRequestNext a (goClientStNext history b)
       CS.SendMsgFindIntersect ps a -> CS.SendMsgFindIntersect ps (goClientStIntersect history a)
       CS.SendMsgDone a -> CS.SendMsgDone a
 
@@ -751,8 +751,8 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
       -> CSP.ClientPipelinedStIdle n (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
       -> CSP.ClientPipelinedStIdle n  BlockInMode                                                        ChainPoint ChainTip m a
     goClientPipelinedStIdle history n client = case client of
-      CSP.SendMsgRequestNext a b -> CSP.SendMsgRequestNext (goClientStNext history n a) (goClientStNext history n <$> b)
-      CSP.SendMsgRequestNextPipelined a ->  CSP.SendMsgRequestNextPipelined (goClientPipelinedStIdle history (Succ n) a)
+      CSP.SendMsgRequestNext a b -> CSP.SendMsgRequestNext a (goClientStNext history n b)
+      CSP.SendMsgRequestNextPipelined m a ->  CSP.SendMsgRequestNextPipelined m (goClientPipelinedStIdle history (Succ n) a)
       CSP.SendMsgFindIntersect ps a -> CSP.SendMsgFindIntersect ps (goClientPipelinedStIntersect history n a)
       CSP.CollectResponse a b -> case n of
         Succ nPrev -> CSP.CollectResponse ((fmap . fmap) (goClientPipelinedStIdle history n) a) (goClientStNext history nPrev b)
@@ -1982,7 +1982,7 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
             = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
                 Collect -> case n of
                   Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownLedgerStates)
-                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
+                _ -> CSP.SendMsgRequestNextPipelined (pure ()) (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
 
           clientNextN
             :: Nat n -- Number of requests inflight.

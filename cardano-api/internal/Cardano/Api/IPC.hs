@@ -739,7 +739,7 @@ chainSyncGetCurrentTip tipVar =
  where
   clientStIdle :: Net.Sync.ClientStIdle BlockInMode ChainPoint ChainTip IO ()
   clientStIdle =
-    Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
+    Net.Sync.SendMsgRequestNext (pure ()) clientStNext
 
   clientStNext :: Net.Sync.ClientStNext BlockInMode ChainPoint ChainTip IO ()
   clientStNext = Net.Sync.ClientStNext
