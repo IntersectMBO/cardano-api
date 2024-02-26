@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.39.2.0
+
+- Update ouroboros-consensus-0.16, ouroboros-consensus-cardano-0.14, ouroboros-consensus-diffusion-0.11, ouroboros-consensus-protocol-0.7, ouroboros-network-api-0.7
+  (compatible)
+  [PR 459](https://github.com/IntersectMBO/cardano-api/pull/459)
+
 ## 8.39.1.0
 
 - Enable deposit return script addresses
