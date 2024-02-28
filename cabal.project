@@ -27,37 +27,37 @@ program-options
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  tag: b9fc6d5b4837e7923e2d8bdefb66deae6522404a
   subdir: eras/alonzo/impl
-  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+  --sha256: sha256-dp7rZ4n0NCoWO2UoGEwVbtjS6R4FusKjBYyhJR1qEn4=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  tag: b9fc6d5b4837e7923e2d8bdefb66deae6522404a
   subdir: eras/babbage/impl
-  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+  --sha256: sha256-dp7rZ4n0NCoWO2UoGEwVbtjS6R4FusKjBYyhJR1qEn4=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  tag: b9fc6d5b4837e7923e2d8bdefb66deae6522404a
   subdir: eras/shelley/impl
-  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+  --sha256: sha256-dp7rZ4n0NCoWO2UoGEwVbtjS6R4FusKjBYyhJR1qEn4=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  tag: b9fc6d5b4837e7923e2d8bdefb66deae6522404a
   subdir: eras/conway/impl
-  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+  --sha256: sha256-dp7rZ4n0NCoWO2UoGEwVbtjS6R4FusKjBYyhJR1qEn4=
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger.git
-  tag: 1eddd83196bc42e57acaf895f548e07db76e984a
+  tag: b9fc6d5b4837e7923e2d8bdefb66deae6522404a
   subdir: libs/cardano-ledger-core
-  --sha256: sha256-oUUDwm+WdwY7n1xgGhP0T+MAiNfQ/CIh4yVwKf12yqk=
+  --sha256: sha256-dp7rZ4n0NCoWO2UoGEwVbtjS6R4FusKjBYyhJR1qEn4=
 
 
 package cryptonite
