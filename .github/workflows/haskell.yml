@@ -3,6 +3,11 @@ name: Haskell CI
 on:
   merge_group:
   pull_request:
+  push:
+    # we need this to populate cache for `main` branch to make it available to the child branches, see
+    # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache
+    branches:
+      - main
 
 jobs:
   build:
