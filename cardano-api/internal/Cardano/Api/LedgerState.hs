@@ -1874,7 +1874,9 @@ foldEpochState
   -> s
   -- ^ an initial value for the condition state
   -> ( AnyNewEpochState
-      -> StateT s IO LedgerStateCondition
+         -> SlotNo -- ^ Current (not necessarily the tip) slot number
+         -> BlockNo -- ^ Current (not necessarily the tip) block number
+         -> StateT s IO LedgerStateCondition
      )
   -- ^ Condition you want to check against the new epoch state.
   --
@@ -2020,7 +2022,7 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
                               -- There can be only one place where `takeMVar stateMv` exists otherwise this
                               -- code will deadlock!
                               condition <- bracket (takeMVar stateMv) (tryPutMVar stateMv) $ \(_prevCondition, previousState) -> do
-                                updatedState@(!newCondition, !_) <- runStateT (checkCondition newEpochState) previousState
+                                updatedState@(!newCondition, !_) <- runStateT (checkCondition newEpochState slotNo currBlockNo) previousState
                                 putMVar stateMv updatedState
                                 pure newCondition
                               -- Have we reached the termination epoch?
