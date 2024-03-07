@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 -- | This module provides a library interface for interacting with Cardano as
 -- a user of the system.
 --
@@ -279,7 +281,8 @@ module Cardano.Api (
     -- * Blocks
 
     -- ** Blocks in the context of an era
-    Block(Block),
+    Block(..),
+    pattern Block,
     BlockHeader(..),
     getBlockHeader,
 
