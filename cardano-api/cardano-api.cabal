@@ -344,7 +344,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.TxBody
                         Test.Cardano.Api.Typed.Value
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
 test-suite cardano-api-golden
   import:               project-config
@@ -381,7 +381,7 @@ test-suite cardano-api-golden
                       , time
                       , text
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-tool-depends:   tasty-discover:tasty-discover
 
