@@ -49,6 +49,7 @@ import           Cardano.Api.Eon.ShelleyEraOnly
 import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
+import           Cardano.Api.Orphans ()
 
 import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Alonzo.Core as L

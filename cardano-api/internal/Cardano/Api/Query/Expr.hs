@@ -49,11 +49,11 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as L
 import qualified Cardano.Ledger.CertState as L
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
@@ -154,14 +154,14 @@ queryStakeAddresses :: ()
   => ShelleyBasedEra era
   -> Set StakeCredential
   -> NetworkId
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map StakeAddress Lovelace, Map StakeAddress PoolId)))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map StakeAddress L.Coin, Map StakeAddress PoolId)))
 queryStakeAddresses sbe stakeCredentials networkId =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeCredentials networkId
 
 queryStakeDelegDeposits :: ()
   => BabbageEraOnwards era
   -> Set StakeCredential
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either Consensus.EraMismatch (Map StakeCredential Lovelace)))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either Consensus.EraMismatch (Map StakeCredential L.Coin)))
 queryStakeDelegDeposits era stakeCreds
   | S.null stakeCreds = pure . pure $ pure mempty
   | otherwise         = do
@@ -235,7 +235,7 @@ queryDRepStakeDistribution :: ()
   => ConwayEraOnwards era
   -> Set (L.DRep L.StandardCrypto)
   -- ^ An empty DRep set means that distributions for all DReps will be returned
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) Lovelace)))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) L.Coin)))
 queryDRepStakeDistribution era dreps = do
   let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
