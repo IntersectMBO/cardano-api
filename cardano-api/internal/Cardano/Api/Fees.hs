@@ -201,9 +201,6 @@ evaluateTransactionFee :: forall era. ()
   -> Word  -- ^ The number of Shelley key witnesses
   -> Word  -- ^ The number of Byron key witnesses
   -> Lovelace
-evaluateTransactionFee _ _ _ _ byronwitcount | byronwitcount > 0 =
-  error "evaluateTransactionFee: TODO support Byron key witnesses"
-
 evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
