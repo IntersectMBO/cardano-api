@@ -45,7 +45,7 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc963";
+        defaultCompiler = "ghc964";
         haddockShellCompiler = defaultCompiler;
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
