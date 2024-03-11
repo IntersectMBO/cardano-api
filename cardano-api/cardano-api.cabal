@@ -178,7 +178,6 @@ library internal
                       , cborg
                       , containers
                       , contra-tracer
-                      , data-default-class
                       , deepseq
                       , directory
                       , either

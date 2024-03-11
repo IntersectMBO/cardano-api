@@ -64,6 +64,7 @@ module Cardano.Api.ProtocolParameters (
     -- * Execution units, prices and cost models,
     ExecutionUnits(..),
     ExecutionUnitPrices(..),
+    CostModels(..),
     CostModel(..),
     fromAlonzoCostModels,
 
