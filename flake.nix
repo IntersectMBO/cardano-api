@@ -82,7 +82,7 @@
             }
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
               # tools that work or should be used only with default compiler
-              haskell-language-server = "2.5.0.0";
+              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.6";
               hlint = "3.6.1";
               stylish-haskell = "0.14.5.0";
             };
