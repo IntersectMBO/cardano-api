@@ -34,11 +34,10 @@ import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
-import           Cardano.Ledger.Api (CoinPerWord (..), ConwayEra)
+import           Cardano.Ledger.Api (CoinPerWord (..))
 import           Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Coin (Coin (..))
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import           Cardano.Ledger.Conway.Governance (Committee (..))
 import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
                    PoolVotingThresholds (..), UpgradeConwayPParams (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -50,18 +49,19 @@ import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGe
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 
-import           Data.Aeson (decode)
 import           Data.ByteString (ByteString)
+import qualified Data.Default.Class as DefaultClass
 import           Data.Functor.Identity (Identity)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromJust)
 import           Data.Ratio
 import           Data.Text (Text)
 import qualified Data.Time as Time
 import           Data.Typeable
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
+
+import           Test.Cardano.Ledger.Core.Rational ((%!))
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
@@ -150,80 +150,66 @@ shelleyGenesisDefaults =
     unsafeBR = unsafeBoundedRational
 
 -- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
+-- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
 conwayGenesisDefaults :: ConwayGenesis StandardCrypto
 conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayParams
-                                      , cgConstitution = blankConstitution
-                                      , cgCommittee = emptyComittee
+                                      , cgConstitution = DefaultClass.def
+                                      , cgCommittee = DefaultClass.def
                                       , cgDelegs = mempty
                                       , cgInitialDReps = mempty
                                       }
   where
   defaultUpgradeConwayParams :: UpgradeConwayPParams Identity
   defaultUpgradeConwayParams = UpgradeConwayPParams { ucppPoolVotingThresholds = defaultPoolVotingThresholds
-                                                    , ucppGovActionLifetime = EpochInterval 10
-                                                    , ucppGovActionDeposit = Coin 1000000000
+                                                    , ucppGovActionLifetime = EpochInterval 1
+                                                    , ucppGovActionDeposit = Coin 1000000
                                                     , ucppDRepVotingThresholds = defaultDRepVotingThresholds
-                                                    , ucppDRepDeposit = Coin 2000000
-                                                    , ucppDRepActivity = EpochInterval 20
+                                                    , ucppDRepDeposit = Coin 1000000
+                                                    , ucppDRepActivity = EpochInterval 100
                                                     , ucppCommitteeMinSize = 0
                                                     , ucppCommitteeMaxTermLength = EpochInterval 200
                                                     }
     where
     defaultPoolVotingThresholds :: PoolVotingThresholds
-    defaultPoolVotingThresholds = PoolVotingThresholds { pvtPPSecurityGroup = fromJust $ boundRational 0.51
-                                                       , pvtMotionNoConfidence = fromJust $ boundRational 0.51
-                                                       , pvtHardForkInitiation = fromJust $ boundRational 0.51
-                                                       , pvtCommitteeNormal = fromJust $ boundRational 0.51
-                                                       , pvtCommitteeNoConfidence = fromJust $ boundRational 0.51
+    defaultPoolVotingThresholds = PoolVotingThresholds { pvtPPSecurityGroup = 1 %! 2
+                                                       , pvtMotionNoConfidence = 1 %! 2
+                                                       , pvtHardForkInitiation = 1 %! 2
+                                                       , pvtCommitteeNormal = 1 %! 2
+                                                       , pvtCommitteeNoConfidence = 1 %! 2
                                                        }
 
     defaultDRepVotingThresholds :: DRepVotingThresholds
-    defaultDRepVotingThresholds = DRepVotingThresholds { dvtUpdateToConstitution = fromJust $ boundRational 0.51
-                                                       , dvtTreasuryWithdrawal = fromJust $ boundRational 0.51
-                                                       , dvtPPTechnicalGroup = fromJust $ boundRational 0.51
-                                                       , dvtPPNetworkGroup = fromJust $ boundRational 0.51
-                                                       , dvtPPGovGroup = fromJust $ boundRational 0.51
-                                                       , dvtPPEconomicGroup = fromJust $ boundRational 0.51
-                                                       , dvtMotionNoConfidence = fromJust $ boundRational 0.51
-                                                       , dvtHardForkInitiation = fromJust $ boundRational 0.51
-                                                       , dvtCommitteeNormal = fromJust $ boundRational 0.51
-                                                       , dvtCommitteeNoConfidence = fromJust $ boundRational 0.51
+    defaultDRepVotingThresholds = DRepVotingThresholds { dvtUpdateToConstitution = 0 %! 1
+                                                       , dvtTreasuryWithdrawal = 1 %! 2
+                                                       , dvtPPTechnicalGroup = 1 %! 2
+                                                       , dvtPPNetworkGroup = 1 %! 2
+                                                       , dvtPPGovGroup = 1 %! 2
+                                                       , dvtPPEconomicGroup = 1 %! 2
+                                                       , dvtMotionNoConfidence = 0 %! 1
+                                                       , dvtHardForkInitiation = 1 %! 2
+                                                       , dvtCommitteeNormal = 1 %! 2
+                                                       , dvtCommitteeNoConfidence = 0 %! 1
                                                        }
 
-  blankConstitution :: Constitution (ConwayEra StandardCrypto)
-  blankConstitution = Constitution { constitutionAnchor = emptyAnchor
-                                   , constitutionScript = SNothing
-                                   }
-    where
-    emptyAnchor :: Anchor StandardCrypto
-    emptyAnchor = Anchor { anchorUrl = fromJust $ textToUrl 0 ""
-                         , anchorDataHash = fromJust $ decode "\"0000000000000000000000000000000000000000000000000000000000000000\""
-                         }
-
-  emptyComittee :: Committee (ConwayEra StandardCrypto)
-  emptyComittee = Committee { committeeQuorum = fromJust $ boundRational 0
-                            , committeeMembers = mempty
-                            }
-
 -- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
+-- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
 alonzoGenesisDefaults :: AlonzoGenesis
-alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = fromJust $ boundRational 721
-                                                          , prMem = fromJust $ boundRational 10000000
+alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 10000000
+                                                          , prMem = 577 %! 10000
                                                           }
                                      , agMaxValSize = 5000
-                                     , agMaxTxExUnits = ExUnits { exUnitsMem = 10000000
+                                     , agMaxTxExUnits = ExUnits { exUnitsMem = 140000000
                                                                 , exUnitsSteps = 10000000000
                                                                 }
                                      , agMaxCollateralInputs = 3
-                                     , agMaxBlockExUnits =  ExUnits { exUnitsMem = 50000000
-                                                                    , exUnitsSteps = 40000000000
+                                     , agMaxBlockExUnits =  ExUnits { exUnitsMem = 62000000
+                                                                    , exUnitsSteps = 20000000000
                                                                     }
                                      , agCostModels = apiCostModels
                                      , agCollateralPercentage = 150
                                      , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
                                      }
   where
-    -- Based on cardano-node/cardano-testnet/src/Testnet/Defaults.hs
     apiCostModels = mkCostModelsLenient $ Map.fromList [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
                                                        , (fromIntegral $ fromEnum PlutusV2, defaultV2CostModel)
                                                        , (fromIntegral $ fromEnum PlutusV3, defaultV3CostModel)
