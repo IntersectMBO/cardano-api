@@ -62,12 +62,12 @@ module Cardano.Api.ReexposeLedger
   , Anchor(..)
   , Delegatee(..)
   , DRep(..)
-  , DRepState
+  , DRepState(..)
   , ConwayTxCert(..)
   , ConwayDelegCert(..)
   , ConwayEraTxCert(..)
   , ConwayGovCert(..)
-  , ConwayGenesis
+  , ConwayGenesis(..)
   , GovState
   , GovActionId(..)
   , Vote (..)
@@ -168,12 +168,12 @@ import           Cardano.Ledger.BaseTypes (AnchorData (..), DnsName, EpochInterv
 import           Cardano.Ledger.Binary (Annotated (..), ByteSpan (..), byronProtVer, fromCBOR,
                    serialize', slice, toCBOR, toPlainDecoder)
 import           Cardano.Ledger.Binary.Plain (Decoder)
-import           Cardano.Ledger.CertState (DRepState, csCommitteeCredsL)
+import           Cardano.Ledger.CertState (DRepState (..), csCommitteeCredsL)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVotingThresholds (..),
                    dvtPPEconomicGroupL, dvtPPGovGroupL, dvtPPNetworkGroupL, dvtPPTechnicalGroupL,
                    dvtUpdateToConstitutionL)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..), GovState,
                    ProposalProcedure (..), Vote (..), Voter (..), VotingProcedure (..),
                    VotingProcedures (..))

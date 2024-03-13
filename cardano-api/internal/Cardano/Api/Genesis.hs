@@ -4,6 +4,7 @@
 module Cardano.Api.Genesis
   ( ShelleyGenesis(..)
   , shelleyGenesisDefaults
+  , alonzoGenesisDefaults
   , conwayGenesisDefaults
 
   -- ** Configuration
@@ -32,10 +33,16 @@ import qualified Cardano.Chain.Genesis
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import           Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
+import           Cardano.Ledger.Api (CoinPerWord (..))
 import           Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Coin (Coin (..))
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
+                   PoolVotingThresholds (..), UpgradeConwayPParams (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Plutus (Language (..))
+import           Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
 import           Cardano.Ledger.Shelley.Core
 import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGenesis (..),
                    emptyGenesisStaking)
@@ -44,6 +51,7 @@ import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 
 import           Data.ByteString (ByteString)
 import qualified Data.Default.Class as DefaultClass
+import           Data.Functor.Identity (Identity)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 import           Data.Ratio
@@ -52,6 +60,8 @@ import qualified Data.Time as Time
 import           Data.Typeable
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
+
+import           Test.Cardano.Ledger.Core.Rational ((%!))
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
@@ -139,7 +149,107 @@ shelleyGenesisDefaults =
     unsafeBR :: (HasCallStack, Typeable r, BoundedRational r) => Rational -> r
     unsafeBR = unsafeBoundedRational
 
-
+-- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
+-- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
 conwayGenesisDefaults :: ConwayGenesis StandardCrypto
-conwayGenesisDefaults = DefaultClass.def
+conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayParams
+                                      , cgConstitution = DefaultClass.def
+                                      , cgCommittee = DefaultClass.def
+                                      , cgDelegs = mempty
+                                      , cgInitialDReps = mempty
+                                      }
+  where
+  defaultUpgradeConwayParams :: UpgradeConwayPParams Identity
+  defaultUpgradeConwayParams = UpgradeConwayPParams { ucppPoolVotingThresholds = defaultPoolVotingThresholds
+                                                    , ucppGovActionLifetime = EpochInterval 1
+                                                    , ucppGovActionDeposit = Coin 1000000
+                                                    , ucppDRepVotingThresholds = defaultDRepVotingThresholds
+                                                    , ucppDRepDeposit = Coin 1000000
+                                                    , ucppDRepActivity = EpochInterval 100
+                                                    , ucppCommitteeMinSize = 0
+                                                    , ucppCommitteeMaxTermLength = EpochInterval 200
+                                                    }
+    where
+    defaultPoolVotingThresholds :: PoolVotingThresholds
+    defaultPoolVotingThresholds = PoolVotingThresholds { pvtPPSecurityGroup = 1 %! 2
+                                                       , pvtMotionNoConfidence = 1 %! 2
+                                                       , pvtHardForkInitiation = 1 %! 2
+                                                       , pvtCommitteeNormal = 1 %! 2
+                                                       , pvtCommitteeNoConfidence = 1 %! 2
+                                                       }
 
+    defaultDRepVotingThresholds :: DRepVotingThresholds
+    defaultDRepVotingThresholds = DRepVotingThresholds { dvtUpdateToConstitution = 0 %! 1
+                                                       , dvtTreasuryWithdrawal = 1 %! 2
+                                                       , dvtPPTechnicalGroup = 1 %! 2
+                                                       , dvtPPNetworkGroup = 1 %! 2
+                                                       , dvtPPGovGroup = 1 %! 2
+                                                       , dvtPPEconomicGroup = 1 %! 2
+                                                       , dvtMotionNoConfidence = 0 %! 1
+                                                       , dvtHardForkInitiation = 1 %! 2
+                                                       , dvtCommitteeNormal = 1 %! 2
+                                                       , dvtCommitteeNoConfidence = 0 %! 1
+                                                       }
+
+-- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
+-- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
+alonzoGenesisDefaults :: AlonzoGenesis
+alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 10000000
+                                                          , prMem = 577 %! 10000
+                                                          }
+                                     , agMaxValSize = 5000
+                                     , agMaxTxExUnits = ExUnits { exUnitsMem = 140000000
+                                                                , exUnitsSteps = 10000000000
+                                                                }
+                                     , agMaxCollateralInputs = 3
+                                     , agMaxBlockExUnits =  ExUnits { exUnitsMem = 62000000
+                                                                    , exUnitsSteps = 20000000000
+                                                                    }
+                                     , agCostModels = apiCostModels
+                                     , agCollateralPercentage = 150
+                                     , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
+                                     }
+  where
+    apiCostModels = mkCostModelsLenient $ Map.fromList [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
+                                                       , (fromIntegral $ fromEnum PlutusV2, defaultV2CostModel)
+                                                       , (fromIntegral $ fromEnum PlutusV3, defaultV3CostModel)
+                                                       ]
+      where
+        defaultV1CostModel = [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
+                             , 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100
+                             , 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525
+                             , 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62
+                             , 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32
+                             , 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473
+                             , 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32
+                             , 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0
+                             , 1, 1, 196500, 453240, 220, 0, 1, 1, 806990, 30482, 4, 1927926, 82523, 4, 265318, 0
+                             , 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220, 32, 32696, 32, 43357
+                             , 32, 32247, 32, 38314, 32, 57996947, 18975, 10
+                             ]
+        defaultV2CostModel = [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
+                             , 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100
+                             , 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525
+                             , 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62
+                             , 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32
+                             , 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473
+                             , 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32
+                             , 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0
+                             , 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990, 30482, 4, 1927926
+                             , 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220
+                             , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
+                             , 32947, 10
+                             ]
+        defaultV3CostModel = [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4, 117366, 10475, 4, 832808, 18
+                             , 3209094, 6, 331451, 1, 65990684, 23097, 18, 114242, 18, 94393407
+                             , 87060, 18, 16420089, 18, 2145798, 36, 3795345, 12, 889023, 1, 204237282, 23271, 36, 129165, 36, 189977790
+                             , 85902, 36, 33012864, 36, 388443360, 1, 401885761, 72, 2331379, 72, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000
+                             , 100, 23000, 100, 23000, 100, 23000, 100, 100, 100, 23000, 100
+                             , 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525, 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662
+                             , 4, 2, 245000, 216773, 62, 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32
+                             , 43249, 1000, 32, 32, 80556, 1, 57667, 4, 1927926, 82523, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473, 1, 208896
+                             , 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32, 196500, 453240, 220, 0
+                             , 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990
+                             , 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182
+                             , 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35190005, 10, 57996947, 18975, 10, 39121781, 32260, 10
+                             ]
