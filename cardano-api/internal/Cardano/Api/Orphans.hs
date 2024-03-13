@@ -16,6 +16,7 @@
 
 module Cardano.Api.Orphans () where
 
+import           Cardano.Api.Pretty (Pretty (..), (<+>))
 import           Cardano.Api.Via.ShowOf
 
 import           Cardano.Binary (DecoderError (..))
@@ -189,6 +190,8 @@ deriving instance Data Bech32.CharPosition
 deriving newtype instance Real L.Coin
 deriving newtype instance Integral L.Coin
 deriving newtype instance Num L.Coin
+instance Pretty L.Coin where
+  pretty (L.Coin n) = pretty n <+> "Lovelace"
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types

@@ -691,7 +691,7 @@ instance Error (TxBodyErrorAutoBalance era) where
     TxBodyErrorAdaBalanceNegative lovelace ->
       mconcat
         [ "The transaction does not balance in its use of ada. The net balance "
-        , "of the transaction is negative: " <> pshow lovelace <> " lovelace. "
+        , "of the transaction is negative: " <> pretty lovelace <> ". "
         , "The usual solution is to provide more inputs, or inputs with more ada."
         ]
 
@@ -699,9 +699,9 @@ instance Error (TxBodyErrorAutoBalance era) where
       mconcat
         [ "The transaction does balance in its use of ada, however the net "
         , "balance does not meet the minimum UTxO threshold. \n"
-        , "Balance: " <> pshow balance <> "\n"
+        , "Balance: " <> pretty balance <> "\n"
         , "Offending output (change output): " <> pretty (prettyRenderTxOut changeOutput) <> "\n"
-        , "Minimum UTxO threshold: " <> pshow minUTxO <> "\n"
+        , "Minimum UTxO threshold: " <> pretty minUTxO <> "\n"
         , "The usual solution is to provide more inputs, or inputs with more ada to "
         , "meet the minimum UTxO threshold"
         ]
@@ -718,7 +718,7 @@ instance Error (TxBodyErrorAutoBalance era) where
     TxBodyErrorMinUTxONotMet txout minUTxO ->
       mconcat
         [ "Minimum UTxO threshold not met for tx output: " <> pretty (prettyRenderTxOut txout) <> "\n"
-        , "Minimum required UTxO: " <> pshow minUTxO
+        , "Minimum required UTxO: " <> pretty minUTxO
         ]
 
     TxBodyErrorNonAdaAssetsUnbalanced val ->
