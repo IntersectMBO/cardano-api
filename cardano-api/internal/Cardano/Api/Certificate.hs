@@ -92,6 +92,7 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
 
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Keys as Ledger
 
 import           Data.ByteString (ByteString)
@@ -197,10 +198,10 @@ data StakePoolParameters =
      StakePoolParameters {
        stakePoolId            :: PoolId,
        stakePoolVRF           :: Hash VrfKey,
-       stakePoolCost          :: Lovelace,
+       stakePoolCost          :: L.Coin,
        stakePoolMargin        :: Rational,
        stakePoolRewardAccount :: StakeAddress,
-       stakePoolPledge        :: Lovelace,
+       stakePoolPledge        :: L.Coin,
        stakePoolOwners        :: [Hash StakeKey],
        stakePoolRelays        :: [StakePoolRelay],
        stakePoolMetadata      :: Maybe StakePoolMetadataReference
@@ -249,7 +250,7 @@ data DRepMetadataReference =
 data StakeAddressRequirements era where
   StakeAddrRegistrationConway
     :: ConwayEraOnwards era
-    -> Lovelace
+    -> L.Coin
     -> StakeCredential
     -> StakeAddressRequirements era
 
@@ -267,7 +268,7 @@ makeStakeAddressRegistrationCertificate = \case
   StakeAddrRegistrationConway cOnwards deposit scred ->
     conwayEraOnwardsConstraints cOnwards
       $ ConwayCertificate cOnwards
-      $ Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) (toShelleyLovelace deposit)
+      $ Ledger.mkRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
 makeStakeAddressUnregistrationCertificate :: StakeAddressRequirements era -> Certificate era
 makeStakeAddressUnregistrationCertificate req =
@@ -275,7 +276,7 @@ makeStakeAddressUnregistrationCertificate req =
     StakeAddrRegistrationConway cOnwards deposit scred ->
       conwayEraOnwardsConstraints cOnwards
         $ ConwayCertificate cOnwards
-        $ Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) (toShelleyLovelace deposit)
+        $ Ledger.mkUnRegDepositTxCert (toShelleyStakeCredential scred) deposit
 
     StakeAddrRegistrationPreConway atMostEra scred ->
       shelleyToBabbageEraConstraints atMostEra
@@ -391,7 +392,7 @@ data DRepRegistrationRequirements era where
   DRepRegistrationRequirements
     :: ConwayEraOnwards era
     -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
-    -> Lovelace
+    -> L.Coin
     -> DRepRegistrationRequirements era
 
 
@@ -402,10 +403,7 @@ makeDrepRegistrationCertificate :: ()
 makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcred deposit) anchor =
   ConwayCertificate conwayOnwards
     . Ledger.ConwayTxCertGov
-    $ Ledger.ConwayRegDRep
-        vcred
-        (toShelleyLovelace deposit)
-        (noInlineMaybeToStrictMaybe anchor)
+    $ Ledger.ConwayRegDRep vcred deposit (noInlineMaybeToStrictMaybe anchor)
 
 data CommitteeHotKeyAuthorizationRequirements era where
   CommitteeHotKeyAuthorizationRequirements
@@ -445,7 +443,7 @@ data DRepUnregistrationRequirements era where
   DRepUnregistrationRequirements
     :: ConwayEraOnwards era
     -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
-    -> Lovelace
+    -> L.Coin
     -> DRepUnregistrationRequirements era
 
 makeDrepUnregistrationCertificate :: ()
@@ -454,22 +452,18 @@ makeDrepUnregistrationCertificate :: ()
 makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards vcred deposit) =
   ConwayCertificate conwayOnwards
     . Ledger.ConwayTxCertGov
-    . Ledger.ConwayUnRegDRep vcred
-    $ toShelleyLovelace deposit
+    $ Ledger.ConwayUnRegDRep vcred deposit
 
 makeStakeAddressAndDRepDelegationCertificate :: ()
   => ConwayEraOnwards era
   -> StakeCredential
   -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
-  -> Lovelace
+  -> L.Coin
   -> Certificate era
 makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
   conwayEraOnwardsConstraints w
     $ ConwayCertificate w
-    $ Ledger.mkRegDepositDelegTxCert
-        (toShelleyStakeCredential cred)
-        delegatee
-        (toShelleyLovelace deposit)
+    $ Ledger.mkRegDepositDelegTxCert (toShelleyStakeCredential cred) delegatee deposit
 
 data DRepUpdateRequirements era where
   DRepUpdateRequirements
@@ -599,8 +593,8 @@ toShelleyPoolParams StakePoolParameters {
     Ledger.PoolParams {
       Ledger.ppId      = poolkh
     , Ledger.ppVrf     = vrfkh
-    , Ledger.ppPledge  = toShelleyLovelace stakePoolPledge
-    , Ledger.ppCost    = toShelleyLovelace stakePoolCost
+    , Ledger.ppPledge  = stakePoolPledge
+    , Ledger.ppCost    = stakePoolCost
     , Ledger.ppMargin  = fromMaybe
                                (error "toShelleyPoolParams: invalid PoolMargin")
                                (Ledger.boundRational stakePoolMargin)
@@ -668,10 +662,10 @@ fromShelleyPoolParams
     StakePoolParameters {
       stakePoolId            = StakePoolKeyHash ppId
     , stakePoolVRF           = VrfKeyHash ppVrf
-    , stakePoolCost          = fromShelleyLovelace ppCost
+    , stakePoolCost          = ppCost
     , stakePoolMargin        = Ledger.unboundRational ppMargin
     , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAcnt
-    , stakePoolPledge        = fromShelleyLovelace ppPledge
+    , stakePoolPledge        = ppPledge
     , stakePoolOwners        = map StakeKeyHash (Set.toList ppOwners)
     , stakePoolRelays        = map fromShelleyStakePoolRelay
                                    (Foldable.toList ppRelays)

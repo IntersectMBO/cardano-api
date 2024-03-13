@@ -24,9 +24,9 @@ import           Cardano.Api.Query
 import           Cardano.Api.Tx.Body
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
-import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
 
@@ -51,8 +51,8 @@ constructBalancedTx :: ()
   -> LedgerEpochInfo
   -> SystemStart
   -> Set PoolId       -- ^ The set of registered stake pools
-  -> Map.Map StakeCredential Lovelace
-  -> Map.Map (L.Credential L.DRepRole L.StandardCrypto) Lovelace
+  -> Map.Map StakeCredential L.Coin
+  -> Map.Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin
   -> [ShelleyWitnessSigningKey]
   -> Either (TxBodyErrorAutoBalance era) (Tx era)
 constructBalancedTx sbe txbodcontent changeAddr mOverrideWits utxo lpp

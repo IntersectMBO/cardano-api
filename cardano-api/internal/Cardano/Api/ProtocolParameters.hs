@@ -127,6 +127,7 @@ import           Cardano.Ledger.Api.PParams
 import qualified Cardano.Ledger.Babbage.Core as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.PParams as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
@@ -519,29 +520,29 @@ data ProtocolParameters =
 
        -- | The constant factor for the minimum fee calculation.
        --
-       protocolParamTxFeeFixed :: Lovelace,
+       protocolParamTxFeeFixed :: L.Coin,
 
        -- | Per byte linear factor for the minimum fee calculation.
        --
-       protocolParamTxFeePerByte :: Lovelace,
+       protocolParamTxFeePerByte :: L.Coin,
 
        -- | The minimum permitted value for new UTxO entries, ie for
        -- transaction outputs.
        --
-       protocolParamMinUTxOValue :: Maybe Lovelace,
+       protocolParamMinUTxOValue :: Maybe L.Coin,
 
        -- | The deposit required to register a stake address.
        --
-       protocolParamStakeAddressDeposit :: Lovelace,
+       protocolParamStakeAddressDeposit :: L.Coin,
 
        -- | The deposit required to register a stake pool.
        --
-       protocolParamStakePoolDeposit :: Lovelace,
+       protocolParamStakePoolDeposit :: L.Coin,
 
        -- | The minimum value that stake pools are permitted to declare for
        -- their cost parameter.
        --
-       protocolParamMinPoolCost :: Lovelace,
+       protocolParamMinPoolCost :: L.Coin,
 
        -- | The maximum number of epochs into the future that stake pools
        -- are permitted to schedule a retirement.
@@ -612,7 +613,7 @@ data ProtocolParameters =
        -- | Cost in ada per byte of UTxO storage.
        --
        -- /Introduced in Babbage/
-       protocolParamUTxOCostPerByte :: Maybe Lovelace
+       protocolParamUTxOCostPerByte :: Maybe L.Coin
 
     }
   deriving (Eq, Generic, Show)
@@ -747,29 +748,29 @@ data ProtocolParametersUpdate =
 
        -- | The constant factor for the minimum fee calculation.
        --
-       protocolUpdateTxFeeFixed :: Maybe Lovelace,
+       protocolUpdateTxFeeFixed :: Maybe L.Coin,
 
        -- | The linear factor for the minimum fee calculation.
        --
-       protocolUpdateTxFeePerByte :: Maybe Lovelace,
+       protocolUpdateTxFeePerByte :: Maybe L.Coin,
 
        -- | The minimum permitted value for new UTxO entries, ie for
        -- transaction outputs.
        --
-       protocolUpdateMinUTxOValue :: Maybe Lovelace,
+       protocolUpdateMinUTxOValue :: Maybe L.Coin,
 
        -- | The deposit required to register a stake address.
        --
-       protocolUpdateStakeAddressDeposit :: Maybe Lovelace,
+       protocolUpdateStakeAddressDeposit :: Maybe L.Coin,
 
        -- | The deposit required to register a stake pool.
        --
-       protocolUpdateStakePoolDeposit :: Maybe Lovelace,
+       protocolUpdateStakePoolDeposit :: Maybe L.Coin,
 
        -- | The minimum value that stake pools are permitted to declare for
        -- their cost parameter.
        --
-       protocolUpdateMinPoolCost :: Maybe Lovelace,
+       protocolUpdateMinPoolCost :: Maybe L.Coin,
 
        -- | The maximum number of epochs into the future that stake pools
        -- are permitted to schedule a retirement.
@@ -842,7 +843,7 @@ data ProtocolParametersUpdate =
        -- | Cost in ada per byte of UTxO storage.
        --
        -- /Introduced in Babbage/
-       protocolUpdateUTxOCostPerByte :: Maybe Lovelace
+       protocolUpdateUTxOCostPerByte :: Maybe L.Coin
     }
   deriving (Eq, Show)
 
@@ -1014,7 +1015,7 @@ fromLedgerNonce (Ledger.Nonce h)    = Just (PraosNonce (Crypto.castHash h))
 -- Script execution unit prices and cost models
 --
 
--- | The prices for 'ExecutionUnits' as a fraction of a 'Lovelace'.
+-- | The prices for 'ExecutionUnits' as a fraction of a 'L.Coin'.
 --
 -- These are used to determine the fee for the use of a script within a
 -- transaction, based on the 'ExecutionUnits' needed by the use of the script.
@@ -1226,25 +1227,19 @@ toShelleyCommonPParamsUpdate
   tau <- mapM (boundRationalEither "Tau") protocolUpdateTreasuryCut
   let ppuCommon =
         emptyPParamsUpdate
-        & ppuMinFeeAL     .~
-          (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte)
-        & ppuMinFeeBL     .~
-          (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed)
+        & ppuMinFeeAL     .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
+        & ppuMinFeeBL     .~ noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
         & ppuMaxBBSizeL   .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
         & ppuMaxTxSizeL   .~ noInlineMaybeToStrictMaybe protocolUpdateMaxTxSize
         & ppuMaxBHSizeL   .~ noInlineMaybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
-        & ppuKeyDepositL  .~
-          (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateStakeAddressDeposit)
-        & ppuPoolDepositL .~
-          (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateStakePoolDeposit)
+        & ppuKeyDepositL  .~ noInlineMaybeToStrictMaybe protocolUpdateStakeAddressDeposit
+        & ppuPoolDepositL .~ noInlineMaybeToStrictMaybe protocolUpdateStakePoolDeposit
         & ppuEMaxL        .~ noInlineMaybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
         & ppuNOptL        .~ noInlineMaybeToStrictMaybe protocolUpdateStakePoolTargetNum
         & ppuA0L          .~ noInlineMaybeToStrictMaybe a0
-
         & ppuRhoL         .~ noInlineMaybeToStrictMaybe rho
         & ppuTauL         .~ noInlineMaybeToStrictMaybe tau
-        & ppuMinPoolCostL     .~
-          (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost)
+        & ppuMinPoolCostL .~ noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
   pure ppuCommon
 
 toShelleyPParamsUpdate :: ( EraPParams ledgerera
@@ -1266,11 +1261,9 @@ toShelleyPParamsUpdate
   protVer <- mapM mkProtVer protocolUpdateProtocolVersion
   let ppuShelley =
         ppuCommon
-        & ppuDL            .~ noInlineMaybeToStrictMaybe d
-        & ppuExtraEntropyL .~
-          (toLedgerNonce <$> noInlineMaybeToStrictMaybe protocolUpdateExtraPraosEntropy)
-        & ppuMinUTxOValueL .~
-          (toShelleyLovelace <$> noInlineMaybeToStrictMaybe protocolUpdateMinUTxOValue)
+        & ppuDL               .~ noInlineMaybeToStrictMaybe d
+        & ppuExtraEntropyL    .~ (toLedgerNonce <$> noInlineMaybeToStrictMaybe protocolUpdateExtraPraosEntropy)
+        & ppuMinUTxOValueL    .~ noInlineMaybeToStrictMaybe protocolUpdateMinUTxOValue
         & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
   pure ppuShelley
 
@@ -1335,9 +1328,7 @@ toBabbageCommonPParamsUpdate
   ppuAlonzoCommon <- toAlonzoCommonPParamsUpdate protocolParametersUpdate
   let ppuBabbage =
         ppuAlonzoCommon
-        & ppuCoinsPerUTxOByteL .~
-          (CoinPerByte . toShelleyLovelace <$>
-           noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
+          & ppuCoinsPerUTxOByteL .~ fmap CoinPerByte (noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte)
   pure ppuBabbage
 
 toBabbagePParamsUpdate :: Ledger.Crypto crypto
@@ -1420,24 +1411,16 @@ fromShelleyCommonPParamsUpdate ppu =
     , protocolUpdateMaxBlockHeaderSize  = strictMaybeToMaybe (ppu ^. ppuMaxBHSizeL)
     , protocolUpdateMaxBlockBodySize    = strictMaybeToMaybe (ppu ^. ppuMaxBBSizeL)
     , protocolUpdateMaxTxSize           = strictMaybeToMaybe (ppu ^. ppuMaxTxSizeL)
-    , protocolUpdateTxFeeFixed          = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe (ppu ^. ppuMinFeeBL)
-    , protocolUpdateTxFeePerByte        = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe (ppu ^. ppuMinFeeAL)
-    , protocolUpdateStakeAddressDeposit = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe (ppu ^. ppuKeyDepositL)
-    , protocolUpdateStakePoolDeposit    = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe (ppu ^. ppuPoolDepositL)
-    , protocolUpdateMinPoolCost         = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe (ppu ^. ppuMinPoolCostL)
+    , protocolUpdateTxFeeFixed          = strictMaybeToMaybe (ppu ^. ppuMinFeeBL)
+    , protocolUpdateTxFeePerByte        = strictMaybeToMaybe (ppu ^. ppuMinFeeAL)
+    , protocolUpdateStakeAddressDeposit = strictMaybeToMaybe (ppu ^. ppuKeyDepositL)
+    , protocolUpdateStakePoolDeposit    = strictMaybeToMaybe (ppu ^. ppuPoolDepositL)
+    , protocolUpdateMinPoolCost         = strictMaybeToMaybe (ppu ^. ppuMinPoolCostL)
     , protocolUpdatePoolRetireMaxEpoch  = strictMaybeToMaybe (ppu ^. ppuEMaxL)
     , protocolUpdateStakePoolTargetNum  = strictMaybeToMaybe (ppu ^. ppuNOptL)
-    , protocolUpdatePoolPledgeInfluence = Ledger.unboundRational <$>
-                                            strictMaybeToMaybe (ppu ^. ppuA0L)
-    , protocolUpdateMonetaryExpansion   = Ledger.unboundRational <$>
-                                            strictMaybeToMaybe (ppu ^. ppuRhoL)
-    , protocolUpdateTreasuryCut         = Ledger.unboundRational <$>
-                                            strictMaybeToMaybe (ppu ^. ppuTauL)
+    , protocolUpdatePoolPledgeInfluence = Ledger.unboundRational <$> strictMaybeToMaybe (ppu ^. ppuA0L)
+    , protocolUpdateMonetaryExpansion   = Ledger.unboundRational <$> strictMaybeToMaybe (ppu ^. ppuRhoL)
+    , protocolUpdateTreasuryCut         = Ledger.unboundRational <$> strictMaybeToMaybe (ppu ^. ppuTauL)
     , protocolUpdateCostModels          = mempty
     , protocolUpdatePrices              = Nothing
     , protocolUpdateMaxTxExUnits        = Nothing
@@ -1466,8 +1449,7 @@ fromShelleyPParamsUpdate ppu =
                                             strictMaybeToMaybe (ppu ^. ppuDL)
     , protocolUpdateExtraPraosEntropy   = fromLedgerNonce <$>
                                             strictMaybeToMaybe (ppu ^. ppuExtraEntropyL)
-    , protocolUpdateMinUTxOValue        = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe (ppu ^. ppuMinUTxOValueL)
+    , protocolUpdateMinUTxOValue        = strictMaybeToMaybe (ppu ^. ppuMinUTxOValueL)
     }
 
 fromAlonzoCommonPParamsUpdate :: AlonzoEraPParams ledgerera
@@ -1503,9 +1485,8 @@ fromBabbageCommonPParamsUpdate :: BabbageEraPParams ledgerera
                                => PParamsUpdate ledgerera
                                -> ProtocolParametersUpdate
 fromBabbageCommonPParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu) {
-      protocolUpdateUTxOCostPerByte    = fromShelleyLovelace . unCoinPerByte <$>
-                                           strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
+  (fromAlonzoCommonPParamsUpdate ppu)
+    { protocolUpdateUTxOCostPerByte = unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
     }
 
 fromBabbagePParamsUpdate :: Ledger.Crypto crypto
@@ -1565,20 +1546,20 @@ toShelleyCommonPParams
   protVer <- mkProtVer protocolParamProtocolVersion
   let ppCommon =
         emptyPParams
-        & ppMinFeeAL         .~ toShelleyLovelace protocolParamTxFeePerByte
-        & ppMinFeeBL         .~ toShelleyLovelace protocolParamTxFeeFixed
+        & ppMinFeeAL         .~ protocolParamTxFeePerByte
+        & ppMinFeeBL         .~ protocolParamTxFeeFixed
         & ppMaxBBSizeL       .~ fromIntegral protocolParamMaxBlockBodySize
         & ppMaxTxSizeL       .~ fromIntegral protocolParamMaxTxSize
         & ppMaxBHSizeL       .~ fromIntegral protocolParamMaxBlockHeaderSize
-        & ppKeyDepositL      .~ toShelleyLovelace protocolParamStakeAddressDeposit
-        & ppPoolDepositL     .~ toShelleyLovelace protocolParamStakePoolDeposit
+        & ppKeyDepositL      .~ protocolParamStakeAddressDeposit
+        & ppPoolDepositL     .~ protocolParamStakePoolDeposit
         & ppEMaxL            .~ protocolParamPoolRetireMaxEpoch
         & ppNOptL            .~ protocolParamStakePoolTargetNum
         & ppA0L              .~ a0
         & ppRhoL             .~ rho
         & ppTauL             .~ tau
         & ppProtocolVersionL .~ protVer
-        & ppMinPoolCostL     .~ toShelleyLovelace protocolParamMinPoolCost
+        & ppMinPoolCostL     .~ protocolParamMinPoolCost
   pure ppCommon
 
 toShelleyPParams :: ( EraPParams ledgerera
@@ -1600,7 +1581,7 @@ toShelleyPParams
         ppCommon
         & ppDL            .~ d
         & ppExtraEntropyL .~ toLedgerNonce protocolParamExtraPraosEntropy
-        & ppMinUTxOValueL .~ toShelleyLovelace minUTxOValue
+        & ppMinUTxOValueL .~ minUTxOValue
   pure ppShelley
 
 
@@ -1684,7 +1665,7 @@ toBabbagePParams
     requireParam "protocolParamUTxOCostPerByte" Right protocolParamUTxOCostPerByte
   let ppBabbage =
         ppAlonzoCommon
-        & ppCoinsPerUTxOByteL .~ CoinPerByte (toShelleyLovelace utxoCostPerByte)
+          & ppCoinsPerUTxOByteL .~ CoinPerByte utxoCostPerByte
   pure ppBabbage
 
 toConwayPParams :: BabbageEraPParams ledgerera
@@ -1718,11 +1699,11 @@ fromShelleyCommonPParams pp =
     , protocolParamMaxBlockHeaderSize  = fromIntegral $ pp ^. ppMaxBHSizeL
     , protocolParamMaxBlockBodySize    = fromIntegral $ pp ^. ppMaxBBSizeL
     , protocolParamMaxTxSize           = fromIntegral $ pp ^. ppMaxTxSizeL
-    , protocolParamTxFeeFixed          = fromShelleyLovelace (pp ^. ppMinFeeBL)
-    , protocolParamTxFeePerByte        = fromShelleyLovelace (pp ^. ppMinFeeAL)
-    , protocolParamStakeAddressDeposit = fromShelleyLovelace (pp ^. ppKeyDepositL)
-    , protocolParamStakePoolDeposit    = fromShelleyLovelace (pp ^. ppPoolDepositL)
-    , protocolParamMinPoolCost         = fromShelleyLovelace (pp ^. ppMinPoolCostL)
+    , protocolParamTxFeeFixed          = pp ^. ppMinFeeBL
+    , protocolParamTxFeePerByte        = pp ^. ppMinFeeAL
+    , protocolParamStakeAddressDeposit = pp ^. ppKeyDepositL
+    , protocolParamStakePoolDeposit    = pp ^. ppPoolDepositL
+    , protocolParamMinPoolCost         = pp ^. ppMinPoolCostL
     , protocolParamPoolRetireMaxEpoch  = pp ^. ppEMaxL
     , protocolParamStakePoolTargetNum  = pp ^. ppNOptL
     , protocolParamPoolPledgeInfluence = Ledger.unboundRational (pp ^. ppA0L)
@@ -1751,7 +1732,7 @@ fromShelleyPParams pp =
   (fromShelleyCommonPParams pp) {
       protocolParamDecentralization    = Just . Ledger.unboundRational $ pp ^. ppDL
     , protocolParamExtraPraosEntropy   = fromLedgerNonce $ pp ^. ppExtraEntropyL
-    , protocolParamMinUTxOValue        = Just . fromShelleyLovelace $ pp ^. ppMinUTxOValueL
+    , protocolParamMinUTxOValue        = Just $ pp ^. ppMinUTxOValueL
     }
 
 
@@ -1773,9 +1754,8 @@ fromBabbagePParams :: BabbageEraPParams ledgerera
                    => PParams ledgerera
                    -> ProtocolParameters
 fromBabbagePParams pp =
-  (fromAlonzoPParams pp) {
-    protocolParamUTxOCostPerByte = Just . fromShelleyLovelace . unCoinPerByte $
-                                     pp ^. ppCoinsPerUTxOByteL
+  (fromAlonzoPParams pp)
+    { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
     }
 
 fromConwayPParams :: BabbageEraPParams ledgerera

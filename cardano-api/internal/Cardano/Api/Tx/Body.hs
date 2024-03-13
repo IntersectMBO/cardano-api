@@ -209,6 +209,7 @@ import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import           Cardano.Ledger.Binary (Annotated (..))
 import qualified Cardano.Ledger.Binary as CBOR
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Core ()
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -819,7 +820,7 @@ deriving instance Show (TxInsReference build era)
 data TxOutValue era where
 
   TxOutValueByron
-    :: Lovelace
+    :: L.Coin
     -> TxOutValue era
 
   TxOutValueShelleyBased
@@ -848,7 +849,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
         pure
           $ shelleyBasedEraConstraints (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg)
           $ TxOutValueShelleyBased (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg)
-          $ A.mkAdaValue (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg) $ lovelaceToCoin ll
+          $ A.mkAdaValue (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg) ll
       )
       (\w -> do
         let l = KeyMap.toList o
@@ -893,20 +894,18 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
 
 lovelaceToTxOutValue :: ()
   => ShelleyBasedEra era
-  -> Lovelace
+  -> L.Coin
   -> TxOutValue era
 lovelaceToTxOutValue era ll =
   shelleyBasedEraConstraints era
     $ TxOutValueShelleyBased era
-    $ A.mkAdaValue era
-    $ lovelaceToCoin ll
+    $ A.mkAdaValue era ll
 
-
-txOutValueToLovelace :: TxOutValue era -> Lovelace
+txOutValueToLovelace :: TxOutValue era -> L.Coin
 txOutValueToLovelace tv =
   case tv of
     TxOutValueByron             l -> l
-    TxOutValueShelleyBased  sbe v -> coinToLovelace $ v ^. A.adaAssetL sbe
+    TxOutValueShelleyBased  sbe v -> v ^. A.adaAssetL sbe
 
 txOutValueToValue :: TxOutValue era -> Value
 txOutValueToValue tv =
@@ -939,7 +938,7 @@ data TxTotalCollateral era where
 
   TxTotalCollateral
     :: BabbageEraOnwards era
-    -> Lovelace
+    -> L.Coin
     -> TxTotalCollateral era
 
 deriving instance Eq   (TxTotalCollateral era)
@@ -1002,7 +1001,7 @@ parseHash asType = do
 --
 
 data TxFee era where
-  TxFeeExplicit :: ShelleyBasedEra era -> Lovelace -> TxFee era
+  TxFeeExplicit :: ShelleyBasedEra era -> L.Coin -> TxFee era
 
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
@@ -1105,7 +1104,7 @@ data TxWithdrawals build era where
 
   TxWithdrawals
     :: ShelleyBasedEra era
-    -> [(StakeAddress, Lovelace, BuildTxWith build (Witness WitCtxStake era))]
+    -> [(StakeAddress, L.Coin, BuildTxWith build (Witness WitCtxStake era))]
     -> TxWithdrawals build era
 
 deriving instance Eq   (TxWithdrawals build era)
@@ -1844,7 +1843,7 @@ fromLedgerTxTotalCollateral sbe txbody =
     (\w ->
       case txbody ^. L.totalCollateralTxBodyL of
         SNothing -> TxTotalCollateralNone
-        SJust totColl -> TxTotalCollateral w $ fromShelleyLovelace totColl
+        SJust totColl -> TxTotalCollateral w totColl
     )
     sbe
 
@@ -1867,7 +1866,7 @@ fromLedgerTxFee
 fromLedgerTxFee sbe body =
   shelleyBasedEraConstraints sbe
     $ TxFeeExplicit sbe
-    $ fromShelleyLovelace $ body ^. L.feeTxBodyL
+    $ body ^. L.feeTxBodyL
 
 fromLedgerTxValidityLowerBound
   :: ShelleyBasedEra era
@@ -2074,7 +2073,7 @@ convTotalCollateral :: TxTotalCollateral era -> StrictMaybe Ledger.Coin
 convTotalCollateral txTotalCollateral =
   case txTotalCollateral of
     TxTotalCollateralNone -> SNothing
-    TxTotalCollateral _ totCollLovelace -> SJust $ toShelleyLovelace totCollLovelace
+    TxTotalCollateral _ totCollLovelace -> SJust totCollLovelace
 
 convTxOuts
   :: forall ctx era ledgerera. ShelleyLedgerEra era ~ ledgerera
@@ -2098,8 +2097,7 @@ convWithdrawals txWithdrawals =
     TxWithdrawals _ ws -> toShelleyWithdrawal ws
 
 convTransactionFee :: ShelleyBasedEra era -> TxFee era -> Ledger.Coin
-convTransactionFee _ = \case
-  TxFeeExplicit _ fee -> toShelleyLovelace fee
+convTransactionFee _ (TxFeeExplicit _ fee) = fee
 
 convValidityLowerBound :: ()
   => TxValidityLowerBound era
@@ -2995,19 +2993,19 @@ orderStakeAddrs :: [(StakeAddress, x, v)] -> [(StakeAddress, x, v)]
 orderStakeAddrs = sortBy (compare `on` (\(k, _, _) -> k))
 
 -- TODO: Investigate if we need
-toShelleyWithdrawal :: [(StakeAddress, Lovelace, a)] -> L.Withdrawals StandardCrypto
+toShelleyWithdrawal :: [(StakeAddress, L.Coin, a)] -> L.Withdrawals StandardCrypto
 toShelleyWithdrawal withdrawals =
     L.Withdrawals $
       Map.fromList
-        [ (toShelleyStakeAddr stakeAddr, toShelleyLovelace value)
+        [ (toShelleyStakeAddr stakeAddr, value)
         | (stakeAddr, value, _) <- withdrawals ]
 
 
 fromShelleyWithdrawal
   :: L.Withdrawals StandardCrypto
-  -> [(StakeAddress, Lovelace, BuildTxWith ViewTx (Witness WitCtxStake era))]
+  -> [(StakeAddress, L.Coin, BuildTxWith ViewTx (Witness WitCtxStake era))]
 fromShelleyWithdrawal (L.Withdrawals withdrawals) =
-  [ (fromShelleyStakeAddr stakeAddr, fromShelleyLovelace value, ViewTx)
+  [ (fromShelleyStakeAddr stakeAddr, value, ViewTx)
   | (stakeAddr, value) <- Map.assocs withdrawals
   ]
 
@@ -3067,9 +3065,9 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
 
-calculateExecutionUnitsLovelace :: Ledger.Prices -> ExecutionUnits -> Maybe Lovelace
+calculateExecutionUnitsLovelace :: Ledger.Prices -> ExecutionUnits -> Maybe L.Coin
 calculateExecutionUnitsLovelace prices eUnits =
-  return . fromShelleyLovelace $ Alonzo.txscriptfee prices (toAlonzoExUnits eUnits)
+  return $ Alonzo.txscriptfee prices (toAlonzoExUnits eUnits)
 
 -- ----------------------------------------------------------------------------
 -- Inline data

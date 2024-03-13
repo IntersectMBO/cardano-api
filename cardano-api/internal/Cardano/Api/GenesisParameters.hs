@@ -20,8 +20,8 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.NetworkId
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import           Cardano.Api.Value
 
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import           Cardano.Slotting.Slot (EpochSize (..))
 
@@ -87,7 +87,7 @@ data GenesisParameters era =
        -- | The maximum supply for Lovelace. This determines the initial value
        -- of the reserves.
        --
-       protocolParamMaxLovelaceSupply :: Lovelace,
+       protocolParamMaxLovelaceSupply :: L.Coin,
 
        -- | The initial values of the updateable 'ProtocolParameters'.
        --
@@ -129,7 +129,6 @@ fromShelleyGenesis
     , protocolParamSlotsPerKESPeriod      = fromIntegral sgSlotsPerKESPeriod
     , protocolParamMaxKESEvolutions       = fromIntegral sgMaxKESEvolutions
     , protocolParamUpdateQuorum           = fromIntegral sgUpdateQuorum
-    , protocolParamMaxLovelaceSupply      = Lovelace
-                                              (fromIntegral sgMaxLovelaceSupply)
+    , protocolParamMaxLovelaceSupply      = L.Coin $ fromIntegral sgMaxLovelaceSupply
     , protocolInitialUpdateableProtocolParameters = Shelley.sgProtocolParams sg
     }

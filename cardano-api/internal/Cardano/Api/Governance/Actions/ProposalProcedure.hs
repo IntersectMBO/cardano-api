@@ -21,11 +21,11 @@ import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxIn
-import           Cardano.Api.Value
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.Address as L
 import           Cardano.Ledger.BaseTypes
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
 import qualified Cardano.Ledger.Conway.Governance as Ledger
@@ -59,7 +59,7 @@ data GovernanceAction era
       Rational -- ^ Quorum of the committee that is necessary for a successful vote
   | InfoAct
   | TreasuryWithdrawal
-      [(Network, StakeCredential, Lovelace)]
+      [(Network, StakeCredential, L.Coin)]
       !(StrictMaybe (Shelley.ScriptHash StandardCrypto)) -- ^ Governance policy
   | InitiateHardfork
       (StrictMaybe (Ledger.GovPurposeId Ledger.HardForkPurpose (ShelleyLedgerEra era)))
@@ -95,7 +95,7 @@ toGovernanceAction sbe =
     InfoAct ->
       Gov.InfoAction
     TreasuryWithdrawal withdrawals govPol ->
-      let m = Map.fromList [(L.RewardAcnt nw (toShelleyStakeCredential sc), toShelleyLovelace l) | (nw,sc,l) <- withdrawals]
+      let m = Map.fromList [(L.RewardAcnt nw (toShelleyStakeCredential sc), l) | (nw,sc,l) <- withdrawals]
       in Gov.TreasuryWithdrawals m govPol
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
@@ -118,7 +118,7 @@ fromGovernanceAction = \case
   Gov.HardForkInitiation prevGovId pVer ->
     InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap govPolicy ->
-    let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), fromShelleyLovelace coin)
+    let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), coin)
               | (rwdAcnt, coin) <- Map.toList withdrawlMap
               ]
     in TreasuryWithdrawal res govPolicy
@@ -162,7 +162,7 @@ instance HasTypeProxy era => HasTypeProxy (Proposal era) where
 createProposalProcedure
   :: ShelleyBasedEra era
   -> Network
-  -> Lovelace -- ^ Deposit
+  -> L.Coin -- ^ Deposit
   -> StakeCredential -- ^ Credential to return the deposit to.
   -> GovernanceAction era
   -> Ledger.Anchor StandardCrypto
@@ -170,7 +170,7 @@ createProposalProcedure
 createProposalProcedure sbe nw dep cred govAct anchor =
   shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
-      { Gov.pProcDeposit = toShelleyLovelace dep
+      { Gov.pProcDeposit = dep
       , Gov.pProcReturnAddr = L.RewardAcnt nw $ toShelleyStakeCredential cred
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
       , Gov.pProcAnchor = anchor
@@ -179,10 +179,10 @@ createProposalProcedure sbe nw dep cred govAct anchor =
 fromProposalProcedure
   :: ShelleyBasedEra era
   -> Proposal era
-  -> (Lovelace, Hash StakeKey, GovernanceAction era)
+  -> (L.Coin, Hash StakeKey, GovernanceAction era)
 fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints sbe
-    ( fromShelleyLovelace $ Gov.pProcDeposit pp
+    ( Gov.pProcDeposit pp
     , case fromShelleyStakeCredential (L.getRwdCred (Gov.pProcReturnAddr pp)) of
           StakeCredentialByKey keyhash -> keyhash
           StakeCredentialByScript _scripthash ->

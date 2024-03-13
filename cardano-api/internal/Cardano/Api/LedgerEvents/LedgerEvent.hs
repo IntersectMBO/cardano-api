@@ -16,8 +16,8 @@ module Cardano.Api.LedgerEvents.LedgerEvent
 import           Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
 import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Keys.Shelley (Hash (..), StakePoolKey)
-import           Cardano.Api.Value (Lovelace, fromShelleyLovelace)
 
+import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import qualified Cardano.Ledger.Core as Ledger.Core
@@ -84,26 +84,26 @@ data LedgerEvent
 --   are inverse; a transfer of 100 ADA in either direction will result in a net
 --   movement of 0, but we include both directions for assistance in debugging.
 data MIRDistributionDetails = MIRDistributionDetails
-  { mirddReservePayouts :: Map StakeCredential Lovelace,
-    mirddTreasuryPayouts :: Map StakeCredential Lovelace,
-    mirddReservesToTreasury :: Lovelace,
-    mirddTreasuryToReserves :: Lovelace
+  { mirddReservePayouts :: Map StakeCredential L.Coin,
+    mirddTreasuryPayouts :: Map StakeCredential L.Coin,
+    mirddReservesToTreasury :: L.Coin,
+    mirddTreasuryToReserves :: L.Coin
   } deriving Show
 
 data PoolReapDetails = PoolReapDetails
   { prdEpochNo :: EpochNo,
     -- | Refunded deposits. The pools referenced are now retired, and the
     --   'StakeCredential' accounts are credited with the deposits.
-    prdRefunded :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace),
+    prdRefunded :: Map StakeCredential (Map (Hash StakePoolKey) L.Coin),
     -- | Unclaimed deposits. The 'StakeCredential' referenced in this map is not
     -- actively registered at the time of the pool reaping, and as such the
     -- funds are returned to the treasury.
-    prdUnclaimed :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
+    prdUnclaimed :: Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
   } deriving Show
 
 convertRetiredPoolsMap
   :: Map (Ledger.StakeCredential StandardCrypto) (Map (Ledger.KeyHash Ledger.StakePool StandardCrypto) Ledger.Coin)
-  -> Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
+  -> Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
 convertRetiredPoolsMap =
   Map.mapKeys fromShelleyStakeCredential
-    . fmap (Map.mapKeys StakePoolKeyHash . fmap fromShelleyLovelace)
+    . fmap (Map.mapKeys StakePoolKeyHash)

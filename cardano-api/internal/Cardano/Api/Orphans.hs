@@ -16,6 +16,7 @@
 
 module Cardano.Api.Orphans () where
 
+import           Cardano.Api.Pretty (Pretty (..), (<+>))
 import           Cardano.Api.Via.ShowOf
 
 import           Cardano.Binary (DecoderError (..))
@@ -179,6 +180,18 @@ deriving instance Data DecoderError
 deriving instance Data CBOR.DeserialiseFailure
 deriving instance Data Bech32.DecodingError
 deriving instance Data Bech32.CharPosition
+
+-- | These instances originally existed on the Lovelace type.
+-- As the Lovelace type is deleted and we use L.Coin instead,
+-- these instances are added to L.Coin.  The instances are
+-- purely for the convenience of writing expressions involving
+-- L.Coin but be aware that not all uses of these typeclasses
+-- are valid.
+deriving newtype instance Real L.Coin
+deriving newtype instance Integral L.Coin
+deriving newtype instance Num L.Coin
+instance Pretty L.Coin where
+  pretty (L.Coin n) = pretty n <+> "Lovelace"
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
