@@ -1,5 +1,36 @@
 # Changelog for cardano-api
 
+## 8.40.0.0
+
+- Use the ledger's Coin instead of our custom Lovelace type
+  (breaking, improvement)
+  [PR 475](https://github.com/IntersectMBO/cardano-api/pull/475)
+
+- Remove error `"evaluateTransactionFee: TODO support Byron key witnesses"` in `estimateMinFeeTx`
+  (compatible)
+  [PR 478](https://github.com/IntersectMBO/cardano-api/pull/478)
+
+- Revert #316 "Remove unused constraint"
+  (improvement)
+  [PR 472](https://github.com/IntersectMBO/cardano-api/pull/472)
+
+- Expose Block constructors
+  (improvement)
+  [PR 468](https://github.com/IntersectMBO/cardano-api/pull/468)
+
+- Add `SlotNo` and `BlockNo` parameters to `foldEpochState`'s callback function
+  This gives access to the current `SlotNo` and `BlockNo` in a given requested block.
+  (feature, breaking)
+  [PR 470](https://github.com/IntersectMBO/cardano-api/pull/470)
+
+- Default genesis parameters yielding positive treasury
+  (compatible)
+  [PR 425](https://github.com/IntersectMBO/cardano-api/pull/425)
+
+- Simplify `EraInEon` to take fewer constraints
+  (compatible)
+  [PR 316](https://github.com/IntersectMBO/cardano-api/pull/316)
+
 ## 8.39.2.0
 
 - Update ouroboros-consensus-0.16, ouroboros-consensus-cardano-0.14, ouroboros-consensus-diffusion-0.11, ouroboros-consensus-protocol-0.7, ouroboros-network-api-0.7
