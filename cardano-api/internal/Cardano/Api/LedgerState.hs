@@ -1874,12 +1874,15 @@ foldEpochState
   -> s
   -- ^ an initial value for the condition state
   -> ( AnyNewEpochState
-         -> SlotNo -- ^ Current (not necessarily the tip) slot number
-         -> BlockNo -- ^ Current (not necessarily the tip) block number
+         -> SlotNo
+         -> BlockNo
          -> StateT s IO LedgerStateCondition
      )
   -- ^ Condition you want to check against the new epoch state.
   --
+  --   'SlotNo' - Current (not necessarily the tip) slot number
+  --
+  --   'BlockNo' - Current (not necessarily the tip) block number
   --
   -- Note: This function can safely assume no rollback will occur even though
   -- internally this is implemented with a client protocol that may require
