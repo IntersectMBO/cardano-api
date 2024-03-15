@@ -49,21 +49,21 @@ tests =
 -- | Ensure serialization of cardano-ledger's PParams is the same as that of cardano-api's legacy ProtocolParameters 
 protocolParametersSerializeTheSame :: forall era. ToJSON (PParams (ShelleyLedgerEra era)) => CardanoEra era -> Property
 protocolParametersSerializeTheSame era =
-   property $ do ValidatedSerializedPair { serializedProtocolParams
+   property $ do ValidatedSerializedPair { serializedProtocolParameters
                                          , serializedPParams
                                          } <- forAll $ genValidSerializedPair era
-                 patchedSerializedProtocolParams <- patchProtocolParamsJSONOrFail era serializedProtocolParams
-                 serializedPParams === patchedSerializedProtocolParams
+                 patchedserializedProtocolParameters <- patchProtocolParamsJSONOrFail era serializedProtocolParameters
+                 serializedPParams === patchedserializedProtocolParameters
 
 -- | Ensure that cardano-api's legacy ProtocolParameter serialization can be deserialized by cardano-ledger's PParams FromJSON instance
 protocolParametersAreCompatible :: forall era. ( ToJSON (PParams (ShelleyLedgerEra era))
                                                , FromJSON (PParams (ShelleyLedgerEra era))
                                                ) => CardanoEra era -> Property
 protocolParametersAreCompatible era =
-   property $ do ValidatedSerializedPair { serializedProtocolParams
+   property $ do ValidatedSerializedPair { serializedProtocolParameters
                                          , serializedPParams = _
                                          } <- forAll $ genValidSerializedPair era
-                 case eitherDecode serializedProtocolParams :: Either String (PParams (ShelleyLedgerEra era)) of
+                 case eitherDecode serializedProtocolParameters :: Either String (PParams (ShelleyLedgerEra era)) of
                    Left err -> fail err
                    Right _ -> success
 
@@ -73,19 +73,19 @@ ppParamsRoundtrip :: forall era. ( FromJSON (PParams (ShelleyLedgerEra era))
                                  , ToJSON (PParams (ShelleyLedgerEra era))
                                  ) => CardanoEra era -> Property
 ppParamsRoundtrip era =
-   property $ do ValidatedSerializedPair { serializedProtocolParams
+   property $ do ValidatedSerializedPair { serializedProtocolParameters
                                          , serializedPParams = _
                                          } <- forAll $ genValidSerializedPair era
-                 patchedSerializedProtocolParams <- patchProtocolParamsJSONOrFail era serializedProtocolParams
-                 case eitherDecode serializedProtocolParams :: Either String (PParams (ShelleyLedgerEra era)) of
+                 patchedserializedProtocolParameters <- patchProtocolParamsJSONOrFail era serializedProtocolParameters
+                 case eitherDecode serializedProtocolParameters :: Either String (PParams (ShelleyLedgerEra era)) of
                    Left err -> fail err
-                   Right pParams -> prettyPrintJSON pParams === LBS.toStrict patchedSerializedProtocolParams
+                   Right pParams -> prettyPrintJSON pParams === LBS.toStrict patchedserializedProtocolParameters
 
 -------------------------
 -- Auxiliary generator --
 -------------------------
 
-data ValidatedSerializedPair era = ValidatedSerializedPair { serializedProtocolParams ::  LBS.ByteString
+data ValidatedSerializedPair era = ValidatedSerializedPair { serializedProtocolParameters ::  LBS.ByteString
                                                            , serializedPParams ::  LBS.ByteString
                                                            }
   deriving Show
@@ -98,7 +98,7 @@ genValidSerializedPair era = do
   case (do unrefinedPParams <- convertToLedgerProtocolParameters sbe unrefinedProtocolParameters :: (Either ProtocolParametersConversionError (LedgerProtocolParameters era))
            let refinedProtocolParams = fromLedgerPParams sbe $ unLedgerProtocolParameters unrefinedPParams
            refinedPParams <- convertToLedgerProtocolParameters sbe refinedProtocolParams
-           return $ ValidatedSerializedPair { serializedProtocolParams = LBS.fromStrict $ prettyPrintJSON refinedProtocolParams
+           return $ ValidatedSerializedPair { serializedProtocolParameters = LBS.fromStrict $ prettyPrintJSON refinedProtocolParams
                                             , serializedPParams = LBS.fromStrict $ prettyPrintJSON . unLedgerProtocolParameters $ refinedPParams
                                             }) of
      Right result -> return result
