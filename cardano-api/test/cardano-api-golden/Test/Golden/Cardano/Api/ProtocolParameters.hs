@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Golden.Cardano.Api.ProtocolParameters
@@ -59,20 +60,20 @@ goldenProtocolParametersToPParams _ =
     decodedLegacyCardanoApiProtocolParameters = eitherDecode bytestringLegacyCardanoApiProtocolParameters
 
 legacyCardanoApiProtocolParameters :: ProtocolParameters
-legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostPerByte = Just $ Lovelace 1000000
-                                                        , protocolParamTxFeePerByte = Lovelace 2000000
-                                                        , protocolParamTxFeeFixed = Lovelace 1500000
+legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostPerByte = Just $ Lovelace 1_000_000
+                                                        , protocolParamTxFeePerByte = Lovelace 2_000_000
+                                                        , protocolParamTxFeeFixed = Lovelace 1_500_000
                                                         , protocolParamTreasuryCut = 0.1
                                                         , protocolParamStakePoolTargetNum = 100
-                                                        , protocolParamStakePoolDeposit = Lovelace 1000000000
-                                                        , protocolParamStakeAddressDeposit = Lovelace 10000000
+                                                        , protocolParamStakePoolDeposit = Lovelace 1_000_000_000
+                                                        , protocolParamStakeAddressDeposit = Lovelace 10_000_000
                                                         , protocolParamProtocolVersion = (2, 3)
                                                         , protocolParamPrices = Just executionUnitPrices
                                                         , protocolParamPoolRetireMaxEpoch = Cardano.Api.Ledger.EpochInterval 4
                                                         , protocolParamPoolPledgeInfluence = 0.54
                                                         , protocolParamMonetaryExpansion = 0.23
-                                                        , protocolParamMinUTxOValue = Just $ Lovelace 3000000
-                                                        , protocolParamMinPoolCost = Lovelace 3500000
+                                                        , protocolParamMinUTxOValue = Just $ Lovelace 3_000_000
+                                                        , protocolParamMinPoolCost = Lovelace 3_500_000
                                                         , protocolParamMaxValueSize = Just 10
                                                         , protocolParamMaxTxSize = 3000
                                                         , protocolParamMaxTxExUnits = Just executionUnits
