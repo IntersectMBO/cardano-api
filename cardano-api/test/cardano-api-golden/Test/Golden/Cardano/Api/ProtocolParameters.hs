@@ -1,7 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Test.Golden.Cardano.Api.ProtocolParameters(test_golden_ProtocolParameters, test_golden_ProtocolParameters_to_PParams) where
+
+module Test.Golden.Cardano.Api.ProtocolParameters
+  ( test_golden_ProtocolParameters
+  , test_golden_ProtocolParameters_to_PParams
+  ) where
 
 import           Cardano.Api (AnyPlutusScriptVersion (AnyPlutusScriptVersion), CostModel (..),
                    ExecutionUnits (..), Lovelace (..), PlutusScriptVersion (..), makePraosNonce)
