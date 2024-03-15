@@ -1,5 +1,18 @@
 # Changelog for cardano-api
 
+## 8.41.0.0
+- Add plutus script support when making hot key authorisation certificates
+  (feature, breaking)
+  [PR 476](https://github.com/IntersectMBO/cardano-api/pull/476)
+
+- Exposed `UpgradeConwayPParams` constructors and type.
+  (improvement)
+  [PR 485](https://github.com/IntersectMBO/cardano-api/pull/485)
+
+- Exported more realistic default genesis for both Conway and Alonzo, and export DRepState constructors.
+  (improvement)
+  [PR 482](https://github.com/IntersectMBO/cardano-api/pull/482)
+
 ## 8.40.0.0
 
 - Use the ledger's Coin instead of our custom Lovelace type
