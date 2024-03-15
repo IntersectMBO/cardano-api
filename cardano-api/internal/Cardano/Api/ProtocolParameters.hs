@@ -1744,8 +1744,7 @@ fromExactlyAlonzoPParams :: (AlonzoEraPParams ledgerera, Ledger.ExactEra Ledger.
                         -> ProtocolParameters
 fromExactlyAlonzoPParams pp =
   (fromAlonzoPParams pp) {
-      protocolParamUTxOCostPerByte = Just . fromShelleyLovelace . unCoinPerWord $
-                                       pp ^. ppCoinsPerUTxOWordL
+      protocolParamUTxOCostPerByte = Just . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
   }
 
 fromBabbagePParams :: BabbageEraPParams ledgerera

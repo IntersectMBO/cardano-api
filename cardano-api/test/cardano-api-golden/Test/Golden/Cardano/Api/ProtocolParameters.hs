@@ -9,8 +9,8 @@ module Test.Golden.Cardano.Api.ProtocolParameters
   ) where
 
 import           Cardano.Api (AnyPlutusScriptVersion (AnyPlutusScriptVersion), CostModel (..),
-                   ExecutionUnits (..), Lovelace (..), PlutusScriptVersion (..), makePraosNonce)
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval), StandardCrypto)
+                   ExecutionUnits (..), PlutusScriptVersion (..), makePraosNonce)
+import           Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval), StandardCrypto)
 import           Cardano.Api.ProtocolParameters (ExecutionUnitPrices (..), ProtocolParameters (..))
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
@@ -60,20 +60,20 @@ goldenProtocolParametersToPParams _ =
     decodedLegacyCardanoApiProtocolParameters = eitherDecode bytestringLegacyCardanoApiProtocolParameters
 
 legacyCardanoApiProtocolParameters :: ProtocolParameters
-legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostPerByte = Just $ Lovelace 1_000_000
-                                                        , protocolParamTxFeePerByte = Lovelace 2_000_000
-                                                        , protocolParamTxFeeFixed = Lovelace 1_500_000
+legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostPerByte = Just $ Coin 1_000_000
+                                                        , protocolParamTxFeePerByte = Coin 2_000_000
+                                                        , protocolParamTxFeeFixed = Coin 1_500_000
                                                         , protocolParamTreasuryCut = 0.1
                                                         , protocolParamStakePoolTargetNum = 100
-                                                        , protocolParamStakePoolDeposit = Lovelace 1_000_000_000
-                                                        , protocolParamStakeAddressDeposit = Lovelace 10_000_000
+                                                        , protocolParamStakePoolDeposit = Coin 1_000_000_000
+                                                        , protocolParamStakeAddressDeposit = Coin 10_000_000
                                                         , protocolParamProtocolVersion = (2, 3)
                                                         , protocolParamPrices = Just executionUnitPrices
                                                         , protocolParamPoolRetireMaxEpoch = Cardano.Api.Ledger.EpochInterval 4
                                                         , protocolParamPoolPledgeInfluence = 0.54
                                                         , protocolParamMonetaryExpansion = 0.23
-                                                        , protocolParamMinUTxOValue = Just $ Lovelace 3_000_000
-                                                        , protocolParamMinPoolCost = Lovelace 3_500_000
+                                                        , protocolParamMinUTxOValue = Just $ Coin 3_000_000
+                                                        , protocolParamMinPoolCost = Coin 3_500_000
                                                         , protocolParamMaxValueSize = Just 10
                                                         , protocolParamMaxTxSize = 3000
                                                         , protocolParamMaxTxExUnits = Just executionUnits
