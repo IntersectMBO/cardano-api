@@ -85,10 +85,13 @@ ppParamsRoundtrip era =
 -- Auxiliary generator --
 -------------------------
 
-data ValidatedSerializedPair era = ValidatedSerializedPair { serializedProtocolParameters ::  LBS.ByteString
-                                                           , serializedPParams ::  LBS.ByteString
-                                                           }
-  deriving Show
+-- | Represents a corresponding pair of serialized protocol parameters in two formats
+data ValidatedSerializedPair era = ValidatedSerializedPair
+  { -- | Serialized cardano-api's legacy `ProtocolParameters` as a ByteString.
+    serializedProtocolParameters :: LBS.ByteString
+  , -- | Serialized cardano-ledger's `PParams` as a ByteString.
+    serializedPParams            :: LBS.ByteString
+  } deriving Show
 
 
 -- | Produces a pair of a valid cardano-api's legacy ProtocolParameters and corresponding cardano-ledger's PParams by doing a round trip
