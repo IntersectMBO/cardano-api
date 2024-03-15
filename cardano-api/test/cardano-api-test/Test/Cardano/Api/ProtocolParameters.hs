@@ -46,7 +46,8 @@ tests =
                           ]
               ]
 
--- | Ensure serialization of cardano-ledger's PParams is the same as that of cardano-api's legacy ProtocolParameters 
+-- | Compares the JSON serialization of cardano-ledger's PParams and cardano-api's ProtocolParameters and 
+-- | ensures that they are the same (except for the agreed changes specified in `patchProtocolParamsJSONOrFail`)
 protocolParametersSerializeTheSame :: forall era. ToJSON (PParams (ShelleyLedgerEra era)) => CardanoEra era -> Property
 protocolParametersSerializeTheSame era =
    property $ do ValidatedSerializedPair { serializedProtocolParameters
@@ -67,7 +68,7 @@ protocolParametersAreCompatible era =
                    Left err -> fail err
                    Right _ -> success
 
--- | Ensure that deserializing using PParams FromJSON instance and then serializing using PParams ToJSON
+-- | Ensure that deserializing using PParams FromJSON instance and then serializing again using PParams ToJSON
 -- | instance results in the same thing
 ppParamsRoundtrip :: forall era. ( FromJSON (PParams (ShelleyLedgerEra era))
                                  , ToJSON (PParams (ShelleyLedgerEra era))
