@@ -1,6 +1,7 @@
 # Changelog for cardano-api
 
 ## 8.41.0.0
+
 - Add plutus script support when making hot key authorisation certificates
   (feature, breaking)
   [PR 476](https://github.com/IntersectMBO/cardano-api/pull/476)
