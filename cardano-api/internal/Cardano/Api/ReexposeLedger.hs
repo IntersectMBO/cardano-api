@@ -68,6 +68,7 @@ module Cardano.Api.ReexposeLedger
   , ConwayEraTxCert(..)
   , ConwayGovCert(..)
   , ConwayGenesis(..)
+  , UpgradeConwayPParams(..)
   , GovState
   , GovActionId(..)
   , Vote (..)
@@ -177,6 +178,7 @@ import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..), GovState,
                    ProposalProcedure (..), Vote (..), Voter (..), VotingProcedure (..),
                    VotingProcedures (..))
+import           Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
                    ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
 import           Cardano.Ledger.Core (Era (..), EraPParams (..), PParams (..), PoolCert (..), Value,
