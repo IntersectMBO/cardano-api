@@ -408,19 +408,17 @@ makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcre
 data CommitteeHotKeyAuthorizationRequirements era where
   CommitteeHotKeyAuthorizationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.KeyHash Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
-    -> Ledger.KeyHash Ledger.HotCommitteeRole (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.HotCommitteeRole (EraCrypto (ShelleyLedgerEra era))
     -> CommitteeHotKeyAuthorizationRequirements era
 
 makeCommitteeHotKeyAuthorizationCertificate :: ()
   => CommitteeHotKeyAuthorizationRequirements era
   -> Certificate era
-makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequirements cOnwards coldKeyHash hotKeyHash) =
+makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequirements cOnwards coldKeyCredential hotKeyCredential) =
   ConwayCertificate cOnwards
     . Ledger.ConwayTxCertGov
-    $ Ledger.ConwayAuthCommitteeHotKey
-        (Ledger.KeyHashObj coldKeyHash)
-        (Ledger.KeyHashObj hotKeyHash)
+    $ Ledger.ConwayAuthCommitteeHotKey coldKeyCredential hotKeyCredential
 
 data CommitteeColdkeyResignationRequirements era where
   CommitteeColdkeyResignationRequirements

@@ -13,6 +13,7 @@ module Cardano.Api.Monad.Error
   , modifyError
   , handleIOExceptionsWith
   , handleIOExceptionsLiftWith
+  , hoistIOEither
 
   , module Control.Monad.Except
   , module Control.Monad.IO.Class
@@ -34,7 +35,7 @@ import           Data.Bifunctor (first)
 type MonadTransError e t m = (Monad m, MonadTrans t, MonadError e (t m))
 --
 -- | Same as 'MonadTransError', but with also 'MonadIO' constraint
-type MonadIOTransError e t m = (MonadIO m, MonadIO (t m), MonadTrans t, MonadError e (t m))
+type MonadIOTransError e t m = (MonadIO m, MonadIO (t m), MonadCatch m, MonadTrans t, MonadError e (t m))
 
 -- | Modify an 'ExceptT' error and lift it to 'MonadError' transformer stack.
 --
@@ -69,10 +70,9 @@ handleIOExceptionsWith f act = liftEither . first f =<< try act
 handleIOExceptionsLiftWith
   :: MonadIOTransError e' t m
   => Exception e
-  => MonadCatch m
   => (e -> e') -- ^ mapping function
   -> m a -- ^ action that can throw
-  -> t m a -- ^ action with caucht error lifted into 'MonadError' stack
+  -> t m a -- ^ action with caught error lifted into 'MonadError' stack
 handleIOExceptionsLiftWith f act = liftEither =<< lift (first f <$> try act)
 
 -- | Lift 'ExceptT' into 'MonadTransError'
@@ -81,3 +81,9 @@ liftExceptT :: MonadTransError e t m
             -> t m a
 liftExceptT = modifyError id
 
+
+-- | Lift an 'IO' action that returns 'Either' into 'MonadIOTransError'
+hoistIOEither :: MonadIOTransError e t m
+              => IO (Either e a)
+              -> t m a
+hoistIOEither = liftExceptT . ExceptT . liftIO
