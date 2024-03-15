@@ -46,8 +46,7 @@ tests =
                           ]
               ]
 
-
--- | Ensure serialization of PParams is the same as that of ProtocolParams
+-- | Ensure serialization of cardano-ledger's PParams is the same as that of cardano-api's legacy ProtocolParameters 
 protocolParametersSerializeTheSame :: forall era. ToJSON (PParams (ShelleyLedgerEra era)) => CardanoEra era -> Property
 protocolParametersSerializeTheSame era =
    property $ do ValidatedSerializedPair { serializedProtocolParams
@@ -56,7 +55,7 @@ protocolParametersSerializeTheSame era =
                  patchedSerializedProtocolParams <- patchProtocolParamsJSONOrFail era serializedProtocolParams
                  serializedPParams === patchedSerializedProtocolParams
 
--- | Ensure that ProtocolParameter serialization can be deserialized by PParams FromJSON instance
+-- | Ensure that cardano-api's legacy ProtocolParameter serialization can be deserialized by cardano-ledger's PParams FromJSON instance
 protocolParametersAreCompatible :: forall era. ( ToJSON (PParams (ShelleyLedgerEra era))
                                                , FromJSON (PParams (ShelleyLedgerEra era))
                                                ) => CardanoEra era -> Property
@@ -92,7 +91,7 @@ data ValidatedSerializedPair era = ValidatedSerializedPair { serializedProtocolP
   deriving Show
 
 
--- | Produces a pair of a valid ProtocolParameters and corresponding PParams by doing a round trip
+-- | Produces a pair of a valid cardano-api's legacy ProtocolParameters and corresponding cardano-ledger's PParams by doing a round trip
 genValidSerializedPair :: forall era. ToJSON (PParams (ShelleyLedgerEra era)) => CardanoEra era -> Gen (ValidatedSerializedPair era)
 genValidSerializedPair era = do
   unrefinedProtocolParameters <- genProtocolParameters era
