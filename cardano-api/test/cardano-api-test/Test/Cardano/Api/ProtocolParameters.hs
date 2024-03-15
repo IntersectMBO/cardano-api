@@ -46,7 +46,7 @@ tests =
                           ]
               ]
 
--- | Compares the JSON serialization of cardano-ledger's PParams and cardano-api's ProtocolParameters and 
+-- | Compares the JSON serialization of cardano-ledger's PParams and cardano-api's ProtocolParameters and
 -- | ensures that they are the same (except for the agreed changes specified in `patchProtocolParamsJSONOrFail`)
 protocolParametersSerializeTheSame :: forall era. ToJSON (PParams (ShelleyLedgerEra era)) => CardanoEra era -> Property
 protocolParametersSerializeTheSame era =
