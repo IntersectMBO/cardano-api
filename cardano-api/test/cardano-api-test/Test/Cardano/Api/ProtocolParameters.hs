@@ -2,7 +2,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-module Test.Cardano.Api.ProtocolParameters(tests) where
+
+module Test.Cardano.Api.ProtocolParameters
+  ( tests
+  ) where
 
 import           Cardano.Api (CardanoEra (..), ProtocolParametersConversionError, inEonForEra,
                    prettyPrintJSON)
