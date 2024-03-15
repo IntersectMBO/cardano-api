@@ -33,7 +33,7 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 test_golden_ProtocolParameters :: TestTree
 test_golden_ProtocolParameters = testProperty "golden ProtocolParameters" $ do
-  H.goldenTestJsonValuePretty examplePP "test/cardano-api-golden/files/golden/ProtocolParameters"
+  H.goldenTestJsonValuePretty legacyCardanoApiProtocolParameters "test/cardano-api-golden/files/golden/ProtocolParameters"
 
 test_golden_ProtocolParameters_to_PParams :: TestTree
 test_golden_ProtocolParameters_to_PParams =
@@ -48,43 +48,43 @@ test_golden_ProtocolParameters_to_PParams =
 
 goldenProtocolParametersToPParams :: forall pp. FromJSON pp => pp -> Property
 goldenProtocolParametersToPParams _ =
-  property $ case decodedPP of
+  property $ case decodedLegacyCardanoApiProtocolParameters of
                Left err -> failWith Nothing ("could not decode: " <> show err)
                Right _ -> success
   where
-    bsExamplePP :: ByteString
-    bsExamplePP = encode examplePP
+    bytestringLegacyCardanoApiProtocolParameters :: ByteString
+    bytestringLegacyCardanoApiProtocolParameters = encode legacyCardanoApiProtocolParameters
 
-    decodedPP :: Either String pp
-    decodedPP = eitherDecode bsExamplePP
+    decodedLegacyCardanoApiProtocolParameters :: Either String pp
+    decodedLegacyCardanoApiProtocolParameters = eitherDecode bytestringLegacyCardanoApiProtocolParameters
 
-examplePP :: ProtocolParameters
-examplePP = ProtocolParameters { protocolParamUTxOCostPerByte = Just $ Lovelace 1000000
-                               , protocolParamTxFeePerByte = Lovelace 2000000
-                               , protocolParamTxFeeFixed = Lovelace 1500000
-                               , protocolParamTreasuryCut = 0.1
-                               , protocolParamStakePoolTargetNum = 100
-                               , protocolParamStakePoolDeposit = Lovelace 1000000000
-                               , protocolParamStakeAddressDeposit = Lovelace 10000000
-                               , protocolParamProtocolVersion = (2, 3)
-                               , protocolParamPrices = Just executionUnitPrices
-                               , protocolParamPoolRetireMaxEpoch = Cardano.Api.Ledger.EpochInterval 4
-                               , protocolParamPoolPledgeInfluence = 0.54
-                               , protocolParamMonetaryExpansion = 0.23
-                               , protocolParamMinUTxOValue = Just $ Lovelace 3000000
-                               , protocolParamMinPoolCost = Lovelace 3500000
-                               , protocolParamMaxValueSize = Just 10
-                               , protocolParamMaxTxSize = 3000
-                               , protocolParamMaxTxExUnits = Just executionUnits
-                               , protocolParamMaxCollateralInputs = Just 10
-                               , protocolParamMaxBlockHeaderSize = 1200
-                               , protocolParamMaxBlockExUnits = Just executionUnits2
-                               , protocolParamMaxBlockBodySize = 5000
-                               , protocolParamExtraPraosEntropy = Just $ makePraosNonce "entropyEntropy"
-                               , protocolParamDecentralization = Just 0.52
-                               , protocolParamCostModels = costModels
-                               , protocolParamCollateralPercent = Just 23
-                               }
+legacyCardanoApiProtocolParameters :: ProtocolParameters
+legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostPerByte = Just $ Lovelace 1000000
+                                                        , protocolParamTxFeePerByte = Lovelace 2000000
+                                                        , protocolParamTxFeeFixed = Lovelace 1500000
+                                                        , protocolParamTreasuryCut = 0.1
+                                                        , protocolParamStakePoolTargetNum = 100
+                                                        , protocolParamStakePoolDeposit = Lovelace 1000000000
+                                                        , protocolParamStakeAddressDeposit = Lovelace 10000000
+                                                        , protocolParamProtocolVersion = (2, 3)
+                                                        , protocolParamPrices = Just executionUnitPrices
+                                                        , protocolParamPoolRetireMaxEpoch = Cardano.Api.Ledger.EpochInterval 4
+                                                        , protocolParamPoolPledgeInfluence = 0.54
+                                                        , protocolParamMonetaryExpansion = 0.23
+                                                        , protocolParamMinUTxOValue = Just $ Lovelace 3000000
+                                                        , protocolParamMinPoolCost = Lovelace 3500000
+                                                        , protocolParamMaxValueSize = Just 10
+                                                        , protocolParamMaxTxSize = 3000
+                                                        , protocolParamMaxTxExUnits = Just executionUnits
+                                                        , protocolParamMaxCollateralInputs = Just 10
+                                                        , protocolParamMaxBlockHeaderSize = 1200
+                                                        , protocolParamMaxBlockExUnits = Just executionUnits2
+                                                        , protocolParamMaxBlockBodySize = 5000
+                                                        , protocolParamExtraPraosEntropy = Just $ makePraosNonce "entropyEntropy"
+                                                        , protocolParamDecentralization = Just 0.52
+                                                        , protocolParamCostModels = costModels
+                                                        , protocolParamCollateralPercent = Just 23
+                                                        }
     where
     executionUnitPrices :: ExecutionUnitPrices
     executionUnitPrices = ExecutionUnitPrices { priceExecutionSteps = 0.3
