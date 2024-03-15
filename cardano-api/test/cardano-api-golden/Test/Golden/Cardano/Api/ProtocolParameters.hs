@@ -34,7 +34,7 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 test_golden_ProtocolParameters :: TestTree
 test_golden_ProtocolParameters = testProperty "golden ProtocolParameters" $ do
-  H.goldenTestJsonValuePretty legacyCardanoApiProtocolParameters "test/cardano-api-golden/files/golden/ProtocolParameters"
+  H.goldenTestJsonValuePretty legacyCardanoApiProtocolParameters "test/cardano-api-golden/files/golden/LegacyProtocolParameters"
 
 test_golden_ProtocolParameters_to_PParams :: TestTree
 test_golden_ProtocolParameters_to_PParams =
