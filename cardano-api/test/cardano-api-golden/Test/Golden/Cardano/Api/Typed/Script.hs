@@ -92,32 +92,32 @@ goldenPath = "test/cardano-api-golden/files/golden/Script"
 test_golden_SimpleScriptV1_All :: TestTree
 test_golden_SimpleScriptV1_All =
   testProperty "golden SimpleScriptV1 All" $
-    goldenTestJsonValuePretty exampleSimpleScriptV1_All (goldenPath </> "SimpleV1/all")
+    goldenTestJsonValuePretty exampleSimpleScriptV1_All (goldenPath </> "SimpleV1/all.script")
 
 test_golden_SimpleScriptV1_Any :: TestTree
 test_golden_SimpleScriptV1_Any =
   testProperty "golden SimpleScriptV1 Any" $
-    goldenTestJsonValuePretty exampleSimpleScriptV1_Any (goldenPath </> "SimpleV1/any")
+    goldenTestJsonValuePretty exampleSimpleScriptV1_Any (goldenPath </> "SimpleV1/any.script")
 
 test_golden_SimpleScriptV1_MofN :: TestTree
 test_golden_SimpleScriptV1_MofN =
   testProperty "golden SimpleScriptV1 MofN" $
-    goldenTestJsonValuePretty exampleSimpleScriptV1_MofN (goldenPath </> "SimpleV1/atleast")
+    goldenTestJsonValuePretty exampleSimpleScriptV1_MofN (goldenPath </> "SimpleV1/atleast.script")
 
 test_golden_SimpleScriptV2_All :: TestTree
 test_golden_SimpleScriptV2_All =
   testProperty "golden SimpleScriptV2 All" $
-    goldenTestJsonValuePretty exampleSimpleScriptV2_All (goldenPath </> "SimpleV2/all")
+    goldenTestJsonValuePretty exampleSimpleScriptV2_All (goldenPath </> "SimpleV2/all.script")
 
 test_golden_SimpleScriptV2_Any :: TestTree
 test_golden_SimpleScriptV2_Any =
   testProperty "golden SimpleScriptV2 Any" $
-    goldenTestJsonValuePretty exampleSimpleScriptV2_Any (goldenPath </> "SimpleV2/any")
+    goldenTestJsonValuePretty exampleSimpleScriptV2_Any (goldenPath </> "SimpleV2/any.script")
 
 test_golden_SimpleScriptV2_MofN :: TestTree
 test_golden_SimpleScriptV2_MofN =
   testProperty "golden SimpleScriptV2 MofN" $
-    goldenTestJsonValuePretty exampleSimpleScriptV2_MofN (goldenPath </> "SimpleV2/atleast")
+    goldenTestJsonValuePretty exampleSimpleScriptV2_MofN (goldenPath </> "SimpleV2/atleast.script")
 
 test_roundtrip_SimpleScript_JSON :: TestTree
 test_roundtrip_SimpleScript_JSON =
