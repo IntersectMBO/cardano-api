@@ -25,6 +25,7 @@ import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor.Identity (Identity)
 import           Data.Map (Map)
 import qualified Data.Map as M
+import           Data.Proxy (Proxy (..))
 
 import           Hedgehog (Property, property, success)
 import qualified Hedgehog.Extras.Aeson as H
@@ -40,14 +41,14 @@ test_golden_ProtocolParameters_to_PParams :: TestTree
 test_golden_ProtocolParameters_to_PParams =
   testGroup "golden ProtocolParameter tests"
             [ testProperty "ShelleyPParams" $
-                goldenProtocolParametersToPParams (undefined :: (ShelleyPParams Identity (ShelleyEra StandardCrypto)))
+                goldenProtocolParametersToPParams (Proxy :: Proxy (ShelleyPParams Identity (ShelleyEra StandardCrypto)))
             , testProperty "AlonzoPParams" $
-                goldenProtocolParametersToPParams (undefined :: (AlonzoPParams Identity (AlonzoEra StandardCrypto)))
+                goldenProtocolParametersToPParams (Proxy :: Proxy (AlonzoPParams Identity (AlonzoEra StandardCrypto)))
             , testProperty "BabbagePParams" $
-                goldenProtocolParametersToPParams (undefined :: (BabbagePParams Identity (BabbageEra StandardCrypto)))
+                goldenProtocolParametersToPParams (Proxy :: Proxy (BabbagePParams Identity (BabbageEra StandardCrypto)))
             ]
 
-goldenProtocolParametersToPParams :: forall pp. FromJSON pp => pp -> Property
+goldenProtocolParametersToPParams :: forall pp. FromJSON pp => Proxy pp -> Property
 goldenProtocolParametersToPParams _ =
   property $ case decodedLegacyCardanoApiProtocolParameters of
                Left err -> failWith Nothing ("could not decode: " <> show err)
