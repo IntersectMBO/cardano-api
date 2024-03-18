@@ -1,5 +1,12 @@
 # Changelog for cardano-api
 
+## 8.39.3.0
+
+- ouroboros-consensus-diffusion-0.12
+  (compatible)
+  [PR 487](https://github.com/IntersectMBO/cardano-api/pull/487)
+  [CHaP PR](https://github.com/IntersectMBO/cardano-haskell-packages/pull/704)
+
 ## 8.41.0.0
 
 - Add plutus script support when making hot key authorisation certificates
@@ -44,13 +51,6 @@
 - Simplify `EraInEon` to take fewer constraints
   (compatible)
   [PR 316](https://github.com/IntersectMBO/cardano-api/pull/316)
-
-## 8.39.3.0
-
-- ouroboros-consensus-diffusion-0.12
-  (compatible)
-  [PR 487](https://github.com/IntersectMBO/cardano-api/pull/487)
-  [CHaP PR](https://github.com/IntersectMBO/cardano-haskell-packages/pull/704)
 
 ## 8.39.2.0
 
