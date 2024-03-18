@@ -11,4 +11,4 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 test_golden_ShelleyGenesis :: TestTree
 test_golden_ShelleyGenesis = testProperty "golden ShelleyGenesis" $
-  H.goldenTestJsonValuePretty exampleShelleyGenesis "test/cardano-api-golden/files/golden/ShelleyGenesis"
+  H.goldenTestJsonValuePretty exampleShelleyGenesis "test/cardano-api-golden/files/golden/ShelleyGenesis.json"
