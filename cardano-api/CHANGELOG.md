@@ -45,6 +45,13 @@
   (compatible)
   [PR 316](https://github.com/IntersectMBO/cardano-api/pull/316)
 
+## 8.39.3.0
+
+- ouroboros-consensus-diffusion-0.12
+  (compatible)
+  [PR 487](https://github.com/IntersectMBO/cardano-api/pull/487)
+  [CHaP PR](https://github.com/IntersectMBO/cardano-haskell-packages/pull/704)
+
 ## 8.39.2.0
 
 - Update ouroboros-consensus-0.16, ouroboros-consensus-cardano-0.14, ouroboros-consensus-diffusion-0.11, ouroboros-consensus-protocol-0.7, ouroboros-network-api-0.7
