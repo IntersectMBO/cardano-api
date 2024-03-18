@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 8.39.3.0
+
+- Bump dependencies version bounds
+
 ## 8.39.2.0
 
 - Bump dependencies version bounds
