@@ -37,10 +37,9 @@ import           Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
 
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
-import qualified Data.Set as Set
 import           Data.Word
+import           GHC.Exts (IsList (..))
 
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 
@@ -54,8 +53,8 @@ data GovernanceAction era
       (StrictMaybe (Shelley.ScriptHash StandardCrypto))
   | ProposeNewCommittee
       (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
-      [Hash CommitteeColdKey] -- ^ Old constitutional committee
-      (Map (Hash CommitteeColdKey) EpochNo) -- ^ New committee members with epoch number when each of them expires
+      [L.Credential ColdCommitteeRole StandardCrypto] -- ^ Old constitutional committee
+      (Map (L.Credential ColdCommitteeRole StandardCrypto) EpochNo) -- ^ New committee members with epoch number when each of them expires
       Rational -- ^ Quorum of the committee that is necessary for a successful vote
   | InfoAct
   | TreasuryWithdrawal
@@ -85,8 +84,8 @@ toGovernanceAction sbe =
     ProposeNewCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
       Gov.UpdateCommittee
         prevGovId -- previous governance action id
-        (Set.fromList $ map toCommitteeMember oldCommitteeMembers) -- members to remove
-        (Map.mapKeys toCommitteeMember newCommitteeMembers) -- members to add
+        (fromList oldCommitteeMembers) -- members to remove
+        newCommitteeMembers -- members to add
         (fromMaybe (error $ mconcat ["toGovernanceAction: the given quorum "
                                   , show quor
                                   , " was outside of the unit interval!"
@@ -95,7 +94,7 @@ toGovernanceAction sbe =
     InfoAct ->
       Gov.InfoAction
     TreasuryWithdrawal withdrawals govPol ->
-      let m = Map.fromList [(L.RewardAcnt nw (toShelleyStakeCredential sc), l) | (nw,sc,l) <- withdrawals]
+      let m = fromList [(L.RewardAcnt nw (toShelleyStakeCredential sc), l) | (nw,sc,l) <- withdrawals]
       in Gov.TreasuryWithdrawals m govPol
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
@@ -119,14 +118,14 @@ fromGovernanceAction = \case
     InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap govPolicy ->
     let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), coin)
-              | (rwdAcnt, coin) <- Map.toList withdrawlMap
+              | (rwdAcnt, coin) <- toList withdrawlMap
               ]
     in TreasuryWithdrawal res govPolicy
   Gov.UpdateCommittee prevGovId oldCommitteeMembers newCommitteeMembers quor ->
     ProposeNewCommittee
       prevGovId
-      (map fromCommitteeMember $ Set.toList oldCommitteeMembers)
-      (Map.mapKeys fromCommitteeMember newCommitteeMembers)
+      (toList oldCommitteeMembers)
+      newCommitteeMembers
       (unboundRational quor)
   Gov.InfoAction ->
     InfoAct
@@ -214,17 +213,4 @@ createAnchor url anchorData =
     { anchorUrl = url
     , anchorDataHash = hashAnchorData $ Ledger.AnchorData anchorData
     }
-
--- ----------------------------------------------------------------------------
--- TODO conversions that likely need to live elsewhere and may even deserve
--- additional wrapper types
-
-toCommitteeMember :: Hash CommitteeColdKey -> L.Credential ColdCommitteeRole StandardCrypto
-toCommitteeMember (CommitteeColdKeyHash keyhash) = L.KeyHashObj keyhash
-
-fromCommitteeMember :: L.Credential ColdCommitteeRole StandardCrypto -> Hash CommitteeColdKey
-fromCommitteeMember = \case
-  L.KeyHashObj keyhash -> CommitteeColdKeyHash keyhash
-  L.ScriptHashObj _scripthash -> error "TODO script committee members not yet supported"
-
 
