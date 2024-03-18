@@ -69,7 +69,7 @@ protocolParametersAreCompatible era =
                    Right _ -> success
 
 -- | Ensure that deserializing using PParams FromJSON instance and then serializing again using PParams ToJSON
--- | instance results in the same thing
+-- instance results in the same thing
 ppParamsRoundtrip :: forall era. ( FromJSON (PParams (ShelleyLedgerEra era))
                                  , ToJSON (PParams (ShelleyLedgerEra era))
                                  ) => CardanoEra era -> Property
@@ -127,11 +127,11 @@ patchProtocolParamsJSONOrFail era b = maybe (fail "Cannot fix JSON") return $ pa
                                                   =<< replace "minCommitteeSize" "committeeMinSize"
                                                         (applyFilters filters o)
 
-        -- | Legacy ProtocolParams ToJSON renders all fields from all eras in all eras,
-        -- | because it is the same data type for every era. But this is not backwards compatible
-        -- | because it means that new eras can modify the fields in old eras. For this reason, when
-        -- | comparing to PParams we use this function to filter fields that don't belong to
-        -- | particular era we are testing.
+        -- Legacy ProtocolParams ToJSON renders all fields from all eras in all eras,
+        -- because it is the same data type for every era. But this is not backwards compatible
+        -- because it means that new eras can modify the fields in old eras. For this reason, when
+        -- comparing to PParams we use this function to filter fields that don't belong to
+        -- particular era we are testing.
         filtersForEra :: CardanoEra era -> Maybe [String]
         filtersForEra ShelleyEra = Just [ "collateralPercentage", "costModels", "executionUnitPrices"
                                         , "maxBlockExecutionUnits", "maxCollateralInputs", "maxTxExecutionUnits"
