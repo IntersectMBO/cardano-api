@@ -16,14 +16,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{- HLINT ignore "Avoid lambda using `infix`" -}
-{- HLINT ignore "Move brackets to avoid" -}
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Use let" -}
-{- HLINT ignore "Use section" -}
-
 -- | Transaction bodies
---
 module Cardano.Api.Tx.Body (
     parseTxId,
     -- * Transaction bodies
@@ -82,6 +75,7 @@ module Cardano.Api.Tx.Body (
     TxIns,
     TxIx(..),
     genesisUTxOPseudoTxIn,
+    getReferenceInputsSizeForTxIds,
 
     -- * Transaction outputs
     CtxTx, CtxUTxO,
@@ -206,6 +200,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Babbage.UTxO as L
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import           Cardano.Ledger.Binary (Annotated (..))
 import qualified Cardano.Ledger.Binary as CBOR
@@ -2818,7 +2813,7 @@ renderScriptWitnessIndex (ScriptWitnessIndexProposing index) =
 
 fromScriptWitnessIndex
   :: AlonzoEraOnwards era
-  -> ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+  -> ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
 fromScriptWitnessIndex aOnwards widx =
   case aOnwards of
     AlonzoEraOnwardsAlonzo -> fromScriptWitnessIndexAlonzo widx
@@ -2826,39 +2821,39 @@ fromScriptWitnessIndex aOnwards widx =
     AlonzoEraOnwardsConway  -> fromScriptWitnessIndexConway widx
 
 fromScriptWitnessIndexAlonzo
-  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra AlonzoEra))
+  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIx (ShelleyLedgerEra AlonzoEra))
 fromScriptWitnessIndexAlonzo i =
   case i of
-    ScriptWitnessIndexTxIn        n -> Just $ L.AlonzoSpending (L.AsIndex n)
-    ScriptWitnessIndexMint        n -> Just $ L.AlonzoMinting (L.AsIndex n)
-    ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIndex n)
-    ScriptWitnessIndexWithdrawal  n -> Just $ L.AlonzoRewarding (L.AsIndex n)
+    ScriptWitnessIndexTxIn        n -> Just $ L.AlonzoSpending (L.AsIx n)
+    ScriptWitnessIndexMint        n -> Just $ L.AlonzoMinting (L.AsIx n)
+    ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIx n)
+    ScriptWitnessIndexWithdrawal  n -> Just $ L.AlonzoRewarding (L.AsIx n)
     _                               -> Nothing
 
 fromScriptWitnessIndexBabbage
-  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra BabbageEra))
+  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIx (ShelleyLedgerEra BabbageEra))
 fromScriptWitnessIndexBabbage i =
   case i of
-    ScriptWitnessIndexTxIn        n -> Just $ L.AlonzoSpending (L.AsIndex n)
-    ScriptWitnessIndexMint        n -> Just $ L.AlonzoMinting (L.AsIndex n)
-    ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIndex n)
-    ScriptWitnessIndexWithdrawal  n -> Just $ L.AlonzoRewarding (L.AsIndex n)
+    ScriptWitnessIndexTxIn        n -> Just $ L.AlonzoSpending (L.AsIx n)
+    ScriptWitnessIndexMint        n -> Just $ L.AlonzoMinting (L.AsIx n)
+    ScriptWitnessIndexCertificate n -> Just $ L.AlonzoCertifying (L.AsIx n)
+    ScriptWitnessIndexWithdrawal  n -> Just $ L.AlonzoRewarding (L.AsIx n)
     _                               -> Nothing
 
 fromScriptWitnessIndexConway
-  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra ConwayEra))
+  :: ScriptWitnessIndex -> Maybe (L.PlutusPurpose L.AsIx (ShelleyLedgerEra ConwayEra))
 fromScriptWitnessIndexConway i =
   case i of
-    ScriptWitnessIndexTxIn        n -> Just $ L.ConwaySpending (L.AsIndex n)
-    ScriptWitnessIndexMint        n -> Just $ L.ConwayMinting (L.AsIndex n)
-    ScriptWitnessIndexCertificate n -> Just $ L.ConwayCertifying (L.AsIndex n)
-    ScriptWitnessIndexWithdrawal  n -> Just $ L.ConwayRewarding (L.AsIndex n)
-    ScriptWitnessIndexVoting      n -> Just $ L.ConwayVoting (L.AsIndex n)
-    ScriptWitnessIndexProposing   n -> Just $ L.ConwayProposing (L.AsIndex n)
+    ScriptWitnessIndexTxIn        n -> Just $ L.ConwaySpending (L.AsIx n)
+    ScriptWitnessIndexMint        n -> Just $ L.ConwayMinting (L.AsIx n)
+    ScriptWitnessIndexCertificate n -> Just $ L.ConwayCertifying (L.AsIx n)
+    ScriptWitnessIndexWithdrawal  n -> Just $ L.ConwayRewarding (L.AsIx n)
+    ScriptWitnessIndexVoting      n -> Just $ L.ConwayVoting (L.AsIx n)
+    ScriptWitnessIndexProposing   n -> Just $ L.ConwayProposing (L.AsIx n)
 
 toScriptIndex
   :: AlonzoEraOnwards era
-  -> L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era)
+  -> L.PlutusPurpose L.AsIx (ShelleyLedgerEra era)
   -> ScriptWitnessIndex
 toScriptIndex sbe scriptPurposeIndex =
   case sbe of
@@ -2867,26 +2862,26 @@ toScriptIndex sbe scriptPurposeIndex =
     AlonzoEraOnwardsConway  -> toScriptIndexConway scriptPurposeIndex
 
 toScriptIndexAlonzo
-  :: L.AlonzoPlutusPurpose L.AsIndex (ShelleyLedgerEra era)
+  :: L.AlonzoPlutusPurpose L.AsIx (ShelleyLedgerEra era)
   -> ScriptWitnessIndex
 toScriptIndexAlonzo scriptPurposeIndex =
   case scriptPurposeIndex of
-    L.AlonzoSpending (L.AsIndex i) -> ScriptWitnessIndexTxIn i
-    L.AlonzoMinting (L.AsIndex i) -> ScriptWitnessIndexMint i
-    L.AlonzoCertifying (L.AsIndex i) -> ScriptWitnessIndexCertificate i
-    L.AlonzoRewarding (L.AsIndex i) -> ScriptWitnessIndexWithdrawal i
+    L.AlonzoSpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
+    L.AlonzoMinting (L.AsIx i) -> ScriptWitnessIndexMint i
+    L.AlonzoCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
+    L.AlonzoRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
 
 toScriptIndexConway
-  :: L.ConwayPlutusPurpose L.AsIndex (ShelleyLedgerEra era)
+  :: L.ConwayPlutusPurpose L.AsIx (ShelleyLedgerEra era)
   -> ScriptWitnessIndex
 toScriptIndexConway scriptPurposeIndex =
   case scriptPurposeIndex of
-    L.ConwaySpending (L.AsIndex i) -> ScriptWitnessIndexTxIn i
-    L.ConwayMinting (L.AsIndex i) -> ScriptWitnessIndexMint i
-    L.ConwayCertifying (L.AsIndex i) -> ScriptWitnessIndexCertificate i
-    L.ConwayRewarding (L.AsIndex i) -> ScriptWitnessIndexWithdrawal i
-    L.ConwayVoting (L.AsIndex i) -> ScriptWitnessIndexVoting i
-    L.ConwayProposing (L.AsIndex i) -> ScriptWitnessIndexProposing i
+    L.ConwaySpending (L.AsIx i) -> ScriptWitnessIndexTxIn i
+    L.ConwayMinting (L.AsIx i) -> ScriptWitnessIndexMint i
+    L.ConwayCertifying (L.AsIx i) -> ScriptWitnessIndexCertificate i
+    L.ConwayRewarding (L.AsIx i) -> ScriptWitnessIndexWithdrawal i
+    L.ConwayVoting (L.AsIx i) -> ScriptWitnessIndexVoting i
+    L.ConwayProposing (L.AsIx i) -> ScriptWitnessIndexProposing i
 
 collectTxBodyScriptWitnesses :: forall era. ShelleyBasedEra era
                              -> TxBodyContent BuildTx era
@@ -3064,6 +3059,17 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (toShelleyNetwork nw)
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
+
+-- | Calculate the reference inputs size for provided set of transaction IDs and UTXOs.
+getReferenceInputsSizeForTxIds
+  :: forall era ledgerera. ShelleyLedgerEra era ~ ledgerera
+  => BabbageEraOnwards era
+  -> Ledger.UTxO ledgerera
+  -> Set TxIn
+  -> Int
+getReferenceInputsSizeForTxIds beo utxo txIds = babbageEraOnwardsConstraints beo $ do
+  let refScripts = L.getReferenceScriptsNonDistinct utxo (Set.map toShelleyTxIn txIds)
+  getSum $ foldMap (Sum .  SafeHash.originalBytesSize . snd) refScripts
 
 calculateExecutionUnitsLovelace :: Ledger.Prices -> ExecutionUnits -> Maybe L.Coin
 calculateExecutionUnitsLovelace prices eUnits =

@@ -286,6 +286,7 @@ module Cardano.Api.Shelley
     emptyVotingProcedures,
     mergeVotingProcedures,
     singletonVotingProcedures,
+    VotesMergingConflict(..),
   ) where
 
 import           Cardano.Api
