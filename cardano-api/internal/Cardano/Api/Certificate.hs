@@ -423,18 +423,18 @@ makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequire
 data CommitteeColdkeyResignationRequirements era where
   CommitteeColdkeyResignationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.KeyHash Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
     -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
     -> CommitteeColdkeyResignationRequirements era
 
 makeCommitteeColdkeyResignationCertificate :: ()
   => CommitteeColdkeyResignationRequirements era
   -> Certificate era
-makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequirements cOnwards coldKeyHash anchor) =
+makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequirements cOnwards coldKeyCred anchor) =
   ConwayCertificate cOnwards
     . Ledger.ConwayTxCertGov
     $ Ledger.ConwayResignCommitteeColdKey
-        (Ledger.KeyHashObj coldKeyHash)
+        coldKeyCred
         (noInlineMaybeToStrictMaybe anchor)
 
 data DRepUnregistrationRequirements era where

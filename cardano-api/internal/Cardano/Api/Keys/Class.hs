@@ -20,6 +20,7 @@ import           Cardano.Api.SerialiseTextEnvelope
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 
+import           Control.Monad.IO.Class
 import           Data.Kind (Type)
 import qualified System.Random as Random
 import           System.Random (StdGen)
@@ -68,19 +69,25 @@ class (Eq (VerificationKey keyrole),
 -- For KES we can then override it to keep the seed and key in mlocked memory at all times.
 -- | Generate a 'SigningKey' using a seed from operating system entropy.
 --
-generateSigningKey :: Key keyrole => AsType keyrole -> IO (SigningKey keyrole)
+generateSigningKey
+  :: MonadIO m
+  => Key keyrole
+  => AsType keyrole
+  -> m (SigningKey keyrole)
 generateSigningKey keytype = do
-    seed <- Crypto.readSeedFromSystemEntropy seedSize
+    seed <- liftIO $ Crypto.readSeedFromSystemEntropy seedSize
     return $! deterministicSigningKey keytype seed
   where
     seedSize = deterministicSigningKeySeedSize keytype
 
 
 generateInsecureSigningKey
-  :: (Key keyrole, SerialiseAsRawBytes (SigningKey keyrole))
+  :: MonadIO m
+  => Key keyrole
+  => SerialiseAsRawBytes (SigningKey keyrole)
   => StdGen
   -> AsType keyrole
-  -> IO (SigningKey keyrole, StdGen)
+  -> m (SigningKey keyrole, StdGen)
 generateInsecureSigningKey g keytype = do
   let (bs, g') = Random.genByteString (fromIntegral $ deterministicSigningKeySeedSize keytype) g
   case deserialiseFromRawBytes (AsSigningKey keytype) bs of
