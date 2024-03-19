@@ -301,7 +301,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
 
   QueryConstitution
-    :: QueryInShelleyBasedEra era (Maybe (L.Constitution (ShelleyLedgerEra era)))
+    :: QueryInShelleyBasedEra era (L.Constitution (ShelleyLedgerEra era))
 
   QueryGovState
     :: QueryInShelleyBasedEra era (L.GovState (ShelleyLedgerEra era))
@@ -318,7 +318,7 @@ data QueryInShelleyBasedEra era result where
     :: Set (Shelley.Credential Shelley.ColdCommitteeRole StandardCrypto)
     -> Set (Shelley.Credential Shelley.HotCommitteeRole StandardCrypto)
     -> Set L.MemberStatus
-    -> QueryInShelleyBasedEra era (Maybe (L.CommitteeMembersState StandardCrypto))
+    -> QueryInShelleyBasedEra era (L.CommitteeMembersState StandardCrypto)
 
   QueryStakeVoteDelegatees
     :: Set StakeCredential

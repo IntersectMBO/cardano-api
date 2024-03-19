@@ -133,9 +133,9 @@ instance ConvertLedgerEvent (ShelleyBlock protocol (BabbageEra StandardCrypto)) 
   toLedgerEvent = toAlonzoOrBabbageLedgerEvents
 
 toAlonzoOrBabbageLedgerEvents
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => LatestTickEventConstraints ledgerera
+  :: LatestTickEventConstraints ledgerera
   => LatestBBodyEventConstraints ledgerera
+  => EraCrypto ledgerera ~ StandardCrypto
   => WrapLedgerEvent (ShelleyBlock protocol ledgerera) -> Maybe LedgerEvent
 toAlonzoOrBabbageLedgerEvents e =
   case unwrapLedgerEvent e of
@@ -144,6 +144,7 @@ toAlonzoOrBabbageLedgerEvents e =
 
 handleAlonzoToBabbageLedgerBBODYEvents
   :: LatestBBodyEventConstraints ledgerera
+  => EraCrypto ledgerera ~ StandardCrypto
   => AlonzoBbodyEvent ledgerera -> Maybe LedgerEvent
 handleAlonzoToBabbageLedgerBBODYEvents (ShelleyInAlonzoEvent (LedgersEvent (Shelley.LedgerEvent ledgerEvent))) =
   handleShelleyLEDGEREvents ledgerEvent

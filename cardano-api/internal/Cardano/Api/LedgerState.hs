@@ -1665,7 +1665,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
                                   $ Slot.epochInfoRange eInfo currentEpoch
 
     (firstSlotOfEpoch, lastSlotofEpoch) <- first LeaderErrSlotRangeCalculationFailure
-                    $ Slot.epochInfoRange eInfo (currentEpoch + 1)
+                    $ Slot.epochInfoRange eInfo (currentEpoch `Slot.addEpochInterval` Slot.EpochInterval 1)
 
 
     -- First we check if we are within 3k/f slots of the end of the current epoch.

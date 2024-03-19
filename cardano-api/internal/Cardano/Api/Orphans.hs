@@ -146,7 +146,7 @@ deriving anyclass instance
   ( L.Crypto (L.EraCrypto ledgerera)
   , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
-  , ToJSON (L.PlutusPurpose L.AsIndex ledgerera)
+  , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
   ) => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
 
 deriving anyclass instance
@@ -154,7 +154,7 @@ deriving anyclass instance
   , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   , ToJSON (L.TxCert ledgerera)
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
-  , ToJSON (L.PlutusPurpose L.AsIndex ledgerera)
+  , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
   ) => ToJSON (L.BabbageUtxowPredFailure ledgerera)
 
 deriving anyclass instance
@@ -469,6 +469,7 @@ instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
     , Ledger.cppGovActionDeposit = lastMappendWithTHKD Ledger.cppGovActionDeposit p1 p2
     , Ledger.cppDRepDeposit = lastMappendWithTHKD Ledger.cppDRepDeposit p1 p2
     , Ledger.cppDRepActivity = lastMappendWithTHKD Ledger.cppDRepActivity p1 p2
+    , Ledger.cppMinFeeRefScriptCostPerByte = lastMappendWithTHKD Ledger.cppMinFeeRefScriptCostPerByte p1 p2
     }
 
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b

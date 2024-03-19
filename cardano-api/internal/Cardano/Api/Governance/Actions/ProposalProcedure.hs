@@ -94,7 +94,7 @@ toGovernanceAction sbe =
     InfoAct ->
       Gov.InfoAction
     TreasuryWithdrawal withdrawals govPol ->
-      let m = fromList [(L.RewardAcnt nw (toShelleyStakeCredential sc), l) | (nw,sc,l) <- withdrawals]
+      let m = fromList [(L.RewardAccount nw (toShelleyStakeCredential sc), l) | (nw,sc,l) <- withdrawals]
       in Gov.TreasuryWithdrawals m govPol
     InitiateHardfork prevGovId pVer ->
       Gov.HardForkInitiation prevGovId pVer
@@ -117,7 +117,7 @@ fromGovernanceAction = \case
   Gov.HardForkInitiation prevGovId pVer ->
     InitiateHardfork prevGovId pVer
   Gov.TreasuryWithdrawals withdrawlMap govPolicy ->
-    let res = [ (L.getRwdNetwork rwdAcnt, fromShelleyStakeCredential (L.getRwdCred rwdAcnt), coin)
+    let res = [ (L.raNetwork rwdAcnt, fromShelleyStakeCredential (L.raCredential rwdAcnt), coin)
               | (rwdAcnt, coin) <- toList withdrawlMap
               ]
     in TreasuryWithdrawal res govPolicy
@@ -170,7 +170,7 @@ createProposalProcedure sbe nw dep cred govAct anchor =
   shelleyBasedEraConstraints sbe $
     Proposal Gov.ProposalProcedure
       { Gov.pProcDeposit = dep
-      , Gov.pProcReturnAddr = L.RewardAcnt nw $ toShelleyStakeCredential cred
+      , Gov.pProcReturnAddr = L.RewardAccount nw $ toShelleyStakeCredential cred
       , Gov.pProcGovAction = toGovernanceAction sbe govAct
       , Gov.pProcAnchor = anchor
       }
@@ -182,7 +182,7 @@ fromProposalProcedure
 fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints sbe
     ( Gov.pProcDeposit pp
-    , case fromShelleyStakeCredential (L.getRwdCred (Gov.pProcReturnAddr pp)) of
+    , case fromShelleyStakeCredential (L.raCredential (Gov.pProcReturnAddr pp)) of
           StakeCredentialByKey keyhash -> keyhash
           StakeCredentialByScript _scripthash ->
             error "fromProposalProcedure TODO: Conway era script reward addresses not yet supported"
@@ -213,4 +213,3 @@ createAnchor url anchorData =
     { anchorUrl = url
     , anchorDataHash = hashAnchorData $ Ledger.AnchorData anchorData
     }
-

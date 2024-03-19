@@ -133,9 +133,9 @@ queryProtocolParameters sbe =
 
 queryConstitutionHash :: ()
   => ShelleyBasedEra era
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData)))
 queryConstitutionHash sbe =
-  (fmap . fmap . fmap . fmap) (L.anchorDataHash .  L.constitutionAnchor)
+  (fmap . fmap . fmap) (L.anchorDataHash .  L.constitutionAnchor)
     $ queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
 
 queryProtocolParametersUpdate :: ()
@@ -210,7 +210,7 @@ queryUtxo sbe utxoFilter =
 
 queryConstitution :: ()
   => ConwayEraOnwards era
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.Constitution (ShelleyLedgerEra era)))))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.Constitution (ShelleyLedgerEra era))))
 queryConstitution era = do
   let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
@@ -247,7 +247,7 @@ queryCommitteeMembersState :: ()
   -> Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
   -> Set (L.Credential L.HotCommitteeRole L.StandardCrypto)
   -> Set L.MemberStatus
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Maybe (L.CommitteeMembersState L.StandardCrypto))))
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (L.CommitteeMembersState L.StandardCrypto)))
 queryCommitteeMembersState era coldCreds hotCreds statuses = do
   let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)

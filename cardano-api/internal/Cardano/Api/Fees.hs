@@ -196,13 +196,13 @@ type PlutusScriptBytes = ShortByteString
 data ResolvablePointers where
   ResolvablePointers ::
       ( Ledger.Era (ShelleyLedgerEra era)
-      , Show (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+      , Show (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
       , Show (L.PlutusPurpose L.AsItem (ShelleyLedgerEra era))
       , Show (Alonzo.PlutusScript (ShelleyLedgerEra era))
       )
     => ShelleyBasedEra era
     -> !(Map
-          (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+          (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
           ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
           , Maybe (PlutusScriptBytes, Plutus.Language)
           , Ledger.ScriptHash Ledger.StandardCrypto
@@ -219,7 +219,7 @@ deriving instance Show ResolvablePointers
 -- the script, and two are the result of execution.
 --
 -- TODO: We should replace ScriptWitnessIndex with ledger's
--- PlutusPurpose AsIndex ledgerera. This would necessitate the
+-- PlutusPurpose AsIx ledgerera. This would necessitate the
 -- parameterization of ScriptExecutionError.
 data ScriptExecutionError =
 
@@ -429,7 +429,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
     fromLedgerScriptExUnitsMap
       :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
       => AlonzoEraOnwards era
-      -> Map (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+      -> Map (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
              (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap aOnwards exmap =

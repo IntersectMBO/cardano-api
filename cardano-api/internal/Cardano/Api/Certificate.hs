@@ -596,7 +596,7 @@ toShelleyPoolParams StakePoolParameters {
     , Ledger.ppMargin  = fromMaybe
                                (error "toShelleyPoolParams: invalid PoolMargin")
                                (Ledger.boundRational stakePoolMargin)
-    , Ledger.ppRewardAcnt   = toShelleyStakeAddr stakePoolRewardAccount
+    , Ledger.ppRewardAccount = toShelleyStakeAddr stakePoolRewardAccount
     , Ledger.ppOwners  = Set.fromList
                                [ kh | StakeKeyHash kh <- stakePoolOwners ]
     , Ledger.ppRelays  = Seq.fromList
@@ -652,7 +652,7 @@ fromShelleyPoolParams
     , Ledger.ppPledge
     , Ledger.ppCost
     , Ledger.ppMargin
-    , Ledger.ppRewardAcnt
+    , Ledger.ppRewardAccount
     , Ledger.ppOwners
     , Ledger.ppRelays
     , Ledger.ppMetadata
@@ -662,7 +662,7 @@ fromShelleyPoolParams
     , stakePoolVRF           = VrfKeyHash ppVrf
     , stakePoolCost          = ppCost
     , stakePoolMargin        = Ledger.unboundRational ppMargin
-    , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAcnt
+    , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAccount
     , stakePoolPledge        = ppPledge
     , stakePoolOwners        = map StakeKeyHash (Set.toList ppOwners)
     , stakePoolRelays        = map fromShelleyStakePoolRelay
