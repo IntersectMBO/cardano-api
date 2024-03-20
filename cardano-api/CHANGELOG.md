@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 8.42.0.0
+
+- Add support for script-based CC members
+  (feature, breaking)
+  [PR 489](https://github.com/IntersectMBO/cardano-api/pull/489)
+
+- Bump ouroboros-consensus-diffusion 0.12
+  (compatible)
+  [PR 488](https://github.com/IntersectMBO/cardano-api/pull/488)
+
 ## 8.39.3.0
 
 - ouroboros-consensus-diffusion-0.12
