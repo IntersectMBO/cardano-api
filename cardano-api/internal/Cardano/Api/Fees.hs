@@ -17,6 +17,7 @@
 module Cardano.Api.Fees (
     -- * Transaction fees
     evaluateTransactionFee,
+    calculateMinTxFee,
     estimateTransactionKeyWitnessCount,
 
     -- * Script execution units
@@ -85,6 +86,7 @@ import qualified Data.Text as Text
 import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
+
 --- ----------------------------------------------------------------------------
 --- Transaction fees
 ---
@@ -93,8 +95,7 @@ import           Lens.Micro ((.~), (^.))
 -- assumption that there will be the given number of key witnesses (i.e.
 -- signatures).
 --
--- TODO: we need separate args for Shelley vs Byron key sigs
---
+-- Use 'calculateMinTxFee' instead as that function is more accurate.
 evaluateTransactionFee :: forall era. ()
   => ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
@@ -107,6 +108,32 @@ evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
         L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount)
+{-# DEPRECATED evaluateTransactionFee "Use 'calculateMinTxFee' instead" #-}
+
+-- | Estimate minimum transaction fee for a proposed transaction by looking
+-- into the transaction and figuring out how many and what kind of key
+-- witnesses this transaction needs.
+--
+-- It requires access to the portion of the `UTxO` that is relevant for this
+-- transaction in order to lookup any txins included in the transaction.
+--
+-- The only type of witnesses that it cannot figure out reliably is the
+-- witnesses needed for satisfying native scripts included in the transaction.
+--
+-- For this reason number of witnesses needed for native scripts must be
+-- supplied as an extra argument.
+calculateMinTxFee :: forall era. ()
+  => ShelleyBasedEra era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> UTxO era
+  -> TxBody era
+  -> Word  -- ^ The number of Shelley key witnesses
+  -> L.Coin
+calculateMinTxFee sbe pp utxo txbody keywitcount =
+  shelleyBasedEraConstraints sbe $
+    case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
+      ShelleyTx _ tx ->
+        L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp tx (fromIntegral keywitcount)
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.
@@ -762,7 +789,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
-        fee   = evaluateTransactionFee sbe pp txbody1 nkeys 0 --TODO: byron keys
+        fee   = calculateMinTxFee sbe pp utxo txbody1 nkeys
         (retColl, reqCol) =
            caseShelleyToAlonzoOrBabbageEraOnwards
             (const (TxReturnCollateralNone, TxTotalCollateralNone))

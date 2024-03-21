@@ -384,6 +384,7 @@ module Cardano.Api (
     LedgerEpochInfo(..),
     toLedgerEpochInfo,
     evaluateTransactionFee,
+    calculateMinTxFee,
     estimateTransactionKeyWitnessCount,
 
     -- ** Minimum required UTxO calculation
