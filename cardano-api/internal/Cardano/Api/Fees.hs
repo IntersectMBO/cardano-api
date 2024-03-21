@@ -16,9 +16,8 @@
 --
 module Cardano.Api.Fees (
     -- * Transaction fees
-    transactionFee,
-    estimateTransactionFee,
     evaluateTransactionFee,
+    calculateMinTxFee,
     estimateTransactionKeyWitnessCount,
 
     -- * Script execution units
@@ -53,7 +52,6 @@ import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger.Lens as A
-import           Cardano.Api.NetworkId
 import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -62,8 +60,6 @@ import           Cardano.Api.Tx.Body
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Value
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -78,7 +74,6 @@ import qualified PlutusLedgerApi.V1 as Plutus
 
 import           Control.Monad (forM_)
 import           Data.Bifunctor (bimap, first)
-import qualified Data.ByteString as BS
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Function ((&))
 import           Data.Map.Strict (Map)
@@ -91,110 +86,16 @@ import qualified Data.Text as Text
 import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
+
 --- ----------------------------------------------------------------------------
 --- Transaction fees
 ---
-
--- | For a concrete fully-constructed transaction, determine the minimum fee
--- that it needs to pay.
---
--- This function is simple, but if you are doing input selection then you
--- probably want to consider estimateTransactionFee.
---
-transactionFee :: ()
-  => ShelleyBasedEra era
-  -> L.Coin -- ^ The fixed tx fee
-  -> L.Coin -- ^ The tx fee per byte
-  -> Tx era
-  -> L.Coin
-transactionFee sbe txFeeFixed txFeePerByte tx =
-  let a = toInteger txFeePerByte
-      b = toInteger txFeeFixed
-  in
-  case tx of
-    ShelleyTx _ tx' ->
-      let x = shelleyBasedEraConstraints sbe $ tx' ^. L.sizeTxF in L.Coin (a * x + b)
-
-{-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
-
---TODO: in the Byron case the per-byte is non-integral, would need different
--- parameters. e.g. a new data type for fee params, Byron vs Shelley
-
--- | This can estimate what the transaction fee will be, based on a starting
--- base transaction, plus the numbers of the additional components of the
--- transaction that may be added.
---
--- So for example with wallet coin selection, the base transaction should
--- contain all the things not subject to coin selection (such as script inputs,
--- metadata, withdrawals, certs etc)
---
-estimateTransactionFee :: ()
-  => ShelleyBasedEra era
-  -> NetworkId
-  -> L.Coin -- ^ The fixed tx fee
-  -> L.Coin -- ^ The tx fee per byte
-  -> Tx era
-  -> Int -- ^ The number of extra UTxO transaction inputs
-  -> Int -- ^ The number of extra transaction outputs
-  -> Int -- ^ The number of extra Shelley key witnesses
-  -> Int -- ^ The number of extra Byron key witnesses
-  -> L.Coin
-estimateTransactionFee sbe nw txFeeFixed txFeePerByte = \case
-  ShelleyTx era tx ->
-    let L.Coin baseFee = transactionFee sbe txFeeFixed txFeePerByte (ShelleyTx era tx)
-    in \nInputs nOutputs nShelleyKeyWitnesses nByronKeyWitnesses ->
-      --TODO: this is fragile. Move something like this to the ledger and
-      -- make it robust, based on the txsize calculation.
-      let extraBytes :: Int
-          extraBytes =
-              nInputs               * sizeInput
-            + nOutputs              * sizeOutput
-            + nByronKeyWitnesses    * sizeByronKeyWitnesses
-            + nShelleyKeyWitnesses  * sizeShelleyKeyWitnesses
-
-      in L.Coin (baseFee + toInteger txFeePerByte * toInteger extraBytes)
-  where
-    sizeInput               = smallArray + uint + hashObj
-    sizeOutput              = smallArray + uint + address
-    sizeByronKeyWitnesses   = smallArray + keyObj + sigObj + ccodeObj + attrsObj
-    sizeShelleyKeyWitnesses = smallArray + keyObj + sigObj
-
-    smallArray  = 1
-    uint        = 5
-
-    hashObj     = 2 + hashLen
-    hashLen     = 32
-
-    keyObj      = 2 + keyLen
-    keyLen      = 32
-
-    sigObj      = 2 + sigLen
-    sigLen      = 64
-
-    ccodeObj    = 2 + ccodeLen
-    ccodeLen    = 32
-
-    address     = 2 + addrHeader + 2 * addrHashLen
-    addrHeader  = 1
-    addrHashLen = 28
-
-    attrsObj    = 2 + BS.length attributes
-    attributes  = CBOR.serialize' $
-                    Byron.mkAttributes Byron.AddrAttributes {
-                      Byron.aaVKDerivationPath = Nothing,
-                      Byron.aaNetworkMagic     = toByronNetworkMagic nw
-                    }
-
---TODO: also deprecate estimateTransactionFee:
---{-# DEPRECATED estimateTransactionFee "Use 'evaluateTransactionFee' instead" #-}
-
 
 -- | Compute the transaction fee for a proposed transaction, with the
 -- assumption that there will be the given number of key witnesses (i.e.
 -- signatures).
 --
--- TODO: we need separate args for Shelley vs Byron key sigs
---
+-- Use 'calculateMinTxFee' instead as that function is more accurate.
 evaluateTransactionFee :: forall era. ()
   => ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
@@ -207,6 +108,32 @@ evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
         L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount)
+{-# DEPRECATED evaluateTransactionFee "Use 'calculateMinTxFee' instead" #-}
+
+-- | Estimate minimum transaction fee for a proposed transaction by looking
+-- into the transaction and figuring out how many and what kind of key
+-- witnesses this transaction needs.
+--
+-- It requires access to the portion of the `UTxO` that is relevant for this
+-- transaction in order to lookup any txins included in the transaction.
+--
+-- The only type of witnesses that it cannot figure out reliably is the
+-- witnesses needed for satisfying native scripts included in the transaction.
+--
+-- For this reason number of witnesses needed for native scripts must be
+-- supplied as an extra argument.
+calculateMinTxFee :: forall era. ()
+  => ShelleyBasedEra era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> UTxO era
+  -> TxBody era
+  -> Word  -- ^ The number of Shelley key witnesses
+  -> L.Coin
+calculateMinTxFee sbe pp utxo txbody keywitcount =
+  shelleyBasedEraConstraints sbe $
+    case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
+      ShelleyTx _ tx ->
+        L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp tx (fromIntegral keywitcount)
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.
@@ -862,7 +789,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
-        fee   = evaluateTransactionFee sbe pp txbody1 nkeys 0 --TODO: byron keys
+        fee   = calculateMinTxFee sbe pp utxo txbody1 nkeys
         (retColl, reqCol) =
            caseShelleyToAlonzoOrBabbageEraOnwards
             (const (TxReturnCollateralNone, TxTotalCollateralNone))
