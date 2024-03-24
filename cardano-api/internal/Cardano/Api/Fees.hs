@@ -95,7 +95,7 @@ import           Lens.Micro ((.~), (^.))
 -- assumption that there will be the given number of key witnesses (i.e.
 -- signatures).
 --
--- Use 'calculateMinTxFee' instead as that function is more accurate.
+-- Use 'calculateMinTxFee' if possible as that function is more accurate.
 evaluateTransactionFee :: forall era. ()
   => ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
@@ -108,7 +108,6 @@ evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
         L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount)
-{-# DEPRECATED evaluateTransactionFee "Use 'calculateMinTxFee' instead" #-}
 
 -- | Estimate minimum transaction fee for a proposed transaction by looking
 -- into the transaction and figuring out how many and what kind of key
