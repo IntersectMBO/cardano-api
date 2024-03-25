@@ -156,9 +156,9 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as
 import           Ouroboros.Consensus.HardFork.Combinator.State.Types
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
-import           Ouroboros.Consensus.Ledger.Tables.Utils
-import           Ouroboros.Consensus.Ledger.Tables (LedgerTables(..))
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
+import           Ouroboros.Consensus.Ledger.Tables (LedgerTables (..))
+import           Ouroboros.Consensus.Ledger.Tables.Utils
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
@@ -205,11 +205,10 @@ import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.SOP (K (K), (:.:) (Comp))
+import           Data.SOP.Functors (Flip (..))
 import           Data.SOP.Strict (NP (..), fn)
 import           Data.SOP.Strict.NS
 import qualified Data.SOP.Telescope as Telescope
-import           Data.SOP.Functors (Flip (..))
---import           Data.SOP.Strict (Compose, K (..), NP (..), fn, hcmap, (:.:) (Comp))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text

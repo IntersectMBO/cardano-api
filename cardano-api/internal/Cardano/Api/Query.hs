@@ -122,7 +122,6 @@ import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import qualified Data.Singletons as Singletons
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
@@ -141,6 +140,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Singletons as Singletons
 import           Data.SOP.Constraint (SListI)
 import           Data.Text (Text)
 import qualified Data.Text as Text
