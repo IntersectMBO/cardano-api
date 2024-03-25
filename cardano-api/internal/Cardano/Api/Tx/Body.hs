@@ -16,14 +16,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{- HLINT ignore "Avoid lambda using `infix`" -}
-{- HLINT ignore "Move brackets to avoid" -}
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Use let" -}
-{- HLINT ignore "Use section" -}
-
 -- | Transaction bodies
---
 module Cardano.Api.Tx.Body (
     parseTxId,
     -- * Transaction bodies
@@ -82,6 +75,7 @@ module Cardano.Api.Tx.Body (
     TxIns,
     TxIx(..),
     genesisUTxOPseudoTxIn,
+    getReferenceInputsSizeForTxIds,
 
     -- * Transaction outputs
     CtxTx, CtxUTxO,
@@ -3064,6 +3058,27 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (toShelleyNetwork nw)
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
+
+getReferenceInputsSizeForTxIds
+  :: forall era ledgerera. ShelleyLedgerEra era ~ ledgerera
+  => BabbageEraOnwards era
+  -> Ledger.UTxO ledgerera
+  -> Set TxIn
+  -> Int
+getReferenceInputsSizeForTxIds beo utxo txIds = babbageEraOnwardsConstraints beo $ do
+  let refScripts =  getReferenceScriptsNonDistinct utxo (Set.map toShelleyTxIn txIds)
+  getSum $ foldMap (Sum . originalBytesSize . snd) refScripts
+    where
+      -- TODO: placeholders for newer ledger
+      getReferenceScriptsNonDistinct
+        :: L.BabbageEraTxOut ledgerera
+        => Ledger.UTxO ledgerera
+        -> Set (L.TxIn (Ledger.EraCrypto ledgerera))
+        -> [(L.ScriptHash (Ledger.EraCrypto ledgerera), Ledger.Script ledgerera)]
+      getReferenceScriptsNonDistinct = undefined -- L.getReferenceScriptsNonDistinct
+
+      originalBytesSize :: Ledger.Script ledgerera -> Int
+      originalBytesSize = undefined -- SafeHash.originalBytesSize
 
 calculateExecutionUnitsLovelace :: Ledger.Prices -> ExecutionUnits -> Maybe L.Coin
 calculateExecutionUnitsLovelace prices eUnits =
