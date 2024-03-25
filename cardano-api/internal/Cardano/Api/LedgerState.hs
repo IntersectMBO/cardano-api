@@ -1244,6 +1244,8 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transC
             }
       , Consensus.hardForkTriggers = ncHardForkTriggers dnc
       , Consensus.ledgerTransitionConfig = transCfg
+        -- FIXME: add a comment mentioning when the a RE should change 'checkpoints' (eg around Genesis release).
+      , Consensus.checkpoints = Consensus.emptyCheckpointsMap
       }
 
 -- | Compute the Nonce from the hash of the Genesis file.

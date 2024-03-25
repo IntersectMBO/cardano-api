@@ -42,7 +42,7 @@ handlePreAlonzoUTxOWEvent
 handlePreAlonzoUTxOWEvent (Shelley.UtxoEvent e) =
   case e of
     Shelley.TotalDeposits{} -> Nothing
-    Shelley.UpdateEvent (Shelley.NewEpoch _) -> Nothing
+    Shelley.UpdateEvent (Shelley.PpupNewEpoch _) -> Nothing
     Shelley.TxUTxODiff _ _ -> Nothing
 
 
@@ -53,5 +53,5 @@ handleAllegraMaryUTxOWEvent
 handleAllegraMaryUTxOWEvent (Shelley.UtxoEvent e) =
   case e of
     Allegra.TotalDeposits{} -> Nothing
-    Allegra.UpdateEvent (Shelley.NewEpoch _) -> Nothing
+    Allegra.UpdateEvent (Shelley.PpupNewEpoch _) -> Nothing
     Allegra.TxUTxODiff _ _ -> Nothing

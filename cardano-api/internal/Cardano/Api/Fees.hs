@@ -107,7 +107,9 @@ evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
-        L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount)
+        let refScriptsSize = undefined -- FIXME: pass this as parameter
+        in
+          L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
 
 -- | Estimate minimum transaction fee for a proposed transaction by looking
 -- into the transaction and figuring out how many and what kind of key
