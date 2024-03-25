@@ -10,7 +10,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
-{-# OPTIONS_GHC -Wno-unused-matches -Wno-unused-top-binds -Wno-unused-imports #-}
 {- HLINT ignore "Redundant fmap" -}
 
 module Cardano.Api.LedgerState
@@ -157,7 +156,8 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as
 import           Ouroboros.Consensus.HardFork.Combinator.State.Types
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
-import qualified Ouroboros.Consensus.Ledger.Basics as Ledger
+import           Ouroboros.Consensus.Ledger.Tables.Utils
+import           Ouroboros.Consensus.Ledger.Tables (LedgerTables(..))
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
@@ -169,7 +169,6 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley hiding (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley hiding (LedgerState)
-import qualified Ouroboros.Consensus.Shelley.Node.Praos as Consensus
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import           Ouroboros.Network.Block (blockNo)
 import qualified Ouroboros.Network.Block
@@ -206,8 +205,7 @@ import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.SOP (K (K), (:.:) (Comp))
-import           Data.SOP.Constraint
-import           Data.SOP.Strict (NP (..), fn, hcmap)
+import           Data.SOP.Strict (NP (..), fn)
 import           Data.SOP.Strict.NS
 import qualified Data.SOP.Telescope as Telescope
 import           Data.SOP.Functors (Flip (..))
@@ -223,8 +221,6 @@ import           Formatting.Buildable (build)
 import           Lens.Micro
 import           Network.TypedProtocol.Pipelined (Nat (..))
 import           System.FilePath
-
---import qualified Legacy.Convert as Legacy
 
 data InitialLedgerStateError
   = ILSEConfigFile Text
@@ -333,39 +329,39 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraConway  -> Consensus.BlockConway shelleyBlock
 
 pattern LedgerStateByron
-  :: Ledger.LedgerState Byron.ByronBlock mk
+  :: Ledger.LedgerState Byron.ByronBlock Ledger.EmptyMK
   -> LedgerState
-pattern LedgerStateByron st <- LedgerState (Consensus.LedgerStateByron st)
+pattern LedgerStateByron st <- LedgerState (Consensus.LedgerStateByron st) _
 
 pattern LedgerStateShelley
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Consensus.StandardCrypto)) mk
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Consensus.StandardCrypto)) Ledger.EmptyMK
   -> LedgerState
-pattern LedgerStateShelley st <- LedgerState  (Consensus.LedgerStateShelley st)
+pattern LedgerStateShelley st <- LedgerState  (Consensus.LedgerStateShelley st) _
 
 pattern LedgerStateAllegra
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Consensus.StandardCrypto)) mk
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Consensus.StandardCrypto)) Ledger.EmptyMK
   -> LedgerState
-pattern LedgerStateAllegra st <- LedgerState  (Consensus.LedgerStateAllegra st)
+pattern LedgerStateAllegra st <- LedgerState  (Consensus.LedgerStateAllegra st) _
 
 pattern LedgerStateMary
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Consensus.StandardCrypto)) mk
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Consensus.StandardCrypto)) Ledger.EmptyMK
   -> LedgerState
-pattern LedgerStateMary st <- LedgerState  (Consensus.LedgerStateMary st)
+pattern LedgerStateMary st <- LedgerState  (Consensus.LedgerStateMary st) _
 
 pattern LedgerStateAlonzo
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Consensus.StandardCrypto)) mk
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Consensus.StandardCrypto)) Ledger.EmptyMK
   -> LedgerState
-pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
+pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st) _
 
 pattern LedgerStateBabbage
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.BabbageEra Consensus.StandardCrypto)) mk
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.BabbageEra Consensus.StandardCrypto)) Ledger.EmptyMK
   -> LedgerState
-pattern LedgerStateBabbage st <- LedgerState  (Consensus.LedgerStateBabbage st)
+pattern LedgerStateBabbage st <- LedgerState  (Consensus.LedgerStateBabbage st) _
 
 pattern LedgerStateConway
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ConwayEra Consensus.StandardCrypto)) mk
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ConwayEra Consensus.StandardCrypto)) Ledger.EmptyMK
   -> LedgerState
-pattern LedgerStateConway st <- LedgerState  (Consensus.LedgerStateConway st)
+pattern LedgerStateConway st <- LedgerState  (Consensus.LedgerStateConway st) _
 
 {-# COMPLETE LedgerStateByron
            , LedgerStateShelley
@@ -1034,11 +1030,12 @@ readByteString fp cfgType = (liftEither <=< liftIO) $
 initLedgerStateVar :: GenesisConfig -> LedgerState
 initLedgerStateVar genesisConfig = LedgerState
   { clsState =
-      HFC.HardForkLedgerState
-    $ hcmap
-        (Proxy @(Compose Ledger.CanStowLedgerTables Ledger.LedgerState))
-        (Flip . Ledger.stowLedgerTables . unFlip)
-    $ HFC.hardForkLedgerStatePerEra
+      Ledger.ledgerState
+    $ forgetLedgerTables
+    $ Consensus.pInfoInitLedger
+    $ fst protocolInfo
+  , clsTables  =
+      Ledger.projectLedgerTables
     $ Ledger.ledgerState
     $ Consensus.pInfoInitLedger
     $ fst protocolInfo
@@ -1060,7 +1057,7 @@ getAnyNewEpochState
   :: ShelleyBasedEra era
   -> LedgerState
   -> Either LedgerStateError AnyNewEpochState
-getAnyNewEpochState sbe (LedgerState ls) =
+getAnyNewEpochState sbe (LedgerState ls _) =
   AnyNewEpochState sbe <$> getNewEpochState sbe ls
 
 getNewEpochState
@@ -1143,10 +1140,13 @@ pattern ConwayLedgerState
 pattern ConwayLedgerState x =  S (S (S (S (S (S (Z x))))))
 
 encodeLedgerState :: LedgerState -> CBOR.Encoding
-encodeLedgerState (LedgerState (HFC.HardForkLedgerState st)) =
-  HFC.encodeTelescope
+encodeLedgerState (LedgerState (HFC.HardForkLedgerState st) tbs) = mconcat
+  [ CBOR.encodeListLen 2
+  , HFC.encodeTelescope
     (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
     st
+  , Ledger.valuesMKEncoder tbs
+  ]
   where
     byron   = fn (K . Byron.encodeByronLedgerState     . unFlip)
     shelley = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
@@ -1157,9 +1157,11 @@ encodeLedgerState (LedgerState (HFC.HardForkLedgerState st)) =
     conway  = fn (K . Shelley.encodeShelleyLedgerState . unFlip)
 
 decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
-decodeLedgerState =
+decodeLedgerState = do
+  2 <- CBOR.decodeListLen
   LedgerState . HFC.HardForkLedgerState
     <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+    <*> Ledger.valuesMKDecoder
   where
     byron   = Comp $ Flip <$> Byron.decodeByronLedgerState
     shelley = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
@@ -1176,14 +1178,12 @@ toLedgerStateEvents ::
     ( Ledger.LedgerState
         (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
     )
-    ( Ledger.LedgerState
-        (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
-        Ledger.EmptyMK
+    ( LedgerState
     ) ->
   LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
   where
-    ledgerState = LedgerState (lrResult lr)
+    ledgerState = lrResult lr
     ledgerEvents = mapMaybe (toLedgerEvent
       . WrapLedgerEvent @(HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
       $ lrEvents lr
@@ -1535,10 +1535,9 @@ applyBlock'
   -> Either LedgerStateError LedgerStateEvents
 applyBlock' env oldState validationMode block = do
   let config = envLedgerConfig env
-      stateOld = clsState oldState
   case validationMode of
-    FullValidation -> tickThenApply config block stateOld
-    QuickValidation -> tickThenReapplyCheckHash config block stateOld
+    FullValidation -> tickThenApply config block oldState
+    QuickValidation -> tickThenReapplyCheckHash config block oldState
 
 applyBlockWithEvents
   :: Env
@@ -1550,10 +1549,9 @@ applyBlockWithEvents
   -> Either LedgerStateError LedgerStateEvents
 applyBlockWithEvents env oldState enableValidation block = do
   let config = envLedgerConfig env
-      stateOld = clsState oldState
   if enableValidation
-    then tickThenApply config block stateOld
-    else tickThenReapplyCheckHash config block stateOld
+    then tickThenApply config block oldState
+    else tickThenReapplyCheckHash config block oldState
 
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
@@ -1561,30 +1559,47 @@ tickThenReapplyCheckHash
     :: HFC.HardForkLedgerConfig
         (Consensus.CardanoEras Consensus.StandardCrypto)
     -> Consensus.CardanoBlock Consensus.StandardCrypto
-    -> Ledger.LedgerState
-        (HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto))
-        Ledger.EmptyMK
+    -> LedgerState
     -> Either LedgerStateError LedgerStateEvents
-tickThenReapplyCheckHash cfg block lsb =
-  if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
-    then Right
-         . toLedgerStateEvents
-          $ Ledger.tickThenReapplyLedgerResult
-              cfg
-              block
-              lsb
+tickThenReapplyCheckHash cfg block (LedgerState st tbs) =
+  if Consensus.blockPrevHash block == Ledger.ledgerTipHash st
+    then
+    let
+      keys :: LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.KeysMK
+      keys = Ledger.getBlockKeySets block
+
+      restrictedTables =
+        LedgerTables (rawRestrictValues (getLedgerTables tbs) (getLedgerTables keys))
+
+
+      ledgerResult =
+          Ledger.tickThenReapplyLedgerResult cfg block
+        $ st `Ledger.withLedgerTables` restrictedTables
+
+    in  Right
+      . toLedgerStateEvents
+      . fmap (\stt -> LedgerState
+                       (forgetLedgerTables stt)
+                       ( LedgerTables
+                       . rawApplyDiffs (getLedgerTables tbs)
+                       . getLedgerTables
+                       . Ledger.projectLedgerTables
+                       $ stt
+                       )
+             )
+      $ ledgerResult
+
     else Left $ ApplyBlockHashMismatch $ mconcat
                   [ "Ledger state hash mismatch. Ledger head is slot "
                   , textShow
                       $ Slot.unSlotNo
                       $ Slot.fromWithOrigin
                           (Slot.SlotNo 0)
-                          (Ledger.ledgerTipSlot lsb)
+                          (Ledger.ledgerTipSlot st)
                   , " hash "
                   , renderByteArray
                       $ unChainHash
-                      $ Ledger.ledgerTipHash lsb
+                      $ Ledger.ledgerTipHash st
                   , " but block previous hash is "
                   , renderByteArray (unChainHash $ Consensus.blockPrevHash block)
                   , " and block current hash is "
@@ -1601,18 +1616,36 @@ tickThenApply
     :: HFC.HardForkLedgerConfig
         (Consensus.CardanoEras Consensus.StandardCrypto)
     -> Consensus.CardanoBlock Consensus.StandardCrypto
-    -> Ledger.LedgerState
-        (HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto))
-        Ledger.EmptyMK
+    -> LedgerState
     -> Either LedgerStateError LedgerStateEvents
-tickThenApply cfg block lsb
-  = either (Left . ApplyBlockError) (Right . toLedgerStateEvents)
-   $ runExcept
-   $ Ledger.tickThenApplyLedgerResult
-              cfg
-              block
-              lsb
+tickThenApply cfg block (LedgerState st tbs)
+  = let
+      keys :: LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.KeysMK
+      keys = Ledger.getBlockKeySets block
+
+      restrictedTables =
+        LedgerTables (rawRestrictValues (getLedgerTables tbs) (getLedgerTables keys))
+
+      eLedgerResult = runExcept
+        $ Ledger.tickThenApplyLedgerResult cfg block
+        $ st `Ledger.withLedgerTables` restrictedTables
+    in
+      either
+        (Left . ApplyBlockError)
+        ( Right
+        . toLedgerStateEvents
+        . fmap (\stt ->
+                   LedgerState
+                     (forgetLedgerTables stt)
+                     ( LedgerTables
+                     . rawApplyDiffs (getLedgerTables tbs)
+                     . getLedgerTables
+                     . Ledger.projectLedgerTables
+                     $ stt
+                     )
+               )
+        )
+      eLedgerResult
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =
