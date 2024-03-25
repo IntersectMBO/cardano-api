@@ -1,5 +1,16 @@
 # Changelog for cardano-api
 
+# 8.43.0.0
+
+- Undeprecate `evaluateTransactionFee`
+  (compatible)
+  [PR 493](https://github.com/IntersectMBO/cardano-api/pull/493)
+
+- Re-implement `evaluateTransactionFee` using ledger's `calcMinFeeTx`
+  The `evaluateTransactionFee` takes an additional `utxo` parameter and no longer takes `byronwitcount`.
+  (breaking)
+  [PR 490](https://github.com/IntersectMBO/cardano-api/pull/490)
+
 ## 8.42.0.0
 
 - Add support for script-based CC members
