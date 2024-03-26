@@ -159,7 +159,7 @@ library internal
                       , bytestring
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-crypto-class ^>= 2.1.4
                       , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data >= 1.0
                       , cardano-ledger-alonzo >= 1.6.0
@@ -173,7 +173,7 @@ library internal
                       , cardano-ledger-mary >= 1.5
                       , cardano-ledger-shelley >= 1.9.0
                       , cardano-protocol-tpraos >= 1.0.3.6
-                      , cardano-slotting >= 0.1
+                      , cardano-slotting ^>= 0.1.2
                       , cardano-strict-containers >= 0.1
                       , cborg
                       , containers
@@ -193,7 +193,7 @@ library internal
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus ^>= 0.16
-                      , ouroboros-consensus-cardano ^>= 0.14
+                      , ouroboros-consensus-cardano ^>= 0.14.2
                       , ouroboros-consensus-diffusion ^>= 0.12
                       , ouroboros-consensus-protocol ^>= 0.7
                       , ouroboros-network
@@ -209,14 +209,14 @@ library internal
                       , safe-exceptions
                       , scientific
                       , serialise
-                      , small-steps ^>= 1.0
+                      , small-steps ^>= 1.0.1
                       , sop-core
                       , sop-extras
                       , stm
                       , strict-sop-core
                       , time
                       , transformers
-                      , transformers-except ^>= 0.1.3
+                      , transformers-except ^>= 0.1.4
                       , typed-protocols ^>= 0.1.1
                       , unordered-containers >= 0.2.11
                       , vector
@@ -248,7 +248,7 @@ library
                       , cardano-api:internal
                       , cardano-binary
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-crypto-class ^>= 2.1.4
                       , cryptonite
                       , deepseq
                       , memory
@@ -280,8 +280,8 @@ library gen
                       , cardano-api
                       , cardano-api:internal
                       , cardano-binary >= 1.6 && < 1.8
-                      , cardano-crypto-class ^>= 2.1.2
-                      , cardano-crypto-test ^>= 1.5
+                      , cardano-crypto-class ^>= 2.1.4
+                      , cardano-crypto-test ^>= 1.5.0.1
                       , cardano-data
                       , cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >= 1.6.0
                       , cardano-ledger-byron-test >= 1.5
@@ -310,9 +310,9 @@ test-suite cardano-api-test
                       , cardano-api:gen
                       , cardano-api:internal
                       , cardano-crypto
-                      , cardano-crypto-class ^>= 2.1.2
-                      , cardano-crypto-test ^>= 1.5
-                      , cardano-crypto-tests ^>= 2.1
+                      , cardano-crypto-class ^>= 2.1.4
+                      , cardano-crypto-test ^>= 1.5.0.1
+                      , cardano-crypto-tests ^>= 2.1.2
                       , cardano-ledger-api ^>= 1.8
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , containers
@@ -359,14 +359,14 @@ test-suite cardano-api-golden
                       , cardano-api
                       , cardano-api:gen
                       , cardano-binary
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-crypto-class ^>= 2.1.4
                       , cardano-data >= 1.0
                       , cardano-ledger-alonzo
                       , cardano-ledger-api ^>= 1.8
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , cardano-ledger-shelley
                       , cardano-ledger-shelley-test >= 1.2.0.1
-                      , cardano-slotting ^>= 0.1
+                      , cardano-slotting ^>= 0.1.2
                       , containers
                       , errors
                       , filepath
