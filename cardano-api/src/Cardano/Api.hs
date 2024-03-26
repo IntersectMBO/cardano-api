@@ -342,6 +342,7 @@ module Cardano.Api (
     TxIns,
     TxIx(TxIx),
     renderTxIn,
+    getReferenceInputsSizeForTxIds,
 
     -- ** Transaction outputs
     CtxTx, CtxUTxO,
