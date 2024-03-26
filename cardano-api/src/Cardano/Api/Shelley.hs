@@ -284,8 +284,8 @@ module Cardano.Api.Shelley
     fromLedgerPParamsUpdate,
 
     emptyVotingProcedures,
+    mergeVotingProcedures,
     singletonVotingProcedures,
-    unsafeMergeVotingProcedures,
   ) where
 
 import           Cardano.Api
