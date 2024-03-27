@@ -102,13 +102,12 @@ evaluateTransactionFee :: forall era. ()
   -> TxBody era
   -> Word  -- ^ The number of Shelley key witnesses
   -> Word  -- ^ The number of Byron key witnesses
+  -> Int   -- ^ Reference script size in bytes
   -> L.Coin
-evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
+evaluateTransactionFee sbe pp txbody keywitcount byronwitcount refScriptsSize =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
-        let refScriptsSize = undefined -- FIXME: pass this as parameter
-        in
           L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
 
 -- | Estimate minimum transaction fee for a proposed transaction by looking
