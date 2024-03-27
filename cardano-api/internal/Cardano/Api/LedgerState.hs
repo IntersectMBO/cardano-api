@@ -1244,7 +1244,7 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transC
             }
       , Consensus.hardForkTriggers = ncHardForkTriggers dnc
       , Consensus.ledgerTransitionConfig = transCfg
-        -- FIXME: add a comment mentioning when the a RE should change 'checkpoints' (eg around Genesis release).
+        -- NOTE: this can become a parameter once https://github.com/IntersectMBO/cardano-node/issues/5730 is implemented.
       , Consensus.checkpoints = Consensus.emptyCheckpointsMap
       }
 
