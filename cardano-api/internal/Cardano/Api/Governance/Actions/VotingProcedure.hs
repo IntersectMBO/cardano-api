@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -30,9 +31,9 @@ import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as L
 
-import           Control.Monad (foldM)
+import           Control.Error (catMaybes)
+import           Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           GHC.Generics
@@ -158,26 +159,43 @@ singletonVotingProcedures _ voter govActionId votingProcedure =
 
 -- | @mergeVotingProcedures vote1 vote2@ merges @vote1@ and @vote2@ into a single vote,
 -- or fails if the votes are incompatible.
+type DoubleVoters era = [(L.Voter (L.EraCrypto (ShelleyLedgerEra era))
+                        , Map (L.GovActionId (EraCrypto (ShelleyLedgerEra era)))
+                                (L.VotingProcedure (ShelleyLedgerEra era))
+                        , Map (L.GovActionId (EraCrypto (ShelleyLedgerEra era)))
+                                (L.VotingProcedure (ShelleyLedgerEra era))
+                         )
+                        ]
+
 mergeVotingProcedures :: ()
   => VotingProcedures era -- ^ Votes to merge
   -> VotingProcedures era -- ^ Votes to merge
-  -> Either (L.Voter (L.EraCrypto (ShelleyLedgerEra era))           -- ^ Either a voter
-            , [L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))]) -- and its conflicting votes (multiples votes for the same governance action);
+  -> Either (DoubleVoters era) -- and its conflicting votes (multiples votes for the same governance action);
             (VotingProcedures era)                                  -- or the merged votes.
 mergeVotingProcedures vpsa vpsb =
-  VotingProcedures . L.VotingProcedures <$> foldM mergeVotesOfOneVoter Map.empty allVoters
+  if Map.null anyDoubleVotes
+  then Right $ VotingProcedures . L.VotingProcedures $ Map.union mapa mapb
+  else let offendingVoters = Map.keys anyDoubleVotes
+           offendingVotes = catMaybes [(offender,,) <$> voteA <*> voteB
+                                      | offender <- offendingVoters
+                                      , let voteA = Map.lookup offender mapa
+                                      , let voteB = Map.lookup offender mapb
+                                      ]
+       in Left offendingVotes
   where
     mapa = L.unVotingProcedures (unVotingProcedures vpsa)
     mapb = L.unVotingProcedures (unVotingProcedures vpsb)
-    allVoters = Set.union (Map.keysSet mapa) (Map.keysSet mapb)
-    mergeVotesOfOneVoter acc voter =
-      Map.union acc <$> case (Map.lookup voter mapa, Map.lookup voter mapb) of
-        (Just v, Nothing) -> Right $ Map.singleton voter v -- Take only available value
-        (Nothing, Just v) -> Right $ Map.singleton voter v -- Take only available value
-        (Nothing, Nothing) -> Right Map.empty -- No value
-        (Just va, Just vb) -> -- Here's the case where we're unioning different votes for the same voter
-          if null intersection -- No conflict: sets of keys from left and right is disjoint
-          then Right $ Map.singleton voter (Map.union va vb)
-          else Left (voter, intersection) -- Ooops, a conflict! Let's report it!
-          where
-            intersection = Map.keys $ Map.intersection va vb
+
+    -- We first determine identical voters in vpsa and vpsb. This is
+    -- acceptable so long as there is not more than one instance of a
+    -- voter voting on a specific governance action.
+    anyDoubleVotes = Map.differenceWith
+                       (\voteMapA voteMapB -> if Map.null $ determineDoubleVotes voteMapA voteMapB
+                                              then Nothing
+                                              else Just voteMapA)
+                       mapa
+                       mapb
+    -- We then determine identical `GovActionId`s being voted on by the same voter.
+    -- We want to error on this.
+    determineDoubleVotes = Map.differenceWith (\vMapA _ -> Just vMapA)
+
