@@ -168,6 +168,7 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                     , ucppDRepActivity = EpochInterval 100
                                                     , ucppCommitteeMinSize = 0
                                                     , ucppCommitteeMaxTermLength = EpochInterval 200
+                                                    , ucppMinFeeRefScriptCostPerByte = undefined -- FIXME: which value should we add here?
                                                     }
     where
     defaultPoolVotingThresholds :: PoolVotingThresholds

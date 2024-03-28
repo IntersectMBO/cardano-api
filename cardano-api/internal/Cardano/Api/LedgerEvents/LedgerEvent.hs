@@ -58,9 +58,9 @@ data LedgerEvent
   | -- | Pools have been reaped and deposits refunded.
     PoolReap PoolReapDetails
     -- | A number of succeeded Plutus script evaluations.
-  | SuccessfulPlutusScript (NonEmpty PlutusWithContext)
+  | SuccessfulPlutusScript (NonEmpty (PlutusWithContext StandardCrypto))
     -- | A number of failed Plutus script evaluations.
-  | FailedPlutusScript  (NonEmpty PlutusWithContext)
+  | FailedPlutusScript  (NonEmpty (PlutusWithContext StandardCrypto))
 
 
   -- Only events available on the Conway Era.

@@ -15,6 +15,7 @@ import           Cardano.Ledger.Alonzo.Rules (AlonzoUtxoEvent (..), AlonzoUtxosE
                    AlonzoUtxowEvent (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Core as Ledger.Core
+import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
 import           Control.State.Transition.Extended
@@ -24,6 +25,7 @@ import           Control.State.Transition.Extended
 handleAlonzoOnwardsUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ AlonzoUtxoEvent ledgerera
   => Event (Ledger.Core.EraRule "UTXOS" ledgerera) ~ AlonzoUtxosEvent ledgerera
+  => Ledger.Core.EraCrypto ledgerera ~ Crypto.StandardCrypto
   => AlonzoUtxowEvent ledgerera -> Maybe LedgerEvent
 handleAlonzoOnwardsUTxOWEvent (WrappedShelleyEraEvent (Shelley.UtxoEvent (UtxosEvent utxoEvent))) =
   case utxoEvent of
@@ -37,10 +39,10 @@ handlePreAlonzoUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ Shelley.UtxoEvent ledgerera
   => Event (Ledger.Core.EraRule "PPUP" ledgerera) ~ Shelley.PpupEvent ledgerera
   => Shelley.ShelleyUtxowEvent ledgerera -> Maybe LedgerEvent
-handlePreAlonzoUTxOWEvent (Shelley.UtxoEvent e)=
+handlePreAlonzoUTxOWEvent (Shelley.UtxoEvent e) =
   case e of
     Shelley.TotalDeposits{} -> Nothing
-    Shelley.UpdateEvent (Shelley.NewEpoch _) -> Nothing
+    Shelley.UpdateEvent (Shelley.PpupNewEpoch _) -> Nothing
     Shelley.TxUTxODiff _ _ -> Nothing
 
 
@@ -48,8 +50,8 @@ handleAllegraMaryUTxOWEvent
   :: Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ Allegra.AllegraUtxoEvent ledgerera
   => Event (Ledger.Core.EraRule "PPUP" ledgerera) ~ Shelley.PpupEvent ledgerera
   => Shelley.ShelleyUtxowEvent ledgerera -> Maybe LedgerEvent
-handleAllegraMaryUTxOWEvent (Shelley.UtxoEvent e)=
+handleAllegraMaryUTxOWEvent (Shelley.UtxoEvent e) =
   case e of
     Allegra.TotalDeposits{} -> Nothing
-    Allegra.UpdateEvent (Shelley.NewEpoch _) -> Nothing
+    Allegra.UpdateEvent (Shelley.PpupNewEpoch _) -> Nothing
     Allegra.TxUTxODiff _ _ -> Nothing

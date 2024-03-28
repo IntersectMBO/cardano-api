@@ -102,12 +102,13 @@ evaluateTransactionFee :: forall era. ()
   -> TxBody era
   -> Word  -- ^ The number of Shelley key witnesses
   -> Word  -- ^ The number of Byron key witnesses
+  -> Int   -- ^ Reference script size in bytes
   -> L.Coin
-evaluateTransactionFee sbe pp txbody keywitcount byronwitcount =
+evaluateTransactionFee sbe pp txbody keywitcount byronwitcount refScriptsSize =
   shelleyBasedEraConstraints sbe $
     case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
-        L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount)
+          L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
 
 -- | Estimate minimum transaction fee for a proposed transaction by looking
 -- into the transaction and figuring out how many and what kind of key
@@ -196,13 +197,13 @@ type PlutusScriptBytes = ShortByteString
 data ResolvablePointers where
   ResolvablePointers ::
       ( Ledger.Era (ShelleyLedgerEra era)
-      , Show (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+      , Show (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
       , Show (L.PlutusPurpose L.AsItem (ShelleyLedgerEra era))
       , Show (Alonzo.PlutusScript (ShelleyLedgerEra era))
       )
     => ShelleyBasedEra era
     -> !(Map
-          (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+          (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
           ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
           , Maybe (PlutusScriptBytes, Plutus.Language)
           , Ledger.ScriptHash Ledger.StandardCrypto
@@ -219,7 +220,7 @@ deriving instance Show ResolvablePointers
 -- the script, and two are the result of execution.
 --
 -- TODO: We should replace ScriptWitnessIndex with ledger's
--- PlutusPurpose AsIndex ledgerera. This would necessitate the
+-- PlutusPurpose AsIx ledgerera. This would necessitate the
 -- parameterization of ScriptExecutionError.
 data ScriptExecutionError =
 
@@ -429,7 +430,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
     fromLedgerScriptExUnitsMap
       :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
       => AlonzoEraOnwards era
-      -> Map (L.PlutusPurpose L.AsIndex (ShelleyLedgerEra era))
+      -> Map (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
              (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap aOnwards exmap =
