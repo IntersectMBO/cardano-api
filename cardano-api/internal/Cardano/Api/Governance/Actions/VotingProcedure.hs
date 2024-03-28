@@ -30,7 +30,9 @@ import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as L
 
+import           Control.Monad (foldM)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           GHC.Generics
@@ -154,16 +156,32 @@ singletonVotingProcedures _ voter govActionId votingProcedure =
     $ Map.singleton voter
     $ Map.singleton govActionId votingProcedure
 
--- | Right biased merge of Voting procedures.
--- TODO Conway we need an alternative version of this function that can report conflicts as it is
--- not safe to just throw away votes.
-unsafeMergeVotingProcedures :: ()
-  => VotingProcedures era
-  -> VotingProcedures era
-  -> VotingProcedures era
-unsafeMergeVotingProcedures vpsa vpsb =
-  VotingProcedures
-    $ L.VotingProcedures
-    $ Map.unionWith (Map.unionWith const)
-        (L.unVotingProcedures (unVotingProcedures vpsa))
-        (L.unVotingProcedures (unVotingProcedures vpsb))
+-- | A voter, and the conflicting votes of this voter (i.e. votes with the same governance action identifier)
+newtype VotesMergingConflict era =
+  VotesMergingConflict
+    ( L.Voter (L.EraCrypto (ShelleyLedgerEra era))
+    , [L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))])
+
+-- | @mergeVotingProcedures vote1 vote2@ merges @vote1@ and @vote2@ into a single vote,
+-- or fails if the votes are incompatible.
+mergeVotingProcedures :: ()
+  => VotingProcedures era -- ^ Votes to merge
+  -> VotingProcedures era -- ^ Votes to merge
+  -> Either (VotesMergingConflict era) (VotingProcedures era) -- ^ Either the conflict found, or the merged votes
+mergeVotingProcedures vpsa vpsb =
+  VotingProcedures . L.VotingProcedures <$> foldM mergeVotesOfOneVoter Map.empty allVoters
+  where
+    mapa = L.unVotingProcedures (unVotingProcedures vpsa)
+    mapb = L.unVotingProcedures (unVotingProcedures vpsb)
+    allVoters = Set.union (Map.keysSet mapa) (Map.keysSet mapb)
+    mergeVotesOfOneVoter acc voter =
+      Map.union acc <$> case (Map.lookup voter mapa, Map.lookup voter mapb) of
+        (Just v, Nothing) -> Right $ Map.singleton voter v -- Take only available value
+        (Nothing, Just v) -> Right $ Map.singleton voter v -- Take only available value
+        (Nothing, Nothing) -> Right Map.empty -- No value
+        (Just va, Just vb) -> -- Here's the case where we're unioning different votes for the same voter
+          if null intersection -- No conflict: sets of keys from left and right is disjoint
+          then Right $ Map.singleton voter (Map.union va vb)
+          else Left $ VotesMergingConflict (voter, intersection) -- Ooops, a conflict! Let's report it!
+          where
+            intersection = Map.keys $ Map.intersection va vb
