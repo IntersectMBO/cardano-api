@@ -30,6 +30,8 @@ deriving instance Show (ByronToAlonzoEra era)
 deriving instance Eq (ByronToAlonzoEra era)
 
 instance Eon ByronToAlonzoEra where
+  -- This is a trivial existential type - replace with a 'AnyBabbageEraOnwards' when it will be used anywhere
+  type AnyEon ByronToAlonzoEra = Some ByronToAlonzoEra
   inEonForEra no yes = \case
     ByronEra    -> yes ByronToAlonzoEraByron
     ShelleyEra  -> yes ByronToAlonzoEraShelley

@@ -1,6 +1,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
@@ -154,6 +156,7 @@ instance TestEquality ShelleyBasedEra where
     testEquality _                      _                      = Nothing
 
 instance Eon ShelleyBasedEra where
+  type AnyEon ShelleyBasedEra = AnyShelleyBasedEra
   inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> yes ShelleyBasedEraShelley

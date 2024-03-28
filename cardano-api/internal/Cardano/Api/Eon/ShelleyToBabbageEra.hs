@@ -49,6 +49,8 @@ deriving instance Show (ShelleyToBabbageEra era)
 deriving instance Eq (ShelleyToBabbageEra era)
 
 instance Eon ShelleyToBabbageEra where
+  -- This is a trivial existential type - replace with a 'AnyShelleyToBabbageEra' when it will be used anywhere
+  type AnyEon ShelleyToBabbageEra = Some ShelleyToBabbageEra
   inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> yes ShelleyToBabbageEraShelley

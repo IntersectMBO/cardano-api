@@ -50,6 +50,8 @@ deriving instance Show (ConwayEraOnwards era)
 deriving instance Eq (ConwayEraOnwards era)
 
 instance Eon ConwayEraOnwards where
+  -- This is a trivial existential type - replace with a 'AnyConwayEraOnwards' when it will be used anywhere
+  type AnyEon ConwayEraOnwards = Some ConwayEraOnwards
   inEonForEra no yes = \case
     ByronEra    -> no
     ShelleyEra  -> no

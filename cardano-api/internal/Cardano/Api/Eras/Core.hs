@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -41,6 +42,8 @@ module Cardano.Api.Eras.Core
   , maybeEon
   , monoidForEraInEon
   , monoidForEraInEonA
+
+  , Some(..)
 
     -- * Data family instances
   , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
@@ -120,7 +123,17 @@ instance HasTypeProxy ConwayEra where
 -- | An Eon is a span of multiple eras.  Eons are used to scope functionality to
 -- particular eras such that it isn't possible construct code that uses functionality
 -- that is outside of given eras.
+
 class Eon (eon :: Type -> Type) where
+  -- | An existential type for the Eon. Can be used for example to extract more
+  -- information about eras in the eon. For example:
+  -- @
+  -- printMinimalEraForEon :: forall eon era. (Show (AnyEon eon), Bounded (AnyEon eon))
+  --                       => Proxy eon
+  --                       -> String
+  -- printMinimalEraForEon _ = show (minBound :: AnyEon eon)
+  -- @
+  type AnyEon eon :: Type
   -- | Determine the value to use in an eon (a span of multiple eras).
   -- Note that the negative case is the first argument, and the positive case is the second as per
   -- the 'either' function convention.
@@ -185,6 +198,10 @@ monoidForEraInEonA :: ()
   -> (eon era -> f a)
   -> f a
 monoidForEraInEonA sbe = forEraInEon sbe (pure mempty)
+
+
+data Some (f :: k -> Type) where
+    Some :: f a -> Some f
 
 -- ----------------------------------------------------------------------------
 -- Era and eon existential types
@@ -260,6 +277,7 @@ instance TestEquality CardanoEra where
     testEquality _          _          = Nothing
 
 instance Eon CardanoEra where
+  type AnyEon CardanoEra = AnyCardanoEra
   inEonForEra _ yes = yes
 
 instance ToCardanoEra CardanoEra where
