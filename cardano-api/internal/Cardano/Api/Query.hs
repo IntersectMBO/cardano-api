@@ -57,6 +57,7 @@ module Cardano.Api.Query
   , LedgerState (..)
   , getProgress
   , getSlotForRelativeTime
+  , decodeBigLedgerPeerSnapshot
 
     -- * Internal conversion functions
   , toLedgerUTxO
@@ -112,6 +113,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 import           Control.Monad.Trans.Except
@@ -300,6 +302,8 @@ data QueryInShelleyBasedEra era result where
   QueryProposals
     :: Set (L.GovActionId StandardCrypto)
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
+  QueryLedgerPeerSnapshot
+    :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
@@ -333,6 +337,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
   nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
   nodeToClientVersionOf QueryProposals{} = NodeToClientV_17
+  nodeToClientVersionOf QueryLedgerPeerSnapshot = NodeToClientV_19
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -472,6 +477,11 @@ decodeStakeSnapshot
   => SerialisedStakeSnapshots era
   -> Either DecoderError (StakeSnapshot era)
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
+
+decodeBigLedgerPeerSnapshot
+  :: Serialised LedgerPeerSnapshot
+  -> Either (LBS.ByteString, DecoderError) LedgerPeerSnapshot
+decodeBigLedgerPeerSnapshot (Serialised lps) = first (lps,) (Plain.decodeFull lps)
 
 toShelleyAddrSet
   :: CardanoEra era
@@ -718,6 +728,8 @@ toConsensusQueryShelleyBased sbe = \case
             (consensusQueryInEraInMode era (Consensus.GetProposals govActs))
       )
       sbe
+  QueryLedgerPeerSnapshot ->
+    Some (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot))
  where
   era = toCardanoEra sbe
 
@@ -1002,6 +1014,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryProposals{} ->
       case q' of
         Consensus.GetProposals{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryLedgerPeerSnapshot{} ->
+      case q' of
+        Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot ->
           r'
         _ -> fromConsensusQueryResultMismatch
 
