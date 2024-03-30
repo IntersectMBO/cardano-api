@@ -124,6 +124,7 @@ import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 import           Control.Monad.Trans.Except
@@ -324,6 +325,9 @@ data QueryInShelleyBasedEra era result where
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
 
+  QueryLedgerPeerSnapshot
+    :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
+
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
@@ -342,6 +346,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryDebugLedgerState = NodeToClientV_9
   nodeToClientVersionOf QueryProtocolState = NodeToClientV_9
   nodeToClientVersionOf QueryCurrentEpochState = NodeToClientV_9
+  nodeToClientVersionOf QueryLedgerPeerSnapshot = NodeToClientV_9
   -- Babbage >= v13
   nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_14
   nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
@@ -705,6 +710,9 @@ toConsensusQueryShelleyBased sbe = \case
       creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
       creds' = Set.map toShelleyStakeCredential creds
 
+  QueryLedgerPeerSnapshot ->
+    Some (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot))
+
   where
     era = shelleyBasedToCardanoEra sbe
 
@@ -967,6 +975,11 @@ fromConsensusQueryResultShelleyBased _ QueryStakeVoteDelegatees{} q' delegs' =
     case q' of
       Consensus.GetFilteredVoteDelegatees {}
         -> Map.mapKeys fromShelleyStakeCredential delegs'
+      _ -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryLedgerPeerSnapshot q' serLedgerPeerSnapshot =
+    case q' of
+      Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot -> serLedgerPeerSnapshot
       _ -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
