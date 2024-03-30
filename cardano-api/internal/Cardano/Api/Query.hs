@@ -57,6 +57,7 @@ module Cardano.Api.Query
   , LedgerState (..)
   , getProgress
   , getSlotForRelativeTime
+  , decodeBigLedgerPeerSnapshot
 
     -- * Internal conversion functions
   , toLedgerUTxO
@@ -112,6 +113,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 import           Control.Monad.Trans.Except
@@ -296,6 +298,8 @@ data QueryInShelleyBasedEra era result where
   QueryStakeVoteDelegatees
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
+  QueryLedgerPeerSnapshot
+    :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
@@ -314,6 +318,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryDebugLedgerState = NodeToClientV_9
   nodeToClientVersionOf QueryProtocolState = NodeToClientV_9
   nodeToClientVersionOf QueryCurrentEpochState = NodeToClientV_9
+  nodeToClientVersionOf QueryLedgerPeerSnapshot = NodeToClientV_9
   -- Babbage >= v13
   nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_14
   nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
@@ -467,6 +472,11 @@ decodeStakeSnapshot
   => SerialisedStakeSnapshots era
   -> Either DecoderError (StakeSnapshot era)
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
+
+decodeBigLedgerPeerSnapshot
+  :: Serialised LedgerPeerSnapshot
+  -> Either DecoderError LedgerPeerSnapshot
+decodeBigLedgerPeerSnapshot = Plain.decodeFull . unSerialised
 
 toShelleyAddrSet
   :: CardanoEra era
@@ -703,6 +713,8 @@ toConsensusQueryShelleyBased sbe = \case
    where
     creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
     creds' = Set.map toShelleyStakeCredential creds
+  QueryLedgerPeerSnapshot ->
+    Some (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot))
  where
   era = toCardanoEra sbe
 
@@ -983,6 +995,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
       case q' of
         Consensus.GetFilteredVoteDelegatees{} ->
           Map.mapKeys fromShelleyStakeCredential r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryLedgerPeerSnapshot{} ->
+      case q' of
+        Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot ->
+          r'
         _ -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
