@@ -92,6 +92,8 @@ import           GHC.Stack (HasCallStack)
 import           GHC.TypeLits
 import           Lens.Micro
 
+deriving instance Ord (L.VotingProcedure era)
+
 deriving instance Generic (L.ApplyTxError era)
 deriving instance Generic (L.Registration.TooLarge a)
 deriving instance Generic L.ApplicationNameError

@@ -29,19 +29,19 @@ import           Test.Tasty.Hedgehog (testProperty)
 -- we can't derive an Eq instance for Crypto.HD.XPrv
 prop_roundtrip_txbody_CBOR :: Property
 prop_roundtrip_txbody_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  Some era <- H.forAll $ Gen.element [minBound..maxBound]
   x <- H.forAll $ makeSignedTransaction [] <$> genTxBody era
   H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  Some era <- H.forAll $ Gen.element [minBound..maxBound]
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
 
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  Some era <- H.forAll $ Gen.element [minBound..maxBound]
   x <- H.forAll $ genCardanoKeyWitness era
   shelleyBasedEraConstraints era $ H.trippingCbor (AsKeyWitness (proxyToAsType Proxy)) x
 
@@ -168,13 +168,13 @@ prop_roundtrip_UpdateProposal_CBOR = H.property $ do
 
 prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  Some era <- H.forAll $ Gen.element [minBound..maxBound]
   x <- forAll $ genTx era
   H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do
-  AnyShelleyBasedEra sbe <- H.forAll $ Gen.element [minBound..maxBound]
+  Some sbe <- H.forAll $ Gen.element [minBound..maxBound]
   x <- forAll $ genShelleyKeyWitness sbe
   tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 

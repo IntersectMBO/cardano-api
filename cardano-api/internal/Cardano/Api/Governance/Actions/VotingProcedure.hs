@@ -30,7 +30,10 @@ import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as L
 
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           GHC.Generics
@@ -153,6 +156,39 @@ singletonVotingProcedures _ voter govActionId votingProcedure =
     $ L.VotingProcedures
     $ Map.singleton voter
     $ Map.singleton govActionId votingProcedure
+
+-- | Lax voting procedures that do not enforce any constraints on the voting procedures.
+-- In particular this allows for conflicting voting procedures to be merged.
+newtype LaxVotingProcedures era = LaxVotingProcedures
+  { unGovActionIdsByVoter ::
+      Map
+        (L.Voter (EraCrypto (ShelleyLedgerEra era)))
+        (Map
+          (L.GovActionId (EraCrypto (ShelleyLedgerEra era)))
+          (Set (L.VotingProcedure (ShelleyLedgerEra era))))
+  }
+
+instance Semigroup (LaxVotingProcedures era) where
+  LaxVotingProcedures a <> LaxVotingProcedures b =
+    LaxVotingProcedures $ Map.unionWith (Map.unionWith Set.union) a b
+
+instance Monoid (LaxVotingProcedures era) where
+  mempty = LaxVotingProcedures Map.empty
+
+votingProceduresToLax :: ConwayEraOnwards era -> VotingProcedures era -> LaxVotingProcedures era
+votingProceduresToLax eon (VotingProcedures vp) =
+  conwayEraOnwardsConstraints eon
+    $ LaxVotingProcedures
+    $ Map.map (Map.map Set.singleton)
+    $ L.unVotingProcedures vp
+
+votingProceduresFromLax :: LaxVotingProcedures era -> (LaxVotingProcedures era, VotingProcedures era)
+votingProceduresFromLax (LaxVotingProcedures vp) =
+  let
+    votingProcedures = VotingProcedures
+      $ L.VotingProcedures
+      $ Map.map (Map.map Set.findMin) vp
+  in (LaxVotingProcedures vp, votingProcedures)
 
 -- | Right biased merge of Voting procedures.
 -- TODO Conway we need an alternative version of this function that can report conflicts as it is

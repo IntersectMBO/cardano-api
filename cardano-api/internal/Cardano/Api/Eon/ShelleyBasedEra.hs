@@ -14,7 +14,6 @@ module Cardano.Api.Eon.ShelleyBasedEra
   ( -- * Shelley-based eras
     ShelleyBasedEra(..)
   , IsShelleyBasedEra(..)
-  , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , inAnyShelleyBasedEra
   , shelleyBasedToCardanoEra
@@ -57,8 +56,7 @@ import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra,
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
 import           Control.DeepSeq
-import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
-import qualified Data.Text as Text
+import           Data.Aeson (ToJSON, toJSON)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
 import           Text.Pretty (Pretty (..))
@@ -233,60 +231,54 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway  -> id
 
-data AnyShelleyBasedEra where
-  AnyShelleyBasedEra
-    :: Typeable era
-    => ShelleyBasedEra era
-    -> AnyShelleyBasedEra
+-- deriving instance Show AnyShelleyBasedEra
 
-deriving instance Show AnyShelleyBasedEra
+-- instance Eq AnyShelleyBasedEra where
+--     AnyShelleyBasedEra sbe == AnyShelleyBasedEra sbe' =
+--       case testEquality sbe sbe' of
+--         Nothing   -> False
+--         Just Refl -> True -- since no constructors share types
 
-instance Eq AnyShelleyBasedEra where
-    AnyShelleyBasedEra sbe == AnyShelleyBasedEra sbe' =
-      case testEquality sbe sbe' of
-        Nothing   -> False
-        Just Refl -> True -- since no constructors share types
+-- instance Bounded AnyShelleyBasedEra where
+--    minBound = AnyShelleyBasedEra ShelleyBasedEraShelley
+--    maxBound = AnyShelleyBasedEra ShelleyBasedEraConway
 
-instance Bounded AnyShelleyBasedEra where
-   minBound = AnyShelleyBasedEra ShelleyBasedEraShelley
-   maxBound = AnyShelleyBasedEra ShelleyBasedEraConway
+-- instance Enum AnyShelleyBasedEra where
+--    enumFrom e = enumFromTo e maxBound
 
-instance Enum AnyShelleyBasedEra where
-   enumFrom e = enumFromTo e maxBound
+--    fromEnum = \case
+--       AnyShelleyBasedEra ShelleyBasedEraShelley  -> 1
+--       AnyShelleyBasedEra ShelleyBasedEraAllegra  -> 2
+--       AnyShelleyBasedEra ShelleyBasedEraMary     -> 3
+--       AnyShelleyBasedEra ShelleyBasedEraAlonzo   -> 4
+--       AnyShelleyBasedEra ShelleyBasedEraBabbage  -> 5
+--       AnyShelleyBasedEra ShelleyBasedEraConway   -> 6
 
-   fromEnum = \case
-      AnyShelleyBasedEra ShelleyBasedEraShelley  -> 1
-      AnyShelleyBasedEra ShelleyBasedEraAllegra  -> 2
-      AnyShelleyBasedEra ShelleyBasedEraMary     -> 3
-      AnyShelleyBasedEra ShelleyBasedEraAlonzo   -> 4
-      AnyShelleyBasedEra ShelleyBasedEraBabbage  -> 5
-      AnyShelleyBasedEra ShelleyBasedEraConway   -> 6
+--    toEnum = \case
+--       1 -> AnyShelleyBasedEra ShelleyBasedEraShelley
+--       2 -> AnyShelleyBasedEra ShelleyBasedEraAllegra
+--       3 -> AnyShelleyBasedEra ShelleyBasedEraMary
+--       4 -> AnyShelleyBasedEra ShelleyBasedEraAlonzo
+--       5 -> AnyShelleyBasedEra ShelleyBasedEraBabbage
+--       6 -> AnyShelleyBasedEra ShelleyBasedEraConway
+--       n ->
+--          error $
+--             "AnyShelleyBasedEra.toEnum: " <> show n
+--             <> " does not correspond to any known enumerated era."
 
-   toEnum = \case
-      1 -> AnyShelleyBasedEra ShelleyBasedEraShelley
-      2 -> AnyShelleyBasedEra ShelleyBasedEraAllegra
-      3 -> AnyShelleyBasedEra ShelleyBasedEraMary
-      4 -> AnyShelleyBasedEra ShelleyBasedEraAlonzo
-      5 -> AnyShelleyBasedEra ShelleyBasedEraBabbage
-      6 -> AnyShelleyBasedEra ShelleyBasedEraConway
-      n ->
-         error $
-            "AnyShelleyBasedEra.toEnum: " <> show n
-            <> " does not correspond to any known enumerated era."
+-- instance ToJSON AnyShelleyBasedEra where
+--    toJSON (AnyShelleyBasedEra sbe) = toJSON sbe
 
-instance ToJSON AnyShelleyBasedEra where
-   toJSON (AnyShelleyBasedEra sbe) = toJSON sbe
-
-instance FromJSON AnyShelleyBasedEra where
-   parseJSON = withText "AnyShelleyBasedEra"
-     $ \case
-        "Shelley" -> pure $ AnyShelleyBasedEra ShelleyBasedEraShelley
-        "Allegra" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-        "Mary" -> pure $ AnyShelleyBasedEra ShelleyBasedEraMary
-        "Alonzo" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-        "Babbage" -> pure $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-        "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
-        wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
+-- instance FromJSON AnyShelleyBasedEra where
+--    parseJSON = withText "AnyShelleyBasedEra"
+--      $ \case
+--         "Shelley" -> pure $ AnyShelleyBasedEra ShelleyBasedEraShelley
+--         "Allegra" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+--         "Mary" -> pure $ AnyShelleyBasedEra ShelleyBasedEraMary
+--         "Alonzo" -> pure $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+--         "Babbage" -> pure $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+--         "Conway" -> pure $ AnyShelleyBasedEra ShelleyBasedEraConway
+--         wrong -> fail $ "Failed to parse unknown shelley-based era: " <> Text.unpack wrong
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era

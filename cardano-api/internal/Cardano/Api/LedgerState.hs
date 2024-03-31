@@ -254,7 +254,7 @@ data LedgerStateError
   -- ^ The ledger state condition you were interested in was not met
   -- prior to the termination epoch.
   | UnexpectedLedgerState
-      AnyShelleyBasedEra
+      (Some ShelleyBasedEra)
       -- ^ Expected era
       (NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto))
       -- ^ Ledgerstate from an unexpected era
@@ -1052,7 +1052,7 @@ getNewEpochState
   -> Either LedgerStateError (ShelleyAPI.NewEpochState (ShelleyLedgerEra era))
 getNewEpochState era x = do
   let tip = Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x
-      err = UnexpectedLedgerState (shelleyBasedEraConstraints era $ AnyShelleyBasedEra era) tip
+      err = UnexpectedLedgerState (shelleyBasedEraConstraints era $ Some era) tip
   case era of
     ShelleyBasedEraShelley ->
       case tip of

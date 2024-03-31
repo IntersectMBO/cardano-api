@@ -90,7 +90,6 @@ module Cardano.Api (
 
     ShelleyBasedEra(..),
     IsShelleyBasedEra(..),
-    AnyShelleyBasedEra(..),
     InAnyShelleyBasedEra(..),
     inAnyShelleyBasedEra,
     shelleyBasedToCardanoEra,

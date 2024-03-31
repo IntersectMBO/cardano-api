@@ -210,6 +210,7 @@ library internal
                       , scientific
                       , serialise
                       , small-steps ^>= 1.0
+                      , some
                       , sop-core
                       , sop-extras
                       , stm
