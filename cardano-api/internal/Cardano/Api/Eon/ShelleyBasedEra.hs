@@ -242,13 +242,13 @@ shelleyBasedEraConstraints = \case
   ShelleyBasedEraBabbage -> id
   ShelleyBasedEraConway -> id
 
-data AnyShelleyBasedEra where
-  AnyShelleyBasedEra
-    :: Typeable era
-    => ShelleyBasedEra era
-    -> AnyShelleyBasedEra
+-- deriving instance Show AnyShelleyBasedEra
 
-deriving instance Show AnyShelleyBasedEra
+-- instance Eq AnyShelleyBasedEra where
+--     AnyShelleyBasedEra sbe == AnyShelleyBasedEra sbe' =
+--       case testEquality sbe sbe' of
+--         Nothing   -> False
+--         Just Refl -> True -- since no constructors share types
 
 instance Eq AnyShelleyBasedEra where
   AnyShelleyBasedEra sbe == AnyShelleyBasedEra sbe' =

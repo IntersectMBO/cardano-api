@@ -275,7 +275,7 @@ data LedgerStateError
     -- prior to the termination epoch.
     TerminationEpochReached EpochNo
   | UnexpectedLedgerState
-      AnyShelleyBasedEra
+      (Some ShelleyBasedEra)
       -- ^ Expected era
       (Consensus.CardanoLedgerState Consensus.StandardCrypto)
       -- ^ Ledgerstate from an unexpected era
@@ -1206,7 +1206,7 @@ getNewEpochState
   -> Consensus.CardanoLedgerState Consensus.StandardCrypto
   -> Either LedgerStateError (ShelleyAPI.NewEpochState (ShelleyLedgerEra era))
 getNewEpochState era x = do
-  let err = UnexpectedLedgerState (shelleyBasedEraConstraints era $ AnyShelleyBasedEra era) x
+  let err = UnexpectedLedgerState (shelleyBasedEraConstraints era $ Some era) x
   case era of
     ShelleyBasedEraShelley ->
       case x of

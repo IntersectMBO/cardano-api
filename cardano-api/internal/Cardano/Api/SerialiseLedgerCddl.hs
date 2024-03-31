@@ -322,26 +322,26 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 -- Parse the text into types because this will increase code readability and
 -- will make it easier to keep track of the different Cddl descriptions via
 -- a single sum data type.
-cddlTypeToEra :: Text -> Either TextEnvelopeCddlError AnyShelleyBasedEra
+cddlTypeToEra :: Text -> Either TextEnvelopeCddlError (Some ShelleyBasedEra)
 cddlTypeToEra = \case
-  "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
-  "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-  "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
-  "Witnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-  "Witnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-  "Witnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
-  "Unwitnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
-  "Unwitnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-  "Unwitnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
-  "Unwitnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-  "Unwitnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-  "Unwitnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
-  "TxWitness ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
-  "TxWitness AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-  "TxWitness MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
-  "TxWitness AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-  "TxWitness BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-  "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+  "Witnessed Tx ShelleyEra" -> return $ Some ShelleyBasedEraShelley
+  "Witnessed Tx AllegraEra" -> return $ Some ShelleyBasedEraAllegra
+  "Witnessed Tx MaryEra" -> return $ Some ShelleyBasedEraMary
+  "Witnessed Tx AlonzoEra" -> return $ Some ShelleyBasedEraAlonzo
+  "Witnessed Tx BabbageEra" -> return $ Some ShelleyBasedEraBabbage
+  "Witnessed Tx ConwayEra" -> return $ Some ShelleyBasedEraConway
+  "Unwitnessed Tx ShelleyEra" -> return $ Some ShelleyBasedEraShelley
+  "Unwitnessed Tx AllegraEra" -> return $ Some ShelleyBasedEraAllegra
+  "Unwitnessed Tx MaryEra" -> return $ Some ShelleyBasedEraMary
+  "Unwitnessed Tx AlonzoEra" -> return $ Some ShelleyBasedEraAlonzo
+  "Unwitnessed Tx BabbageEra" -> return $ Some ShelleyBasedEraBabbage
+  "Unwitnessed Tx ConwayEra" -> return $ Some ShelleyBasedEraConway
+  "TxWitness ShelleyEra" -> return $ Some ShelleyBasedEraShelley
+  "TxWitness AllegraEra" -> return $ Some ShelleyBasedEraAllegra
+  "TxWitness MaryEra" -> return $ Some ShelleyBasedEraMary
+  "TxWitness AlonzoEra" -> return $ Some ShelleyBasedEraAlonzo
+  "TxWitness BabbageEra" -> return $ Some ShelleyBasedEraBabbage
+  "TxWitness ConwayEra" -> return $ Some ShelleyBasedEraConway
   unknownCddlType -> Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
 
 readFileTextEnvelopeCddlAnyOf

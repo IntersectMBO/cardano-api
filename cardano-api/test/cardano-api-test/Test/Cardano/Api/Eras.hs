@@ -20,7 +20,7 @@ import Test.Tasty.Hedgehog (testProperty)
 prop_maxBound_CardanoMatchesShelley :: Property
 prop_maxBound_CardanoMatchesShelley = property $ do
   AnyCardanoEra era <- forAll $ Gen.element [maxBound]
-  AnyShelleyBasedEra sbe <- forAll $ Gen.element [maxBound]
+  Some sbe <- forAll $ Gen.element [maxBound]
 
   fromEnum (anyCardanoEra era) === fromEnum (anyCardanoEra (toCardanoEra sbe))
 
@@ -43,7 +43,7 @@ prop_toJSON_CardanoMatchesShelley :: Property
 prop_toJSON_CardanoMatchesShelley = property $ do
   AnyShelleyBasedEra sbe <- forAll $ Gen.element [minBound .. maxBound]
 
-  toJSON (AnyShelleyBasedEra sbe) === toJSON (anyCardanoEra (toCardanoEra sbe))
+  toJSON (Some sbe) === toJSON (anyCardanoEra (toCardanoEra sbe))
 
 tests :: TestTree
 tests =

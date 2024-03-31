@@ -30,6 +30,7 @@ import Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as L
 import Control.Monad (foldM)
 import qualified Data.Map as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text

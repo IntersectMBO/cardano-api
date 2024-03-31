@@ -213,6 +213,7 @@ library internal
     scientific,
     serialise,
     small-steps ^>=1.1,
+    some,
     sop-core,
     stm,
     strict-sop-core,
