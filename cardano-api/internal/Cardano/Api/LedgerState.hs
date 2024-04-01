@@ -144,7 +144,6 @@ import qualified Cardano.Slotting.Slot as Slot
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
 import           Ouroboros.Consensus.Block.Forging (BlockForging)
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
-import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
@@ -153,7 +152,6 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
-import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as HFC
 import           Ouroboros.Consensus.HardFork.Combinator.State.Types
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
@@ -168,6 +166,7 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
+import           Ouroboros.Consensus.Storage.Serialisation
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import           Ouroboros.Network.Block (blockNo)
 import qualified Ouroboros.Network.Block
@@ -203,8 +202,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.SOP (K (K), (:.:) (Comp))
-import           Data.SOP.Strict (NP (..), fn)
+import           Data.SOP.Strict (NP (..))
 import           Data.SOP.Strict.NS
 import qualified Data.SOP.Telescope as Telescope
 import           Data.Text (Text)
@@ -1126,32 +1124,18 @@ pattern ConwayLedgerState
 pattern ConwayLedgerState x =  S (S (S (S (S (S (Z x))))))
 
 
-encodeLedgerState :: LedgerState -> CBOR.Encoding
-encodeLedgerState (LedgerState (HFC.HardForkLedgerState st)) =
-  HFC.encodeTelescope
-    (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
-    st
-  where
-    byron = fn (K . Byron.encodeByronLedgerState)
-    shelley = fn (K . Shelley.encodeShelleyLedgerState)
-    allegra = fn (K . Shelley.encodeShelleyLedgerState)
-    mary = fn (K . Shelley.encodeShelleyLedgerState)
-    alonzo = fn (K . Shelley.encodeShelleyLedgerState)
-    babbage = fn (K . Shelley.encodeShelleyLedgerState)
-    conway = fn (K . Shelley.encodeShelleyLedgerState)
+encodeLedgerState ::
+     Consensus.CardanoCodecConfig Consensus.StandardCrypto
+  -> LedgerState
+  -> CBOR.Encoding
+encodeLedgerState ccfg (LedgerState st) =
+  encodeDisk @(Consensus.CardanoBlock Consensus.StandardCrypto) ccfg st
 
-decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
-decodeLedgerState =
-  LedgerState . HFC.HardForkLedgerState
-    <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
-  where
-    byron = Comp Byron.decodeByronLedgerState
-    shelley = Comp Shelley.decodeShelleyLedgerState
-    allegra = Comp Shelley.decodeShelleyLedgerState
-    mary = Comp Shelley.decodeShelleyLedgerState
-    alonzo = Comp Shelley.decodeShelleyLedgerState
-    babbage = Comp Shelley.decodeShelleyLedgerState
-    conway = Comp Shelley.decodeShelleyLedgerState
+decodeLedgerState ::
+     Consensus.CardanoCodecConfig Consensus.StandardCrypto
+  -> forall s. CBOR.Decoder s LedgerState
+decodeLedgerState ccfg =
+  LedgerState <$> decodeDisk @(Consensus.CardanoBlock Consensus.StandardCrypto) ccfg
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
