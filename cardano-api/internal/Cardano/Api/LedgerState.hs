@@ -17,15 +17,15 @@ module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
     envSecurityParam
   , LedgerState
-      ( ..
-      , LedgerStateByron
-      , LedgerStateShelley
-      , LedgerStateAllegra
-      , LedgerStateMary
-      , LedgerStateAlonzo
-      , LedgerStateBabbage
-      , LedgerStateConway
-      )
+      ( .. )
+  , pattern Consensus.LedgerStateByron
+  , pattern Consensus.LedgerStateShelley
+  , pattern Consensus.LedgerStateAllegra
+  , pattern Consensus.LedgerStateMary
+  , pattern Consensus.LedgerStateAlonzo
+  , pattern Consensus.LedgerStateBabbage
+  , pattern Consensus.LedgerStateConway
+
   , encodeLedgerState
   , decodeLedgerState
   , initialLedgerState
@@ -143,7 +143,6 @@ import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
 import           Ouroboros.Consensus.Block.Forging (BlockForging)
-import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
@@ -323,48 +322,6 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
         ShelleyBasedEraConway  -> Consensus.BlockConway shelleyBlock
 
-pattern LedgerStateByron
-  :: Ledger.LedgerState Byron.ByronBlock
-  -> LedgerState
-pattern LedgerStateByron st <- LedgerState (Consensus.LedgerStateByron st)
-
-pattern LedgerStateShelley
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Consensus.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateShelley st <- LedgerState  (Consensus.LedgerStateShelley st)
-
-pattern LedgerStateAllegra
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Consensus.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateAllegra st <- LedgerState  (Consensus.LedgerStateAllegra st)
-
-pattern LedgerStateMary
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Consensus.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateMary st <- LedgerState  (Consensus.LedgerStateMary st)
-
-pattern LedgerStateAlonzo
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Consensus.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
-
-pattern LedgerStateBabbage
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.BabbageEra Consensus.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateBabbage st <- LedgerState  (Consensus.LedgerStateBabbage st)
-
-pattern LedgerStateConway
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ConwayEra Consensus.StandardCrypto))
-  -> LedgerState
-pattern LedgerStateConway st <- LedgerState  (Consensus.LedgerStateConway st)
-
-{-# COMPLETE LedgerStateByron
-           , LedgerStateShelley
-           , LedgerStateAllegra
-           , LedgerStateMary
-           , LedgerStateAlonzo
-           , LedgerStateBabbage
-           , LedgerStateConway #-}
 
 data FoldBlocksError
   = FoldBlocksInitialLedgerStateError !InitialLedgerStateError
