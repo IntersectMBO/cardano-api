@@ -832,7 +832,7 @@ genesisConfigToEnv
             in
             Right $ Env
                   { envLedgerConfig = Consensus.topLevelConfigLedger topLevelConfig
-                  , envProtocolConfig = Consensus.topLevelConfigProtocol topLevelConfig
+                  , envConsensusConfig = Consensus.topLevelConfigProtocol topLevelConfig
                   }
         where
           shelleyGenesis = transCfg ^. Ledger.tcShelleyGenesisL
@@ -1412,7 +1412,7 @@ newtype StakeCred
 
 data Env = Env
   { envLedgerConfig :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
-  , envProtocolConfig :: Consensus.CardanoConsensusConfig Consensus.StandardCrypto
+  , envConsensusConfig :: Consensus.CardanoConsensusConfig Consensus.StandardCrypto
   }
 
 envSecurityParam :: Env -> Word64
@@ -1420,7 +1420,7 @@ envSecurityParam env = k
   where
     Consensus.SecurityParam k
       = HFC.hardForkConsensusConfigK
-      $ envProtocolConfig env
+      $ envConsensusConfig env
 
 -- | How to do validation when applying a block to a ledger state.
 data ValidationMode
