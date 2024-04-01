@@ -153,7 +153,6 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import           Ouroboros.Consensus.HardFork.Combinator.State.Types
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
-import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrResult)
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
@@ -987,9 +986,7 @@ initLedgerStateVar genesisConfig = LedgerState
     protocolInfo = mkProtocolInfoCardano genesisConfig
 
 newtype LedgerState = LedgerState
-  { clsState :: Ledger.LedgerState
-                  (HFC.HardForkBlock
-                    (Consensus.CardanoEras Consensus.StandardCrypto))
+  { clsState :: Consensus.CardanoLedgerState Consensus.StandardCrypto
   } deriving Show
 
 
@@ -1097,20 +1094,17 @@ decodeLedgerState ccfg =
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
 toLedgerStateEvents ::
-  LedgerResult
-    ( Shelley.LedgerState
-        (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
-    )
-    ( Shelley.LedgerState
-        (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
-    ) ->
+  Ledger.LedgerResult
+    (Consensus.CardanoLedgerState Consensus.StandardCrypto)
+    (Consensus.CardanoLedgerState Consensus.StandardCrypto)
+    ->
   LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
   where
-    ledgerState = LedgerState (lrResult lr)
+    ledgerState = LedgerState (Ledger.lrResult lr)
     ledgerEvents = mapMaybe (toLedgerEvent
-      . WrapLedgerEvent @(HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto)))
-      $ lrEvents lr
+      . WrapLedgerEvent @(Consensus.CardanoBlock Consensus.StandardCrypto))
+      $ Ledger.lrEvents lr
 
 -- Usually only one constructor, but may have two when we are preparing for a HFC event.
 data GenesisConfig
@@ -1133,10 +1127,8 @@ type NodeConfigFile = File NodeConfig
 mkProtocolInfoCardano ::
   GenesisConfig ->
   (Consensus.ProtocolInfo
-    (HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto))
-  , IO [BlockForging IO (HFC.HardForkBlock
-                              (Consensus.CardanoEras Consensus.StandardCrypto))])
+    (Consensus.CardanoBlock Consensus.StandardCrypto)
+  , IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)])
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg)
   = Consensus.protocolInfoCardano Consensus.CardanoProtocolParams
       { Consensus.paramsByron =
@@ -1428,8 +1420,8 @@ newtype StakeCred
   deriving (Eq, Ord)
 
 data Env = Env
-  { envLedgerConfig :: HFC.HardForkLedgerConfig (Consensus.CardanoEras Consensus.StandardCrypto)
-  , envProtocolConfig :: TPraos.ConsensusConfig (HFC.HardForkProtocol (Consensus.CardanoEras Consensus.StandardCrypto))
+  { envLedgerConfig :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
+  , envProtocolConfig :: Consensus.CardanoConsensusConfig Consensus.StandardCrypto
   }
 
 envSecurityParam :: Env -> Word64
@@ -1454,8 +1446,7 @@ applyBlock'
   :: Env
   -> LedgerState
   -> ValidationMode
-  ->  HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto)
+  -> Consensus.CardanoBlock Consensus.StandardCrypto
   -> Either LedgerStateError LedgerStateEvents
 applyBlock' env oldState validationMode block = do
   let config = envLedgerConfig env
@@ -1469,8 +1460,7 @@ applyBlockWithEvents
   -> LedgerState
   -> Bool
   -- ^ True to validate
-  ->  HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto)
+  -> Consensus.CardanoBlock Consensus.StandardCrypto
   -> Either LedgerStateError LedgerStateEvents
 applyBlockWithEvents env oldState enableValidation block = do
   let config = envLedgerConfig env
@@ -1482,12 +1472,9 @@ applyBlockWithEvents env oldState enableValidation block = do
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
 tickThenReapplyCheckHash
-    :: HFC.HardForkLedgerConfig
-        (Consensus.CardanoEras Consensus.StandardCrypto)
+    :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
     -> Consensus.CardanoBlock Consensus.StandardCrypto
-    -> Shelley.LedgerState
-        (HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto))
+    -> Consensus.CardanoLedgerState Consensus.StandardCrypto
     -> Either LedgerStateError LedgerStateEvents
 tickThenReapplyCheckHash cfg block lsb =
   if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
@@ -1517,12 +1504,9 @@ tickThenReapplyCheckHash cfg block lsb =
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
 tickThenApply
-    :: HFC.HardForkLedgerConfig
-        (Consensus.CardanoEras Consensus.StandardCrypto)
+    :: Consensus.CardanoLedgerConfig Consensus.StandardCrypto
     -> Consensus.CardanoBlock Consensus.StandardCrypto
-    -> Shelley.LedgerState
-        (HFC.HardForkBlock
-            (Consensus.CardanoEras Consensus.StandardCrypto))
+    -> Consensus.CardanoLedgerState Consensus.StandardCrypto
     -> Either LedgerStateError LedgerStateEvents
 tickThenApply cfg block lsb
   = either (Left . ApplyBlockError) (Right . toLedgerStateEvents)
