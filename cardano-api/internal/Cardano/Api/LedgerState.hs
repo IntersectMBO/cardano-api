@@ -16,8 +16,7 @@
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
     envSecurityParam
-  , LedgerState
-      ( .. )
+  , LedgerState ( .. )
   , pattern Consensus.LedgerStateByron
   , pattern Consensus.LedgerStateShelley
   , pattern Consensus.LedgerStateAllegra
@@ -151,18 +150,13 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
-import           Ouroboros.Consensus.HardFork.Combinator.State.Types
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
-import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
-import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
-import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
-import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
 import           Ouroboros.Consensus.Storage.Serialisation
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
@@ -200,9 +194,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.SOP.Strict (NP (..))
-import           Data.SOP.Strict.NS
-import qualified Data.SOP.Telescope as Telescope
+import           Data.SOP.Strict.NP
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -239,7 +231,7 @@ data LedgerStateError
   = ApplyBlockHashMismatch Text
   -- ^ When using QuickValidation, the block hash did not match the expected
   -- block hash after applying a new block to the current ledger state.
-  | ApplyBlockError (Consensus.HardForkLedgerError (Consensus.CardanoEras Consensus.StandardCrypto))
+  | ApplyBlockError (Consensus.CardanoLedgerError Consensus.StandardCrypto)
   -- ^ When using FullValidation, an error occurred when applying a new block
   -- to the current ledger state.
   | InvalidRollback
@@ -252,7 +244,7 @@ data LedgerStateError
   | UnexpectedLedgerState
       AnyShelleyBasedEra
       -- ^ Expected era
-      (NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto))
+      (Consensus.CardanoLedgerState Consensus.StandardCrypto)
       -- ^ Ledgerstate from an unexpected era
   | ByronEraUnsupported
   | DebugError !String
@@ -991,83 +983,41 @@ getAnyNewEpochState sbe (LedgerState ls) =
 
 getNewEpochState
   :: ShelleyBasedEra era
-  -> Consensus.LedgerState (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
+  -> Consensus.CardanoLedgerState Consensus.StandardCrypto
   -> Either LedgerStateError (ShelleyAPI.NewEpochState (ShelleyLedgerEra era))
 getNewEpochState era x = do
-  let tip = Telescope.tip $ getHardForkState $ HFC.hardForkLedgerStatePerEra x
-      err = UnexpectedLedgerState (shelleyBasedEraConstraints era $ AnyShelleyBasedEra era) tip
+  let err = UnexpectedLedgerState (shelleyBasedEraConstraints era $ AnyShelleyBasedEra era) x
   case era of
     ShelleyBasedEraShelley ->
-      case tip of
-        ShelleyLedgerState shelleyCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState shelleyCurrent
+      case x of
+        Consensus.LedgerStateShelley current ->
+          pure $ Shelley.shelleyLedgerState current
         _ -> Left err
     ShelleyBasedEraAllegra ->
-      case tip of
-        AllegraLedgerState allegraCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState allegraCurrent
+      case x of
+        Consensus.LedgerStateAllegra current ->
+          pure $ Shelley.shelleyLedgerState current
         _ -> Left err
     ShelleyBasedEraMary ->
-      case tip of
-        MaryLedgerState maryCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState maryCurrent
+      case x of
+        Consensus.LedgerStateMary current ->
+          pure $ Shelley.shelleyLedgerState current
         _ -> Left err
     ShelleyBasedEraAlonzo ->
-      case tip of
-        AlonzoLedgerState alonzoCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState alonzoCurrent
+      case x of
+        Consensus.LedgerStateAlonzo current ->
+          pure $ Shelley.shelleyLedgerState current
         _ -> Left err
     ShelleyBasedEraBabbage ->
-      case tip of
-        BabbageLedgerState babbageCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState babbageCurrent
+      case x of
+        Consensus.LedgerStateBabbage current ->
+          pure $ Shelley.shelleyLedgerState current
         _ -> Left err
     ShelleyBasedEraConway ->
-      case tip of
-        ConwayLedgerState conwayCurrent ->
-          pure $ Shelley.shelleyLedgerState $ currentState conwayCurrent
+     case x of
+        Consensus.LedgerStateConway current ->
+          pure $ Shelley.shelleyLedgerState current
         _ -> Left err
-
-{-# COMPLETE ShelleyLedgerState,
-             AllegraLedgerState,
-              MaryLedgerState,
-              AlonzoLedgerState,
-              BabbageLedgerState,
-              ConwayLedgerState
-             #-}
-
-pattern ShelleyLedgerState
-  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Consensus.StandardCrypto) (Shelley.ShelleyEra Consensus.StandardCrypto))
-  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
-pattern ShelleyLedgerState x = S (Z x)
-
-pattern AllegraLedgerState
-  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Consensus.StandardCrypto) (Shelley.AllegraEra Consensus.StandardCrypto))
-  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
-pattern AllegraLedgerState x = S (S (Z x))
-
-pattern MaryLedgerState
-  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Consensus.StandardCrypto) (Shelley.MaryEra Consensus.StandardCrypto))
-  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
-pattern MaryLedgerState x =  S (S (S (Z x)))
-
-
-pattern AlonzoLedgerState
-  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (TPraos.TPraos Consensus.StandardCrypto) (Shelley.AlonzoEra Consensus.StandardCrypto))
-  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
-pattern AlonzoLedgerState x =  S (S (S (S (Z x))))
-
-
-pattern BabbageLedgerState
-  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (Consensus.Praos Consensus.StandardCrypto) (Shelley.BabbageEra Consensus.StandardCrypto))
-  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
-pattern BabbageLedgerState x =  S (S (S (S (S (Z x)))))
-
-pattern ConwayLedgerState
-  :: Current Consensus.LedgerState (Shelley.ShelleyBlock (Consensus.Praos Consensus.StandardCrypto) (Shelley.ConwayEra Consensus.StandardCrypto))
-  -> NS (Current Consensus.LedgerState) (Consensus.CardanoEras Consensus.StandardCrypto)
-pattern ConwayLedgerState x =  S (S (S (S (S (S (Z x))))))
-
 
 encodeLedgerState ::
      Consensus.CardanoCodecConfig Consensus.StandardCrypto
