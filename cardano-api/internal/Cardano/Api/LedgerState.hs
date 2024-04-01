@@ -306,21 +306,12 @@ applyBlock
   -> LedgerState
   -- ^ The current ledger state
   -> ValidationMode
-  -> Block era
+  -> BlockInMode
   -- ^ Some block to apply
   -> Either LedgerStateError (LedgerState, [LedgerEvent])
   -- ^ The new ledger state (or an error).
-applyBlock env oldState validationMode block
-  = applyBlock' env oldState validationMode $ case block of
-      ByronBlock byronBlock -> Consensus.BlockByron byronBlock
-      ShelleyBlock blockEra shelleyBlock -> case blockEra of
-        ShelleyBasedEraShelley -> Consensus.BlockShelley shelleyBlock
-        ShelleyBasedEraAllegra -> Consensus.BlockAllegra shelleyBlock
-        ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
-        ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
-        ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
-        ShelleyBasedEraConway  -> Consensus.BlockConway shelleyBlock
-
+applyBlock env oldState validationMode
+  = applyBlock' env oldState validationMode . toConsensusBlock
 
 data FoldBlocksError
   = FoldBlocksInitialLedgerStateError !InitialLedgerStateError
@@ -477,7 +468,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
             -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
           clientNextN n knownLedgerStates =
             CSP.ClientStNext {
-                CSP.recvMsgRollForward = \blockInMode@(BlockInMode _ block@(Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
+                CSP.recvMsgRollForward = \blockInMode@(BlockInMode _ (Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
                   let newLedgerStateE = applyBlock
                         env
                         (maybe
@@ -486,7 +477,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
                           (Seq.lookup 0 knownLedgerStates)
                         )
                         validationMode
-                        block
+                        blockInMode
                   case newLedgerStateE of
                     Left err -> clientIdle_DoneNwithMaybeError n (Just err)
                     Right newLedgerState -> do
@@ -640,7 +631,7 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
             goClientStIdle (Left err) <$> CS.runChainSyncClient (recvMsgRollBackward point tip)
       )
     goClientStNext (Right history) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) = CS.ClientStNext
-      (\blkInMode@(BlockInMode _ blk@(Block (BlockHeader slotNo _ _) _)) tip -> CS.ChainSyncClient $ let
+      (\blkInMode@(BlockInMode _ (Block (BlockHeader slotNo _ _) _)) tip -> CS.ChainSyncClient $ let
           newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
@@ -648,7 +639,7 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
                   env
                   oldLedgerState
                   validationMode
-                  blk
+                  blkInMode
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
           in goClientStIdle (Right history') <$> CS.runChainSyncClient
                 (recvMsgRollForward (blkInMode, newLedgerStateE) tip)
@@ -728,7 +719,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
           goClientPipelinedStIdle (Left err) n <$> recvMsgRollBackward point tip
       )
     goClientStNext (Right history) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) = CSP.ClientStNext
-      (\blkInMode@(BlockInMode _ blk@(Block (BlockHeader slotNo _ _) _)) tip -> let
+      (\blkInMode@(BlockInMode _ (Block (BlockHeader slotNo _ _) _)) tip -> let
           newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
@@ -736,7 +727,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
                   env
                   oldLedgerState
                   validationMode
-                  blk
+                  blkInMode
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
         in goClientPipelinedStIdle (Right history') n <$> recvMsgRollForward
               (blkInMode, newLedgerStateE) tip
@@ -1920,7 +1911,7 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
             -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
           clientNextN n knownLedgerStates =
             CSP.ClientStNext {
-                CSP.recvMsgRollForward = \blockInMode@(BlockInMode era block@(Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
+                CSP.recvMsgRollForward = \blockInMode@(BlockInMode era (Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
                   let newLedgerStateE = applyBlock
                         env
                         (maybe
@@ -1929,7 +1920,7 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
                           (Seq.lookup 0 knownLedgerStates)
                         )
                         validationMode
-                        block
+                        blockInMode
                   case forEraMaybeEon era of
                     Nothing -> let !err = Just ByronEraUnsupported
                                in clientIdle_DoneNwithMaybeError n err
