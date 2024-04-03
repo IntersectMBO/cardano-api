@@ -267,7 +267,7 @@ instance ToCardanoEra CardanoEra where
 
 -- | The class of Cardano eras. This allows uniform handling of all Cardano
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
--- constructors, or the 'CardanoEraStyle' constructors via `cardanoEraStyle`.
+-- constructors.
 --
 class HasTypeProxy era => IsCardanoEra era where
    cardanoEra      :: CardanoEra era
