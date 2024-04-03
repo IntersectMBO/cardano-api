@@ -29,9 +29,14 @@ module Cardano.Api.Fees (
     evaluateTransactionBalance,
 
     -- * Automated transaction building
+    estimateBalancedTxBody,
+    estimateOrCalculateBalancedTxBody,
     makeTransactionBodyAutoBalance,
+    AutoBalanceError(..),
     BalancedTxBody(..),
+    FeeEstimationMode(..),
     TxBodyErrorAutoBalance(..),
+    TxFeeEstimationError(..),
 
     -- * Minimum UTxO calculation
     calculateMinimumUTxO,
@@ -76,6 +81,7 @@ import           Control.Monad (forM_)
 import           Data.Bifunctor (bimap, first)
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Function ((&))
+import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
@@ -86,6 +92,159 @@ import qualified Data.Text as Text
 import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
+
+data AutoBalanceError era 
+  = AutoBalanceEstimationError (TxFeeEstimationError era)
+  | AutoBalanceCalculationError (TxBodyErrorAutoBalance era)
+
+estimateOrCalculateBalancedTxBody
+  :: ShelleyBasedEra era
+  -> FeeEstimationMode era
+  -> L.PParams (ShelleyLedgerEra era)
+  -> TxBodyContent BuildTx era
+  -> Set PoolId
+  -> Map StakeCredential L.Coin
+  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
+  -> AddressInEra era
+  -> Either (AutoBalanceError era) (BalancedTxBody era)
+estimateOrCalculateBalancedTxBody era feeEstMode pparams txBodyContent poolids stakeDelegDeposits drepDelegDeposits changeAddr = 
+  case feeEstMode of 
+    CalculateWithSpendableUTxO utxo systemstart ledgerEpochInfo mOverride -> 
+      first AutoBalanceCalculationError $ 
+        makeTransactionBodyAutoBalance era systemstart ledgerEpochInfo (LedgerProtocolParameters pparams)
+                                       poolids stakeDelegDeposits drepDelegDeposits utxo txBodyContent changeAddr mOverride
+
+    EstimateWithoutSpendableUTxO totalPotentialCollateral totalUTxOValue exUnitsMap numKeyWits numByronWits totalRefScriptsSize -> 
+      forShelleyBasedEraInEon
+        era 
+        (Left $ AutoBalanceEstimationError TxFeeEstimationOnlyMaryOnwardsSupported)
+        (\w -> first AutoBalanceEstimationError $ 
+                 estimateBalancedTxBody w txBodyContent pparams poolids stakeDelegDeposits drepDelegDeposits 
+                                        exUnitsMap totalPotentialCollateral numKeyWits numByronWits 
+                                        totalRefScriptsSize changeAddr totalUTxOValue
+        )
+
+  
+data TxFeeEstimationError era
+  = TxFeeEstimationTransactionTranslationError (TransactionValidityError era)
+  | TxFeeEstimationScriptExecutionError (TxBodyErrorAutoBalance era)
+  | TxFeeEstimationBalanceError (TxBodyErrorAutoBalance era)
+  | TxFeeEstimationxBodyError TxBodyError
+  | TxFeeEstimationFinalConstructionError TxBodyError
+  | TxFeeEstimationOnlyMaryOnwardsSupported
+  deriving Show
+
+
+-- | Use when you do not have access to the UTxOs you intend to spend
+estimateBalancedTxBody
+  :: MaryEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> L.PParams (ShelleyLedgerEra era)
+  -> Set PoolId       -- ^ The set of registered stake pools, that are being
+                      --   unregistered in this transaction.
+  -> Map StakeCredential L.Coin
+                      -- ^ Map of all deposits for stake credentials that are being
+                      --   unregistered in this transaction
+  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
+                      -- ^ Map of all deposits for drep credentials that are being
+                      --   unregistered in this transaction
+  -> Map ScriptWitnessIndex ExecutionUnits -- ^ Plutus script execution units
+  -> Coin -- ^ Total potential collateral amount
+  -> Int -- ^ The number of key witnesses still to be added to the transaction.
+  -> Int -- ^ The number of Byron key witnesses still to be added to the transaction.
+  -> Int -- ^ Size of all reference scripts in bytes
+  -> AddressInEra era -- ^ Change address
+  -> Value -- ^ Total value of UTxOs being spent
+  -> Either (TxFeeEstimationError era) (BalancedTxBody era)
+estimateBalancedTxBody w txbodycontent pparams poolids
+                      stakeDelegDeposits drepDelegDeposits exUnitsMap totalPotentialCollateral
+                      intendedKeyWits byronwits sizeOfAllReferenceScripts changeaddr
+                      totalUTxOValue = do
+    -- Step 1. Substitute those execution units into the tx
+
+    let sbe = maryEraOnwardsToShelleyBasedEra w
+    txbodycontent1 <- first TxFeeEstimationScriptExecutionError
+                        $ substituteExecutionUnits exUnitsMap txbodycontent
+
+    -- Step 2. We need to calculate the current balance of the tx. The user
+    -- must at least provide the total value of the UTxOs they intend to spend
+    -- for us to calulate the balance.
+    let change = toLedgerValue w $ calculateChangeValue sbe totalUTxOValue txbodycontent1
+    let maxLovelaceChange = L.Coin (2^(64 :: Integer)) - 1
+    let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
+    let changeTxOut = forShelleyBasedEraInEon sbe
+          (lovelaceToTxOutValue sbe maxLovelaceChange)
+          (\w' -> maryEraOnwardsConstraints w' $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
+
+    let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput sbe txbodycontent changeaddr
+
+    -- Step 3. Create a tx body with out max lovelace fee. This is strictly for
+    -- calculating our fee with evaluateTransactionFee.
+    let maxLovelaceFee = L.Coin (2^(32 :: Integer) - 1)
+    txbody1ForFeeEstimateOnly <- first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
+               createAndValidateTransactionBody sbe txbodycontent1 {
+                 txFee  = TxFeeExplicit sbe maxLovelaceFee,
+                 txOuts = TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone
+                        : txOuts txbodycontent,
+                 txReturnCollateral = dummyCollRet,
+                 txTotalCollateral = dummyTotColl
+               }
+    let fee = evaluateTransactionFee sbe pparams txbody1ForFeeEstimateOnly (fromIntegral intendedKeyWits) (fromIntegral byronwits) sizeOfAllReferenceScripts
+
+    -- Step 4. We use the fee to calculate the required collateral
+        (retColl, reqCol) =
+           caseShelleyToAlonzoOrBabbageEraOnwards
+            (const (TxReturnCollateralNone, TxTotalCollateralNone))
+            (\w' ->
+              calcReturnAndTotalCollateral w'
+                fee pparams (txInsCollateral txbodycontent) (txReturnCollateral txbodycontent)
+                (txTotalCollateral txbodycontent) changeaddr totalPotentialCollateral
+            )
+            sbe
+
+    -- Step 5. Now we can calculate the balance of the tx. What matter here are:
+    --  1. The original outputs
+    --  2. Tx fee
+    --  3. Return and total collateral
+    txbody2 <- first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
+           createAndValidateTransactionBody sbe txbodycontent1 {
+             txFee = TxFeeExplicit sbe fee,
+             txReturnCollateral = retColl,
+             txTotalCollateral = reqCol
+           }
+
+    let fakeUTxO = createFakeUTxO sbe txbodycontent1 $ selectLovelace totalUTxOValue
+        balance = evaluateTransactionBalance sbe pparams poolids stakeDelegDeposits drepDelegDeposits fakeUTxO txbody2
+    -- check if the balance is positive or negative
+    -- in one case we can produce change, in the other the inputs are insufficient
+    first TxFeeEstimationBalanceError $ balanceCheck sbe pparams changeaddr balance
+
+    -- Step 6. Check all txouts have the min required UTxO value
+    forM_ (txOuts txbodycontent1)
+      $ \txout -> first TxFeeEstimationBalanceError $ checkMinUTxOValue sbe txout pparams
+
+
+    -- Step 7.
+
+    -- Create the txbody with the final fee and change output. This should work
+    -- provided that the fee and change are less than 2^32-1, and so will
+    -- fit within the encoding size we picked above when calculating the fee.
+    -- Yes this could be an over-estimate by a few bytes if the fee or change
+    -- would fit within 2^16-1. That's a possible optimisation.
+    let finalTxBodyContent = txbodycontent1 {
+          txFee  = TxFeeExplicit sbe fee,
+          txOuts = accountForNoChange
+                     (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
+                     (txOuts txbodycontent),
+          txReturnCollateral = retColl,
+          txTotalCollateral = reqCol
+        }
+    txbody3 <-
+      first TxFeeEstimationFinalConstructionError $ -- TODO: impossible to fail now. We need to implement a function
+                          -- that simply creates a transaction body because we have already
+                          -- validated the transaction body earlier within makeTransactionBodyAutoBalance
+        createAndValidateTransactionBody sbe finalTxBodyContent
+    return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
 
 --- ----------------------------------------------------------------------------
 --- Transaction fees
@@ -679,6 +838,28 @@ data BalancedTxBody era
       (TxOut CtxTx era) -- ^ Transaction balance (change output)
       L.Coin    -- ^ Estimated transaction fee
 
+data FeeEstimationMode era
+  = CalculateWithSpendableUTxO -- ^ Accurate fee calculation.
+      -- | Spendable UTxO
+      (UTxO era)
+      SystemStart
+      LedgerEpochInfo
+      -- | Override key witnesses
+      (Maybe Word)
+  | EstimateWithoutSpendableUTxO -- ^ Less accurate fee estimation.
+      -- | Total potential collateral amount
+      Coin 
+      -- | Total value of UTxOs being spent
+      Value 
+      -- | Plutus script execution units
+      (Map ScriptWitnessIndex ExecutionUnits) 
+      -- | The number of key witnesses still to be added to the transaction.
+      Int
+      -- | The number of Byron key witnesses still to be added to the transaction.
+      Int
+      -- | The total size in bytes of reference scripts
+      Int
+
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
 --
@@ -766,18 +947,16 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     let maxLovelaceChange = L.Coin (2^(64 :: Integer)) - 1
     let maxLovelaceFee = L.Coin (2^(32 :: Integer) - 1)
 
-    let outgoing = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
-    let incoming = mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- Map.elems $ unUTxO utxo]
-    let minted = case txMintValue txbodycontent1 of
-          TxMintNone -> mempty
-          TxMintValue w v _ -> toLedgerValue w v
-    let change = mconcat [incoming, minted, negateLedgerValue sbe outgoing]
+    let totalValueAtSpendableUTxO = fromLedgerValue sbe $  calculateIncomingUTxOValue $ Map.elems $ unUTxO utxo
+    let change = forShelleyBasedEraInEon sbe
+                   mempty
+                   (\w -> toLedgerValue w $  calculateChangeValue sbe totalValueAtSpendableUTxO txbodycontent1)
     let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
     let changeTxOut = forShelleyBasedEraInEon sbe
           (lovelaceToTxOutValue sbe maxLovelaceChange)
           (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
 
-    let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
+    let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput sbe txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                createAndValidateTransactionBody sbe txbodycontent1 {
                  txFee  = TxFeeExplicit sbe maxLovelaceFee,
@@ -786,7 +965,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
                  txReturnCollateral = dummyCollRet,
                  txTotalCollateral = dummyTotColl
                }
-
+        -- NB: This has the potential to over estimate the fees!!
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
         fee   = calculateMinTxFee sbe pp utxo txbody1 nkeys
@@ -794,9 +973,14 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
            caseShelleyToAlonzoOrBabbageEraOnwards
             (const (TxReturnCollateralNone, TxTotalCollateralNone))
             (\w ->
-              calcReturnAndTotalCollateral w
-                fee pp (txInsCollateral txbodycontent) (txReturnCollateral txbodycontent)
-                (txTotalCollateral txbodycontent) changeaddr utxo
+              let collIns = case txInsCollateral txbodycontent of
+                              TxInsCollateral _ collIns' -> collIns'
+                              TxInsCollateralNone -> mempty
+                  collateralOuts  = catMaybes [ Map.lookup txin (unUTxO utxo) | txin <- collIns]
+                  totalPotentialCollateral = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) collateralOuts
+              in calcReturnAndTotalCollateral w
+                   fee pp (txInsCollateral txbodycontent) (txReturnCollateral txbodycontent)
+                   (txTotalCollateral txbodycontent) changeaddr totalPotentialCollateral
             )
             sbe
 
@@ -812,11 +996,11 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
                }
     let balance = evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo txbody2
 
-    forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue txout pp
+    forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue sbe txout pp
 
     -- check if the balance is positive or negative
     -- in one case we can produce change, in the other the inputs are insufficient
-    balanceCheck pp balance
+    balanceCheck sbe pp changeaddr balance
 
     --TODO: we could add the extra fee for the CBOR encoding of the change,
     -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
@@ -841,66 +1025,99 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
         createAndValidateTransactionBody sbe finalTxBodyContent
     return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
-   -- Essentially we check for the existence of collateral inputs. If they exist we
-   -- create a fictitious collateral return output. Why? Because we need to put dummy values
-   -- to get a fee estimate (i.e we overestimate the fee.)
-   maybeDummyTotalCollAndCollReturnOutput
-     :: TxBodyContent BuildTx era -> AddressInEra era -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
-   maybeDummyTotalCollAndCollReturnOutput TxBodyContent{txInsCollateral, txReturnCollateral, txTotalCollateral} cAddr =
-     case txInsCollateral of
-       TxInsCollateralNone -> (TxReturnCollateralNone, TxTotalCollateralNone)
-       TxInsCollateral{} ->
-         forEraInEon era
-            (TxReturnCollateralNone, TxTotalCollateralNone)
-            (\w ->
-              let dummyRetCol =
-                    TxReturnCollateral w
-                    ( TxOut cAddr
-                        (lovelaceToTxOutValue sbe $ L.Coin (2^(64 :: Integer)) - 1)
-                        TxOutDatumNone ReferenceScriptNone
-                    )
-                  dummyTotCol = TxTotalCollateral w (L.Coin (2^(32 :: Integer) - 1))
-              in case (txReturnCollateral, txTotalCollateral) of
-                (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) -> (rc, tc)
-                (rc@TxReturnCollateral{},TxTotalCollateralNone) -> (rc, dummyTotCol)
-                (TxReturnCollateralNone,tc@TxTotalCollateral{}) -> (dummyRetCol, tc)
-                (TxReturnCollateralNone, TxTotalCollateralNone) -> (dummyRetCol, dummyTotCol)
-            )
-   -- Calculation taken from validateInsufficientCollateral: https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
-   -- TODO: Bug Jared to expose a function from the ledger that returns total and return collateral.
-   calcReturnAndTotalCollateral :: ()
-      => Ledger.AlonzoEraPParams (ShelleyLedgerEra era)
-      => BabbageEraOnwards era
-      -> L.Coin -- ^ Fee
-      -> Ledger.PParams (ShelleyLedgerEra era)
-      -> TxInsCollateral era -- ^ From the initial TxBodyContent
-      -> TxReturnCollateral CtxTx era -- ^ From the initial TxBodyContent
-      -> TxTotalCollateral era -- ^ From the initial TxBodyContent
-      -> AddressInEra era -- ^ Change address
-      -> UTxO era
-      -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
-   calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _= (TxReturnCollateralNone, TxTotalCollateralNone)
-   calcReturnAndTotalCollateral _ _ _ _ rc@TxReturnCollateral{} tc@TxTotalCollateral{} _ _ = (rc,tc)
-   calcReturnAndTotalCollateral retColSup fee pp' (TxInsCollateral _ collIns) txReturnCollateral txTotalCollateral cAddr (UTxO utxo') =
-      do
-        let colPerc = pp' ^. Ledger.ppCollateralPercentageL
-        -- We must first figure out how much lovelace we have committed
-        -- as collateral and we must determine if we have enough lovelace at our
-        -- collateral tx inputs to cover the tx
-        let txOuts = catMaybes [ Map.lookup txin utxo' | txin <- collIns]
-            totalCollateralLovelace = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) txOuts
-            requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
-            totalCollateral = TxTotalCollateral retColSup . L.rationalToCoinViaCeiling
-                                                          $ reqAmt % 100
-            -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
-            -- We choose to multiply 100 rather than divide by 100 to make the calculation
-            -- easier to manage. At the end of the calculation we then use % 100 to perform our division
-            -- and round up.
-            enoughCollateral = totalCollateralLovelace * 100 >= requiredCollateral
-            L.Coin amt = totalCollateralLovelace * 100 - requiredCollateral
-            returnCollateral = L.rationalToCoinViaFloor $ amt % 100
+   era :: CardanoEra era
+   era = shelleyBasedToCardanoEra sbe
 
-        case (txReturnCollateral, txTotalCollateral) of
+-- In the event of spending the exact amount of lovelace in
+-- the specified input(s), this function excludes the change
+-- output. Note that this does not save any fees because by default
+-- the fee calculation includes a change address for simplicity and
+-- we make no attempt to recalculate the tx fee without a change address.
+accountForNoChange :: TxOut CtxTx era -> [TxOut CtxTx era] -> [TxOut CtxTx era]
+accountForNoChange change@(TxOut _ balance _ _) rest =
+  case txOutValueToLovelace balance of
+    L.Coin 0 -> rest
+    -- We append change at the end so a client can predict the indexes
+    -- of the outputs
+    _ -> rest ++ [change]
+
+checkMinUTxOValue
+  :: ShelleyBasedEra era
+  -> TxOut CtxTx era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> Either (TxBodyErrorAutoBalance era) ()
+checkMinUTxOValue sbe txout@(TxOut _ v _ _) bpp = do
+   let minUTxO = calculateMinimumUTxO sbe txout bpp
+   if txOutValueToLovelace v >= minUTxO
+     then Right ()
+     else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra (toCardanoEra sbe) txout) minUTxO
+
+balanceCheck
+  :: ShelleyBasedEra era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> AddressInEra era
+  -> TxOutValue era
+  -> Either (TxBodyErrorAutoBalance era) ()
+balanceCheck sbe bpparams changeaddr balance
+ | txOutValueToLovelace balance == 0 && onlyAda (txOutValueToValue balance) = return ()
+ | txOutValueToLovelace balance < 0 =
+     Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
+ | otherwise =
+     case checkMinUTxOValue sbe (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) bpparams of
+       Left (TxBodyErrorMinUTxONotMet txOutAny minUTxO) ->
+         Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
+       Left err -> Left err
+       Right _ -> Right ()
+
+isNotAda :: AssetId -> Bool
+isNotAda AdaAssetId = False
+isNotAda _ = True
+
+onlyAda :: Value -> Bool
+onlyAda = null . valueToList . filterValue isNotAda
+
+
+calculateIncomingUTxOValue
+  :: Monoid (Ledger.Value (ShelleyLedgerEra era))
+  => [TxOut ctx era] -> Ledger.Value (ShelleyLedgerEra era)
+calculateIncomingUTxOValue providedUtxoOuts =
+  mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- providedUtxoOuts]
+
+
+-- Calculation taken from validateInsufficientCollateral: https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
+-- TODO: Bug Jared to expose a function from the ledger that returns total and return collateral.
+calcReturnAndTotalCollateral :: ()
+   => Ledger.AlonzoEraPParams (ShelleyLedgerEra era)
+   => BabbageEraOnwards era
+   -> L.Coin -- ^ Fee
+   -> Ledger.PParams (ShelleyLedgerEra era)
+   -> TxInsCollateral era -- ^ From the initial TxBodyContent
+   -> TxReturnCollateral CtxTx era -- ^ From the initial TxBodyContent
+   -> TxTotalCollateral era -- ^ From the initial TxBodyContent
+   -> AddressInEra era -- ^ Change address
+   -> Coin -- ^ Total available collateral in lovelace
+   -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
+calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _= (TxReturnCollateralNone, TxTotalCollateralNone)
+calcReturnAndTotalCollateral _ _ _ _ rc@TxReturnCollateral{} tc@TxTotalCollateral{} _ _ = (rc,tc)
+calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableAda =
+   do
+     let colPerc = pp' ^. Ledger.ppCollateralPercentageL
+     -- We must first figure out how much lovelace we have committed
+     -- as collateral and we must determine if we have enough lovelace at our
+     -- collateral tx inputs to cover the tx
+     let --txOuts = catMaybes [ Map.lookup txin utxo' | txin <- collIns]
+         totalCollateralLovelace = totalAvailableAda --mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) txOuts
+         requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
+         totalCollateral = TxTotalCollateral retColSup . L.rationalToCoinViaCeiling
+                                                       $ reqAmt % 100
+         -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
+         -- We choose to multiply 100 rather than divide by 100 to make the calculation
+         -- easier to manage. At the end of the calculation we then use % 100 to perform our division
+         -- and round up.
+         enoughCollateral = totalCollateralLovelace * 100 >= requiredCollateral
+         L.Coin amt = totalCollateralLovelace * 100 - requiredCollateral
+         returnCollateral = L.rationalToCoinViaFloor $ amt % 100
+     case (txReturnCollateral, txTotalCollateral) of
 #if MIN_VERSION_base(4,16,0)
 #else
               -- For ghc-9.2, this pattern match is redundant, but ghc-8.10 will complain if its missing.
@@ -916,55 +1133,72 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
                 then
                   ( TxReturnCollateral
                       retColSup
-                      (TxOut cAddr (lovelaceToTxOutValue sbe returnCollateral) TxOutDatumNone ReferenceScriptNone)
+                      (TxOut cAddr (lovelaceToTxOutValue (babbageEraOnwardsToShelleyBasedEra retColSup) returnCollateral) TxOutDatumNone ReferenceScriptNone)
                   , totalCollateral
                   )
                 else (TxReturnCollateralNone, TxTotalCollateralNone)
 
-   era :: CardanoEra era
-   era = shelleyBasedToCardanoEra sbe
 
-   -- In the event of spending the exact amount of lovelace in
-   -- the specified input(s), this function excludes the change
-   -- output. Note that this does not save any fees because by default
-   -- the fee calculation includes a change address for simplicity and
-   -- we make no attempt to recalculate the tx fee without a change address.
-   accountForNoChange :: TxOut CtxTx era -> [TxOut CtxTx era] -> [TxOut CtxTx era]
-   accountForNoChange change@(TxOut _ balance _ _) rest =
-     case txOutValueToLovelace balance of
-       L.Coin 0 -> rest
-       -- We append change at the end so a client can predict the indexes
-       -- of the outputs
-       _ -> rest ++ [change]
+calculateCreatedUTOValue
+  :: ShelleyBasedEra era -> TxBodyContent build era -> Value
+calculateCreatedUTOValue sbe txbodycontent =
+  mconcat [fromLedgerValue sbe v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
 
-   balanceCheck :: Ledger.PParams (ShelleyLedgerEra era) -> TxOutValue era -> Either (TxBodyErrorAutoBalance era) ()
-   balanceCheck bpparams balance
-    | txOutValueToLovelace balance == 0 && onlyAda (txOutValueToValue balance) = return ()
-    | txOutValueToLovelace balance < 0 =
-        Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
-    | otherwise =
-        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) bpparams of
-          Left (TxBodyErrorMinUTxONotMet txOutAny minUTxO) ->
-            Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
-          Left err -> Left err
-          Right _ -> Right ()
+calculateChangeValue
+  :: ShelleyBasedEra era -> Value -> TxBodyContent build era -> Value
+calculateChangeValue sbe incoming txbodycontent =
+    let outgoing = calculateCreatedUTOValue sbe txbodycontent
+        minted = case txMintValue txbodycontent of
+          TxMintNone -> mempty
+          TxMintValue _ v _ -> v
+    in mconcat [incoming, minted, negateValue outgoing]
 
-   isNotAda :: AssetId -> Bool
-   isNotAda AdaAssetId = False
-   isNotAda _ = True
+-- | This is used in the balance calculation in the event where
+-- the user does not supply the UTxO(s) they intend to spend
+-- but they must supply their total balance of ADA.
+-- TODO: Include multiassets
+createFakeUTxO :: ShelleyBasedEra era -> TxBodyContent BuildTx era -> Coin -> UTxO era
+createFakeUTxO sbe txbodycontent totalAdaInUTxO =
+  let singleTxIn = maybe [] (return . fst) $ List.uncons [txin | (txin, _) <- txIns txbodycontent]
+      singleTxOut = maybe [] (return . updateTxOut sbe totalAdaInUTxO . toCtxUTxOTxOut . fst) $ List.uncons $ txOuts txbodycontent
+      -- Take one txin and one txout. Replace the out value with totalAdaInUTxO
+      -- Return an empty UTxO if there are no txins or txouts
+  in UTxO $ Map.fromList $ zip singleTxIn singleTxOut
 
-   onlyAda :: Value -> Bool
-   onlyAda = null . valueToList . filterValue isNotAda
+updateTxOut :: ShelleyBasedEra era -> Coin -> TxOut CtxUTxO era -> TxOut CtxUTxO era
+updateTxOut sbe updatedValue txout =
+  let ledgerout = shelleyBasedEraConstraints sbe $ toShelleyTxOut sbe txout & L.coinTxOutL .~ updatedValue
+  in fromShelleyTxOut sbe ledgerout
 
-   checkMinUTxOValue
-     :: TxOut CtxTx era
-     -> Ledger.PParams (ShelleyLedgerEra era)
-     -> Either (TxBodyErrorAutoBalance era) ()
-   checkMinUTxOValue txout@(TxOut _ v _ _) bpp = do
-      let minUTxO = calculateMinimumUTxO sbe txout bpp
-      if txOutValueToLovelace v >= minUTxO
-        then Right ()
-        else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra era txout) minUTxO
+-- Essentially we check for the existence of collateral inputs. If they exist we
+-- create a fictitious collateral return output. Why? Because we need to put dummy values
+-- to get a fee estimate (i.e we overestimate the fee.)
+maybeDummyTotalCollAndCollReturnOutput
+  :: ShelleyBasedEra era
+  -> TxBodyContent BuildTx era
+  -> AddressInEra era
+  -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
+maybeDummyTotalCollAndCollReturnOutput sbe TxBodyContent{txInsCollateral, txReturnCollateral, txTotalCollateral} cAddr =
+  case txInsCollateral of
+    TxInsCollateralNone -> (TxReturnCollateralNone, TxTotalCollateralNone)
+    TxInsCollateral{} ->
+      forShelleyBasedEraInEon sbe
+         (TxReturnCollateralNone, TxTotalCollateralNone)
+         (\w ->
+           let dummyRetCol =
+                 TxReturnCollateral w
+                 ( TxOut cAddr
+                     (lovelaceToTxOutValue sbe $ L.Coin (2^(64 :: Integer)) - 1)
+                     TxOutDatumNone ReferenceScriptNone
+                 )
+               dummyTotCol = TxTotalCollateral w (L.Coin (2^(32 :: Integer) - 1))
+           in case (txReturnCollateral, txTotalCollateral) of
+             (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) -> (rc, tc)
+             (rc@TxReturnCollateral{},TxTotalCollateralNone) -> (rc, dummyTotCol)
+             (TxReturnCollateralNone,tc@TxTotalCollateral{}) -> (dummyRetCol, tc)
+             (TxReturnCollateralNone, TxTotalCollateralNone) -> (dummyRetCol, dummyTotCol)
+         )
+
 
 substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
                          -> TxBodyContent BuildTx era

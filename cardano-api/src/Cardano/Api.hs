@@ -400,8 +400,12 @@ module Cardano.Api (
     evaluateTransactionBalance,
 
     -- ** Building transactions with automated fees and balancing
+    estimateBalancedTxBody,
+    estimateOrCalculateBalancedTxBody,
     makeTransactionBodyAutoBalance,
+    AutoBalanceError(..),
     BalancedTxBody(..),
+    TxFeeEstimationError(..),
     TxBodyErrorAutoBalance(..),
     TxScriptValidity(..),
     ScriptValidity(..),
