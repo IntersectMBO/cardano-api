@@ -20,10 +20,7 @@ packages:
     cardano-api
     cardano-api-gen
 
-package cardano-api
-  ghc-options: -Werror
-
-package cardano-api-gen
+program-options
   ghc-options: -Werror
 
 package cryptonite
