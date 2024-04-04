@@ -168,6 +168,7 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                     , ucppDRepActivity = EpochInterval 100
                                                     , ucppCommitteeMinSize = 0
                                                     , ucppCommitteeMaxTermLength = EpochInterval 200
+                                                    , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- TODO: set to correct value after benchmarking
                                                     }
     where
     defaultPoolVotingThresholds :: PoolVotingThresholds
@@ -240,6 +241,7 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                              , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
                              , 32947, 10
                              ]
+        -- taken from https://github.com/IntersectMBO/plutus/blob/master/plutus-core/cost-model/data/builtinCostModel.json
         defaultV3CostModel = [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4, 117366, 10475, 4, 832808, 18
                              , 3209094, 6, 331451, 1, 65990684, 23097, 18, 114242, 18, 94393407
                              , 87060, 18, 16420089, 18, 2145798, 36, 3795345, 12, 889023, 1, 204237282, 23271, 36, 129165, 36, 189977790
@@ -252,4 +254,5 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                              , 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990
                              , 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182
                              , 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35190005, 10, 57996947, 18975, 10, 39121781, 32260, 10
+                             , 1292075, 24469, 74, 0, 1, 936157, 49601, 237, 0, 1
                              ]

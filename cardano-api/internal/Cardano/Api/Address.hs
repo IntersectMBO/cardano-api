@@ -566,12 +566,12 @@ instance HasTypeProxy StakeAddress where
 
 instance SerialiseAsRawBytes StakeAddress where
     serialiseToRawBytes (StakeAddress nw sc) =
-        Shelley.serialiseRewardAcnt (Shelley.RewardAcnt nw sc)
+        Shelley.serialiseRewardAccount (Shelley.RewardAccount nw sc)
 
     deserialiseFromRawBytes AsStakeAddress bs =
-        case Shelley.deserialiseRewardAcnt bs of
+        case Shelley.deserialiseRewardAccount bs of
           Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise StakeAddress")
-          Just (Shelley.RewardAcnt nw sc) -> Right (StakeAddress nw sc)
+          Just (Shelley.RewardAccount nw sc) -> Right (StakeAddress nw sc)
 
 
 instance SerialiseAsBech32 StakeAddress where
@@ -637,11 +637,11 @@ toShelleyAddr (AddressInEra (ShelleyAddressInEra _)
                             (ShelleyAddress nw pc scr)) =
     Shelley.Addr nw pc scr
 
-toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAcnt StandardCrypto
+toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAccount StandardCrypto
 toShelleyStakeAddr (StakeAddress nw sc) =
-    Shelley.RewardAcnt {
-      Shelley.getRwdNetwork = nw,
-      Shelley.getRwdCred    = sc
+    Shelley.RewardAccount {
+      Shelley.raNetwork    = nw,
+      Shelley.raCredential = sc
     }
 
 toShelleyPaymentCredential :: PaymentCredential
@@ -689,8 +689,8 @@ fromShelleyAddr sBasedEra (Shelley.Addr nw pc scr) =
       (ShelleyAddressInEra sBasedEra)
       (ShelleyAddress nw pc scr)
 
-fromShelleyStakeAddr :: Shelley.RewardAcnt StandardCrypto -> StakeAddress
-fromShelleyStakeAddr (Shelley.RewardAcnt nw sc) = StakeAddress nw sc
+fromShelleyStakeAddr :: Shelley.RewardAccount StandardCrypto -> StakeAddress
+fromShelleyStakeAddr (Shelley.RewardAccount nw sc) = StakeAddress nw sc
 
 fromShelleyStakeCredential :: Shelley.StakeCredential StandardCrypto
                            -> StakeCredential
