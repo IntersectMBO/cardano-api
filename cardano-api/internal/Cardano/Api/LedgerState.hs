@@ -1921,28 +1921,13 @@ instance Show AnyNewEpochState where
 
 getUTxOValues :: forall era. ShelleyBasedEra era
   -> Ledger.LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.ValuesMK
-  -> Set TxIn -- keys
   -> Map TxIn (TxOut CtxUTxO era)
-getUTxOValues sbe tbs keys =
+getUTxOValues sbe tbs =
    let
-      cardanoKeys :: LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.KeysMK
-      cardanoKeys = LedgerTables $ Ledger.KeysMK $ Set.map ((case sbe of
-                   ShelleyBasedEraShelley -> HFC.injectCanonicalTxIn $ IS IZ
-                   ShelleyBasedEraAllegra -> HFC.injectCanonicalTxIn $ IS (IS IZ)
-                   ShelleyBasedEraMary    -> HFC.injectCanonicalTxIn $ IS (IS (IS IZ))
-                   ShelleyBasedEraAlonzo  -> HFC.injectCanonicalTxIn $ IS (IS (IS (IS IZ)))
-                   ShelleyBasedEraBabbage -> HFC.injectCanonicalTxIn $ IS (IS (IS (IS (IS IZ))))
-                   ShelleyBasedEraConway  -> HFC.injectCanonicalTxIn $ IS (IS (IS (IS (IS (IS IZ)))))
-        ) . toShelleyTxIn) keys
-
-      restrictedTables :: Ledger.LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.ValuesMK
-      restrictedTables =
-       LedgerTables (rawRestrictValues (getLedgerTables tbs) (getLedgerTables cardanoKeys))
-
       distribTables :: Shelley.EraCrypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
           => Index (Consensus.CardanoEras Consensus.StandardCrypto) (Shelley.ShelleyBlock proto (ShelleyLedgerEra era))
           -> Map TxIn (TxOut CtxUTxO era)
-      distribTables idx = let LedgerTables (Ledger.ValuesMK values) = HFC.distribLedgerTables idx restrictedTables
+      distribTables idx = let LedgerTables (Ledger.ValuesMK values) = HFC.distribLedgerTables idx tbs
                     in Map.mapKeys fromShelleyTxIn $ Map.map (fromShelleyTxOut sbe) values
   in case sbe of
       ShelleyBasedEraShelley -> distribTables (IS IZ)
