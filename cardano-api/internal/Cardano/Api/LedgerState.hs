@@ -33,6 +33,7 @@ module Cardano.Api.LedgerState
   , applyBlockWithEvents
   , AnyNewEpochState(..)
   , getAnyNewEpochState
+  , getUTxOValues
 
     -- * Traversing the block chain
   , foldBlocks
@@ -108,6 +109,7 @@ import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (un
                    decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SpecialByron as Byron
+import           Cardano.Api.Tx.Body
 import           Cardano.Api.Utils (textShow)
 
 import qualified Cardano.Binary as CBOR
@@ -150,8 +152,7 @@ import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import qualified Ouroboros.Consensus.Cardano.Node as Consensus
 import qualified Ouroboros.Consensus.Config as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
-import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
+import qualified Ouroboros.Consensus.HardFork.Combinator as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as HFC
 import           Ouroboros.Consensus.HardFork.Combinator.State.Types
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
@@ -206,6 +207,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.SOP (K (K), (:.:) (Comp))
 import           Data.SOP.Functors (Flip (..))
+import           Data.SOP.Index
 import           Data.SOP.Strict (NP (..), fn)
 import           Data.SOP.Strict.NS
 import qualified Data.SOP.Telescope as Telescope
@@ -1056,8 +1058,8 @@ getAnyNewEpochState
   :: ShelleyBasedEra era
   -> LedgerState
   -> Either LedgerStateError AnyNewEpochState
-getAnyNewEpochState sbe (LedgerState ls _) =
-  AnyNewEpochState sbe <$> getNewEpochState sbe ls
+getAnyNewEpochState sbe (LedgerState ls tbs) =
+  flip (AnyNewEpochState sbe) tbs <$> getNewEpochState sbe ls
 
 getNewEpochState
   :: ShelleyBasedEra era
@@ -1177,8 +1179,8 @@ toLedgerStateEvents ::
     ( Ledger.LedgerState
         (HFC.HardForkBlock (Consensus.CardanoEras Consensus.StandardCrypto))
     )
-    ( LedgerState
-    ) ->
+    LedgerState
+     ->
   LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
   where
@@ -1910,12 +1912,45 @@ data AnyNewEpochState where
   AnyNewEpochState
     :: ShelleyBasedEra era
     -> ShelleyAPI.NewEpochState (ShelleyLedgerEra era)
+    -> Ledger.LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.ValuesMK
     -> AnyNewEpochState
 
 instance Show AnyNewEpochState where
-  showsPrec p (AnyNewEpochState sbe ledgerNewEpochState) =
+  showsPrec p (AnyNewEpochState sbe ledgerNewEpochState _) =
     shelleyBasedEraConstraints sbe $ showsPrec p ledgerNewEpochState
 
+getUTxOValues :: forall era. ShelleyBasedEra era
+  -> Ledger.LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.ValuesMK
+  -> Set TxIn -- keys
+  -> Map TxIn (TxOut CtxUTxO era)
+getUTxOValues sbe tbs keys =
+   let
+      cardanoKeys :: LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.KeysMK
+      cardanoKeys = LedgerTables $ Ledger.KeysMK $ Set.map ((case sbe of
+                   ShelleyBasedEraShelley -> HFC.injectCanonicalTxIn $ IS IZ
+                   ShelleyBasedEraAllegra -> HFC.injectCanonicalTxIn $ IS (IS IZ)
+                   ShelleyBasedEraMary    -> HFC.injectCanonicalTxIn $ IS (IS (IS IZ))
+                   ShelleyBasedEraAlonzo  -> HFC.injectCanonicalTxIn $ IS (IS (IS (IS IZ)))
+                   ShelleyBasedEraBabbage -> HFC.injectCanonicalTxIn $ IS (IS (IS (IS (IS IZ))))
+                   ShelleyBasedEraConway  -> HFC.injectCanonicalTxIn $ IS (IS (IS (IS (IS (IS IZ)))))
+        ) . toShelleyTxIn) keys
+
+      restrictedTables :: Ledger.LedgerTables (Ledger.LedgerState (Consensus.CardanoBlock Consensus.StandardCrypto)) Ledger.ValuesMK
+      restrictedTables =
+       LedgerTables (rawRestrictValues (getLedgerTables tbs) (getLedgerTables cardanoKeys))
+
+      distribTables :: Shelley.EraCrypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
+          => Index (Consensus.CardanoEras Consensus.StandardCrypto) (Shelley.ShelleyBlock proto (ShelleyLedgerEra era))
+          -> Map TxIn (TxOut CtxUTxO era)
+      distribTables idx = let LedgerTables (Ledger.ValuesMK values) = HFC.distribLedgerTables idx restrictedTables
+                    in Map.mapKeys fromShelleyTxIn $ Map.map (fromShelleyTxOut sbe) values
+  in case sbe of
+      ShelleyBasedEraShelley -> distribTables (IS IZ)
+      ShelleyBasedEraAllegra -> distribTables (IS (IS IZ))
+      ShelleyBasedEraMary    -> distribTables (IS (IS (IS IZ)))
+      ShelleyBasedEraAlonzo  -> distribTables (IS (IS (IS (IS IZ))))
+      ShelleyBasedEraBabbage -> distribTables (IS (IS (IS (IS (IS IZ)))))
+      ShelleyBasedEraConway  -> distribTables (IS (IS (IS (IS (IS (IS IZ))))))
 
 -- | Reconstructs the ledger's new epoch state and applies a supplied condition to it for every block. This
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
@@ -2068,12 +2103,11 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
                           let (knownLedgerStates', _) = pushLedgerState env knownLedgerStates slotNo new blockInMode
                               newClientTip = At currBlockNo
                               newServerTip = fromChainTip serverChainTip
-                          case getNewEpochState sbe $ clsState newLedgerState of
+                          case getAnyNewEpochState sbe newLedgerState of
                             Left e ->
                               let !err = Just e
                               in clientIdle_DoneNwithMaybeError n err
-                            Right lState -> do
-                              let newEpochState = AnyNewEpochState sbe lState
+                            Right newEpochState -> do
                               -- Run the condition function in an exclusive lock.
                               -- There can be only one place where `takeMVar stateMv` exists otherwise this
                               -- code will deadlock!
