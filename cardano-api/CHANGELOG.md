@@ -1,6 +1,24 @@
 # Changelog for cardano-api
 
-# 8.43.0.0
+## 8.44.0.0
+
+- - Add `getReferenceInputsSizeForTxIds` function.
+  - Bump `cardano-ledger` and `ouroboros-consensus` bounds. In particular, the Conway genesis parameter `ucppMinFeeRefScriptCostPerByte` needs to be set to the correct value after benchmarking.
+  - Add an extra parameter to `evaluateTransactionFee`, the reference script size, which the Ledger requires to estimate the minimum fee of a transaction.
+  (feature, breaking)
+  [PR 496](https://github.com/IntersectMBO/cardano-api/pull/496)
+
+- In `Cardano.API.LedgerState`:
+  - Use type aliases and patterns from ouroboros-consensus instead of re-defining them.
+  - Import entities from the right modules.
+  (improvement)
+  [PR 503](https://github.com/IntersectMBO/cardano-api/pull/503)
+
+- Replace unsafeMergeVotingProcedures by mergeVotingProcedures, that handles incompatible votes and return an error
+  (breaking, bugfix)
+  [PR 498](https://github.com/IntersectMBO/cardano-api/pull/498)
+
+## 8.43.0.0
 
 - Undeprecate `evaluateTransactionFee`
   (compatible)
