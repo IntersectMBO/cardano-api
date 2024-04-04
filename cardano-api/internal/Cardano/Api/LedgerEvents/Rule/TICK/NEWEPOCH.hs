@@ -96,6 +96,6 @@ handleConwayNEWEPOCHEvents conwayNewEpochEvent =
                                                 (convertRetiredPoolsMap refundPools)
                                                 (convertRetiredPoolsMap unclaimedPools)
         Conway.SnapEvent _ -> Nothing
-        Conway.GovInfoEvent {} -> Nothing -- FIXME: Confirm if we need a new event here
+        Conway.GovInfoEvent {} -> Nothing
 
     Conway.TotalAdaPotsEvent _ -> Nothing

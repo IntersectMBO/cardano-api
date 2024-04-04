@@ -3060,9 +3060,9 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
 
--- | Calculate the reference inputs size for provided set of transaction IDs and UTXOs.
+-- | Calculate the reference inputs size in bytes for provided set of transaction IDs and UTXOs.
 getReferenceInputsSizeForTxIds
-  :: forall era ledgerera. ShelleyLedgerEra era ~ ledgerera
+  :: ShelleyLedgerEra era ~ ledgerera
   => BabbageEraOnwards era
   -> Ledger.UTxO ledgerera
   -> Set TxIn
