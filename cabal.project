@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-25T10:39:21Z
-  , cardano-haskell-packages 2024-04-04T11:57:10Z
+  , cardano-haskell-packages 2024-04-05T11:01:53Z
 
 packages:
     cardano-api
@@ -47,15 +47,11 @@ source-repository-package
   subdir:
     latex-svg-image
 
-if impl(ghc >= 9.6)
-  allow-newer:
-    cardano-lmdb-simple:bytestring
-
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 02d6f44179cbffd573a15c0bd8a7e8d5de43690e
-  --sha256: 1h67ln5r5xzs2yiwld0pplym6iga458wh653z4z2s4k7g7a2i3rq
+  tag: 19782899875b1a5a08d79ab9abba174ab8f85724
+  --sha256: 0zgsi6nlm8ky8l1kq9qahrmjpypjc7x1cszbbwi70qajd5ic7zcx
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
