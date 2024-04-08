@@ -2,16 +2,16 @@
 cabal.project                                                 @Jimbo4350 @newhoggy @disassembler
 
 # General reviewers per PR
-#                        Duncan   Jordan     Erik   John      Mateusz     Kevin          Carlos             Sam
-*                        @dcoutts @Jimbo4350 @erikd @newhoggy @carbolymer @kevinhammmond @CarlosLopezDeLara @disassembler
+#                        Duncan   Jordan     Erik   John      Mateusz     Clément Pablo  Kevin          Carlos             Sam
+*                        @dcoutts @Jimbo4350 @erikd @newhoggy @carbolymer @smelc  @palas @kevinhammond @CarlosLopezDeLara @disassembler
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
 
-*.nix                                                         @intersectmbo/core-tech-release
-flake.lock                                                    @intersectmbo/core-tech-release
+*.nix                                                         @intersectmbo/core-tech-release-1
+flake.lock                                                    @intersectmbo/core-tech-release-1
 
 # Technical writers
 README.*                                                      @Jimbo4350 @newhoggy @olgahryniuk @disassembler @CarlosLopezDeLara
 
-.github                                                       @Jimbo4350 @newhoggy @carbolymer @intersectmbo/core-tech-release
+.github                                                       @Jimbo4350 @newhoggy @carbolymer @smelc @palas @intersectmbo/core-tech-release-1
