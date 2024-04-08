@@ -28,6 +28,11 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
+-- bitvecs simd c++ dependencies break our windows build (for now)
+if os(windows)
+  package bitvec
+    flags: -simd
+
 tests: True
 
 test-show-details: direct
