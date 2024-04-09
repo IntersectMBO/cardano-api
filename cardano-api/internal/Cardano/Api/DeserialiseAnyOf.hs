@@ -248,6 +248,10 @@ data SomeAddressVerificationKey
   | AStakeExtendedVerificationKey         (VerificationKey StakeExtendedKey)
   | ADRepVerificationKey                  (VerificationKey DRepKey)
   | ADRepExtendedVerificationKey          (VerificationKey DRepExtendedKey)
+  | ACommitteeColdVerificationKey         (VerificationKey CommitteeColdKey)
+  | ACommitteeColdExtendedVerificationKey (VerificationKey CommitteeColdExtendedKey)
+  | ACommitteeHotVerificationKey          (VerificationKey CommitteeHotKey)
+  | ACommitteeHotExtendedVerificationKey  (VerificationKey CommitteeHotExtendedKey)
   deriving (Show)
 
 renderSomeAddressVerificationKey :: SomeAddressVerificationKey -> Text
@@ -273,6 +277,10 @@ renderSomeAddressVerificationKey =
     AStakeExtendedVerificationKey vk         -> serialiseToBech32 vk
     ADRepVerificationKey vk                  -> serialiseToBech32 vk
     ADRepExtendedVerificationKey vk          -> serialiseToBech32 vk
+    ACommitteeColdVerificationKey vk         -> serialiseToBech32 vk
+    ACommitteeColdExtendedVerificationKey vk -> serialiseToBech32 vk
+    ACommitteeHotVerificationKey vk          -> serialiseToBech32 vk
+    ACommitteeHotExtendedVerificationKey vk  -> serialiseToBech32 vk
 
 
 mapSomeAddressVerificationKey :: ()
@@ -292,6 +300,10 @@ mapSomeAddressVerificationKey f = \case
   AStakeExtendedVerificationKey             vk -> f vk
   ADRepVerificationKey                      vk -> f vk
   ADRepExtendedVerificationKey              vk -> f vk
+  ACommitteeColdVerificationKey             vk -> f vk
+  ACommitteeColdExtendedVerificationKey     vk -> f vk
+  ACommitteeHotVerificationKey              vk -> f vk
+  ACommitteeHotExtendedVerificationKey      vk -> f vk
 
 -- | Internal function to pretty render byron keys
 prettyByronVerificationKey :: VerificationKey ByronKey-> Text
@@ -321,6 +333,10 @@ deserialiseAnyVerificationKeyBech32 =
   allBech32VerKey =
     [ FromSomeType (AsVerificationKey AsDRepKey) ADRepVerificationKey
     , FromSomeType (AsVerificationKey AsDRepExtendedKey) ADRepExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeColdKey) ACommitteeColdVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeColdExtendedKey) ACommitteeColdExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeHotKey) ACommitteeHotVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeHotExtendedKey) ACommitteeHotExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsKesKey) AKesVerificationKey
@@ -341,6 +357,10 @@ deserialiseAnyVerificationKeyTextEnvelope bs =
     [ FromSomeType (AsVerificationKey AsByronKey) AByronVerificationKey
     , FromSomeType (AsVerificationKey AsDRepKey) ADRepVerificationKey
     , FromSomeType (AsVerificationKey AsDRepExtendedKey) ADRepExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeColdKey) ACommitteeColdVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeColdExtendedKey) ACommitteeColdExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeHotKey) ACommitteeHotVerificationKey
+    , FromSomeType (AsVerificationKey AsCommitteeHotExtendedKey) ACommitteeHotExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsStakeExtendedKey) AStakeExtendedVerificationKey
