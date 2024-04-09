@@ -235,43 +235,44 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
         Left err -> DeserialiseInputError $ InputBech32DecodeError err
 
 data SomeAddressVerificationKey
-  = AByronVerificationKey           (VerificationKey ByronKey)
-  | APaymentVerificationKey         (VerificationKey PaymentKey)
-  | APaymentExtendedVerificationKey (VerificationKey PaymentExtendedKey)
-  | AGenesisUTxOVerificationKey     (VerificationKey GenesisUTxOKey)
-  | AGenesisExtendedVerificationKey (VerificationKey GenesisExtendedKey)
+  = AByronVerificationKey                 (VerificationKey ByronKey)
+  | APaymentVerificationKey               (VerificationKey PaymentKey)
+  | APaymentExtendedVerificationKey       (VerificationKey PaymentExtendedKey)
+  | AGenesisUTxOVerificationKey           (VerificationKey GenesisUTxOKey)
+  | AGenesisExtendedVerificationKey       (VerificationKey GenesisExtendedKey)
   | AGenesisDelegateExtendedVerificationKey
-                                    (VerificationKey GenesisDelegateExtendedKey)
-  | AKesVerificationKey             (VerificationKey KesKey)
-  | AVrfVerificationKey             (VerificationKey VrfKey)
-  | AStakeVerificationKey           (VerificationKey StakeKey)
-  | AStakeExtendedVerificationKey   (VerificationKey StakeExtendedKey)
-  | ADRepVerificationKey            (VerificationKey DRepKey)
-  | ADRepExtendedVerificationKey    (VerificationKey DRepExtendedKey)
+                                          (VerificationKey GenesisDelegateExtendedKey)
+  | AKesVerificationKey                   (VerificationKey KesKey)
+  | AVrfVerificationKey                   (VerificationKey VrfKey)
+  | AStakeVerificationKey                 (VerificationKey StakeKey)
+  | AStakeExtendedVerificationKey         (VerificationKey StakeExtendedKey)
+  | ADRepVerificationKey                  (VerificationKey DRepKey)
+  | ADRepExtendedVerificationKey          (VerificationKey DRepExtendedKey)
   deriving (Show)
 
 renderSomeAddressVerificationKey :: SomeAddressVerificationKey -> Text
-renderSomeAddressVerificationKey (AByronVerificationKey vk) =  prettyByronVerificationKey vk
-renderSomeAddressVerificationKey (APaymentVerificationKey vk) = serialiseToBech32 vk
-renderSomeAddressVerificationKey (APaymentExtendedVerificationKey vk) = serialiseToBech32 vk
-renderSomeAddressVerificationKey (AGenesisUTxOVerificationKey vk) =
-  serialiseToBech32 (castVerificationKey vk :: VerificationKey PaymentKey)
-renderSomeAddressVerificationKey (AGenesisExtendedVerificationKey vk) =
-  let genKey =  (castVerificationKey vk :: VerificationKey GenesisKey)
-      payKey = (castVerificationKey genKey :: VerificationKey PaymentKey)
-  in serialiseToBech32 payKey
-renderSomeAddressVerificationKey (AGenesisDelegateExtendedVerificationKey vk) =
-  -- TODO: We could implement a CastVerificationKeyRole GenesisDelegateKey PaymentKey
-  -- if we want to avoid casting twice.
-  let genDelegKey = (castVerificationKey vk :: VerificationKey GenesisDelegateKey)
-      stakePoolKey = castVerificationKey genDelegKey :: VerificationKey StakePoolKey
-  in serialiseToBech32 stakePoolKey
-renderSomeAddressVerificationKey (AKesVerificationKey vk) = serialiseToBech32 vk
-renderSomeAddressVerificationKey (AVrfVerificationKey vk) = serialiseToBech32 vk
-renderSomeAddressVerificationKey (AStakeVerificationKey vk) = serialiseToBech32 vk
-renderSomeAddressVerificationKey (AStakeExtendedVerificationKey vk) = serialiseToBech32 vk
-renderSomeAddressVerificationKey (ADRepVerificationKey vk) = serialiseToBech32 vk
-renderSomeAddressVerificationKey (ADRepExtendedVerificationKey vk) = serialiseToBech32 vk
+renderSomeAddressVerificationKey =
+  \case
+    AByronVerificationKey vk           -> prettyByronVerificationKey vk
+    APaymentVerificationKey vk         -> serialiseToBech32 vk
+    APaymentExtendedVerificationKey vk -> serialiseToBech32 vk
+    AGenesisUTxOVerificationKey vk     -> serialiseToBech32 (castVerificationKey vk :: VerificationKey PaymentKey)
+    AGenesisExtendedVerificationKey vk ->
+      let genKey =  (castVerificationKey vk    :: VerificationKey GenesisKey)
+          payKey = (castVerificationKey genKey :: VerificationKey PaymentKey)
+      in serialiseToBech32 payKey
+    AGenesisDelegateExtendedVerificationKey vk ->
+      -- TODO: We could implement a CastVerificationKeyRole GenesisDelegateKey PaymentKey
+      -- if we want to avoid casting twice.
+      let genDelegKey = (castVerificationKey vk          :: VerificationKey GenesisDelegateKey)
+          stakePoolKey = castVerificationKey genDelegKey :: VerificationKey StakePoolKey
+      in serialiseToBech32 stakePoolKey
+    AKesVerificationKey vk                   -> serialiseToBech32 vk
+    AVrfVerificationKey vk                   -> serialiseToBech32 vk
+    AStakeVerificationKey vk                 -> serialiseToBech32 vk
+    AStakeExtendedVerificationKey vk         -> serialiseToBech32 vk
+    ADRepVerificationKey vk                  -> serialiseToBech32 vk
+    ADRepExtendedVerificationKey vk          -> serialiseToBech32 vk
 
 
 mapSomeAddressVerificationKey :: ()
