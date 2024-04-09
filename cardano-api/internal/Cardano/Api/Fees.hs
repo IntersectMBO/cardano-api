@@ -35,6 +35,9 @@ module Cardano.Api.Fees (
     AutoBalanceError(..),
     BalancedTxBody(..),
     FeeEstimationMode(..),
+    RequiredShelleyKeyWitnesses(..),
+    RequiredByronKeyWitnesses(..),
+    TotalReferenceScriptsSize(..),
     TxBodyErrorAutoBalance(..),
     TxFeeEstimationError(..),
 
@@ -96,6 +99,13 @@ import           Lens.Micro ((.~), (^.))
 data AutoBalanceError era 
   = AutoBalanceEstimationError (TxFeeEstimationError era)
   | AutoBalanceCalculationError (TxBodyErrorAutoBalance era)
+  deriving Show
+
+instance Error (AutoBalanceError era) where 
+  prettyError = \case
+    AutoBalanceEstimationError e -> prettyError e 
+    AutoBalanceCalculationError e -> prettyError e
+
 
 estimateOrCalculateBalancedTxBody
   :: ShelleyBasedEra era
@@ -114,15 +124,18 @@ estimateOrCalculateBalancedTxBody era feeEstMode pparams txBodyContent poolids s
         makeTransactionBodyAutoBalance era systemstart ledgerEpochInfo (LedgerProtocolParameters pparams)
                                        poolids stakeDelegDeposits drepDelegDeposits utxo txBodyContent changeAddr mOverride
 
-    EstimateWithoutSpendableUTxO totalPotentialCollateral totalUTxOValue exUnitsMap numKeyWits numByronWits totalRefScriptsSize -> 
-      forShelleyBasedEraInEon
-        era 
-        (Left $ AutoBalanceEstimationError TxFeeEstimationOnlyMaryOnwardsSupported)
-        (\w -> first AutoBalanceEstimationError $ 
-                 estimateBalancedTxBody w txBodyContent pparams poolids stakeDelegDeposits drepDelegDeposits 
-                                        exUnitsMap totalPotentialCollateral numKeyWits numByronWits 
-                                        totalRefScriptsSize changeAddr totalUTxOValue
-        )
+    EstimateWithoutSpendableUTxO 
+      totalPotentialCollateral totalUTxOValue exUnitsMap 
+      (RequiredShelleyKeyWitnesses numKeyWits) (RequiredByronKeyWitnesses numByronWits) 
+      (TotalReferenceScriptsSize totalRefScriptsSize) -> 
+        forShelleyBasedEraInEon
+          era 
+          (Left $ AutoBalanceEstimationError TxFeeEstimationOnlyMaryOnwardsSupportedError)
+          (\w -> first AutoBalanceEstimationError $ 
+                   estimateBalancedTxBody w txBodyContent pparams poolids stakeDelegDeposits drepDelegDeposits 
+                                          exUnitsMap totalPotentialCollateral numKeyWits numByronWits 
+                                          totalRefScriptsSize changeAddr totalUTxOValue
+          )
 
   
 data TxFeeEstimationError era
@@ -131,9 +144,20 @@ data TxFeeEstimationError era
   | TxFeeEstimationBalanceError (TxBodyErrorAutoBalance era)
   | TxFeeEstimationxBodyError TxBodyError
   | TxFeeEstimationFinalConstructionError TxBodyError
-  | TxFeeEstimationOnlyMaryOnwardsSupported
+  | TxFeeEstimationOnlyMaryOnwardsSupportedError
   deriving Show
 
+
+
+instance Error (TxFeeEstimationError era) where 
+  prettyError = \case
+    TxFeeEstimationTransactionTranslationError e -> prettyError e
+    TxFeeEstimationScriptExecutionError e -> prettyError e
+    TxFeeEstimationBalanceError e -> prettyError e
+    TxFeeEstimationxBodyError e -> prettyError e
+    TxFeeEstimationFinalConstructionError e -> prettyError e
+    TxFeeEstimationOnlyMaryOnwardsSupportedError->
+      "Only mary era onwards supported." 
 
 -- | Use when you do not have access to the UTxOs you intend to spend
 estimateBalancedTxBody
@@ -838,13 +862,26 @@ data BalancedTxBody era
       (TxOut CtxTx era) -- ^ Transaction balance (change output)
       L.Coin    -- ^ Estimated transaction fee
 
+newtype RequiredShelleyKeyWitnesses 
+  = RequiredShelleyKeyWitnesses { unRequiredShelleyKeyWitnesses :: Int }
+  deriving Show
+
+newtype RequiredByronKeyWitnesses 
+  = RequiredByronKeyWitnesses { unRequiredByronKeyWitnesses :: Int }
+  deriving Show
+
+newtype TotalReferenceScriptsSize 
+  = TotalReferenceScriptsSize { unTotalReferenceScriptsSize :: Int }
+  deriving Show
+
+
 data FeeEstimationMode era
   = CalculateWithSpendableUTxO -- ^ Accurate fee calculation.
       -- | Spendable UTxO
       (UTxO era)
       SystemStart
       LedgerEpochInfo
-      -- | Override key witnesses
+      -- | Override number of key witnesses
       (Maybe Word)
   | EstimateWithoutSpendableUTxO -- ^ Less accurate fee estimation.
       -- | Total potential collateral amount
@@ -854,11 +891,11 @@ data FeeEstimationMode era
       -- | Plutus script execution units
       (Map ScriptWitnessIndex ExecutionUnits) 
       -- | The number of key witnesses still to be added to the transaction.
-      Int
+      RequiredShelleyKeyWitnesses
       -- | The number of Byron key witnesses still to be added to the transaction.
-      Int
+      RequiredByronKeyWitnesses
       -- | The total size in bytes of reference scripts
-      Int
+      TotalReferenceScriptsSize
 
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
@@ -965,7 +1002,9 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
                  txReturnCollateral = dummyCollRet,
                  txTotalCollateral = dummyTotColl
                }
-        -- NB: This has the potential to over estimate the fees!!
+        -- NB: This has the potential to over estimate the fees because estimateTransactionKeyWitnessCount
+        -- makes the conservative assumption that all inputs are from distinct
+        -- addresses.
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
         fee   = calculateMinTxFee sbe pp utxo txbody1 nkeys
@@ -1028,7 +1067,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
    era :: CardanoEra era
    era = shelleyBasedToCardanoEra sbe
 
--- In the event of spending the exact amount of lovelace in
+-- | In the event of spending the exact amount of lovelace in
 -- the specified input(s), this function excludes the change
 -- output. Note that this does not save any fees because by default
 -- the fee calculation includes a change address for simplicity and
@@ -1105,16 +1144,15 @@ calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollate
      -- We must first figure out how much lovelace we have committed
      -- as collateral and we must determine if we have enough lovelace at our
      -- collateral tx inputs to cover the tx
-     let --txOuts = catMaybes [ Map.lookup txin utxo' | txin <- collIns]
-         totalCollateralLovelace = totalAvailableAda --mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) txOuts
+     let totalCollateralLovelace = totalAvailableAda
          requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
          totalCollateral = TxTotalCollateral retColSup . L.rationalToCoinViaCeiling
                                                        $ reqAmt % 100
          -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
          -- We choose to multiply 100 rather than divide by 100 to make the calculation
          -- easier to manage. At the end of the calculation we then use % 100 to perform our division
-         -- and round up.
-         enoughCollateral = totalCollateralLovelace * 100 >= requiredCollateral
+         -- and round the returnCollateral down which has the effect of potentially slightly
+         -- overestimating the required collateral.
          L.Coin amt = totalCollateralLovelace * 100 - requiredCollateral
          returnCollateral = L.rationalToCoinViaFloor $ amt % 100
      case (txReturnCollateral, txTotalCollateral) of
@@ -1129,7 +1167,7 @@ calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollate
               (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
                 (TxReturnCollateralNone, tc)
               (TxReturnCollateralNone, TxTotalCollateralNone) ->
-                if enoughCollateral
+                if totalCollateralLovelace * 100 >= requiredCollateral
                 then
                   ( TxReturnCollateral
                       retColSup
@@ -1156,6 +1194,11 @@ calculateChangeValue sbe incoming txbodycontent =
 -- | This is used in the balance calculation in the event where
 -- the user does not supply the UTxO(s) they intend to spend
 -- but they must supply their total balance of ADA.
+-- evaluateTransactionBalance calls evalBalanceTxBody which requires a UTxO value. 
+-- This eventually calls getConsumedMaryValue which retrieves the balance 
+-- from the transaction itself. This necessitated a function to create a "fake" UTxO 
+-- to still use evalBalanceTxBody however this will fail for transactions 
+-- containing multi-assets, refunds and withdrawals. 
 -- TODO: Include multiassets
 createFakeUTxO :: ShelleyBasedEra era -> TxBodyContent BuildTx era -> Coin -> UTxO era
 createFakeUTxO sbe txbodycontent totalAdaInUTxO =
@@ -1172,7 +1215,8 @@ updateTxOut sbe updatedValue txout =
 
 -- Essentially we check for the existence of collateral inputs. If they exist we
 -- create a fictitious collateral return output. Why? Because we need to put dummy values
--- to get a fee estimate (i.e we overestimate the fee.)
+-- to get a fee estimate (i.e we overestimate the fee). The required collateral depends 
+-- on the tx fee as per the Alonzo spec.
 maybeDummyTotalCollAndCollReturnOutput
   :: ShelleyBasedEra era
   -> TxBodyContent BuildTx era
