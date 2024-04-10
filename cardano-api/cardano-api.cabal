@@ -194,7 +194,7 @@ library internal
                       , optparse-applicative-fork
                       , ouroboros-consensus ^>= 0.17
                       , ouroboros-consensus-cardano ^>= 0.15
-                      , ouroboros-consensus-diffusion ^>= 0.13
+                      , ouroboros-consensus-diffusion ^>= 0.15
                       , ouroboros-consensus-protocol ^>= 0.8
                       , ouroboros-network
                       , ouroboros-network-api ^>= 0.7
