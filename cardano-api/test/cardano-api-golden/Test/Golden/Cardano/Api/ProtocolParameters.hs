@@ -94,7 +94,7 @@ legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostP
                                               }
 
     costModels :: Map AnyPlutusScriptVersion CostModel
-    costModels = M.fromList [ (AnyPlutusScriptVersion PlutusScriptV3, CostModel [223,222..1])
+    costModels = M.fromList [ (AnyPlutusScriptVersion PlutusScriptV3, CostModel [1..233])
                             , (AnyPlutusScriptVersion PlutusScriptV2, CostModel [1..175])
                             ]
 
