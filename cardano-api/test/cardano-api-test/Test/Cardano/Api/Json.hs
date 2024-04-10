@@ -18,8 +18,6 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 prop_json_roundtrip_alonzo_genesis :: Property
 prop_json_roundtrip_alonzo_genesis = H.property $ do
   genesis <- forAll genAlonzoGenesis
