@@ -15,8 +15,6 @@ import           Test.Hedgehog.Roundtrip.CBOR (trippingCbor)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 prop_roundtrip_byron_key_CBOR :: Property
 prop_roundtrip_byron_key_CBOR = H.property $ do
   seed <- H.forAll $ deterministicSigningKey AsByronKey <$> Gen.genSeedForKey AsByronKey

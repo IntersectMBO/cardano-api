@@ -181,8 +181,6 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
 
-{- HLINT ignore "Reduce duplication" -}
-{- HLINT ignore "Use let" -}
 
 genAddressByron :: Gen (Address ByronAddr)
 genAddressByron = makeByronAddress <$> genNetworkId
@@ -933,7 +931,7 @@ genProtocolParameters era = do
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
-  protocolParamCostModels <- pure mempty
+  let protocolParamCostModels = mempty
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
   protocolParamPrices <- Gen.maybe genExecutionUnitPrices
