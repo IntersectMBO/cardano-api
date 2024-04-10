@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Test.Cardano.Api.Metadata
   ( tests
@@ -14,11 +15,14 @@ import           Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Word (Word64)
+import           GHC.Stack
+import           Text.InterpolatedString.Perl6
 
 import           Test.Gen.Cardano.Api.Metadata
 
-import           Hedgehog (Gen, Property, property, (===))
-import qualified Hedgehog
+import           Hedgehog (Gen, Property, (===))
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Test.Tasty (TestTree, testGroup)
@@ -29,63 +33,151 @@ import           Test.Tasty.Hedgehog (testProperty)
 --
 
 prop_golden_1 :: Property
-prop_golden_1 = matchMetadata
-                  "{\"0\": 1}"
+prop_golden_1 = matchMetadata TxMetadataJsonNoSchema
+                  [q|{"0": 1}|]
                   (TxMetadata (Map.fromList [(0, TxMetaNumber 1)]))
 
 prop_golden_2 :: Property
-prop_golden_2 = matchMetadata
-                  "{\"0\": \"deadbeef\"}"
+prop_golden_2 = matchMetadata TxMetadataJsonNoSchema
+                  [q|{"0": "deadbeef"}|]
                   (txMetadataSingleton 0 (TxMetaText "deadbeef"))
 
 prop_golden_3 :: Property
-prop_golden_3 = matchMetadata
-                  "{\"0\": \"0xDEADBEEF\"}"
+prop_golden_3 = matchMetadata TxMetadataJsonNoSchema
+                  [q|{"0": "0xDEADBEEF"}|]
                   (txMetadataSingleton 0 (TxMetaText "0xDEADBEEF"))
 
 prop_golden_4 :: Property
-prop_golden_4 = matchMetadata
-                  "{\"0\": \"0xdeadbeef\"}"
+prop_golden_4 = matchMetadata TxMetadataJsonNoSchema
+                  [q|{"0": "0xdeadbeef"}|]
                   (txMetadataSingleton 0 (TxMetaBytes "\xde\xad\xbe\xef"))
 
 prop_golden_5 :: Property
-prop_golden_5 = matchMetadata
-                  "{\"0\": [] }"
+prop_golden_5 = matchMetadata TxMetadataJsonNoSchema
+                  [q|{"0": [] }|]
                   (txMetadataSingleton 0 (TxMetaList []))
 
 prop_golden_6 :: Property
-prop_golden_6 = matchMetadata
-                  "{\"0\": [1, \"a\", \"0x42\"] }"
+prop_golden_6 = matchMetadata TxMetadataJsonNoSchema
+                  [q|{"0": [1, "a", "0x42"] }|]
                   (txMetadataSingleton 0
                     (TxMetaList [TxMetaNumber 1
                                 ,TxMetaText "a"
                                 ,TxMetaBytes "\x42"]))
 
 prop_golden_7 :: Property
-prop_golden_7 = matchMetadata
-                  "{\"0\": {} }"
+prop_golden_7 = matchMetadata TxMetadataJsonNoSchema
+                  [q|{"0": {} }|]
                   (txMetadataSingleton 0 (TxMetaMap []))
 
 prop_golden_8 :: Property
-prop_golden_8 = matchMetadata
-                  "{\"0\": { \"0x41\": \"0x42\", \"1\": 2, \"a\" : \"b\" }}"
-                  (txMetadataSingleton 0
-                    (TxMetaMap [(TxMetaBytes "\x41", TxMetaBytes "\x42")
-                               ,(TxMetaNumber 1,     TxMetaNumber 2)
-                               ,(TxMetaText  "a",    TxMetaText "b")]))
+prop_golden_8 =
+  matchMetadata TxMetadataJsonNoSchema
+  [q|{"0": {
+        "0x41": "0x42",
+        "0x154041": "0x44",
+        "0x104041": "0x43",
+        "0x3041": "0x45",
+        "aab": "ba",
+        "abb": "ba",
+        "11": 3,
+        "1": 2,
+        "a": "b",
+        "aa": "bb",
+        "ab": "ba",
+        "aba": {
+          "0x41": "0x42",
+          "0x154041": "0x44",
+          "0x104041": "0x43",
+          "0x3041": "0x45",
+          "aab": "ba",
+          "abb": "ba",
+          "11": 3,
+          "1": 2,
+          "a": "b",
+          "aa": "bb",
+          "ab": "ba"
+         }
+       }}|]
+  ( txMetadataSingleton 0
+    ( TxMetaMap
+      [ ( TxMetaNumber 1 , TxMetaNumber 2 )
+      , ( TxMetaNumber 11 , TxMetaNumber 3 )
+      , ( TxMetaBytes "A" , TxMetaBytes "B" )
+      , ( TxMetaText "a" , TxMetaText "b" )
+      , ( TxMetaBytes "0A" , TxMetaBytes "E" )
+      , ( TxMetaText "aa" , TxMetaText "bb" )
+      , ( TxMetaText "ab" , TxMetaText "ba" )
+      , ( TxMetaBytes "\DLE@A" , TxMetaBytes "C" )
+      , ( TxMetaBytes "\NAK@A" , TxMetaBytes "D" )
+      , ( TxMetaText "aab" , TxMetaText "ba" )
+      , ( TxMetaText "aba"
+        , TxMetaMap
+          [ ( TxMetaNumber 1 , TxMetaNumber 2 )
+          , ( TxMetaNumber 11 , TxMetaNumber 3 )
+          , ( TxMetaBytes "A" , TxMetaBytes "B" )
+          , ( TxMetaText "a" , TxMetaText "b" )
+          , ( TxMetaBytes "0A" , TxMetaBytes "E" )
+          , ( TxMetaText "aa" , TxMetaText "bb" )
+          , ( TxMetaText "ab" , TxMetaText "ba" )
+          , ( TxMetaBytes "\DLE@A" , TxMetaBytes "C" )
+          , ( TxMetaBytes "\NAK@A" , TxMetaBytes "D" )
+          , ( TxMetaText "aab" , TxMetaText "ba" )
+          , ( TxMetaText "abb" , TxMetaText "ba" )
+          ]
+        )
+      , ( TxMetaText "abb" , TxMetaText "ba" )
+      ]
+    ))
+
+prop_golden_9 :: Property
+prop_golden_9 =
+  matchMetadata TxMetadataJsonDetailedSchema
+  [q|{"0":
+      {"map":
+        [ { "k": {"string": "aaa"}
+          , "v": {"string": "b4"}
+          }
+        , { "k": {"int": 1}
+          , "v": {"string": "b6"}
+          }
+        , { "k": {"string": "aa"}
+          , "v": {"string": "b2"}
+          }
+        , { "k": {"string": "ab"}
+          , "v": {"string": "b3"}
+          }
+        , { "k": {"string": "b"}
+          , "v": {"string": "b5"}
+          }
+        , { "k": {"string": "a"}
+          , "v": {"string": "b1"}
+          }
+        ]
+      }}|]
+  ( txMetadataSingleton 0
+    ( TxMetaMap
+      [ ( TxMetaText "aaa" , TxMetaText "b4" )
+      , ( TxMetaNumber 1 , TxMetaText "b6" )
+      , ( TxMetaText "aa" , TxMetaText "b2" )
+      , ( TxMetaText "ab" , TxMetaText "b3" )
+      , ( TxMetaText "b" , TxMetaText "b5" )
+      , ( TxMetaText "a" , TxMetaText "b1" )
+      ]
+    ))
 
 txMetadataSingleton :: Word64 -> TxMetadataValue -> TxMetadata
 txMetadataSingleton n v = TxMetadata (Map.fromList [(n, v)])
 
-matchMetadata :: ByteString -> TxMetadata -> Property
-matchMetadata jsonStr metadata =
-  Hedgehog.withTests 1 $ Hedgehog.property $ Hedgehog.test $
-    case Aeson.decodeStrict' jsonStr of
-      Nothing -> Hedgehog.failure
-      Just json -> do
-        Hedgehog.annotateShow json
-        metadataFromJson TxMetadataJsonNoSchema json === Right metadata
-
+matchMetadata :: HasCallStack
+              => TxMetadataJsonSchema
+              -> ByteString -- ^ json string to test
+              -> TxMetadata -- ^ expected metadata
+              -> Property
+matchMetadata hasSchema jsonStr expectedMetadata = withFrozenCallStack $ H.propertyOnce $ do
+  json <- H.noteShowM . H.nothingFail $ Aeson.decodeStrict' jsonStr
+  metadata <- H.noteShowM . H.leftFail $ metadataFromJson hasSchema json
+  metadata === expectedMetadata
 
 -- ----------------------------------------------------------------------------
 -- Round trip properties
@@ -99,8 +191,8 @@ matchMetadata jsonStr metadata =
 -- original value.
 --
 prop_noschema_json_roundtrip_via_metadata :: Property
-prop_noschema_json_roundtrip_via_metadata = Hedgehog.property $ do
-    json <- Hedgehog.forAll (genJsonForTxMetadata TxMetadataJsonNoSchema)
+prop_noschema_json_roundtrip_via_metadata = H.property $ do
+    json <- H.forAll (genJsonForTxMetadata TxMetadataJsonNoSchema)
     Right json === (fmap (metadataToJson   TxMetadataJsonNoSchema)
                         . metadataFromJson TxMetadataJsonNoSchema) json
 
@@ -108,8 +200,8 @@ prop_noschema_json_roundtrip_via_metadata = Hedgehog.property $ do
 -- back, to give the same original JSON.
 --
 prop_schema_json_roundtrip_via_metadata :: Property
-prop_schema_json_roundtrip_via_metadata = Hedgehog.property $ do
-    json <- Hedgehog.forAll (genJsonForTxMetadata TxMetadataJsonDetailedSchema)
+prop_schema_json_roundtrip_via_metadata = H.property $ do
+    json <- H.forAll (genJsonForTxMetadata TxMetadataJsonDetailedSchema)
     Right json === (fmap (metadataToJson   TxMetadataJsonDetailedSchema)
                         . metadataFromJson TxMetadataJsonDetailedSchema) json
 
@@ -118,8 +210,8 @@ prop_schema_json_roundtrip_via_metadata = Hedgehog.property $ do
 -- back, to give the same original tx metadata.
 --
 prop_metadata_roundtrip_via_schema_json :: Property
-prop_metadata_roundtrip_via_schema_json = Hedgehog.property $ do
-    md <- Hedgehog.forAll genTxMetadata
+prop_metadata_roundtrip_via_schema_json = H.property $ do
+    md <- H.forAll genTxMetadata
     Right md === (metadataFromJson TxMetadataJsonDetailedSchema
                 . metadataToJson   TxMetadataJsonDetailedSchema) md
 
@@ -129,19 +221,19 @@ prop_metadata_chunks
   -> (str -> TxMetadataValue)
   -> (TxMetadataValue -> Maybe str)
   -> Property
-prop_metadata_chunks genStr toMetadataValue extractChunk = Hedgehog.property $ do
-  str <- Hedgehog.forAll genStr
+prop_metadata_chunks genStr toMetadataValue extractChunk = H.property $ do
+  str <- H.forAll genStr
   case toMetadataValue str of
     metadataValue@(TxMetaList chunks) -> do
-      Hedgehog.cover  1  "Empty chunks"   (null chunks)
-      Hedgehog.cover  5  "Single chunks"  (length chunks == 1)
-      Hedgehog.cover 25  "Many chunks"    (length chunks > 1)
+      H.cover  1  "Empty chunks"   (null chunks)
+      H.cover  5  "Single chunks"  (length chunks == 1)
+      H.cover 25  "Many chunks"    (length chunks > 1)
       str === mconcat (mapMaybe extractChunk chunks)
       Right () === validateTxMetadata metadata
      where
       metadata = makeTransactionMetadata (Map.singleton 0 metadataValue)
     _ ->
-      Hedgehog.failure
+      H.failure
 
 prop_metadata_text_chunks :: Property
 prop_metadata_text_chunks =
@@ -177,6 +269,7 @@ tests = testGroup "Test.Cardano.Api.Metadata"
   , testProperty "golden 6"                             prop_golden_6
   , testProperty "golden 7"                             prop_golden_7
   , testProperty "golden 8"                             prop_golden_8
+  , testProperty "golden 9"                             prop_golden_9
   , testProperty "noschema json roundtrip via metadata" prop_noschema_json_roundtrip_via_metadata
   , testProperty "schema json roundtrip via metadata"   prop_schema_json_roundtrip_via_metadata
   , testProperty "metadata roundtrip via schema json"   prop_metadata_roundtrip_via_schema_json

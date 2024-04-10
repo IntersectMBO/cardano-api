@@ -319,6 +319,7 @@ test-suite cardano-api-test
                       , hedgehog >= 1.1
                       , hedgehog-extras
                       , hedgehog-quickcheck
+                      , interpolatedstring-perl6
                       , mtl
                       , QuickCheck
                       , tasty
