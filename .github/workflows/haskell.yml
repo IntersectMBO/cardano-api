@@ -8,6 +8,10 @@ on:
     # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache
     branches:
       - main
+  # GH caches are removed when not accessed within 7 days - this schedule runs the job every 6 days making
+  # sure that we always have some caches on main
+  schedule:
+    - cron: '0 0 */6 * *'
 
 jobs:
   build:
@@ -69,7 +73,7 @@ jobs:
       with:
         use-sodium-vrf: true # default is true
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Cabal update
       run: cabal update
@@ -85,6 +89,10 @@ jobs:
       run: |
         cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
 
+    # Use a fresh cache each month
+    - name: Store month number as environment variable used in cache version
+      run:  echo "MONTHNUM=$(/usr/bin/date -u '+%m')" >> $GITHUB_ENV
+
     # From the dependency list we restore the cached dependencies.
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
     # until the `index-state` values in the `cabal.project` file changes.
@@ -95,7 +103,11 @@ jobs:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist-newstyle
-        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        key:
+          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-${{ hashFiles('dependencies.txt') }}
+        # try to restore previous cache from this month if there's no cache for the dependencies set
+        restore-keys: |
+          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-
 
     # Now we install the dependencies. If the cache was found and restored in the previous step,
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
@@ -110,7 +122,8 @@ jobs:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
           dist-newstyle
-        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        key:
+          cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.MONTHNUM }}-${{ hashFiles('dependencies.txt') }}
 
     # Now we build.
     - name: Build all
@@ -140,7 +153,7 @@ jobs:
         done
 
     - name: Save Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: artifacts-${{ matrix.sys.os }}-${{ matrix.ghc }}
         path: ./artifacts
@@ -183,7 +196,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Create Release Tag
       id: create_release_tag
