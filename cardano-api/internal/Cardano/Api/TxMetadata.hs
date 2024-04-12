@@ -57,6 +57,7 @@ import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
 
+import qualified Codec.CBOR.Magic as CBOR
 import           Control.Applicative (Alternative (..))
 import           Control.Monad (guard, when)
 import qualified Data.Aeson as Aeson
@@ -85,13 +86,11 @@ import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Data.Vector as Vector
 import           Data.Word
 
-{- HLINT ignore "Use lambda-case" -}
-
 -- ----------------------------------------------------------------------------
 -- TxMetadata types
 --
 
-newtype TxMetadata = TxMetadata (Map Word64 TxMetadataValue)
+newtype TxMetadata = TxMetadata { unTxMetadata :: Map Word64 TxMetadataValue }
     deriving (Eq, Show)
 
 data TxMetadataValue = TxMetaMap    [(TxMetadataValue, TxMetadataValue)]
@@ -133,7 +132,7 @@ instance SerialiseAsCBOR TxMetadata where
           --   protocol version be supplied as an argument.
           CBOR.serialize' CBOR.shelleyProtVer
         . toShelleyMetadata
-        . (\(TxMetadata m) -> m)
+        . unTxMetadata
 
     deserialiseFromCBOR AsTxMetadata bs =
           TxMetadata
@@ -429,7 +428,7 @@ metadataFromJson :: TxMetadataJsonSchema
                  -> Aeson.Value
                  -> Either TxMetadataJsonError TxMetadata
 metadataFromJson schema =
-    \vtop -> case vtop of
+    \case
       -- The top level has to be an object
       -- with unsigned integer (decimal or hex) keys
       Aeson.Object m ->
@@ -556,9 +555,11 @@ metadataValueFromJsonNoSchema = conv
       $ Vector.toList vs
 
     conv (Aeson.Object kvs) =
-        fmap TxMetaMap
+        fmap
+        ( TxMetaMap
+        . sortCanonicalForCbor
+        )
       . traverse (\(k,v) -> (,) (convKey k) <$> conv v)
-      . List.sortOn fst
       . fmap (first Aeson.toText)
       $ KeyMap.toList kvs
 
@@ -573,6 +574,23 @@ metadataValueFromJsonNoSchema = conv
 bytesPrefix :: Text
 bytesPrefix = "0x"
 
+
+-- | Sorts the list by the first value in the tuple using the rules for canonical CBOR (RFC 7049 section 3.9)
+--
+-- This function is used when transforming data from JSON. In principle the JSON standard and aeson library
+-- do not provide any guarantees about the order of keys in 'Aeson.Object' which means we are free to pick any.
+-- Because we're dumping data into CBOR we are picking a canonical way of sorting keys in a map - the keys are
+-- sorted according to the value of their byte representation.
+--
+-- Details described here: https://datatracker.ietf.org/doc/html/rfc7049#section-3.9
+sortCanonicalForCbor :: [(TxMetadataValue, TxMetadataValue)]
+                    -> [(TxMetadataValue, TxMetadataValue)]
+sortCanonicalForCbor =
+  map snd
+  . List.sortOn fst
+  . map (\e@(k, _) -> (CBOR.uintegerFromBytes $ serialiseKey k, e))
+    where
+      serialiseKey = CBOR.serialize' CBOR.shelleyProtVer . toShelleyMetadatum
 
 -- ----------------------------------------------------------------------------
 -- JSON conversion using the "detailed schema" style
