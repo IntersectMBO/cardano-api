@@ -47,7 +47,8 @@ import           Network.TypedProtocol.Pipelined (Nat (..))
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
 -- provide a termination epoch otherwise blocks would be applied indefinitely.
 foldEpochState
-  :: forall t m s. MonadIOTransError FoldBlocksError t m
+  :: forall t m a. ()
+  => MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
@@ -55,12 +56,12 @@ foldEpochState
   -> ValidationMode
   -> EpochNo
   -- ^ Termination epoch
-  -> s
+  -> a
   -- ^ an initial value for the condition state
   -> ( AnyNewEpochState
          -> SlotNo
          -> BlockNo
-         -> StateT s IO LedgerStateCondition
+         -> StateT a IO LedgerStateCondition
      )
   -- ^ Condition you want to check against the new epoch state.
   --
@@ -73,7 +74,7 @@ foldEpochState
   -- rollback. This is achieved by only calling the accumulator on states/blocks
   -- that are older than the security parameter, k. This has the side effect of
   -- truncating the last k blocks before the node's tip.
-  -> t m (LedgerStateCondition, s)
+  -> t m (LedgerStateCondition, a)
   -- ^ The final state
 foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
@@ -81,15 +82,15 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
-  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError
-                          $ initialLedgerState nodeConfigFilePath
+  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
-  errorIORef <- modifyError FoldBlocksIOException . liftIO $ newIORef Nothing
+  errorIORef <- liftIO $ newIORef Nothing
+
   -- This needs to be a full MVar by default. It serves as a mutual exclusion lock when executing
   -- 'checkCondition' to ensure that states 's' are processed in order. This is assured by MVar fairness.
-  stateMv <- modifyError FoldBlocksIOException . liftIO $ newMVar (ConditionNotMet, initialResult)
+  stateMv <- liftIO $ newMVar (ConditionNotMet, initialResult)
 
   -- Derive the NetworkId as described in network-magic.md from the
   -- cardano-ledger-specs repo.
@@ -118,16 +119,16 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
         , localNodeSocketPath       = socketPath
         }
 
-  modifyError FoldBlocksIOException $ liftIO $ connectToLocalNode
+  liftIO $ connectToLocalNode
     connectInfo
     (protocols stateMv errorIORef env ledgerState)
 
   liftIO (readIORef errorIORef) >>= \case
     Just err -> throwError $ FoldBlocksApplyBlockError err
-    Nothing -> modifyError FoldBlocksIOException . liftIO $ readMVar stateMv
+    Nothing -> liftIO $ readMVar stateMv
   where
     protocols :: ()
-      => MVar (LedgerStateCondition, s)
+      => MVar (LedgerStateCondition, a)
       -> IORef (Maybe LedgerStateError)
       -> Env
       -> LedgerState
@@ -143,18 +144,14 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
     -- | Defines the client side of the chain sync protocol.
     chainSyncClient :: Word16
                     -- ^ The maximum number of concurrent requests.
-                    -> MVar (LedgerStateCondition, s)
+                    -> MVar (LedgerStateCondition, a)
                     -- ^ State accumulator. Written to on every block.
                     -> IORef (Maybe LedgerStateError)
                     -- ^ Resulting error if any. Written to once on protocol
                     -- completion.
                     -> Env
                     -> LedgerState
-                    -> CSP.ChainSyncClientPipelined
-                        BlockInMode
-                        ChainPoint
-                        ChainTip
-                        IO ()
+                    -> CSP.ChainSyncClientPipelined BlockInMode ChainPoint ChainTip IO ()
                     -- ^ Client returns maybe an error.
     chainSyncClient pipelineSize stateMv errorIORef' env ledgerState0
       = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
@@ -189,13 +186,14 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
                         )
                         validationMode
                         block
-                  case forEraMaybeEon era of
-                    Nothing -> let !err = Just ByronEraUnsupported
-                               in clientIdle_DoneNwithMaybeError n err
-                    Just sbe ->
-                      case newLedgerStateE of
-                        Left err -> clientIdle_DoneNwithMaybeError n (Just err)
-                        Right new@(newLedgerState, ledgerEvents) -> do
+
+                  case newLedgerStateE of
+                    Left err -> clientIdle_DoneNwithMaybeError n (Just err)
+                    Right new@(newLedgerState, ledgerEvents) ->
+                      case forEraMaybeEon era of
+                        Nothing -> let !err = Just ByronEraUnsupported
+                                  in clientIdle_DoneNwithMaybeError n err
+                        Just sbe ->do
                           let (knownLedgerStates', _) = pushLedgerState env knownLedgerStates slotNo new blockInMode
                               newClientTip = At currBlockNo
                               newServerTip = fromChainTip serverChainTip
@@ -233,8 +231,6 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
                           ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
                   return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
               }
-
-
 
           clientIdle_DoneNwithMaybeError
             :: Nat n -- Number of requests inflight.

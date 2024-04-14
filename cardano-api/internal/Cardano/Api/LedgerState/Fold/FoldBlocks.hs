@@ -122,7 +122,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
     (protocols stateIORef errorIORef env ledgerState)
 
   liftIO (readIORef errorIORef) >>= \case
-    Just err -> throwError (FoldBlocksApplyBlockError err)
+    Just err -> throwError $ FoldBlocksApplyBlockError err
     Nothing -> liftIO $ readIORef stateIORef
   where
     protocols :: ()
@@ -149,11 +149,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
                     -- completion.
                     -> Env
                     -> LedgerState
-                    -> CSP.ChainSyncClientPipelined
-                        BlockInMode
-                        ChainPoint
-                        ChainTip
-                        IO ()
+                    -> CSP.ChainSyncClientPipelined BlockInMode ChainPoint ChainTip IO ()
                     -- ^ Client returns maybe an error.
     chainSyncClient pipelineSize stateIORef errorIORef env ledgerState0
       = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
@@ -260,7 +256,6 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
                           ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
                   return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
               }
-
 
           clientIdle_DoneNwithMaybeError
             :: Nat n -- Number of requests inflight.
