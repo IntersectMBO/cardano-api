@@ -109,6 +109,9 @@ library internal
                         Cardano.Api.LedgerState.ChainSync
                         Cardano.Api.LedgerState.Core
                         Cardano.Api.LedgerState.Fold
+                        Cardano.Api.LedgerState.Fold.Core
+                        Cardano.Api.LedgerState.Fold.FoldBlocks
+                        Cardano.Api.LedgerState.Fold.FoldEpochState
                         Cardano.Api.LedgerEvents.ConvertLedgerEvent
                         Cardano.Api.LedgerEvents.Rule.BBODY.DELEGS
                         Cardano.Api.LedgerEvents.Rule.BBODY.LEDGER
