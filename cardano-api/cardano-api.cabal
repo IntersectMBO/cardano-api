@@ -107,6 +107,7 @@ library internal
                         Cardano.Api.Ledger.Lens
                         Cardano.Api.LedgerState
                         Cardano.Api.LedgerState.Core
+                        Cardano.Api.LedgerState.Fold
                         Cardano.Api.LedgerEvents.ConvertLedgerEvent
                         Cardano.Api.LedgerEvents.Rule.BBODY.DELEGS
                         Cardano.Api.LedgerEvents.Rule.BBODY.LEDGER
