@@ -76,7 +76,7 @@ foldEpochState
   -- truncating the last k blocks before the node's tip.
   -> t m (LedgerStateCondition, a)
   -- ^ The final state
-foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleIOExceptions $ do
+foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleFoldBlocksIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s

@@ -77,7 +77,7 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> t m a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleIOExceptions $ do
+foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleFoldBlocksIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s

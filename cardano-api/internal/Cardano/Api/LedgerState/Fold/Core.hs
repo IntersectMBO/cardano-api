@@ -6,7 +6,7 @@ module Cardano.Api.LedgerState.Fold.Core
   , LedgerStateCondition(..)
   , FoldBlocksError(..)
 
-  , handleIOExceptions
+  , handleFoldBlocksIOExceptions
   ) where
 
 import           Cardano.Api.Error as Api
@@ -43,5 +43,5 @@ data LedgerStateCondition
   | ConditionNotMet
   deriving (Show, Eq)
 
-handleIOExceptions :: MonadIOTransError FoldBlocksError t m => ExceptT FoldBlocksError IO a -> t m a
-handleIOExceptions = liftEither <=< liftIO . fmap (join . first FoldBlocksIOException) . try . runExceptT
+handleFoldBlocksIOExceptions :: MonadIOTransError FoldBlocksError t m => ExceptT FoldBlocksError IO a -> t m a
+handleFoldBlocksIOExceptions = liftEither <=< liftIO . fmap (join . first FoldBlocksIOException) . try . runExceptT
