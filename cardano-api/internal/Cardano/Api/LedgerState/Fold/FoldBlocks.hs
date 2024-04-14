@@ -45,8 +45,7 @@ import           Network.TypedProtocol.Pipelined (Nat (..))
 
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
-foldBlocks
-  :: forall a t m. ()
+foldBlocks :: forall a t m. ()
   => Show a
   => MonadIOTransError FoldBlocksError t m
   => NodeConfigFile 'In
@@ -77,7 +76,21 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> t m a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleFoldBlocksIOExceptions $ do
+foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
+  foldBlocks' nodeConfigFilePath socketPath validationMode state0 accumulate
+
+-- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
+-- the node's tip where @k@ is the security parameter.
+foldBlocks' :: forall a t m. ()
+  => Show a
+  => MonadIOTransError FoldBlocksError t m
+  => NodeConfigFile 'In
+  -> SocketPath
+  -> ValidationMode
+  -> a
+  -> (Env -> LedgerState -> [LedgerEvent] -> BlockInMode -> a -> IO (a, FoldStatus))
+  -> t m a
+foldBlocks' nodeConfigFilePath socketPath validationMode state0 accumulate = handleFoldBlocksIOExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
