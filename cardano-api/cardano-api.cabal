@@ -106,6 +106,7 @@ library internal
                         Cardano.Api.Keys.Shelley
                         Cardano.Api.Ledger.Lens
                         Cardano.Api.LedgerState
+                        Cardano.Api.LedgerState.ChainSync
                         Cardano.Api.LedgerState.Core
                         Cardano.Api.LedgerState.Fold
                         Cardano.Api.LedgerEvents.ConvertLedgerEvent

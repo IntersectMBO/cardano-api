@@ -72,5 +72,6 @@ module Cardano.Api.LedgerState
   )
   where
 
+import           Cardano.Api.LedgerState.ChainSync
 import           Cardano.Api.LedgerState.Core
 import           Cardano.Api.LedgerState.Fold
