@@ -165,21 +165,21 @@ foldBlocks' nodeConfigFilePath socketPath validationMode state0 accumulate = han
                     -> CSP.ChainSyncClientPipelined BlockInMode ChainPoint ChainTip IO ()
                     -- ^ Client returns maybe an error.
     chainSyncClient pipelineSize stateIORef errorIORef env ledgerState0
-      = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
+      = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Zero Origin Origin initialLedgerStateHistory
       where
           initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
 
           clientIdle_RequestMoreN
-            :: WithOrigin BlockNo
+            :: Nat n -- Number of requests inflight.
             -> WithOrigin BlockNo
-            -> Nat n -- Number of requests inflight.
+            -> WithOrigin BlockNo
             -> LedgerStateHistory
             -> CSP.ClientPipelinedStIdle n BlockInMode ChainPoint ChainTip IO ()
-          clientIdle_RequestMoreN clientTip serverTip n knownLedgerStates
+          clientIdle_RequestMoreN n clientTip serverTip knownLedgerStates
             = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
                 Collect -> case n of
                   Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownLedgerStates)
-                _ -> CSP.SendMsgRequestNextPipelined (pure ()) (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
+                _ -> CSP.SendMsgRequestNextPipelined (pure ()) (clientIdle_RequestMoreN (Succ n) clientTip serverTip knownLedgerStates)
 
           clientNextN
             :: Nat n -- Number of requests inflight.
@@ -207,7 +207,7 @@ foldBlocks' nodeConfigFilePath socketPath validationMode state0 accumulate = han
                       truncatedKnownLedgerStates = case chainPoint of
                           ChainPointAtGenesis -> initialLedgerStateHistory
                           ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
-                  return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
+                  return (clientIdle_RequestMoreN n newClientTip newServerTip truncatedKnownLedgerStates)
               }
 
           clientIdle_DoneNwithMaybeError
@@ -304,4 +304,4 @@ foldBlocks' nodeConfigFilePath socketPath validationMode state0 accumulate = han
                                             ]
                 clientIdle_DoneNwithMaybeError n $ Just ioRefErr
 
-              ContinueFold -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
+              ContinueFold -> return $ clientIdle_RequestMoreN n newClientTip newServerTip knownLedgerStates'
