@@ -199,67 +199,7 @@ foldBlocks' nodeConfigFilePath socketPath validationMode state0 accumulate = han
                         block
                   case newLedgerStateE of
                     Left err -> clientIdle_DoneNwithMaybeError n (Just err)
-                    Right newLedgerState -> do
-                      let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
-                          newClientTip = At currBlockNo
-                          newServerTip = fromChainTip serverChainTip
-
-                          ledgerStateSingleFold
-                            :: (SlotNo, (LedgerState, [LedgerEvent]), WithOrigin BlockInMode) -- Ledger events for a single block
-                            -> IO FoldStatus
-                          ledgerStateSingleFold (_, _, Origin) = return ContinueFold
-                          ledgerStateSingleFold (_, (ledgerState, ledgerEvents), At currBlock) = do
-                            accumulatorState <- readIORef stateIORef
-                            (newState, foldStatus) <- accumulate
-                                                      env
-                                                      ledgerState
-                                                      ledgerEvents
-                                                      currBlock
-                                                      accumulatorState
-                            atomicWriteIORef stateIORef newState
-                            return foldStatus
-
-                          ledgerStateRecurser
-                            :: Seq (SlotNo, LedgerStateEvents, WithOrigin BlockInMode) -- Ledger events for multiple blocks
-                            -> IO FoldStatus
-                          ledgerStateRecurser states = go (toList states) ContinueFold
-                            where
-                              go [] foldStatus = return foldStatus
-                              go (s : rest) ContinueFold = do
-                                newFoldStatus <- ledgerStateSingleFold s
-                                go rest newFoldStatus
-                              go _          StopFold    = go [] StopFold
-                              go _          DebugFold   = go [] DebugFold
-
-                      -- NB: knownLedgerStates' is the new ledger state history i.e k blocks from the tip
-                      -- or also known as the mutable blocks. We default to using the mutable blocks.
-                      finalFoldStatus <- ledgerStateRecurser knownLedgerStates'
-
-                      case finalFoldStatus of
-                        StopFold ->
-                          -- We return StopFold in our accumulate function if we want to terminate the fold.
-                          -- This allow us to check for a specific condition in our accumulate function
-                          -- and then terminate e.g a specific stake pool was registered
-                          let noError = Nothing
-                          in clientIdle_DoneNwithMaybeError n noError
-
-                        DebugFold -> do
-                          currentIORefState <- readIORef stateIORef
-
-                          -- Useful for debugging:
-                          let !ioRefErr = DebugError . force
-                                            $ unlines [ "newClientTip: " <> show newClientTip
-                                                      , "newServerTip: " <> show newServerTip
-                                                      , "newLedgerState: " <> show (snd newLedgerState)
-                                                      , "knownLedgerStates: " <> show (extractHistory knownLedgerStates)
-                                                      , "committedStates: " <> show (extractHistory committedStates)
-                                                      , "numberOfRequestsInFlight: " <> show n
-                                                      , "k: " <> show (envSecurityParam env)
-                                                      , "Current IORef State: " <> show currentIORefState
-                                                      ]
-                          clientIdle_DoneNwithMaybeError n $ Just ioRefErr
-
-                        ContinueFold -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
+                    Right newLedgerState -> step n knownLedgerStates slotNo newLedgerState blockInMode currBlockNo serverChainTip
 
               , CSP.recvMsgRollBackward = \chainPoint serverChainTip -> do
                   let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
@@ -294,3 +234,74 @@ foldBlocks' nodeConfigFilePath socketPath validationMode state0 accumulate = han
           fromChainTip ct = case ct of
             ChainTipAtGenesis -> Origin
             ChainTip _ _ bno -> At bno
+
+          step :: ()
+            => Nat n
+            -> History LedgerStateEvents
+            -> SlotNo
+            -> LedgerStateEvents
+            -> BlockInMode
+            -> BlockNo
+            -> ChainTip
+            -> IO (CSP.ClientPipelinedStIdle n BlockInMode ChainPoint ChainTip IO ())
+          step n knownLedgerStates slotNo newLedgerState blockInMode currBlockNo serverChainTip = do
+            let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
+                newClientTip = At currBlockNo
+                newServerTip = fromChainTip serverChainTip
+
+                ledgerStateSingleFold
+                  :: (SlotNo, (LedgerState, [LedgerEvent]), WithOrigin BlockInMode) -- Ledger events for a single block
+                  -> IO FoldStatus
+                ledgerStateSingleFold (_, _, Origin) = return ContinueFold
+                ledgerStateSingleFold (_, (ledgerState, ledgerEvents), At currBlock) = do
+                  accumulatorState <- readIORef stateIORef
+                  (newState, foldStatus) <- accumulate
+                                            env
+                                            ledgerState
+                                            ledgerEvents
+                                            currBlock
+                                            accumulatorState
+                  atomicWriteIORef stateIORef newState
+                  return foldStatus
+
+                ledgerStateRecurser
+                  :: Seq (SlotNo, LedgerStateEvents, WithOrigin BlockInMode) -- Ledger events for multiple blocks
+                  -> IO FoldStatus
+                ledgerStateRecurser states = go (toList states) ContinueFold
+                  where
+                    go [] foldStatus = return foldStatus
+                    go (s : rest) ContinueFold = do
+                      newFoldStatus <- ledgerStateSingleFold s
+                      go rest newFoldStatus
+                    go _          StopFold    = go [] StopFold
+                    go _          DebugFold   = go [] DebugFold
+
+            -- NB: knownLedgerStates' is the new ledger state history i.e k blocks from the tip
+            -- or also known as the mutable blocks. We default to using the mutable blocks.
+            finalFoldStatus <- ledgerStateRecurser knownLedgerStates'
+
+            case finalFoldStatus of
+              StopFold ->
+                -- We return StopFold in our accumulate function if we want to terminate the fold.
+                -- This allow us to check for a specific condition in our accumulate function
+                -- and then terminate e.g a specific stake pool was registered
+                let noError = Nothing
+                in clientIdle_DoneNwithMaybeError n noError
+
+              DebugFold -> do
+                currentIORefState <- readIORef stateIORef
+
+                -- Useful for debugging:
+                let !ioRefErr = DebugError . force
+                                  $ unlines [ "newClientTip: " <> show newClientTip
+                                            , "newServerTip: " <> show newServerTip
+                                            , "newLedgerState: " <> show (snd newLedgerState)
+                                            , "knownLedgerStates: " <> show (extractHistory knownLedgerStates)
+                                            , "committedStates: " <> show (extractHistory committedStates)
+                                            , "numberOfRequestsInFlight: " <> show n
+                                            , "k: " <> show (envSecurityParam env)
+                                            , "Current IORef State: " <> show currentIORefState
+                                            ]
+                clientIdle_DoneNwithMaybeError n $ Just ioRefErr
+
+              ContinueFold -> return $ clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates'
