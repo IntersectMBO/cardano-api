@@ -14,7 +14,8 @@ import           Cardano.Api.Ledger (PParams (..))
 import           Cardano.Api.ProtocolParameters (LedgerProtocolParameters (..),
                    convertToLedgerProtocolParameters, fromLedgerPParams)
 
-import           Data.Aeson (FromJSON, Object, ToJSON, decode, eitherDecode)
+import           Control.Monad (void)
+import           Data.Aeson (FromJSON, Object, ToJSON, eitherDecode)
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -22,11 +23,10 @@ import           Data.Foldable (foldl')
 
 import           Test.Gen.Cardano.Api.Typed (genProtocolParameters)
 
-import           Hedgehog (Gen, Property, forAll, property, success, (===))
+import           Hedgehog (Gen, MonadTest, Property, forAll, property, success, (===))
+import           Hedgehog.Extras (leftFail)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
-import Hedgehog.Extras (leftFail)
-import Control.Monad (void)
 
 tests :: TestTree
 tests =
@@ -115,46 +115,49 @@ genValidSerializedPair era = do
       toShelleyBased :: CardanoEra era -> ShelleyBasedEra era
       toShelleyBased = inEonForEra (error "Not a Shelley-based era") id
 
-
-patchProtocolParamsJSONOrFail :: MonadFail m => CardanoEra era -> LBS.ByteString -> m LBS.ByteString
-patchProtocolParamsJSONOrFail era b = maybe (fail "Cannot fix JSON") return $ patchProtocolParamsJSON b
+-- Legacy representation of 'ProtocolParameters' in cardano-api is not 100% compatible with
+-- the 'PParams' representation in cardano-ledger. This functions modifies the JSON object
+-- produced by the serialization of 'ProtocolParameters' type to match 'PParams' serialization
+-- format.
+patchProtocolParamsJSONOrFail :: (MonadTest m, MonadFail m) => CardanoEra era -> LBS.ByteString -> m LBS.ByteString
+patchProtocolParamsJSONOrFail era s = LBS.fromStrict . prettyPrintJSON
+                                        <$> (patchProtocolParamRepresentation
+                                             =<< leftFail (eitherDecode s))
   where
-    patchProtocolParamsJSON :: LBS.ByteString -> Maybe LBS.ByteString
-    patchProtocolParamsJSON s = LBS.fromStrict . prettyPrintJSON <$> (patchProtocolParamRepresentation =<< decode s)
-      where
-        -- We are renaming two of the fields to match the spec. Based on discussion here:
-        -- https://github.com/IntersectMBO/cardano-ledger/pull/4129#discussion_r1507373498
-        patchProtocolParamRepresentation :: Object -> Maybe Object
-        patchProtocolParamRepresentation o = do filters <- filtersForEra era
-                                                renameKey "committeeTermLength" "committeeMaxTermLength"
-                                                  =<< renameKey "minCommitteeSize" "committeeMinSize"
-                                                        (applyFilters filters o)
+    -- We are renaming two of the fields to match the spec. Based on discussion here:
+    -- https://github.com/IntersectMBO/cardano-ledger/pull/4129#discussion_r1507373498
+    patchProtocolParamRepresentation :: MonadFail m => Object -> m Object
+    patchProtocolParamRepresentation o = do filters <- filtersForEra era
+                                            renameKey "committeeTermLength" "committeeMaxTermLength"
+                                              =<< renameKey "minCommitteeSize" "committeeMinSize"
+                                                    (applyFilters filters o)
 
-        -- Legacy ProtocolParams ToJSON renders all fields from all eras in all eras,
-        -- because it is the same data type for every era. But this is not backwards compatible
-        -- because it means that new eras can modify the fields in old eras. For this reason, when
-        -- comparing to PParams we use this function to filter fields that don't belong to
-        -- particular era we are testing.
-        filtersForEra :: CardanoEra era -> Maybe [String]
-        filtersForEra ShelleyEra = Just [ "collateralPercentage", "costModels", "executionUnitPrices"
-                                        , "maxBlockExecutionUnits", "maxCollateralInputs", "maxTxExecutionUnits"
-                                        , "maxValueSize", "utxoCostPerByte" ]
-        filtersForEra AlonzoEra  = Just [ "minUTxOValue" ]
-        filtersForEra BabbageEra = Just [ "decentralization", "extraPraosEntropy", "minUTxOValue" ]
-        filtersForEra _ = Nothing
+    -- Legacy ProtocolParams ToJSON renders all fields from all eras in all eras,
+    -- because it is the same data type for every era. But this is not backwards compatible
+    -- because it means that new eras can modify the fields in old eras. For this reason, when
+    -- comparing to PParams we use this function to filter fields that don't belong to
+    -- particular era we are testing.
+    filtersForEra :: MonadFail m => CardanoEra era -> m [String]
+    filtersForEra ShelleyEra = return [ "collateralPercentage", "costModels", "executionUnitPrices"
+                                      , "maxBlockExecutionUnits", "maxCollateralInputs", "maxTxExecutionUnits"
+                                      , "maxValueSize", "utxoCostPerByte" ]
+    filtersForEra AlonzoEra  = return [ "minUTxOValue" ]
+    filtersForEra BabbageEra = return [ "decentralization", "extraPraosEntropy", "minUTxOValue" ]
+    filtersForEra era' = fail $ "filtersForEra is not defined for: " <> show era'
 
-        applyFilters :: [String] -> Object -> Object
-        applyFilters filters o = foldl' (flip Aeson.delete) o (map Aeson.fromString filters)
+    applyFilters :: [String] -> Object -> Object
+    applyFilters filters o = foldl' (flip Aeson.delete) o (map Aeson.fromString filters)
 
-        -- Renames the key of an entry in a JSON object.
-        -- If there already is a key with the new name in the object, return 'Nothing'.
-        renameKey :: String -> String -> Object -> Maybe Object
-        renameKey src dest o =
-          let srcKey = Aeson.fromString src
-              destKey = Aeson.fromString dest in
-          case Aeson.lookup srcKey o of
-            Nothing -> Just o
-            Just v -> if Aeson.member destKey o
-                      then Nothing
-                      else Just $ Aeson.insert destKey v $ Aeson.delete srcKey o
+    -- Renames the key of an entry in a JSON object.
+    -- If there already is a key with the new name in the object the function fails.
+    renameKey :: MonadFail m => String -> String -> Object -> m Object
+    renameKey src dest o =
+      let srcKey = Aeson.fromString src
+          destKey = Aeson.fromString dest in
+      case Aeson.lookup srcKey o of
+        Nothing -> return o
+        Just v -> if Aeson.member destKey o
+                  then fail $ "renameKey failed because there is already an entry with the new name: " <> dest
+                  else return $ Aeson.insert destKey v $ Aeson.delete srcKey o
+
 
