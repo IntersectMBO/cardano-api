@@ -100,12 +100,14 @@ data ValidatedSerializedPair era = ValidatedSerializedPair
 genValidSerializedPair :: forall era. ToJSON (PParams (ShelleyLedgerEra era)) => CardanoEra era -> Gen (ValidatedSerializedPair era)
 genValidSerializedPair era = do
   unrefinedProtocolParameters <- genProtocolParameters era
-  case (do unrefinedPParams <- convertToLedgerProtocolParameters sbe unrefinedProtocolParameters :: (Either ProtocolParametersConversionError (LedgerProtocolParameters era))
+  let mValidatedSerializedPair =
+        do unrefinedPParams <- convertToLedgerProtocolParameters sbe unrefinedProtocolParameters :: (Either ProtocolParametersConversionError (LedgerProtocolParameters era))
            let refinedProtocolParams = fromLedgerPParams sbe $ unLedgerProtocolParameters unrefinedPParams
            refinedPParams <- convertToLedgerProtocolParameters sbe refinedProtocolParams
            return $ ValidatedSerializedPair { serializedProtocolParameters = LBS.fromStrict $ prettyPrintJSON refinedProtocolParams
                                             , serializedPParams = LBS.fromStrict $ prettyPrintJSON . unLedgerProtocolParameters $ refinedPParams
-                                            }) of
+                                            }
+  case mValidatedSerializedPair of
      Right result -> return result
      Left _ -> genValidSerializedPair era
     where
