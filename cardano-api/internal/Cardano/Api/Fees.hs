@@ -877,25 +877,17 @@ newtype TotalReferenceScriptsSize
 
 data FeeEstimationMode era
   = CalculateWithSpendableUTxO -- ^ Accurate fee calculation.
-      -- | Spendable UTxO
-      (UTxO era)
+      (UTxO era) -- ^ Spendable UTxO
       SystemStart
       LedgerEpochInfo
-      -- | Override number of key witnesses
-      (Maybe Word)
+      (Maybe Word) -- ^ Override number of key witnesses
   | EstimateWithoutSpendableUTxO -- ^ Less accurate fee estimation.
-      -- | Total potential collateral amount
-      Coin 
-      -- | Total value of UTxOs being spent
-      Value 
-      -- | Plutus script execution units
-      (Map ScriptWitnessIndex ExecutionUnits) 
-      -- | The number of key witnesses still to be added to the transaction.
-      RequiredShelleyKeyWitnesses
-      -- | The number of Byron key witnesses still to be added to the transaction.
-      RequiredByronKeyWitnesses
-      -- | The total size in bytes of reference scripts
-      TotalReferenceScriptsSize
+      Coin -- ^ Total potential collateral amount
+      Value -- ^ Total value of UTxOs being spent
+      (Map ScriptWitnessIndex ExecutionUnits) -- ^ Plutus script execution units
+      RequiredShelleyKeyWitnesses -- ^ The number of key witnesses still to be added to the transaction.
+      RequiredByronKeyWitnesses -- ^ The number of Byron key witnesses still to be added to the transaction.
+      TotalReferenceScriptsSize -- ^ The total size in bytes of reference scripts
 
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
