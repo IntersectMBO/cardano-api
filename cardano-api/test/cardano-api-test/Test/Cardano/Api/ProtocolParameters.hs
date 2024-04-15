@@ -25,6 +25,8 @@ import           Test.Gen.Cardano.Api.Typed (genProtocolParameters)
 import           Hedgehog (Gen, Property, forAll, property, success, (===))
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog.Extras (leftFail)
+import Control.Monad (void)
 
 tests :: TestTree
 tests =
@@ -64,9 +66,8 @@ protocolParametersAreCompatible era =
    property $ do ValidatedSerializedPair { serializedProtocolParameters
                                          , serializedPParams = _
                                          } <- forAll $ genValidSerializedPair era
-                 case eitherDecode serializedProtocolParameters :: Either String (PParams (ShelleyLedgerEra era)) of
-                   Left err -> fail err
-                   Right _ -> success
+                 void (leftFail (eitherDecode serializedProtocolParameters :: Either String (PParams (ShelleyLedgerEra era))))
+                 success
 
 -- | Ensure that deserializing using PParams FromJSON instance and then serializing again using PParams ToJSON
 -- instance results in the same thing
