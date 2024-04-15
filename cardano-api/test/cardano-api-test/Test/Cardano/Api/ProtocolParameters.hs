@@ -47,9 +47,9 @@ tests =
                           , testProperty "BabbageEra" $ protocolParametersAreCompatible BabbageEra
                           ]
               , testGroup "PParams roundtrip"
-                          [ testProperty "ShelleyEra" $ ppParamsRoundtrip ShelleyEra
-                          , testProperty "AlonzoEra" $ ppParamsRoundtrip AlonzoEra
-                          , testProperty "BabbageEra" $ ppParamsRoundtrip BabbageEra
+                          [ testProperty "ShelleyEra" $ roundtripBetweenPParamsAndLegacyProtocolParameters ShelleyEra
+                          , testProperty "AlonzoEra" $ roundtripBetweenPParamsAndLegacyProtocolParameters AlonzoEra
+                          , testProperty "BabbageEra" $ roundtripBetweenPParamsAndLegacyProtocolParameters BabbageEra
                           ]
               ]
 
@@ -74,12 +74,14 @@ protocolParametersAreCompatible era =
                  void (leftFail (eitherDecode serializedProtocolParameters :: Either String (PParams (ShelleyLedgerEra era))))
                  success
 
--- | Ensure that deserializing using PParams FromJSON instance and then serializing again using PParams ToJSON
--- instance results in the same thing
-ppParamsRoundtrip :: forall era. ( FromJSON (PParams (ShelleyLedgerEra era))
-                                 , ToJSON (PParams (ShelleyLedgerEra era))
-                                 ) => CardanoEra era -> Property
-ppParamsRoundtrip era =
+-- | This tests that, for protocol parameter sets that can roundtrip between PParams and ProtocolParameters
+-- (i.e. sets of parameters that are valid/work according to the constraints in both PParams and ProtocolParameters
+-- and their conversion functions), deserializing them using PParams FromJSON instance and then serializing
+-- again using PParams ToJSON instance results in the same thing.
+roundtripBetweenPParamsAndLegacyProtocolParameters :: forall era. ( FromJSON (PParams (ShelleyLedgerEra era))
+                                                                  , ToJSON (PParams (ShelleyLedgerEra era))
+                                                                  ) => CardanoEra era -> Property
+roundtripBetweenPParamsAndLegacyProtocolParameters era =
    property $ do ValidatedSerializedPair { serializedProtocolParameters
                                          , serializedPParams = _
                                          } <- forAll $ genValidSerializedPair era
