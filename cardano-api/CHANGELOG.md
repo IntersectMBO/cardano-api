@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 8.45.0.0
+
+- Sort metadata keys for no-schema json for canonical CBOR
+  (breaking, bugfix)
+  [PR 517](https://github.com/IntersectMBO/cardano-api/pull/517)
+
+- Implement estimateBalancedTxBody and estimateOrCalculateBalancedTxBody
+  (feature, compatible)
+  [PR 511](https://github.com/IntersectMBO/cardano-api/pull/511)
+
+- Add support for CC keys in the SomeAddressVerificationKey type
+  (feature, breaking)
+  [PR 514](https://github.com/IntersectMBO/cardano-api/pull/514)
+
 ## 8.44.0.0
 
 - - Add `getReferenceInputsSizeForTxIds` function.
