@@ -51,9 +51,13 @@ test_golden_ProtocolParameters_to_PParams =
 -- Test that tries decoding the legacy protocol parameters golden file
 -- 'legacyCardanoApiProtocolParameters' as the type provided as a 'Proxy'.
 goldenLegacyProtocolParametersToPParams :: forall pp. FromJSON pp => Proxy pp -> Property
-goldenLegacyProtocolParametersToPParams _ =
+goldenLegacyProtocolParametersToPParams proxy =
   property $ case decodedLegacyCardanoApiProtocolParameters of
-               Left err -> failWith Nothing ("could not decode: " <> show err)
+               Left err -> failWith Nothing
+                                    ("goldenLegacyProtocolParametersToPParams could not decode golden file as "
+                                     <> show proxy
+                                     <> ": "
+                                     <> show err)
                Right _ -> success
   where
     bytestringLegacyCardanoApiProtocolParameters :: ByteString
