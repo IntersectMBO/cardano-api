@@ -121,6 +121,8 @@ patchProtocolParamsJSONOrFail era b = maybe (fail "Cannot fix JSON") return $ pa
     patchProtocolParamsJSON :: LBS.ByteString -> Maybe LBS.ByteString
     patchProtocolParamsJSON s = LBS.fromStrict . prettyPrintJSON <$> (patchProtocolParamRepresentation =<< decode s)
       where
+        -- We are renaming two of the fields to match the spec. Based on discussion here:
+        -- https://github.com/IntersectMBO/cardano-ledger/pull/4129#discussion_r1507373498
         patchProtocolParamRepresentation :: Object -> Maybe Object
         patchProtocolParamRepresentation o = do filters <- filtersForEra era
                                                 replace "committeeTermLength" "committeeMaxTermLength"
