@@ -28,6 +28,11 @@ import           Hedgehog.Extras (leftFail)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
+-- Originally, cardano-api used a different type than cardano-ledger to represent
+-- protocol parameters. From conway on, we aim to unify those types and use PParams.
+-- These tests aim to ensure backwards compatibility between the legacy type ProtocolParams
+-- and PParams for eras before conway. Conway should use PParams directly, so we don't
+-- provide any tests for it.
 tests :: TestTree
 tests =
     testGroup "ProtocolParameter tests"
