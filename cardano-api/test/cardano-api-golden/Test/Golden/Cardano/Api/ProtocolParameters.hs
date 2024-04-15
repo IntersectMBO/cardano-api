@@ -17,6 +17,8 @@ import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..))
 import           Cardano.Ledger.Babbage (BabbageEra)
 import           Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
+import           Cardano.Ledger.Plutus.CostModels (costModelParamsCount)
+import           Cardano.Ledger.Plutus.Language (Language (..))
 import           Cardano.Ledger.Shelley (ShelleyEra)
 import           Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 
@@ -100,9 +102,13 @@ legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostP
                                               }
 
     costModels :: Map AnyPlutusScriptVersion CostModel
-    costModels = M.fromList [ (AnyPlutusScriptVersion PlutusScriptV3, CostModel [1..233])
-                            , (AnyPlutusScriptVersion PlutusScriptV2, CostModel [1..175])
+    costModels = M.fromList [ (AnyPlutusScriptVersion PlutusScriptV3, CostModel [1..numParams PlutusV3])
+                            , (AnyPlutusScriptVersion PlutusScriptV2, CostModel [1..numParams PlutusV2])
+                            , (AnyPlutusScriptVersion PlutusScriptV1, CostModel [1..numParams PlutusV1])
                             ]
+
+    numParams :: Language -> Integer
+    numParams = fromIntegral . costModelParamsCount
 
     executionUnits :: ExecutionUnits
     executionUnits = ExecutionUnits { executionSteps = 4300
