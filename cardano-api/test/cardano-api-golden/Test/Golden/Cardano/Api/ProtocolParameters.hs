@@ -41,15 +41,17 @@ test_golden_ProtocolParameters_to_PParams :: TestTree
 test_golden_ProtocolParameters_to_PParams =
   testGroup "golden ProtocolParameter tests"
             [ testProperty "ShelleyPParams" $
-                goldenProtocolParametersToPParams (Proxy :: Proxy (ShelleyPParams Identity (ShelleyEra StandardCrypto)))
+                goldenLegacyProtocolParametersToPParams (Proxy :: Proxy (ShelleyPParams Identity (ShelleyEra StandardCrypto)))
             , testProperty "AlonzoPParams" $
-                goldenProtocolParametersToPParams (Proxy :: Proxy (AlonzoPParams Identity (AlonzoEra StandardCrypto)))
+                goldenLegacyProtocolParametersToPParams (Proxy :: Proxy (AlonzoPParams Identity (AlonzoEra StandardCrypto)))
             , testProperty "BabbagePParams" $
-                goldenProtocolParametersToPParams (Proxy :: Proxy (BabbagePParams Identity (BabbageEra StandardCrypto)))
+                goldenLegacyProtocolParametersToPParams (Proxy :: Proxy (BabbagePParams Identity (BabbageEra StandardCrypto)))
             ]
 
-goldenProtocolParametersToPParams :: forall pp. FromJSON pp => Proxy pp -> Property
-goldenProtocolParametersToPParams _ =
+-- Test that tries decoding the legacy protocol parameters golden file
+-- 'legacyCardanoApiProtocolParameters' as the type provided as a 'Proxy'.
+goldenLegacyProtocolParametersToPParams :: forall pp. FromJSON pp => Proxy pp -> Property
+goldenLegacyProtocolParametersToPParams _ =
   property $ case decodedLegacyCardanoApiProtocolParameters of
                Left err -> failWith Nothing ("could not decode: " <> show err)
                Right _ -> success
