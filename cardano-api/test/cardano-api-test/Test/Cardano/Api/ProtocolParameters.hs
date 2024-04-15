@@ -126,8 +126,8 @@ patchProtocolParamsJSONOrFail era b = maybe (fail "Cannot fix JSON") return $ pa
         -- https://github.com/IntersectMBO/cardano-ledger/pull/4129#discussion_r1507373498
         patchProtocolParamRepresentation :: Object -> Maybe Object
         patchProtocolParamRepresentation o = do filters <- filtersForEra era
-                                                replace "committeeTermLength" "committeeMaxTermLength"
-                                                  =<< replace "minCommitteeSize" "committeeMinSize"
+                                                renameKey "committeeTermLength" "committeeMaxTermLength"
+                                                  =<< renameKey "minCommitteeSize" "committeeMinSize"
                                                         (applyFilters filters o)
 
         -- Legacy ProtocolParams ToJSON renders all fields from all eras in all eras,
@@ -146,8 +146,10 @@ patchProtocolParamsJSONOrFail era b = maybe (fail "Cannot fix JSON") return $ pa
         applyFilters :: [String] -> Object -> Object
         applyFilters filters o = foldl' (flip Aeson.delete) o (map Aeson.fromString filters)
 
-        replace :: String -> String -> Object -> Maybe Object
-        replace src dest o =
+        -- Renames the key of an entry in a JSON object.
+        -- If there already is a key with the new name in the object, return 'Nothing'.
+        renameKey :: String -> String -> Object -> Maybe Object
+        renameKey src dest o =
           let srcKey = Aeson.fromString src
               destKey = Aeson.fromString dest in
           case Aeson.lookup srcKey o of
