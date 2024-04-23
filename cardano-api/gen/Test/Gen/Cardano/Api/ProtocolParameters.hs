@@ -75,6 +75,7 @@ genIntroducedInConwayPParams =
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
     <*> genStrictMaybe Q.arbitrary
+    <*> genStrictMaybe Q.arbitrary
 
 genShelleyEraBasedProtocolParametersUpdate :: MonadGen m => m (EraBasedProtocolParametersUpdate ShelleyEra)
 genShelleyEraBasedProtocolParametersUpdate =
