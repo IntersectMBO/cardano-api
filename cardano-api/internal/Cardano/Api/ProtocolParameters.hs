@@ -253,6 +253,7 @@ data IntroducedInConwayPParams era
     , icGovActionDeposit     :: StrictMaybe Ledger.Coin
     , icDRepDeposit          :: StrictMaybe Ledger.Coin
     , icDRepActivity         :: StrictMaybe Ledger.EpochInterval
+    , icMinFeeRefScriptCostPerByte  :: StrictMaybe Ledger.NonNegativeInterval
     } deriving Show
 
 
@@ -270,6 +271,7 @@ createIntroducedInConwayPParams IntroducedInConwayPParams{..} =
       & Ledger.ppuGovActionDepositL .~ icGovActionDeposit
       & Ledger.ppuDRepDepositL .~ icDRepDeposit
       & Ledger.ppuDRepActivityL .~ icDRepActivity
+      & Ledger.ppuMinFeeRefScriptCostPerByteL .~ icMinFeeRefScriptCostPerByte
 
 
 createEraBasedProtocolParamUpdate
