@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 8.45.1.0
+
+- Adding `MinFeeRefScriptCostPerByte` to Conway PParams
+  (feature)
+  [PR 524](https://github.com/IntersectMBO/cardano-api/pull/524)
+
+- Added a golden test for ProtocolParameters, added three property-based tests for comparing ProtocolParameters and PParams for the different eras, and fixed the implementation of `toAlonzoPParams` function.
+  (improvement)
+  [PR 457](https://github.com/IntersectMBO/cardano-api/pull/457)
+
 ## 8.45.0.0
 
 - Sort metadata keys for no-schema json for canonical CBOR
