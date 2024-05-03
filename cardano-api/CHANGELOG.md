@@ -1,5 +1,12 @@
 # Changelog for cardano-api
 
+## 8.45.2.0
+
+- Update estimateBalancedTxBody to account for required deposits due to
+  governance proposals and stake registration certificates
+  (feature, compatible, improvement)
+  [PR 527](https://github.com/IntersectMBO/cardano-api/pull/527)
+
 ## 8.45.1.0 
 
 - Adding `MinFeeRefScriptCostPerByte` to Conway PParams
