@@ -59,6 +59,7 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
@@ -73,6 +74,8 @@ import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Conway.Governance as L
+import qualified Cardano.Ledger.Core as L
 import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
@@ -83,11 +86,13 @@ import qualified PlutusLedgerApi.V1 as Plutus
 import           Control.Monad (forM_)
 import           Data.Bifunctor (bimap, first)
 import           Data.ByteString.Short (ShortByteString)
+import           Data.Foldable (toList)
 import           Data.Function ((&))
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import qualified Data.OSet.Strict as OSet
 import           Data.Ratio
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -96,14 +101,14 @@ import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
 
-data AutoBalanceError era 
+data AutoBalanceError era
   = AutoBalanceEstimationError (TxFeeEstimationError era)
   | AutoBalanceCalculationError (TxBodyErrorAutoBalance era)
   deriving Show
 
-instance Error (AutoBalanceError era) where 
+instance Error (AutoBalanceError era) where
   prettyError = \case
-    AutoBalanceEstimationError e -> prettyError e 
+    AutoBalanceEstimationError e -> prettyError e
     AutoBalanceCalculationError e -> prettyError e
 
 
@@ -117,27 +122,27 @@ estimateOrCalculateBalancedTxBody
   -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
   -> AddressInEra era
   -> Either (AutoBalanceError era) (BalancedTxBody era)
-estimateOrCalculateBalancedTxBody era feeEstMode pparams txBodyContent poolids stakeDelegDeposits drepDelegDeposits changeAddr = 
-  case feeEstMode of 
-    CalculateWithSpendableUTxO utxo systemstart ledgerEpochInfo mOverride -> 
-      first AutoBalanceCalculationError $ 
+estimateOrCalculateBalancedTxBody era feeEstMode pparams txBodyContent poolids stakeDelegDeposits drepDelegDeposits changeAddr =
+  case feeEstMode of
+    CalculateWithSpendableUTxO utxo systemstart ledgerEpochInfo mOverride ->
+      first AutoBalanceCalculationError $
         makeTransactionBodyAutoBalance era systemstart ledgerEpochInfo (LedgerProtocolParameters pparams)
                                        poolids stakeDelegDeposits drepDelegDeposits utxo txBodyContent changeAddr mOverride
 
-    EstimateWithoutSpendableUTxO 
-      totalPotentialCollateral totalUTxOValue exUnitsMap 
-      (RequiredShelleyKeyWitnesses numKeyWits) (RequiredByronKeyWitnesses numByronWits) 
-      (TotalReferenceScriptsSize totalRefScriptsSize) -> 
+    EstimateWithoutSpendableUTxO
+      totalPotentialCollateral totalUTxOValue exUnitsMap
+      (RequiredShelleyKeyWitnesses numKeyWits) (RequiredByronKeyWitnesses numByronWits)
+      (TotalReferenceScriptsSize totalRefScriptsSize) ->
         forShelleyBasedEraInEon
-          era 
+          era
           (Left $ AutoBalanceEstimationError TxFeeEstimationOnlyMaryOnwardsSupportedError)
-          (\w -> first AutoBalanceEstimationError $ 
-                   estimateBalancedTxBody w txBodyContent pparams poolids stakeDelegDeposits drepDelegDeposits 
-                                          exUnitsMap totalPotentialCollateral numKeyWits numByronWits 
+          (\w -> first AutoBalanceEstimationError $
+                   estimateBalancedTxBody w txBodyContent pparams poolids stakeDelegDeposits drepDelegDeposits
+                                          exUnitsMap totalPotentialCollateral numKeyWits numByronWits
                                           totalRefScriptsSize changeAddr totalUTxOValue
           )
 
-  
+
 data TxFeeEstimationError era
   = TxFeeEstimationTransactionTranslationError (TransactionValidityError era)
   | TxFeeEstimationScriptExecutionError (TxBodyErrorAutoBalance era)
@@ -149,7 +154,7 @@ data TxFeeEstimationError era
 
 
 
-instance Error (TxFeeEstimationError era) where 
+instance Error (TxFeeEstimationError era) where
   prettyError = \case
     TxFeeEstimationTransactionTranslationError e -> prettyError e
     TxFeeEstimationScriptExecutionError e -> prettyError e
@@ -157,11 +162,11 @@ instance Error (TxFeeEstimationError era) where
     TxFeeEstimationxBodyError e -> prettyError e
     TxFeeEstimationFinalConstructionError e -> prettyError e
     TxFeeEstimationOnlyMaryOnwardsSupportedError->
-      "Only mary era onwards supported." 
+      "Only mary era onwards supported."
 
 -- | Use when you do not have access to the UTxOs you intend to spend
 estimateBalancedTxBody
-  :: MaryEraOnwards era
+  :: forall era. MaryEraOnwards era
   -> TxBodyContent BuildTx era
   -> L.PParams (ShelleyLedgerEra era)
   -> Set PoolId       -- ^ The set of registered stake pools, that are being
@@ -192,11 +197,40 @@ estimateBalancedTxBody w txbodycontent pparams poolids
 
     -- Step 2. We need to calculate the current balance of the tx. The user
     -- must at least provide the total value of the UTxOs they intend to spend
-    -- for us to calulate the balance.
-    let change = toLedgerValue w $ calculateChangeValue sbe totalUTxOValue txbodycontent1
-    let maxLovelaceChange = L.Coin (2^(64 :: Integer)) - 1
-    let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
-    let changeTxOut = forShelleyBasedEraInEon sbe
+    -- for us to calulate the balance. NB: We must:
+    --  1. Subtract certificate and proposal deposits
+    -- from the total available Ada value!
+    -- Page 24 Shelley ledger spec
+    let certificates =
+          case txCertificates txbodycontent1 of
+            TxCertificatesNone -> []
+            TxCertificates _ certs _ -> map toShelleyCertificate certs
+
+        proposalProcedures :: OSet.OSet (L.ProposalProcedure (ShelleyLedgerEra era))
+        proposalProcedures =
+          case unFeatured <$> txProposalProcedures txbodycontent1 of
+            Nothing -> OSet.empty
+            Just TxProposalProceduresNone -> OSet.empty
+            Just (TxProposalProcedures procedures _) -> procedures
+
+        totalDeposits :: L.Coin
+        totalDeposits =
+          -- Because we do not have access to the ledger state and to reduce the complexity of this function's
+          -- type signature, we assume the user is trying to register a stake pool that has not been
+          -- registered before and has not included duplicate stake pool registration certificates.
+          let assumeStakePoolHasNotBeenRegistered = const False
+          in sum [ maryEraOnwardsConstraints w $ L.getTotalDepositsTxCerts pparams assumeStakePoolHasNotBeenRegistered certificates
+                 , mconcat $ map (^. L.pProcDepositL) $ toList proposalProcedures
+                 ]
+
+        availableUTxOValue = mconcat [ totalUTxOValue
+                                     , negateValue (lovelaceToValue totalDeposits)
+                                     ]
+
+    let change = toLedgerValue w $ calculateChangeValue sbe availableUTxOValue txbodycontent1
+        maxLovelaceChange = L.Coin (2^(64 :: Integer)) - 1
+        changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
+        changeTxOut = forShelleyBasedEraInEon sbe
           (lovelaceToTxOutValue sbe maxLovelaceChange)
           (\w' -> maryEraOnwardsConstraints w' $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
 
@@ -237,7 +271,7 @@ estimateBalancedTxBody w txbodycontent pparams poolids
              txTotalCollateral = reqCol
            }
 
-    let fakeUTxO = createFakeUTxO sbe txbodycontent1 $ selectLovelace totalUTxOValue
+    let fakeUTxO = createFakeUTxO sbe txbodycontent1 $ selectLovelace availableUTxOValue
         balance = evaluateTransactionBalance sbe pparams poolids stakeDelegDeposits drepDelegDeposits fakeUTxO txbody2
     -- check if the balance is positive or negative
     -- in one case we can produce change, in the other the inputs are insufficient
@@ -862,15 +896,15 @@ data BalancedTxBody era
       (TxOut CtxTx era) -- ^ Transaction balance (change output)
       L.Coin    -- ^ Estimated transaction fee
 
-newtype RequiredShelleyKeyWitnesses 
+newtype RequiredShelleyKeyWitnesses
   = RequiredShelleyKeyWitnesses { unRequiredShelleyKeyWitnesses :: Int }
   deriving Show
 
-newtype RequiredByronKeyWitnesses 
+newtype RequiredByronKeyWitnesses
   = RequiredByronKeyWitnesses { unRequiredByronKeyWitnesses :: Int }
   deriving Show
 
-newtype TotalReferenceScriptsSize 
+newtype TotalReferenceScriptsSize
   = TotalReferenceScriptsSize { unTotalReferenceScriptsSize :: Int }
   deriving Show
 
@@ -1186,11 +1220,11 @@ calculateChangeValue sbe incoming txbodycontent =
 -- | This is used in the balance calculation in the event where
 -- the user does not supply the UTxO(s) they intend to spend
 -- but they must supply their total balance of ADA.
--- evaluateTransactionBalance calls evalBalanceTxBody which requires a UTxO value. 
--- This eventually calls getConsumedMaryValue which retrieves the balance 
--- from the transaction itself. This necessitated a function to create a "fake" UTxO 
--- to still use evalBalanceTxBody however this will fail for transactions 
--- containing multi-assets, refunds and withdrawals. 
+-- evaluateTransactionBalance calls evalBalanceTxBody which requires a UTxO value.
+-- This eventually calls getConsumedMaryValue which retrieves the balance
+-- from the transaction itself. This necessitated a function to create a "fake" UTxO
+-- to still use evalBalanceTxBody however this will fail for transactions
+-- containing multi-assets, refunds and withdrawals.
 -- TODO: Include multiassets
 createFakeUTxO :: ShelleyBasedEra era -> TxBodyContent BuildTx era -> Coin -> UTxO era
 createFakeUTxO sbe txbodycontent totalAdaInUTxO =
@@ -1207,7 +1241,7 @@ updateTxOut sbe updatedValue txout =
 
 -- Essentially we check for the existence of collateral inputs. If they exist we
 -- create a fictitious collateral return output. Why? Because we need to put dummy values
--- to get a fee estimate (i.e we overestimate the fee). The required collateral depends 
+-- to get a fee estimate (i.e we overestimate the fee). The required collateral depends
 -- on the tx fee as per the Alonzo spec.
 maybeDummyTotalCollAndCollReturnOutput
   :: ShelleyBasedEra era
