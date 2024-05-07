@@ -146,6 +146,15 @@ Briefly speaking, it requires executing of the following steps:
     >
     >CHaP CI build can fail due to various reasons, like invalid haddock syntax.
     >Merging the release PR later allows easier adjusting of the tag to include the fix for the potential issues.
+1. If a GitHub release is automatically created by the CI, as visible on https://github.com/IntersectMBO/cardano-api/releases,
+   undraft the release by clicking the pen on the top right, then untick _Set as a pre-release_, and
+   finally select _Update release_.
+
+   >:warning: **GitHub bug**
+   >
+   > If you try to undraft a PR using the [gh API](https://docs.github.com/fr/rest/releases/releases?apiVersion=2022-11-28#update-a-release),
+   > you will observe that the `PATCH` endpoint messes up existing metadata of the release (author, associated commit, etc.).
+   > So you HAVE to use the UI, as described above.
 
 ## Troubleshooting
 
