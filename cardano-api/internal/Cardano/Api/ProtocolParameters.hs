@@ -614,8 +614,34 @@ data ProtocolParameters =
        -- | Cost in ada per byte of UTxO storage.
        --
        -- /Introduced in Babbage/
-       protocolParamUTxOCostPerByte :: Maybe L.Coin
+       protocolParamUTxOCostPerByte :: Maybe L.Coin,
 
+       -- /Introduced in Conway/
+       protocolParamPoolVotingThresholds :: Maybe Ledger.PoolVotingThresholds,
+
+       -- /Introduced in Conway/
+       protocolParamDRepVotingThresholds :: Maybe Ledger.DRepVotingThresholds,
+
+       -- /Introduced in Conway/
+       protocolParamCommitteeMinSize :: Maybe Natural,
+
+       -- /Introduced in Conway/
+       protocolParamCommitteeMaxTermLength :: Maybe Ledger.EpochInterval,
+
+       -- /Introduced in Conway/
+       protocolParamGovActionLifetime :: Maybe Ledger.EpochInterval,
+
+       -- /Introduced in Conway/
+       protocolParamGovActionDeposit :: Maybe L.Coin,
+
+       -- /Introduced in Conway/
+       protocolParamDRepDeposit :: Maybe L.Coin,
+
+       -- /Introduced in Conway/
+       protocolParamDRepActivity :: Maybe Ledger.EpochInterval,
+
+       -- /Introduced in Conway/
+       protocolParamMinFeeRefScriptCostPerByte :: Maybe Ledger.NonNegativeInterval
     }
   deriving (Eq, Generic, Show)
 
@@ -649,6 +675,15 @@ instance FromJSON ProtocolParameters where
         <*> o .:? "collateralPercentage"
         <*> o .:? "maxCollateralInputs"
         <*> o .:? "utxoCostPerByte"
+        <*> o .:? "poolVotingThresholds"
+        <*> o .:? "dRepVotingThresholds"
+        <*> o .:? "committeeMinSize"
+        <*> o .:? "committeeMaxTermLength"
+        <*> o .:? "govActionLifetime"
+        <*> o .:? "govActionDeposit"
+        <*> o .:? "dRepDeposit"
+        <*> o .:? "dRepActivity"
+        <*> o .:? "minFeeRefScriptCostPerByte"
 
 instance ToJSON ProtocolParameters where
   toJSON ProtocolParameters{..} =
@@ -681,6 +716,16 @@ instance ToJSON ProtocolParameters where
       , "maxCollateralInputs"    .= protocolParamMaxCollateralInputs
       -- Babbage era:
       , "utxoCostPerByte"        .= protocolParamUTxOCostPerByte
+      -- Conway era:
+      , "poolVotingThresholds"       .= protocolParamPoolVotingThresholds
+      , "dRepVotingThresholds"       .= protocolParamDRepVotingThresholds
+      , "committeeMinSize"           .= protocolParamCommitteeMinSize
+      , "committeeMaxTermLength"     .= protocolParamCommitteeMaxTermLength
+      , "govActionLifetime"          .= protocolParamGovActionLifetime
+      , "govActionDeposit"           .= protocolParamGovActionDeposit
+      , "dRepDeposit"                .= protocolParamDRepDeposit
+      , "dRepActivity"               .= protocolParamDRepActivity
+      , "minFeeRefScriptCostPerByte" .= protocolParamMinFeeRefScriptCostPerByte
       ]
 
 
@@ -1721,6 +1766,15 @@ fromShelleyCommonPParams pp =
     , protocolParamDecentralization    = Nothing -- Obsolete from Babbage onwards
     , protocolParamExtraPraosEntropy   = Nothing -- Obsolete from Alonzo onwards
     , protocolParamMinUTxOValue        = Nothing -- Obsolete from Alonzo onwards
+    , protocolParamPoolVotingThresholds = Nothing -- Only from Conway onwards
+    , protocolParamDRepVotingThresholds = Nothing -- Only from Conway onwards
+    , protocolParamCommitteeMinSize       = Nothing     -- Only from Conway onwards
+    , protocolParamCommitteeMaxTermLength = Nothing     -- Only from Conway onwards
+    , protocolParamGovActionLifetime      = Nothing     -- Only from Conway onwards
+    , protocolParamGovActionDeposit       = Nothing     -- Only from Conway onwards
+    , protocolParamDRepDeposit            = Nothing     -- Only from Conway onwards
+    , protocolParamDRepActivity           = Nothing     -- Only from Conway onwards
+    , protocolParamMinFeeRefScriptCostPerByte = Nothing -- Only from Conway onwards
     }
 
 fromShelleyPParams :: ( EraPParams ledgerera
@@ -1759,10 +1813,21 @@ fromBabbagePParams pp =
     { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
     }
 
-fromConwayPParams :: BabbageEraPParams ledgerera
+fromConwayPParams :: Ledger.ConwayEraPParams ledgerera
                   => PParams ledgerera
                   -> ProtocolParameters
-fromConwayPParams = fromBabbagePParams
+fromConwayPParams pp =
+  (fromBabbagePParams pp)
+    { protocolParamPoolVotingThresholds = Just $ pp ^. Ledger.ppPoolVotingThresholdsL
+    , protocolParamDRepVotingThresholds = Just $ pp ^. Ledger.ppDRepVotingThresholdsL
+    , protocolParamCommitteeMinSize = Just $ pp ^. Ledger.ppCommitteeMinSizeL
+    , protocolParamCommitteeMaxTermLength = Just $ pp ^. Ledger.ppCommitteeMaxTermLengthL
+    , protocolParamGovActionLifetime = Just $ pp ^. Ledger.ppGovActionLifetimeL
+    , protocolParamGovActionDeposit = Just $ pp ^. Ledger.ppGovActionDepositL
+    , protocolParamDRepDeposit = Just $ pp ^. Ledger.ppDRepDepositL
+    , protocolParamDRepActivity = Just $ pp ^. Ledger.ppDRepActivityL
+    , protocolParamMinFeeRefScriptCostPerByte = Just $ pp ^. Ledger.ppMinFeeRefScriptCostPerByteL
+  }
 
 checkProtocolParameters :: ()
   => ShelleyBasedEra era
