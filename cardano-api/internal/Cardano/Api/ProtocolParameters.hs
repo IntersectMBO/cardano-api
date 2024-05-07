@@ -457,7 +457,9 @@ createIntroducedInBabbagePParams w (IntroducedInBabbagePParams coinsPerUTxOByte)
 -- 'UpdateProposal', which contains a 'ProtocolParametersUpdate'.
 --
 -- The 'ProtocolParametersUpdate' is essentially a diff for the
--- 'ProtocolParameters'.
+-- 'ProtocolParameters', up to Alonzo included. Starting at Conway,
+-- updates to era-specific fields of 'ProtocolParameters' are handled
+-- with 'EraBasedProtocolParametersUpdate'.
 --
 -- There are also parameters fixed in the Genesis file. See 'GenesisParameters'.
 --
@@ -890,6 +892,9 @@ data ProtocolParametersUpdate =
        --
        -- /Introduced in Babbage/
        protocolUpdateUTxOCostPerByte :: Maybe L.Coin
+
+       -- Fields introduced in Conway and onwards are not added here. They
+       -- are handled via EraBasedProtocolParametersUpdate.
     }
   deriving (Eq, Show)
 
