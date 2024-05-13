@@ -62,6 +62,7 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 
 import           Test.Cardano.Ledger.Core.Rational ((%!))
+import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
@@ -169,6 +170,7 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                     , ucppCommitteeMinSize = 0
                                                     , ucppCommitteeMaxTermLength = EpochInterval 200
                                                     , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- TODO: set to correct value after benchmarking
+                                                    , ucppPlutusV3CostModel = testingCostModelV3
                                                     }
     where
     defaultPoolVotingThresholds :: PoolVotingThresholds
