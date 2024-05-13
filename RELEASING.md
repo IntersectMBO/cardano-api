@@ -146,6 +146,15 @@ Briefly speaking, it requires executing of the following steps:
     >
     >CHaP CI build can fail due to various reasons, like invalid haddock syntax.
     >Merging the release PR later allows easier adjusting of the tag to include the fix for the potential issues.
+1. If the release pipeline (if any, see e.g. [here for CLI](https://github.com/IntersectMBO/cardano-cli/actions/workflows/release-upload.yaml)) fails
+   during the _Get specific check run status_ step of the _Wait for Hydra check-runs_ pipeline, this means Hydra did not
+   run on the tagged commit. This can happen if the tagged commit is not the remote `HEAD` when you create the PR,
+   or if you change the tag after the fact.
+
+   To make hydra run on the tagged commit, checkout this commit, create a branch whose name starts with `ci/`
+   (see [Hydra's code](https://github.com/input-output-hk/hydra-tools/commit/854620a3426957be72fa618c4dfc68f03842617b)) and push this branch.
+   Hydra will pick it up and you can then retrigger release creation as follows (the branch from which you execute this command
+   doesn't matter much): `gh workflow run "Release Upload" -r $(git branch --show-current) -f target_tag=cardano-api-8.2.0.0`.
 1. If a GitHub release is automatically created by the CI, as visible on https://github.com/IntersectMBO/cardano-api/releases,
    undraft the release by clicking the pen on the top right, then untick _Set as a pre-release_, and
    finally select _Update release_.
