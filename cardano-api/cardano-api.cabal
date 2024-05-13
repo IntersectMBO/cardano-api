@@ -183,6 +183,7 @@ library internal
                       , directory
                       , either
                       , errors
+                      , FailT
                       , filepath
                       , formatting
                       , groups

@@ -49,6 +49,7 @@ import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGe
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 
+import           Control.Monad.Trans.Fail.String (errorFail)
 import           Data.ByteString (ByteString)
 import qualified Data.Default.Class as DefaultClass
 import           Data.Functor.Identity (Identity)
@@ -208,7 +209,7 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                                      , agMaxBlockExUnits =  ExUnits { exUnitsMem = 62000000
                                                                     , exUnitsSteps = 20000000000
                                                                     }
-                                     , agCostModels = apiCostModels
+                                     , agCostModels = errorFail apiCostModels
                                      , agCollateralPercentage = 150
                                      , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
                                      }
