@@ -30,7 +30,6 @@ import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.Protocol.Praos.Translate ()
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
