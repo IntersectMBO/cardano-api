@@ -134,6 +134,7 @@ instance Error TextEnvelopeCddlError where
     TextEnvelopeCddlErrByronKeyWitnessUnsupported ->
       "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 
+{-# DEPRECATED serialiseTxLedgerCddl "Use 'serialiseToTextEnvelope' from 'Cardano.Api.SerialiseTextEnvelope' instead." #-}
 serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelopeCddl
 serialiseTxLedgerCddl era tx =
   shelleyBasedEraConstraints era $
