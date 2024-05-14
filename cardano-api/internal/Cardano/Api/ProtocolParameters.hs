@@ -136,6 +136,7 @@ import qualified Cardano.Ledger.Plutus.CostModels as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Cardano.Slotting.Slot (EpochNo (..))
+import           PlutusLedgerApi.Common (CostModelApplyError)
 
 import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
@@ -144,6 +145,7 @@ import           Data.Bifunctor (bimap, first)
 import           Data.ByteString (ByteString)
 import           Data.Data (Data)
 import           Data.Either.Combinators (maybeToRight)
+import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
@@ -1081,7 +1083,7 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 -- Script cost models
 --
 
-newtype CostModel = CostModel [Integer]
+newtype CostModel = CostModel [Int64]
   deriving (Eq, Show, Data)
   deriving newtype (ToCBOR, FromCBOR)
 
@@ -1858,7 +1860,7 @@ instance Error ProtocolParametersError where
 data ProtocolParametersConversionError
   = PpceOutOfBounds !ProtocolParameterName !Rational
   | PpceVersionInvalid !ProtocolParameterVersion
-  | PpceInvalidCostModel !CostModel !Alonzo.CostModelApplyError
+  | PpceInvalidCostModel !CostModel !CostModelApplyError
   | PpceMissingParameter !ProtocolParameterName
   deriving (Eq, Show, Data)
 

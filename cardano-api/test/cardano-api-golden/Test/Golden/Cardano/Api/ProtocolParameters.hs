@@ -25,6 +25,7 @@ import           Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import           Data.Aeson (FromJSON, eitherDecode, encode)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor.Identity (Identity)
+import           Data.Int (Int64)
 import           Data.Map (Map)
 import qualified Data.Map as M
 import           Data.Proxy (Proxy (..))
@@ -107,7 +108,7 @@ legacyCardanoApiProtocolParameters = ProtocolParameters { protocolParamUTxOCostP
                             , (AnyPlutusScriptVersion PlutusScriptV1, CostModel [1..numParams PlutusV1])
                             ]
 
-    numParams :: Language -> Integer
+    numParams :: Language -> Int64
     numParams = fromIntegral . costModelParamsCount
 
     executionUnits :: ExecutionUnits

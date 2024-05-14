@@ -49,6 +49,7 @@ import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGe
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 
+import           Control.Monad.Trans.Fail.String (errorFail)
 import           Data.ByteString (ByteString)
 import qualified Data.Default.Class as DefaultClass
 import           Data.Functor.Identity (Identity)
@@ -62,6 +63,7 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 
 import           Test.Cardano.Ledger.Core.Rational ((%!))
+import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
@@ -169,6 +171,7 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                     , ucppCommitteeMinSize = 0
                                                     , ucppCommitteeMaxTermLength = EpochInterval 200
                                                     , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- TODO: set to correct value after benchmarking
+                                                    , ucppPlutusV3CostModel = testingCostModelV3
                                                     }
     where
     defaultPoolVotingThresholds :: PoolVotingThresholds
@@ -206,14 +209,13 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                                      , agMaxBlockExUnits =  ExUnits { exUnitsMem = 62000000
                                                                     , exUnitsSteps = 20000000000
                                                                     }
-                                     , agCostModels = apiCostModels
+                                     , agCostModels = errorFail apiCostModels
                                      , agCollateralPercentage = 150
                                      , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
                                      }
   where
     apiCostModels = mkCostModelsLenient $ Map.fromList [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
                                                        , (fromIntegral $ fromEnum PlutusV2, defaultV2CostModel)
-                                                       , (fromIntegral $ fromEnum PlutusV3, defaultV3CostModel)
                                                        ]
       where
         defaultV1CostModel = [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
@@ -240,19 +242,4 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                              , 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220
                              , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
                              , 32947, 10
-                             ]
-        -- taken from https://github.com/IntersectMBO/plutus/blob/master/plutus-core/cost-model/data/builtinCostModel.json
-        defaultV3CostModel = [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4, 117366, 10475, 4, 832808, 18
-                             , 3209094, 6, 331451, 1, 65990684, 23097, 18, 114242, 18, 94393407
-                             , 87060, 18, 16420089, 18, 2145798, 36, 3795345, 12, 889023, 1, 204237282, 23271, 36, 129165, 36, 189977790
-                             , 85902, 36, 33012864, 36, 388443360, 1, 401885761, 72, 2331379, 72, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000
-                             , 100, 23000, 100, 23000, 100, 23000, 100, 100, 100, 23000, 100
-                             , 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525, 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662
-                             , 4, 2, 245000, 216773, 62, 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32
-                             , 43249, 1000, 32, 32, 80556, 1, 57667, 4, 1927926, 82523, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473, 1, 208896
-                             , 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32, 196500, 453240, 220, 0
-                             , 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990
-                             , 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182
-                             , 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35190005, 10, 57996947, 18975, 10, 39121781, 32260, 10
-                             , 1292075, 24469, 74, 0, 1, 936157, 49601, 237, 0, 1
                              ]
