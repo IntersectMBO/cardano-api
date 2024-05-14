@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 8.46.0.0
+
+- - Updated `cardano-ledger`, `ouroboros-consensus` and `plutus` packages.
+  - Added `FailT` dependency.
+  - Updated `conwayGenesisDefaults` and `alonzoGenesisDefaults`.
+  - Changed `CostModel` to use `Int64` instead of `Integer`.
+  - Fixed `ProtocolParameters` golden test to account for the `Integer` -> `Int64` change in the `CostModel`.
+  (breaking, test)
+  [PR 523](https://github.com/IntersectMBO/cardano-api/pull/523)
+
 ## 8.45.2.0
 
 - Update estimateBalancedTxBody to account for required deposits due to
