@@ -60,6 +60,12 @@ library internal
                         Cardano.Api.Anchor
                         Cardano.Api.Block
                         Cardano.Api.Certificate
+                        Cardano.Api.Class.HasScriptLanguageInEra
+                        Cardano.Api.Class.IsAllegraEraOnwards
+                        Cardano.Api.Class.IsAlonzoEraOnwards
+                        Cardano.Api.Class.IsBabbageEraOnwards
+                        Cardano.Api.Class.IsMaryEraOnwards
+                        Cardano.Api.Class.ToAlonzoScript
                         Cardano.Api.Convenience.Construction
                         Cardano.Api.Convenience.Query
                         Cardano.Api.DeserialiseAnyOf
