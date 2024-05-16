@@ -79,26 +79,31 @@ module Cardano.Api
 
     -- ** From Allegra
   , AllegraEraOnwards (..)
+  , IsAllegraBasedEra (..)
 
     -- ** From Mary
   , MaryEraOnwards (..)
   , maryEraOnwardsConstraints
   , maryEraOnwardsToShelleyBasedEra
+  , IsMaryBasedEra (..)
 
     -- ** From Alonzo
   , AlonzoEraOnwards (..)
   , alonzoEraOnwardsConstraints
   , alonzoEraOnwardsToShelleyBasedEra
+  , IsAlonzoBasedEra (..)
 
     -- ** From Babbage
   , BabbageEraOnwards (..)
   , babbageEraOnwardsConstraints
   , babbageEraOnwardsToShelleyBasedEra
+  , IsBabbageBasedEra (..)
 
     -- ** From Conway
   , ConwayEraOnwards (..)
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToShelleyBasedEra
+  , IsConwayBasedEra (..)
 
     -- * Era case handling
 
@@ -501,6 +506,8 @@ module Cardano.Api
   , ScriptInEra (..)
   , toScriptInEra
   , eraOfScriptInEra
+  , HasScriptLanguageInEra (..)
+  , ToAlonzoScript (..)
 
     -- ** Use of a script in an era as a witness
   , WitCtxTxIn

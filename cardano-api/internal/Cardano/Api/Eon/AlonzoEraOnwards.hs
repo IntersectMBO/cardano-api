@@ -13,6 +13,7 @@ module Cardano.Api.Eon.AlonzoEraOnwards
   , alonzoEraOnwardsConstraints
   , alonzoEraOnwardsToShelleyBasedEra
   , AlonzoEraOnwardsConstraints
+  , IsAlonzoBasedEra (..)
   )
 where
 
@@ -117,3 +118,15 @@ alonzoEraOnwardsToShelleyBasedEra = \case
   AlonzoEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
   AlonzoEraOnwardsBabbage -> ShelleyBasedEraBabbage
   AlonzoEraOnwardsConway -> ShelleyBasedEraConway
+
+class IsAlonzoBasedEra era where
+  alonzoBasedEra :: AlonzoEraOnwards era
+
+instance IsAlonzoBasedEra AlonzoEra where
+  alonzoBasedEra = AlonzoEraOnwardsAlonzo
+
+instance IsAlonzoBasedEra BabbageEra where
+  alonzoBasedEra = AlonzoEraOnwardsBabbage
+
+instance IsAlonzoBasedEra ConwayEra where
+  alonzoBasedEra = AlonzoEraOnwardsConway

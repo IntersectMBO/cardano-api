@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -40,6 +41,8 @@ module Cardano.Api.Script
   , ScriptInEra (..)
   , toScriptInEra
   , eraOfScriptInEra
+  , HasScriptLanguageInEra (..)
+  , ToAlonzoScript (..)
 
     -- * Reference scripts
   , ReferenceScript (..)
@@ -1020,6 +1023,54 @@ instance IsPlutusScriptLanguage lang => HasTextEnvelope (PlutusScript lang) wher
       PlutusScriptV1 -> "PlutusScriptV1"
       PlutusScriptV2 -> "PlutusScriptV2"
       PlutusScriptV3 -> "PlutusScriptV3"
+
+-- | Smart-constructor for 'ScriptLanguageInEra' to write functions
+-- manipulating scripts that do not commit to a particular era.
+class HasScriptLanguageInEra lang era where
+  scriptLanguageInEra :: ScriptLanguageInEra lang era
+
+instance HasScriptLanguageInEra PlutusScriptV1 AlonzoEra where
+  scriptLanguageInEra = PlutusScriptV1InAlonzo
+
+instance HasScriptLanguageInEra PlutusScriptV1 BabbageEra where
+  scriptLanguageInEra = PlutusScriptV1InBabbage
+
+instance HasScriptLanguageInEra PlutusScriptV2 BabbageEra where
+  scriptLanguageInEra = PlutusScriptV2InBabbage
+
+instance HasScriptLanguageInEra PlutusScriptV1 ConwayEra where
+  scriptLanguageInEra = PlutusScriptV1InConway
+
+instance HasScriptLanguageInEra PlutusScriptV2 ConwayEra where
+  scriptLanguageInEra = PlutusScriptV2InConway
+
+instance HasScriptLanguageInEra PlutusScriptV3 ConwayEra where
+  scriptLanguageInEra = PlutusScriptV3InConway
+
+class ToAlonzoScript lang era where
+  toLedgerScript
+    :: PlutusScript lang
+    -> Conway.AlonzoScript (ShelleyLedgerEra era)
+
+instance ToAlonzoScript PlutusScriptV1 BabbageEra where
+  toLedgerScript (PlutusScriptSerialised bytes) =
+    Conway.PlutusScript $ Conway.BabbagePlutusV1 $ Plutus.Plutus $ Plutus.PlutusBinary bytes
+
+instance ToAlonzoScript PlutusScriptV2 BabbageEra where
+  toLedgerScript (PlutusScriptSerialised bytes) =
+    Conway.PlutusScript $ Conway.BabbagePlutusV2 $ Plutus.Plutus $ Plutus.PlutusBinary bytes
+
+instance ToAlonzoScript PlutusScriptV1 ConwayEra where
+  toLedgerScript (PlutusScriptSerialised bytes) =
+    Conway.PlutusScript $ Conway.ConwayPlutusV1 $ Plutus.Plutus $ Plutus.PlutusBinary bytes
+
+instance ToAlonzoScript PlutusScriptV2 ConwayEra where
+  toLedgerScript (PlutusScriptSerialised bytes) =
+    Conway.PlutusScript $ Conway.ConwayPlutusV2 $ Plutus.Plutus $ Plutus.PlutusBinary bytes
+
+instance ToAlonzoScript PlutusScriptV3 ConwayEra where
+  toLedgerScript (PlutusScriptSerialised bytes) =
+    Conway.PlutusScript $ Conway.ConwayPlutusV3 $ Plutus.Plutus $ Plutus.PlutusBinary bytes
 
 -- | An example Plutus script that always succeeds, irrespective of inputs.
 --
