@@ -13,6 +13,7 @@ module Cardano.Api.Eon.ConwayEraOnwards
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToShelleyBasedEra
   , ConwayEraOnwardsConstraints
+  , IsConwayBasedEra (..)
   )
 where
 
@@ -112,3 +113,9 @@ conwayEraOnwardsConstraints = \case
 conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
 conwayEraOnwardsToShelleyBasedEra = \case
   ConwayEraOnwardsConway -> ShelleyBasedEraConway
+
+class IsConwayBasedEra era where
+  conwayBasedEra :: ConwayEraOnwards era
+
+instance IsConwayBasedEra ConwayEra where
+  conwayBasedEra = ConwayEraOnwardsConway

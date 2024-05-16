@@ -13,6 +13,7 @@ module Cardano.Api.Eon.BabbageEraOnwards
   , babbageEraOnwardsConstraints
   , babbageEraOnwardsToShelleyBasedEra
   , BabbageEraOnwardsConstraints
+  , IsBabbageBasedEra (..)
   )
 where
 
@@ -111,3 +112,12 @@ babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra e
 babbageEraOnwardsToShelleyBasedEra = \case
   BabbageEraOnwardsBabbage -> ShelleyBasedEraBabbage
   BabbageEraOnwardsConway -> ShelleyBasedEraConway
+
+class IsBabbageBasedEra era where
+  babbageBasedEra :: BabbageEraOnwards era
+
+instance IsBabbageBasedEra BabbageEra where
+  babbageBasedEra = BabbageEraOnwardsBabbage
+
+instance IsBabbageBasedEra ConwayEra where
+  babbageBasedEra = BabbageEraOnwardsConway

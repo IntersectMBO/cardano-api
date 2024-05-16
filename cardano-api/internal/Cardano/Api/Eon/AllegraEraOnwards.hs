@@ -13,6 +13,7 @@ module Cardano.Api.Eon.AllegraEraOnwards
   , allegraEraOnwardsConstraints
   , allegraEraOnwardsToShelleyBasedEra
   , AllegraEraOnwardsConstraints
+  , IsAllegraBasedEra (..)
   )
 where
 
@@ -109,3 +110,21 @@ allegraEraOnwardsToShelleyBasedEra = \case
   AllegraEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
   AllegraEraOnwardsBabbage -> ShelleyBasedEraBabbage
   AllegraEraOnwardsConway -> ShelleyBasedEraConway
+
+class IsAllegraBasedEra era where
+  allegraBasedEra :: AllegraEraOnwards era
+
+instance IsAllegraBasedEra AllegraEra where
+  allegraBasedEra = AllegraEraOnwardsAllegra
+
+instance IsAllegraBasedEra MaryEra where
+  allegraBasedEra = AllegraEraOnwardsMary
+
+instance IsAllegraBasedEra AlonzoEra where
+  allegraBasedEra = AllegraEraOnwardsAlonzo
+
+instance IsAllegraBasedEra BabbageEra where
+  allegraBasedEra = AllegraEraOnwardsBabbage
+
+instance IsAllegraBasedEra ConwayEra where
+  allegraBasedEra = AllegraEraOnwardsConway
