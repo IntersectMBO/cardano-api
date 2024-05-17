@@ -4,15 +4,13 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Ledger CDDL Serialisation
 --
 module Cardano.Api.SerialiseLedgerCddl
-  ( TextEnvelopeCddl(..)
-  , TextEnvelopeCddlError (..)
+  ( TextEnvelopeCddlError (..)
   , FromSomeTypeCDDL(..)
 
   -- * Reading one of several transaction or
@@ -41,7 +39,9 @@ import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IO
 import           Cardano.Api.Pretty
-import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseTextEnvelope (TextEnvelope (..),
+                   TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
+                   deserialiseFromTextEnvelope, serialiseToTextEnvelope)
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 
@@ -51,17 +51,16 @@ import qualified Cardano.Ledger.Binary as CBOR
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    newExceptT, runExceptT)
-import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Data (Data)
+import           Data.Either.Combinators (mapLeft)
 import qualified Data.List as List
 import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
+import qualified Data.Text as T
 
 -- Why have we gone this route? The serialization format of `TxBody era`
 -- differs from the CDDL. We serialize to an intermediate type in order to simplify
@@ -77,29 +76,6 @@ import qualified Data.Text.Encoding as Text
 -- ease removal of the non-CDDL spec serialization, we have opted to create a separate
 -- data type to encompass this in the interim.
 
-data TextEnvelopeCddl = TextEnvelopeCddl
-  { teCddlType :: !Text
-  , teCddlDescription :: !Text
-  , teCddlRawCBOR :: !ByteString
-  } deriving (Eq, Show)
-
-instance ToJSON TextEnvelopeCddl where
-  toJSON TextEnvelopeCddl {teCddlType, teCddlDescription, teCddlRawCBOR} =
-    object [ "type"        .= teCddlType
-           , "description" .= teCddlDescription
-           , "cborHex"     .= Text.decodeUtf8 (Base16.encode teCddlRawCBOR)
-           ]
-
-instance FromJSON TextEnvelopeCddl where
-  parseJSON = withObject "TextEnvelopeCddl" $ \v ->
-                TextEnvelopeCddl <$> (v .: "type")
-                                 <*> (v .: "description")
-                                 <*> (parseJSONBase16 =<< v .: "cborHex")
-    where
-      parseJSONBase16 v =
-        either fail return . Base16.decode . Text.encodeUtf8 =<< parseJSON v
-
-
 data TextEnvelopeCddlError
   = TextEnvelopeCddlErrCBORDecodingError DecoderError
   | TextEnvelopeCddlAesonDecodeError FilePath String
@@ -110,6 +86,13 @@ data TextEnvelopeCddlError
   | TextEnvelopeCddlErrUnknownType Text
   | TextEnvelopeCddlErrByronKeyWitnessUnsupported
   deriving (Show, Eq, Data)
+
+textEnvelopeErrorToTextEnvelopeCddlError :: TextEnvelopeError -> TextEnvelopeCddlError
+textEnvelopeErrorToTextEnvelopeCddlError = \case
+  TextEnvelopeTypeError expectedTypes actualType -> TextEnvelopeCddlTypeError (map (T.pack . show) expectedTypes)
+                                                                              (T.pack $ show actualType)
+  TextEnvelopeDecodeError decoderError -> TextEnvelopeCddlErrCBORDecodingError decoderError
+  TextEnvelopeAesonDecodeError errorString -> TextEnvelopeCddlAesonDecodeError "" errorString
 
 instance Error TextEnvelopeCddlError where
   prettyError = \case
@@ -135,36 +118,20 @@ instance Error TextEnvelopeCddlError where
       "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 
 {-# DEPRECATED serialiseTxLedgerCddl "Use 'serialiseToTextEnvelope' from 'Cardano.Api.SerialiseTextEnvelope' instead." #-}
-serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelopeCddl
-serialiseTxLedgerCddl era tx =
-  shelleyBasedEraConstraints era $
-    TextEnvelopeCddl
-      { teCddlType = genType tx
-      , teCddlDescription = "Ledger Cddl Format"
-      , teCddlRawCBOR = serialiseToCBOR tx
-      -- The SerialiseAsCBOR (Tx era) instance serializes to the Cddl format
-      }
- where
-  genType :: Tx era -> Text
-  genType tx' = case getTxWitnesses tx' of
-                  [] -> "Unwitnessed " <> genTxType
-                  _ -> "Witnessed " <> genTxType
-  genTxType :: Text
-  genTxType =
-    case era of
-      ShelleyBasedEraShelley -> "Tx ShelleyEra"
-      ShelleyBasedEraAllegra -> "Tx AllegraEra"
-      ShelleyBasedEraMary -> "Tx MaryEra"
-      ShelleyBasedEraAlonzo -> "Tx AlonzoEra"
-      ShelleyBasedEraBabbage -> "Tx BabbageEra"
-      ShelleyBasedEraConway -> "Tx ConwayEra"
+serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
+serialiseTxLedgerCddl era tx = shelleyBasedEraConstraints era $
+  serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx
 
-deserialiseTxLedgerCddl :: ()
-  => ShelleyBasedEra era
-  -> TextEnvelopeCddl
-  -> Either TextEnvelopeCddlError (Tx era)
-deserialiseTxLedgerCddl era tec =
-  first TextEnvelopeCddlErrCBORDecodingError . deserialiseTx era $ teCddlRawCBOR tec
+{-# DEPRECATED deserialiseTxLedgerCddl "Use 'deserialiseFromTextEnvelope' from 'Cardano.Api.SerialiseTextEnvelope' instead." #-}
+deserialiseTxLedgerCddl :: forall era .
+     ShelleyBasedEra era
+  -> TextEnvelope
+  -> Either TextEnvelopeError (Tx era)
+deserialiseTxLedgerCddl era = shelleyBasedEraConstraints era $
+  deserialiseFromTextEnvelope asType
+  where
+    asType :: AsType (Tx era)
+    asType = shelleyBasedEraConstraints era $ proxyToAsType Proxy
 
 writeByronTxFileTextEnvelopeCddl
   :: File content Out
@@ -176,75 +143,39 @@ writeByronTxFileTextEnvelopeCddl path w =
   where
     txJson = encodePretty' textEnvelopeCddlJSONConfig (serializeByronTx w) <> "\n"
 
-serializeByronTx :: Byron.ATxAux ByteString -> TextEnvelopeCddl
+serializeByronTx :: Byron.ATxAux ByteString -> TextEnvelope
 serializeByronTx tx =
-  TextEnvelopeCddl
-    { teCddlType = "Tx ByronEra"
-    , teCddlDescription = "Ledger Cddl Format"
-    , teCddlRawCBOR = CBOR.recoverBytes tx
+  TextEnvelope
+    { teType = "Tx ByronEra"
+    , teDescription = "Ledger Cddl Format"
+    , teRawCBOR = CBOR.recoverBytes tx
     }
 
-deserialiseByronTxCddl :: TextEnvelopeCddl -> Either TextEnvelopeCddlError (Byron.ATxAux ByteString)
+deserialiseByronTxCddl :: TextEnvelope -> Either TextEnvelopeCddlError (Byron.ATxAux ByteString)
 deserialiseByronTxCddl tec =
    first TextEnvelopeCddlErrCBORDecodingError $
      CBOR.decodeFullAnnotatedBytes
         CBOR.byronProtVer "Byron Tx"
-        CBOR.decCBOR (LBS.fromStrict $ teCddlRawCBOR tec)
+        CBOR.decCBOR (LBS.fromStrict $ teRawCBOR tec)
 
-deserialiseTx :: ()
-  => ShelleyBasedEra era
-  -> ByteString
-  -> Either DecoderError (Tx era)
-deserialiseTx sbe =
-  shelleyBasedEraConstraints sbe
-    $ deserialiseFromCBOR (AsTx (proxyToAsType Proxy))
-
-serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelopeCddl
-serialiseWitnessLedgerCddl sbe kw =
-  TextEnvelopeCddl
-    { teCddlType = witEra sbe
-    , teCddlDescription = genDesc kw
-    , teCddlRawCBOR = cddlSerialiseWitness kw
-    }
+serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelope
+serialiseWitnessLedgerCddl sbe kw = shelleyBasedEraConstraints sbe $
+  serialiseToTextEnvelope (Just (TextEnvelopeDescr $ T.unpack $ genDesc kw)) kw
  where
-  cddlSerialiseWitness :: KeyWitness era -> ByteString
-  cddlSerialiseWitness (ShelleyBootstrapWitness era wit) = CBOR.serialize' (eraProtVerLow era) wit
-  cddlSerialiseWitness (ShelleyKeyWitness era wit) = CBOR.serialize' (eraProtVerLow era) wit
-  cddlSerialiseWitness ByronKeyWitness{} = case sbe of {}
-
   genDesc :: KeyWitness era -> Text
   genDesc ByronKeyWitness{} = case sbe of {}
   genDesc ShelleyBootstrapWitness{} = "Key BootstrapWitness ShelleyEra"
   genDesc ShelleyKeyWitness{} = "Key Witness ShelleyEra"
 
-  witEra :: ShelleyBasedEra era -> Text
-  witEra ShelleyBasedEraShelley = "TxWitness ShelleyEra"
-  witEra ShelleyBasedEraAllegra = "TxWitness AllegraEra"
-  witEra ShelleyBasedEraMary = "TxWitness MaryEra"
-  witEra ShelleyBasedEraAlonzo = "TxWitness AlonzoEra"
-  witEra ShelleyBasedEraBabbage = "TxWitness BabbageEra"
-  witEra ShelleyBasedEraConway = "TxWitness ConwayEra"
-
-deserialiseWitnessLedgerCddl
-  :: ShelleyBasedEra era
-  -> TextEnvelopeCddl
-  -> Either TextEnvelopeCddlError (KeyWitness era)
-deserialiseWitnessLedgerCddl sbe TextEnvelopeCddl{teCddlRawCBOR,teCddlDescription} =
-  --TODO: Parse these into types because this will increase code readability and
-  -- will make it easier to keep track of the different Cddl descriptions via
-  -- a single sum data type.
-  case teCddlDescription of
-    "Key BootstrapWitness ShelleyEra" -> do
-      w <- first TextEnvelopeCddlErrCBORDecodingError
-             $ CBOR.decodeFullAnnotator
-               (eraProtVerLow sbe) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
-      Right $ ShelleyBootstrapWitness sbe w
-    "Key Witness ShelleyEra" -> do
-      w <- first TextEnvelopeCddlErrCBORDecodingError
-             $ CBOR.decodeFullAnnotator
-               (eraProtVerLow sbe) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teCddlRawCBOR)
-      Right $ ShelleyKeyWitness sbe w
-    _ -> Left TextEnvelopeCddlUnknownKeyWitness
+deserialiseWitnessLedgerCddl :: forall era .
+     ShelleyBasedEra era
+  -> TextEnvelope
+  -> Either TextEnvelopeError (KeyWitness era)
+deserialiseWitnessLedgerCddl sbe te = shelleyBasedEraConstraints sbe $
+  deserialiseFromTextEnvelope asType te
+  where
+    asType :: AsType (KeyWitness era)
+    asType = shelleyBasedEraConstraints sbe $ proxyToAsType Proxy
 
 writeTxFileTextEnvelopeCddl :: ()
   => ShelleyBasedEra era
@@ -281,16 +212,16 @@ data FromSomeTypeCDDL c b where
   FromCDDLTx
     :: Text -- ^ CDDL type that we want
     -> (InAnyShelleyBasedEra Tx -> b)
-    -> FromSomeTypeCDDL TextEnvelopeCddl b
+    -> FromSomeTypeCDDL TextEnvelope b
 
   FromCDDLWitness
     :: Text -- ^ CDDL type that we want
     -> (InAnyShelleyBasedEra KeyWitness -> b)
-    -> FromSomeTypeCDDL TextEnvelopeCddl b
+    -> FromSomeTypeCDDL TextEnvelope b
 
 deserialiseFromTextEnvelopeCddlAnyOf
-  :: [FromSomeTypeCDDL TextEnvelopeCddl b]
-  -> TextEnvelopeCddl
+  :: [FromSomeTypeCDDL TextEnvelope b]
+  -> TextEnvelope
   -> Either TextEnvelopeCddlError b
 deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
     case List.find matching types of
@@ -299,19 +230,19 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 
       Just (FromCDDLTx ttoken f) -> do
         AnyShelleyBasedEra era <- cddlTypeToEra ttoken
-        f . InAnyShelleyBasedEra era <$> deserialiseTxLedgerCddl era teCddl
+        f . InAnyShelleyBasedEra era <$> mapLeft textEnvelopeErrorToTextEnvelopeCddlError (deserialiseTxLedgerCddl era teCddl)
 
       Just (FromCDDLWitness ttoken f) -> do
          AnyShelleyBasedEra era <- cddlTypeToEra ttoken
-         f . InAnyShelleyBasedEra era <$> deserialiseWitnessLedgerCddl era teCddl
+         f . InAnyShelleyBasedEra era <$> mapLeft textEnvelopeErrorToTextEnvelopeCddlError (deserialiseWitnessLedgerCddl era teCddl)
   where
    actualType :: Text
-   actualType = teCddlType teCddl
+   actualType = T.pack $ show $ teType teCddl
 
    expectedTypes :: [Text]
    expectedTypes = [ typ | FromCDDLTx typ _f <- types ]
 
-   matching :: FromSomeTypeCDDL TextEnvelopeCddl b -> Bool
+   matching :: FromSomeTypeCDDL TextEnvelope b -> Bool
    matching (FromCDDLTx ttoken _f) = actualType == ttoken
    matching (FromCDDLWitness ttoken _f)  = actualType == ttoken
 
@@ -341,7 +272,7 @@ cddlTypeToEra = \case
   unknownCddlType -> Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
 
 readFileTextEnvelopeCddlAnyOf
-  :: [FromSomeTypeCDDL TextEnvelopeCddl b]
+  :: [FromSomeTypeCDDL TextEnvelope b]
   -> FilePath
   -> IO (Either (FileError TextEnvelopeCddlError) b)
 readFileTextEnvelopeCddlAnyOf types path =
@@ -352,7 +283,7 @@ readFileTextEnvelopeCddlAnyOf types path =
 
 readTextEnvelopeCddlFromFile
   :: FilePath
-  -> IO (Either (FileError TextEnvelopeCddlError) TextEnvelopeCddl)
+  -> IO (Either (FileError TextEnvelopeCddlError) TextEnvelope)
 readTextEnvelopeCddlFromFile path =
   runExceptT $ do
     bs <- fileIOExceptT path readFileBlocking
