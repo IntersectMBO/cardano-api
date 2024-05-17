@@ -679,8 +679,6 @@ module Cardano.Api (
     deserialiseByronTxCddl,
     serialiseWitnessLedgerCddl,
     deserialiseWitnessLedgerCddl,
-    TextEnvelopeCddl(..), -- TODO: Deprecate this when we stop supporting the cli's
-                          -- intermediate txbody format.
     TextEnvelopeCddlError(..),
 
     -- *** Reading one of several key types
