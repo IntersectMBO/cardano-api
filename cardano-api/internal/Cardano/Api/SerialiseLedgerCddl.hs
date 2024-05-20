@@ -41,7 +41,7 @@ import           Cardano.Api.IO
 import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseTextEnvelope (TextEnvelope (..),
                    TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
-                   deserialiseFromTextEnvelope, serialiseToTextEnvelope)
+                   deserialiseFromTextEnvelope, serialiseToTextEnvelope, HasTextEnvelope (textEnvelopeType))
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 
@@ -129,11 +129,18 @@ deserialiseTxLedgerCddl :: forall era .
      ShelleyBasedEra era
   -> TextEnvelope
   -> Either TextEnvelopeError (Tx era)
-deserialiseTxLedgerCddl era = shelleyBasedEraConstraints era $
-  deserialiseFromTextEnvelope asType
+deserialiseTxLedgerCddl era te =
+  shelleyBasedEraConstraints era $
+  case deserialiseFromTextEnvelope asType te of
+    Left (TextEnvelopeTypeError _ actualType) | textEnvelopeType asTxBodyType == actualType ->
+      makeSignedTransaction [] <$> deserialiseFromTextEnvelope asTxBodyType te
+    other -> other
   where
     asType :: AsType (Tx era)
     asType = shelleyBasedEraConstraints era $ proxyToAsType Proxy
+
+    asTxBodyType :: AsType (TxBody era)
+    asTxBodyType = shelleyBasedEraConstraints era $ proxyToAsType Proxy
 
 writeByronTxFileTextEnvelopeCddl
   :: File content Out
