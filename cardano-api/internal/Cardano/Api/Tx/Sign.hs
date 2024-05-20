@@ -273,12 +273,12 @@ getTxBody (ShelleyTx sbe tx) =
 instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
     textEnvelopeType _ =
       case shelleyBasedEra :: ShelleyBasedEra era of
-        ShelleyBasedEraShelley -> "TxSignedShelley"
-        ShelleyBasedEraAllegra -> "Tx AllegraEra"
-        ShelleyBasedEraMary    -> "Tx MaryEra"
-        ShelleyBasedEraAlonzo  -> "Tx AlonzoEra"
-        ShelleyBasedEraBabbage -> "Tx BabbageEra"
-        ShelleyBasedEraConway  -> "Tx ConwayEra"
+        ShelleyBasedEraShelley -> "Witnessed Tx Shelley"
+        ShelleyBasedEraAllegra -> "Witnessed Tx AllegraEra"
+        ShelleyBasedEraMary    -> "Witnessed Tx MaryEra"
+        ShelleyBasedEraAlonzo  -> "Witnessed Tx AlonzoEra"
+        ShelleyBasedEraBabbage -> "Witnessed Tx BabbageEra"
+        ShelleyBasedEraConway  -> "Witnessed Tx ConwayEra"
 
 
 
@@ -459,12 +459,12 @@ instance IsShelleyBasedEra era => SerialiseAsCBOR (TxBody era) where
 instance IsShelleyBasedEra era => HasTextEnvelope (TxBody era) where
     textEnvelopeType _ =
       case shelleyBasedEra :: ShelleyBasedEra era of
-        ShelleyBasedEraShelley -> "TxUnsignedShelley"
-        ShelleyBasedEraAllegra -> "TxBodyAllegra"
-        ShelleyBasedEraMary    -> "TxBodyMary"
-        ShelleyBasedEraAlonzo  -> "TxBodyAlonzo"
-        ShelleyBasedEraBabbage -> "TxBodyBabbage"
-        ShelleyBasedEraConway  -> "TxBodyConway"
+        ShelleyBasedEraShelley -> "Unwitnessed Tx ShelleyEra"
+        ShelleyBasedEraAllegra -> "Unwitnessed Tx AllegraEra"
+        ShelleyBasedEraMary    -> "Unwitnessed Tx MaryEra"
+        ShelleyBasedEraAlonzo  -> "Unwitnessed Tx AlonzoEra"
+        ShelleyBasedEraBabbage -> "Unwitnessed Tx BabbageEra"
+        ShelleyBasedEraConway  -> "Unwitnessed Tx ConwayEra"
 
 data TxBodyScriptData era where
      TxBodyNoScriptData :: TxBodyScriptData era
@@ -705,7 +705,7 @@ decodeShelleyBasedWitness sbe =
 instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
     textEnvelopeType _ =
       case cardanoEra :: CardanoEra era of
-        ByronEra   -> "TxWitnessByron"
+        ByronEra   -> "TxWitness ByronEra"
         ShelleyEra -> "TxWitness ShelleyEra"
         AllegraEra -> "TxWitness AllegraEra"
         MaryEra    -> "TxWitness MaryEra"

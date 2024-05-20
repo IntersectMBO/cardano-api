@@ -120,7 +120,9 @@ instance Error TextEnvelopeCddlError where
 {-# DEPRECATED serialiseTxLedgerCddl "Use 'serialiseToTextEnvelope' from 'Cardano.Api.SerialiseTextEnvelope' instead." #-}
 serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
 serialiseTxLedgerCddl era tx = shelleyBasedEraConstraints era $
-  serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx
+  case getTxWitnesses tx of
+    [] -> serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) (getTxBody tx)
+    _ -> serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx
 
 {-# DEPRECATED deserialiseTxLedgerCddl "Use 'deserialiseFromTextEnvelope' from 'Cardano.Api.SerialiseTextEnvelope' instead." #-}
 deserialiseTxLedgerCddl :: forall era .
@@ -146,7 +148,7 @@ writeByronTxFileTextEnvelopeCddl path w =
 serializeByronTx :: Byron.ATxAux ByteString -> TextEnvelope
 serializeByronTx tx =
   TextEnvelope
-    { teType = "Tx ByronEra"
+    { teType = "Witnessed Tx ByronEra"
     , teDescription = "Ledger Cddl Format"
     , teRawCBOR = CBOR.recoverBytes tx
     }
