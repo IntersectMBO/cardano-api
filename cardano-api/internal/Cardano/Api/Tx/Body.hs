@@ -280,9 +280,12 @@ deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
 
 data TxOutInAnyEra where
-     TxOutInAnyEra :: CardanoEra era
-                   -> TxOut CtxTx era
-                   -> TxOutInAnyEra
+  TxOutInAnyEra
+    :: CardanoEra era
+    -- ^ The cardano era
+    -> TxOut CtxTx era
+    -- ^ The transaction output
+    -> TxOutInAnyEra
 
 deriving instance Show TxOutInAnyEra
 
@@ -798,12 +801,15 @@ deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
 
 data TxInsReference build era where
+  -- ^ No transaction inputs
+  TxInsReferenceNone :: TxInsReference build era
 
-     TxInsReferenceNone :: TxInsReference build era
-
-     TxInsReference     :: BabbageEraOnwards era
-                        -> [TxIn]
-                        -> TxInsReference build era
+  TxInsReference
+    :: BabbageEraOnwards era
+    -- ^ Witness that the era is babbage era onwards
+    -> [TxIn]
+    -- ^ Transaction inputs
+    -> TxInsReference build era
 
 deriving instance Eq   (TxInsReference build era)
 deriving instance Show (TxInsReference build era)
@@ -816,6 +822,7 @@ data TxOutValue era where
 
   TxOutValueByron
     :: L.Coin
+    -- ^ The value in lovelace
     -> TxOutValue era
 
   TxOutValueShelleyBased
@@ -823,7 +830,9 @@ data TxOutValue era where
         , Show (Ledger.Value (ShelleyLedgerEra era))
         )
     => ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> L.Value (ShelleyLedgerEra era)
+    -- ^ The value in the era
     -> TxOutValue era
 
 deriving instance Eq   (TxOutValue era)
@@ -914,26 +923,30 @@ prettyRenderTxOut (TxOutInAnyEra _ (TxOut (AddressInEra _ addr) txOutVal _ _)) =
   <> renderValue (txOutValueToValue txOutVal)
 
 data TxReturnCollateral ctx era where
-
+  -- ^ No return collateral
   TxReturnCollateralNone
     :: TxReturnCollateral ctx era
 
   TxReturnCollateral
     :: BabbageEraOnwards era
+    -- ^ Witness that the era is babbage era onwards
     -> TxOut ctx era
+    -- ^ The return collateral
     -> TxReturnCollateral ctx era
 
 deriving instance Eq   (TxReturnCollateral ctx era)
 deriving instance Show (TxReturnCollateral ctx era)
 
 data TxTotalCollateral era where
-
+  -- ^ No total collateral
   TxTotalCollateralNone
     :: TxTotalCollateral era
 
   TxTotalCollateral
     :: BabbageEraOnwards era
+    -- ^ Witness that the era is babbage era onwards
     -> L.Coin
+    -- ^ The total collateral
     -> TxTotalCollateral era
 
 deriving instance Eq   (TxTotalCollateral era)
@@ -945,31 +958,43 @@ deriving instance Show (TxTotalCollateral era)
 
 data TxOutDatum ctx era where
 
-     TxOutDatumNone   :: TxOutDatum ctx era
+  -- | No transaction output datum
+  TxOutDatumNone
+    :: TxOutDatum ctx era
 
-     -- | A transaction output that only specifies the hash of the datum, but
-     -- not the full datum value.
-     --
-     TxOutDatumHash   :: AlonzoEraOnwards era
-                      -> Hash ScriptData
-                      -> TxOutDatum ctx era
+  -- | A transaction output that only specifies the hash of the datum, but
+  -- not the full datum value.
+  --
+  TxOutDatumHash
+    :: AlonzoEraOnwards era
+    -- ^ Witness that the era is alonzo era onwards
+    -> Hash ScriptData
+    -- ^ The hash of the datum
+    -> TxOutDatum ctx era
 
-     -- | A transaction output that specifies the whole datum value. This can
-     -- only be used in the context of the transaction body, and does not occur
-     -- in the UTxO. The UTxO only contains the datum hash.
-     --
-     TxOutDatumInTx'  :: AlonzoEraOnwards era
-                      -> Hash ScriptData
-                      -> HashableScriptData
-                      -> TxOutDatum CtxTx era
+  -- | A transaction output that specifies the whole datum value. This can
+  -- only be used in the context of the transaction body, and does not occur
+  -- in the UTxO. The UTxO only contains the datum hash.
+  --
+  TxOutDatumInTx'
+    :: AlonzoEraOnwards era
+    -- ^ Witness that the era is alonzo era onwards
+    -> Hash ScriptData
+    -- ^ The hash of the datum
+    -> HashableScriptData
+    -- ^ The datum value
+    -> TxOutDatum CtxTx era
 
-     -- | A transaction output that specifies the whole datum instead of the
-     -- datum hash. Note that the datum map will not be updated with this datum,
-     -- it only exists at the transaction output.
-     --
-     TxOutDatumInline :: BabbageEraOnwards era
-                      -> HashableScriptData
-                      -> TxOutDatum ctx era
+  -- | A transaction output that specifies the whole datum instead of the
+  -- datum hash. Note that the datum map will not be updated with this datum,
+  -- it only exists at the transaction output.
+  --
+  TxOutDatumInline
+    :: BabbageEraOnwards era
+    -- ^ Witness that the era is babbage era onwards
+    -> HashableScriptData
+    -- ^ The datum value
+    -> TxOutDatum ctx era
 
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
@@ -996,7 +1021,12 @@ parseHash asType = do
 --
 
 data TxFee era where
-  TxFeeExplicit :: ShelleyBasedEra era -> L.Coin -> TxFee era
+  TxFeeExplicit
+    :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
+    -> L.Coin
+    -- ^ The explicit fee
+    -> TxFee era
 
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
@@ -1013,7 +1043,9 @@ defaultTxFee w = TxFeeExplicit w mempty
 data TxValidityUpperBound era where
   TxValidityUpperBound
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> Maybe SlotNo
+    -- ^ The upper bound of the validity range
     -> TxValidityUpperBound era
 
 deriving instance Eq   (TxValidityUpperBound era)
@@ -1031,7 +1063,9 @@ data TxValidityLowerBound era where
 
   TxValidityLowerBound
     :: AllegraEraOnwards era
+    -- ^ Witness that the era is allegra era onwards
     -> SlotNo
+    -- ^ The lower bound of the validity range
     -> TxValidityLowerBound era
 
 deriving instance Eq   (TxValidityLowerBound era)
@@ -1048,7 +1082,9 @@ data TxMetadataInEra era where
 
   TxMetadataInEra
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> TxMetadata
+    -- ^ The transaction metadata
     -> TxMetadataInEra era
 
 deriving instance Eq   (TxMetadataInEra era)
@@ -1065,7 +1101,9 @@ data TxAuxScripts era where
 
   TxAuxScripts
     :: AllegraEraOnwards era
+    -- ^ Witness that the era is allegra era onwards
     -> [ScriptInEra era]
+    -- ^ The auxiliary scripts
     -> TxAuxScripts era
 
 deriving instance Eq   (TxAuxScripts era)
@@ -1082,7 +1120,9 @@ data TxExtraKeyWitnesses era where
 
   TxExtraKeyWitnesses
     :: AlonzoEraOnwards era
+    -- ^ Witness that the era is alonzo era onwards
     -> [Hash PaymentKey]
+    -- ^ The required signatures
     -> TxExtraKeyWitnesses era
 
 deriving instance Eq   (TxExtraKeyWitnesses era)
@@ -1099,7 +1139,9 @@ data TxWithdrawals build era where
 
   TxWithdrawals
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> [(StakeAddress, L.Coin, BuildTxWith build (Witness WitCtxStake era))]
+    -- ^ The withdrawals
     -> TxWithdrawals build era
 
 deriving instance Eq   (TxWithdrawals build era)
@@ -1116,8 +1158,11 @@ data TxCertificates build era where
 
   TxCertificates
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> [Certificate era]
+    -- ^ The certificates
     -> BuildTxWith build (Map StakeCredential (Witness WitCtxStake era))
+    -- ^ The witnesses for the certificates
     -> TxCertificates build era
 
 deriving instance Eq   (TxCertificates build era)
@@ -1128,8 +1173,15 @@ deriving instance Show (TxCertificates build era)
 --
 
 data TxUpdateProposal era where
-  TxUpdateProposalNone :: TxUpdateProposal era
-  TxUpdateProposal :: ShelleyToBabbageEra era -> UpdateProposal -> TxUpdateProposal era
+  TxUpdateProposalNone
+    :: TxUpdateProposal era
+
+  TxUpdateProposal
+    :: ShelleyToBabbageEra era
+    -- ^ Witness that the era is shelley to babbage
+    -> UpdateProposal
+    -- ^ The update proposal
+    -> TxUpdateProposal era
 
 deriving instance Eq   (TxUpdateProposal era)
 deriving instance Show (TxUpdateProposal era)
@@ -1140,13 +1192,18 @@ deriving instance Show (TxUpdateProposal era)
 
 data TxMintValue build era where
 
-     TxMintNone  :: TxMintValue build era
+  -- ^ No minting
+  TxMintNone
+    :: TxMintValue build era
 
-     TxMintValue :: MaryEraOnwards era
-                 -> Value
-                 -> BuildTxWith build
-                      (Map PolicyId (ScriptWitness WitCtxMint era))
-                 -> TxMintValue build era
+  TxMintValue
+    :: MaryEraOnwards era
+    -- ^ Witness that the era is mary era onwards
+    -> Value
+    -- ^ The minted value
+    -> BuildTxWith build (Map PolicyId (ScriptWitness WitCtxMint era))
+    -- ^ The witnesses for the minting policies
+    -> TxMintValue build era
 
 deriving instance Eq   (TxMintValue build era)
 deriving instance Show (TxMintValue build era)
@@ -1156,10 +1213,15 @@ deriving instance Show (TxMintValue build era)
 --
 
 data TxVotingProcedures build era where
-  TxVotingProceduresNone :: TxVotingProcedures build era
+  -- ^ No voting procedures
+  TxVotingProceduresNone
+    :: TxVotingProcedures build era
+
   TxVotingProcedures
     :: L.VotingProcedures (ShelleyLedgerEra era)
+    -- ^ The voting procedures
     -> BuildTxWith build (Map (Ledger.Voter (Ledger.EraCrypto (ShelleyLedgerEra era))) (ScriptWitness WitCtxStake era))
+    -- ^ The witnesses for the voting procedures
     -> TxVotingProcedures build era
 
 
@@ -1172,11 +1234,16 @@ deriving instance Show (TxVotingProcedures build era)
 --
 
 data TxProposalProcedures build era where
-  TxProposalProceduresNone :: TxProposalProcedures build era
+  -- | No proposal procedures
+  TxProposalProceduresNone
+    :: TxProposalProcedures build era
+
   TxProposalProcedures
     :: Ledger.EraPParams (ShelleyLedgerEra era)
     => OSet (L.ProposalProcedure (ShelleyLedgerEra era))
+    -- ^ The proposal procedures
     -> BuildTxWith build (Map (L.ProposalProcedure (ShelleyLedgerEra era)) (ScriptWitness WitCtxStake era))
+    -- ^ The witnesses for the proposal procedures
     -> TxProposalProcedures build era
 
 
@@ -2734,7 +2801,10 @@ toShelleyTxOutAny _ = \case
 -- collections of script witnesses from multiple contexts.
 --
 data AnyScriptWitness era where
-     AnyScriptWitness :: ScriptWitness witctx era -> AnyScriptWitness era
+  AnyScriptWitness
+    :: ScriptWitness witctx era
+    -- The script witness itself
+    -> AnyScriptWitness era
 
 deriving instance Show (AnyScriptWitness era)
 

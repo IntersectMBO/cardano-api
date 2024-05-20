@@ -120,7 +120,9 @@ import           Lens.Micro
 data Tx era where
   ShelleyTx
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> L.Tx (ShelleyLedgerEra era)
+    -- ^ The transaction itself
     -> Tx era
 
 
@@ -288,36 +290,38 @@ instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
 -- TODO: We can use Ledger.Tx era here however we would need to rename TxBody
 -- as technically it is not strictly a transaction body.
 data TxBody era where
-     ShelleyTxBody
-       :: ShelleyBasedEra era
-       -> Ledger.TxBody (ShelleyLedgerEra era)
+  ShelleyTxBody
+    :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
 
-          -- We include the scripts along with the tx body, rather than the
-          -- witnesses set, since they need to be known when building the body.
-       -> [Ledger.Script (ShelleyLedgerEra era)]
+    -> Ledger.TxBody (ShelleyLedgerEra era)
+    -- ^ The 'ShelleyLedgerEra' type family maps that to the era type from the
+    -- ledger lib. The 'Ledger.TxBody' type family maps that to a specific
+    -- tx body type, which is different for each Shelley-based era.
 
-          -- The info for each use of each script: the script input data, both
-          -- the UTxO input data (called the "datum") and the supplied input
-          -- data (called the "redeemer") and the execution units.
-       -> TxBodyScriptData era
+    -> [Ledger.Script (ShelleyLedgerEra era)]
+    -- ^ We include the scripts along with the tx body, rather than the
+    -- witnesses set, since they need to be known when building the body.
 
-          -- The 'L.TxAuxData' consists of one or several things,
-          -- depending on era:
-          -- + transaction metadata  (in Shelley and later)
-          -- + auxiliary scripts     (in Allegra and later)
-          -- Note that there is no auxiliary script data as such, because the
-          -- extra script data has to be passed to scripts and hence is needed
-          -- for validation. It is thus part of the witness data, not the
-          -- auxiliary data.
-       -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+    -> TxBodyScriptData era
+    -- ^ The info for each use of each script: the script input data, both
+    -- the UTxO input data (called the "datum") and the supplied input
+    -- data (called the "redeemer") and the execution units.
 
-       -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
+    -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
+    -- ^ The 'L.TxAuxData' consists of one or several things,
+    -- depending on era:
+    -- + transaction metadata  (in Shelley and later)
+    -- + auxiliary scripts     (in Allegra and later)
+    -- Note that there is no auxiliary script data as such, because the
+    -- extra script data has to be passed to scripts and hence is needed
+    -- for validation. It is thus part of the witness data, not the
+    -- auxiliary data.
 
-       -> TxBody era
-     -- The 'ShelleyBasedEra' GADT tells us what era we are in.
-     -- The 'ShelleyLedgerEra' type family maps that to the era type from the
-     -- ledger lib. The 'Ledger.TxBody' type family maps that to a specific
-     -- tx body type, which is different for each Shelley-based era.
+    -> TxScriptValidity era
+    -- ^ Mark script as expected to pass or fail validation
+
+    -> TxBody era
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -467,13 +471,18 @@ instance IsShelleyBasedEra era => HasTextEnvelope (TxBody era) where
         ShelleyBasedEraConway  -> "TxBodyConway"
 
 data TxBodyScriptData era where
-     TxBodyNoScriptData :: TxBodyScriptData era
-     TxBodyScriptData
-       :: AlonzoEraOnwardsConstraints era
-       => AlonzoEraOnwards era
-       -> Alonzo.TxDats (ShelleyLedgerEra era)
-       -> Alonzo.Redeemers (ShelleyLedgerEra era)
-       -> TxBodyScriptData era
+  -- ^ No script data
+  TxBodyNoScriptData :: TxBodyScriptData era
+
+  TxBodyScriptData
+    :: AlonzoEraOnwardsConstraints era
+    => AlonzoEraOnwards era
+    -- ^ Witness that the era is alonzo era onwards
+    -> Alonzo.TxDats (ShelleyLedgerEra era)
+    -- ^ The data inputs for the scripts
+    -> Alonzo.Redeemers (ShelleyLedgerEra era)
+    -- ^ The redeemers for the scripts
+    -> TxBodyScriptData era
 
 deriving instance Eq   (TxBodyScriptData era)
 deriving instance L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto => Show (TxBodyScriptData era)
@@ -510,13 +519,16 @@ isValidToScriptValidity (L.IsValid True) = ScriptValid
 -- The Alonzo and subsequent eras support script validity.
 --
 data TxScriptValidity era where
+  -- | No tx script validity
   TxScriptValidityNone
     :: TxScriptValidity era
 
-  -- | Tx script validity is supported in transactions in the 'Alonzo' era onwards.
+  -- | Tx script validity
   TxScriptValidity
     :: AlonzoEraOnwards era
+    -- ^ Witness that the era is alonzo era onwards
     -> ScriptValidity
+    -- ^ The script validity
     -> TxScriptValidity era
 
 deriving instance Eq   (TxScriptValidity era)
@@ -533,19 +545,24 @@ txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptVa
 
 data KeyWitness era where
 
-     ByronKeyWitness
-       :: Byron.TxInWitness
-       -> KeyWitness ByronEra
+  ByronKeyWitness
+    :: Byron.TxInWitness
+    -- ^ The witness for a Byron transaction
+    -> KeyWitness ByronEra
 
-     ShelleyBootstrapWitness
-       :: ShelleyBasedEra era
-       -> Shelley.BootstrapWitness StandardCrypto
-       -> KeyWitness era
+  ShelleyBootstrapWitness
+    :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
+    -> Shelley.BootstrapWitness StandardCrypto
+    -- ^ The bootstrap witness for a Shelley transaction
+    -> KeyWitness era
 
-     ShelleyKeyWitness
-       :: ShelleyBasedEra era
-       -> L.WitVKey Shelley.Witness StandardCrypto
-       -> KeyWitness era
+  ShelleyKeyWitness
+    :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
+    -> L.WitVKey Shelley.Witness StandardCrypto
+    -- ^ The witness for a Shelley transaction
+    -> KeyWitness era
 
 
 -- The GADT in the Shelley cases requires a custom instance

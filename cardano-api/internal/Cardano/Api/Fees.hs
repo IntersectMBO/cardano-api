@@ -419,6 +419,7 @@ data ResolvablePointers where
       , Show (Alonzo.PlutusScript (ShelleyLedgerEra era))
       )
     => ShelleyBasedEra era
+    -- ^ Witness that the era is from shelley onwards
     -> !(Map
           (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
           ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
@@ -426,6 +427,7 @@ data ResolvablePointers where
           , Ledger.ScriptHash Ledger.StandardCrypto
           )
         )
+    -- ^ A mapping of pointers that are possible to resolve
     -> ResolvablePointers
 
 deriving instance Show ResolvablePointers
@@ -561,15 +563,23 @@ data TransactionValidityError era  where
     -- check or submit transactions that use Plutus scripts that have the end
     -- of their validity interval more than 36 hours into the future.
     TransactionValidityIntervalError
-      :: Consensus.PastHorizonException -> TransactionValidityError era
+      :: Consensus.PastHorizonException
+      -- ^ The exception that was thrown by the consensus layer
+      -> TransactionValidityError era
 
     TransactionValidityTranslationError
       :: Plutus.EraPlutusContext (ShelleyLedgerEra era)
+      -- ^ The era plutus context that was used to translate the transaction context
       => Plutus.ContextError (ShelleyLedgerEra era)
+      -- ^ The error that occurred while translating the transaction context
       -> TransactionValidityError era
 
     TransactionValidityCostModelError
-      :: (Map AnyPlutusScriptVersion CostModel) -> String -> TransactionValidityError era
+      :: Map AnyPlutusScriptVersion CostModel
+      -- ^ The cost models that were used to calculate the execution units
+      -> String
+      -- ^ The error that occurred while converting from the cardano-api cost
+      -> TransactionValidityError era
 
 deriving instance Show (TransactionValidityError era)
 

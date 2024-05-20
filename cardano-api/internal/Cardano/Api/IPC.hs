@@ -342,13 +342,17 @@ data LocalNodeClientParams where
 
            )
        => ProtocolClientInfoArgs block
+       -- ^ The protocol client info
        -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
+       -- ^ The client side mini-protocol handler
        -> LocalNodeClientParams
 
      LocalNodeClientParamsCardano
       :: (ProtocolClient block, CardanoHardForkConstraints (ConsensusCryptoForBlock block))
       => ProtocolClientInfoArgs block
+      -- ^ The protocol client info
       -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
+      -- ^ The client side mini-protocol handler
       -> LocalNodeClientParams
 
 data LocalNodeClientProtocolsForBlock block =

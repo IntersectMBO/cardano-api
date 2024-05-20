@@ -202,44 +202,68 @@ createPParams sbe ebPParamsUpdate =
 data EraBasedProtocolParametersUpdate era where
   ShelleyEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
+    -- ^ Common protocol parameters
     -> DeprecatedAfterMaryPParams ShelleyEra
+    -- ^ Protocol parameters that have been deprecated after Mary
     -> DeprecatedAfterBabbagePParams ShelleyEra
+    -- ^ Protocol parameters that have been deprecated after Babbage
     -> ShelleyToAlonzoPParams ShelleyEra
+    -- ^ Protocol parameters that have been deprecated after Alonzo
     -> EraBasedProtocolParametersUpdate ShelleyEra
 
   AllegraEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
+    -- ^ Common protocol parameters
     -> DeprecatedAfterMaryPParams AllegraEra
+    -- ^ Protocol parameters that have been deprecated after Mary
     -> ShelleyToAlonzoPParams AllegraEra
+    -- ^ Protocol parameters that have been deprecated after Alonzo
     -> DeprecatedAfterBabbagePParams ShelleyEra
+    -- ^ Protocol parameters that have been deprecated after Babbage
     -> EraBasedProtocolParametersUpdate AllegraEra
 
   MaryEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
+    -- ^ Common protocol parameters
     -> DeprecatedAfterMaryPParams MaryEra
+    -- ^ Protocol parameters that have been deprecated after Mary
     -> ShelleyToAlonzoPParams MaryEra
+    -- ^ Protocol parameters that have been deprecated after Alonzo
     -> DeprecatedAfterBabbagePParams ShelleyEra
+    -- ^ Protocol parameters that have been deprecated after Babbage
     -> EraBasedProtocolParametersUpdate MaryEra
 
   AlonzoEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
+    -- ^ Common protocol parameters
     -> ShelleyToAlonzoPParams AlonzoEra
+    -- ^ Protocol parameters that have been deprecated after Alonzo
     -> AlonzoOnwardsPParams AlonzoEra
+    -- ^ Protocol parameters that have been introduced in Alonzo
     -> DeprecatedAfterBabbagePParams ShelleyEra
+    -- ^ Protocol parameters that have been deprecated after Babbage
     -> EraBasedProtocolParametersUpdate AlonzoEra
 
   BabbageEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
+    -- ^ Common protocol parameters
     -> AlonzoOnwardsPParams BabbageEra
+    -- ^ Protocol parameters that have been introduced in Babbage
     -> DeprecatedAfterBabbagePParams ShelleyEra
+    -- ^ Protocol parameters that have been deprecated after Babbage
     -> IntroducedInBabbagePParams BabbageEra
+    -- ^ Protocol parameters that have been introduced in Babbage
     -> EraBasedProtocolParametersUpdate BabbageEra
 
   ConwayEraBasedProtocolParametersUpdate
     :: CommonProtocolParametersUpdate
+    -- ^ Common protocol parameters
     -> AlonzoOnwardsPParams ConwayEra
+    -- ^ Protocol parameters that have been introduced in Conway
     -> IntroducedInBabbagePParams ConwayEra
+    -- ^ Protocol parameters that have been introduced in Babbage
     -> IntroducedInConwayPParams (ShelleyLedgerEra ConwayEra)
+    -- ^ Protocol parameters that have been introduced in Conway
     -> EraBasedProtocolParametersUpdate ConwayEra
 
 deriving instance Show (EraBasedProtocolParametersUpdate era)
