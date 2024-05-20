@@ -688,6 +688,7 @@ fromShelleyAddrIsSbe sbe = \case
 
 fromShelleyAddr
   :: ShelleyBasedEra era
+  -- ^ Witness that the era is shelley era onwards
   -> Shelley.Addr StandardCrypto
   -> AddressInEra era
 fromShelleyAddr _ (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =

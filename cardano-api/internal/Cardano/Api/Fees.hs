@@ -505,6 +505,7 @@ data ResolvablePointers where
             , Ledger.ScriptHash Ledger.StandardCrypto
             )
         )
+    -- ^ A mapping of pointers that are possible to resolve
     -> ResolvablePointers
 
 deriving instance Show ResolvablePointers

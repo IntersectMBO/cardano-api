@@ -126,7 +126,9 @@ import           Lens.Micro
 data Tx era where
   ShelleyTx
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> L.Tx (ShelleyLedgerEra era)
+    -- ^ The transaction itself
     -> Tx era
 
 instance Show (InAnyCardanoEra Tx) where
@@ -564,12 +566,15 @@ isValidToScriptValidity (L.IsValid True) = ScriptValid
 --
 -- The Alonzo and subsequent eras support script validity.
 data TxScriptValidity era where
+  -- | No tx script validity
   TxScriptValidityNone
     :: TxScriptValidity era
   -- | Tx script validity is supported in transactions in the 'Alonzo' era onwards.
   TxScriptValidity
     :: AlonzoEraOnwards era
+    -- ^ Witness that the era is alonzo era onwards
     -> ScriptValidity
+    -- ^ The script validity
     -> TxScriptValidity era
 
 deriving instance Eq (TxScriptValidity era)

@@ -183,7 +183,9 @@ getShelleyBlockTxs era (Ledger.Block _header txs) =
 data BlockInMode where
   BlockInMode
     :: CardanoEra era
+    -- ^ The era of the block
     -> Block era
+    -- ^ The block itself
     -> BlockInMode
 
 deriving instance Show BlockInMode

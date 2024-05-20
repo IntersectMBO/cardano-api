@@ -143,6 +143,7 @@ data QueryInMode result where
     :: QueryInMode AnyCardanoEra
   QueryInEra
     :: QueryInEra era result
+    -- ^ Query in a specific era
     -> QueryInMode (Either EraMismatch result)
   QueryEraHistory
     :: QueryInMode EraHistory
@@ -166,6 +167,7 @@ data EraHistory where
   EraHistory
     :: Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
     => History.Interpreter xs
+    -- ^ The history interpreter for the hard fork combinator
     -> EraHistory
 
 getProgress
@@ -239,15 +241,19 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
   QueryUTxO
     :: QueryUTxOFilter
+    -- ^ Filter the UTxO by this filter
     -> QueryInShelleyBasedEra era (UTxO era)
   QueryStakeAddresses
     :: Set StakeCredential
+    -- ^ Stake addresses to query
     -> NetworkId
+    -- ^ Network ID
     -> QueryInShelleyBasedEra era (Map StakeAddress L.Coin, Map StakeAddress PoolId)
   QueryStakePools
     :: QueryInShelleyBasedEra era (Set PoolId)
   QueryStakePoolParameters
     :: Set PoolId
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (Map PoolId StakePoolParameters)
   -- TODO: add support for RewardProvenance
   -- QueryPoolRanking
@@ -261,15 +267,19 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
   QueryPoolState
     :: Maybe (Set PoolId)
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (SerialisedPoolState era)
   QueryPoolDistribution
     :: Maybe (Set PoolId)
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (SerialisedPoolDistribution era)
   QueryStakeSnapshot
     :: Maybe (Set PoolId)
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
   QueryStakeDelegDeposits
     :: Set StakeCredential
+    -- ^ Stake addresses to query
     -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
   QueryAccountState
     :: QueryInShelleyBasedEra era L.AccountState

@@ -37,7 +37,11 @@ throwErrorAsException :: Error e => e -> IO a
 throwErrorAsException e = throwIO (ErrorAsException e)
 
 data ErrorAsException where
-  ErrorAsException :: Error e => e -> ErrorAsException
+  ErrorAsException
+    :: Error e
+    => e
+    -- ^ The error
+    -> ErrorAsException
 
 instance Error ErrorAsException where
   prettyError (ErrorAsException e) =
