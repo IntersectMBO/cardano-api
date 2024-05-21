@@ -41,7 +41,8 @@ import           Cardano.Api.IO
 import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseTextEnvelope (TextEnvelope (..),
                    TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
-                   deserialiseFromTextEnvelope, serialiseToTextEnvelope)
+                   TextEnvelopeType (TextEnvelopeType), deserialiseFromTextEnvelope,
+                   serialiseToTextEnvelope)
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 
@@ -120,7 +121,21 @@ instance Error TextEnvelopeCddlError where
 {-# DEPRECATED serialiseTxLedgerCddl "Use 'serialiseToTextEnvelope' from 'Cardano.Api.SerialiseTextEnvelope' instead." #-}
 serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
 serialiseTxLedgerCddl era tx = shelleyBasedEraConstraints era $
-  serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx
+  (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx){teType = TextEnvelopeType $ T.unpack $ genType tx}
+  where
+   genType :: Tx era -> Text
+   genType tx' = case getTxWitnesses tx' of
+                   [] -> "Unwitnessed " <> genTxType
+                   _ -> "Witnessed " <> genTxType
+   genTxType :: Text
+   genTxType =
+     case era of
+       ShelleyBasedEraShelley -> "Tx ShelleyEra"
+       ShelleyBasedEraAllegra -> "Tx AllegraEra"
+       ShelleyBasedEraMary -> "Tx MaryEra"
+       ShelleyBasedEraAlonzo -> "Tx AlonzoEra"
+       ShelleyBasedEraBabbage -> "Tx BabbageEra"
+       ShelleyBasedEraConway -> "Tx ConwayEra"
 
 {-# DEPRECATED deserialiseTxLedgerCddl "Use 'deserialiseFromTextEnvelope' from 'Cardano.Api.SerialiseTextEnvelope' instead." #-}
 deserialiseTxLedgerCddl :: forall era .
