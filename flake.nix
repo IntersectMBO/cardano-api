@@ -45,8 +45,8 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc964";
-        haddockShellCompiler = defaultCompiler;
+        defaultCompiler = "ghc8107";
+        haddockShellCompiler = "defaultCompiler";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
