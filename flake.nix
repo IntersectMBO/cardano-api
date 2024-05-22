@@ -46,7 +46,7 @@
 
         # see flake `variants` below for alternative compilers
         defaultCompiler = "ghc964";
-        haddockShellCompiler = defaultCompiler;
+        haddockShellCompiler = "ghc8107";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
