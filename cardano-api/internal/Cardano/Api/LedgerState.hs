@@ -1778,7 +1778,8 @@ instance Show AnyNewEpochState where
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
 -- provide a termination epoch otherwise blocks would be applied indefinitely.
 foldEpochState
-  :: forall t m s. MonadIOTransError FoldBlocksError t m
+  :: forall t m s.
+     (MonadIO m, MonadIO (t m), MonadCatch m, MonadTrans t, MonadError FoldBlocksError (t m), MonadState s IO)
   => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
@@ -1940,7 +1941,8 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
                               -- There can be only one place where `takeMVar stateMv` exists otherwise this
                               -- code will deadlock!
                               condition <- bracket (takeMVar stateMv) (tryPutMVar stateMv) $ \(_prevCondition, previousState) -> do
-                                updatedState@(!newCondition, !_) <- runStateT (checkCondition newEpochState slotNo currBlockNo) previousState
+                                updatedState@(!newCondition, !newState) <- runStateT (checkCondition newEpochState slotNo currBlockNo) previousState
+                                put newState
                                 putMVar stateMv updatedState
                                 pure newCondition
                               -- Have we reached the termination epoch?

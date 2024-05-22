@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -35,7 +36,7 @@ import           Data.Bifunctor (first)
 type MonadTransError e t m = (Monad m, MonadTrans t, MonadError e (t m))
 --
 -- | Same as 'MonadTransError', but with also 'MonadIO' constraint
-type MonadIOTransError e t m = (MonadIO m, MonadIO (t m), MonadCatch m, MonadTrans t, MonadError e (t m))
+type MonadIOTransError e t m  = (MonadIO m, MonadIO (t m), MonadCatch m, MonadTrans t, MonadError e (t m))
 
 -- | Modify an 'ExceptT' error and lift it to 'MonadError' transformer stack.
 --
