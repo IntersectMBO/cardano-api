@@ -7,6 +7,7 @@ module Cardano.Api.Eras.Case
   ( -- Case on CardanoEra
     caseByronOrShelleyBasedEra
   , caseByronToAlonzoOrBabbageEraOnwards
+  , caseByronToBabbageOrConwayEraOnwards
 
     -- Case on ShelleyBasedEra
   , caseShelleyEraOnlyOrAllegraEraOnwards
@@ -53,6 +54,21 @@ caseByronOrShelleyBasedEra l r = \case
   AlonzoEra  -> r ShelleyBasedEraAlonzo
   BabbageEra -> r ShelleyBasedEraBabbage
   ConwayEra  -> r ShelleyBasedEraConway
+
+-- | @caseByronToBabbageOrConwayEraOnwards f g era@ returns @f@ in Byron to Babbage and applies @g@ to Conway-based eras.
+caseByronToBabbageOrConwayEraOnwards :: ()
+  => a
+  -> (ConwayEraOnwardsConstraints era => ConwayEraOnwards era -> a)
+  -> CardanoEra era
+  -> a
+caseByronToBabbageOrConwayEraOnwards l r = \case
+  ByronEra   -> l
+  ShelleyEra -> l
+  AllegraEra -> l
+  MaryEra    -> l
+  AlonzoEra  -> l
+  BabbageEra -> l
+  ConwayEra  -> r ConwayEraOnwardsConway
 
 -- | @caseByronToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to byron, shelley, allegra, mary, and alonzo;
 -- and @g@ to babbage and later eras.
