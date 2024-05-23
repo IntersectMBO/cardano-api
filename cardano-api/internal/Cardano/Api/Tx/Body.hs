@@ -1188,6 +1188,8 @@ deriving instance Show (TxProposalProcedures build era)
 -- Transaction body content
 --
 
+-- If you extend this type, consider updating the @friendly*@ family of functions
+-- in cardano-cli.
 data TxBodyContent build era =
      TxBodyContent {
        txIns                :: TxIns build era,
