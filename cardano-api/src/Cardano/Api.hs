@@ -329,6 +329,8 @@ module Cardano.Api (
     setTxUpdateProposal,
     setTxMintValue,
     setTxScriptValidity,
+    setTxCurrentTreasuryValue,
+    setTxTreasuryDonation,
     TxBodyError(..),
     TxBodyScriptData(..),
 

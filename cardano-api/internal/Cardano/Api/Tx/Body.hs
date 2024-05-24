@@ -54,6 +54,8 @@ module Cardano.Api.Tx.Body (
     setTxUpdateProposal,
     setTxMintValue,
     setTxScriptValidity,
+    setTxCurrentTreasuryValue,
+    setTxTreasuryDonation,
     TxBodyError(..),
     TxBodyScriptData(..),
     TxScriptValidity(..),
@@ -205,6 +207,7 @@ import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import           Cardano.Ledger.Binary (Annotated (..))
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Conway.Core as L
 import           Cardano.Ledger.Core ()
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -1211,7 +1214,11 @@ data TxBodyContent build era =
        txMintValue          :: TxMintValue    build era,
        txScriptValidity     :: TxScriptValidity era,
        txProposalProcedures :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)),
-       txVotingProcedures   :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))
+       txVotingProcedures   :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era)),
+       -- | Current treasury value
+       txCurrentTreasuryValue :: Maybe (Featured ConwayEraOnwards era L.Coin),
+       -- | Treasury donation to perform
+       txTreasuryDonation     :: Maybe (Featured ConwayEraOnwards era L.Coin)
      }
      deriving (Eq, Show)
 
@@ -1239,6 +1246,8 @@ defaultTxBodyContent era = TxBodyContent
     , txScriptValidity = TxScriptValidityNone
     , txProposalProcedures = Nothing
     , txVotingProcedures = Nothing
+    , txCurrentTreasuryValue = Nothing
+    , txTreasuryDonation = Nothing
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
@@ -1307,8 +1316,11 @@ setTxMintValue v txBodyContent = txBodyContent { txMintValue = v }
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent { txScriptValidity = v }
 
+setTxCurrentTreasuryValue :: Maybe (Featured ConwayEraOnwards era L.Coin) -> TxBodyContent build era -> TxBodyContent build era
+setTxCurrentTreasuryValue v txBodyContent = txBodyContent { txCurrentTreasuryValue = v }
 
-
+setTxTreasuryDonation :: Maybe (Featured ConwayEraOnwards era L.Coin) -> TxBodyContent build era -> TxBodyContent build era
+setTxTreasuryDonation v txBodyContent = txBodyContent { txTreasuryDonation = v }
 
 getTxIdByron :: Byron.ATxAux ByteString -> TxId
 getTxIdByron (Byron.ATxAux { Byron.aTaTx = txbody }) =
@@ -1666,6 +1678,8 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
       , txScriptValidity      = scriptValidity
       , txProposalProcedures  = fromLedgerProposalProcedures  sbe body
       , txVotingProcedures    = fromLedgerVotingProcedures    sbe body
+      , txCurrentTreasuryValue = fromLedgerCurrentTreasuryValue sbe body
+      , txTreasuryDonation     = fromLedgerTreasuryDonation sbe body
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
@@ -1693,6 +1707,28 @@ fromLedgerVotingProcedures sbe body =
       $ TxVotingProcedures
           (body ^. L.votingProceduresTxBodyL)
           ViewTx
+
+fromLedgerCurrentTreasuryValue :: ()
+  => ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Maybe (Featured ConwayEraOnwards era Coin)
+fromLedgerCurrentTreasuryValue sbe body =
+  caseShelleyToBabbageOrConwayEraOnwards
+    (const Nothing)
+    (\cOnwards -> conwayEraOnwardsConstraints cOnwards $
+      case body ^. L.currentTreasuryValueTxBodyL of
+        SNothing -> Nothing
+        SJust currentTreasuryValue -> Just $ Featured cOnwards currentTreasuryValue)
+    sbe
+
+fromLedgerTreasuryDonation :: ()
+  => ShelleyBasedEra era
+  -> L.TxBody (ShelleyLedgerEra era)
+  -> Maybe (Featured ConwayEraOnwards era Coin)
+fromLedgerTreasuryDonation sbe body =
+  forShelleyBasedEraInEonMaybe sbe $ \w ->
+    conwayEraOnwardsConstraints w
+      $ Featured w (body ^. L.treasuryDonationTxBodyL)
 
 fromLedgerTxIns
   :: forall era.
