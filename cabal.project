@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-03-18T13:14:14Z
-  , cardano-haskell-packages 2024-05-14T00:00:00Z
+  , hackage.haskell.org 2024-05-24T12:49:48Z
+  , cardano-haskell-packages 2024-05-24T09:29:56Z
 
 packages:
     cardano-api
@@ -27,6 +27,10 @@ package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
+
+constraints:
+  -- io-classes-mtl-0.1.2.0 is not buildable
+  io-classes-mtl < 0.1.2.0
 
 tests: True
 
