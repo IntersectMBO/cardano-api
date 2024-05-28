@@ -14,11 +14,9 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
-ord_distributive :: (Show a, Ord a, Ord b)
+ordDistributive :: (Show a, Ord a, Ord b)
                       => H.Gen a -> (a -> b) -> Property
-ord_distributive gen to =
+ordDistributive gen to =
     H.property $ do
       x <- H.forAll gen
       y <- H.forAll gen
@@ -27,30 +25,30 @@ ord_distributive gen to =
 
 prop_ord_distributive_TxId :: Property
 prop_ord_distributive_TxId =
-    ord_distributive genTxId toShelleyTxId
+    ordDistributive genTxId toShelleyTxId
 
 prop_ord_distributive_TxIn :: Property
 prop_ord_distributive_TxIn =
-    ord_distributive genTxIn toShelleyTxIn
+    ordDistributive genTxIn toShelleyTxIn
 
 prop_ord_distributive_Address :: Property
 prop_ord_distributive_Address =
-    ord_distributive genAddressShelley (toShelleyAddr . toAddressInAnyEra)
+    ordDistributive genAddressShelley (toShelleyAddr . toAddressInAnyEra)
   where
     toAddressInAnyEra :: Address ShelleyAddr -> AddressInEra ShelleyEra
     toAddressInAnyEra = anyAddressInShelleyBasedEra ShelleyBasedEraShelley . toAddressAny
 
 prop_ord_distributive_StakeAddress :: Property
 prop_ord_distributive_StakeAddress =
-    ord_distributive genStakeAddress toShelleyStakeAddr
+    ordDistributive genStakeAddress toShelleyStakeAddr
 
 prop_ord_distributive_TxMetadata :: Property
 prop_ord_distributive_TxMetadata =
-    ord_distributive genTxMetadataValue toShelleyMetadatum
+    ordDistributive genTxMetadataValue toShelleyMetadatum
 
 prop_ord_distributive_ScriptData :: Property
 prop_ord_distributive_ScriptData =
-    ord_distributive (getScriptData <$> genHashableScriptData) toPlutusData
+    ordDistributive (getScriptData <$> genHashableScriptData) toPlutusData
 
 -- -----------------------------------------------------------------------------
 

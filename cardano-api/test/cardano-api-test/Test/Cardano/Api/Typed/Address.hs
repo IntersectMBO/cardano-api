@@ -17,27 +17,25 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 -- Address CBOR round trips
 
 prop_roundtrip_shelley_address :: Property
 prop_roundtrip_shelley_address =
-  roundtrip_serialise_address AsShelleyAddress genAddressShelley
+  roundtripSerialiseAddress AsShelleyAddress genAddressShelley
 
 
 prop_roundtrip_byron_address :: Property
 prop_roundtrip_byron_address =
-  roundtrip_serialise_address AsByronAddress genAddressByron
+  roundtripSerialiseAddress AsByronAddress genAddressByron
 
 
 -- -----------------------------------------------------------------------------
 
-roundtrip_serialise_address
+roundtripSerialiseAddress
   :: ( SerialiseAddress a
      , Eq a
      , Show a) => AsType a -> H.Gen a -> Property
-roundtrip_serialise_address asType g =
+roundtripSerialiseAddress asType g =
   H.property $ do
     v <- H.forAll g
     H.tripping v serialiseAddress (deserialiseAddress asType)

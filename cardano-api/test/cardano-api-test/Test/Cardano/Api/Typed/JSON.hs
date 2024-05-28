@@ -22,8 +22,6 @@ import qualified Hedgehog.Gen as Gen
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 prop_roundtrip_praos_nonce_JSON :: Property
 prop_roundtrip_praos_nonce_JSON = H.property $ do
   pNonce <- forAll $ Gen.just genMaybePraosNonce

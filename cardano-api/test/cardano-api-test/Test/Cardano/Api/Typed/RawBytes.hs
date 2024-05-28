@@ -16,75 +16,73 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 -- Address CBOR round trips
 
 prop_roundtrip_shelley_address_raw :: Property
 prop_roundtrip_shelley_address_raw =
-  roundtrip_raw_bytes AsShelleyAddress genAddressShelley
+  roundtripRawBytes AsShelleyAddress genAddressShelley
 
 
 prop_roundtrip_byron_address_raw :: Property
 prop_roundtrip_byron_address_raw =
-  roundtrip_raw_bytes AsByronAddress genAddressByron
+  roundtripRawBytes AsByronAddress genAddressByron
 
 prop_roundtrip_stake_address_raw :: Property
 prop_roundtrip_stake_address_raw =
-  roundtrip_raw_bytes AsStakeAddress genStakeAddress
+  roundtripRawBytes AsStakeAddress genStakeAddress
 
 prop_roundtrip_script_hash_raw :: Property
 prop_roundtrip_script_hash_raw =
-  roundtrip_raw_bytes AsScriptHash genScriptHash
+  roundtripRawBytes AsScriptHash genScriptHash
 
 prop_roundtrip_verification_ByronKey_hash_raw :: Property
 prop_roundtrip_verification_ByronKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsByronKey
+  roundtripVerificationKeyHashRaw AsByronKey
 
 prop_roundtrip_verification_PaymentKey_hash_raw :: Property
 prop_roundtrip_verification_PaymentKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsPaymentKey
+  roundtripVerificationKeyHashRaw AsPaymentKey
 
 prop_roundtrip_verification_StakeKey_hash_raw :: Property
 prop_roundtrip_verification_StakeKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsStakeKey
+  roundtripVerificationKeyHashRaw AsStakeKey
 
 prop_roundtrip_verification_StakePoolKey_hash_raw :: Property
 prop_roundtrip_verification_StakePoolKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsStakePoolKey
+  roundtripVerificationKeyHashRaw AsStakePoolKey
 
 prop_roundtrip_verification_GenesisKey_hash_raw :: Property
 prop_roundtrip_verification_GenesisKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsGenesisKey
+  roundtripVerificationKeyHashRaw AsGenesisKey
 
 prop_roundtrip_verification_GenesisDelegateKey_hash_raw :: Property
 prop_roundtrip_verification_GenesisDelegateKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsGenesisDelegateKey
+  roundtripVerificationKeyHashRaw AsGenesisDelegateKey
 
 prop_roundtrip_verification_KesKey_hash_raw :: Property
 prop_roundtrip_verification_KesKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsKesKey
+  roundtripVerificationKeyHashRaw AsKesKey
 
 prop_roundtrip_verification_VrfKey_hash_raw :: Property
 prop_roundtrip_verification_VrfKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsVrfKey
+  roundtripVerificationKeyHashRaw AsVrfKey
 
 prop_roundtrip_verification_GenesisUTxOKey_hash_raw :: Property
 prop_roundtrip_verification_GenesisUTxOKey_hash_raw =
-  roundtrip_verification_key_hash_raw AsGenesisUTxOKey
+  roundtripVerificationKeyHashRaw AsGenesisUTxOKey
 
 -- -----------------------------------------------------------------------------
 
-roundtrip_raw_bytes
+roundtripRawBytes
   :: ( SerialiseAsRawBytes a
      , Eq a
      , Show a) => AsType a -> H.Gen a -> Property
-roundtrip_raw_bytes asType g =
+roundtripRawBytes asType g =
   H.property $ do
     v <- H.forAll g
     H.tripping v serialiseToRawBytes (deserialiseFromRawBytes asType)
 
-roundtrip_verification_key_hash_raw :: ()
+roundtripVerificationKeyHashRaw :: ()
 #if MIN_VERSION_base(4,17,0)
   -- GHC 9.2 and above needs an extra constraint.
   => HasTypeProxy keyrole
@@ -94,7 +92,7 @@ roundtrip_verification_key_hash_raw :: ()
   => Show (Hash keyrole)
   => AsType keyrole
   -> Property
-roundtrip_verification_key_hash_raw roletoken =
+roundtripVerificationKeyHashRaw roletoken =
   H.property $ do
     vKey <- H.forAll $ genVerificationKey roletoken
     let vKeyHash = verificationKeyHash vKey

@@ -13,8 +13,6 @@ import qualified GHC.Stack as GHC
 
 import qualified Hedgehog as H
 
-{- HLINT ignore "Use camelCase" -}
-
 -- | Assert that CBOR serialisation and deserialisation roundtrips.
 trippingCbor :: ()
   => HasCallStack

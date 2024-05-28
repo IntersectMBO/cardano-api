@@ -28,8 +28,6 @@ import           Hedgehog.Extras.Aeson
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 exampleSimpleScriptV1_All :: SimpleScript
 exampleSimpleScriptV1_All =
   RequireAllOf
