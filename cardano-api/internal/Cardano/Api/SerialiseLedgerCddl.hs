@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Ledger CDDL Serialisation
 --
@@ -42,7 +43,7 @@ import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseTextEnvelope (TextEnvelope (..),
                    TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
                    TextEnvelopeType (TextEnvelopeType), deserialiseFromTextEnvelope,
-                   serialiseToTextEnvelope)
+                   serialiseToTextEnvelope, HasTextEnvelope (textEnvelopeType), legacyComparison)
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 
@@ -142,8 +143,8 @@ deserialiseTxLedgerCddl :: forall era .
      ShelleyBasedEra era
   -> TextEnvelope
   -> Either TextEnvelopeError (Tx era)
-deserialiseTxLedgerCddl era = shelleyBasedEraConstraints era $
-  deserialiseFromTextEnvelope asType
+deserialiseTxLedgerCddl era te =
+  shelleyBasedEraConstraints era $ deserialiseFromTextEnvelope asType te{teType = textEnvelopeType asType}
   where
     asType :: AsType (Tx era)
     asType = shelleyBasedEraConstraints era $ proxyToAsType Proxy
@@ -185,9 +186,15 @@ serialiseWitnessLedgerCddl sbe kw = shelleyBasedEraConstraints sbe $
 deserialiseWitnessLedgerCddl :: forall era .
      ShelleyBasedEra era
   -> TextEnvelope
-  -> Either TextEnvelopeError (KeyWitness era)
-deserialiseWitnessLedgerCddl sbe te = shelleyBasedEraConstraints sbe $
-  deserialiseFromTextEnvelope asType te
+  -> Either TextEnvelopeCddlError (KeyWitness era)
+deserialiseWitnessLedgerCddl sbe te@TextEnvelope{teDescription} =
+  let res = shelleyBasedEraConstraints sbe $ mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
+              deserialiseFromTextEnvelope asType te{teType = textEnvelopeType asType} in
+  case teDescription of
+    "Key BootstrapWitness ShelleyEra" -> res
+    "Key Witness ShelleyEra" -> res
+    _ -> Left TextEnvelopeCddlUnknownKeyWitness
+  
   where
     asType :: AsType (KeyWitness era)
     asType = shelleyBasedEraConstraints sbe $ proxyToAsType Proxy
@@ -249,7 +256,7 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 
       Just (FromCDDLWitness ttoken f) -> do
          AnyShelleyBasedEra era <- cddlTypeToEra ttoken
-         f . InAnyShelleyBasedEra era <$> mapLeft textEnvelopeErrorToTextEnvelopeCddlError (deserialiseWitnessLedgerCddl era teCddl)
+         f . InAnyShelleyBasedEra era <$> deserialiseWitnessLedgerCddl era teCddl
   where
    actualType :: Text
    actualType = T.pack $ show $ teType teCddl
@@ -258,8 +265,8 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
    expectedTypes = [ typ | FromCDDLTx typ _f <- types ]
 
    matching :: FromSomeTypeCDDL TextEnvelope b -> Bool
-   matching (FromCDDLTx ttoken _f) = actualType == ttoken
-   matching (FromCDDLWitness ttoken _f)  = actualType == ttoken
+   matching (FromCDDLTx ttoken _f) = TextEnvelopeType (T.unpack ttoken) `legacyComparison` teType teCddl
+   matching (FromCDDLWitness ttoken _f)  = TextEnvelopeType (T.unpack ttoken) `legacyComparison` teType teCddl
 
 -- Parse the text into types because this will increase code readability and
 -- will make it easier to keep track of the different Cddl descriptions via

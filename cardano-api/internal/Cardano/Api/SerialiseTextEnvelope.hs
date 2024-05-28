@@ -26,6 +26,7 @@ module Cardano.Api.SerialiseTextEnvelope
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
   , textEnvelopeToJSON
+  , legacyComparison
 
     -- * Reading one of several key types
   , FromSomeType(..)
@@ -180,18 +181,6 @@ legacyComparison (TextEnvelopeType expectedType) (TextEnvelopeType actualType) =
     ("Tx AlonzoEra", "Unwitnessed Tx AlonzoEra") -> True
     ("Tx BabbageEra", "Unwitnessed Tx BabbageEra") -> True
     ("Tx ConwayEra", "Unwitnessed Tx ConwayEra") -> True
-    ("TxUnsignedShelley", "Unwitnessed Tx ShelleyEra") -> True
-    ("TxBodyAllegra", "Unwitnessed Tx AllegraEra") -> True
-    ("TxBodyMary", "Unwitnessed Tx MaryEra") -> True
-    ("TxBodyAlonzo", "Unwitnessed Tx AlonzoEra") -> True
-    ("TxBodyBabbage", "Unwitnessed Tx BabbageEra") -> True
-    ("TxBodyConway", "Unwitnessed Tx ConwayEra") -> True
-    ("TxUnsignedShelley", "Tx ShelleyEra") -> True
-    ("TxBodyAllegra", "Tx AllegraEra") -> True
-    ("TxBodyMary", "Tx MaryEra") -> True
-    ("TxBodyAlonzo", "Tx AlonzoEra") -> True
-    ("TxBodyBabbage", "Tx BabbageEra") -> True
-    ("TxBodyConway", "Tx ConwayEra") -> True
     (expectedOther, expectedActual) -> expectedOther == expectedActual
 
 
