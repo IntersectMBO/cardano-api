@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Ledger CDDL Serialisation
 --
@@ -187,12 +188,29 @@ deserialiseWitnessLedgerCddl :: forall era .
   -> TextEnvelope
   -> Either TextEnvelopeCddlError (KeyWitness era)
 deserialiseWitnessLedgerCddl sbe te =
-  shelleyBasedEraConstraints sbe $ mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
+  shelleyBasedEraConstraints sbe $ legacyDecoding te $ mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
     deserialiseFromTextEnvelope asType te
-  
   where
     asType :: AsType (KeyWitness era)
     asType = shelleyBasedEraConstraints sbe $ proxyToAsType Proxy
+
+    -- | This wrapper ensures that we can still decode the key witness
+    -- that were serialized before we migrated to using 'serialiseToTextEnvelope'
+    legacyDecoding :: TextEnvelope -> Either TextEnvelopeCddlError (KeyWitness era) -> Either TextEnvelopeCddlError (KeyWitness era)
+    legacyDecoding TextEnvelope{teDescription, teRawCBOR} (Left (TextEnvelopeCddlErrCBORDecodingError _)) =
+      case teDescription of
+        "Key BootstrapWitness ShelleyEra" -> do
+          w <- first TextEnvelopeCddlErrCBORDecodingError
+                $ CBOR.decodeFullAnnotator
+                  (eraProtVerLow sbe) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teRawCBOR)
+          Right $ ShelleyBootstrapWitness sbe w
+        "Key Witness ShelleyEra" -> do
+          w <- first TextEnvelopeCddlErrCBORDecodingError
+                $ CBOR.decodeFullAnnotator
+                  (eraProtVerLow sbe) "Shelley Witness" CBOR.decCBOR (LBS.fromStrict teRawCBOR)
+          Right $ ShelleyKeyWitness sbe w
+        _ -> Left TextEnvelopeCddlUnknownKeyWitness
+    legacyDecoding _ v = v
 
 writeTxFileTextEnvelopeCddl :: ()
   => ShelleyBasedEra era
