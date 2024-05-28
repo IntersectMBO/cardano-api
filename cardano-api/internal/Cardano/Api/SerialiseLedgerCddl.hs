@@ -6,7 +6,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Ledger CDDL Serialisation
 --
@@ -43,7 +42,7 @@ import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseTextEnvelope (TextEnvelope (..),
                    TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
                    TextEnvelopeType (TextEnvelopeType), deserialiseFromTextEnvelope,
-                   serialiseToTextEnvelope, HasTextEnvelope (textEnvelopeType), legacyComparison)
+                   serialiseToTextEnvelope, legacyComparison)
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 
@@ -143,8 +142,8 @@ deserialiseTxLedgerCddl :: forall era .
      ShelleyBasedEra era
   -> TextEnvelope
   -> Either TextEnvelopeError (Tx era)
-deserialiseTxLedgerCddl era te =
-  shelleyBasedEraConstraints era $ deserialiseFromTextEnvelope asType te{teType = textEnvelopeType asType}
+deserialiseTxLedgerCddl era =
+  shelleyBasedEraConstraints era $ deserialiseFromTextEnvelope asType
   where
     asType :: AsType (Tx era)
     asType = shelleyBasedEraConstraints era $ proxyToAsType Proxy
@@ -187,13 +186,9 @@ deserialiseWitnessLedgerCddl :: forall era .
      ShelleyBasedEra era
   -> TextEnvelope
   -> Either TextEnvelopeCddlError (KeyWitness era)
-deserialiseWitnessLedgerCddl sbe te@TextEnvelope{teDescription} =
-  let res = shelleyBasedEraConstraints sbe $ mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
-              deserialiseFromTextEnvelope asType te{teType = textEnvelopeType asType} in
-  case teDescription of
-    "Key BootstrapWitness ShelleyEra" -> res
-    "Key Witness ShelleyEra" -> res
-    _ -> Left TextEnvelopeCddlUnknownKeyWitness
+deserialiseWitnessLedgerCddl sbe te =
+  shelleyBasedEraConstraints sbe $ mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
+    deserialiseFromTextEnvelope asType te
   
   where
     asType :: AsType (KeyWitness era)
