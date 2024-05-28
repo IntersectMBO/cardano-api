@@ -4,9 +4,9 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Ledger CDDL Serialisation
 --
@@ -43,7 +43,7 @@ import           Cardano.Api.Pretty
 import           Cardano.Api.SerialiseTextEnvelope (TextEnvelope (..),
                    TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
                    TextEnvelopeType (TextEnvelopeType), deserialiseFromTextEnvelope,
-                   serialiseToTextEnvelope, legacyComparison)
+                   legacyComparison, serialiseToTextEnvelope)
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
 
