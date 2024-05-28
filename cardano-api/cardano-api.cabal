@@ -210,8 +210,10 @@ library internal
                       , safe-exceptions
                       , scientific
                       , serialise
+                      , singletons
                       , small-steps ^>= 1.1
                       , sop-core
+                      , sop-extras
                       , stm
                       , strict-sop-core
                       , time
