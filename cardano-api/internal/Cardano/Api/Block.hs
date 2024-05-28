@@ -94,12 +94,17 @@ import           Data.Text (Text)
 --
 data Block era where
 
-     ByronBlock :: Consensus.ByronBlock
-                -> Block ByronEra
+  ByronBlock
+    :: Consensus.ByronBlock
+    -- ^ The underlying Byron block type
+    -> Block ByronEra
 
-     ShelleyBlock :: ShelleyBasedEra era
-                  -> Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era)
-                  -> Block era
+  ShelleyBlock
+    :: ShelleyBasedEra era
+    -- ^ Shelley based era witness
+    -> Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era)
+    -- ^ The underlying Shelley block type
+    -> Block era
 
 -- | A block consists of a header and a body containing transactions.
 --
@@ -186,7 +191,9 @@ getShelleyBlockTxs era (Ledger.Block _header txs) =
 data BlockInMode where
   BlockInMode
     :: CardanoEra era
+    -- ^ The era of the block
     -> Block era
+    -- ^ The block itself
     -> BlockInMode
 
 deriving instance Show BlockInMode

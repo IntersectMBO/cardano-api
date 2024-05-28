@@ -278,13 +278,17 @@ textEnvelopeCddlJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
 -- having to provide the era.
 data FromSomeTypeCDDL c b where
   FromCDDLTx
-    :: Text -- ^ CDDL type that we want
+    :: Text
+    -- ^ CDDL type that we want
     -> (InAnyShelleyBasedEra Tx -> b)
+    -- ^ Function to convert the tx to the desired type
     -> FromSomeTypeCDDL TextEnvelopeCddl b
 
   FromCDDLWitness
-    :: Text -- ^ CDDL type that we want
+    :: Text
+    -- ^ CDDL type that we want
     -> (InAnyShelleyBasedEra KeyWitness -> b)
+    -- ^ Function to convert the witness to the desired type
     -> FromSomeTypeCDDL TextEnvelopeCddl b
 
 deserialiseFromTextEnvelopeCddlAnyOf
