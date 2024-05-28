@@ -175,25 +175,29 @@ instance HasTypeProxy ShelleyAddr where
 -- with the era in which it is supported.
 --
 data Address addrtype where
+  -- | Byron addresses were the only supported address type in the original
+  -- Byron era.
+  --
+  ByronAddress
+    :: Byron.Address
+    -- ^ The Byron address
+    -> Address ByronAddr
 
-     -- | Byron addresses were the only supported address type in the original
-     -- Byron era.
-     --
-     ByronAddress
-       :: Byron.Address
-       -> Address ByronAddr
-
-     -- | Shelley addresses allow delegation. Shelley addresses were introduced
-     -- in Shelley era and are thus supported from the Shelley era onwards
-     --
-     ShelleyAddress
-       :: Shelley.Network
-       -> Shelley.PaymentCredential StandardCrypto
-       -> Shelley.StakeReference    StandardCrypto
-       -> Address ShelleyAddr
-       -- Note that the two ledger credential types here are parametrised by
-       -- the era, but in fact this is a phantom type parameter and they are
-       -- the same for all eras. See 'toShelleyAddr' below.
+  -- | Shelley addresses allow delegation. Shelley addresses were introduced
+  -- in Shelley era and are thus supported from the Shelley era onwards
+  --
+  -- Note that the two ledger credential types here are parameterrised by
+  -- the era, but in fact this is a phantom type parameter and they are
+  -- the same for all eras. See 'toShelleyAddr' below.
+  --
+  ShelleyAddress
+    :: Shelley.Network
+    -- ^ The shelley network
+    -> Shelley.PaymentCredential StandardCrypto
+    -- ^ Payment credentials
+    -> Shelley.StakeReference    StandardCrypto
+    -- ^ Stake reference
+    -> Address ShelleyAddr
 
 deriving instance Eq   (Address addrtype)
 deriving instance Ord  (Address addrtype)
@@ -363,9 +367,12 @@ fromShelleyAddrToAny (Shelley.Addr nw pc scr) =
 -- supported in the 'ShelleyEra' and later eras.
 --
 data AddressInEra era where
-     AddressInEra :: AddressTypeInEra addrtype era
-                  -> Address addrtype
-                  -> AddressInEra era
+  AddressInEra
+    :: AddressTypeInEra addrtype era
+    -- ^ Witness that the address type is supported in the era
+    -> Address addrtype
+    -- ^ The address
+    -> AddressInEra era
 
 instance NFData (AddressInEra era) where
   rnf (AddressInEra t a) = deepseq (deepseq t a) ()
@@ -428,10 +435,15 @@ deriving instance Show (AddressInEra era)
 
 data AddressTypeInEra addrtype era where
 
-     ByronAddressInAnyEra :: AddressTypeInEra ByronAddr era
+  -- | Byron addresses are supported in all eras.
+  ByronAddressInAnyEra
+    :: AddressTypeInEra ByronAddr era
 
-     ShelleyAddressInEra  :: ShelleyBasedEra era
-                          -> AddressTypeInEra ShelleyAddr era
+  -- | Shelley addresses are supported in the Shelley era and later eras.
+  ShelleyAddressInEra
+    :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
+    -> AddressTypeInEra ShelleyAddr era
 
 deriving instance Show (AddressTypeInEra addrtype era)
 
@@ -523,15 +535,17 @@ makeShelleyAddressInEra sbe nw pc scr =
 --
 
 data StakeAddress where
-     StakeAddress
-       :: Shelley.Network
-       -> Shelley.StakeCredential StandardCrypto
-       -> StakeAddress
+  StakeAddress
+    :: Shelley.Network
+    -- ^ The shelley network
+    -> Shelley.StakeCredential StandardCrypto
+    -- ^ The stake credential
+    -> StakeAddress
   deriving (Eq, Ord, Show)
 
 data PaymentCredential
-       = PaymentCredentialByKey    (Hash PaymentKey)
-       | PaymentCredentialByScript  ScriptHash
+    = PaymentCredentialByKey    (Hash PaymentKey)
+    | PaymentCredentialByScript  ScriptHash
   deriving (Eq, Ord, Show)
 
 data StakeCredential
@@ -679,6 +693,7 @@ fromShelleyAddrIsSbe sbe = \case
 
 fromShelleyAddr
   :: ShelleyBasedEra era
+  -- ^ Witness that the era is shelley era onwards
   -> Shelley.Addr StandardCrypto
   -> AddressInEra era
 fromShelleyAddr _ (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =

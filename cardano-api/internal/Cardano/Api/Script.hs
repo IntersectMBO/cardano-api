@@ -222,9 +222,12 @@ instance HasTypeProxy PlutusScriptV3 where
 --
 data ScriptLanguage lang where
 
-     SimpleScriptLanguage :: ScriptLanguage SimpleScript'
+  SimpleScriptLanguage :: ScriptLanguage SimpleScript'
 
-     PlutusScriptLanguage :: PlutusScriptVersion lang -> ScriptLanguage lang
+  PlutusScriptLanguage
+    :: PlutusScriptVersion lang
+    -- ^ The version of the Plutus language
+    -> ScriptLanguage lang
 
 deriving instance (Eq   (ScriptLanguage lang))
 deriving instance (Show (ScriptLanguage lang))
@@ -254,7 +257,10 @@ instance TestEquality PlutusScriptVersion where
 
 
 data AnyScriptLanguage where
-     AnyScriptLanguage :: ScriptLanguage lang -> AnyScriptLanguage
+  AnyScriptLanguage
+    :: ScriptLanguage lang
+    -- ^ The script language
+    -> AnyScriptLanguage
 
 deriving instance (Show AnyScriptLanguage)
 
@@ -282,8 +288,10 @@ instance Bounded AnyScriptLanguage where
 
 
 data AnyPlutusScriptVersion where
-     AnyPlutusScriptVersion :: PlutusScriptVersion lang
-                            -> AnyPlutusScriptVersion
+  AnyPlutusScriptVersion
+    :: PlutusScriptVersion lang
+    -- ^ The version of the Plutus language
+    -> AnyPlutusScriptVersion
 
 deriving instance (Show AnyPlutusScriptVersion)
 
@@ -403,12 +411,17 @@ instance IsPlutusScriptLanguage PlutusScriptV3 where
 --
 data Script lang where
 
-     SimpleScript :: !SimpleScript
-                  -> Script SimpleScript'
+  SimpleScript
+    :: !SimpleScript
+    -- ^ A script in the simple script language
+    -> Script SimpleScript'
 
-     PlutusScript :: !(PlutusScriptVersion lang)
-                  -> !(PlutusScript lang)
-                  -> Script lang
+  PlutusScript
+    :: !(PlutusScriptVersion lang)
+    -- ^ The version of the Plutus language
+    -> !(PlutusScript lang)
+    -- ^ A script in the Plutus language
+    -> Script lang
 
 deriving instance (Eq   (Script lang))
 deriving instance (Show (Script lang))
@@ -469,9 +482,12 @@ instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
 -- Use 'toScriptInEra' to convert to a script in the context of an era.
 --
 data ScriptInAnyLang where
-     ScriptInAnyLang :: ScriptLanguage lang
-                     -> Script lang
-                     -> ScriptInAnyLang
+  ScriptInAnyLang
+    :: ScriptLanguage lang
+    -- ^ The language of the script
+    -> Script lang
+    -- ^ The script itself
+    -> ScriptInAnyLang
 
 deriving instance Show ScriptInAnyLang
 
@@ -528,9 +544,12 @@ instance HasTypeProxy ScriptInAnyLang where
 --
 
 data ScriptInEra era where
-     ScriptInEra :: ScriptLanguageInEra lang era
-                 -> Script lang
-                 -> ScriptInEra era
+  ScriptInEra
+    :: ScriptLanguageInEra lang era
+    -- ^ Witness that the script language is supported in this era
+    -> Script lang
+    -- ^ The script itself
+    -> ScriptInEra era
 
 deriving instance Show (ScriptInEra era)
 
@@ -740,17 +759,20 @@ data SimpleScriptOrReferenceInput lang
 --
 data ScriptWitness witctx era where
 
-     SimpleScriptWitness :: ScriptLanguageInEra SimpleScript' era
-                         -> SimpleScriptOrReferenceInput SimpleScript'
-                         -> ScriptWitness witctx era
+  SimpleScriptWitness
+    :: ScriptLanguageInEra SimpleScript' era
+    -- ^ Witness that the script language is supported in this era
+    -> SimpleScriptOrReferenceInput SimpleScript'
+    -- ^ The script itself
+    -> ScriptWitness witctx era
 
-     PlutusScriptWitness :: ScriptLanguageInEra lang era
-                         -> PlutusScriptVersion lang
-                         -> PlutusScriptOrReferenceInput lang
-                         -> ScriptDatum witctx
-                         -> ScriptRedeemer
-                         -> ExecutionUnits
-                         -> ScriptWitness witctx era
+  PlutusScriptWitness :: ScriptLanguageInEra lang era
+                      -> PlutusScriptVersion lang
+                      -> PlutusScriptOrReferenceInput lang
+                      -> ScriptDatum witctx
+                      -> ScriptRedeemer
+                      -> ExecutionUnits
+                      -> ScriptWitness witctx era
 
 deriving instance Show (ScriptWitness witctx era)
 
@@ -826,12 +848,17 @@ scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
 
 data Witness witctx era where
 
-     KeyWitness    :: KeyWitnessInCtx witctx
-                   -> Witness         witctx era
+  KeyWitness
+    :: KeyWitnessInCtx witctx
+    -- ^ The kind of key witness
+    -> Witness         witctx era
 
-     ScriptWitness :: ScriptWitnessInCtx witctx
-                   -> ScriptWitness      witctx era
-                   -> Witness            witctx era
+  ScriptWitness
+    :: ScriptWitnessInCtx witctx
+    -- ^ The kind of script witness
+    -> ScriptWitness      witctx era
+    -- ^ The script witness itself
+    -> Witness            witctx era
 
 deriving instance Eq   (Witness witctx era)
 deriving instance Show (Witness witctx era)
@@ -1387,11 +1414,14 @@ parsePaymentKeyHash =
 -- has to be added to the transaction, they can now be referenced via a transaction output.
 
 data ReferenceScript era where
-     ReferenceScript :: BabbageEraOnwards era
-                     -> ScriptInAnyLang
-                     -> ReferenceScript era
+  ReferenceScript
+    :: BabbageEraOnwards era
+    -- ^ Witness that the era is babbage era onwards
+    -> ScriptInAnyLang
+    -- ^ The script itself
+    -> ReferenceScript era
 
-     ReferenceScriptNone :: ReferenceScript era
+  ReferenceScriptNone :: ReferenceScript era
 
 deriving instance Eq (ReferenceScript era)
 deriving instance Show (ReferenceScript era)

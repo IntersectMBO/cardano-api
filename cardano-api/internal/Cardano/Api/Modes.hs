@@ -64,6 +64,7 @@ import           Data.SOP.Strict (NS (S, Z))
 data ConsensusModeParams where
   CardanoModeParams
     :: Byron.EpochSlots
+    -- ^ The number of slots in an epoch.
     -> ConsensusModeParams
 
 deriving instance Show ConsensusModeParams
