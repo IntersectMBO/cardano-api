@@ -105,15 +105,16 @@ source-repository-package
     ouroboros-network-testing
     quickcheck-monoids
 
+-- UTxO-HD for 10.2
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 7cbd3f85fe4fcc434510a528632ff654fd98a933
-  --sha256: sha256-8mEOs5rJxQEgxGVGJGaHNs1JSBLty531zAz3aFEu1is=
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 80bac6f41f0c973ee49f886da16c3e6b38cec92d
+  --sha256: sha256-n10Edr1XhF7nqkMPDO6yI+FVbdM7ZXxCEEZ9vxhYyBU=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
     ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
     sop-extras
     strict-sop-core
