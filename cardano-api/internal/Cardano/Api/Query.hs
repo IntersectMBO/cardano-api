@@ -157,6 +157,7 @@ data QueryInMode result where
 
   QueryInEra
     :: QueryInEra era result
+    -- ^ Query in a specific era
     -> QueryInMode (Either EraMismatch result)
 
   QueryEraHistory
@@ -184,6 +185,7 @@ data EraHistory where
   EraHistory
     :: Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
     => History.Interpreter xs
+    -- ^ The history interpreter for the hard fork combinator
     -> EraHistory
 
 getProgress :: ()
@@ -225,11 +227,15 @@ slotToEpoch slotNo (EraHistory interpreter) = case Qry.interpretQuery interprete
 deriving instance Show (QueryInMode result)
 
 data QueryInEra era result where
-     QueryByronUpdateState :: QueryInEra ByronEra ByronUpdateState
+  QueryByronUpdateState
+    :: QueryInEra ByronEra ByronUpdateState
 
-     QueryInShelleyBasedEra :: ShelleyBasedEra era
-                            -> QueryInShelleyBasedEra era result
-                            -> QueryInEra era result
+  QueryInShelleyBasedEra
+    :: ShelleyBasedEra era
+    -- ^ The witness that the era is shelley era onwards
+    -> QueryInShelleyBasedEra era result
+    -- ^ The query in the shelley-based era
+    -> QueryInEra era result
 
 instance NodeToClientVersionOf (QueryInEra era result) where
   nodeToClientVersionOf QueryByronUpdateState = NodeToClientV_9
@@ -257,11 +263,14 @@ data QueryInShelleyBasedEra era result where
 
   QueryUTxO
     :: QueryUTxOFilter
+    -- ^ Filter the UTxO by this filter
     -> QueryInShelleyBasedEra era (UTxO era)
 
   QueryStakeAddresses
     :: Set StakeCredential
+    -- ^ Stake addresses to query
     -> NetworkId
+    -- ^ Network ID
     -> QueryInShelleyBasedEra era (Map StakeAddress L.Coin, Map StakeAddress PoolId)
 
   QueryStakePools
@@ -269,6 +278,7 @@ data QueryInShelleyBasedEra era result where
 
   QueryStakePoolParameters
     :: Set PoolId
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (Map PoolId StakePoolParameters)
 
      -- TODO: add support for RewardProvenance
@@ -286,18 +296,22 @@ data QueryInShelleyBasedEra era result where
 
   QueryPoolState
     :: Maybe (Set PoolId)
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (SerialisedPoolState era)
 
   QueryPoolDistribution
     :: Maybe (Set PoolId)
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (SerialisedPoolDistribution era)
 
   QueryStakeSnapshot
     :: Maybe (Set PoolId)
+    -- ^ Stake pools to query
     -> QueryInShelleyBasedEra era (SerialisedStakeSnapshots era)
 
   QueryStakeDelegDeposits
     :: Set StakeCredential
+    -- ^ Stake addresses to query
     -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
 
   QueryConstitution
@@ -308,6 +322,7 @@ data QueryInShelleyBasedEra era result where
 
   QueryDRepState
     :: Set (Shelley.Credential Shelley.DRepRole StandardCrypto)
+    -- ^ DRep IDs to query
     -> QueryInShelleyBasedEra era (Map (Shelley.Credential Shelley.DRepRole StandardCrypto) (L.DRepState StandardCrypto))
 
   QueryDRepStakeDistr

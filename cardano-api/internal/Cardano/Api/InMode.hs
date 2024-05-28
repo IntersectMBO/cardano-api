@@ -67,7 +67,9 @@ data TxInMode where
   --
   TxInMode
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> Tx era
+    -- ^ The transaction itself
     -> TxInMode
 
   -- | Legacy Byron transactions and things we can
@@ -159,7 +161,9 @@ toConsensusGenTx (TxInMode ShelleyBasedEraConway (ShelleyTx _ tx)) =
 data TxIdInMode where
   TxIdInMode
     :: CardanoEra era
+    -- ^ The cardano era
     -> TxId
+    -- ^ The transaction id
     -> TxIdInMode
 
 toConsensusTxId :: ()
@@ -218,11 +222,14 @@ toConsensusTxId (TxIdInMode ConwayEra txid) =
 data TxValidationError era where
   ByronTxValidationError
     :: Consensus.ApplyTxErr Consensus.ByronBlock
+    -- ^ The error from trying to submit a Byron transaction
     -> TxValidationError era
 
   ShelleyTxValidationError
     :: ShelleyBasedEra era
+    -- ^ Witness that the era is shelley era onwards
     -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
+    -- ^ The error from trying to submit a Shelley transaction
     -> TxValidationError era
 
 deriving instance Generic (TxValidationError era)
@@ -273,10 +280,12 @@ appTxErrToJson w e = shelleyBasedEraConstraints w $ toJSON e
 data TxValidationErrorInCardanoMode where
   TxValidationErrorInCardanoMode :: ()
     => TxValidationError era
+    -- ^ The transaction validation error
     -> TxValidationErrorInCardanoMode
 
   TxValidationEraMismatch :: ()
     => EraMismatch
+    -- ^ The error from trying to submit a transaction to the wrong era
     -> TxValidationErrorInCardanoMode
 
 deriving instance Show TxValidationErrorInCardanoMode
