@@ -3,6 +3,9 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- TODO remove me when ProtocolParameters is deleted
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Test.Golden.Cardano.Api.ProtocolParameters
   ( test_golden_ProtocolParameters
   , test_golden_ProtocolParameters_to_PParams
