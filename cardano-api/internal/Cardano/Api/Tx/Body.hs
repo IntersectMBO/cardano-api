@@ -16,6 +16,8 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
+{- HLINT ignore "Redundant bracket" -}
+
 -- | Transaction bodies
 module Cardano.Api.Tx.Body (
     parseTxId,
@@ -1191,8 +1193,9 @@ deriving instance Show (TxProposalProcedures build era)
 -- Transaction body content
 --
 
--- If you extend this type, consider updating the @friendly*@ family of functions
--- in cardano-cli.
+-- If you extend this type, consider updating:
+-- - the 'makeShelleyTransactionBody' function of the relevant era below, and
+-- - the @friendly*@ family of functions in cardano-cli.
 data TxBodyContent build era =
      TxBodyContent {
        txIns                :: TxIns build era,
@@ -2637,7 +2640,9 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
                              txMintValue,
                              txScriptValidity,
                              txProposalProcedures,
-                             txVotingProcedures
+                             txVotingProcedures,
+                             txCurrentTreasuryValue,
+                             txTreasuryDonation
                            } = do
     let aOn = AllegraEraOnwardsConway
     let cOn = ConwayEraOnwardsConway
@@ -2663,6 +2668,8 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
             & A.scriptIntegrityHashTxBodyL azOn .~ scriptIntegrityHash
             & A.votingProceduresTxBodyL cOn     .~ convVotingProcedures (maybe TxVotingProceduresNone unFeatured txVotingProcedures)
             & A.proposalProceduresTxBodyL cOn   .~ convProposalProcedures (maybe TxProposalProceduresNone unFeatured txProposalProcedures)
+            & A.currentTreasuryValueTxBodyL cOn .~ (Ledger.maybeToStrictMaybe (unFeatured <$> txCurrentTreasuryValue))
+            & A.treasuryDonationTxBodyL cOn     .~ (maybe (L.Coin 0) unFeatured txTreasuryDonation)
             -- TODO Conway: support optional network id in TxBodyContent
             -- & L.networkIdTxBodyL .~ SNothing
           ) ^. A.txBodyL
