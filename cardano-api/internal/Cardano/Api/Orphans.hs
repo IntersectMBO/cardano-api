@@ -16,7 +16,7 @@
 
 module Cardano.Api.Orphans () where
 
-import           Cardano.Api.Pretty (Pretty (..), (<+>))
+import           Cardano.Api.Pretty (Pretty (..), prettyException, (<+>))
 import           Cardano.Api.Via.ShowOf
 
 import           Cardano.Binary (DecoderError (..))
@@ -74,6 +74,7 @@ import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
+import           Ouroboros.Network.Mux (MuxError)
 
 import qualified Codec.Binary.Bech32 as Bech32
 import qualified Codec.CBOR.Read as CBOR
@@ -474,3 +475,7 @@ instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
 
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b
 lastMappendWithTHKD f a b = Ledger.THKD $ lastMappendWith (Ledger.unTHKD . f) a b
+
+instance Pretty MuxError where
+  pretty err = "Mux layer error:" <+> prettyException err
+
