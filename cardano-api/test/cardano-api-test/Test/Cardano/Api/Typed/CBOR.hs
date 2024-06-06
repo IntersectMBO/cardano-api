@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO remove when serialiseTxLedgerCddl is removed
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
@@ -27,6 +28,7 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
+
 prop_roundtrip_txbody_CBOR :: Property
 prop_roundtrip_txbody_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
