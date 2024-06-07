@@ -3,6 +3,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
+-- TODO remove me when ProtocolParameters is deleted
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Test.Cardano.Api.ProtocolParameters
   ( tests
   ) where
