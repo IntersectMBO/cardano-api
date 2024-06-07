@@ -33,6 +33,8 @@ module Cardano.Api.Ledger.Lens
   , certsTxBodyL
   , votingProceduresTxBodyL
   , proposalProceduresTxBodyL
+  , currentTreasuryValueTxBodyL
+  , treasuryDonationTxBodyL
   , adaAssetL
   , multiAssetL
   , valueTxOutL
@@ -56,6 +58,7 @@ import qualified Cardano.Ledger.Alonzo.Core as L
 import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Keys as L
 import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.Shelley.PParams as L
@@ -177,6 +180,12 @@ votingProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.votingPr
 
 proposalProceduresTxBodyL :: ConwayEraOnwards era -> Lens' (TxBody era) (L.OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
 proposalProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.proposalProceduresTxBodyL
+
+currentTreasuryValueTxBodyL :: ConwayEraOnwards era -> Lens' (TxBody era) (StrictMaybe L.Coin)
+currentTreasuryValueTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.currentTreasuryValueTxBodyL
+
+treasuryDonationTxBodyL :: ConwayEraOnwards era -> Lens' (TxBody era) L.Coin
+treasuryDonationTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.treasuryDonationTxBodyL
 
 mkAdaOnlyTxOut :: ShelleyBasedEra era -> L.Addr (L.EraCrypto (ShelleyLedgerEra era)) -> L.Coin -> L.TxOut (ShelleyLedgerEra era)
 mkAdaOnlyTxOut sbe addr coin =

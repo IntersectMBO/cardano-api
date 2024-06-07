@@ -895,6 +895,7 @@ data BalancedTxBody era
       (TxBody era)
       (TxOut CtxTx era) -- ^ Transaction balance (change output)
       L.Coin    -- ^ Estimated transaction fee
+  deriving Show
 
 newtype RequiredShelleyKeyWitnesses
   = RequiredShelleyKeyWitnesses { unRequiredShelleyKeyWitnesses :: Int }

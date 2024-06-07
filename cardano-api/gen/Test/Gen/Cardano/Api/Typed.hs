@@ -655,6 +655,8 @@ genTxBodyContent sbe = do
   txScriptValidity <- genTxScriptValidity era
   txProposalProcedures <- genMaybeFeaturedInEra genProposals era
   txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
+  txCurrentTreasuryValue <- genMaybeFeaturedInEra genCurrentTreasuryValue era
+  txTreasuryDonation <- genMaybeFeaturedInEra genTreasuryDonation era
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
@@ -676,6 +678,8 @@ genTxBodyContent sbe = do
     , Api.txScriptValidity
     , Api.txProposalProcedures
     , Api.txVotingProcedures
+    , Api.txCurrentTreasuryValue
+    , Api.txTreasuryDonation
     }
 
 
@@ -1102,3 +1106,9 @@ genVotingProcedures :: ConwayEraOnwards era -> Gen (Api.TxVotingProcedures Build
 genVotingProcedures w =
   conwayEraOnwardsConstraints w
     $ Api.TxVotingProcedures <$> Q.arbitrary <*> return (BuildTxWith mempty)
+
+genCurrentTreasuryValue :: ConwayEraOnwards era -> Gen L.Coin
+genCurrentTreasuryValue _era = Q.arbitrary
+
+genTreasuryDonation :: ConwayEraOnwards era -> Gen L.Coin
+genTreasuryDonation _era = Q.arbitrary

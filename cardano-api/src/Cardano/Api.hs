@@ -50,6 +50,7 @@ module Cardano.Api (
     forShelleyBasedEraMaybeEon,
 
     Featured(..),
+    unFeatured,
     asFeaturedInEra,
     asFeaturedInShelleyBasedEra,
 
@@ -329,6 +330,8 @@ module Cardano.Api (
     setTxUpdateProposal,
     setTxMintValue,
     setTxScriptValidity,
+    setTxCurrentTreasuryValue,
+    setTxTreasuryDonation,
     TxBodyError(..),
     TxBodyScriptData(..),
 
