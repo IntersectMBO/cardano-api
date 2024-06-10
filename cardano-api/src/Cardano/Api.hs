@@ -754,7 +754,9 @@ module Cardano.Api (
     chainSyncClientPipelinedWithLedgerState,
 
     -- *** Ledger state conditions
-    LedgerStateCondition(..),
+    ConditionResult(..),
+    fromConditionResult,
+    toConditionResult,
     AnyNewEpochState(..),
     foldEpochState,
     getAnyNewEpochState,

@@ -43,7 +43,9 @@ module Cardano.Api.LedgerState
   , chainSyncClientPipelinedWithLedgerState
 
    -- * Ledger state conditions
-  , LedgerStateCondition(..)
+  , ConditionResult(..)
+  , fromConditionResult
+  , toConditionResult
   , foldEpochState
 
    -- * Errors
@@ -166,6 +168,7 @@ import           Ouroboros.Consensus.Storage.Serialisation
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import           Ouroboros.Network.Block (blockNo)
 import qualified Ouroboros.Network.Block
+import           Ouroboros.Network.Mux (MuxError)
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
@@ -356,6 +359,7 @@ data FoldBlocksError
   = FoldBlocksInitialLedgerStateError !InitialLedgerStateError
   | FoldBlocksApplyBlockError !LedgerStateError
   | FoldBlocksIOException !IOException
+  | FoldBlocksMuxError !MuxError
   deriving Show
 
 instance Error FoldBlocksError where
@@ -363,6 +367,7 @@ instance Error FoldBlocksError where
     FoldBlocksInitialLedgerStateError err -> prettyError err
     FoldBlocksApplyBlockError err -> "Failed when applying a block:" <+> prettyError err
     FoldBlocksIOException err -> "IOException:" <+> prettyException err
+    FoldBlocksMuxError err -> "FoldBlocks error:" <+> prettyException err
 
 -- | Type that lets us decide whether to continue or stop
 -- the fold from within our accumulation function.
@@ -406,7 +411,7 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> t m a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleIOExceptions $ do
+foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -1758,10 +1763,19 @@ constructGlobals sGen eInfo (Ledger.ProtVer majorPParamsVer _) =
 
 --------------------------------------------------------------------------
 
-data LedgerStateCondition
-  = ConditionMet
-  | ConditionNotMet
-  deriving (Show, Eq)
+-- | Type isomorphic to bool, representing condition check result
+data ConditionResult
+  = ConditionNotMet
+  | ConditionMet
+  deriving (Read, Show, Enum, Bounded, Ord, Eq)
+
+toConditionResult :: Bool -> ConditionResult
+toConditionResult False = ConditionNotMet
+toConditionResult True = ConditionMet
+
+fromConditionResult :: ConditionResult -> Bool
+fromConditionResult ConditionNotMet = False
+fromConditionResult ConditionMet = True
 
 data AnyNewEpochState where
   AnyNewEpochState
@@ -1791,7 +1805,7 @@ foldEpochState
   -> ( AnyNewEpochState
          -> SlotNo
          -> BlockNo
-         -> StateT s IO LedgerStateCondition
+         -> StateT s IO ConditionResult
      )
   -- ^ Condition you want to check against the new epoch state.
   --
@@ -1804,9 +1818,9 @@ foldEpochState
   -- rollback. This is achieved by only calling the accumulator on states/blocks
   -- that are older than the security parameter, k. This has the side effect of
   -- truncating the last k blocks before the node's tip.
-  -> t m (LedgerStateCondition, s)
+  -> t m (ConditionResult, s)
   -- ^ The final state
-foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleIOExceptions $ do
+foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -1858,7 +1872,7 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
     Nothing -> modifyError FoldBlocksIOException . liftIO $ readMVar stateMv
   where
     protocols :: ()
-      => MVar (LedgerStateCondition, s)
+      => MVar (ConditionResult, s)
       -> IORef (Maybe LedgerStateError)
       -> Env
       -> LedgerState
@@ -1874,7 +1888,7 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
     -- | Defines the client side of the chain sync protocol.
     chainSyncClient :: Word16
                     -- ^ The maximum number of concurrent requests.
-                    -> MVar (LedgerStateCondition, s)
+                    -> MVar (ConditionResult, s)
                     -- ^ State accumulator. Written to on every block.
                     -> IORef (Maybe LedgerStateError)
                     -- ^ Resulting error if any. Written to once on protocol
@@ -2002,5 +2016,11 @@ atTerminationEpoch terminationEpoch events =
     , currentEpoch' >= terminationEpoch
     ]
 
-handleIOExceptions :: MonadIOTransError FoldBlocksError t m => ExceptT FoldBlocksError IO a -> t m a
-handleIOExceptions = liftEither <=< liftIO . fmap (join . first FoldBlocksIOException) . try . runExceptT
+handleExceptions :: MonadIOTransError FoldBlocksError t m
+                 => ExceptT FoldBlocksError IO a
+                 -> t m a
+handleExceptions = liftEither <=< liftIO . runExceptT . flip catches handlers
+  where
+    handlers = [ Handler $ throwError . FoldBlocksIOException
+               , Handler $ throwError . FoldBlocksMuxError
+               ]
