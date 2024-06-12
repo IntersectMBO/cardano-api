@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 8.47.0.0
+
+- Add MuxError handling in `FoldBlocksError`. Rename `LedgerStateCondition` to `ConditionResult`.
+  (breaking, refactoring)
+  [PR 548](https://github.com/IntersectMBO/cardano-api/pull/548)
+
+- Prepare deprecation of ProtocolParameters
+  (compatible, documentation)
+  [PR 547](https://github.com/IntersectMBO/cardano-api/pull/547)
+
+- TxBodyContent: support treasury donations
+  (breaking)
+  [PR 543](https://github.com/IntersectMBO/cardano-api/pull/543)
+
+- Added deprecation warning to function `serialiseTxLedgerCddl`
+  (breaking)
+  [PR 534](https://github.com/IntersectMBO/cardano-api/pull/534)
+
 ## 8.46.0.0
 
 - - Updated `cardano-ledger`, `ouroboros-consensus` and `plutus` packages.
