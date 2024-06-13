@@ -143,28 +143,6 @@ jobs:
         KEEP_WORKSPACE: 1
       run: cabal test all --enable-tests --test-show-details=direct -j1
 
-    - name: "Tar artifacts"
-      run: |
-        mkdir -p artifacts
-
-        for exe in $(cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style == "local" and (."component-name" | startswith("exe:"))) | ."bin-file"'); do
-          if [ -f $exe ]; then
-            echo "Including artifact $exe"
-
-            ( cd artifacts
-              tar -C "$(dirname $exe)" -czf "$(basename $exe).tar.gz" "$(basename $exe)"
-            )
-          else
-            echo "Skipping artifact $exe"
-          fi
-        done
-
-    - name: Save Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-${{ matrix.sys.os }}-${{ matrix.ghc }}
-        path: ./artifacts
-
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
     # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
     # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
