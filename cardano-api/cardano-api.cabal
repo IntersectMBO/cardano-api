@@ -125,6 +125,7 @@ library internal
                         Cardano.Api.Query.Expr
                         Cardano.Api.Query.Types
                         Cardano.Api.ReexposeLedger
+                        Cardano.Api.ReexposeNetwork
                         Cardano.Api.Rewards
                         Cardano.Api.Script
                         Cardano.Api.ScriptData
@@ -241,6 +242,7 @@ library
                         -- cardano-api only depends on modules
                         -- exposed by cardano-api-ledger
                         Cardano.Api.Ledger
+                        Cardano.Api.Network
 
   reexported-modules:   Cardano.Api.Ledger.Lens
 
