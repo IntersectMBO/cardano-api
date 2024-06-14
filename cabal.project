@@ -28,6 +28,11 @@ package cryptonite
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
 
+-- disable c++ nonsense on bitvec, to make it compile. The windows linker/loader
+-- chokes on c++ dependencies.
+package bitvec
+   flags: -simd
+
 constraints:
   -- io-classes-mtl-0.1.2.0 is not buildable
   io-classes-mtl < 0.1.2.0
