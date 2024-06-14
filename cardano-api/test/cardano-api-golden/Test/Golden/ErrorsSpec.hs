@@ -245,6 +245,7 @@ test_ScriptExecutionError =
     , ("ScriptErrorRedeemerPointsToUnknownScriptHash", ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0))
     , ("ScriptErrorMissingScript", ScriptErrorMissingScript (ScriptWitnessIndexMint 0) (ResolvablePointers ShelleyBasedEraBabbage Map.empty)) -- TODO CIP-1694 make work in all eras
     , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Plutus.PlutusV2)
+    , ("ScriptErrorTranslationError", ScriptErrorTranslationError testPastHorizonValue)
     ]
 
 test_StakePoolMetadataValidationError :: TestTree
@@ -279,8 +280,7 @@ testPastHorizonValue = Ledger.TimeTranslationPastHorizon text
 test_TransactionValidityError :: TestTree
 test_TransactionValidityError =
   testAllErrorMessages_ "Cardano.Api.Fees" "TransactionValidityError"
-    [ ("TransactionValidityTranslationError", TransactionValidityTranslationError testPastHorizonValue)
-    , ("TransactionValidityCostModelError", TransactionValidityCostModelError
+    [ ("TransactionValidityCostModelError", TransactionValidityCostModelError
         (Map.fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
         string)
     -- TODO Implement this when we get access to data constructors of PastHorizon or its fields' types' constructors
