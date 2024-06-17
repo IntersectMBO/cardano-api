@@ -102,6 +102,10 @@ import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
 
+-- | Type synonym for logs returned by the ledger's @evalTxExUnitsWithLogs@ function.
+-- for scripts in transactions.
+type EvalTxExecutionUnitsLog = [Text]
+
 data AutoBalanceError era
   = AutoBalanceEstimationError (TxFeeEstimationError era)
   | AutoBalanceCalculationError (TxBodyErrorAutoBalance era)
@@ -619,7 +623,7 @@ evaluateTransactionExecutionUnits :: forall era. ()
   -> UTxO era
   -> TxBody era
   -> Either (TransactionValidityError era)
-            (Map ScriptWitnessIndex (Either ScriptExecutionError ([Text], ExecutionUnits)))
+            (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
 evaluateTransactionExecutionUnits era systemstart epochInfo pp utxo txbody =
     case makeSignedTransaction' era [] txbody of
       ShelleyTx sbe tx' -> evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx'
@@ -632,7 +636,7 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
   -> UTxO era
   -> L.Tx (ShelleyLedgerEra era)
   -> Either (TransactionValidityError era)
-            (Map ScriptWitnessIndex (Either ScriptExecutionError ([Text], ExecutionUnits)))
+            (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (Right Map.empty))
@@ -649,8 +653,8 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
       :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
       => AlonzoEraOnwards era
       -> Map (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
-             (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) ([Text.Text], Alonzo.ExUnits))
-      -> Map ScriptWitnessIndex (Either ScriptExecutionError ([Text.Text], ExecutionUnits))
+             (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) (EvalTxExecutionUnitsLog, Alonzo.ExUnits))
+      -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
     fromLedgerScriptExUnitsMap aOnwards exmap =
       Map.fromList
         [ (toScriptIndex aOnwards rdmrptr,
