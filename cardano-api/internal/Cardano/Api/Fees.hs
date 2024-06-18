@@ -84,7 +84,7 @@ import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
 
 import           Control.Monad (forM_)
-import           Data.Bifunctor (bimap, first)
+import           Data.Bifunctor (bimap, first, second)
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Foldable (toList)
 import           Data.Function ((&))
@@ -97,9 +97,14 @@ import           Data.Ratio
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Data.Text (Text)
 import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
+
+-- | Type synonym for logs returned by the ledger's @evalTxExUnitsWithLogs@ function.
+-- for scripts in transactions.
+type EvalTxExecutionUnitsLog = [Text]
 
 data AutoBalanceError era
   = AutoBalanceEstimationError (TxFeeEstimationError era)
@@ -618,7 +623,7 @@ evaluateTransactionExecutionUnits :: forall era. ()
   -> UTxO era
   -> TxBody era
   -> Either (TransactionValidityError era)
-            (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
+            (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
 evaluateTransactionExecutionUnits era systemstart epochInfo pp utxo txbody =
     case makeSignedTransaction' era [] txbody of
       ShelleyTx sbe tx' -> evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx'
@@ -631,11 +636,11 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
   -> UTxO era
   -> L.Tx (ShelleyLedgerEra era)
   -> Either (TransactionValidityError era)
-            (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
+            (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (Right Map.empty))
-    (\w -> case alonzoEraOnwardsConstraints w $ L.evalTxExUnits pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
+    (\w -> case alonzoEraOnwardsConstraints w $ L.evalTxExUnitsWithLogs pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
              Left err    -> Left $ alonzoEraOnwardsConstraints w
                                  $ TransactionValidityTranslationError err
              Right exmap -> Right (fromLedgerScriptExUnitsMap w exmap)
@@ -648,12 +653,12 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
       :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
       => AlonzoEraOnwards era
       -> Map (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
-             (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) Alonzo.ExUnits)
-      -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
+             (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) (EvalTxExecutionUnitsLog, Alonzo.ExUnits))
+      -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
     fromLedgerScriptExUnitsMap aOnwards exmap =
       Map.fromList
         [ (toScriptIndex aOnwards rdmrptr,
-           bimap (fromAlonzoScriptExecutionError aOnwards) fromAlonzoExUnits exunitsOrFailure)
+           bimap (fromAlonzoScriptExecutionError aOnwards) (second fromAlonzoExUnits) exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
     fromAlonzoScriptExecutionError
@@ -980,13 +985,14 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
             -- 1,2,4 or 8 bytes?
         }
 
-    exUnitsMap <- first TxBodyErrorValidityInterval $
-                    evaluateTransactionExecutionUnits
-                      era
-                      systemstart history
-                      lpp
-                      utxo
-                      txbody0
+    exUnitsMapWithLogs <- first TxBodyErrorValidityInterval $
+                            evaluateTransactionExecutionUnits
+                              era
+                              systemstart history
+                              lpp
+                              utxo
+                              txbody0
+    let exUnitsMap = Map.map (fmap snd) exUnitsMapWithLogs
 
     exUnitsMap' <-
       case Map.mapEither id exUnitsMap of
