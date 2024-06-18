@@ -122,6 +122,7 @@ import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
@@ -461,7 +462,7 @@ decodePoolState (SerialisedPoolState (Serialised ls)) =
   PoolState <$> decodeFull (Core.eraProtVerLow @(ShelleyLedgerEra era)) ls
 
 newtype SerialisedPoolDistribution era
-  = SerialisedPoolDistribution (Serialised (Shelley.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))))
+  = SerialisedPoolDistribution (Serialised (Consensus.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))))
 
 newtype PoolDistribution era = PoolDistribution
   { unPoolDistr :: Shelley.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))
@@ -524,15 +525,15 @@ fromLedgerUTxO sbe (Shelley.UTxO utxo) =
     . Map.toList
     $ utxo
 
-fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
+fromShelleyPoolDistr :: Consensus.PoolDistr StandardCrypto
                      -> Map (Hash StakePoolKey) Rational
 fromShelleyPoolDistr =
     --TODO: write an appropriate property to show it is safe to use
     -- Map.fromListAsc or to use Map.mapKeysMonotonic
     Map.fromList
-  . map (bimap StakePoolKeyHash Shelley.individualPoolStake)
+  . map (bimap StakePoolKeyHash Consensus.individualPoolStake)
   . Map.toList
-  . Shelley.unPoolDistr
+  . Consensus.unPoolDistr
 
 fromShelleyDelegations :: Map (Shelley.Credential Shelley.Staking StandardCrypto)
                               (Shelley.KeyHash Shelley.StakePool StandardCrypto)
