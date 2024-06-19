@@ -830,6 +830,9 @@ fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraConw
                  r'
       _ -> fromConsensusQueryResultMismatch
 
+-- This function is written like this so that we have exhaustive pattern checking
+-- on the @QueryInShelleyBasedEra era result@ value. Don't change the top-level
+-- @case sbeQuery of ...@!
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera protocol result result'.
      HasCallStack
@@ -841,133 +844,123 @@ fromConsensusQueryResultShelleyBased
   -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) result'
   -> result'
   -> result
-fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
-    case q' of
-      Consensus.GetEpochNo -> epoch
-      _                    -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryConstitution q' mConstitution =
-    case q' of
-      Consensus.GetConstitution -> mConstitution
-      _                         -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryGenesisParameters q' r' =
-    case q' of
-      Consensus.GetGenesisConfig -> fromShelleyGenesis
-                                      (Consensus.getCompactGenesis r')
-      _                          -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryProtocolParameters q' r' =
-    case q' of
-      Consensus.GetCurrentPParams -> r'
-      _                           -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased sbe QueryProtocolParametersUpdate q' r' =
-    case q' of
-      Consensus.GetProposedPParamsUpdates -> fromLedgerProposedPPUpdates sbe r'
-      _                                   -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryStakeDistribution q' r' =
-    case q' of
-      Consensus.GetStakeDistribution -> fromShelleyPoolDistr r'
-      _                              -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased sbe (QueryUTxO QueryUTxOWhole) q' utxo' =
-    case q' of
-      Consensus.GetUTxOWhole -> fromLedgerUTxO sbe utxo'
-      _                      -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased sbe (QueryUTxO QueryUTxOByAddress{}) q' utxo' =
-    case q' of
-      Consensus.GetUTxOByAddress{} -> fromLedgerUTxO sbe utxo'
-      _                            -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased sbe (QueryUTxO QueryUTxOByTxIn{}) q' utxo' =
-    case q' of
-      Consensus.GetUTxOByTxIn{} -> fromLedgerUTxO sbe utxo'
-      _                         -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ (QueryStakeAddresses _ nId) q' r' =
-    case q' of
-      Consensus.GetFilteredDelegationsAndRewardAccounts{}
-        -> let (delegs, rwaccs) = r'
-           in ( Map.mapKeys (makeStakeAddress nId) $ fromShelleyRewardAccounts rwaccs
-              , Map.mapKeys (makeStakeAddress nId) $ fromShelleyDelegations delegs
-              )
-      _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryStakePools q' poolids' =
-    case q' of
-      Consensus.GetStakePools -> Set.map StakePoolKeyHash poolids'
-      _                       -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryStakePoolParameters{} q' poolparams' =
-    case q' of
-      Consensus.GetStakePoolParams{} -> Map.map fromShelleyPoolParams
-                                      . Map.mapKeysMonotonic StakePoolKeyHash
-                                      $ poolparams'
-      _                              -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryDebugLedgerState{} q' r' =
-    case q' of
-      Consensus.GetCBOR Consensus.DebugNewEpochState -> SerialisedDebugLedgerState r'
-      _                                              -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryProtocolState q' r' =
-    case q' of
-      Consensus.GetCBOR Consensus.DebugChainDepState -> ProtocolState r'
-      _                                              -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryCurrentEpochState q' r' =
-  case q' of
-    Consensus.GetCBOR Consensus.DebugEpochState -> SerialisedCurrentEpochState r'
-    _                                           -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryPoolState{} q' r' =
-  case q' of
-    Consensus.GetCBOR Consensus.GetPoolState {} -> SerialisedPoolState r'
-    _                                           -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryPoolDistribution{} q' r' =
-  case q' of
-    Consensus.GetCBOR Consensus.GetPoolDistr {} -> SerialisedPoolDistribution r'
-    _                                           -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryStakeSnapshot{} q' r' =
-  case q' of
-    Consensus.GetCBOR Consensus.GetStakeSnapshots {} -> SerialisedStakeSnapshots r'
-    _                                                -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryStakeDelegDeposits{} q' stakeCreds' =
-    case q' of
-      Consensus.GetStakeDelegDeposits{} -> Map.mapKeysMonotonic fromShelleyStakeCredential stakeCreds'
-      _                                 -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryGovState{} q' govState' =
-  case q' of
-    Consensus.GetGovState{} -> govState'
-    _                       -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryDRepState{} q' drepState'  =
-  case q' of
-    Consensus.GetDRepState{} -> drepState'
-    _                        -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryDRepStakeDistr{} q' stakeDistr' =
-  case q' of
-    Consensus.GetDRepStakeDistr{} -> stakeDistr'
-    _                             -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryCommitteeMembersState{} q' committeeMembersState' =
-  case q' of
-    Consensus.GetCommitteeMembersState{} -> committeeMembersState'
-    _                                    -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResultShelleyBased _ QueryStakeVoteDelegatees{} q' delegs' =
-    case q' of
-      Consensus.GetFilteredVoteDelegatees {}
-        -> Map.mapKeys fromShelleyStakeCredential delegs'
-      _ -> fromConsensusQueryResultMismatch
+fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
+  case sbeQuery of
+    QueryEpoch ->
+      case q' of
+        Consensus.GetEpochNo -> r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryConstitution ->
+      case q' of
+        Consensus.GetConstitution -> r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryGenesisParameters ->
+      case q' of
+        Consensus.GetGenesisConfig -> fromShelleyGenesis (Consensus.getCompactGenesis r')
+        _ -> fromConsensusQueryResultMismatch
+    QueryProtocolParameters ->
+      case q' of
+        Consensus.GetCurrentPParams -> r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryProtocolParametersUpdate ->
+      case q' of
+        Consensus.GetProposedPParamsUpdates -> fromLedgerProposedPPUpdates sbe r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakeDistribution ->
+      case q' of
+        Consensus.GetStakeDistribution -> fromShelleyPoolDistr r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryUTxO QueryUTxOWhole ->
+      case q' of
+        Consensus.GetUTxOWhole -> fromLedgerUTxO sbe r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryUTxO QueryUTxOByAddress{} ->
+      case q' of
+        Consensus.GetUTxOByAddress{} -> fromLedgerUTxO sbe r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryUTxO QueryUTxOByTxIn{} ->
+      case q' of
+        Consensus.GetUTxOByTxIn{} -> fromLedgerUTxO sbe r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakeAddresses _ nId ->
+      case q' of
+        Consensus.GetFilteredDelegationsAndRewardAccounts{} ->
+          let (delegs, rwaccs) = r'
+          in ( Map.mapKeys (makeStakeAddress nId) $ fromShelleyRewardAccounts rwaccs
+             , Map.mapKeys (makeStakeAddress nId) $ fromShelleyDelegations delegs
+             )
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakePools ->
+      case q' of
+        Consensus.GetStakePools -> Set.map StakePoolKeyHash r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakePoolParameters{} ->
+      case q' of
+        Consensus.GetStakePoolParams{} ->
+          Map.map fromShelleyPoolParams
+          . Map.mapKeysMonotonic StakePoolKeyHash
+          $ r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryDebugLedgerState{} ->
+      case q' of
+        Consensus.GetCBOR Consensus.DebugNewEpochState ->
+          SerialisedDebugLedgerState r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryProtocolState ->
+      case q' of
+        Consensus.GetCBOR Consensus.DebugChainDepState ->
+          ProtocolState r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryCurrentEpochState ->
+      case q' of
+        Consensus.GetCBOR Consensus.DebugEpochState ->
+          SerialisedCurrentEpochState r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryPoolState{} ->
+      case q' of
+        Consensus.GetCBOR Consensus.GetPoolState {} ->
+          SerialisedPoolState r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryPoolDistribution{} ->
+      case q' of
+        Consensus.GetCBOR Consensus.GetPoolDistr {} ->
+          SerialisedPoolDistribution r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakeSnapshot{} ->
+      case q' of
+        Consensus.GetCBOR Consensus.GetStakeSnapshots {} ->
+          SerialisedStakeSnapshots r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakeDelegDeposits{} ->
+      case q' of
+        Consensus.GetStakeDelegDeposits{} ->
+          Map.mapKeysMonotonic fromShelleyStakeCredential r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryGovState{} ->
+      case q' of
+        Consensus.GetGovState{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryDRepState{} ->
+      case q' of
+        Consensus.GetDRepState{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryDRepStakeDistr{} ->
+      case q' of
+        Consensus.GetDRepStakeDistr{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryCommitteeMembersState{} ->
+      case q' of
+        Consensus.GetCommitteeMembersState{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakeVoteDelegatees{} ->
+      case q' of
+        Consensus.GetFilteredVoteDelegatees {} ->
+          Map.mapKeys fromShelleyStakeCredential r'
+        _ -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.
