@@ -1,5 +1,25 @@
 # Changelog for cardano-api
 
+## 8.48.0.0
+
+- - Updated dependencies:
+    - `cardano-ledger`
+    - `ouroboros-consensus`
+    - `ouroboros-network`
+    - `plutus`
+   - Replaced `Cardano.Api.Fees.TransactionValidityError.TransactionValidityTranslationError` with `Cardano.Api.Fees.ScriptExecutionError.ScriptErrorTranslationError`
+   - Concretized `toShelleyMultiSig` and `fromShelleyMultiSig` to `ShelleyEra`.
+  (feature, breaking)
+  [PR 552](https://github.com/IntersectMBO/cardano-api/pull/552)
+
+- evaluateTransactionExecutionUnitsShelley: return logs that are useful for debugging
+  (breaking)
+  [PR 555](https://github.com/IntersectMBO/cardano-api/pull/555)
+
+- Export Target type from ouroboros-network, to be more convenient to users
+  (compatible)
+  [PR 448](https://github.com/IntersectMBO/cardano-api/pull/448)
+
 ## 8.47.0.0
 
 - Add MuxError handling in `FoldBlocksError`. Rename `LedgerStateCondition` to `ConditionResult`.
