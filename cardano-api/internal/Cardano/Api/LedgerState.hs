@@ -212,6 +212,7 @@ import qualified Data.Yaml as Yaml
 import           Formatting.Buildable (build)
 import           Lens.Micro
 import           Network.TypedProtocol.Pipelined (Nat (..))
+import           System.Directory (doesFileExist)
 import           System.FilePath
 
 data InitialLedgerStateError
@@ -1257,14 +1258,18 @@ readAlonzoGenesisConfig enc = do
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
     $ readAlonzoGenesis file (ncAlonzoGenesisHash enc)
 
+-- | If the conway genesis file does not exist we simply put in a default.
 readConwayGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
   -> t m (ConwayGenesis Consensus.StandardCrypto)
 readConwayGenesisConfig enc = do
   let file = ncConwayGenesisFile enc
-  modifyError (NEConwayConfig (unFile file) . renderConwayGenesisError)
-    $ readConwayGenesis file (ncConwayGenesisHash enc)
+  fileExists <- liftIO . doesFileExist $ unFile file
+  if fileExists
+  then modifyError (NEConwayConfig (unFile file) . renderConwayGenesisError)
+         $ readConwayGenesis file (ncConwayGenesisHash enc)
+  else return conwayGenesisDefaults
 
 readShelleyGenesis
   :: forall m t. MonadIOTransError ShelleyGenesisError t m
