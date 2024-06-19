@@ -887,12 +887,16 @@ readNodeConfig
   => NodeConfigFile 'In
   -> m NodeConfig
 readNodeConfig (File ncf) = do
-    ncfg <- (liftEither . parseNodeConfig) =<< readByteString ncf "node"
+    ncfg <- liftEither . parseNodeConfig =<< readByteString ncf "node"
     return ncfg
-      { ncByronGenesisFile = mapFile (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
-      , ncShelleyGenesisFile = mapFile (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
-      , ncAlonzoGenesisFile = mapFile (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
-      , ncConwayGenesisFile = mapFile (mkAdjustPath ncf) (ncConwayGenesisFile ncfg)
+      { ncByronGenesisFile =
+          mapFile (mkAdjustPath ncf) (ncByronGenesisFile ncfg)
+      , ncShelleyGenesisFile =
+          mapFile (mkAdjustPath ncf) (ncShelleyGenesisFile ncfg)
+      , ncAlonzoGenesisFile =
+          mapFile (mkAdjustPath ncf) (ncAlonzoGenesisFile ncfg)
+      , ncConwayGenesisFile =
+          mapFile (mkAdjustPath ncf) <$> ncConwayGenesisFile ncfg
       }
 
 data NodeConfig = NodeConfig
@@ -903,8 +907,8 @@ data NodeConfig = NodeConfig
   , ncShelleyGenesisHash :: !GenesisHashShelley
   , ncAlonzoGenesisFile :: !(File AlonzoGenesis 'In)
   , ncAlonzoGenesisHash :: !GenesisHashAlonzo
-  , ncConwayGenesisFile :: !(File ConwayGenesisConfig 'In)
-  , ncConwayGenesisHash :: !GenesisHashConway
+  , ncConwayGenesisFile :: !(Maybe (File ConwayGenesisConfig 'In))
+  , ncConwayGenesisHash :: !(Maybe GenesisHashConway)
   , ncRequiresNetworkMagic :: !Cardano.Crypto.RequiresNetworkMagic
   , ncByronProtocolVersion :: !Cardano.Chain.Update.ProtocolVersion
   , ncHardForkTriggers :: !Consensus.CardanoHardForkTriggers
@@ -924,8 +928,8 @@ instance FromJSON NodeConfig where
           <*> fmap GenesisHashShelley (o .: "ShelleyGenesisHash")
           <*> fmap File (o .: "AlonzoGenesisFile")
           <*> fmap GenesisHashAlonzo (o .: "AlonzoGenesisHash")
-          <*> fmap File (o .: "ConwayGenesisFile")
-          <*> fmap GenesisHashConway (o .: "ConwayGenesisHash")
+          <*> (fmap . fmap) File (o .:? "ConwayGenesisFile")
+          <*> (fmap . fmap) GenesisHashConway (o .:? "ConwayGenesisHash")
           <*> o .: "RequiresNetworkMagic"
           <*> parseByronProtocolVersion o
           <*> parseHardForkTriggers o
@@ -1257,14 +1261,18 @@ readAlonzoGenesisConfig enc = do
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
     $ readAlonzoGenesis file (ncAlonzoGenesisHash enc)
 
+-- | If the conway genesis file does not exist we simply put in a default.
 readConwayGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
   -> t m (ConwayGenesis Consensus.StandardCrypto)
 readConwayGenesisConfig enc = do
-  let file = ncConwayGenesisFile enc
-  modifyError (NEConwayConfig (unFile file) . renderConwayGenesisError)
-    $ readConwayGenesis file (ncConwayGenesisHash enc)
+  let mFile = ncConwayGenesisFile enc
+  case mFile of
+    Nothing -> return conwayGenesisDefaults
+    Just fp ->
+      modifyError (NEConwayConfig (unFile fp) . renderConwayGenesisError)
+        $ readConwayGenesis (ncConwayGenesisFile enc) (ncConwayGenesisHash enc)
 
 readShelleyGenesis
   :: forall m t. MonadIOTransError ShelleyGenesisError t m
@@ -1363,10 +1371,13 @@ renderAlonzoGenesisError sge =
 
 readConwayGenesis
   :: forall m t. MonadIOTransError ConwayGenesisError t m
-  => ConwayGenesisFile 'In
-  -> GenesisHashConway
+  => Maybe (ConwayGenesisFile 'In)
+  -> Maybe GenesisHashConway
   -> t m (ConwayGenesis Consensus.StandardCrypto)
-readConwayGenesis (File file) expectedGenesisHash = do
+readConwayGenesis Nothing Nothing = return conwayGenesisDefaults
+readConwayGenesis (Just fp) Nothing = throwError $ ConwayGenesisHashMissing $ unFile fp
+readConwayGenesis Nothing (Just _) = throwError ConwayGenesisFileMissing
+readConwayGenesis (Just (File file)) (Just expectedGenesisHash) = do
     content <- modifyError id $ handleIOExceptT (ConwayGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashConway (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
@@ -1380,6 +1391,8 @@ readConwayGenesis (File file) expectedGenesisHash = do
 data ConwayGenesisError
      = ConwayGenesisReadError !FilePath !Text
      | ConwayGenesisHashMismatch !GenesisHashConway !GenesisHashConway -- actual, expected
+     | ConwayGenesisHashMissing !FilePath
+     | ConwayGenesisFileMissing
      | ConwayGenesisDecodeError !FilePath !Text
      deriving Show
 
@@ -1388,6 +1401,15 @@ instance Exception ConwayGenesisError
 renderConwayGenesisError :: ConwayGenesisError -> Text
 renderConwayGenesisError sge =
     case sge of
+      ConwayGenesisFileMissing ->
+        mconcat
+          [ "\"ConwayGenesisFile\" is missing from node configuration. "
+          ]
+      ConwayGenesisHashMissing fp ->
+        mconcat
+          [ "\"ConwayGenesisHash\" is missing from node configuration: "
+          , Text.pack fp
+          ]
       ConwayGenesisReadError fp err ->
         mconcat
           [ "There was an error reading the genesis file: ", Text.pack fp

@@ -491,7 +491,12 @@ data ScriptExecutionError =
 
        -- | A cost model was missing for a language which was used.
      | ScriptErrorMissingCostModel Plutus.Language
-  deriving Show
+     
+     | forall era. ( Plutus.EraPlutusContext (ShelleyLedgerEra era)
+                   , Show (Plutus.ContextError (ShelleyLedgerEra era))
+                   ) => ScriptErrorTranslationError (Plutus.ContextError (ShelleyLedgerEra era))
+     
+deriving instance Show ScriptExecutionError
 
 instance Error ScriptExecutionError where
   prettyError = \case
@@ -548,6 +553,10 @@ instance Error ScriptExecutionError where
     ScriptErrorMissingCostModel language ->
       "No cost model was found for language " <> pshow language
 
+    ScriptErrorTranslationError e -> 
+      "Error translating the transaction context: " <> pshow e
+
+
 data TransactionValidityError era  where
     -- | The transaction validity interval is too far into the future.
     --
@@ -567,11 +576,6 @@ data TransactionValidityError era  where
     -- of their validity interval more than 36 hours into the future.
     TransactionValidityIntervalError
       :: Consensus.PastHorizonException -> TransactionValidityError era
-
-    TransactionValidityTranslationError
-      :: Plutus.EraPlutusContext (ShelleyLedgerEra era)
-      => Plutus.ContextError (ShelleyLedgerEra era)
-      -> TransactionValidityError era
 
     TransactionValidityCostModelError
       :: (Map AnyPlutusScriptVersion CostModel) -> String -> TransactionValidityError era
@@ -600,8 +604,6 @@ instance Error (TransactionValidityError era) where
 
           | otherwise
           = 0 -- This should be impossible.
-    TransactionValidityTranslationError errmsg ->
-      "Error translating the transaction context: " <> pshow errmsg
 
     TransactionValidityCostModelError cModels err ->
       mconcat
@@ -640,10 +642,9 @@ evaluateTransactionExecutionUnitsShelley :: forall era. ()
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (Right Map.empty))
-    (\w -> case alonzoEraOnwardsConstraints w $ L.evalTxExUnitsWithLogs pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart of
-             Left err    -> Left $ alonzoEraOnwardsConstraints w
-                                 $ TransactionValidityTranslationError err
-             Right exmap -> Right (fromLedgerScriptExUnitsMap w exmap)
+    (\w -> pure . fromLedgerScriptExUnitsMap w 
+             $ alonzoEraOnwardsConstraints w 
+             $ L.evalTxExUnitsWithLogs pp tx (toLedgerUTxO sbe utxo) ledgerEpochInfo systemstart 
     )
     sbe
   where
@@ -689,6 +690,9 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
           in ScriptErrorMissingScript scriptWitnessedItemIndex
                $ ResolvablePointers sbe $ Map.map extractScriptBytesAndLanguage resolveable
         L.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
+        L.ContextError e -> 
+           alonzoEraOnwardsConstraints aOnwards 
+            $ ScriptErrorTranslationError e
 
 
 extractScriptBytesAndLanguage

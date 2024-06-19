@@ -193,13 +193,13 @@ fromProposalProcedure sbe (Proposal pp) =
 createPreviousGovernanceActionId
   :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
   => TxId
-  -> Word32 -- ^ Governance action transation index
+  -> Word16 -- ^ Governance action transation index
   -> Ledger.GovPurposeId (r :: Ledger.GovActionPurpose) (ShelleyLedgerEra era)
 createPreviousGovernanceActionId  txid index =
    Ledger.GovPurposeId $ createGovernanceActionId txid index
 
 
-createGovernanceActionId :: TxId -> Word32 -> Gov.GovActionId StandardCrypto
+createGovernanceActionId :: TxId -> Word16 -> Gov.GovActionId StandardCrypto
 createGovernanceActionId txid index =
    Ledger.GovActionId
      { Ledger.gaidTxId = toShelleyTxId txid
