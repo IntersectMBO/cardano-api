@@ -465,7 +465,7 @@ newtype SerialisedPoolDistribution era
   = SerialisedPoolDistribution (Serialised (Consensus.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))))
 
 newtype PoolDistribution era = PoolDistribution
-  { unPoolDistr :: Shelley.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))
+  { unPoolDistr :: Consensus.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))
   }
 
 decodePoolDistribution

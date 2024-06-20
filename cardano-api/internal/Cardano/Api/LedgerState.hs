@@ -131,6 +131,7 @@ import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), na
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.BHeaderView as Ledger
 import           Cardano.Ledger.Binary (DecoderError)
+import qualified Cardano.Ledger.Coin as SL
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
@@ -164,6 +165,7 @@ import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import qualified Ouroboros.Consensus.Shelley.HFEras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
+import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
 import           Ouroboros.Consensus.Storage.Serialisation
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import           Ouroboros.Network.Block (blockNo)
@@ -1754,7 +1756,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
       $ Slot.epochInfoRange eInfo currentEpoch
 
     setSnapshotPoolDistr <-
-      first LeaderErrDecodeProtocolEpochStateFailure . fmap (SL.unPoolDistr . unPoolDistr)
+      first LeaderErrDecodeProtocolEpochStateFailure . fmap (SL.unPoolDistr . fromConsensusPoolDistr . unPoolDistr)
         $ decodePoolDistribution sbe serPoolDistr
 
     let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
@@ -2046,3 +2048,21 @@ handleExceptions = liftEither <=< liftIO . runExceptT . flip catches handlers
     handlers = [ Handler $ throwError . FoldBlocksIOException
                , Handler $ throwError . FoldBlocksMuxError
                ]
+
+-- WARNING: Do NOT use this function anywhere else except in its current call sites.
+-- This is a temporary work around.
+fromConsensusPoolDistr :: Consensus.PoolDistr c -> SL.PoolDistr c
+fromConsensusPoolDistr cpd =
+  SL.PoolDistr
+    { SL.unPoolDistr = Map.map toLedgerIndividualPoolStake $ Consensus.unPoolDistr cpd
+    , SL.pdTotalActiveStake = SL.CompactCoin 0
+    }
+
+-- WARNING: Do NOT use this function anywhere else except in its current call sites.
+-- This is a temporary work around.
+toLedgerIndividualPoolStake :: Consensus.IndividualPoolStake c -> SL.IndividualPoolStake c
+toLedgerIndividualPoolStake ips = SL.IndividualPoolStake {
+      SL.individualPoolStake    = Consensus.individualPoolStake ips
+    , SL.individualPoolStakeVrf = Consensus.individualPoolStakeVrf ips
+    , SL.individualTotalPoolStake = SL.CompactCoin 0
+    }
