@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 8.48.0.1 
+
+- Deserialize `ouroboros-consensus`'s `PoolDistr` instead of `cardano-ledger`'s `PoolDist` to maintain backwards compatibility with the `PoolDistr` query. This is needed because `cardano-ledger`'s `PoolDistr` datatype has changed.
+  (compatible)
+  [PR 562](https://github.com/IntersectMBO/cardano-api/pull/562)
+
 ## 8.48.0.0
 
 - - Updated dependencies:
