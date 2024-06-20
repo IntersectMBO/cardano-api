@@ -45,7 +45,7 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc964";
+        defaultCompiler = "ghc982";
         haddockShellCompiler = defaultCompiler;
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
@@ -82,9 +82,9 @@
             }
             // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
               # tools that work or should be used only with default compiler
-              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.6";
-              hlint = "3.6.1";
-              stylish-haskell = "0.14.5.0";
+              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.8";
+              hlint = "3.8";
+              stylish-haskell = "0.14.6.0";
             };
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs; [ gh jq yq-go actionlint shellcheck ];
@@ -92,7 +92,6 @@
           shell.withHoogle = false;
           # Skip cross compilers for the shell
           shell.crossPlatforms = _: [];
-
 
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.

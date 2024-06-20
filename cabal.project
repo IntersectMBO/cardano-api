@@ -22,7 +22,7 @@ packages:
 
 extra-packages: Cabal, process
 
-if impl(ghc < 9.8)
+if impl(ghc < 9.10)
   constraints: interpolatedstring-perl6:setup.time source
 
 program-options
