@@ -105,6 +105,7 @@ import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Core as Core
+import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import           Cardano.Slotting.Slot (WithOrigin (..))
@@ -301,6 +302,9 @@ data QueryInShelleyBasedEra era result where
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
 
+  QueryAccountState
+    :: QueryInShelleyBasedEra era L.AccountState
+
   QueryConstitution
     :: QueryInShelleyBasedEra era (L.Constitution (ShelleyLedgerEra era))
 
@@ -349,6 +353,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_14
   nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_15
   -- Conway >= v16
+  nodeToClientVersionOf QueryAccountState = NodeToClientV_16
   nodeToClientVersionOf QueryConstitution = NodeToClientV_16
   nodeToClientVersionOf QueryGovState = NodeToClientV_16
   nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
@@ -675,6 +680,9 @@ toConsensusQueryShelleyBased sbe = \case
     where
       creds' = Set.map toShelleyStakeCredential creds
 
+  QueryAccountState ->
+    Some (consensusQueryInEraInMode era Consensus.GetAccountState)
+
   QueryGovState ->
     Some (consensusQueryInEraInMode era Consensus.GetGovState)
 
@@ -936,6 +944,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
       case q' of
         Consensus.GetStakeDelegDeposits{} ->
           Map.mapKeysMonotonic fromShelleyStakeCredential r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryAccountState{} ->
+      case q' of
+        Consensus.GetAccountState{} ->
+          r'
         _ -> fromConsensusQueryResultMismatch
     QueryGovState{} ->
       case q' of
