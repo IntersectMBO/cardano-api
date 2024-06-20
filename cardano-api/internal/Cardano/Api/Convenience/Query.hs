@@ -1,4 +1,8 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -6,6 +10,7 @@
 --
 module Cardano.Api.Convenience.Query (
     QueryConvenienceError(..),
+    TxCurrentTreasuryValue(..),
     determineEra,
     -- * Simplest query related
     executeQueryCardanoMode,
@@ -17,8 +22,10 @@ module Cardano.Api.Convenience.Query (
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
+import           Cardano.Api.Feature (Featured (..))
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
@@ -34,6 +41,7 @@ import           Cardano.Ledger.CertState (DRepState (..))
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
+import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
@@ -69,6 +77,9 @@ renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionErro
   "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
   "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
+newtype TxCurrentTreasuryValue = TxCurrentTreasuryValue { unTxCurrentTreasuryValue :: L.Coin }
+  deriving newtype Show
+
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
 queryStateForBalancedTx :: ()
@@ -84,7 +95,8 @@ queryStateForBalancedTx :: ()
           , SystemStart
           , Set PoolId
           , Map StakeCredential L.Coin
-          , Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin))
+          , Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin
+          , Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)) )
 queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   sbe <- requireShelleyBasedEra era
     & onNothing (left ByronEraNotSupported)
@@ -124,7 +136,19 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
           & onLeft (left . QceUnsupportedNtcVersion)
           & onLeft (left . QueryEraMismatch))
 
-  pure (utxo, LedgerProtocolParameters pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits, drepDelegDeposits)
+  featuredTxTreasuryValueM <-
+    caseShelleyToBabbageOrConwayEraOnwards
+      (const $ pure Nothing)
+      (\cOnwards -> do
+        L.AccountState { L.asTreasury } <-
+          lift (queryAccountState cOnwards)
+            & onLeft (left . QceUnsupportedNtcVersion)
+            & onLeft (left . QueryEraMismatch)
+        let txCurrentTreasuryValue = TxCurrentTreasuryValue asTreasury
+        return $ Just $ Featured cOnwards txCurrentTreasuryValue)
+      sbe
+
+  pure (utxo, LedgerProtocolParameters pparams, eraHistory, systemStart, stakePools, stakeDelegDeposits, drepDelegDeposits, featuredTxTreasuryValueM)
 
 -- | Query the node to determine which era it is in.
 determineEra :: ()
