@@ -2,7 +2,8 @@
 {-# LANGUAGE GADTs #-}
 
 module Cardano.Api.Query.Expr
-  ( queryChainBlockNo
+  ( queryAccountState
+  , queryChainBlockNo
   , queryChainPoint
   , queryConstitution
   , queryCurrentEpochState
@@ -58,6 +59,7 @@ import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
 import           Cardano.Ledger.SafeHash
+import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
@@ -259,3 +261,9 @@ queryStakeVoteDelegatees :: ()
 queryStakeVoteDelegatees era stakeCredentials = do
   let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeVoteDelegatees stakeCredentials
+
+queryAccountState :: ()
+  => ConwayEraOnwards era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch L.AccountState))
+queryAccountState cOnwards =
+  queryExpr $ QueryInEra . QueryInShelleyBasedEra (conwayEraOnwardsToShelleyBasedEra cOnwards) $ QueryAccountState
