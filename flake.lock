@@ -3,11 +3,11 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1718790880,
-        "narHash": "sha256-8lIMAxIBYRVs4uQXVnmWT3N5SND5zE2s1t9/chn7DX8=",
+        "lastModified": 1718835244,
+        "narHash": "sha256-HMjhDRE4H4ae+/I/ZLiRwG4+ceMQAmZLYmkS04AJrQ4=",
         "owner": "intersectmbo",
         "repo": "cardano-haskell-packages",
-        "rev": "5ba8c1a3835b87954354757f2aa6611174067165",
+        "rev": "e3afe42f8c3a0be8e8fb53602afd57f7839e040a",
         "type": "github"
       },
       "original": {
@@ -101,22 +101,6 @@
         "type": "github"
       }
     },
-    "cardano-mainnet-mirror": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1557232434,
-        "narHash": "sha256-2rclcOjIVq0lFCdYAa8S9imzZZHqySn2LZ/O48hUofw=",
-        "owner": "input-output-hk",
-        "repo": "cardano-mainnet-mirror",
-        "rev": "a31ac7534ec855b715b9a6bb6a06861ee94935d9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-mainnet-mirror",
-        "type": "github"
-      }
-    },
     "cardano-shell": {
       "flake": false,
       "locked": {
@@ -134,22 +118,6 @@
       }
     },
     "flake-compat": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1696426674,
-        "narHash": "sha256-kvjfFW7WAETZlt09AgDn1MrtKzP7t90Vf7vypd3OL1U=",
-        "owner": "edolstra",
-        "repo": "flake-compat",
-        "rev": "0f9255e01c2351cc7d116c072cb317785dd33b33",
-        "type": "github"
-      },
-      "original": {
-        "owner": "edolstra",
-        "repo": "flake-compat",
-        "type": "github"
-      }
-    },
-    "flake-compat_2": {
       "flake": false,
       "locked": {
         "lastModified": 1672831974,
@@ -262,7 +230,7 @@
         "cabal-34": "cabal-34",
         "cabal-36": "cabal-36",
         "cardano-shell": "cardano-shell",
-        "flake-compat": "flake-compat_2",
+        "flake-compat": "flake-compat",
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk",
         "ghc910X": "ghc910X",
         "ghc911": "ghc911",
@@ -771,8 +739,6 @@
     "root": {
       "inputs": {
         "CHaP": "CHaP",
-        "cardano-mainnet-mirror": "cardano-mainnet-mirror",
-        "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
         "haskellNix": "haskellNix",
         "iohkNix": "iohkNix",
