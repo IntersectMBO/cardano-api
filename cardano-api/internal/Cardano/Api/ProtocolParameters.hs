@@ -175,7 +175,7 @@ instance IsShelleyBasedEra era => Eq (LedgerProtocolParameters era) where
     shelleyBasedEraConstraints (shelleyBasedEra @era)
       $ a == b
 
-{-# DEPRECATED convertToLedgerProtocolParameters "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED convertToLedgerProtocolParameters "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 convertToLedgerProtocolParameters
   :: ShelleyBasedEra era
   -> ProtocolParameters
@@ -464,7 +464,7 @@ createIntroducedInBabbagePParams w (IntroducedInBabbagePParams coinsPerUTxOByte)
 --
 -- There are also parameters fixed in the Genesis file. See 'GenesisParameters'.
 --
-{-# DEPRECATED ProtocolParameters "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters" #-}
+{-# DEPRECATED ProtocolParameters "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 data ProtocolParameters =
      ProtocolParameters {
 
@@ -1669,7 +1669,7 @@ toConwayPParams = toBabbagePParams
 -- Conversion functions: protocol parameters from ledger types
 --
 
-{-# DEPRECATED fromLedgerPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED fromLedgerPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 fromLedgerPParams
   :: ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
@@ -1682,7 +1682,7 @@ fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
 fromLedgerPParams ShelleyBasedEraConway  = fromConwayPParams
 
 
-{-# DEPRECATED fromShelleyCommonPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED fromShelleyCommonPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 fromShelleyCommonPParams :: EraPParams ledgerera
                          => PParams ledgerera
                          -> ProtocolParameters
@@ -1716,7 +1716,7 @@ fromShelleyCommonPParams pp =
     , protocolParamMinUTxOValue        = Nothing -- Obsolete from Alonzo onwards
     }
 
-{-# DEPRECATED fromShelleyPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED fromShelleyPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 fromShelleyPParams :: ( EraPParams ledgerera
                       , Ledger.AtMostEra Ledger.MaryEra ledgerera
                       , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
@@ -1731,7 +1731,7 @@ fromShelleyPParams pp =
     }
 
 
-{-# DEPRECATED fromAlonzoPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED fromAlonzoPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 fromAlonzoPParams :: AlonzoEraPParams ledgerera
                         => PParams ledgerera
                         -> ProtocolParameters
@@ -1747,7 +1747,7 @@ fromAlonzoPParams pp =
     , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
     }
 
-{-# DEPRECATED fromExactlyAlonzoPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED fromExactlyAlonzoPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 fromExactlyAlonzoPParams :: (AlonzoEraPParams ledgerera, Ledger.ExactEra Ledger.AlonzoEra ledgerera)
                         => PParams ledgerera
                         -> ProtocolParameters
@@ -1756,7 +1756,7 @@ fromExactlyAlonzoPParams pp =
       protocolParamUTxOCostPerByte = Just . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
   }
 
-{-# DEPRECATED fromBabbagePParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED fromBabbagePParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 fromBabbagePParams :: BabbageEraPParams ledgerera
                    => PParams ledgerera
                    -> ProtocolParameters
@@ -1766,13 +1766,13 @@ fromBabbagePParams pp =
   , protocolParamDecentralization = Nothing
   }
 
-{-# DEPRECATED fromConwayPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters." #-}
+{-# DEPRECATED fromConwayPParams "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork." #-}
 fromConwayPParams :: BabbageEraPParams ledgerera
                   => PParams ledgerera
                   -> ProtocolParameters
 fromConwayPParams = fromBabbagePParams
 
-{-# DEPRECATED checkProtocolParameters "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. PParams natively enforce these checks." #-}
+{-# DEPRECATED checkProtocolParameters "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork. PParams natively enforce these checks." #-}
 checkProtocolParameters :: ()
   => ShelleyBasedEra era
   -> ProtocolParameters
