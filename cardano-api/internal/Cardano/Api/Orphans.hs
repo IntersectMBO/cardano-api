@@ -74,10 +74,13 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
 import           Ouroboros.Network.Mux (MuxError)
+import qualified PlutusLedgerApi.Common as P
+import qualified PlutusLedgerApi.V2 as V2
 
 import qualified Codec.Binary.Bech32 as Bech32
 import qualified Codec.CBOR.Read as CBOR
 import           Data.Aeson (KeyValue ((.=)), ToJSON (..), ToJSONKey (..), object, pairs)
+import qualified Data.Aeson as A
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS
@@ -85,6 +88,7 @@ import           Data.Data (Data)
 import           Data.Kind (Constraint, Type)
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Monoid
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (Typeable)
 import           GHC.Generics
@@ -553,3 +557,17 @@ lastMappendWithTHKD f a b = Ledger.THKD $ lastMappendWith (Ledger.unTHKD . f) a 
 
 instance Pretty MuxError where
   pretty err = "Mux layer error:" <+> prettyException err
+
+instance A.FromJSON V2.ParamName where
+  parseJSON = A.withText "ParamName" parsePlutusParamName
+
+instance A.FromJSONKey V2.ParamName where
+  fromJSONKey = A.FromJSONKeyTextParser parsePlutusParamName
+
+parsePlutusParamName :: (P.IsParamName a, MonadFail f) => T.Text -> f a
+parsePlutusParamName t =
+  case P.readParamName t of
+    Just p -> pure p
+    Nothing -> fail $ "Cannot parse cost model parameter name: " <> T.unpack t
+
+deriving instance Show V2.ParamName
