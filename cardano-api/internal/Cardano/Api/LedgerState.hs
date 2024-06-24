@@ -1334,6 +1334,7 @@ readAlonzoGenesis (File file) expectedGenesisHash = do
     content <- modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
+    -- FIXME!!!
     liftEither . first (AlonzoGenesisDecodeError file . Text.pack) $ Aeson.eitherDecodeStrict' content
   where
     checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()

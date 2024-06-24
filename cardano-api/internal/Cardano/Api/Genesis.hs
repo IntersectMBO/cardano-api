@@ -1,10 +1,14 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Genesis
   ( ShelleyGenesis(..)
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
+  , decodeAlonzoGenesis
   , conwayGenesisDefaults
 
   -- ** Configuration
@@ -26,13 +30,19 @@ module Cardano.Api.Genesis
   , ConwayGenesisFile
   ) where
 
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.IO
+import           Cardano.Api.Monad.Error (MonadError (throwError), liftEither, liftMaybe)
 import           Cardano.Api.Utils (unsafeBoundedRational)
 
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import qualified Cardano.Ledger.Alonzo.Genesis as L
 import           Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
 import           Cardano.Ledger.Api (CoinPerWord (..))
 import           Cardano.Ledger.BaseTypes as Ledger
@@ -42,25 +52,39 @@ import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
                    PoolVotingThresholds (..), UpgradeConwayPParams (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Plutus (Language (..))
+import qualified Cardano.Ledger.Plutus as L
 import           Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
 import           Cardano.Ledger.Shelley.Core
 import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGenesis (..),
                    emptyGenesisStaking)
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
+import qualified PlutusLedgerApi.Common as V2
+import qualified PlutusLedgerApi.V2 as V2
 
+import           Control.Monad
+import           Control.Monad.Error.Class (modifyError)
 import           Control.Monad.Trans.Fail.String (errorFail)
+import           Control.Monad.Trans.Maybe
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as A
+import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Default.Class as DefaultClass
 import           Data.Functor.Identity (Identity)
+import           Data.Int (Int64)
 import qualified Data.ListMap as ListMap
+import qualified Data.Map.Strict as M
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import           Data.Ratio
 import           Data.Text (Text)
 import qualified Data.Time as Time
 import           Data.Typeable
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
+import qualified Lens.Micro.Aeson as AL
 
 import           Test.Cardano.Ledger.Core.Rational ((%!))
 import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
@@ -152,7 +176,7 @@ shelleyGenesisDefaults =
     unsafeBR = unsafeBoundedRational
 
 -- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
--- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
+-- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
 conwayGenesisDefaults :: ConwayGenesis StandardCrypto
 conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayParams
                                       , cgConstitution = DefaultClass.def
@@ -195,8 +219,63 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                        , dvtCommitteeNoConfidence = 0 %! 1
                                                        }
 
+decodeAlonzoGenesis :: MonadError String m
+                    => AlonzoEraOnwards era
+                    -> LBS.ByteString
+                    -> m AlonzoGenesis
+decodeAlonzoGenesis aeo genesisBs = modifyError ("Cannot decode Alonzo genesis: " <>) $ do
+  genesisValue :: A.Value <- liftEither $ A.eitherDecode genesisBs
+  let genesisValue' = (AL.key "costModels" . AL.key "PlutusV2" . AL._Object) %~ setDefaultValues $ genesisValue
+  genesis <- case A.fromJSON genesisValue' of
+    A.Success a -> pure a
+    A.Error e -> throwError e
+  forEraInEon @ConwayEraOnwards (toCardanoEra aeo)
+    -- chop off v2 params if we're < Conway
+    (chopOffOptionalV2Params genesis)
+    (pure . const genesis)
+  where
+    setDefaultValues cm = A.union cm costModelV2Extension
+
+    costModelV2Extension :: A.Object
+    costModelV2Extension = errorFail $ do
+      A.Object obj <- pure . A.toJSON . M.fromList $
+        zip optionalV2costModelParams (repeat @Int64 maxBound)
+      pure obj
+
+    optionalV2costModelParams = map V2.showParamName
+      [ V2.IntegerToByteString'cpu'arguments'c0
+      , V2.IntegerToByteString'cpu'arguments'c1
+      , V2.IntegerToByteString'cpu'arguments'c2
+      , V2.IntegerToByteString'memory'arguments'intercept
+      , V2.IntegerToByteString'memory'arguments'slope
+      , V2.ByteStringToInteger'cpu'arguments'c0
+      , V2.ByteStringToInteger'cpu'arguments'c1
+      , V2.ByteStringToInteger'cpu'arguments'c2
+      , V2.ByteStringToInteger'memory'arguments'intercept
+      , V2.ByteStringToInteger'memory'arguments'slope
+      ]
+
+    chopOffOptionalV2Params g = fmap (fromMaybe g) . runMaybeT $ do
+      costModelValues <- hoistMaybe
+        . fmap L.getCostModelParams
+        . M.lookup L.PlutusV2
+        . L.costModelsValid
+        $ L.agCostModels g
+      let expectedParamsCount = L.costModelParamsCount L.PlutusV2
+          trimmedParams = take expectedParamsCount costModelValues
+      -- this is a redundant check, but lets us know that we're doing right things here
+      when (length trimmedParams /= expectedParamsCount) $ do
+        throwError $ "Expected " <> show expectedParamsCount <> " V2 cost model parameters, but got " <> show (length trimmedParams)
+      updatedCostModel <- liftEither . first show $ L.mkCostModel L.PlutusV2 trimmedParams
+      let updatedCostModels = L.updateCostModels
+            (L.agCostModels g)
+            (L.mkCostModels $ M.singleton L.PlutusV2 updatedCostModel)
+
+      pure $ g { L.agCostModels = updatedCostModels }
+
+
 -- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
--- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
+-- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
 alonzoGenesisDefaults :: AlonzoGenesis
 alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 10000000
                                                           , prMem = 577 %! 10000
@@ -242,4 +321,6 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                              , 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220
                              , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
                              , 32947, 10
+                             -- TODO add here those new alonzo cost parametes in conway era
+                             , 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 -- FIXME: REMOVEME
                              ]
