@@ -379,6 +379,7 @@ test-suite cardano-api-golden
                       , hedgehog >= 1.1
                       , hedgehog-extras ^>= 0.6.1.0
                       , microlens
+                      , ouroboros-network-api
                       , parsec
                       , plutus-core ^>= 1.30
                       , plutus-ledger-api ^>= 1.30
@@ -391,7 +392,8 @@ test-suite cardano-api-golden
 
   build-tool-depends:   tasty-discover:tasty-discover
 
-  other-modules:        Test.Golden.Cardano.Api.Genesis
+  other-modules:        Test.Golden.Cardano.Api.EpochLeadership
+                      , Test.Golden.Cardano.Api.Genesis
                       , Test.Golden.Cardano.Api.Ledger
                       , Test.Golden.Cardano.Api.Typed.Script
                       , Test.Golden.Cardano.Api.Value
