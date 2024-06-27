@@ -1,4 +1,7 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Golden.Cardano.Api.EpochLeadership
   ( test_golden_currentEpochEligibleLeadershipSlots
@@ -9,18 +12,23 @@ import           Cardano.Api.Block (EpochNo (..), Hash (StakePoolKeyHash), SlotN
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
 import           Cardano.Api.Genesis (shelleyGenesisDefaults)
 import           Cardano.Api.GenesisParameters (EpochSize (..))
-import           Cardano.Api.Ledger (KeyHash (..), StandardCrypto)
+import           Cardano.Api.Ledger (KeyHash (..), StandardCrypto, toCBOR)
 import           Cardano.Api.LedgerState (currentEpochEligibleLeadershipSlots)
+import           Cardano.Api.Modes (ConsensusProtocol)
 import           Cardano.Api.Query (ProtocolState (..),
                    SerialisedPoolDistribution (SerialisedPoolDistribution))
 import           Cardano.Api.Shelley (VrfKey, proxyToAsType, unStakePoolKeyHash)
 
-import           Cardano.Binary (serialize)
+import           Cardano.Binary (ToCBOR, serialize)
 import           Cardano.Crypto.Seed (mkSeedFromBytes)
 import           Cardano.Ledger.Api.PParams (emptyPParams)
+import           Cardano.Ledger.BaseTypes (Nonce (..), WithOrigin (..))
 import           Cardano.Ledger.Binary.Encoding (toByronCBOR)
+import qualified Cardano.Protocol.TPraos.API as API
 import           Cardano.Slotting.EpochInfo (EpochInfo (..))
 import           Cardano.Slotting.Time (RelativeTime (..), mkSlotLength)
+import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosState (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Query.Types (PoolDistr (..))
 import           Ouroboros.Network.Block (Serialised (..))
 
@@ -33,8 +41,16 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog (testProperty)
 
+encodeProtocolState
+  :: ToCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  => Consensus.ChainDepState (ConsensusProtocol era)
+  -> ProtocolState era
+encodeProtocolState cds = ProtocolState (Serialised pbs)
+  where pbs = serialize (toCBOR cds)
+
 test_golden_currentEpochEligibleLeadershipSlots :: TestTree
-test_golden_currentEpochEligibleLeadershipSlots = testProperty "golden EpochLeadership" $
+test_golden_currentEpochEligibleLeadershipSlots =
+  testProperty "golden EpochLeadership" $
   H.property $ do
     let sbe = ShelleyBasedEraShelley
         sGen = shelleyGenesisDefaults
@@ -45,7 +61,8 @@ test_golden_currentEpochEligibleLeadershipSlots = testProperty "golden EpochLead
                           , epochInfoSlotLength_ = const (pure $ mkSlotLength 10)
                           }
         pp = emptyPParams
-        ptclState = ProtocolState (Serialised "dummyProtocolState")
+        chainDepState = TPraosState Origin (API.initialChainDepState NeutralNonce Map.empty)
+        ptclState = encodeProtocolState chainDepState
         poolid = StakePoolKeyHash { unStakePoolKeyHash = KeyHash "58eef2925db2789f76ea057c51069e52c5e0a44550f853c6cdf620f8" }
         vrskey = deterministicSigningKey (proxyToAsType (Proxy :: Proxy VrfKey)) (mkSeedFromBytes "")
         poolDistr :: PoolDistr StandardCrypto = PoolDistr Map.empty
