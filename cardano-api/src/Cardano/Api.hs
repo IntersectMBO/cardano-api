@@ -926,6 +926,7 @@ module Cardano.Api (
 
     -- ** Queries
     QueryConvenienceError(..),
+    TxCurrentTreasuryValue(..),
     queryStateForBalancedTx,
     renderQueryConvenienceError,
 
