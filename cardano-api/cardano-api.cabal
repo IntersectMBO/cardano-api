@@ -369,6 +369,7 @@ test-suite cardano-api-golden
                       , cardano-ledger-alonzo
                       , cardano-ledger-api ^>= 1.9
                       , cardano-ledger-babbage >= 1.6.0
+                      , cardano-ledger-binary
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , cardano-ledger-shelley
                       , cardano-ledger-shelley-test >= 1.2.0.1
@@ -379,6 +380,7 @@ test-suite cardano-api-golden
                       , hedgehog >= 1.1
                       , hedgehog-extras ^>= 0.6.1.0
                       , microlens
+                      , ouroboros-consensus-cardano
                       , ouroboros-network-api
                       , parsec
                       , plutus-core ^>= 1.30
