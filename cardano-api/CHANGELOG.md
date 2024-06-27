@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 8.49.0.0
+
+- Make the query used by the CLI's `transaction build` return the current treasury value, so that command to do treasury donation doesn't require the user to pass it. Corresponding CLI PR: https://github.com/IntersectMBO/cardano-cli/pull/778
+  (feature, breaking)
+  [PR 557](https://github.com/IntersectMBO/cardano-api/pull/557)
+
+- Small improvements to queries
+  (breaking, refactoring)
+  [PR 559](https://github.com/IntersectMBO/cardano-api/pull/559)
+
 ## 8.48.0.1 
 
 - Deserialize `ouroboros-consensus`'s `PoolDistr` instead of `cardano-ledger`'s `PoolDist` to maintain backwards compatibility with the `PoolDistr` query. This is needed because `cardano-ledger`'s `PoolDistr` datatype has changed.
