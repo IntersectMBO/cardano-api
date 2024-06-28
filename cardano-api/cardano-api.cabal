@@ -123,6 +123,9 @@ library internal
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Query
                         Cardano.Api.Query.Expr
+                        Cardano.Api.Query.New.AnyEraQuery
+                        Cardano.Api.Query.New.EraIndependent 
+                        Cardano.Api.Query.New.ShelleyBased
                         Cardano.Api.Query.Types
                         Cardano.Api.ReexposeLedger
                         Cardano.Api.ReexposeNetwork

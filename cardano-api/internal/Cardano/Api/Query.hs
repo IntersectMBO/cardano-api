@@ -76,6 +76,7 @@ module Cardano.Api.Query (
     -- * Internal conversion functions
     toLedgerUTxO,
     fromLedgerUTxO,
+    fromConsensusQueryResultMismatch,
   ) where
 
 import           Cardano.Api.Address

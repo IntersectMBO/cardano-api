@@ -1,11 +1,21 @@
-module Cardano.Api.Query.New where
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 
-import           Cardano.Api.IPC.Monad
-
-{-
+{-|
 This module is intended to be a replacement for the existing Query
 related types in cardano-api.
--}
+|-}
+
+module Cardano.Api.Query.New.AnyEraQuery where
+
+import           Cardano.Api.IPC.Monad
+import           Cardano.Api.Query
+import           Cardano.Api.Query.New.ShelleyBased
+
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
+
+import           Control.Monad.Trans.Except (ExceptT)
+
 
 
 
@@ -21,6 +31,13 @@ type LocalStateQueryExprWithError e block point query r m a
 -- This means we have an additional failure in the query of the result, that does
 -- not exist in other `QueryInMode` queries. Because of this we make this distinction
 -- so that we are not forced to handle errors that cannot occur.
-data AnyEraQuery mode result where
-  AnyEraQuery :: QueryInMode mode result -> AnyEraQuery mode result
-  AnyEraQueryShelleyBasedEra :: QueryShelleyBasedEra mode result -> AnyEraQuery mode result
+data AnyEraQuery result where
+  AnyEraQuery :: QueryInMode result -> AnyEraQuery result
+  AnyEraQueryShelleyBasedEra :: QueryShelleyBasedEra era result -> AnyEraQuery result
+
+pattern AnyQuerySbe
+  :: QueryInShelleyBasedEra era result
+  -> AnyEraQuery (Either EraMismatch result)
+pattern AnyQuerySbe q = AnyEraQueryShelleyBasedEra (QueryShelleyBasedEra q)
+
+{-# COMPLETE AnyEraQuery, AnyQuerySbe #-}
