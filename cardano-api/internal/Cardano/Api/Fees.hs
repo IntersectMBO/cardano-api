@@ -328,7 +328,7 @@ evaluateTransactionFee :: forall era. ()
   -> L.Coin
 evaluateTransactionFee sbe pp txbody keywitcount byronwitcount refScriptsSize =
   shelleyBasedEraConstraints sbe $
-    case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
+    case makeSignedTransaction' (toCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
           L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
 
@@ -353,7 +353,7 @@ calculateMinTxFee :: forall era. ()
   -> L.Coin
 calculateMinTxFee sbe pp utxo txbody keywitcount =
   shelleyBasedEraConstraints sbe $
-    case makeSignedTransaction' (shelleyBasedToCardanoEra sbe) [] txbody of
+    case makeSignedTransaction' (toCardanoEra sbe) [] txbody of
       ShelleyTx _ tx ->
         L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp tx (fromIntegral keywitcount)
 
@@ -1102,7 +1102,7 @@ makeTransactionBodyAutoBalance sbe systemstart history lpp@(LedgerProtocolParame
     return (BalancedTxBody finalTxBodyContent txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
    era :: CardanoEra era
-   era = shelleyBasedToCardanoEra sbe
+   era = toCardanoEra sbe
 
 -- | In the event of spending the exact amount of lovelace in
 -- the specified input(s), this function excludes the change

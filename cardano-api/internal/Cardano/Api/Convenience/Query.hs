@@ -29,6 +29,7 @@ import           Cardano.Api.Feature (Featured (..))
 import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
+import           Cardano.Api.Monad.Error
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -45,9 +46,9 @@ import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
-import           Control.Monad.Trans (MonadTrans (..))
-import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-import           Control.Monad.Trans.Except.Extra (left, onLeft, onNothing)
+import           Control.Exception.Safe (SomeException, displayException)
+import           Control.Monad
+import           Data.Bifunctor (first)
 import           Data.Function ((&))
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -55,12 +56,14 @@ import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
+import           GHC.Exts (IsString (..))
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
   | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
+  | QceUnexpectedException !SomeException
   deriving Show
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
@@ -76,6 +79,8 @@ renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionErro
   "Unsupported feature for the node-to-client protocol version.\n" <>
   "This query requires at least " <> textShow minNtcVersion <> " but the node negotiated " <> textShow ntcVersion <> ".\n" <>
   "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
+renderQueryConvenienceError (QceUnexpectedException e) =
+  "Unexpected exception while processing query:\n" <> fromString (displayException e)
 
 newtype TxCurrentTreasuryValue = TxCurrentTreasuryValue { unTxCurrentTreasuryValue :: L.Coin }
   deriving newtype Show
@@ -153,7 +158,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
 -- | Query the node to determine which era it is in.
 determineEra :: ()
   => LocalNodeConnectInfo
-  -> IO (Either AcquiringFailure AnyCardanoEra)
+  -> ExceptT AcquiringFailure IO AnyCardanoEra
 determineEra localNodeConnInfo =
   queryNodeLocalState localNodeConnInfo VolatileTip QueryCurrentEra
 
@@ -163,8 +168,8 @@ executeQueryCardanoMode :: ()
   => SocketPath
   -> NetworkId
   -> QueryInMode (Either EraMismatch result)
-  -> IO (Either QueryConvenienceError result)
-executeQueryCardanoMode socketPath nid q = runExceptT $ do
+  -> ExceptT QueryConvenienceError IO result
+executeQueryCardanoMode socketPath nid q = do
   let localNodeConnInfo =
         LocalNodeConnectInfo
           { localConsensusModeParams = CardanoModeParams (EpochSlots 21600)
@@ -172,14 +177,15 @@ executeQueryCardanoMode socketPath nid q = runExceptT $ do
           , localNodeSocketPath = socketPath
           }
 
-  ExceptT $ executeQueryAnyMode localNodeConnInfo q
+  executeQueryAnyMode localNodeConnInfo q
 
 -- | Execute a query against the local node in any mode.
 executeQueryAnyMode :: forall result. ()
   => LocalNodeConnectInfo
   -> QueryInMode (Either EraMismatch result)
-  -> IO (Either QueryConvenienceError result)
-executeQueryAnyMode localNodeConnInfo q = runExceptT $ do
-  lift (queryNodeLocalState localNodeConnInfo VolatileTip q)
-    & onLeft (left . AcqFailure)
-    & onLeft (left . QueryEraMismatch)
+  -> ExceptT QueryConvenienceError IO result
+executeQueryAnyMode localNodeConnInfo q =
+  liftEither <=< fmap (first QueryEraMismatch)
+    . handleIOExceptionsWith QceUnexpectedException
+    . modifyError AcqFailure
+    $ queryNodeLocalState localNodeConnInfo VolatileTip q

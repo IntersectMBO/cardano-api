@@ -11,7 +11,6 @@
 module Cardano.Api.Eon.BabbageEraOnwards
   ( BabbageEraOnwards(..)
   , babbageEraOnwardsConstraints
-  , babbageEraOnwardsToCardanoEra
   , babbageEraOnwardsToShelleyBasedEra
 
   , BabbageEraOnwardsConstraints
@@ -106,9 +105,6 @@ babbageEraOnwardsConstraints :: ()
 babbageEraOnwardsConstraints = \case
   BabbageEraOnwardsBabbage -> id
   BabbageEraOnwardsConway  -> id
-
-babbageEraOnwardsToCardanoEra :: BabbageEraOnwards era -> CardanoEra era
-babbageEraOnwardsToCardanoEra = shelleyBasedToCardanoEra . babbageEraOnwardsToShelleyBasedEra
 
 babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra era
 babbageEraOnwardsToShelleyBasedEra = \case

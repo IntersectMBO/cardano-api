@@ -1786,7 +1786,7 @@ checkProtocolParameters sbe ProtocolParameters{..} =
     ShelleyBasedEraBabbage -> checkBabbageParams
     ShelleyBasedEraConway -> checkBabbageParams
  where
-   era = shelleyBasedToCardanoEra sbe
+   era = toCardanoEra sbe
 
    cModel = not $ Map.null protocolParamCostModels
    prices = isJust protocolParamPrices

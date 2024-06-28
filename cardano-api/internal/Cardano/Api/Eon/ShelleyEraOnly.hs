@@ -11,7 +11,6 @@
 module Cardano.Api.Eon.ShelleyEraOnly
   ( ShelleyEraOnly(..)
   , shelleyEraOnlyConstraints
-  , shelleyEraOnlyToCardanoEra
   , shelleyEraOnlyToShelleyBasedEra
 
   , ShelleyEraOnlyConstraints
@@ -98,9 +97,6 @@ shelleyEraOnlyConstraints :: ()
   -> a
 shelleyEraOnlyConstraints = \case
   ShelleyEraOnlyShelley  -> id
-
-shelleyEraOnlyToCardanoEra :: ShelleyEraOnly era -> CardanoEra era
-shelleyEraOnlyToCardanoEra = shelleyBasedToCardanoEra . shelleyEraOnlyToShelleyBasedEra
 
 shelleyEraOnlyToShelleyBasedEra :: ShelleyEraOnly era -> ShelleyBasedEra era
 shelleyEraOnlyToShelleyBasedEra = \case

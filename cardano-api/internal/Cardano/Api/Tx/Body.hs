@@ -1412,7 +1412,7 @@ createTransactionBody :: ()
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
-    let era = shelleyBasedToCardanoEra sbe
+    let era = toCardanoEra sbe
         apiTxOuts = txOuts bc
         apiScriptWitnesses = collectTxBodyScriptWitnesses sbe bc
         apiScriptValidity = txScriptValidity bc
@@ -1587,7 +1587,7 @@ validateTxInsCollateral txInsCollateral languages =
 
 validateTxOuts :: ShelleyBasedEra era -> [TxOut CtxTx era] -> Either TxBodyError ()
 validateTxOuts sbe txOuts = do
-  let era = shelleyBasedToCardanoEra sbe
+  let era = toCardanoEra sbe
   cardanoEraConstraints era $
     sequence_
       [ do

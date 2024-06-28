@@ -11,7 +11,6 @@
 module Cardano.Api.Eon.ShelleyToAllegraEra
   ( ShelleyToAllegraEra(..)
   , shelleyToAllegraEraConstraints
-  , shelleyToAllegraEraToCardanoEra
   , shelleyToAllegraEraToShelleyBasedEra
 
   , ShelleyToAllegraEraConstraints
@@ -101,9 +100,6 @@ shelleyToAllegraEraConstraints :: ()
 shelleyToAllegraEraConstraints = \case
   ShelleyToAllegraEraShelley -> id
   ShelleyToAllegraEraAllegra -> id
-
-shelleyToAllegraEraToCardanoEra :: ShelleyToAllegraEra era -> CardanoEra era
-shelleyToAllegraEraToCardanoEra = shelleyBasedToCardanoEra . shelleyToAllegraEraToShelleyBasedEra
 
 shelleyToAllegraEraToShelleyBasedEra :: ShelleyToAllegraEra era -> ShelleyBasedEra era
 shelleyToAllegraEraToShelleyBasedEra = \case

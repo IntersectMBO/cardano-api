@@ -11,7 +11,6 @@
 module Cardano.Api.Eon.MaryEraOnwards
   ( MaryEraOnwards(..)
   , maryEraOnwardsConstraints
-  , maryEraOnwardsToCardanoEra
   , maryEraOnwardsToShelleyBasedEra
 
   , MaryEraOnwardsConstraints
@@ -102,9 +101,6 @@ maryEraOnwardsConstraints = \case
   MaryEraOnwardsAlonzo  -> id
   MaryEraOnwardsBabbage -> id
   MaryEraOnwardsConway  -> id
-
-maryEraOnwardsToCardanoEra :: MaryEraOnwards era -> CardanoEra era
-maryEraOnwardsToCardanoEra = shelleyBasedToCardanoEra . maryEraOnwardsToShelleyBasedEra
 
 maryEraOnwardsToShelleyBasedEra :: MaryEraOnwards era -> ShelleyBasedEra era
 maryEraOnwardsToShelleyBasedEra = \case

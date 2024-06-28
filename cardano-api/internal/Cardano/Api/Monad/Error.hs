@@ -14,6 +14,7 @@ module Cardano.Api.Monad.Error
   , handleIOExceptionsWith
   , handleIOExceptionsLiftWith
   , hoistIOEither
+  , liftMaybe
 
   , module Control.Monad.Except
   , module Control.Monad.IO.Class
@@ -87,3 +88,10 @@ hoistIOEither :: MonadIOTransError e t m
               => IO (Either e a)
               -> t m a
 hoistIOEither = liftExceptT . ExceptT . liftIO
+
+-- | Lift 'Maybe' into 'MonadError'
+liftMaybe :: MonadError e m
+          => e      -- ^ Error to throw, if 'Nothing'
+          -> Maybe a
+          -> m a
+liftMaybe e = maybe (throwError e) pure

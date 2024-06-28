@@ -48,4 +48,4 @@ asFeaturedInShelleyBasedEra :: ()
   => a
   -> ShelleyBasedEra era
   -> Maybe (Featured eon era a)
-asFeaturedInShelleyBasedEra value = asFeaturedInEra value . shelleyBasedToCardanoEra
+asFeaturedInShelleyBasedEra value = asFeaturedInEra value . toCardanoEra

@@ -715,7 +715,7 @@ toConsensusQueryShelleyBased sbe = \case
       creds' = Set.map toShelleyStakeCredential creds
 
   where
-    era = shelleyBasedToCardanoEra sbe
+    era = toCardanoEra sbe
 
 consensusQueryInEraInMode
   :: forall era erablock modeblock result result' xs.

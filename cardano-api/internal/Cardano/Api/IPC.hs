@@ -82,6 +82,7 @@ import           Cardano.Api.InMode
 import           Cardano.Api.IO
 import           Cardano.Api.IPC.Version
 import           Cardano.Api.Modes
+import           Cardano.Api.Monad.Error (ExceptT (..))
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol
 import           Cardano.Api.Query
@@ -124,6 +125,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
                    tryPutTMVar)
 import           Control.Monad (void)
+import           Control.Monad.IO.Class
 import           Control.Tracer (nullTracer)
 import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import qualified Data.ByteString.Lazy as LBS
@@ -181,10 +183,11 @@ data LocalNodeConnectInfo =
 -- | Establish a connection to a local node and execute the given set of
 -- protocol handlers.
 --
-connectToLocalNode :: ()
+connectToLocalNode
+  :: MonadIO m
   => LocalNodeConnectInfo
   -> LocalNodeClientProtocolsInMode
-  -> IO ()
+  -> m ()
 connectToLocalNode localNodeConnectInfo handlers
   = connectToLocalNodeWithVersion localNodeConnectInfo (const handlers)
 
@@ -192,16 +195,17 @@ connectToLocalNode localNodeConnectInfo handlers
 -- protocol handlers parameterized on the negotiated node-to-client protocol
 -- version.
 --
-connectToLocalNodeWithVersion :: ()
+connectToLocalNodeWithVersion
+  :: MonadIO m
   => LocalNodeConnectInfo
   -> (NodeToClientVersion -> LocalNodeClientProtocolsInMode)
-  -> IO ()
+  -> m ()
 connectToLocalNodeWithVersion LocalNodeConnectInfo {
                      localNodeSocketPath,
                      localNodeNetworkId,
                      localConsensusModeParams
                    } clients =
-    Net.withIOManager $ \iomgr ->
+    liftIO $ Net.withIOManager $ \iomgr ->
       Net.connectTo
         (Net.localSnocket iomgr)
         Net.NetworkConnectTracers {
@@ -534,9 +538,9 @@ queryNodeLocalState :: forall result. ()
   => LocalNodeConnectInfo
   -> Net.Query.Target ChainPoint
   -> QueryInMode result
-  -> IO (Either AcquiringFailure result)
+  -> ExceptT AcquiringFailure IO result
 queryNodeLocalState connctInfo mpoint query = do
-    resultVar <- newEmptyTMVarIO
+    resultVar <- liftIO newEmptyTMVarIO
     connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
@@ -545,7 +549,7 @@ queryNodeLocalState connctInfo mpoint query = do
         localTxSubmissionClient = Nothing,
         localTxMonitoringClient = Nothing
       }
-    atomically (takeTMVar resultVar)
+    ExceptT $ atomically (takeTMVar resultVar)
   where
     singleQuery
       :: Net.Query.Target ChainPoint
@@ -570,12 +574,13 @@ queryNodeLocalState connctInfo mpoint query = do
               pure $ Net.Query.SendMsgDone ()
           }
 
-submitTxToNodeLocal :: ()
+submitTxToNodeLocal
+  :: MonadIO m
   => LocalNodeConnectInfo
   -> TxInMode
-  -> IO (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
+  -> m (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
 submitTxToNodeLocal connctInfo tx = do
-    resultVar <- newEmptyTMVarIO
+    resultVar <- liftIO newEmptyTMVarIO
     connectToLocalNode
       connctInfo
       LocalNodeClientProtocols {
@@ -584,7 +589,7 @@ submitTxToNodeLocal connctInfo tx = do
         localStateQueryClient   = Nothing,
         localTxMonitoringClient = Nothing
       }
-    atomically (takeTMVar resultVar)
+    liftIO $ atomically (takeTMVar resultVar)
   where
     localTxSubmissionClientSingle :: ()
       => TMVar (Net.Tx.SubmitResult TxValidationErrorInCardanoMode)
@@ -654,12 +659,13 @@ data LocalTxMonitoringQuery
   | LocalTxMonitoringMempoolInformation
 
 
-queryTxMonitoringLocal :: ()
+queryTxMonitoringLocal
+  :: MonadIO m
   => LocalNodeConnectInfo
   -> LocalTxMonitoringQuery
-  -> IO LocalTxMonitoringResult
+  -> m LocalTxMonitoringResult
 queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
-  resultVar <- newEmptyTMVarIO
+  resultVar <- liftIO newEmptyTMVarIO
 
   let client = case localTxMonitoringQuery of
                  LocalTxMonitoringQueryTx txidInMode ->
@@ -677,7 +683,7 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
       localStateQueryClient   = Nothing,
       localTxMonitoringClient = Just client
     }
-  atomically (takeTMVar resultVar)
+  liftIO $ atomically (takeTMVar resultVar)
  where
   localTxMonitorClientTxExists :: ()
     => TxIdInMode
@@ -716,11 +722,12 @@ queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
 -- Get tip as 'ChainPoint'
 --
 
-getLocalChainTip :: ()
+getLocalChainTip
+  :: MonadIO m
   => LocalNodeConnectInfo
-  -> IO ChainTip
+  -> m ChainTip
 getLocalChainTip localNodeConInfo = do
-    resultVar <- newEmptyTMVarIO
+    resultVar <- liftIO newEmptyTMVarIO
     connectToLocalNode
       localNodeConInfo
       LocalNodeClientProtocols
@@ -729,7 +736,7 @@ getLocalChainTip localNodeConInfo = do
         , localStateQueryClient = Nothing
         , localTxMonitoringClient = Nothing
         }
-    atomically $ takeTMVar resultVar
+    liftIO . atomically $ takeTMVar resultVar
 
 chainSyncGetCurrentTip :: ()
   => TMVar ChainTip

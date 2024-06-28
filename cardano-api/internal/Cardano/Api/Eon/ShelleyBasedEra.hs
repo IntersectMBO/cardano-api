@@ -17,7 +17,6 @@ module Cardano.Api.Eon.ShelleyBasedEra
   , AnyShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , inAnyShelleyBasedEra
-  , shelleyBasedToCardanoEra
   , inEonForShelleyBasedEra
   , inEonForShelleyBasedEraMaybe
   , forShelleyBasedEraInEon
@@ -71,7 +70,7 @@ inEonForShelleyBasedEra :: ()
   -> ShelleyBasedEra era
   -> a
 inEonForShelleyBasedEra no yes =
-  inEonForEra no yes . shelleyBasedToCardanoEra
+  inEonForEra no yes . toCardanoEra
 
 inEonForShelleyBasedEraMaybe :: ()
   => Eon eon
@@ -86,7 +85,7 @@ forShelleyBasedEraMaybeEon :: ()
   => ShelleyBasedEra era
   -> Maybe (eon era)
 forShelleyBasedEraMaybeEon =
-  inEonForEra Nothing Just . shelleyBasedToCardanoEra
+  inEonForEra Nothing Just . toCardanoEra
 
 forShelleyBasedEraInEon :: ()
   => Eon eon
@@ -139,10 +138,10 @@ deriving instance Ord  (ShelleyBasedEra era)
 deriving instance Show (ShelleyBasedEra era)
 
 instance Pretty (ShelleyBasedEra era) where
-  pretty = pretty . shelleyBasedToCardanoEra
+  pretty = pretty . toCardanoEra
 
 instance ToJSON (ShelleyBasedEra era) where
-   toJSON = toJSON . shelleyBasedToCardanoEra
+   toJSON = toJSON . toCardanoEra
 
 instance TestEquality ShelleyBasedEra where
     testEquality ShelleyBasedEraShelley ShelleyBasedEraShelley = Just Refl
@@ -305,15 +304,6 @@ inAnyShelleyBasedEra :: ()
   -> InAnyShelleyBasedEra thing
 inAnyShelleyBasedEra sbe a =
   shelleyBasedEraConstraints sbe $ InAnyShelleyBasedEra sbe a
-
--- | Converts a 'ShelleyBasedEra' to the broader 'CardanoEra'.
-shelleyBasedToCardanoEra :: ShelleyBasedEra era -> CardanoEra era
-shelleyBasedToCardanoEra ShelleyBasedEraShelley = ShelleyEra
-shelleyBasedToCardanoEra ShelleyBasedEraAllegra = AllegraEra
-shelleyBasedToCardanoEra ShelleyBasedEraMary    = MaryEra
-shelleyBasedToCardanoEra ShelleyBasedEraAlonzo  = AlonzoEra
-shelleyBasedToCardanoEra ShelleyBasedEraBabbage = BabbageEra
-shelleyBasedToCardanoEra ShelleyBasedEraConway  = ConwayEra
 
 -- ----------------------------------------------------------------------------
 -- Conversion to Shelley ledger library types
