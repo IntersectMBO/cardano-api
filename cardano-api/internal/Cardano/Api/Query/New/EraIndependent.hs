@@ -21,9 +21,9 @@ import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 
-data SimpleQueryError
-  = SimpleQueryErrorAcquiringFail AcquiringFailure
-  | SimpleQueryErrorUnsupportedVer UnsupportedNtcVersionError
+data IndependentEraQueryError
+  = IndependentEraQueryAcquiringFail AcquiringFailure
+  | IndependentEraQueryUnsupportedVersion UnsupportedNtcVersionError
   deriving Show
 
 -- | QueryIndependent queries are era independent

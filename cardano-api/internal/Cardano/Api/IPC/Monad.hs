@@ -3,7 +3,7 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.Api.IPC.Monad
-  ( LocalStateQueryExpr
+  ( LocalStateQueryExpr(..)
   , executeLocalStateQueryExpr
   , queryExpr
   ) where
