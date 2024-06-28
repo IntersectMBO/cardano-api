@@ -11,7 +11,6 @@
 module Cardano.Api.Eon.AlonzoEraOnwards
   ( AlonzoEraOnwards(..)
   , alonzoEraOnwardsConstraints
-  , alonzoEraOnwardsToCardanoEra
   , alonzoEraOnwardsToShelleyBasedEra
 
   , AlonzoEraOnwardsConstraints
@@ -112,9 +111,6 @@ alonzoEraOnwardsConstraints = \case
   AlonzoEraOnwardsAlonzo  -> id
   AlonzoEraOnwardsBabbage -> id
   AlonzoEraOnwardsConway  -> id
-
-alonzoEraOnwardsToCardanoEra :: AlonzoEraOnwards era -> CardanoEra era
-alonzoEraOnwardsToCardanoEra = shelleyBasedToCardanoEra . alonzoEraOnwardsToShelleyBasedEra
 
 alonzoEraOnwardsToShelleyBasedEra :: AlonzoEraOnwards era -> ShelleyBasedEra era
 alonzoEraOnwardsToShelleyBasedEra = \case

@@ -10,7 +10,6 @@
 module Cardano.Api.Eon.ByronToAlonzoEra
   ( ByronToAlonzoEra(..)
   , byronToAlonzoEraConstraints
-  , byronToAlonzoEraToCardanoEra
 
   , ByronToAlonzoEraConstraints
   ) where
@@ -62,11 +61,3 @@ byronToAlonzoEraConstraints = \case
   ByronToAlonzoEraAllegra  -> id
   ByronToAlonzoEraMary     -> id
   ByronToAlonzoEraAlonzo   -> id
-
-byronToAlonzoEraToCardanoEra :: ByronToAlonzoEra era -> CardanoEra era
-byronToAlonzoEraToCardanoEra = \case
-  ByronToAlonzoEraByron    -> ByronEra
-  ByronToAlonzoEraShelley  -> ShelleyEra
-  ByronToAlonzoEraAllegra  -> AllegraEra
-  ByronToAlonzoEraMary     -> MaryEra
-  ByronToAlonzoEraAlonzo   -> AlonzoEra

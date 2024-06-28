@@ -11,7 +11,6 @@
 module Cardano.Api.Eon.ConwayEraOnwards
   ( ConwayEraOnwards(..)
   , conwayEraOnwardsConstraints
-  , conwayEraOnwardsToCardanoEra
   , conwayEraOnwardsToShelleyBasedEra
 
   , ConwayEraOnwardsConstraints
@@ -108,9 +107,6 @@ conwayEraOnwardsConstraints :: ()
   -> a
 conwayEraOnwardsConstraints = \case
   ConwayEraOnwardsConway -> id
-
-conwayEraOnwardsToCardanoEra :: ConwayEraOnwards era -> CardanoEra era
-conwayEraOnwardsToCardanoEra = shelleyBasedToCardanoEra . conwayEraOnwardsToShelleyBasedEra
 
 conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
 conwayEraOnwardsToShelleyBasedEra = \case

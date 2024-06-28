@@ -634,7 +634,7 @@ genTxMintValue =
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent sbe = do
-  let era = shelleyBasedToCardanoEra sbe
+  let era = toCardanoEra sbe
   txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
   txInsReference <- genTxInsReference era
