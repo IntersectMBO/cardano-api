@@ -6,10 +6,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Api.Query.New.Expr
-  ( IndependentEraQueryError(..)
-  , executeLocalStateQueryExprIndependent
-  , queryExprIndependent
+module Cardano.Api.Query.New.ShelleyBased.Expr
+  ( ShelleyBasedQueryError(..)
+  , executeLocalStateQueryExprShelleyBased
+  , queryExprShelleyBased
   ) where
 
 import           Cardano.Api.Block
@@ -17,10 +17,12 @@ import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.IPC.Version
 import           Cardano.Api.Query
-import           Cardano.Api.Query.New.EraIndependent
+import           Cardano.Api.Query.New.EraIndependent.Query
+import           Cardano.Api.Query.New.ShelleyBased.Query
 
 import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
 import           Control.Concurrent.STM
 import           Control.Monad.Except
@@ -44,12 +46,12 @@ type LocalStateQueryExprWithError e block point query r m a
 
 
 -- | Execute a local state query expression.
-executeLocalStateQueryExprIndependent
+executeLocalStateQueryExprShelleyBased
   :: LocalNodeConnectInfo
-  -> Maybe ChainPoint
-  -> LocalStateQueryExprWithError IndependentEraQueryError BlockInMode ChainPoint QueryInMode () IO a
-  -> IO (Either IndependentEraQueryError a)
-executeLocalStateQueryExprIndependent connectInfo mpoint f = do
+  -> Target ChainPoint
+  -> LocalStateQueryExprWithError ShelleyBasedQueryError BlockInMode ChainPoint (QueryShelleyBasedEra era) () IO a
+  -> IO (Either ShelleyBasedQueryError a)
+executeLocalStateQueryExprShelleyBased connectInfo target f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
 
@@ -58,7 +60,7 @@ executeLocalStateQueryExprIndependent connectInfo mpoint f = do
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState ntcVersion f
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult target tmvResultLocalState ntcVersion f
       , localTxSubmissionClient = Nothing
       , localTxMonitoringClient = Nothing
       }
@@ -68,15 +70,15 @@ executeLocalStateQueryExprIndependent connectInfo mpoint f = do
 
 
 -- | Get the node server's Node-to-Client version.
-getNtcVersion :: LocalStateQueryExpr block point QueryInMode r IO NodeToClientVersion
+getNtcVersion :: LocalStateQueryExpr block point (QueryShelleyBasedEra era) r IO NodeToClientVersion
 getNtcVersion = LocalStateQueryExpr ask
 
 
--- | Use 'queryExprIndependent' in a do block to construct monadic local state queries.
-queryExprIndependent
-  :: QueryInMode a
-  -> LocalStateQueryExprWithError IndependentEraQueryError block point QueryInMode r IO a
-queryExprIndependent query = do
+-- | Use 'queryExprShelleyBased' in a do block to construct monadic local state queries.
+queryExprShelleyBased
+  :: QueryShelleyBasedEra era a
+  -> LocalStateQueryExprWithError ShelleyBasedQueryError block point (QueryShelleyBasedEra era) r IO a
+queryExprShelleyBased query = do
   let minNtcVersion = nodeToClientVersionOf query
   ntcVersion <- lift getNtcVersion
   if ntcVersion >= minNtcVersion
@@ -86,21 +88,21 @@ queryExprIndependent query = do
           Net.Query.ClientStQuerying
           { Net.Query.recvMsgResult = f
           }
-    else left $ IndependentEraQueryUnsupportedVersion $ UnsupportedNtcVersionError minNtcVersion ntcVersion
+    else left $ ShelleyBasedEquerySimpleError $ IndependentEraQueryUnsupportedVersion $ UnsupportedNtcVersionError minNtcVersion ntcVersion
 
--- | Use 'queryExprIndependent' in a do block to construct monadic local state queries.
+-- | Use 'queryExprShelleyBased' in a do block to construct monadic local state queries.
 setupLocalStateQueryExpr ::
      STM x
      -- ^ An STM expression that only returns when all protocols are complete.
      -- Protocols must wait until 'waitDone' returns because premature exit will
      -- cause other incomplete protocols to abort which may lead to deadlock.
-  -> Maybe ChainPoint
-  -> TMVar (Either IndependentEraQueryError a)
+  -> Target ChainPoint
+  -> TMVar (Either ShelleyBasedQueryError a)
   -> NodeToClientVersion
-  -> LocalStateQueryExprWithError IndependentEraQueryError BlockInMode ChainPoint QueryInMode () IO a
-  -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
-setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
-  LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
+  -> LocalStateQueryExprWithError ShelleyBasedQueryError BlockInMode ChainPoint (QueryShelleyBasedEra era) () IO a
+  -> Net.Query.LocalStateQueryClient BlockInMode ChainPoint (QueryShelleyBasedEra era) IO ()
+setupLocalStateQueryExpr waitDone target resultVar' ntcVersion f =
+  LocalStateQueryClient . pure . Net.Query.SendMsgAcquire target $
     Net.Query.ClientStAcquiring
     { Net.Query.recvMsgAcquired =
       runContT (runReaderT (runLocalStateQueryExpr $ runExceptT f) ntcVersion) $ \result -> do
@@ -109,7 +111,7 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
         pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
 
     , Net.Query.recvMsgFailure = \failure -> do
-        atomically $ putTMVar resultVar' (Left . IndependentEraQueryAcquiringFail $ toAcquiringFailure failure)
+        atomically $ putTMVar resultVar' (Left . ShelleyBasedEquerySimpleError . IndependentEraQueryAcquiringFail $ toAcquiringFailure failure)
         void $ atomically waitDone -- Wait for all protocols to complete before exiting.
         pure $ Net.Query.SendMsgDone ()
     }

@@ -6,11 +6,11 @@ This module is intended to be a replacement for the existing Query
 related types in cardano-api.
 |-}
 
-module Cardano.Api.Query.New.AnyEraQuery where
+module Cardano.Api.Query.New.AnyEra.Query where
 
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Query
-import           Cardano.Api.Query.New.ShelleyBased
+import           Cardano.Api.Query.New.ShelleyBased.Query
 
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 

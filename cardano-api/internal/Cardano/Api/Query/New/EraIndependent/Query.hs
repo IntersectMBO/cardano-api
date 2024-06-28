@@ -4,7 +4,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Cardano.Api.Query.New.EraIndependent where
+module Cardano.Api.Query.New.EraIndependent.Query where
 
 import           Cardano.Api.Block
 import           Cardano.Api.Eras.Core
