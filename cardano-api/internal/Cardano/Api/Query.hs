@@ -157,9 +157,9 @@ data QueryInMode result where
   QueryCurrentEra
     :: QueryInMode AnyCardanoEra
 
-  QueryInEra
-    :: QueryInEra era result
-    -> QueryInMode (Either EraMismatch result)
+  -- QueryInEra
+  --   :: QueryInEra era result
+  --   -> QueryInMode (Either EraMismatch result)
 
   QueryEraHistory
     :: QueryInMode EraHistory
@@ -176,7 +176,7 @@ data QueryInMode result where
 instance NodeToClientVersionOf (QueryInMode result) where
   nodeToClientVersionOf = \case
     QueryCurrentEra   -> NodeToClientV_9
-    QueryInEra q      -> nodeToClientVersionOf q
+   -- QueryInEra q      -> nodeToClientVersionOf q
     QueryEraHistory   -> NodeToClientV_9
     QuerySystemStart  -> NodeToClientV_9
     QueryChainBlockNo -> NodeToClientV_10
@@ -586,13 +586,13 @@ toConsensusQuery QueryChainBlockNo = Some Consensus.GetChainBlockNo
 
 toConsensusQuery QueryChainPoint = Some Consensus.GetChainPoint
 
-toConsensusQuery (QueryInEra QueryByronUpdateState) =
-  Some $ Consensus.BlockQuery $
-    Consensus.QueryIfCurrentByron
-      Consensus.GetUpdateInterfaceState
-
-toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
-  shelleyBasedEraConstraints sbe $ toConsensusQueryShelleyBased sbe q
+-- toConsensusQuery (QueryInEra QueryByronUpdateState) =
+--   Some $ Consensus.BlockQuery $
+--     Consensus.QueryIfCurrentByron
+--       Consensus.GetUpdateInterfaceState
+--
+-- toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
+--   shelleyBasedEraConstraints sbe $ toConsensusQueryShelleyBased sbe q
 
 toConsensusQueryShelleyBased :: forall era protocol block result. ()
   => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
@@ -778,66 +778,66 @@ fromConsensusQueryResult QueryCurrentEra q' r' =
         -> fromConsensusEraIndex r'
       _ -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResult (QueryInEra QueryByronUpdateState) q' r' =
-    case q' of
-      Consensus.BlockQuery
-        (Consensus.QueryIfCurrentByron Consensus.GetUpdateInterfaceState)
-        -> bimap fromConsensusEraMismatch ByronUpdateState r'
-      _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraShelley q)) q' r' =
-    case q' of
-      Consensus.BlockQuery (Consensus.QueryIfCurrentShelley q'')
-        -> bimap fromConsensusEraMismatch
-                 (fromConsensusQueryResultShelleyBased
-                    ShelleyBasedEraShelley q q'')
-                 r'
-      _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraAllegra q)) q' r' =
-    case q' of
-      Consensus.BlockQuery (Consensus.QueryIfCurrentAllegra q'')
-        -> bimap fromConsensusEraMismatch
-                 (fromConsensusQueryResultShelleyBased
-                    ShelleyBasedEraAllegra q q'')
-                 r'
-      _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraMary q)) q' r' =
-    case q' of
-      Consensus.BlockQuery (Consensus.QueryIfCurrentMary q'')
-        -> bimap fromConsensusEraMismatch
-                 (fromConsensusQueryResultShelleyBased
-                    ShelleyBasedEraMary q q'')
-                 r'
-      _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraAlonzo q)) q' r' =
-    case q' of
-      Consensus.BlockQuery (Consensus.QueryIfCurrentAlonzo q'')
-        -> bimap fromConsensusEraMismatch
-                 (fromConsensusQueryResultShelleyBased
-                    ShelleyBasedEraAlonzo q q'')
-                 r'
-      _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraBabbage q)) q' r' =
-    case q' of
-      Consensus.BlockQuery (Consensus.QueryIfCurrentBabbage q'')
-        -> bimap fromConsensusEraMismatch
-                 (fromConsensusQueryResultShelleyBased
-                    ShelleyBasedEraBabbage q q'')
-                 r'
-      _ -> fromConsensusQueryResultMismatch
-
-fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraConway q)) q' r' =
-    case q' of
-      Consensus.BlockQuery (Consensus.QueryIfCurrentConway q'')
-        -> bimap fromConsensusEraMismatch
-                 (fromConsensusQueryResultShelleyBased
-                    ShelleyBasedEraConway q q'')
-                 r'
-      _ -> fromConsensusQueryResultMismatch
+-- fromConsensusQueryResult (QueryInEra QueryByronUpdateState) q' r' =
+--     case q' of
+--       Consensus.BlockQuery
+--         (Consensus.QueryIfCurrentByron Consensus.GetUpdateInterfaceState)
+--         -> bimap fromConsensusEraMismatch ByronUpdateState r'
+--       _ -> fromConsensusQueryResultMismatch
+--
+-- fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraShelley q)) q' r' =
+--     case q' of
+--       Consensus.BlockQuery (Consensus.QueryIfCurrentShelley q'')
+--         -> bimap fromConsensusEraMismatch
+--                  (fromConsensusQueryResultShelleyBased
+--                     ShelleyBasedEraShelley q q'')
+--                  r'
+--       _ -> fromConsensusQueryResultMismatch
+--
+-- fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraAllegra q)) q' r' =
+--     case q' of
+--       Consensus.BlockQuery (Consensus.QueryIfCurrentAllegra q'')
+--         -> bimap fromConsensusEraMismatch
+--                  (fromConsensusQueryResultShelleyBased
+--                     ShelleyBasedEraAllegra q q'')
+--                  r'
+--       _ -> fromConsensusQueryResultMismatch
+--
+-- fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraMary q)) q' r' =
+--     case q' of
+--       Consensus.BlockQuery (Consensus.QueryIfCurrentMary q'')
+--         -> bimap fromConsensusEraMismatch
+--                  (fromConsensusQueryResultShelleyBased
+--                     ShelleyBasedEraMary q q'')
+--                  r'
+--       _ -> fromConsensusQueryResultMismatch
+--
+-- fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraAlonzo q)) q' r' =
+--     case q' of
+--       Consensus.BlockQuery (Consensus.QueryIfCurrentAlonzo q'')
+--         -> bimap fromConsensusEraMismatch
+--                  (fromConsensusQueryResultShelleyBased
+--                     ShelleyBasedEraAlonzo q q'')
+--                  r'
+--       _ -> fromConsensusQueryResultMismatch
+--
+-- fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraBabbage q)) q' r' =
+--     case q' of
+--       Consensus.BlockQuery (Consensus.QueryIfCurrentBabbage q'')
+--         -> bimap fromConsensusEraMismatch
+--                  (fromConsensusQueryResultShelleyBased
+--                     ShelleyBasedEraBabbage q q'')
+--                  r'
+--       _ -> fromConsensusQueryResultMismatch
+--
+-- fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraConway q)) q' r' =
+--     case q' of
+--       Consensus.BlockQuery (Consensus.QueryIfCurrentConway q'')
+--         -> bimap fromConsensusEraMismatch
+--                  (fromConsensusQueryResultShelleyBased
+--                     ShelleyBasedEraConway q q'')
+--                  r'
+--       _ -> fromConsensusQueryResultMismatch
 
 -- This function is written like this so that we have exhaustive pattern checking
 -- on the @QueryInShelleyBasedEra era result@ value. Don't change the top-level
