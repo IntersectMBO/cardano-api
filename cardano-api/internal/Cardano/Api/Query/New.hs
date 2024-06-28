@@ -15,3 +15,12 @@ related types in cardano-api.
 -- This will come about by a redefining of the query related data types.
 type LocalStateQueryExprWithError e block point query r m a
   = ExceptT e (LocalStateQueryExpr block point query r m) a
+
+
+-- 'QueryInShelleyBasedEra' queries return 'Either EraMismatch'.
+-- This means we have an additional failure in the query of the result, that does
+-- not exist in other `QueryInMode` queries. Because of this we make this distinction
+-- so that we are not forced to handle errors that cannot occur.
+data AnyEraQuery mode result where
+  AnyEraQuery :: QueryInMode mode result -> AnyEraQuery mode result
+  AnyEraQueryShelleyBasedEra :: QueryShelleyBasedEra mode result -> AnyEraQuery mode result
