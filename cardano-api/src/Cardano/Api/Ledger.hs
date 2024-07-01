@@ -1,6 +1,5 @@
 module Cardano.Api.Ledger
   ( module Cardano.Api.ReexposeLedger
-  )
-  where
+  ) where
 
-import           Cardano.Api.ReexposeLedger
+import Cardano.Api.ReexposeLedger

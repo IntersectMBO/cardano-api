@@ -12,8 +12,8 @@ module Cardano.Api.IO.Base
   , VRFPrivateKeyFilePermissionError(..)
   ) where
 
-import           Data.Aeson (FromJSON, ToJSON)
-import           Data.String (IsString)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.String (IsString)
 
 data FileDirection
   = In
@@ -37,4 +37,4 @@ data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath
   | GroupPermissionsExist FilePath
   | GenericPermissionsExist FilePath
-  deriving Show
+  deriving (Show)

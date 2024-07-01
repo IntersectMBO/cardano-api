@@ -5,34 +5,34 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
--- UndecidableInstances needed for 9.2.7 and 8.10.7
 {-# LANGUAGE UndecidableInstances #-}
-
--- Only for UninhabitableType
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
+-- UndecidableInstances needed for 9.2.7 and 8.10.7
+-- Only for UninhabitableType
 -- | This module defines the protocol versions corresponding to the eras in the Cardano blockchain.
 module Cardano.Api.Protocol.Version
   ( BabbageEra
   , ConwayEra
   , pattern CurrentEra
   , pattern UpcomingEra
-  , Era (..)
+  , Era(..)
   , UseEra
   , VersionToSbe
   , useEra
   , protocolVersionToSbe
   ) where
 
-import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
+import Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra(..))
 import qualified Cardano.Api.Eras.Core as Api
 
-import           GHC.TypeLits
+import GHC.TypeLits
 
 -- | Users typically interact with the latest features on the mainnet or experiment with features
 -- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era
 -- and the next era (upcoming era).
 data BabbageEra
+
 data ConwayEra
 
 -- Allows us to gradually change the api without breaking things.
@@ -56,8 +56,9 @@ After a hardfork, 'cardano-api' should be updated promptly to reflect
 the new mainnet era in 'CurrentEra'.
 
 -}
-data Era version where
+data Era version
   -- | The era currently active on Cardano's mainnet.
+ where
   CurrentEraInternal :: Era BabbageEra
   -- | The era planned for the next hardfork on Cardano's mainnet.
   UpcomingEraInternal :: Era ConwayEra
@@ -106,8 +107,6 @@ protocolVersionToSbe CurrentEraInternal = Just ShelleyBasedEraBabbage
 protocolVersionToSbe UpcomingEraInternal = Nothing
 @
 -}
-
-
 {- | 'CurrentEraInternal' and 'UpcomingEraInternal' are for internal use only.
 The above restriction combined with the following pattern synonyms
 prevents a user from pattern matching on 'Era era' and
@@ -123,7 +122,6 @@ doThing = \case
 Consumers of this library must pick one of the two eras while
 this library is responsibile for what happens at the boundary of the eras.
 -}
-
 pattern CurrentEra :: Era BabbageEra
 pattern CurrentEra = CurrentEraInternal
 
@@ -132,16 +130,12 @@ pattern UpcomingEra = UpcomingEraInternal
 
 {-# COMPLETE CurrentEra, UpcomingEra #-}
 
-protocolVersionToSbe
-  :: Era version
-  -> Maybe (ShelleyBasedEra (VersionToSbe version))
+protocolVersionToSbe :: Era version -> Maybe (ShelleyBasedEra (VersionToSbe version))
 protocolVersionToSbe CurrentEraInternal = Just ShelleyBasedEraBabbage
 protocolVersionToSbe UpcomingEraInternal = Nothing
 
 -------------------------------------------------------------------------
-
 -- | Type class interface for the 'Era' type.
-
 class UseEra version where
   useEra :: Era version
 
@@ -151,13 +145,11 @@ instance UseEra BabbageEra where
 instance UseEra ConwayEra where
   useEra = UpcomingEra
 
-
 -- | After a hardfork there is usually no planned upcoming era
 -- that we are able to experiment with. We force a type era
 -- in this instance. See docs above.
 data EraCurrentlyNonExistent
 
-type family UninhabitableType a  where
-  UninhabitableType EraCurrentlyNonExistent = TypeError ('Text "There is currently no planned upcoming era. Use CurrentEra instead.")
-
-
+type family UninhabitableType a where
+  UninhabitableType EraCurrentlyNonExistent = TypeError
+    ('Text "There is currently no planned upcoming era. Use CurrentEra instead.")

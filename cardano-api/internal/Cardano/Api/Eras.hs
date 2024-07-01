@@ -9,9 +9,8 @@ module Cardano.Api.Eras
   , AlonzoEra
   , BabbageEra
   , ConwayEra
-
-    -- * CardanoEra
-  , CardanoEra(..)
+  , -- * CardanoEra
+    CardanoEra(..)
   , IsCardanoEra(..)
   , AnyCardanoEra(..)
   , anyCardanoEra
@@ -20,11 +19,9 @@ module Cardano.Api.Eras
   , cardanoEraConstraints
   , CardanoLedgerEra
   , ToCardanoEra(..)
-
-    -- * IsEon
-  , Eon(..)
+  , -- * IsEon
+    Eon(..)
   , EraInEon(..)
-
   , inEonForEraMaybe
   , forEraInEon
   , forEraInEonMaybe
@@ -32,22 +29,19 @@ module Cardano.Api.Eras
   , maybeEon
   , monoidForEraInEon
   , monoidForEraInEonA
-
-    -- * Data family instances
-  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
-
-    -- * Era case handling
-
+  , -- * Data family instances
+    AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra,
+       AsAlonzoEra, AsBabbageEra, AsConwayEra)
+  , -- * Era case handling
     -- ** Case on CardanoEra
-  , caseByronOrShelleyBasedEra
-
-    -- ** Case on ShelleyBasedEra
-  , caseByronToAlonzoOrBabbageEraOnwards
+    caseByronOrShelleyBasedEra
+  , -- ** Case on ShelleyBasedEra
+    caseByronToAlonzoOrBabbageEraOnwards
   , caseShelleyToAllegraOrMaryEraOnwards
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
   ) where
 
-import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Core
+import Cardano.Api.Eras.Case
+import Cardano.Api.Eras.Core
