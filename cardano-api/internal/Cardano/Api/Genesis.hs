@@ -1,8 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Genesis
   ( ShelleyGenesis(..)
@@ -32,17 +36,15 @@ module Cardano.Api.Genesis
 
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
-import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.IO
-import           Cardano.Api.Monad.Error (MonadError (throwError), liftEither, liftMaybe)
+import           Cardano.Api.Monad.Error
 import           Cardano.Api.Utils (unsafeBoundedRational)
 
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import qualified Cardano.Ledger.Alonzo.Genesis as L
 import           Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
 import           Cardano.Ledger.Api (CoinPerWord (..))
 import           Cardano.Ledger.BaseTypes as Ledger
@@ -62,26 +64,24 @@ import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified PlutusLedgerApi.Common as V2
 import qualified PlutusLedgerApi.V2 as V2
 
-import           Control.Monad
-import           Control.Monad.Error.Class (modifyError)
 import           Control.Monad.Trans.Fail.String (errorFail)
-import           Control.Monad.Trans.Maybe
 import qualified Data.Aeson as A
-import qualified Data.Aeson.KeyMap as A
-import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Default.Class as DefaultClass
 import           Data.Functor.Identity (Identity)
 import           Data.Int (Int64)
+import           Data.List (sortOn)
 import qualified Data.ListMap as ListMap
+import           Data.Map (Map)
 import qualified Data.Map.Strict as M
-import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Ratio
 import           Data.Text (Text)
 import qualified Data.Time as Time
 import           Data.Typeable
+import qualified Data.Vector as V
+import           GHC.Exts (IsList (..))
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import qualified Lens.Micro.Aeson as AL
@@ -164,7 +164,7 @@ shelleyGenesisDefaults =
         & ppTauL       .~ unsafeBR (1 % 10)     -- τ * remaining_reserves is sent to treasury every epoch
 
       -- genesis keys and initial funds
-    , sgGenDelegs             = Map.empty
+    , sgGenDelegs             = M.empty
     , sgStaking               = emptyGenesisStaking
     , sgInitialFunds          = ListMap.empty
     , sgMaxLovelaceSupply     = 0
@@ -219,29 +219,52 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                        , dvtCommitteeNoConfidence = 0 %! 1
                                                        }
 
-decodeAlonzoGenesis :: MonadError String m
+decodeAlonzoGenesis :: forall era t m. MonadTransError String t m
                     => AlonzoEraOnwards era
                     -> LBS.ByteString
-                    -> m AlonzoGenesis
+                    -> t m AlonzoGenesis
 decodeAlonzoGenesis aeo genesisBs = modifyError ("Cannot decode Alonzo genesis: " <>) $ do
   genesisValue :: A.Value <- liftEither $ A.eitherDecode genesisBs
-  let genesisValue' = (AL.key "costModels" . AL.key "PlutusV2" . AL._Object) %~ setDefaultValues $ genesisValue
-  genesis <- case A.fromJSON genesisValue' of
-    A.Success a -> pure a
-    A.Error e -> throwError e
-  forEraInEon @ConwayEraOnwards (toCardanoEra aeo)
-    -- chop off v2 params if we're < Conway
-    (chopOffOptionalV2Params genesis)
-    (pure . const genesis)
+  -- Making a fixup of a costmodel is easier before JSON deserialization. This also saves us from building
+  -- plutus' EvaluationContext one more time after cost model update.
+  genesisValue' <- (AL.key "costModels" . AL.key "PlutusV2" . AL._Value) setCostModelDefaultValues genesisValue
+  fromJsonE genesisValue'
   where
-    setDefaultValues cm = A.union cm costModelV2Extension
+    setCostModelDefaultValues :: A.Value -> ExceptT String m A.Value
+    setCostModelDefaultValues = \case
 
-    costModelV2Extension :: A.Object
-    costModelV2Extension = errorFail $ do
-      A.Object obj <- pure . A.toJSON . M.fromList $
-        zip optionalV2costModelParams (repeat @Int64 maxBound)
-      pure obj
+      obj@(A.Object _) -> do
+        -- decode cost model into a map first
+        costModel :: Map V2.ParamName Int64 <- modifyError ("Decoding cost model object: " <> ) $ fromJsonE obj
+        setCostModelDefaultValues
+          . A.toJSON -- convert to an array representation of Int64 values
+          . fmap snd
+          . sortOn fst -- ensure proper order of params in the list
+          . toList
+          . (`M.union` costModelDefaultValues) -- add default values of missing params
+          $ costModel
 
+      A.Array vec
+        | V.length vec < costModelExpectedLength -> pure . A.Array . V.take costModelExpectedLength $ vec <> (A.toJSON <$> optionalCostModelDefaultValues)
+        | V.length vec > costModelExpectedLength -> pure . A.Array $ V.take costModelExpectedLength vec
+
+      other -> pure other
+
+    costModelExpectedLength :: Int
+    costModelExpectedLength
+      | isConwayOnwards = length allCostModelParams
+      | otherwise = L.costModelParamsCount L.PlutusV2 -- Babbage
+
+    optionalCostModelDefaultValues :: (Item l ~ Int64, IsList l) => l
+    optionalCostModelDefaultValues = fromList $ replicate (length optionalV2costModelParams) maxBound
+
+    costModelDefaultValues :: Map V2.ParamName Int64
+    costModelDefaultValues = fromList $ map (, maxBound) allCostModelParams
+
+    allCostModelParams :: [V2.ParamName]
+    allCostModelParams = [minBound..maxBound]
+
+    optionalV2costModelParams :: [Text]
     optionalV2costModelParams = map V2.showParamName
       [ V2.IntegerToByteString'cpu'arguments'c0
       , V2.IntegerToByteString'cpu'arguments'c1
@@ -255,24 +278,13 @@ decodeAlonzoGenesis aeo genesisBs = modifyError ("Cannot decode Alonzo genesis: 
       , V2.ByteStringToInteger'memory'arguments'slope
       ]
 
-    chopOffOptionalV2Params g = fmap (fromMaybe g) . runMaybeT $ do
-      costModelValues <- hoistMaybe
-        . fmap L.getCostModelParams
-        . M.lookup L.PlutusV2
-        . L.costModelsValid
-        $ L.agCostModels g
-      let expectedParamsCount = L.costModelParamsCount L.PlutusV2
-          trimmedParams = take expectedParamsCount costModelValues
-      -- this is a redundant check, but lets us know that we're doing right things here
-      when (length trimmedParams /= expectedParamsCount) $ do
-        throwError $ "Expected " <> show expectedParamsCount <> " V2 cost model parameters, but got " <> show (length trimmedParams)
-      updatedCostModel <- liftEither . first show $ L.mkCostModel L.PlutusV2 trimmedParams
-      let updatedCostModels = L.updateCostModels
-            (L.agCostModels g)
-            (L.mkCostModels $ M.singleton L.PlutusV2 updatedCostModel)
+    fromJsonE :: A.FromJSON a => A.Value -> ExceptT String m a
+    fromJsonE v =
+      case A.fromJSON v of
+        A.Success a -> pure a
+        A.Error e -> throwError e
 
-      pure $ g { L.agCostModels = updatedCostModels }
-
+    isConwayOnwards = isJust $ forEraMaybeEon @ConwayEraOnwards (toCardanoEra aeo)
 
 -- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
@@ -293,7 +305,7 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                                      , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
                                      }
   where
-    apiCostModels = mkCostModelsLenient $ Map.fromList [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
+    apiCostModels = mkCostModelsLenient $ fromList [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
                                                        , (fromIntegral $ fromEnum PlutusV2, defaultV2CostModel)
                                                        ]
       where

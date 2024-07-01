@@ -1,10 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
-
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Api.Genesis
   ( tests
@@ -12,7 +9,6 @@ module Test.Cardano.Api.Genesis
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Genesis
-import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Alonzo.Genesis as L
@@ -39,7 +35,7 @@ prop_reading_plutus_v2_costmodel
 prop_reading_plutus_v2_costmodel aeo cmf = H.propertyOnce $ do
   H.noteShow_ $ "Era: " <> pshow aeo
   H.noteShow_ $ "Cost model type: " <> show cmf
-  (genesis, costModelValues) <- loadPlutusV2CostModelFromGenesis aeo (getGenesisFile cmf)
+  (_genesis, costModelValues) <- loadPlutusV2CostModelFromGenesis aeo (getGenesisFile cmf)
 
   H.noteShow_ costModelValues
 
@@ -54,6 +50,9 @@ prop_reading_plutus_v2_costmodel aeo cmf = H.propertyOnce $ do
         else last10CostModelValues === replicate 10 1
     else
       length costModelValues === 175
+
+  -- let genesisBs = CBOR.serialize' genesis
+  -- genesis' <- H.leftFail $ CBOR.decodeFullDecoder "AlonzoGenesis" CBOR.fromCBOR (LBS.fromStrict genesisBs) -- :: Either CBOR.DecoderError L.AlonzoGenesis
 
   -- TODO test cbor round trip here!
   -- genesis'
@@ -111,14 +110,12 @@ loadPlutusV2CostModelFromGenesis
   -> m (L.AlonzoGenesis, [Int64])
 loadPlutusV2CostModelFromGenesis aeo filePath = withFrozenCallStack $ do
   genesisBs <- H.lbsReadFile filePath
-  genesis <- H.leftFail $ decodeAlonzoGenesis aeo genesisBs
+  genesis <- H.leftFailM . runExceptT $ decodeAlonzoGenesis aeo genesisBs
   fmap ((genesis,) . L.getCostModelParams)
     . H.nothingFail
     . M.lookup L.PlutusV2
     . L.costModelsValid
     $ L.agCostModels genesis
-
-deriving instance Show V2.ParamName
 
 -- * List all test cases
 
