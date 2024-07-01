@@ -163,14 +163,14 @@ library internal
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-crypto-wrapper ^>= 1.5
                       , cardano-data >= 1.0
-                      , cardano-ledger-alonzo >= 1.8.1
+                      , cardano-ledger-alonzo >= 1.10
                       , cardano-ledger-allegra >= 1.5
                       , cardano-ledger-api ^>= 1.9.2
-                      , cardano-ledger-babbage >= 1.8.1
+                      , cardano-ledger-babbage >= 1.8.2
                       , cardano-ledger-binary ^>= 1.3.3
                       , cardano-ledger-byron >= 1.0.1
-                      , cardano-ledger-conway >= 1.15
-                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
+                      , cardano-ledger-conway >= 1.16
+                      , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.13.2
                       , cardano-ledger-mary >= 1.6.1
                       , cardano-ledger-shelley >= 1.12
                       , cardano-protocol-tpraos >= 1.2
@@ -194,8 +194,8 @@ library internal
                       , mtl
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-consensus ^>= 0.19
-                      , ouroboros-consensus-cardano ^>= 0.17
+                      , ouroboros-consensus ^>= 0.20
+                      , ouroboros-consensus-cardano ^>= 0.18
                       , ouroboros-consensus-diffusion ^>= 0.17
                       , ouroboros-consensus-protocol ^>= 0.9.0.1
                       , ouroboros-network
