@@ -89,6 +89,7 @@ module Cardano.Api.LedgerState
   where
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core (forEraMaybeEon)
@@ -286,16 +287,17 @@ instance Error LedgerStateError where
 -- | Get the environment and initial ledger state.
 initialLedgerState
   :: MonadIOTransError InitialLedgerStateError t m
-  => NodeConfigFile 'In
+  => AlonzoEraOnwards aeo
+  -> NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> t m (Env, LedgerState)
   -- ^ The environment and initial ledger state
-initialLedgerState nodeConfigFile = do
+initialLedgerState aeo nodeConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
   -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
   config <- modifyError ILSEConfigFile (readNodeConfig nodeConfigFile)
-  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig config)
+  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig aeo config)
   env <- modifyError ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
   return (env, ledgerState)
@@ -1187,12 +1189,13 @@ shelleyPraosNonce genesisHash =
 
 readCardanoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
+  => AlonzoEraOnwards aeo
+  -> NodeConfig
   -> t m GenesisConfig
-readCardanoGenesisConfig enc = do
+readCardanoGenesisConfig aeo enc = do
   byronGenesis <- readByronGenesisConfig enc
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
-  alonzoGenesis <- readAlonzoGenesisConfig enc
+  alonzoGenesis <- readAlonzoGenesisConfig aeo enc
   conwayGenesis <- readConwayGenesisConfig enc
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
@@ -1256,12 +1259,13 @@ readShelleyGenesisConfig enc = do
 
 readAlonzoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
+  => AlonzoEraOnwards era
+  -> NodeConfig
   -> t m AlonzoGenesis
-readAlonzoGenesisConfig enc = do
+readAlonzoGenesisConfig aeo enc = do
   let file = ncAlonzoGenesisFile enc
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
-    $ readAlonzoGenesis file (ncAlonzoGenesisHash enc)
+    $ readAlonzoGenesis aeo file (ncAlonzoGenesisHash enc)
 
 -- | If the conway genesis file does not exist we simply put in a default.
 readConwayGenesisConfig
@@ -1326,16 +1330,17 @@ renderShelleyGenesisError sge =
           ]
 
 readAlonzoGenesis
-  :: forall m t. MonadIOTransError AlonzoGenesisError t m
-  => File AlonzoGenesis 'In
+  :: forall m t era. MonadIOTransError AlonzoGenesisError t m
+  => AlonzoEraOnwards era
+  -> File AlonzoGenesis 'In
   -> GenesisHashAlonzo
   -> t m AlonzoGenesis
-readAlonzoGenesis (File file) expectedGenesisHash = do
+readAlonzoGenesis aeo (File file) expectedGenesisHash = do
     content <- modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
     let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
     checkExpectedGenesisHash genesisHash
-    -- FIXME!!!
-    liftEither . first (AlonzoGenesisDecodeError file . Text.pack) $ Aeson.eitherDecodeStrict' content
+    modifyError (AlonzoGenesisDecodeError file . Text.pack) $
+      decodeAlonzoGenesis aeo content
   where
     checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
     checkExpectedGenesisHash actual =

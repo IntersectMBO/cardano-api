@@ -485,13 +485,13 @@ instance Pretty MuxError where
 
 
 instance A.FromJSON V2.ParamName where
-  parseJSON = A.withText "ParamName" parsePlutusV2paramName
+  parseJSON = A.withText "ParamName" parsePlutusParamName
 
 instance A.FromJSONKey V2.ParamName where
-  fromJSONKey = A.FromJSONKeyTextParser parsePlutusV2paramName
+  fromJSONKey = A.FromJSONKeyTextParser parsePlutusParamName
 
-parsePlutusV2paramName :: (P.IsParamName a, MonadFail f) => T.Text -> f a
-parsePlutusV2paramName t =
+parsePlutusParamName :: (P.IsParamName a, MonadFail f) => T.Text -> f a
+parsePlutusParamName t =
   case P.readParamName t of
     Just p -> pure p
     Nothing -> fail $ "Cannot parse cost model parameter name: " <> T.unpack t
