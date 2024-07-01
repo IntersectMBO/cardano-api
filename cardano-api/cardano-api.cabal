@@ -311,12 +311,16 @@ test-suite cardano-api-test
                       , cardano-api
                       , cardano-api:gen
                       , cardano-api:internal
+                      , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
                       , cardano-ledger-api ^>= 1.9
+                      , cardano-ledger-binary
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
+                      , cardano-protocol-tpraos
+                      , cardano-slotting
                       , containers
                       , directory
                       , hedgehog >= 1.1
@@ -324,12 +328,18 @@ test-suite cardano-api-test
                       , hedgehog-quickcheck
                       , interpolatedstring-perl6
                       , mtl
+                      , ouroboros-consensus
+                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus-protocol
+                      , ouroboros-network-api
                       , QuickCheck
                       , tasty
                       , tasty-hedgehog
                       , tasty-quickcheck
+                      , time
 
   other-modules:        Test.Cardano.Api.Crypto
+                        Test.Cardano.Api.EpochLeadership
                         Test.Cardano.Api.Eras
                         Test.Cardano.Api.IO
                         Test.Cardano.Api.Json
