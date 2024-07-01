@@ -311,12 +311,16 @@ test-suite cardano-api-test
                       , cardano-api
                       , cardano-api:gen
                       , cardano-api:internal
+                      , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
                       , cardano-ledger-api ^>= 1.9
+                      , cardano-ledger-binary
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
+                      , cardano-protocol-tpraos
+                      , cardano-slotting
                       , containers
                       , directory
                       , hedgehog >= 1.1
@@ -324,12 +328,18 @@ test-suite cardano-api-test
                       , hedgehog-quickcheck
                       , interpolatedstring-perl6
                       , mtl
+                      , ouroboros-consensus
+                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus-protocol
+                      , ouroboros-network-api
                       , QuickCheck
                       , tasty
                       , tasty-hedgehog
                       , tasty-quickcheck
+                      , time
 
   other-modules:        Test.Cardano.Api.Crypto
+                        Test.Cardano.Api.EpochLeadership
                         Test.Cardano.Api.Eras
                         Test.Cardano.Api.IO
                         Test.Cardano.Api.Json
@@ -369,11 +379,9 @@ test-suite cardano-api-golden
                       , cardano-ledger-alonzo
                       , cardano-ledger-api ^>= 1.9
                       , cardano-ledger-babbage >= 1.6.0
-                      , cardano-ledger-binary
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , cardano-ledger-shelley
                       , cardano-ledger-shelley-test >= 1.2.0.1
-                      , cardano-protocol-tpraos
                       , cardano-slotting ^>= 0.2.0.0
                       , containers
                       , errors
@@ -381,10 +389,6 @@ test-suite cardano-api-golden
                       , hedgehog >= 1.1
                       , hedgehog-extras ^>= 0.6.1.0
                       , microlens
-                      , ouroboros-consensus
-                      , ouroboros-consensus-cardano
-                      , ouroboros-consensus-protocol
-                      , ouroboros-network-api
                       , parsec
                       , plutus-core ^>= 1.30
                       , plutus-ledger-api ^>= 1.30
@@ -397,8 +401,7 @@ test-suite cardano-api-golden
 
   build-tool-depends:   tasty-discover:tasty-discover
 
-  other-modules:        Test.Golden.Cardano.Api.EpochLeadership
-                      , Test.Golden.Cardano.Api.Genesis
+  other-modules:        Test.Golden.Cardano.Api.Genesis
                       , Test.Golden.Cardano.Api.Ledger
                       , Test.Golden.Cardano.Api.Typed.Script
                       , Test.Golden.Cardano.Api.Value

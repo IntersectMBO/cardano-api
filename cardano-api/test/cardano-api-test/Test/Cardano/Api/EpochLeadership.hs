@@ -3,8 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Golden.Cardano.Api.EpochLeadership
-  ( test_golden_currentEpochEligibleLeadershipSlots
+module Test.Cardano.Api.EpochLeadership
+  ( tests
   ) where
 
 import           Cardano.Api (Key (verificationKeyHash), deterministicSigningKey,
@@ -41,20 +41,23 @@ import qualified Data.Set as Set
 import           Data.Time.Clock (secondsToNominalDiffTime)
 
 import qualified Hedgehog as H
-import           Test.Tasty (TestTree)
+import qualified Hedgehog.Extras as H
+import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-encodeProtocolState
-  :: ToCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-  => Consensus.ChainDepState (ConsensusProtocol era)
-  -> ProtocolState era
-encodeProtocolState cds = ProtocolState (Serialised pbs)
-  where pbs = serialize (toCBOR cds)
+--
+-- The list of all tests
+--
+tests :: TestTree
+tests =
+  testGroup "Epoch Leadership"
+    [ test_currentEpochEligibleLeadershipSlots
+    ]
 
-test_golden_currentEpochEligibleLeadershipSlots :: TestTree
-test_golden_currentEpochEligibleLeadershipSlots =
-  testProperty "golden EpochLeadership" $
-  H.property $ do
+test_currentEpochEligibleLeadershipSlots :: TestTree
+test_currentEpochEligibleLeadershipSlots =
+  testProperty "currentEpochEligibleLeadershipSlots happy path" $
+  H.propertyOnce $ do
     let sbe = ShelleyBasedEraShelley
         sGen = shelleyGenesisDefaults
         eInfo = EpochInfo { epochInfoSize_ = const (Right (EpochSize 100))
@@ -96,3 +99,10 @@ test_golden_currentEpochEligibleLeadershipSlots =
         expectedEligibleSlots = [ SlotNo 406, SlotNo 432, SlotNo 437, SlotNo 443, SlotNo 484 ]
     eligibleSlots <- H.evalEither eEligibleSlots
     eligibleSlots H.=== Set.fromList expectedEligibleSlots
+  where
+  encodeProtocolState
+    :: ToCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+    => Consensus.ChainDepState (ConsensusProtocol era)
+    -> ProtocolState era
+  encodeProtocolState cds = ProtocolState (Serialised pbs)
+    where pbs = serialize (toCBOR cds)
