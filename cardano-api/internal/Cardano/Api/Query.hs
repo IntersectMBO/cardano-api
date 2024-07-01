@@ -74,6 +74,7 @@ module Cardano.Api.Query (
     getSlotForRelativeTime,
 
     -- * Internal conversion functions
+    consensusQueryInEraInMode,
     toLedgerUTxO,
     fromLedgerUTxO,
     fromConsensusQueryResultMismatch,

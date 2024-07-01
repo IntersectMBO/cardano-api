@@ -8,8 +8,8 @@
 
 module Cardano.Api.Query.New.ShelleyBased.Expr
   ( ShelleyBasedQueryError(..)
-  , executeLocalStateQueryExprShelleyBased
-  , queryExprShelleyBased
+ -- , executeLocalStateQueryExprShelleyBased
+ -- , queryExprShelleyBased
   ) where
 
 import           Cardano.Api.Block
@@ -18,7 +18,9 @@ import           Cardano.Api.IPC.Monad
 import           Cardano.Api.IPC.Version
 import           Cardano.Api.Query
 import           Cardano.Api.Query.New.EraIndependent.Query
+import           Cardano.Api.Query.New.IPC.Generic
 import           Cardano.Api.Query.New.ShelleyBased.Query
+import qualified Cardano.Api.Query.New.ShelleyBased.Query as ShelleyBased
 
 import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
@@ -55,8 +57,10 @@ executeLocalStateQueryExprShelleyBased connectInfo target f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
 
-  connectToLocalNodeWithVersion
+  connectToLocalNodeWithVersionGeneric
     connectInfo
+    ShelleyBased.toConsensusQuery
+    ShelleyBased.fromConsensusQuery
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = NoLocalChainSyncClient
@@ -75,20 +79,20 @@ getNtcVersion = LocalStateQueryExpr ask
 
 
 -- | Use 'queryExprShelleyBased' in a do block to construct monadic local state queries.
-queryExprShelleyBased
-  :: QueryShelleyBasedEra era a
-  -> LocalStateQueryExprWithError ShelleyBasedQueryError block point (QueryShelleyBasedEra era) r IO a
-queryExprShelleyBased query = do
-  let minNtcVersion = nodeToClientVersionOf query
-  ntcVersion <- lift getNtcVersion
-  if ntcVersion >= minNtcVersion
-    then
-      lift . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f -> pure $
-        Net.Query.SendMsgQuery query $
-          Net.Query.ClientStQuerying
-          { Net.Query.recvMsgResult = f
-          }
-    else left $ ShelleyBasedEquerySimpleError $ IndependentEraQueryUnsupportedVersion $ UnsupportedNtcVersionError minNtcVersion ntcVersion
+--queryExprShelleyBased
+--  :: QueryShelleyBasedEra era a
+--  -> LocalStateQueryExprWithError ShelleyBasedQueryError block point (QueryShelleyBasedEra era) r IO a
+--queryExprShelleyBased query = do
+--  let minNtcVersion = nodeToClientVersionOf query
+--  ntcVersion <- lift getNtcVersion
+--  if ntcVersion >= minNtcVersion
+--    then
+--      lift . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f -> pure $
+--        Net.Query.SendMsgQuery query $
+--          Net.Query.ClientStQuerying
+--          { Net.Query.recvMsgResult = f
+--          }
+--    else left $ ShelleyBasedEquerySimpleError $ IndependentEraQueryUnsupportedVersion $ UnsupportedNtcVersionError minNtcVersion ntcVersion
 
 -- | Use 'queryExprShelleyBased' in a do block to construct monadic local state queries.
 setupLocalStateQueryExpr ::

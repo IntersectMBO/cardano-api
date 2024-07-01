@@ -25,6 +25,7 @@ module Cardano.Api.IPC (
     LocalNodeClientProtocols(..),
     LocalChainSyncClient(..),
     LocalNodeClientProtocolsInMode,
+    LocalNodeClientProtocolsForBlock(..),
 
     -- ** Modes
     -- | TODO move to Cardano.Api
@@ -74,6 +75,13 @@ module Cardano.Api.IPC (
     NodeToClientVersion(..),
 
     UnsupportedNtcVersionError(..),
+
+    -- *** Internal
+    convLocalChainSyncClient,
+    convLocalChainSyncClientPipelined,
+    convLocalTxMonitoringClient,
+    convLocalTxSubmissionClient,
+    mkVersionedProtocols,
   ) where
 
 import           Cardano.Api.Block

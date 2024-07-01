@@ -199,6 +199,7 @@ library internal
                       , microlens
                       , mtl
                       , network
+                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-consensus ^>= 0.19
                       , ouroboros-consensus-cardano ^>= 0.17
