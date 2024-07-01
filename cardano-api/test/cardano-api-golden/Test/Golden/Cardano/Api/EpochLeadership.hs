@@ -92,7 +92,7 @@ test_golden_currentEpochEligibleLeadershipSlots =
                        ]
         serPoolDistr = SerialisedPoolDistribution (Serialised (serialize (toByronCBOR poolDistr)))
         currentEpoch = EpochNo 4
-        eEligibileSlots = currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid vrskey1 serPoolDistr currentEpoch
+        eEligibleSlots = currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid vrskey1 serPoolDistr currentEpoch
         expectedEligibleSlots = [ SlotNo 406, SlotNo 432, SlotNo 437, SlotNo 443, SlotNo 484 ]
-    eligibileSlots <- H.evalEither eEligibileSlots
-    eligibileSlots H.=== Set.fromList expectedEligibleSlots
+    eligibleSlots <- H.evalEither eEligibleSlots
+    eligibleSlots H.=== Set.fromList expectedEligibleSlots
