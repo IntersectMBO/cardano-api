@@ -969,8 +969,7 @@ module Cardano.Api (
     DRepExtendedKey,
     DRepMetadata,
     DRepMetadataReference,
-    DRepMetadataValidationError,
-    validateAndHashDRepMetadata,
+    hashDRepMetadata,
 
     -- ** Governance related certificates
     AnchorDataHash(..),

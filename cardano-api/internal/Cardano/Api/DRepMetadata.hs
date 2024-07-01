@@ -7,8 +7,7 @@
 module Cardano.Api.DRepMetadata (
     -- * DRep off-chain metadata
     DRepMetadata(..),
-    validateAndHashDRepMetadata,
-    DRepMetadataValidationError(..),
+    hashDRepMetadata,
 
     -- * Data family instances
     AsType(..),
@@ -16,7 +15,6 @@ module Cardano.Api.DRepMetadata (
   ) where
 
 import           Cardano.Api.Eras
-import           Cardano.Api.Error
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Byron
@@ -29,9 +27,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import           Data.Either.Combinators (maybeToRight)
-import           Prettyprinter
 
 -- ----------------------------------------------------------------------------
 -- DRep metadata
@@ -57,37 +53,12 @@ instance SerialiseAsRawBytes (Hash DRepMetadata) where
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash DRepMetadata") $
       DRepMetadataHash <$> Crypto.hashFromBytes bs
 
--- | A drep metadata validation error.
-data DRepMetadataValidationError
-  = DRepMetadataInvalidLengthError
-    -- ^ The length of the JSON-encoded drep metadata exceeds the
-    -- maximum.
-      !Int
-      -- ^ Maximum byte length.
-      !Int
-      -- ^ Actual byte length.
-  deriving Show
-
-instance Error DRepMetadataValidationError where
-  prettyError = \case
-    DRepMetadataInvalidLengthError maxLen actualLen ->
-      mconcat
-        [ "DRep metadata must consist of at most "
-        , pretty maxLen
-        , " bytes, but it consists of "
-        , pretty actualLen
-        , " bytes."
-        ]
-
--- | Decode and validate the provided JSON-encoded bytes as 'DRepMetadata'.
--- Return the decoded metadata and the hash of the original bytes.
-validateAndHashDRepMetadata
+-- | Return the decoded metadata and the hash of the original bytes.
+hashDRepMetadata
   :: ByteString
-  -> Either DRepMetadataValidationError (DRepMetadata, Hash DRepMetadata)
-validateAndHashDRepMetadata bs
-  -- TODO confirm if there are size limits to the DRep metadata
-  | BS.length bs <= 512 = do
-      let md = DRepMetadata bs
-      let mdh = DRepMetadataHash (Crypto.hashWith id bs)
-      return (md, mdh)
-  | otherwise = Left $ DRepMetadataInvalidLengthError 512 (BS.length bs)
+  -> (DRepMetadata, Hash DRepMetadata)
+hashDRepMetadata bs =
+  let md  = DRepMetadata bs
+      mdh = DRepMetadataHash (Crypto.hashWith id bs) in
+  (md, mdh)
+
