@@ -1,10 +1,18 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Genesis
   ( ShelleyGenesis(..)
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
+  , decodeAlonzoGenesis
   , conwayGenesisDefaults
 
   -- ** Configuration
@@ -26,7 +34,11 @@ module Cardano.Api.Genesis
   , ConwayGenesisFile
   ) where
 
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eras.Core
 import           Cardano.Api.IO
+import           Cardano.Api.Monad.Error
 import           Cardano.Api.Utils (unsafeBoundedRational)
 
 import qualified Cardano.Chain.Genesis
@@ -42,25 +54,36 @@ import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
                    PoolVotingThresholds (..), UpgradeConwayPParams (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Plutus (Language (..))
+import qualified Cardano.Ledger.Plutus as L
 import           Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
 import           Cardano.Ledger.Shelley.Core
 import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGenesis (..),
                    emptyGenesisStaking)
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
+import qualified PlutusLedgerApi.Common as V2
+import qualified PlutusLedgerApi.V2 as V2
 
 import           Control.Monad.Trans.Fail.String (errorFail)
+import qualified Data.Aeson as A
 import           Data.ByteString (ByteString)
 import qualified Data.Default.Class as DefaultClass
 import           Data.Functor.Identity (Identity)
+import           Data.Int (Int64)
+import           Data.List (sortOn)
 import qualified Data.ListMap as ListMap
-import qualified Data.Map.Strict as Map
+import           Data.Map (Map)
+import qualified Data.Map.Strict as M
+import           Data.Maybe
 import           Data.Ratio
 import           Data.Text (Text)
 import qualified Data.Time as Time
 import           Data.Typeable
+import qualified Data.Vector as V
+import           GHC.Exts (IsList (..))
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
+import qualified Lens.Micro.Aeson as AL
 
 import           Test.Cardano.Ledger.Core.Rational ((%!))
 import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
@@ -140,7 +163,7 @@ shelleyGenesisDefaults =
         & ppTauL       .~ unsafeBR (1 % 10)     -- τ * remaining_reserves is sent to treasury every epoch
 
       -- genesis keys and initial funds
-    , sgGenDelegs             = Map.empty
+    , sgGenDelegs             = M.empty
     , sgStaking               = emptyGenesisStaking
     , sgInitialFunds          = ListMap.empty
     , sgMaxLovelaceSupply     = 0
@@ -152,7 +175,7 @@ shelleyGenesisDefaults =
     unsafeBR = unsafeBoundedRational
 
 -- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
--- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
+-- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
 conwayGenesisDefaults :: ConwayGenesis StandardCrypto
 conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayParams
                                       , cgConstitution = DefaultClass.def
@@ -195,8 +218,75 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                        , dvtCommitteeNoConfidence = 0 %! 1
                                                        }
 
+decodeAlonzoGenesis :: forall era t m. MonadTransError String t m
+                    => AlonzoEraOnwards era
+                    -> ByteString
+                    -> t m AlonzoGenesis
+decodeAlonzoGenesis aeo genesisBs = modifyError ("Cannot decode Alonzo genesis: " <>) $ do
+  genesisValue :: A.Value <- liftEither $ A.eitherDecode (BS.fromStrict genesisBs)
+  -- Making a fixup of a costmodel is easier before JSON deserialization. This also saves us from building
+  -- plutus' EvaluationContext one more time after cost model update.
+  genesisValue' <- (AL.key "costModels" . AL.key "PlutusV2" . AL._Value) setCostModelDefaultValues genesisValue
+  fromJsonE genesisValue'
+  where
+    setCostModelDefaultValues :: A.Value -> ExceptT String m A.Value
+    setCostModelDefaultValues = \case
+
+      obj@(A.Object _) -> do
+        -- decode cost model into a map first
+        costModel :: Map V2.ParamName Int64 <- modifyError ("Decoding cost model object: " <> ) $ fromJsonE obj
+        setCostModelDefaultValues
+          . A.toJSON -- convert to an array representation of Int64 values
+          . fmap snd
+          . sortOn fst -- ensure proper order of params in the list
+          . toList
+          . (`M.union` costModelDefaultValues) -- add default values of missing params
+          $ costModel
+
+      A.Array vec
+        | V.length vec < costModelExpectedLength -> pure . A.Array . V.take costModelExpectedLength $ vec <> (A.toJSON <$> optionalCostModelDefaultValues)
+        | V.length vec > costModelExpectedLength -> pure . A.Array $ V.take costModelExpectedLength vec
+
+      other -> pure other
+
+    costModelExpectedLength :: Int
+    costModelExpectedLength
+      | isConwayOnwards = length allCostModelParams
+      | otherwise = L.costModelParamsCount L.PlutusV2 -- Babbage
+
+    optionalCostModelDefaultValues :: (Item l ~ Int64, IsList l) => l
+    optionalCostModelDefaultValues = fromList $ replicate (length optionalV2costModelParams) maxBound
+
+    costModelDefaultValues :: Map V2.ParamName Int64
+    costModelDefaultValues = fromList $ map (, maxBound) allCostModelParams
+
+    allCostModelParams :: [V2.ParamName]
+    allCostModelParams = [minBound..maxBound]
+
+    optionalV2costModelParams :: [Text]
+    optionalV2costModelParams = map V2.showParamName
+      [ V2.IntegerToByteString'cpu'arguments'c0
+      , V2.IntegerToByteString'cpu'arguments'c1
+      , V2.IntegerToByteString'cpu'arguments'c2
+      , V2.IntegerToByteString'memory'arguments'intercept
+      , V2.IntegerToByteString'memory'arguments'slope
+      , V2.ByteStringToInteger'cpu'arguments'c0
+      , V2.ByteStringToInteger'cpu'arguments'c1
+      , V2.ByteStringToInteger'cpu'arguments'c2
+      , V2.ByteStringToInteger'memory'arguments'intercept
+      , V2.ByteStringToInteger'memory'arguments'slope
+      ]
+
+    fromJsonE :: A.FromJSON a => A.Value -> ExceptT String m a
+    fromJsonE v =
+      case A.fromJSON v of
+        A.Success a -> pure a
+        A.Error e -> throwError e
+
+    isConwayOnwards = isJust $ forEraMaybeEon @ConwayEraOnwards (toCardanoEra aeo)
+
 -- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
--- | Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
+-- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
 alonzoGenesisDefaults :: AlonzoGenesis
 alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 10000000
                                                           , prMem = 577 %! 10000
@@ -214,7 +304,7 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                                      , agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
                                      }
   where
-    apiCostModels = mkCostModelsLenient $ Map.fromList [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
+    apiCostModels = mkCostModelsLenient $ fromList [ (fromIntegral $ fromEnum PlutusV1, defaultV1CostModel)
                                                        , (fromIntegral $ fromEnum PlutusV2, defaultV2CostModel)
                                                        ]
       where
@@ -242,4 +332,6 @@ alonzoGenesisDefaults = AlonzoGenesis { agPrices = Prices { prSteps = 721 %! 100
                              , 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220
                              , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
                              , 32947, 10
+                             -- TODO add here those new alonzo cost parametes in conway era
+                             , 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 -- FIXME: REMOVEME
                              ]

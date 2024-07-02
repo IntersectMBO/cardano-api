@@ -191,6 +191,7 @@ library internal
                       , iproute
                       , memory
                       , microlens
+                      , microlens-aeson
                       , mtl
                       , network
                       , optparse-applicative-fork
@@ -316,6 +317,7 @@ test-suite cardano-api-test
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-crypto-test ^>= 1.5
                       , cardano-crypto-tests ^>= 2.1
+                      , cardano-ledger-alonzo
                       , cardano-ledger-api ^>= 1.9
                       , cardano-ledger-binary
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
@@ -332,6 +334,7 @@ test-suite cardano-api-test
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api
+                      , plutus-ledger-api
                       , QuickCheck
                       , tasty
                       , tasty-hedgehog
@@ -341,6 +344,7 @@ test-suite cardano-api-test
   other-modules:        Test.Cardano.Api.Crypto
                         Test.Cardano.Api.EpochLeadership
                         Test.Cardano.Api.Eras
+                        Test.Cardano.Api.Genesis
                         Test.Cardano.Api.IO
                         Test.Cardano.Api.Json
                         Test.Cardano.Api.KeysByron
