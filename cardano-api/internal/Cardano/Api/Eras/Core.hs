@@ -10,57 +10,54 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 
 -- | Cardano eras, sometimes we have to distinguish them.
---
 module Cardano.Api.Eras.Core
   ( -- * Eras
-    ByronEra
-  , ShelleyEra
-  , AllegraEra
-  , MaryEra
-  , AlonzoEra
-  , BabbageEra
-  , ConwayEra
+    ByronEra,
+    ShelleyEra,
+    AllegraEra,
+    MaryEra,
+    AlonzoEra,
+    BabbageEra,
+    ConwayEra,
 
     -- * CardanoEra
-  , CardanoEra(..)
-  , IsCardanoEra(..)
-  , AnyCardanoEra(..)
-  , anyCardanoEra
-  , InAnyCardanoEra(..)
-  , inAnyCardanoEra
-  , CardanoLedgerEra
-  , ToCardanoEra(..)
+    CardanoEra (..),
+    IsCardanoEra (..),
+    AnyCardanoEra (..),
+    anyCardanoEra,
+    InAnyCardanoEra (..),
+    inAnyCardanoEra,
+    CardanoLedgerEra,
+    ToCardanoEra (..),
 
     -- * IsEon
-  , Eon(..)
-  , EraInEon(..)
-  , inEonForEraMaybe
-  , forEraInEon
-  , forEraInEonMaybe
-  , forEraMaybeEon
-  , maybeEon
-  , monoidForEraInEon
-  , monoidForEraInEonA
+    Eon (..),
+    EraInEon (..),
+    inEonForEraMaybe,
+    forEraInEon,
+    forEraInEonMaybe,
+    forEraMaybeEon,
+    maybeEon,
+    monoidForEraInEon,
+    monoidForEraInEonA,
 
     -- * Data family instances
-  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
+    AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra),
+    CardanoEraConstraints,
+    cardanoEraConstraints,
+  )
+where
 
-  , CardanoEraConstraints
-  , cardanoEraConstraints
-  ) where
-
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Pretty
-
+import Cardano.Api.HasTypeProxy
+import Cardano.Api.Pretty
 import qualified Cardano.Ledger.Api as L
-
-import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
-import           Data.Kind
-import           Data.Maybe (isJust)
-import           Data.String (IsString)
+import Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
+import Data.Kind
+import Data.Maybe (isJust)
+import Data.String (IsString)
 import qualified Data.Text as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           Data.Typeable (Typeable, showsTypeRep, typeOf)
+import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import Data.Typeable (Typeable, showsTypeRep, typeOf)
 
 -- ----------------------------------------------------------------------------
 -- Eras
@@ -87,32 +84,32 @@ data BabbageEra
 data ConwayEra
 
 instance HasTypeProxy ByronEra where
-    data AsType ByronEra = AsByronEra
-    proxyToAsType _ = AsByronEra
+  data AsType ByronEra = AsByronEra
+  proxyToAsType _ = AsByronEra
 
 instance HasTypeProxy ShelleyEra where
-    data AsType ShelleyEra = AsShelleyEra
-    proxyToAsType _ = AsShelleyEra
+  data AsType ShelleyEra = AsShelleyEra
+  proxyToAsType _ = AsShelleyEra
 
 instance HasTypeProxy AllegraEra where
-    data AsType AllegraEra = AsAllegraEra
-    proxyToAsType _ = AsAllegraEra
+  data AsType AllegraEra = AsAllegraEra
+  proxyToAsType _ = AsAllegraEra
 
 instance HasTypeProxy MaryEra where
-    data AsType MaryEra = AsMaryEra
-    proxyToAsType _ = AsMaryEra
+  data AsType MaryEra = AsMaryEra
+  proxyToAsType _ = AsMaryEra
 
 instance HasTypeProxy AlonzoEra where
-    data AsType AlonzoEra = AsAlonzoEra
-    proxyToAsType _ = AsAlonzoEra
+  data AsType AlonzoEra = AsAlonzoEra
+  proxyToAsType _ = AsAlonzoEra
 
 instance HasTypeProxy BabbageEra where
-   data AsType BabbageEra = AsBabbageEra
-   proxyToAsType _ = AsBabbageEra
+  data AsType BabbageEra = AsBabbageEra
+  proxyToAsType _ = AsBabbageEra
 
 instance HasTypeProxy ConwayEra where
-   data AsType ConwayEra = AsConwayEra
-   proxyToAsType _ = AsConwayEra
+  data AsType ConwayEra = AsConwayEra
+  proxyToAsType _ = AsConwayEra
 
 -- ----------------------------------------------------------------------------
 -- Eon
@@ -124,86 +121,111 @@ class Eon (eon :: Type -> Type) where
   -- | Determine the value to use in an eon (a span of multiple eras).
   -- Note that the negative case is the first argument, and the positive case is the second as per
   -- the 'either' function convention.
-  inEonForEra :: ()
-    => a              -- ^ Value to use if the eon does not include the era
-    -> (eon era -> a) -- ^ Function to get the value to use if the eon includes the era
-    -> CardanoEra era -- ^ Era to check
-    -> a              -- ^ The value to use
+  inEonForEra ::
+    () =>
+    -- | Value to use if the eon does not include the era
+    a ->
+    -- | Function to get the value to use if the eon includes the era
+    (eon era -> a) ->
+    -- | Era to check
+    CardanoEra era ->
+    -- | The value to use
+    a
 
-inEonForEraMaybe :: ()
-  => Eon eon
-  => (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
-  -> CardanoEra era   -- ^ Era to check
-  -> Maybe a          -- ^ The value to use
+inEonForEraMaybe ::
+  () =>
+  (Eon eon) =>
+  -- | Function to get the value to use if the eon includes the era
+  (eon era -> a) ->
+  -- | Era to check
+  CardanoEra era ->
+  -- | The value to use
+  Maybe a
 inEonForEraMaybe yes =
   inEonForEra Nothing (Just . yes)
 
-forEraInEon :: ()
-  => Eon eon
-  => CardanoEra era   -- ^ Era to check
-  -> a                -- ^ Value to use if the eon does not include the era
-  -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
-  -> a                -- ^ The value to use
+forEraInEon ::
+  () =>
+  (Eon eon) =>
+  -- | Era to check
+  CardanoEra era ->
+  -- | Value to use if the eon does not include the era
+  a ->
+  -- | Function to get the value to use if the eon includes the era
+  (eon era -> a) ->
+  -- | The value to use
+  a
 forEraInEon era no yes =
   inEonForEra no yes era
 
-forEraInEonMaybe :: ()
-  => Eon eon
-  => CardanoEra era   -- ^ Era to check
-  -> (eon era -> a)   -- ^ Function to get the value to use if the eon includes the era
-  -> Maybe a          -- ^ The value to use
+forEraInEonMaybe ::
+  () =>
+  (Eon eon) =>
+  -- | Era to check
+  CardanoEra era ->
+  -- | Function to get the value to use if the eon includes the era
+  (eon era -> a) ->
+  -- | The value to use
+  Maybe a
 forEraInEonMaybe era yes =
   forEraInEon era Nothing (Just . yes)
 
-forEraMaybeEon :: ()
-  => Eon eon
-  => CardanoEra era   -- ^ Era to check
-  -> Maybe (eon era)  -- ^ The eon if supported in the era
+forEraMaybeEon ::
+  () =>
+  (Eon eon) =>
+  -- | Era to check
+  CardanoEra era ->
+  -- | The eon if supported in the era
+  Maybe (eon era)
 forEraMaybeEon =
   inEonForEra Nothing Just
 
-maybeEon :: ()
-  => Eon eon
-  => IsCardanoEra era
-  => Maybe (eon era)  -- ^ The eon if supported in the era
+maybeEon ::
+  () =>
+  (Eon eon) =>
+  (IsCardanoEra era) =>
+  -- | The eon if supported in the era
+  Maybe (eon era)
 maybeEon =
   inEonForEra Nothing Just cardanoEra
 
-monoidForEraInEon :: ()
-  => Eon eon
-  => Monoid a
-  => CardanoEra era
-  -> (eon era -> a)
-  -> a
+monoidForEraInEon ::
+  () =>
+  (Eon eon) =>
+  (Monoid a) =>
+  CardanoEra era ->
+  (eon era -> a) ->
+  a
 monoidForEraInEon sbe = forEraInEon sbe mempty
 
-monoidForEraInEonA :: ()
-  => Eon eon
-  => Applicative f
-  => Monoid a
-  => CardanoEra era
-  -> (eon era -> f a)
-  -> f a
+monoidForEraInEonA ::
+  () =>
+  (Eon eon) =>
+  (Applicative f) =>
+  (Monoid a) =>
+  CardanoEra era ->
+  (eon era -> f a) ->
+  f a
 monoidForEraInEonA sbe = forEraInEon sbe (pure mempty)
 
 -- ----------------------------------------------------------------------------
 -- Era and eon existential types
 
 data EraInEon eon where
-  EraInEon
-    :: ( Typeable era
-       , Typeable (eon era)
-       , Eon eon
-       )
-    => eon era
-    -> EraInEon eon
+  EraInEon ::
+    ( Typeable era,
+      Typeable (eon era),
+      Eon eon
+    ) =>
+    eon era ->
+    EraInEon eon
 
 -- | Assumes that eons are singletons
 instance Show (EraInEon eon) where
   showsPrec _ (EraInEon eonEra) = showsTypeRep (typeOf eonEra)
 
 -- | Assumes that eons are singletons
-instance TestEquality eon => Eq (EraInEon eon) where
+instance (TestEquality eon) => Eq (EraInEon eon) where
   EraInEon era1 == EraInEon era2 =
     isJust $ testEquality era1 era2
 
@@ -211,9 +233,10 @@ instance TestEquality eon => Eq (EraInEon eon) where
 -- ToCardanoEra
 
 class ToCardanoEra (eon :: Type -> Type) where
-  toCardanoEra :: ()
-    => eon era
-    -> CardanoEra era
+  toCardanoEra ::
+    () =>
+    eon era ->
+    CardanoEra era
 
 -- ----------------------------------------------------------------------------
 -- Value level representation for Cardano eras
@@ -228,20 +251,22 @@ class ToCardanoEra (eon :: Type -> Type) where
 --
 -- In combination this can often enable code that handles all eras, and does
 -- so uniformly where possible, and non-uniformly where necessary.
---
 data CardanoEra era where
-     ByronEra   :: CardanoEra ByronEra
-     ShelleyEra :: CardanoEra ShelleyEra
-     AllegraEra :: CardanoEra AllegraEra
-     MaryEra    :: CardanoEra MaryEra
-     AlonzoEra  :: CardanoEra AlonzoEra
-     BabbageEra :: CardanoEra BabbageEra
-     ConwayEra  :: CardanoEra ConwayEra
-     -- when you add era here, change `instance Bounded AnyCardanoEra`
+  ByronEra :: CardanoEra ByronEra
+  ShelleyEra :: CardanoEra ShelleyEra
+  AllegraEra :: CardanoEra AllegraEra
+  MaryEra :: CardanoEra MaryEra
+  AlonzoEra :: CardanoEra AlonzoEra
+  BabbageEra :: CardanoEra BabbageEra
+  ConwayEra :: CardanoEra ConwayEra
 
-deriving instance Eq    (CardanoEra era)
-deriving instance Ord   (CardanoEra era)
-deriving instance Show  (CardanoEra era)
+-- when you add era here, change `instance Bounded AnyCardanoEra`
+
+deriving instance Eq (CardanoEra era)
+
+deriving instance Ord (CardanoEra era)
+
+deriving instance Show (CardanoEra era)
 
 instance Pretty (CardanoEra era) where
   pretty = cardanoEraToStringLike
@@ -250,14 +275,14 @@ instance ToJSON (CardanoEra era) where
   toJSON = cardanoEraToStringLike
 
 instance TestEquality CardanoEra where
-    testEquality ByronEra   ByronEra   = Just Refl
-    testEquality ShelleyEra ShelleyEra = Just Refl
-    testEquality AllegraEra AllegraEra = Just Refl
-    testEquality MaryEra    MaryEra    = Just Refl
-    testEquality AlonzoEra  AlonzoEra  = Just Refl
-    testEquality BabbageEra BabbageEra = Just Refl
-    testEquality ConwayEra  ConwayEra  = Just Refl
-    testEquality _          _          = Nothing
+  testEquality ByronEra ByronEra = Just Refl
+  testEquality ShelleyEra ShelleyEra = Just Refl
+  testEquality AllegraEra AllegraEra = Just Refl
+  testEquality MaryEra MaryEra = Just Refl
+  testEquality AlonzoEra AlonzoEra = Just Refl
+  testEquality BabbageEra BabbageEra = Just Refl
+  testEquality ConwayEra ConwayEra = Just Refl
+  testEquality _ _ = Nothing
 
 instance Eon CardanoEra where
   inEonForEra _ yes = yes
@@ -268,54 +293,54 @@ instance ToCardanoEra CardanoEra where
 -- | The class of Cardano eras. This allows uniform handling of all Cardano
 -- eras, but also non-uniform by making case distinctions on the 'CardanoEra'
 -- constructors.
---
-class HasTypeProxy era => IsCardanoEra era where
-   cardanoEra      :: CardanoEra era
+class (HasTypeProxy era) => IsCardanoEra era where
+  cardanoEra :: CardanoEra era
 
 instance IsCardanoEra ByronEra where
-   cardanoEra      = ByronEra
+  cardanoEra = ByronEra
 
 instance IsCardanoEra ShelleyEra where
-   cardanoEra      = ShelleyEra
+  cardanoEra = ShelleyEra
 
 instance IsCardanoEra AllegraEra where
-   cardanoEra      = AllegraEra
+  cardanoEra = AllegraEra
 
 instance IsCardanoEra MaryEra where
-   cardanoEra      = MaryEra
+  cardanoEra = MaryEra
 
 instance IsCardanoEra AlonzoEra where
-   cardanoEra      = AlonzoEra
+  cardanoEra = AlonzoEra
 
 instance IsCardanoEra BabbageEra where
-   cardanoEra      = BabbageEra
+  cardanoEra = BabbageEra
 
 instance IsCardanoEra ConwayEra where
-   cardanoEra      = ConwayEra
+  cardanoEra = ConwayEra
 
 type CardanoEraConstraints era =
-  ( Typeable era
-  , IsCardanoEra era
+  ( Typeable era,
+    IsCardanoEra era
   )
 
-cardanoEraConstraints :: ()
-  => CardanoEra era
-  -> (CardanoEraConstraints era => a)
-  -> a
+cardanoEraConstraints ::
+  () =>
+  CardanoEra era ->
+  ((CardanoEraConstraints era) => a) ->
+  a
 cardanoEraConstraints = \case
-  ByronEra   -> id
+  ByronEra -> id
   ShelleyEra -> id
   AllegraEra -> id
-  MaryEra    -> id
-  AlonzoEra  -> id
+  MaryEra -> id
+  AlonzoEra -> id
   BabbageEra -> id
-  ConwayEra  -> id
+  ConwayEra -> id
 
 data AnyCardanoEra where
-  AnyCardanoEra
-    :: Typeable era
-    => CardanoEra era
-    -> AnyCardanoEra
+  AnyCardanoEra ::
+    (Typeable era) =>
+    CardanoEra era ->
+    AnyCardanoEra
 
 deriving instance Show AnyCardanoEra
 
@@ -324,61 +349,62 @@ instance Pretty AnyCardanoEra where
 
 -- | Assumes that 'CardanoEra era' are singletons
 instance Eq AnyCardanoEra where
-    AnyCardanoEra era == AnyCardanoEra era' =
-      isJust $ testEquality era era'
+  AnyCardanoEra era == AnyCardanoEra era' =
+    isJust $ testEquality era era'
 
 instance Bounded AnyCardanoEra where
-   minBound = AnyCardanoEra ByronEra
-   maxBound = AnyCardanoEra ConwayEra
+  minBound = AnyCardanoEra ByronEra
+  maxBound = AnyCardanoEra ConwayEra
 
 instance Enum AnyCardanoEra where
+  -- [e..] = [e..maxBound]
+  enumFrom e = enumFromTo e maxBound
 
-   -- [e..] = [e..maxBound]
-   enumFrom e = enumFromTo e maxBound
+  fromEnum = \case
+    AnyCardanoEra ByronEra -> 0
+    AnyCardanoEra ShelleyEra -> 1
+    AnyCardanoEra AllegraEra -> 2
+    AnyCardanoEra MaryEra -> 3
+    AnyCardanoEra AlonzoEra -> 4
+    AnyCardanoEra BabbageEra -> 5
+    AnyCardanoEra ConwayEra -> 6
 
-   fromEnum = \case
-      AnyCardanoEra ByronEra    -> 0
-      AnyCardanoEra ShelleyEra  -> 1
-      AnyCardanoEra AllegraEra  -> 2
-      AnyCardanoEra MaryEra     -> 3
-      AnyCardanoEra AlonzoEra   -> 4
-      AnyCardanoEra BabbageEra  -> 5
-      AnyCardanoEra ConwayEra   -> 6
-
-   toEnum = \case
-      0 -> AnyCardanoEra ByronEra
-      1 -> AnyCardanoEra ShelleyEra
-      2 -> AnyCardanoEra AllegraEra
-      3 -> AnyCardanoEra MaryEra
-      4 -> AnyCardanoEra AlonzoEra
-      5 -> AnyCardanoEra BabbageEra
-      6 -> AnyCardanoEra ConwayEra
-      n ->
-         error $
-            "AnyCardanoEra.toEnum: " <> show n
-            <> " does not correspond to any known enumerated era."
+  toEnum = \case
+    0 -> AnyCardanoEra ByronEra
+    1 -> AnyCardanoEra ShelleyEra
+    2 -> AnyCardanoEra AllegraEra
+    3 -> AnyCardanoEra MaryEra
+    4 -> AnyCardanoEra AlonzoEra
+    5 -> AnyCardanoEra BabbageEra
+    6 -> AnyCardanoEra ConwayEra
+    n ->
+      error $
+        "AnyCardanoEra.toEnum: "
+          <> show n
+          <> " does not correspond to any known enumerated era."
 
 instance ToJSON AnyCardanoEra where
-   toJSON (AnyCardanoEra era) = toJSON era
+  toJSON (AnyCardanoEra era) = toJSON era
 
 instance FromJSON AnyCardanoEra where
-  parseJSON = withText "AnyCardanoEra"
-    $ (\case
-        Right era -> pure era
-        Left era -> fail $ "Failed to parse unknown era: " <> Text.unpack era
-      ) . anyCardanoEraFromStringLike
+  parseJSON =
+    withText "AnyCardanoEra" $
+      ( \case
+          Right era -> pure era
+          Left era -> fail $ "Failed to parse unknown era: " <> Text.unpack era
+      )
+        . anyCardanoEraFromStringLike
 
-
-cardanoEraToStringLike :: IsString a => CardanoEra era -> a
+cardanoEraToStringLike :: (IsString a) => CardanoEra era -> a
 {-# INLINE cardanoEraToStringLike #-}
 cardanoEraToStringLike = \case
-  ByronEra   -> "Byron"
+  ByronEra -> "Byron"
   ShelleyEra -> "Shelley"
   AllegraEra -> "Allegra"
-  MaryEra    -> "Mary"
-  AlonzoEra  -> "Alonzo"
+  MaryEra -> "Mary"
+  AlonzoEra -> "Alonzo"
   BabbageEra -> "Babbage"
-  ConwayEra  -> "Conway"
+  ConwayEra -> "Conway"
 
 anyCardanoEraFromStringLike :: (IsString a, Eq a) => a -> Either a AnyCardanoEra
 {-# INLINE anyCardanoEraFromStringLike #-}
@@ -394,32 +420,31 @@ anyCardanoEraFromStringLike = \case
 
 -- | Like the 'AnyCardanoEra' constructor but does not demand a 'IsCardanoEra'
 -- class constraint.
---
 anyCardanoEra :: CardanoEra era -> AnyCardanoEra
 anyCardanoEra = \case
-  ByronEra    -> AnyCardanoEra ByronEra
-  ShelleyEra  -> AnyCardanoEra ShelleyEra
-  AllegraEra  -> AnyCardanoEra AllegraEra
-  MaryEra     -> AnyCardanoEra MaryEra
-  AlonzoEra   -> AnyCardanoEra AlonzoEra
-  BabbageEra  -> AnyCardanoEra BabbageEra
-  ConwayEra   -> AnyCardanoEra ConwayEra
+  ByronEra -> AnyCardanoEra ByronEra
+  ShelleyEra -> AnyCardanoEra ShelleyEra
+  AllegraEra -> AnyCardanoEra AllegraEra
+  MaryEra -> AnyCardanoEra MaryEra
+  AlonzoEra -> AnyCardanoEra AlonzoEra
+  BabbageEra -> AnyCardanoEra BabbageEra
+  ConwayEra -> AnyCardanoEra ConwayEra
 
 -- | This pairs up some era-dependent type with a 'CardanoEra' value that tells
 -- us what era it is, but hides the era type. This is useful when the era is
 -- not statically known, for example when deserialising from a file.
---
 data InAnyCardanoEra thing where
-  InAnyCardanoEra
-    :: Typeable era
-    => CardanoEra era
-    -> thing era
-    -> InAnyCardanoEra thing
+  InAnyCardanoEra ::
+    (Typeable era) =>
+    CardanoEra era ->
+    thing era ->
+    InAnyCardanoEra thing
 
-inAnyCardanoEra :: ()
-  => CardanoEra era
-  -> thing era
-  -> InAnyCardanoEra thing
+inAnyCardanoEra ::
+  () =>
+  CardanoEra era ->
+  thing era ->
+  InAnyCardanoEra thing
 inAnyCardanoEra era a =
   cardanoEraConstraints era $ InAnyCardanoEra era a
 
@@ -433,12 +458,11 @@ inAnyCardanoEra era a =
 -- This type mapping  connect types from this API with types in the
 -- ledger library which allows writing conversion functions in a more generic
 -- way.
-
 type family CardanoLedgerEra era = ledgerera | ledgerera -> era where
-  CardanoLedgerEra ByronEra   = L.ByronEra   L.StandardCrypto
+  CardanoLedgerEra ByronEra = L.ByronEra L.StandardCrypto
   CardanoLedgerEra ShelleyEra = L.ShelleyEra L.StandardCrypto
   CardanoLedgerEra AllegraEra = L.AllegraEra L.StandardCrypto
-  CardanoLedgerEra MaryEra    = L.MaryEra    L.StandardCrypto
-  CardanoLedgerEra AlonzoEra  = L.AlonzoEra  L.StandardCrypto
+  CardanoLedgerEra MaryEra = L.MaryEra L.StandardCrypto
+  CardanoLedgerEra AlonzoEra = L.AlonzoEra L.StandardCrypto
   CardanoLedgerEra BabbageEra = L.BabbageEra L.StandardCrypto
-  CardanoLedgerEra ConwayEra  = L.ConwayEra  L.StandardCrypto
+  CardanoLedgerEra ConwayEra = L.ConwayEra L.StandardCrypto

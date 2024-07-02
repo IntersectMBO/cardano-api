@@ -1,64 +1,64 @@
 -- | This module provides a library interface that is intended to be
 -- the complete API for Shelley covering everything, including
 -- exposing constructors for the lower level types.
---
-
 module Cardano.Api.Shelley
   ( module Cardano.Api,
 
     -- * Genesis
-    ShelleyGenesis(..),
+    ShelleyGenesis (..),
     shelleyGenesisDefaults,
     alonzoGenesisDefaults,
     conwayGenesisDefaults,
 
     -- * Cryptographic key interface
     -- $keys
-    Key(..),
-    VerificationKey(..),
-    SigningKey(..),
+    Key (..),
+    VerificationKey (..),
+    SigningKey (..),
 
     -- * Hashes
-    Hash(..),
+    Hash (..),
 
     -- * Type Proxies
-    AsType(..),
+    AsType (..),
 
     -- * Payment addresses
+
     -- | Constructing and inspecting Shelley payment addresses
-    Address(ShelleyAddress),
+    Address (ShelleyAddress),
     toShelleyAddr,
     fromShelleyAddr,
     fromShelleyAddrIsSbe,
     fromShelleyAddrToAny,
     toShelleyStakeCredential,
     fromShelleyStakeCredential,
-    NetworkId(Mainnet, Testnet),
+    NetworkId (Mainnet, Testnet),
 
     -- * Stake addresses
-    PaymentCredential(..),
-    StakeAddress(..),
-    StakeAddressReference(..),
-    StakeCredential(..),
+    PaymentCredential (..),
+    StakeAddress (..),
+    StakeAddressReference (..),
+    StakeCredential (..),
     toShelleyStakeAddr,
     fromShelleyStakeAddr,
     fromShelleyStakeReference,
     fromShelleyPaymentCredential,
 
     -- * Building transactions
+
     -- | Constructing and inspecting transactions
-    TxBody(ShelleyTxBody),
-    TxId(TxId),
+    TxBody (ShelleyTxBody),
+    TxId (TxId),
     toShelleyTxId,
     fromShelleyTxId,
     getTxIdShelley,
-    TxIn(TxIn),
+    TxIn (TxIn),
     toShelleyTxIn,
     fromShelleyTxIn,
-    TxOut(TxOut),
+    TxOut (TxOut),
     toShelleyTxOut,
     fromShelleyTxOut,
-    TxIx(TxIx),
+    TxIx (TxIx),
     toMaryValue,
     fromMaryValue,
     calcMinimumDeposit,
@@ -67,26 +67,27 @@ module Cardano.Api.Shelley
     signArbitraryBytesKes,
 
     -- * Signing transactions
+
     -- | Creating transaction witnesses one by one, or all in one go.
-    Tx(ShelleyTx),
+    Tx (ShelleyTx),
 
     -- ** Incremental signing and separate witnesses
     KeyWitness
-      ( ShelleyBootstrapWitness
-      , ShelleyKeyWitness
+      ( ShelleyBootstrapWitness,
+        ShelleyKeyWitness
       ),
     ShelleyWitnessSigningKey
-      ( WitnessPaymentKey
-      , WitnessPaymentExtendedKey
-      , WitnessStakeKey
-      , WitnessStakeExtendedKey
-      , WitnessStakePoolKey
-      , WitnessGenesisKey
-      , WitnessGenesisExtendedKey
-      , WitnessGenesisDelegateKey
-      , WitnessGenesisDelegateExtendedKey
+      ( WitnessPaymentKey,
+        WitnessPaymentExtendedKey,
+        WitnessStakeKey,
+        WitnessStakeExtendedKey,
+        WitnessStakePoolKey,
+        WitnessGenesisKey,
+        WitnessGenesisExtendedKey,
+        WitnessGenesisDelegateKey,
+        WitnessGenesisDelegateExtendedKey
       ),
-    ShelleySigningKey(..),
+    ShelleySigningKey (..),
     getShelleyKeyWitnessVerificationKey,
     getTxBodyAndWitnesses,
     makeShelleySignature,
@@ -100,6 +101,7 @@ module Cardano.Api.Shelley
     toConsensusPointHF,
 
     -- * Transaction metadata
+
     -- | Embedding additional structured data within transactions.
     toShelleyMetadata,
     fromShelleyMetadata,
@@ -107,21 +109,20 @@ module Cardano.Api.Shelley
     fromShelleyMetadatum,
 
     -- * Protocol parameters
-    LedgerProtocolParameters(..),
-    EraBasedProtocolParametersUpdate(..),
-    CommonProtocolParametersUpdate(..),
-    AlonzoOnwardsPParams(..),
-    DeprecatedAfterBabbagePParams(..),
-    DeprecatedAfterMaryPParams(..),
-    ShelleyToAlonzoPParams(..),
-    IntroducedInBabbagePParams(..),
-    IntroducedInConwayPParams(..),
+    LedgerProtocolParameters (..),
+    EraBasedProtocolParametersUpdate (..),
+    CommonProtocolParametersUpdate (..),
+    AlonzoOnwardsPParams (..),
+    DeprecatedAfterBabbagePParams (..),
+    DeprecatedAfterMaryPParams (..),
+    ShelleyToAlonzoPParams (..),
+    IntroducedInBabbagePParams (..),
+    IntroducedInConwayPParams (..),
     createEraBasedProtocolParamUpdate,
     convertToLedgerProtocolParameters,
-
-    ProtocolParameters(..),
+    ProtocolParameters (..),
     checkProtocolParameters,
-    ProtocolParametersError(..),
+    ProtocolParametersError (..),
 
     -- * Scripts
     fromShelleyBasedScript,
@@ -132,9 +133,9 @@ module Cardano.Api.Shelley
     fromAllegraTimelock,
     toShelleyScriptHash,
     fromShelleyScriptHash,
-    PlutusScript(..),
-    PlutusScriptOrReferenceInput(..),
-    SimpleScriptOrReferenceInput(..),
+    PlutusScript (..),
+    PlutusScriptOrReferenceInput (..),
+    SimpleScriptOrReferenceInput (..),
     toPlutusData,
     fromPlutusData,
     toAlonzoData,
@@ -149,7 +150,7 @@ module Cardano.Api.Shelley
     calculateExecutionUnitsLovelace,
 
     -- * Reference Scripts
-    ReferenceScript(..),
+    ReferenceScript (..),
     refScriptToShelleyScript,
 
     -- * Certificates
@@ -159,20 +160,20 @@ module Cardano.Api.Shelley
     toShelleyPoolParams,
 
     -- ** Operational certificates
-    OperationalCertificate(OperationalCertificate),
-    OperationalCertificateIssueCounter(..),
-    OperationalCertIssueError(..),
+    OperationalCertificate (OperationalCertificate),
+    OperationalCertificateIssueCounter (..),
+    OperationalCertIssueError (..),
 
     -- * Stake Pool
-    StakePoolMetadata(StakePoolMetadata),
+    StakePoolMetadata (StakePoolMetadata),
     stakePoolName,
     stakePoolDescription,
     stakePoolTicker,
     stakePoolHomepage,
-    StakePoolMetadataReference(StakePoolMetadataReference),
+    StakePoolMetadataReference (StakePoolMetadataReference),
     stakePoolMetadataURL,
     stakePoolMetadataHash,
-    StakePoolParameters(StakePoolParameters),
+    StakePoolParameters (StakePoolParameters),
     stakePoolId,
     stakePoolVRF,
     stakePoolCost,
@@ -183,11 +184,11 @@ module Cardano.Api.Shelley
     stakePoolRelays,
     stakePoolMetadata,
     StakePoolRelay
-      ( StakePoolRelayIp
-      , StakePoolRelayDnsARecord
-      , StakePoolRelayDnsSrvRecord
+      ( StakePoolRelayIp,
+        StakePoolRelayDnsARecord,
+        StakePoolRelayDnsSrvRecord
       ),
-    EpochNo(..),
+    EpochNo (..),
 
     -- * Governance Actions
     createAnchor,
@@ -195,8 +196,8 @@ module Cardano.Api.Shelley
     createGovernanceActionId,
 
     -- * DRep
-    DRepMetadata(DRepMetadata),
-    DRepMetadataReference(DRepMetadataReference),
+    DRepMetadata (DRepMetadata),
+    DRepMetadataReference (DRepMetadataReference),
 
     -- ** Stake pool operator's keys
     StakePoolKey,
@@ -204,63 +205,59 @@ module Cardano.Api.Shelley
 
     -- ** KES keys
     KesKey,
-    KESPeriod(..),
+    KESPeriod (..),
 
     -- ** VRF keys
     VrfKey,
 
     -- ** Low level protocol interaction with a Cardano node
-    LocalNodeConnectInfo(LocalNodeConnectInfo),
-    LocalNodeClientProtocols(LocalNodeClientProtocols),
+    LocalNodeConnectInfo (LocalNodeConnectInfo),
+    LocalNodeClientProtocols (LocalNodeClientProtocols),
 
     -- ** Shelley based eras
     ShelleyLedgerEra,
 
     -- *** Ledger Events
-    LedgerEvent(..),
-    AnyProposals(..),
-    AnyRatificationState(..),
-    MIRDistributionDetails(..),
-    PoolReapDetails(..),
+    LedgerEvent (..),
+    AnyProposals (..),
+    AnyRatificationState (..),
+    MIRDistributionDetails (..),
+    PoolReapDetails (..),
     toLedgerEvent,
 
     -- ** Local State Query
-    DebugLedgerState(..),
+    DebugLedgerState (..),
     decodeDebugLedgerState,
-    ProtocolState(..),
+    ProtocolState (..),
     decodeProtocolState,
-    SerialisedDebugLedgerState(..),
-    CurrentEpochState(..),
-    SerialisedCurrentEpochState(..),
+    SerialisedDebugLedgerState (..),
+    CurrentEpochState (..),
+    SerialisedCurrentEpochState (..),
     decodeCurrentEpochState,
-
-    PoolState(..),
-    SerialisedPoolState(..),
+    PoolState (..),
+    SerialisedPoolState (..),
     decodePoolState,
-
-    PoolDistribution(..),
-    SerialisedPoolDistribution(..),
+    PoolDistribution (..),
+    SerialisedPoolDistribution (..),
     decodePoolDistribution,
-
-    StakeSnapshot(..),
-    SerialisedStakeSnapshots(..),
+    StakeSnapshot (..),
+    SerialisedStakeSnapshots (..),
     decodeStakeSnapshot,
-
-    UTxO(..),
-    AcquiringFailure(..),
-    SystemStart(..),
+    UTxO (..),
+    AcquiringFailure (..),
+    SystemStart (..),
 
     -- ** Governance
-    GovernanceAction(..),
-    GovernanceActionId(..),
-    Proposal(..),
-    VotingProcedure(..),
-    VotingProcedures(..),
-    GovernancePoll(..),
-    GovernancePollAnswer(..),
-    GovernancePollError(..),
-    Vote(..),
-    Voter(..),
+    GovernanceAction (..),
+    GovernanceActionId (..),
+    Proposal (..),
+    VotingProcedure (..),
+    VotingProcedures (..),
+    GovernancePoll (..),
+    GovernancePollAnswer (..),
+    GovernancePollError (..),
+    Vote (..),
+    Voter (..),
     createProposalProcedure,
     createVotingProcedure,
     renderGovernancePollError,
@@ -269,7 +266,7 @@ module Cardano.Api.Shelley
     verifyPollAnswer,
 
     -- ** Various calculations
-    LeadershipError(..),
+    LeadershipError (..),
     currentEpochEligibleLeadershipSlots,
     nextEpochEligibleLeadershipSlots,
 
@@ -282,38 +279,38 @@ module Cardano.Api.Shelley
     toShelleyNetwork,
     fromShelleyPoolParams,
     fromLedgerPParamsUpdate,
-
     emptyVotingProcedures,
     mergeVotingProcedures,
     singletonVotingProcedures,
-    VotesMergingConflict(..),
-  ) where
+    VotesMergingConflict (..),
+  )
+where
 
-import           Cardano.Api
-import           Cardano.Api.Address
-import           Cardano.Api.Block
-import           Cardano.Api.Certificate
-import           Cardano.Api.DRepMetadata
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Genesis
-import           Cardano.Api.Governance.Actions.ProposalProcedure
-import           Cardano.Api.Governance.Actions.VotingProcedure
-import           Cardano.Api.Governance.Poll
-import           Cardano.Api.InMode
-import           Cardano.Api.IPC
-import           Cardano.Api.Keys.Praos
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.LedgerEvents.ConvertLedgerEvent
-import           Cardano.Api.LedgerEvents.LedgerEvent
-import           Cardano.Api.LedgerState
-import           Cardano.Api.NetworkId
-import           Cardano.Api.OperationalCertificate
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query
-import           Cardano.Api.Script
-import           Cardano.Api.ScriptData
-import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.Tx.Body
-import           Cardano.Api.Tx.Sign
-import           Cardano.Api.TxMetadata
-import           Cardano.Api.Value
+import Cardano.Api
+import Cardano.Api.Address
+import Cardano.Api.Block
+import Cardano.Api.Certificate
+import Cardano.Api.DRepMetadata
+import Cardano.Api.Eon.ShelleyBasedEra
+import Cardano.Api.Genesis
+import Cardano.Api.Governance.Actions.ProposalProcedure
+import Cardano.Api.Governance.Actions.VotingProcedure
+import Cardano.Api.Governance.Poll
+import Cardano.Api.IPC
+import Cardano.Api.InMode
+import Cardano.Api.Keys.Praos
+import Cardano.Api.Keys.Shelley
+import Cardano.Api.LedgerEvents.ConvertLedgerEvent
+import Cardano.Api.LedgerEvents.LedgerEvent
+import Cardano.Api.LedgerState
+import Cardano.Api.NetworkId
+import Cardano.Api.OperationalCertificate
+import Cardano.Api.ProtocolParameters
+import Cardano.Api.Query
+import Cardano.Api.Script
+import Cardano.Api.ScriptData
+import Cardano.Api.StakePoolMetadata
+import Cardano.Api.Tx.Body
+import Cardano.Api.Tx.Sign
+import Cardano.Api.TxMetadata
+import Cardano.Api.Value
