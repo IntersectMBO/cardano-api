@@ -3,45 +3,44 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | DRep off-chain metadata
---
-module Cardano.Api.DRepMetadata (
-    -- * DRep off-chain metadata
-    DRepMetadata(..),
-    validateAndHashDRepMetadata,
-    DRepMetadataValidationError(..),
+module Cardano.Api.DRepMetadata
+  ( -- * DRep off-chain metadata
+    DRepMetadata (..)
+  , validateAndHashDRepMetadata
+  , DRepMetadataValidationError (..)
 
     -- * Data family instances
-    AsType(..),
-    Hash(..),
+  , AsType (..)
+  , Hash (..)
   ) where
 
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Byron
-import           Cardano.Api.Keys.Praos
-import           Cardano.Api.Script
-import           Cardano.Api.SerialiseRaw
+import Cardano.Api.Eras
+import Cardano.Api.Error
+import Cardano.Api.HasTypeProxy
+import Cardano.Api.Hash
+import Cardano.Api.Keys.Byron
+import Cardano.Api.Keys.Praos
+import Cardano.Api.Script
+import Cardano.Api.SerialiseRaw
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 
-import           Data.ByteString (ByteString)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import           Data.Either.Combinators (maybeToRight)
-import           Prettyprinter
+import Data.Either.Combinators (maybeToRight)
+import Prettyprinter
 
 -- ----------------------------------------------------------------------------
 -- DRep metadata
 --
 
 -- | A representation of the required fields for off-chain drep metadata.
---
 newtype DRepMetadata = DRepMetadata
   { unDRepMetadata :: ByteString
-  } deriving (Eq, Show)
+  }
+  deriving (Eq, Show)
 
 newtype instance Hash DRepMetadata = DRepMetadataHash (Shelley.Hash StandardCrypto ByteString)
   deriving (Eq, Show)
@@ -59,14 +58,14 @@ instance SerialiseAsRawBytes (Hash DRepMetadata) where
 
 -- | A drep metadata validation error.
 data DRepMetadataValidationError
-  = DRepMetadataInvalidLengthError
-    -- ^ The length of the JSON-encoded drep metadata exceeds the
+  = -- | The length of the JSON-encoded drep metadata exceeds the
     -- maximum.
+    DRepMetadataInvalidLengthError
       !Int
       -- ^ Maximum byte length.
       !Int
       -- ^ Actual byte length.
-  deriving Show
+  deriving (Show)
 
 instance Error DRepMetadataValidationError where
   prettyError = \case

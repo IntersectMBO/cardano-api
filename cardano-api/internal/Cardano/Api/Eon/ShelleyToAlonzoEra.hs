@@ -9,19 +9,18 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Eon.ShelleyToAlonzoEra
-  ( ShelleyToAlonzoEra(..)
+  ( ShelleyToAlonzoEra (..)
   , shelleyToAlonzoEraConstraints
   , shelleyToAlonzoEraToShelleyBasedEra
-
   , ShelleyToAlonzoEraConstraints
   ) where
 
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras.Core
-import           Cardano.Api.Modes
-import           Cardano.Api.Query.Types
+import Cardano.Api.Eon.ShelleyBasedEra
+import Cardano.Api.Eras.Core
+import Cardano.Api.Modes
+import Cardano.Api.Query.Types
 
-import           Cardano.Binary
+import Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
@@ -34,8 +33,8 @@ import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
-import           Data.Aeson
-import           Data.Typeable (Typeable)
+import Data.Aeson
+import Data.Typeable (Typeable)
 
 data ShelleyToAlonzoEra era where
   ShelleyToAlonzoEraShelley :: ShelleyToAlonzoEra ShelleyEra
@@ -48,20 +47,20 @@ deriving instance Eq (ShelleyToAlonzoEra era)
 
 instance Eon ShelleyToAlonzoEra where
   inEonForEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> yes ShelleyToAlonzoEraShelley
-    AllegraEra  -> yes ShelleyToAlonzoEraAllegra
-    MaryEra     -> yes ShelleyToAlonzoEraMary
-    AlonzoEra   -> yes ShelleyToAlonzoEraAlonzo
-    BabbageEra  -> no
-    ConwayEra   -> no
+    ByronEra -> no
+    ShelleyEra -> yes ShelleyToAlonzoEraShelley
+    AllegraEra -> yes ShelleyToAlonzoEraAllegra
+    MaryEra -> yes ShelleyToAlonzoEraMary
+    AlonzoEra -> yes ShelleyToAlonzoEraAlonzo
+    BabbageEra -> no
+    ConwayEra -> no
 
 instance ToCardanoEra ShelleyToAlonzoEra where
   toCardanoEra = \case
-    ShelleyToAlonzoEraShelley  -> ShelleyEra
-    ShelleyToAlonzoEraAllegra  -> AllegraEra
-    ShelleyToAlonzoEraMary     -> MaryEra
-    ShelleyToAlonzoEraAlonzo   -> AlonzoEra
+    ShelleyToAlonzoEraShelley -> ShelleyEra
+    ShelleyToAlonzoEraAllegra -> AllegraEra
+    ShelleyToAlonzoEraMary -> MaryEra
+    ShelleyToAlonzoEraAlonzo -> AlonzoEra
 
 type ShelleyToAlonzoEraConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
@@ -83,7 +82,6 @@ type ShelleyToAlonzoEraConstraints era =
   , L.ShelleyEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
-
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
@@ -92,19 +90,20 @@ type ShelleyToAlonzoEraConstraints era =
   , Typeable era
   )
 
-shelleyToAlonzoEraConstraints :: ()
+shelleyToAlonzoEraConstraints
+  :: ()
   => ShelleyToAlonzoEra era
   -> (ShelleyToAlonzoEraConstraints era => a)
   -> a
 shelleyToAlonzoEraConstraints = \case
   ShelleyToAlonzoEraShelley -> id
   ShelleyToAlonzoEraAllegra -> id
-  ShelleyToAlonzoEraMary    -> id
-  ShelleyToAlonzoEraAlonzo  -> id
+  ShelleyToAlonzoEraMary -> id
+  ShelleyToAlonzoEraAlonzo -> id
 
 shelleyToAlonzoEraToShelleyBasedEra :: ShelleyToAlonzoEra era -> ShelleyBasedEra era
 shelleyToAlonzoEraToShelleyBasedEra = \case
   ShelleyToAlonzoEraShelley -> ShelleyBasedEraShelley
   ShelleyToAlonzoEraAllegra -> ShelleyBasedEraAllegra
-  ShelleyToAlonzoEraMary    -> ShelleyBasedEraMary
-  ShelleyToAlonzoEraAlonzo  -> ShelleyBasedEraAlonzo
+  ShelleyToAlonzoEraMary -> ShelleyBasedEraMary
+  ShelleyToAlonzoEraAlonzo -> ShelleyBasedEraAlonzo

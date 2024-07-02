@@ -2,8 +2,8 @@ module Cardano.Api.Json
   ( toRationalJSON
   ) where
 
-import           Data.Aeson
-import           Data.Scientific
+import Data.Aeson
+import Data.Scientific
 
 -- Rationals and JSON are an awkward mix. We cannot convert rationals
 -- like @1/3@ to JSON numbers. But _most_ of the numbers we want to use
@@ -15,4 +15,4 @@ toRationalJSON :: Rational -> Value
 toRationalJSON r =
   case fromRationalRepetendLimited 20 r of
     Right (s, Nothing) -> toJSON s
-    _                  -> toJSON r
+    _ -> toJSON r

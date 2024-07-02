@@ -5,7 +5,7 @@ module Cardano.Api.LedgerEvents.Rule.BBODY.DELEGS
   ( handleShelleyDELEGSEvent
   ) where
 
-import           Cardano.Api.LedgerEvents.LedgerEvent
+import Cardano.Api.LedgerEvents.LedgerEvent
 
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 
