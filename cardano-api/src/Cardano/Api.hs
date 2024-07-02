@@ -92,11 +92,15 @@ module Cardano.Api (
 
     -- ** From Allegra
     AllegraEraOnwards(..),
+    
+    IsAllegraEraOnwards(..),
 
     -- ** From Mary
     MaryEraOnwards(..),
     maryEraOnwardsConstraints,
     maryEraOnwardsToShelleyBasedEra,
+
+    IsMaryEraOnwards(..),
 
     -- ** From Alonzo
 
@@ -104,12 +108,15 @@ module Cardano.Api (
     alonzoEraOnwardsConstraints,
     alonzoEraOnwardsToShelleyBasedEra,
 
+    IsAlonzoEraOnwards(..),
+
     -- ** From Babbage
 
     BabbageEraOnwards(..),
     babbageEraOnwardsConstraints,
     babbageEraOnwardsToShelleyBasedEra,
 
+    IsBabbageEraOnwards(..),
     -- ** From Conway
 
     ConwayEraOnwards(..),
@@ -989,6 +996,9 @@ module Cardano.Api (
     ResolvablePointers(..),
 
     unsafeBoundedRational,
+
+    ToAlonzoScript(..),
+    HasScriptLanguageInEra(..),
     -- ** Supporting modules
     module Cardano.Api.Monad.Error,
     module Cardano.Api.Pretty
@@ -1002,6 +1012,12 @@ import           Cardano.Api.Convenience.Construction
 import           Cardano.Api.Convenience.Query
 import           Cardano.Api.DeserialiseAnyOf
 import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Class.HasScriptLanguageInEra
+import           Cardano.Api.Class.IsAllegraEraOnwards
+import           Cardano.Api.Class.IsAlonzoEraOnwards
+import           Cardano.Api.Class.IsBabbageEraOnwards
+import           Cardano.Api.Class.IsMaryEraOnwards
+import           Cardano.Api.Class.ToAlonzoScript
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
