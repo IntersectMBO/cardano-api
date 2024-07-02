@@ -26,6 +26,7 @@ module Cardano.Api.Query.Expr
   , queryStakeSnapshot
   , querySystemStart
   , queryUtxo
+  , queryLedgerPeerSnapshot
   , L.MemberStatus (..)
   , L.CommitteeMembersState (..)
   , queryCommitteeMembersState
@@ -62,6 +63,8 @@ import           Cardano.Ledger.SafeHash
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
+import           Ouroboros.Network.Block (Serialised)
+import           Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
 
 import           Data.Map (Map)
 import           Data.Set (Set)
@@ -99,6 +102,12 @@ queryDebugLedgerState :: ()
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedDebugLedgerState era)))
 queryDebugLedgerState sbe =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryDebugLedgerState
+
+queryLedgerPeerSnapshot :: ()
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Either EraMismatch (Serialised LedgerPeerSnapshot)))
+queryLedgerPeerSnapshot sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryLedgerPeerSnapshot
 
 queryEraHistory :: ()
   => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError  EraHistory)
