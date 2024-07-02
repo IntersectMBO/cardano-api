@@ -18,28 +18,24 @@
 -- parameters updates. This standard is meant to be an inclusive interim
 -- solution while the work on a larger governance framework such as
 -- CIP-1694 continues.
-module Cardano.Api.Governance.Poll(
-    -- * Type Proxies
-    AsType (..),
-    Hash (..),
-
+module Cardano.Api.Governance.Poll
+  ( -- * Type Proxies
+    AsType(..)
+  , Hash(..)
     -- * Types
-    GovernancePoll (..),
-    GovernancePollAnswer (..),
-
+  , GovernancePoll(..)
+  , GovernancePollAnswer(..)
     -- * Errors
-    GovernancePollError (..),
-    renderGovernancePollError,
-
+  , GovernancePollError(..)
+  , renderGovernancePollError
     -- * Functions
-    hashGovernancePoll,
-    verifyPollAnswer,
-  ) where
+  , hashGovernancePoll
+  , verifyPollAnswer ) where
 
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
@@ -49,24 +45,26 @@ import           Cardano.Api.Tx.Body
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
+import           Cardano.Binary                    ( DecoderError(..) )
+import           Cardano.Crypto.Hash
+       ( hashFromBytes, hashToBytes, hashWith )
+import qualified Cardano.Crypto.Hash               as Hash
+import           Cardano.Ledger.Crypto             ( HASH, StandardCrypto )
 
-import           Cardano.Binary (DecoderError (..))
-import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
-import qualified Cardano.Crypto.Hash as Hash
-import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
+import           Control.Arrow                     ( left )
+import           Control.Monad                     ( foldM, when )
 
-import           Control.Arrow (left)
-import           Control.Monad (foldM, when)
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Function ((&))
-import qualified Data.Map.Strict as Map
-import           Data.String (IsString (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.Text.Lazy.Builder as Text.Builder
-import           Data.Word (Word64)
-import           Formatting (build, sformat)
+import           Data.Either.Combinators           ( maybeToRight )
+import           Data.Function                     ( (&) )
+import qualified Data.Map.Strict                   as Map
+import           Data.String                       ( IsString(..) )
+import           Data.Text                         ( Text )
+import qualified Data.Text                         as Text
+import qualified Data.Text.Lazy                    as Text.Lazy
+import qualified Data.Text.Lazy.Builder            as Text.Builder
+import           Data.Word                         ( Word64 )
+
+import           Formatting                        ( build, sformat )
 
 -- | Associated metadata label as defined in CIP-0094
 pollMetadataLabel :: Word64
@@ -103,96 +101,93 @@ pollMetadataKeyNonce = TxMetaText "_"
 -- There's an optional nonce used to make poll unique (as things down the line
 -- are based on their hashes) if the same question/answers need to be asked
 -- multiple times.
-data GovernancePoll = GovernancePoll
-    { govPollQuestion :: Text
-      -- ^ A question as a human readable text; the text can be arbitrarily large.
-    , govPollAnswers :: [Text]
-      -- ^ Answers as human readable texts; their positions are used for answering.
-    , govPollNonce :: Maybe Word
-      -- ^ An optional nonce to make the poll unique if needs be.
-    }
-  deriving (Show, Eq)
+data GovernancePoll =
+  GovernancePoll
+  { govPollQuestion :: Text
+    -- ^ A question as a human readable text; the text can be arbitrarily large.
+  , govPollAnswers  :: [ Text ]
+    -- ^ Answers as human readable texts; their positions are used for answering.
+  , govPollNonce    :: Maybe Word
+    -- ^ An optional nonce to make the poll unique if needs be.
+  }
+  deriving ( Show, Eq )
 
 instance HasTextEnvelope GovernancePoll where
-   textEnvelopeType _ = "GovernancePoll"
+  textEnvelopeType _ = "GovernancePoll"
 
 instance HasTypeProxy GovernancePoll where
-    data AsType GovernancePoll = AsGovernancePoll
-    proxyToAsType _ = AsGovernancePoll
+  data AsType GovernancePoll = AsGovernancePoll
+
+  proxyToAsType _ = AsGovernancePoll
 
 instance AsTxMetadata GovernancePoll where
-    asTxMetadata GovernancePoll{govPollQuestion, govPollAnswers, govPollNonce} =
-      makeTransactionMetadata $ Map.fromList
-        [ ( pollMetadataLabel
-          , TxMetaMap $
-           [ ( pollMetadataKeyQuestion, metaTextChunks govPollQuestion )
-           , ( pollMetadataKeyAnswers, TxMetaList (metaTextChunks <$> govPollAnswers) )
-           ] ++
-           case govPollNonce of
-             Nothing -> []
-             Just nonce ->
-               [ ( pollMetadataKeyNonce, TxMetaNumber (toInteger nonce) )
-               ]
-          )
-        ]
+  asTxMetadata GovernancePoll { govPollQuestion, govPollAnswers, govPollNonce } =
+    makeTransactionMetadata
+    $ Map.fromList
+      [ ( pollMetadataLabel
+        , TxMetaMap
+          $ [ ( pollMetadataKeyQuestion, metaTextChunks govPollQuestion )
+            , ( pollMetadataKeyAnswers
+              , TxMetaList (metaTextChunks <$> govPollAnswers) ) ]
+          ++ case govPollNonce of
+            Nothing    -> []
+            Just nonce
+              -> [ ( pollMetadataKeyNonce, TxMetaNumber (toInteger nonce) ) ] ) ]
 
 instance SerialiseAsCBOR GovernancePoll where
-    serialiseToCBOR =
-      serialiseToCBOR . asTxMetadata
+  serialiseToCBOR = serialiseToCBOR . asTxMetadata
 
-    deserialiseFromCBOR AsGovernancePoll bs = do
-      metadata <- deserialiseFromCBOR AsTxMetadata bs
-      withNestedMap lbl pollMetadataLabel metadata $ \values ->
-        GovernancePoll
-          -- Question
-          <$> ( let key = pollMetadataKeyQuestion in case lookup key values of
-                  Just x  ->
-                    expectTextChunks (fieldPath lbl key) x
-                  Nothing ->
-                    Left $ missingField (fieldPath lbl key)
-              )
-          -- Answers
-          <*> ( let key = pollMetadataKeyAnswers in case lookup key values of
-                  Just (TxMetaList xs) ->
-                    traverse (expectTextChunks (fieldPath lbl key)) xs
-                  Just _  ->
-                    Left $ malformedField (fieldPath lbl key) "List of Text (answers)"
-                  Nothing ->
-                    Left $ missingField (fieldPath lbl key)
-              )
-          -- Nonce (optional)
-          <*> ( let key = pollMetadataKeyNonce in case lookup key values of
-                  Just (TxMetaNumber nonce) ->
-                    Just <$> expectWord (fieldPath lbl key) nonce
-                  Nothing ->
-                    pure Nothing
-                  Just _  ->
-                    Left $ malformedField (fieldPath lbl key) "Number (nonce)"
-              )
-     where
-       lbl = "GovernancePoll"
+  deserialiseFromCBOR AsGovernancePoll bs = do
+    metadata <- deserialiseFromCBOR AsTxMetadata bs
+    withNestedMap lbl pollMetadataLabel metadata $ \values -> GovernancePoll
+      -- Question
+      <$> (let key = pollMetadataKeyQuestion
+           in  case lookup key values of
+                 Just x  -> expectTextChunks (fieldPath lbl key) x
+                 Nothing -> Left $ missingField (fieldPath lbl key))
+      -- Answers
+      <*> (let key = pollMetadataKeyAnswers
+           in  case lookup key values of
+                 Just (TxMetaList xs)
+                   -> traverse (expectTextChunks (fieldPath lbl key)) xs
+                 Just _ -> Left
+                   $ malformedField
+                     (fieldPath lbl key)
+                     "List of Text (answers)"
+                 Nothing -> Left $ missingField (fieldPath lbl key))
+      -- Nonce (optional)
+      <*> (let key = pollMetadataKeyNonce
+           in  case lookup key values of
+                 Just (TxMetaNumber nonce) -> Just
+                   <$> expectWord (fieldPath lbl key) nonce
+                 Nothing -> pure Nothing
+                 Just _ -> Left
+                   $ malformedField (fieldPath lbl key) "Number (nonce)")
+    where
+      lbl = "GovernancePoll"
 
 --  ----------------------------------------------------------------------------
 -- Governance Poll Hash
 --
 
 newtype instance Hash GovernancePoll =
-    GovernancePollHash { unGovernancePollHash :: Hash.Hash (HASH StandardCrypto) GovernancePoll }
-  deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GovernancePoll)
+  GovernancePollHash
+  { unGovernancePollHash :: Hash.Hash (HASH StandardCrypto) GovernancePoll
+  }
+  deriving stock ( Eq, Ord )
+  deriving ( Show, IsString ) via UsingRawBytesHex (Hash GovernancePoll)
 
 instance SerialiseAsRawBytes (Hash GovernancePoll) where
-    serialiseToRawBytes =
-      hashToBytes . unGovernancePollHash
+  serialiseToRawBytes = hashToBytes . unGovernancePollHash
 
-    deserialiseFromRawBytes (AsHash AsGovernancePoll) bs =
-      maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash(GovernancePoll)") $
-        GovernancePollHash <$> hashFromBytes bs
+  deserialiseFromRawBytes (AsHash AsGovernancePoll) bs =
+    maybeToRight
+      (SerialiseAsRawBytesError "Unable to deserialise Hash(GovernancePoll)")
+    $ GovernancePollHash <$> hashFromBytes bs
 
 hashGovernancePoll :: GovernancePoll -> Hash GovernancePoll
 hashGovernancePoll =
   GovernancePollHash . hashWith @(HASH StandardCrypto) serialiseToCBOR
-
 
 -- ----------------------------------------------------------------------------
 -- Governance Poll Answer
@@ -200,65 +195,60 @@ hashGovernancePoll =
 
 -- | An (unauthenticated) answer to a poll from an SPO referring to a poll by
 -- hash digest value.
-data GovernancePollAnswer = GovernancePollAnswer
-    { govAnsPoll :: Hash GovernancePoll
-      -- ^ The target poll
-    , govAnsChoice :: Word
-      -- ^ The (0-based) index of the chosen answer from that poll
-    }
-  deriving (Show, Eq)
+data GovernancePollAnswer =
+  GovernancePollAnswer
+  { govAnsPoll   :: Hash GovernancePoll
+    -- ^ The target poll
+  , govAnsChoice :: Word
+    -- ^ The (0-based) index of the chosen answer from that poll
+  }
+  deriving ( Show, Eq )
 
 instance HasTypeProxy GovernancePollAnswer where
-    data AsType GovernancePollAnswer = AsGovernancePollAnswer
-    proxyToAsType _ = AsGovernancePollAnswer
+  data AsType GovernancePollAnswer = AsGovernancePollAnswer
+
+  proxyToAsType _ = AsGovernancePollAnswer
 
 instance AsTxMetadata GovernancePollAnswer where
-    asTxMetadata GovernancePollAnswer{govAnsPoll, govAnsChoice} =
-      makeTransactionMetadata $ Map.fromList
-        [ ( pollMetadataLabel
-          , TxMetaMap
-           [ ( pollMetadataKeyPoll, TxMetaBytes (serialiseToRawBytes govAnsPoll) )
-           , ( pollMetadataKeyChoice, TxMetaNumber (toInteger govAnsChoice) )
-           ]
-          )
-        ]
+  asTxMetadata GovernancePollAnswer { govAnsPoll, govAnsChoice } =
+    makeTransactionMetadata
+    $ Map.fromList
+      [ ( pollMetadataLabel
+        , TxMetaMap
+            [ ( pollMetadataKeyPoll
+              , TxMetaBytes (serialiseToRawBytes govAnsPoll) )
+            , ( pollMetadataKeyChoice, TxMetaNumber (toInteger govAnsChoice) ) ] ) ]
 
 instance SerialiseAsCBOR GovernancePollAnswer where
-    serialiseToCBOR =
-      serialiseToCBOR . asTxMetadata
+  serialiseToCBOR = serialiseToCBOR . asTxMetadata
 
-    deserialiseFromCBOR AsGovernancePollAnswer bs = do
-      metadata <- deserialiseFromCBOR AsTxMetadata bs
-      withNestedMap lbl pollMetadataLabel metadata $ \values ->
-        GovernancePollAnswer
-          -- Poll
-          <$> ( let key = pollMetadataKeyPoll in case lookup key values of
-                  Nothing ->
-                    Left $ missingField (fieldPath lbl key)
-                  Just x  ->
-                    expectHash key x
-              )
-          -- Answer
-          <*> ( let key = pollMetadataKeyChoice in case lookup key values of
-                  Just (TxMetaNumber n) ->
-                    expectWord (fieldPath lbl key) n
-                  Just _  ->
-                    Left $ malformedField (fieldPath lbl key) "Number (answer index)"
-                  Nothing ->
-                    Left $ missingField (fieldPath lbl key)
-              )
-     where
-       lbl = "GovernancePollAnswer"
+  deserialiseFromCBOR AsGovernancePollAnswer bs = do
+    metadata <- deserialiseFromCBOR AsTxMetadata bs
+    withNestedMap lbl pollMetadataLabel metadata
+      $ \values -> GovernancePollAnswer
+      -- Poll
+      <$> (let key = pollMetadataKeyPoll
+           in  case lookup key values of
+                 Nothing -> Left $ missingField (fieldPath lbl key)
+                 Just x  -> expectHash key x)
+      -- Answer
+      <*> (let key = pollMetadataKeyChoice
+           in  case lookup key values of
+                 Just (TxMetaNumber n) -> expectWord (fieldPath lbl key) n
+                 Just _ -> Left
+                   $ malformedField (fieldPath lbl key) "Number (answer index)"
+                 Nothing -> Left $ missingField (fieldPath lbl key))
+    where
+      lbl = "GovernancePollAnswer"
 
-       expectHash key value =
-         case value of
-           TxMetaBytes bytes ->
-             left
-               (DecoderErrorCustom (fieldPath lbl key) . Text.pack . unSerialiseAsRawBytesError)
-               (deserialiseFromRawBytes (AsHash AsGovernancePoll) bytes)
-           _ ->
-             Left (malformedField (fieldPath lbl key) "Bytes (32 bytes hash digest)")
-
+      expectHash key value = case value of
+        TxMetaBytes bytes -> left
+          (DecoderErrorCustom (fieldPath lbl key)
+           . Text.pack
+           . unSerialiseAsRawBytesError)
+          (deserialiseFromRawBytes (AsHash AsGovernancePoll) bytes)
+        _ -> Left
+          (malformedField (fieldPath lbl key) "Bytes (32 bytes hash digest)")
 
 -- ----------------------------------------------------------------------------
 -- Governance Poll Verification
@@ -272,99 +262,94 @@ data GovernancePollError
   | ErrGovernancePollInvalidAnswer GovernancePollInvalidAnswerError
   deriving Show
 
-data GovernancePollInvalidAnswerError = GovernancePollInvalidAnswerError
-  { invalidAnswerAcceptableAnswers :: [(Word, Text)]
-  , invalidAnswerReceivedAnswer :: Word
+data GovernancePollInvalidAnswerError =
+  GovernancePollInvalidAnswerError
+  { invalidAnswerAcceptableAnswers :: [ ( Word, Text ) ]
+  , invalidAnswerReceivedAnswer    :: Word
   }
   deriving Show
 
-data GovernancePollMismatchError = GovernancePollMismatchError
-  { specifiedHashInAnswer :: Hash GovernancePoll
+data GovernancePollMismatchError =
+  GovernancePollMismatchError
+  { specifiedHashInAnswer  :: Hash GovernancePoll
   , calculatedHashFromPoll :: Hash GovernancePoll
   }
   deriving Show
 
 renderGovernancePollError :: GovernancePollError -> Text
-renderGovernancePollError err =
-  case err of
-    ErrGovernancePollMismatch mismatchErr -> mconcat
-      [ "Answer's poll doesn't match provided poll (hash mismatch).\n"
-      , "  Hash specified in answer:  " <> textShow (specifiedHashInAnswer mismatchErr)
-      , "\n"
-      , "  Hash calculated from poll: " <> textShow (calculatedHashFromPoll mismatchErr)
-      ]
-    ErrGovernancePollNoAnswer ->
-      "No answer found in the provided transaction's metadata."
-    ErrGovernancePollUnauthenticated -> mconcat
-      [ "No (valid) signatories found for the answer. "
-      , "Signatories MUST be specified as extra signatories on the transaction "
-      , "and cannot be mere payment keys."
-      ]
-    ErrGovernancePollMalformedAnswer decoderErr ->
-      "Malformed metadata; couldn't deserialise answer: " <> sformat build decoderErr
-    ErrGovernancePollInvalidAnswer invalidAnswer ->
-        mconcat
-          [ "Invalid answer ("
-          , textShow (invalidAnswerReceivedAnswer invalidAnswer)
-          , ") not part of the poll."
-          , "\n"
-          , "Accepted answers:"
-          , "\n"
-          , Text.intercalate "\n"
-              [ mconcat
-                  [ textShow ix
-                  , " → "
-                  , answer
-                  ]
-              | (ix, answer) <- invalidAnswerAcceptableAnswers invalidAnswer
-              ]
-          ]
+renderGovernancePollError err = case err of
+  ErrGovernancePollMismatch mismatchErr -> mconcat
+    [ "Answer's poll doesn't match provided poll (hash mismatch).\n"
+    , "  Hash specified in answer:  "
+      <> textShow (specifiedHashInAnswer mismatchErr)
+    , "\n"
+    , "  Hash calculated from poll: "
+      <> textShow (calculatedHashFromPoll mismatchErr) ]
+  ErrGovernancePollNoAnswer
+   -> "No answer found in the provided transaction's metadata."
+  ErrGovernancePollUnauthenticated -> mconcat
+    [ "No (valid) signatories found for the answer. "
+    , "Signatories MUST be specified as extra signatories on the transaction "
+    , "and cannot be mere payment keys." ]
+  ErrGovernancePollMalformedAnswer
+    decoderErr -> "Malformed metadata; couldn't deserialise answer: "
+    <> sformat build decoderErr
+  ErrGovernancePollInvalidAnswer invalidAnswer -> mconcat
+    [ "Invalid answer ("
+    , textShow (invalidAnswerReceivedAnswer invalidAnswer)
+    , ") not part of the poll."
+    , "\n"
+    , "Accepted answers:"
+    , "\n"
+    , Text.intercalate
+        "\n"
+        [ mconcat [ textShow ix, " → ", answer ]
+        | ( ix, answer ) <- invalidAnswerAcceptableAnswers invalidAnswer ] ]
 
 -- | Verify a poll against a given transaction and returns the signatories
 -- (verification key only) when valid.
 --
 -- Note: signatures aren't checked as it is assumed to have been done externally
 -- (the existence of the transaction in the ledger provides this guarantee).
-verifyPollAnswer
-  :: GovernancePoll
-  -> InAnyShelleyBasedEra Tx
-  -> Either GovernancePollError [Hash PaymentKey]
-verifyPollAnswer poll (InAnyShelleyBasedEra _era (getTxBody -> TxBody body)) = do
-  answer <- extractPollAnswer (txMetadata body)
-  answer `hasMatchingHash` hashGovernancePoll poll
-  answer `isAmongAcceptableChoices` govPollAnswers poll
-  extraKeyWitnesses (txExtraKeyWits body)
- where
-  extractPollAnswer = \case
-      TxMetadataNone ->
-        Left ErrGovernancePollNoAnswer
-      TxMetadataInEra _era metadata ->
-        left ErrGovernancePollMalformedAnswer $
-          deserialiseFromCBOR AsGovernancePollAnswer (serialiseToCBOR metadata)
+verifyPollAnswer :: GovernancePoll
+                 -> InAnyShelleyBasedEra Tx
+                 -> Either GovernancePollError [ Hash PaymentKey ]
+verifyPollAnswer poll (InAnyShelleyBasedEra _era (getTxBody -> TxBody body)) =
+  do
+    answer <- extractPollAnswer (txMetadata body)
+    answer `hasMatchingHash` hashGovernancePoll poll
+    answer `isAmongAcceptableChoices` govPollAnswers poll
+    extraKeyWitnesses (txExtraKeyWits body)
+  where
+    extractPollAnswer = \case
+      TxMetadataNone -> Left ErrGovernancePollNoAnswer
+      TxMetadataInEra _era metadata -> left ErrGovernancePollMalformedAnswer
+        $ deserialiseFromCBOR AsGovernancePollAnswer (serialiseToCBOR metadata)
 
-  hasMatchingHash answer calculatedHashFromPoll = do
-    let specifiedHashInAnswer = govAnsPoll answer
-    when (calculatedHashFromPoll /= specifiedHashInAnswer) $
-      Left $ ErrGovernancePollMismatch $
-        GovernancePollMismatchError
-          { specifiedHashInAnswer
-          , calculatedHashFromPoll
-          }
-
-  isAmongAcceptableChoices answer answers =
-    when (govAnsChoice answer >= fromIntegral (length answers)) $ do
-      let invalidAnswerReceivedAnswer = govAnsChoice answer
-      let invalidAnswerAcceptableAnswers = zip [0..] answers
-      Left $ ErrGovernancePollInvalidAnswer $ GovernancePollInvalidAnswerError
-        { invalidAnswerReceivedAnswer
-        , invalidAnswerAcceptableAnswers
+    hasMatchingHash answer calculatedHashFromPoll = do
+      let specifiedHashInAnswer = govAnsPoll answer
+      when (calculatedHashFromPoll /= specifiedHashInAnswer)
+        $ Left
+        $ ErrGovernancePollMismatch
+        $ GovernancePollMismatchError
+        { specifiedHashInAnswer
+        , calculatedHashFromPoll
         }
 
-  extraKeyWitnesses = \case
-    TxExtraKeyWitnesses _era witnesses ->
-      pure witnesses
-    TxExtraKeyWitnessesNone ->
-      Left ErrGovernancePollUnauthenticated
+    isAmongAcceptableChoices answer answers =
+      when (govAnsChoice answer >= fromIntegral (length answers)) $ do
+        let invalidAnswerReceivedAnswer = govAnsChoice answer
+        let invalidAnswerAcceptableAnswers = zip [ 0 .. ] answers
+        Left
+          $ ErrGovernancePollInvalidAnswer
+          $ GovernancePollInvalidAnswerError
+          { invalidAnswerReceivedAnswer
+          , invalidAnswerAcceptableAnswers
+          }
+
+    extraKeyWitnesses = \case
+      TxExtraKeyWitnesses _era witnesses -> pure witnesses
+      TxExtraKeyWitnessesNone -> Left ErrGovernancePollUnauthenticated
 
 -- ----------------------------------------------------------------------------
 -- Decoder Helpers
@@ -374,59 +359,48 @@ withNestedMap
   :: Text
   -> Word64
   -> TxMetadata
-  -> ([(TxMetadataValue, TxMetadataValue)] -> Either DecoderError a)
+  -> ([ ( TxMetadataValue, TxMetadataValue ) ] -> Either DecoderError a)
   -> Either DecoderError a
 withNestedMap lbl topLevelLabel (TxMetadata m) continueWith =
   case Map.lookup topLevelLabel m of
-    Just (TxMetaMap values) ->
-      continueWith values
-    Nothing ->
-      Left $ DecoderErrorCustom lbl
+    Just (TxMetaMap values) -> continueWith values
+    Nothing -> Left
+      $ DecoderErrorCustom
+        lbl
         ("missing expected label: " <> textShow topLevelLabel)
-    Just _ ->
-      Left $ DecoderErrorCustom lbl
-        "malformed data; expected a key:value map"
+    Just _ -> Left
+      $ DecoderErrorCustom lbl "malformed data; expected a key:value map"
 
 expectTextChunks :: Text -> TxMetadataValue -> Either DecoderError Text
-expectTextChunks lbl value =
-  case value of
-    TxMetaList xs ->
-      foldM expectText mempty xs
-        & maybe
-            (Left (malformedField (lbl <> "[i]") "Text"))
-            (Right . Text.Lazy.toStrict . Text.Builder.toLazyText)
-    _ ->
-      Left (malformedField lbl "List<Text>")
- where
-  expectText acc x =
-    case x of
+expectTextChunks lbl value = case value of
+  TxMetaList xs -> foldM expectText mempty xs
+    & maybe
+      (Left (malformedField (lbl <> "[i]") "Text"))
+      (Right . Text.Lazy.toStrict . Text.Builder.toLazyText)
+  _ -> Left (malformedField lbl "List<Text>")
+  where
+    expectText acc x = case x of
       TxMetaText txt -> Just (acc <> Text.Builder.fromText txt)
       _ -> Nothing
 
 expectWord :: Text -> Integer -> Either DecoderError Word
 expectWord lbl n
-  | n >= 0 && n < toInteger (maxBound :: Word) =
-      pure (fromInteger n)
+  | n >= 0 && n < toInteger (maxBound :: Word) = pure (fromInteger n)
   | otherwise =
-      Left $ DecoderErrorCustom lbl
-        "invalid number; must be non-negative word"
+    Left $ DecoderErrorCustom lbl "invalid number; must be non-negative word"
 
 missingField :: Text -> DecoderError
-missingField lbl =
-  DecoderErrorCustom lbl
-    "missing mandatory field"
+missingField lbl = DecoderErrorCustom lbl "missing mandatory field"
 
 malformedField :: Text -> Text -> DecoderError
 malformedField lbl hint =
-  DecoderErrorCustom lbl
-    ("malformed field; must be: " <> hint)
+  DecoderErrorCustom lbl ("malformed field; must be: " <> hint)
 
-fieldPath
-  :: Text
-    -- ^ Label
-  -> TxMetadataValue
-    -- ^ Field key
-  -> Text
+fieldPath :: Text
+          -- ^ Label
+          -> TxMetadataValue
+          -- ^ Field key
+          -> Text
 fieldPath lbl (TxMetaNumber i) = lbl <> "." <> textShow i
 fieldPath lbl (TxMetaText t) = lbl <> "." <> t
 fieldPath lbl _ = lbl <> ".?"

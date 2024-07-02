@@ -4,23 +4,21 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Api.Typed.JSON
-  ( tests
-  ) where
+module Test.Cardano.Api.Typed.JSON ( tests ) where
 
 import           Cardano.Api
 
-import           Data.Aeson (eitherDecode, encode)
+import           Data.Aeson                     ( eitherDecode, encode )
 
-import           Test.Gen.Cardano.Api.Typed (genMaybePraosNonce, genProtocolParameters)
+import           Hedgehog                       ( Property, forAll, tripping )
+import qualified Hedgehog                       as H
+import qualified Hedgehog.Gen                   as Gen
 
 import           Test.Cardano.Api.Typed.Orphans ()
-
-import           Hedgehog (Property, forAll, tripping)
-import qualified Hedgehog as H
-import qualified Hedgehog.Gen as Gen
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Gen.Cardano.Api.Typed
+       ( genMaybePraosNonce, genProtocolParameters )
+import           Test.Tasty                     ( TestTree, testGroup )
+import           Test.Tasty.Hedgehog            ( testProperty )
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -31,14 +29,17 @@ prop_roundtrip_praos_nonce_JSON = H.property $ do
 
 prop_roundtrip_protocol_parameters_JSON :: Property
 prop_roundtrip_protocol_parameters_JSON = H.property $ do
-  AnyCardanoEra era <- forAll $ Gen.element [minBound .. maxBound]
+  AnyCardanoEra era <- forAll $ Gen.element [ minBound .. maxBound ]
   pp <- forAll (genProtocolParameters era)
   tripping pp encode eitherDecode
 
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.Typed.JSON"
-  [ testProperty "roundtrip praos nonce JSON"         prop_roundtrip_praos_nonce_JSON
-  , testProperty "roundtrip protocol parameters JSON" prop_roundtrip_protocol_parameters_JSON
-  ]
+tests =
+  testGroup
+    "Test.Cardano.Api.Typed.JSON"
+    [ testProperty "roundtrip praos nonce JSON" prop_roundtrip_praos_nonce_JSON
+    , testProperty
+        "roundtrip protocol parameters JSON"
+        prop_roundtrip_protocol_parameters_JSON ]

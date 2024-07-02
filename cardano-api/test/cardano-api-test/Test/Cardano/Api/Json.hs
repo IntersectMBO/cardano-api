@@ -1,22 +1,20 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 
-module Test.Cardano.Api.Json
-  ( tests
-  ) where
+module Test.Cardano.Api.Json ( tests ) where
 
-import           Cardano.Api.Orphans ()
+import           Cardano.Api.Orphans        ()
 import           Cardano.Api.Shelley
 
-import           Data.Aeson (eitherDecode, encode)
+import           Data.Aeson                 ( eitherDecode, encode )
 
-import           Test.Gen.Cardano.Api (genAlonzoGenesis)
+import           Hedgehog                   ( Property, forAll, tripping )
+import qualified Hedgehog                   as H
+
+import           Test.Gen.Cardano.Api       ( genAlonzoGenesis )
 import           Test.Gen.Cardano.Api.Typed
-
-import           Hedgehog (Property, forAll, tripping)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty                 ( TestTree, testGroup )
+import           Test.Tasty.Hedgehog        ( testProperty )
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -53,15 +51,29 @@ prop_json_roundtrip_txout_utxo_context = H.property $ do
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
   sData <- forAll genHashableScriptData
-  tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
+  tripping
+    sData
+    scriptDataToJsonDetailedSchema
+    scriptDataFromJsonDetailedSchema
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.Json"
-  [ testProperty "json roundtrip alonzo genesis"           prop_json_roundtrip_alonzo_genesis
-  , testProperty "json roundtrip utxo"                     prop_json_roundtrip_utxo
-  , testProperty "json roundtrip reference scripts"        prop_json_roundtrip_reference_scripts
-  , testProperty "json roundtrip txoutvalue"               prop_json_roundtrip_txoutvalue
-  , testProperty "json roundtrip txout tx context"         prop_json_roundtrip_txout_tx_context
-  , testProperty "json roundtrip txout utxo context"       prop_json_roundtrip_txout_utxo_context
-  , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
-  ]
+tests =
+  testGroup
+    "Test.Cardano.Api.Json"
+    [ testProperty
+        "json roundtrip alonzo genesis"
+        prop_json_roundtrip_alonzo_genesis
+    , testProperty "json roundtrip utxo" prop_json_roundtrip_utxo
+    , testProperty
+        "json roundtrip reference scripts"
+        prop_json_roundtrip_reference_scripts
+    , testProperty "json roundtrip txoutvalue" prop_json_roundtrip_txoutvalue
+    , testProperty
+        "json roundtrip txout tx context"
+        prop_json_roundtrip_txout_tx_context
+    , testProperty
+        "json roundtrip txout utxo context"
+        prop_json_roundtrip_txout_utxo_context
+    , testProperty
+        "json roundtrip scriptdata detailed json"
+        prop_json_roundtrip_scriptdata_detailed_json ]

@@ -10,7 +10,6 @@ module Cardano.Api.Experimental
   , UseEra
   , VersionToSbe
   , useEra
-  , protocolVersionToSbe
-  ) where
+  , protocolVersionToSbe ) where
 
 import           Cardano.Api.Protocol.Version

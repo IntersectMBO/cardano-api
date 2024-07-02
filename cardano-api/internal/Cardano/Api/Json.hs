@@ -1,6 +1,4 @@
-module Cardano.Api.Json
-  ( toRationalJSON
-  ) where
+module Cardano.Api.Json ( toRationalJSON ) where
 
 import           Data.Aeson
 import           Data.Scientific
@@ -12,7 +10,6 @@ import           Data.Scientific
 -- in a @{"numerator": 1, "denominator": 3}@ style otherwise.
 --
 toRationalJSON :: Rational -> Value
-toRationalJSON r =
-  case fromRationalRepetendLimited 20 r of
-    Right (s, Nothing) -> toJSON s
-    _                  -> toJSON r
+toRationalJSON r = case fromRationalRepetendLimited 20 r of
+  Right ( s, Nothing ) -> toJSON s
+  _ -> toJSON r

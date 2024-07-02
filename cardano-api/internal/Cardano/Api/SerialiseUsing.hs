@@ -5,8 +5,7 @@
 module Cardano.Api.SerialiseUsing
   ( UsingRawBytes(..)
   , UsingRawBytesHex(..)
-  , UsingBech32(..)
-  ) where
+  , UsingBech32(..) ) where
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
@@ -16,14 +15,15 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 
-import qualified Data.Aeson.Types as Aeson
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Char8 as BSC
-import           Data.String (IsString (..))
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Typeable (tyConName, typeRep, typeRepTyCon)
+import qualified Data.Aeson.Types            as Aeson
+import           Data.ByteString             ( ByteString )
+import qualified Data.ByteString.Base16      as Base16
+import qualified Data.ByteString.Char8       as BSC
+import           Data.String                 ( IsString(..) )
+import qualified Data.Text                   as Text
+import qualified Data.Text.Encoding          as Text
+import           Data.Typeable
+       ( tyConName, typeRep, typeRepTyCon )
 
 -- | For use with @deriving via@, to provide 'ToCBOR' and 'FromCBOR' instances,
 -- based on the 'SerialiseAsRawBytes' instance.
@@ -33,18 +33,19 @@ import           Data.Typeable (tyConName, typeRep, typeRepTyCon)
 newtype UsingRawBytes a = UsingRawBytes a
 
 instance SerialiseAsRawBytes a => ToCBOR (UsingRawBytes a) where
-    toCBOR (UsingRawBytes x) = toCBOR (serialiseToRawBytes x)
+  toCBOR (UsingRawBytes x) = toCBOR (serialiseToRawBytes x)
 
 instance SerialiseAsRawBytes a => FromCBOR (UsingRawBytes a) where
-    fromCBOR = do
-      bs <- fromCBOR
-      case deserialiseFromRawBytes ttoken bs of
-        Right x  -> return (UsingRawBytes x)
-        Left (SerialiseAsRawBytesError msg) -> fail ("cannot deserialise as a " ++ tname ++ ".  The error was: " ++ msg)
-      where
-        ttoken = proxyToAsType (Proxy :: Proxy a)
-        tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
+  fromCBOR = do
+    bs <- fromCBOR
+    case deserialiseFromRawBytes ttoken bs of
+      Right x -> return (UsingRawBytes x)
+      Left (SerialiseAsRawBytesError msg) -> fail
+        ("cannot deserialise as a " ++ tname ++ ".  The error was: " ++ msg)
+    where
+      ttoken = proxyToAsType (Proxy :: Proxy a)
 
+      tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
 -- | For use with @deriving via@, to provide instances for any\/all of 'Show',
 -- 'IsString', 'ToJSON', 'FromJSON', 'ToJSONKey', FromJSONKey' using a hex
@@ -57,42 +58,40 @@ instance SerialiseAsRawBytes a => FromCBOR (UsingRawBytes a) where
 newtype UsingRawBytesHex a = UsingRawBytesHex a
 
 instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
-    show (UsingRawBytesHex x) = show (serialiseToRawBytesHex x)
+  show (UsingRawBytesHex x) = show (serialiseToRawBytesHex x)
 
 instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
-    fromString = either error id . deserialiseFromRawBytesBase16 . BSC.pack
+  fromString = either error id . deserialiseFromRawBytesBase16 . BSC.pack
 
 instance SerialiseAsRawBytes a => ToJSON (UsingRawBytesHex a) where
-    toJSON (UsingRawBytesHex x) = toJSON (serialiseToRawBytesHexText x)
+  toJSON (UsingRawBytesHex x) = toJSON (serialiseToRawBytesHexText x)
 
 instance SerialiseAsRawBytes a => FromJSON (UsingRawBytesHex a) where
   parseJSON =
-    Aeson.withText tname $
-      either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
+    Aeson.withText tname
+    $ either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
     where
-      tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
+      tname = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
 instance SerialiseAsRawBytes a => ToJSONKey (UsingRawBytesHex a) where
-  toJSONKey =
-    Aeson.toJSONKeyText $ \(UsingRawBytesHex x) -> serialiseToRawBytesHexText x
+  toJSONKey = Aeson.toJSONKeyText $ \(UsingRawBytesHex x)
+    -> serialiseToRawBytesHexText x
 
 instance SerialiseAsRawBytes a => FromJSONKey (UsingRawBytesHex a) where
-
   fromJSONKey =
-    Aeson.FromJSONKeyTextParser $
-    either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
+    Aeson.FromJSONKeyTextParser
+    $ either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
 
-deserialiseFromRawBytesBase16 ::
-  SerialiseAsRawBytes a => ByteString -> Either String (UsingRawBytesHex a)
-deserialiseFromRawBytesBase16 str =
-  case Base16.decode str of
-    Right raw -> case deserialiseFromRawBytes ttoken raw of
-      Right x  -> Right (UsingRawBytesHex x)
-      Left (SerialiseAsRawBytesError msg) -> Left ("cannot deserialise " ++ show str ++ ".  The error was: " <> msg)
-    Left msg  -> Left ("invalid hex " ++ show str ++ ", " ++ msg)
+deserialiseFromRawBytesBase16
+  :: SerialiseAsRawBytes a => ByteString -> Either String (UsingRawBytesHex a)
+deserialiseFromRawBytesBase16 str = case Base16.decode str of
+  Right raw -> case deserialiseFromRawBytes ttoken raw of
+    Right x -> Right (UsingRawBytesHex x)
+    Left (SerialiseAsRawBytesError msg) -> Left
+      ("cannot deserialise " ++ show str ++ ".  The error was: " <> msg)
+  Left msg  -> Left ("invalid hex " ++ show str ++ ", " ++ msg)
   where
     ttoken = proxyToAsType (Proxy :: Proxy a)
-
 
 -- | For use with @deriving via@, to provide instances for any\/all of 'Show',
 -- 'IsString', 'ToJSON', 'FromJSON', 'ToJSONKey', FromJSONKey' using a bech32
@@ -105,31 +104,31 @@ deserialiseFromRawBytesBase16 str =
 newtype UsingBech32 a = UsingBech32 a
 
 instance SerialiseAsBech32 a => Show (UsingBech32 a) where
-    show (UsingBech32 x) = show (serialiseToBech32 x)
+  show (UsingBech32 x) = show (serialiseToBech32 x)
 
 instance SerialiseAsBech32 a => IsString (UsingBech32 a) where
-    fromString str =
-      case deserialiseFromBech32 ttoken (Text.pack str) of
-        Right x  -> UsingBech32 x
-        Left  e ->
-          error $ docToString $
-            "fromString: " <> pretty str <> ": " <> prettyError e
-      where
-        ttoken :: AsType a
-        ttoken = proxyToAsType Proxy
+  fromString str = case deserialiseFromBech32 ttoken (Text.pack str) of
+    Right x -> UsingBech32 x
+    Left e  -> error
+      $ docToString
+      $ "fromString: " <> pretty str <> ": " <> prettyError e
+    where
+      ttoken :: AsType a
+      ttoken = proxyToAsType Proxy
 
 instance SerialiseAsBech32 a => ToJSON (UsingBech32 a) where
-    toJSON (UsingBech32 x) = toJSON (serialiseToBech32 x)
+  toJSON (UsingBech32 x) = toJSON (serialiseToBech32 x)
 
 instance SerialiseAsBech32 a => FromJSON (UsingBech32 a) where
-    parseJSON =
-      Aeson.withText tname $ \str ->
-        case deserialiseFromBech32 ttoken str of
-          Right x -> return (UsingBech32 x)
-          Left  e -> fail $ docToString $ pretty str <> ": " <> prettyError e
-      where
-        ttoken = proxyToAsType (Proxy :: Proxy a)
-        tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
+  parseJSON =
+    Aeson.withText tname $ \str -> case deserialiseFromBech32 ttoken str of
+      Right x -> return (UsingBech32 x)
+      Left e  -> fail $ docToString $ pretty str <> ": " <> prettyError e
+    where
+      ttoken = proxyToAsType (Proxy :: Proxy a)
+
+      tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
 instance SerialiseAsBech32 a => ToJSONKey (UsingBech32 a)
+
 instance SerialiseAsBech32 a => FromJSONKey (UsingBech32 a)

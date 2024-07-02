@@ -8,11 +8,9 @@ module Cardano.Api.Pretty
   , docToString
   , pshow
   , prettyException
-
   , hsep
   , vsep
   , (<+>)
-
   , black
   , red
   , green
@@ -20,14 +18,15 @@ module Cardano.Api.Pretty
   , blue
   , magenta
   , cyan
-  , white
-  ) where
+  , white ) where
 
 import           Cardano.Api.Via.ShowOf
 
 import           Control.Exception.Safe
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as TextLazy
+
+import qualified Data.Text                     as Text
+import qualified Data.Text.Lazy                as TextLazy
+
 import           Prettyprinter
 import           Prettyprinter.Render.Terminal
 
@@ -36,7 +35,7 @@ import           Prettyprinter.Render.Terminal
 type Ann = AnsiStyle
 
 docToString :: Doc AnsiStyle -> String
-docToString =  show
+docToString = show
 
 docToLazyText :: Doc AnsiStyle -> TextLazy.Text
 docToLazyText = renderLazy . layoutPretty defaultLayoutOptions

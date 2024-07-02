@@ -15,28 +15,30 @@ module Cardano.Api.Monad.Error
   , handleIOExceptionsLiftWith
   , hoistIOEither
   , liftMaybe
-
   , module Control.Monad.Except
   , module Control.Monad.IO.Class
   , module Control.Monad.Trans.Class
   , module Control.Monad.Trans.Except
-  , module Control.Monad.Trans.Except.Extra
-  ) where
+  , module Control.Monad.Trans.Except.Extra ) where
 
 import           Control.Exception.Safe
-import           Control.Monad.Except (ExceptT (..), MonadError (..), catchError, liftEither,
-                   mapExcept, mapExceptT, runExcept, runExceptT, withExcept)
+import           Control.Monad.Except
+       ( ExceptT(..), MonadError(..), catchError, liftEither, mapExcept
+       , mapExceptT, runExcept, runExceptT, withExcept )
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import           Data.Bifunctor (first)
+
+import           Data.Bifunctor                   ( first )
 
 -- | Convenience alias
-type MonadTransError e t m = (Monad m, MonadTrans t, MonadError e (t m))
+type MonadTransError e t m = ( Monad m, MonadTrans t, MonadError e (t m) )
+
 --
 -- | Same as 'MonadTransError', but with also 'MonadIO' constraint
-type MonadIOTransError e t m = (MonadIO m, MonadIO (t m), MonadCatch m, MonadTrans t, MonadError e (t m))
+type MonadIOTransError e t m =
+  ( MonadIO m, MonadIO (t m), MonadCatch m, MonadTrans t, MonadError e (t m) )
 
 -- | Modify an 'ExceptT' error and lift it to 'MonadError' transformer stack.
 --
@@ -50,11 +52,10 @@ type MonadIOTransError e t m = (MonadIO m, MonadIO (t m), MonadCatch m, MonadTra
 -- use of '>>='.
 --
 -- This function avoids that, but at the cost of limiting its application to transformers.
-modifyError
-  :: MonadTransError e' t m
-  => (e -> e') -- ^ mapping function
-  -> ExceptT e m a -- ^ value
-  -> t m a -- ^ result with modified error
+modifyError :: MonadTransError e' t m
+            => (e -> e') -- ^ mapping function
+            -> ExceptT e m a -- ^ value
+            -> t m a -- ^ result with modified error
 modifyError f m = lift (runExceptT m) >>= either (throwError . f) pure
 
 -- | Wrap an exception and lift it into 'MonadError'.
@@ -77,16 +78,11 @@ handleIOExceptionsLiftWith
 handleIOExceptionsLiftWith f act = liftEither =<< lift (first f <$> try act)
 
 -- | Lift 'ExceptT' into 'MonadTransError'
-liftExceptT :: MonadTransError e t m
-            => ExceptT e m a
-            -> t m a
+liftExceptT :: MonadTransError e t m => ExceptT e m a -> t m a
 liftExceptT = modifyError id
 
-
 -- | Lift an 'IO' action that returns 'Either' into 'MonadIOTransError'
-hoistIOEither :: MonadIOTransError e t m
-              => IO (Either e a)
-              -> t m a
+hoistIOEither :: MonadIOTransError e t m => IO (Either e a) -> t m a
 hoistIOEither = liftExceptT . ExceptT . liftIO
 
 -- | Lift 'Maybe' into 'MonadError'

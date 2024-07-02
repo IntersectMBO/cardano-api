@@ -17,15 +17,14 @@ module Cardano.Api.Protocol.Version
   , ConwayEra
   , pattern CurrentEra
   , pattern UpcomingEra
-  , Era (..)
+  , Era(..)
   , UseEra
   , VersionToSbe
   , useEra
-  , protocolVersionToSbe
-  ) where
+  , protocolVersionToSbe ) where
 
-import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
-import qualified Cardano.Api.Eras.Core as Api
+import           Cardano.Api.Eon.ShelleyBasedEra ( ShelleyBasedEra(..) )
+import qualified Cardano.Api.Eras.Core           as Api
 
 import           GHC.TypeLits
 
@@ -33,6 +32,7 @@ import           GHC.TypeLits
 -- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era
 -- and the next era (upcoming era).
 data BabbageEra
+
 data ConwayEra
 
 -- Allows us to gradually change the api without breaking things.
@@ -133,9 +133,8 @@ pattern UpcomingEra = UpcomingEraInternal
 {-# COMPLETE CurrentEra, UpcomingEra #-}
 
 protocolVersionToSbe
-  :: Era version
-  -> Maybe (ShelleyBasedEra (VersionToSbe version))
-protocolVersionToSbe CurrentEraInternal = Just ShelleyBasedEraBabbage
+  :: Era version -> Maybe (ShelleyBasedEra (VersionToSbe version))
+protocolVersionToSbe CurrentEraInternal  = Just ShelleyBasedEraBabbage
 protocolVersionToSbe UpcomingEraInternal = Nothing
 
 -------------------------------------------------------------------------
@@ -151,13 +150,14 @@ instance UseEra BabbageEra where
 instance UseEra ConwayEra where
   useEra = UpcomingEra
 
-
 -- | After a hardfork there is usually no planned upcoming era
 -- that we are able to experiment with. We force a type era
 -- in this instance. See docs above.
 data EraCurrentlyNonExistent
 
-type family UninhabitableType a  where
-  UninhabitableType EraCurrentlyNonExistent = TypeError ('Text "There is currently no planned upcoming era. Use CurrentEra instead.")
+type family UninhabitableType a where
+  UninhabitableType EraCurrentlyNonExistent = TypeError
+    ('Text
+       "There is currently no planned upcoming era. Use CurrentEra instead.")
 
 

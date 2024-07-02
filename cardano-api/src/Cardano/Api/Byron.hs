@@ -4,89 +4,69 @@
 --
 
 module Cardano.Api.Byron
-  ( module Cardano.Api,
-    AsType(..),
-
+  ( module Cardano.Api
+  , AsType(..)
     -- * Cryptographic key interface
     -- $keys
-    VerificationKey(..),
-    SigningKey(..),
-    SomeByronSigningKey(..),
-
+  , VerificationKey(..)
+  , SigningKey(..)
+  , SomeByronSigningKey(..)
     -- * Hashes
-    Hash(..),
-
+  , Hash(..)
     -- * Payment addresses
     -- | Constructing and inspecting Byron payment addresses
-    Address(ByronAddress),
-    NetworkId(Mainnet, Testnet),
-
+  , Address(ByronAddress)
+  , NetworkId(Mainnet, Testnet)
     -- * Building transactions
     -- | Constructing and inspecting transactions
-    TxId(TxId),
-    TxIn(TxIn),
-    TxOut(TxOut),
-    TxIx(TxIx),
-
+  , TxId(TxId)
+  , TxIn(TxIn)
+  , TxOut(TxOut)
+  , TxIx(TxIx)
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
-    ATxAux(..),
-
+  , ATxAux(..)
     -- ** Incremental signing and separate witnesses
-    KeyWitness (ByronKeyWitness),
-    WitnessNetworkIdOrByronAddress
-      ( WitnessNetworkId
-      , WitnessByronAddress
-      ),
-
+  , KeyWitness(ByronKeyWitness)
+  , WitnessNetworkIdOrByronAddress(WitnessNetworkId,
+                               WitnessByronAddress)
     -- * Errors
-    Error(..),
-    FileError(..),
-
+  , Error(..)
+  , FileError(..)
     -- ** Low level protocol interaction with a Cardano node
-    LocalNodeConnectInfo(LocalNodeConnectInfo),
-    LocalNodeClientProtocols(LocalNodeClientProtocols),
-
+  , LocalNodeConnectInfo(LocalNodeConnectInfo)
+  , LocalNodeClientProtocols(LocalNodeClientProtocols)
     -- *** Chain sync protocol
-    ChainSyncClient(..),
-
+  , ChainSyncClient(..)
     -- *** Local tx submission
-    LocalTxSubmissionClient(LocalTxSubmissionClient),
-
+  , LocalTxSubmissionClient(LocalTxSubmissionClient)
     -- *** Local state query
-    LocalStateQueryClient(..),
-
+  , LocalStateQueryClient(..)
     -- * Address
-    NetworkMagic(..),
-
+  , NetworkMagic(..)
     -- * Update Proposal
-    ByronUpdateProposal(..),
-    ByronProtocolParametersUpdate (..),
-    makeByronUpdateProposal,
-    toByronLedgerUpdateProposal,
-    makeProtocolParametersUpdate,
-
+  , ByronUpdateProposal(..)
+  , ByronProtocolParametersUpdate(..)
+  , makeByronUpdateProposal
+  , toByronLedgerUpdateProposal
+  , makeProtocolParametersUpdate
     -- * Vote
-    ByronVote(..),
-    makeByronVote,
-    toByronLedgertoByronVote,
-
+  , ByronVote(..)
+  , makeByronVote
+  , toByronLedgertoByronVote
     -- ** Conversions
-    fromByronTxIn,
-    toByronLovelace,
-    toByronNetworkMagic,
-    toByronProtocolMagicId,
-    toByronRequiresNetworkMagic,
-
+  , fromByronTxIn
+  , toByronLovelace
+  , toByronNetworkMagic
+  , toByronProtocolMagicId
+  , toByronRequiresNetworkMagic
     -- * Hardcoded configuration parameters
-    applicationName,
-    applicationVersion,
-    softwareVersion,
-
+  , applicationName
+  , applicationVersion
+  , softwareVersion
     -- * Serialization
-    serializeByronTx,
-    writeByronTxFileTextEnvelopeCddl,
-  ) where
+  , serializeByronTx
+  , writeByronTxFileTextEnvelopeCddl ) where
 
 import           Cardano.Api
 import           Cardano.Api.Address

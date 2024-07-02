@@ -1,29 +1,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Api.Ledger
-  ( tests
-  ) where
+module Test.Cardano.Api.Ledger ( tests ) where
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-
-import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Api                 as L
 import           Cardano.Ledger.Api.Tx.Address
 import           Cardano.Ledger.Crypto
 import           Cardano.Ledger.SafeHash
 
 import           Control.Monad.Identity
 
-import           Test.Gen.Cardano.Api.Typed
+import qualified Hedgehog                           as H
+import           Hedgehog.Gen.QuickCheck            ( arbitrary )
+import           Hedgehog.Internal.Property
 
 import           Test.Cardano.Ledger.Core.Arbitrary ()
-
-import qualified Hedgehog as H
-import           Hedgehog.Gen.QuickCheck (arbitrary)
-import           Hedgehog.Internal.Property
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Gen.Cardano.Api.Typed
+import           Test.Tasty                         ( TestTree, testGroup )
+import           Test.Tasty.Hedgehog                ( testProperty )
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at
@@ -48,7 +44,7 @@ prop_original_scriptdata_bytes_preserved = H.property $ do
     Left e -> failWith Nothing $ show e
     Right hScriptData -> do
       let ScriptDataHash apiHash = hashScriptDataBytes hScriptData
-          ledgerAlonzoData = toAlonzoData hScriptData :: L.Data L.Alonzo
+          ledgerAlonzoData       = toAlonzoData hScriptData :: L.Data L.Alonzo
       -- We check that our hashScriptDataBytes is equivalent to `L.hashData`
       -- This test will let us know if our 'hashScriptDataBytes' is ever broken
       L.hashData ledgerAlonzoData === apiHash
@@ -65,8 +61,11 @@ prop_roundtrip_scriptdata_plutusdata = H.property $ do
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.Ledger"
-  [ testProperty "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
-  , testProperty "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
-  , testProperty "script data bytes preserved" prop_original_scriptdata_bytes_preserved
-  ]
+tests =
+  testGroup
+    "Test.Cardano.Api.Ledger"
+    [ testProperty "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
+    , testProperty "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
+    , testProperty
+        "script data bytes preserved"
+        prop_original_scriptdata_bytes_preserved ]

@@ -1,11 +1,10 @@
-module Cardano.Api.Via.ShowOf
-  ( ShowOf(..)
-  ) where
+module Cardano.Api.Via.ShowOf ( ShowOf(..) ) where
 
 import           Data.Aeson
-import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.Key   as Key
 import           Data.Aeson.Types
-import qualified Data.Text as Text
+import qualified Data.Text        as Text
+
 import           Prettyprinter
 
 newtype ShowOf a = ShowOf a

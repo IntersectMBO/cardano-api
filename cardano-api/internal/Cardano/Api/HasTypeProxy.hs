@@ -5,13 +5,11 @@
 module Cardano.Api.HasTypeProxy
   ( HasTypeProxy(AsType, proxyToAsType)
   , Proxy(..)
-  , FromSomeType(..)
-  ) where
+  , FromSomeType(..) ) where
 
-import           Data.Kind (Constraint, Type)
-import           Data.Proxy (Proxy (..))
-import           Data.Typeable (Typeable)
-
+import           Data.Kind     ( Constraint, Type )
+import           Data.Proxy    ( Proxy(..) )
+import           Data.Typeable ( Typeable )
 
 class Typeable t => HasTypeProxy t where
   -- | A family of singleton types used in this API to indicate which type to
@@ -23,7 +21,6 @@ class Typeable t => HasTypeProxy t where
 
   proxyToAsType :: Proxy t -> AsType t
 
-
 data FromSomeType (c :: Type -> Constraint) b where
-     FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
+  FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
 
