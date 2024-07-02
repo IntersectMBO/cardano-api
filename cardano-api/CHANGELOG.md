@@ -1,5 +1,13 @@
 # Changelog for cardano-api
 
+## 9.0.0.0
+
+- - Remove redundant era conversion functions. Use `toCardanoEra` instead.
+  - Add IO Exception handling to consensus query execution.
+  - Refactor Cardano.Api.Convenience.Query to return `ExceptT e IO a` instead of `IO (Either e a)`
+  (breaking, refactoring)
+  [PR 566](https://github.com/IntersectMBO/cardano-api/pull/566)
+
 ## 8.49.0.0
 
 - Make the query used by the CLI's `transaction build` return the current treasury value, so that command to do treasury donation doesn't require the user to pass it. Corresponding CLI PR: https://github.com/IntersectMBO/cardano-cli/pull/778
