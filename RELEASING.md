@@ -97,6 +97,21 @@ In order to generate changelog files in markdown format use the following steps:
     * updated changelogs
     * bumped version fields in cabal files
 
+>:high_brightness: **Note**
+>
+>Usually the release PR should only contain a changelog update and a version bump.
+>If you are making a release which aims to contain everything from `main` branch, there should be no additional code changes in the release PR.
+>An exception to that would be a release with a backported fix for example, where the release PR should contain required code changes too.
+
+>:bulb: **Tip**
+>
+>Hold off on merging of the release PR, until CHaP PR gets merged. See: p. 5 in [Releasing to `cardano-haskell-packages`](#releasing-to-cardano-haskell-packages).
+
+>:bulb: **Tip**
+>
+>Avoid unnecessary rebasing of the release PR to prevent accidental inclusion of unwanted changes.
+>The release PR should be merged using merge queue with an explicit merge commit.
+
 ### Tagging the commit
 **After verifying the release PR diff** that it contains the correct contents, prepare the tag.
 
@@ -145,7 +160,7 @@ Briefly speaking, it requires executing of the following steps:
     >:bulb: **Tip**
     >
     >CHaP CI build can fail due to various reasons, like invalid haddock syntax.
-    >Merging the release PR later allows easier adjusting of the tag to include the fix for the potential issues.
+    >Merging the release PR after CHaP PR allows easier adjusting of the tag to include the fix for the potential CHaP build issues.
 1. If the release pipeline (if any, see e.g. [here for CLI](https://github.com/IntersectMBO/cardano-cli/actions/workflows/release-upload.yaml)) fails
    during the _Get specific check run status_ step of the _Wait for Hydra check-runs_ pipeline, this means Hydra did not
    run on the tagged commit. This can happen if the tagged commit is not the remote `HEAD` when you create the PR,
