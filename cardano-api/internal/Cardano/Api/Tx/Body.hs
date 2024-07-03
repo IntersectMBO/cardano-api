@@ -2301,7 +2301,7 @@ convScriptData sbe txOuts scriptWitnesses =
                               _
                               _
                               _
-                              (ScriptDatumForTxIn d)
+                              (ScriptDatumForTxIn (Just d))
                               _
                               _
                             )
@@ -2598,7 +2598,7 @@ makeShelleyTransactionBody
                       _
                       _
                       _
-                      (ScriptDatumForTxIn d)
+                      (ScriptDatumForTxIn (Just d))
                       _
                       _
                     )
@@ -2724,7 +2724,7 @@ makeShelleyTransactionBody
                       _
                       _
                       _
-                      (ScriptDatumForTxIn d)
+                      (ScriptDatumForTxIn (Just d))
                       _
                       _
                     )
@@ -2862,7 +2862,7 @@ makeShelleyTransactionBody
                       _
                       _
                       _
-                      (ScriptDatumForTxIn d)
+                      (ScriptDatumForTxIn (Just d))
                       _
                       _
                     )
