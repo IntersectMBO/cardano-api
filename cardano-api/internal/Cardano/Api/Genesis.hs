@@ -67,6 +67,7 @@ import qualified PlutusLedgerApi.V2 as V2
 import           Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.Aeson as A
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Default.Class as DefaultClass
 import           Data.Functor.Identity (Identity)
 import           Data.Int (Int64)
@@ -223,7 +224,7 @@ decodeAlonzoGenesis :: forall era t m. MonadTransError String t m
                     -> ByteString
                     -> t m AlonzoGenesis
 decodeAlonzoGenesis aeo genesisBs = modifyError ("Cannot decode Alonzo genesis: " <>) $ do
-  genesisValue :: A.Value <- liftEither $ A.eitherDecode (BS.fromStrict genesisBs)
+  genesisValue :: A.Value <- liftEither $ A.eitherDecode (LBS.fromStrict genesisBs)
   -- Making a fixup of a costmodel is easier before JSON deserialization. This also saves us from building
   -- plutus' EvaluationContext one more time after cost model update.
   genesisValue' <- (AL.key "costModels" . AL.key "PlutusV2" . AL._Value) setCostModelDefaultValues genesisValue

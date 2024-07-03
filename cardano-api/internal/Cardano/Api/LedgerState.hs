@@ -384,10 +384,11 @@ data FoldStatus
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
-  :: forall a t m. ()
+  :: forall a t m era. ()
   => Show a
   => MonadIOTransError FoldBlocksError t m
-  => NodeConfigFile 'In
+  => AlonzoEraOnwards era
+  -> NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
@@ -415,13 +416,13 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> t m a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleExceptions $ do
+foldBlocks aeo nodeConfigFilePath socketPath validationMode state0 accumulate = handleExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
-  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
+  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError $ initialLedgerState aeo nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
@@ -1822,8 +1823,9 @@ instance Show AnyNewEpochState where
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
 -- provide a termination epoch otherwise blocks would be applied indefinitely.
 foldEpochState
-  :: forall t m s. MonadIOTransError FoldBlocksError t m
-  => NodeConfigFile 'In
+  :: forall t m s era. MonadIOTransError FoldBlocksError t m
+  => AlonzoEraOnwards era
+  -> NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
@@ -1850,14 +1852,14 @@ foldEpochState
   -- truncating the last k blocks before the node's tip.
   -> t m (ConditionResult, s)
   -- ^ The final state
-foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleExceptions $ do
+foldEpochState aeo nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
   (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError
-                          $ initialLedgerState nodeConfigFilePath
+                          $ initialLedgerState aeo nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
