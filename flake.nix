@@ -85,6 +85,7 @@
               haskell-language-server = "2.5.0.0";
               hlint = "3.6.1";
               stylish-haskell = "0.14.5.0";
+              cabal-gild = "1.3.1.2";
             };
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs; [ gh jq yq-go ];
