@@ -2218,7 +2218,7 @@ convScriptData sbe txOuts scriptWitnesses =
               [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
            ++ [ d | (_, AnyScriptWitness
                           (PlutusScriptWitness
-                             _ _ _ (ScriptDatumForTxIn d) _ _)) <- scriptWitnesses
+                             _ _ _ (ScriptDatumForTxIn (Just d)) _ _)) <- scriptWitnesses
                   ]
       in TxBodyScriptData w datums redeemers
     )
@@ -2485,7 +2485,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraAlonzo
         [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
      ++ [ d | (_, AnyScriptWitness
                     (PlutusScriptWitness
-                       _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
+                       _ _ _ (ScriptDatumForTxIn (Just d)) _ _)) <- witnesses
             ]
 
     redeemers :: Alonzo.Redeemers StandardAlonzo
@@ -2591,7 +2591,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraBabbage
         [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
      ++ [ d | (_, AnyScriptWitness
                     (PlutusScriptWitness
-                       _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
+                       _ _ _ (ScriptDatumForTxIn (Just d)) _ _)) <- witnesses
             ]
 
     redeemers :: Alonzo.Redeemers StandardBabbage
@@ -2707,7 +2707,7 @@ makeShelleyTransactionBody sbe@ShelleyBasedEraConway
         [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
      ++ [ d | (_, AnyScriptWitness
                     (PlutusScriptWitness
-                       _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
+                       _ _ _ (ScriptDatumForTxIn (Just d)) _ _)) <- witnesses
             ]
 
     redeemers :: Alonzo.Redeemers StandardConway
