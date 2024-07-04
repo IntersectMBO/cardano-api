@@ -191,7 +191,7 @@ import qualified Data.ByteArray
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.IORef
@@ -287,17 +287,16 @@ instance Error LedgerStateError where
 -- | Get the environment and initial ledger state.
 initialLedgerState
   :: MonadIOTransError InitialLedgerStateError t m
-  => AlonzoEraOnwards aeo
-  -> NodeConfigFile 'In
+  => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> t m (Env, LedgerState)
   -- ^ The environment and initial ledger state
-initialLedgerState aeo nodeConfigFile = do
+initialLedgerState nodeConfigFile = do
   -- TODO Once support for querying the ledger config is added to the node, we
   -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
   config <- modifyError ILSEConfigFile (readNodeConfig nodeConfigFile)
-  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig aeo config)
+  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig Nothing config)
   env <- modifyError ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
   return (env, ledgerState)
@@ -384,11 +383,10 @@ data FoldStatus
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
-  :: forall a t m era. ()
+  :: forall a t m. ()
   => Show a
   => MonadIOTransError FoldBlocksError t m
-  => AlonzoEraOnwards era
-  -> NodeConfigFile 'In
+  => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
@@ -416,13 +414,13 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> t m a
   -- ^ The final state
-foldBlocks aeo nodeConfigFilePath socketPath validationMode state0 accumulate = handleExceptions $ do
+foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = handleExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
-  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError $ initialLedgerState aeo nodeConfigFilePath
+  (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError $ initialLedgerState nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.
@@ -1190,13 +1188,13 @@ shelleyPraosNonce genesisHash =
 
 readCardanoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => AlonzoEraOnwards aeo
+  => Maybe (AlonzoEraOnwards aeo)
   -> NodeConfig
   -> t m GenesisConfig
-readCardanoGenesisConfig aeo enc = do
+readCardanoGenesisConfig mAeo enc = do
   byronGenesis <- readByronGenesisConfig enc
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
-  alonzoGenesis <- readAlonzoGenesisConfig aeo enc
+  alonzoGenesis <- readAlonzoGenesisConfig mAeo enc
   conwayGenesis <- readConwayGenesisConfig enc
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
@@ -1260,13 +1258,13 @@ readShelleyGenesisConfig enc = do
 
 readAlonzoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => AlonzoEraOnwards era
+  => Maybe (AlonzoEraOnwards era)
   -> NodeConfig
   -> t m AlonzoGenesis
-readAlonzoGenesisConfig aeo enc = do
+readAlonzoGenesisConfig mAeo enc = do
   let file = ncAlonzoGenesisFile enc
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError)
-    $ readAlonzoGenesis aeo file (ncAlonzoGenesisHash enc)
+    $ readAlonzoGenesis mAeo file (ncAlonzoGenesisHash enc)
 
 -- | If the conway genesis file does not exist we simply put in a default.
 readConwayGenesisConfig
@@ -1332,16 +1330,16 @@ renderShelleyGenesisError sge =
 
 readAlonzoGenesis
   :: forall m t era. MonadIOTransError AlonzoGenesisError t m
-  => AlonzoEraOnwards era
+  => Maybe (AlonzoEraOnwards era)
   -> File AlonzoGenesis 'In
   -> GenesisHashAlonzo
   -> t m AlonzoGenesis
-readAlonzoGenesis aeo (File file) expectedGenesisHash = do
-    content <- modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
-    let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
+readAlonzoGenesis mAeo (File file) expectedGenesisHash = do
+    content <- modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ LBS.readFile file
+    let genesisHash = GenesisHashAlonzo . Cardano.Crypto.Hash.Class.hashWith id $ LBS.toStrict content
     checkExpectedGenesisHash genesisHash
     modifyError (AlonzoGenesisDecodeError file . Text.pack) $
-      decodeAlonzoGenesis aeo content
+      decodeAlonzoGenesis mAeo content
   where
     checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
     checkExpectedGenesisHash actual =
@@ -1550,7 +1548,7 @@ unChainHash ch =
     Ouroboros.Network.Block.BlockHash bh -> BSS.fromShort (HFC.getOneEraHash bh)
 
 data LeadershipError = LeaderErrDecodeLedgerStateFailure
-                     | LeaderErrDecodeProtocolStateFailure (LB.ByteString, DecoderError)
+                     | LeaderErrDecodeProtocolStateFailure (LBS.ByteString, DecoderError)
                      | LeaderErrDecodeProtocolEpochStateFailure DecoderError
                      | LeaderErrGenesisSlot
                      | LeaderErrStakePoolHasNoStake PoolId
@@ -1823,9 +1821,8 @@ instance Show AnyNewEpochState where
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
 -- provide a termination epoch otherwise blocks would be applied indefinitely.
 foldEpochState
-  :: forall t m s era. MonadIOTransError FoldBlocksError t m
-  => AlonzoEraOnwards era
-  -> NodeConfigFile 'In
+  :: forall t m s. MonadIOTransError FoldBlocksError t m
+  => NodeConfigFile 'In
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
   -> SocketPath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
@@ -1852,14 +1849,14 @@ foldEpochState
   -- truncating the last k blocks before the node's tip.
   -> t m (ConditionResult, s)
   -- ^ The final state
-foldEpochState aeo nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleExceptions $ do
+foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch initialResult checkCondition = handleExceptions $ do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
   --  * Pipelined:        46m  23s
 
   (env, ledgerState) <- modifyError FoldBlocksInitialLedgerStateError
-                          $ initialLedgerState aeo nodeConfigFilePath
+                          $ initialLedgerState nodeConfigFilePath
 
   -- Place to store the accumulated state
   -- This is a bit ugly, but easy.

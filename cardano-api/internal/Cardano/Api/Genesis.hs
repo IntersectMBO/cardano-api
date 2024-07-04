@@ -219,12 +219,15 @@ conwayGenesisDefaults = ConwayGenesis { cgUpgradePParams = defaultUpgradeConwayP
                                                        , dvtCommitteeNoConfidence = 0 %! 1
                                                        }
 
+-- | TODO HADDOCKS
 decodeAlonzoGenesis :: forall era t m. MonadTransError String t m
-                    => AlonzoEraOnwards era
-                    -> ByteString
+                    => Maybe (AlonzoEraOnwards era) -- ^ TODO HADDOCKS
+                    -> LBS.ByteString
                     -> t m AlonzoGenesis
-decodeAlonzoGenesis aeo genesisBs = modifyError ("Cannot decode Alonzo genesis: " <>) $ do
-  genesisValue :: A.Value <- liftEither $ A.eitherDecode (LBS.fromStrict genesisBs)
+decodeAlonzoGenesis Nothing genesisBs = modifyError ("Cannot decode Alonzo genesis: " <>) $
+  liftEither $ A.eitherDecode genesisBs
+decodeAlonzoGenesis (Just aeo) genesisBs = modifyError ("Cannot decode era-sensitive Alonzo genesis: " <>) $ do
+  genesisValue :: A.Value <- liftEither $ A.eitherDecode genesisBs
   -- Making a fixup of a costmodel is easier before JSON deserialization. This also saves us from building
   -- plutus' EvaluationContext one more time after cost model update.
   genesisValue' <- (AL.key "costModels" . AL.key "PlutusV2" . AL._Value) setCostModelDefaultValues genesisValue
