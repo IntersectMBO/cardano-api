@@ -61,9 +61,9 @@ import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGe
                    emptyGenesisStaking)
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
-import qualified PlutusLedgerApi.Common as V2
 import qualified PlutusLedgerApi.V2 as V2
 
+import           Control.Monad
 import           Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.Aeson as A
 import           Data.ByteString (ByteString)
@@ -77,6 +77,7 @@ import           Data.Map (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Ratio
+import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Time as Time
 import           Data.Typeable
@@ -239,36 +240,46 @@ decodeAlonzoGenesis (Just aeo) genesisBs = modifyError ("Cannot decode era-sensi
       obj@(A.Object _) -> do
         -- decode cost model into a map first
         costModel :: Map V2.ParamName Int64 <- modifyError ("Decoding cost model object: " <> ) $ fromJsonE obj
-        setCostModelDefaultValues
-          . A.toJSON -- convert to an array representation of Int64 values
-          . fmap snd
-          . sortOn fst -- ensure proper order of params in the list
-          . toList
-          . (`M.union` costModelDefaultValues) -- add default values of missing params
-          $ costModel
+
+        let costModelWithDefaults =
+              sortOn fst
+              . toList
+              $ M.union costModel (M.fromList optionalCostModelDefaultValues)
+
+        -- check that we have all required params
+        unless (allCostModelParams == (fst <$> costModelWithDefaults)) $ do
+          let allCostModelParamsSet = fromList allCostModelParams
+              providedCostModelParamsSet = fromList $ fst <$> costModelWithDefaults
+          throwError $ "Missing V2 Plutus cost model parameters: "
+            <> show (toList $ S.difference allCostModelParamsSet providedCostModelParamsSet)
+
+        -- We have already have required params, we already added optional ones (which are trimmed later
+        -- if required). Continue processing further in array representation.
+        setCostModelDefaultValues . A.toJSON $ map snd costModelWithDefaults
 
       A.Array vec
-        | V.length vec < costModelExpectedLength -> pure . A.Array . V.take costModelExpectedLength $ vec <> (A.toJSON <$> optionalCostModelDefaultValues)
+        -- here we rely on an assumption that params are in correct order, so that we can take only the
+        -- required ones for an era
+        | V.length vec < costModelExpectedLength -> pure . A.Array . V.take costModelExpectedLength $ vec <> (A.toJSON . snd <$> optionalCostModelDefaultValues)
         | V.length vec > costModelExpectedLength -> pure . A.Array $ V.take costModelExpectedLength vec
 
       other -> pure other
 
     costModelExpectedLength :: Int
     costModelExpectedLength
+      -- use all available parameters >= conway
       | isConwayOnwards = length allCostModelParams
+      -- use only required params in < conway
       | otherwise = L.costModelParamsCount L.PlutusV2 -- Babbage
 
-    optionalCostModelDefaultValues :: (Item l ~ Int64, IsList l) => l
-    optionalCostModelDefaultValues = fromList $ replicate (length optionalV2costModelParams) maxBound
-
-    costModelDefaultValues :: Map V2.ParamName Int64
-    costModelDefaultValues = fromList $ map (, maxBound) allCostModelParams
+    optionalCostModelDefaultValues :: (Item l ~ (V2.ParamName, Int64), IsList l) => l
+    optionalCostModelDefaultValues = fromList $ map (, maxBound) optionalV2costModelParams
 
     allCostModelParams :: [V2.ParamName]
     allCostModelParams = [minBound..maxBound]
 
-    optionalV2costModelParams :: [Text]
-    optionalV2costModelParams = map V2.showParamName
+    optionalV2costModelParams :: [V2.ParamName]
+    optionalV2costModelParams =
       [ V2.IntegerToByteString'cpu'arguments'c0
       , V2.IntegerToByteString'cpu'arguments'c1
       , V2.IntegerToByteString'cpu'arguments'c2

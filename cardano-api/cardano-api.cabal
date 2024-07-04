@@ -323,6 +323,7 @@ test-suite cardano-api-test
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.8
                       , cardano-protocol-tpraos
                       , cardano-slotting
+                      , cborg
                       , containers
                       , directory
                       , hedgehog >= 1.1

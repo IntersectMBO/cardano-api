@@ -13,13 +13,17 @@ import           Cardano.Api.Genesis
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
-import qualified Cardano.Binary as CBOR
+import qualified Cardano.Binary as CB
 import qualified Cardano.Ledger.Alonzo.Genesis as L
 import qualified Cardano.Ledger.Binary as L
 import qualified Cardano.Ledger.Plutus as L
 import qualified PlutusLedgerApi.V2 as V2
 
+import qualified Codec.CBOR.Decoding as CBOR
+import qualified Codec.CBOR.Encoding as CBOR
+import qualified Codec.CBOR.Write as CBOR
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Either
 import           Data.Int (Int64)
 import qualified Data.Map.Strict as M
 import           Data.Maybe
@@ -40,51 +44,49 @@ prop_reading_plutus_v2_era_sensitive_costmodel
 prop_reading_plutus_v2_era_sensitive_costmodel aeo cmf = H.propertyOnce $ do
   H.noteShow_ $ "Era: " <> pshow aeo
   H.noteShow_ $ "Cost model type: " <> show cmf
-  (genesis, costModelValues) <- loadPlutusV2CostModelFromGenesis aeo (getGenesisFile cmf)
+  (allCostModels, v2costModelValues) <- H.leftFailM $ loadPlutusV2CostModelFromGenesis (Just aeo) (getGenesisFile cmf)
 
-  H.noteShow_ costModelValues
+  H.noteShow_ v2costModelValues
 
   let isConwayOnwards = isJust $ maybeEon @ConwayEraOnwards @era
-      last10CostModelValues = reverse . take 10 $ reverse costModelValues
+      last10CostModelValues = reverse . take 10 $ reverse v2costModelValues
 
   if isConwayOnwards
     then do
-      length costModelValues === 185
+      length v2costModelValues === 185
       if getCostModelFileParamCount cmf < 185
         then last10CostModelValues === replicate 10 maxBound
         else last10CostModelValues === replicate 10 1
     else
-      length costModelValues === 175
+      length v2costModelValues === 175
 
-  let genesisBs = CBOR.serialize genesis
-  genesis' <- H.leftFail $ decodeCborInEraAlonzoGenesis aeo genesisBs
-  genesis' === genesis
-
-decodeCborInEraAlonzoGenesis
-  :: forall era. AlonzoEraOnwards era
-  -> LBS.ByteString
-  -> Either L.DecoderError L.AlonzoGenesis
-decodeCborInEraAlonzoGenesis aeo = CBOR.decodeFullDecoder "AlonzoGenesis" fromEraCbor'
-  where
-    fromEraCbor' :: CBOR.Decoder s L.AlonzoGenesis
-    fromEraCbor' = alonzoEraOnwardsConstraints aeo $ do
-      -- error $ show $ eraProtVerLow (alonzoEraOnwardsToShelleyBasedEra aeo)
-      L.fromEraCBOR @(ShelleyLedgerEra era)
-
+  let allCostModelsBs = encodeCborInEraCostModels aeo allCostModels
+  allCostModels' <- H.leftFail $ decodeCborInEraCostModels aeo allCostModelsBs
+  allCostModels' === allCostModels
 
 prop_reading_plutus_v2_costmodel
   :: PlutusV2CostModelFormat
   -> Property
 prop_reading_plutus_v2_costmodel cmf = H.propertyOnce $ do
-  -- TODO
-  True === True
+  H.noteShow_ $ "Cost model type: " <> show cmf
+  mCostModelValues <- fmap snd <$> loadPlutusV2CostModelFromGenesis Nothing (getGenesisFile cmf)
+
+  H.noteShow_ mCostModelValues
+
+  if cmf == Map175
+    then do
+      H.assertWith mCostModelValues isLeft
+    else do
+      costModelValues <- H.leftFail mCostModelValues
+      length costModelValues === getCostModelFileParamCount cmf
 
 prop_verify_plutus_v2_costmodel :: Property
 prop_verify_plutus_v2_costmodel = H.propertyOnce $ do
   let lastParamName = maxBound
       last10Params = (toEnum . subtract 9 $ fromEnum lastParamName) `enumFromTo` lastParamName :: [V2.ParamName]
   H.note_ "Check that last 10 params of PlutusV2 cost models are exactly the ones we expect"
-  -- TODO add comment why we need this
+  -- The conditional logic of trimming conway parameters in babbage relies on the fact that last 10 V2 params
+  -- are those below
   last10Params ===
     [ V2.IntegerToByteString'cpu'arguments'c0
     , V2.IntegerToByteString'cpu'arguments'c1
@@ -106,7 +108,7 @@ data PlutusV2CostModelFormat
   | Map185
   | Array175
   | Array185
-  deriving Show
+  deriving (Eq, Show)
 
 getGenesisFile :: PlutusV2CostModelFormat -> FilePath
 getGenesisFile = ("./test/cardano-api-test/files/input/genesis/spec.alonzo-v2-cost-model-" <>) . \case
@@ -126,34 +128,65 @@ loadPlutusV2CostModelFromGenesis
   :: HasCallStack
   => MonadIO m
   => MonadTest m
-  => AlonzoEraOnwards era
+  => Maybe (AlonzoEraOnwards era)
   -> FilePath
-  -> m (L.AlonzoGenesis, [Int64])
-loadPlutusV2CostModelFromGenesis aeo filePath = withFrozenCallStack $ do
+  -> m (Either String (L.CostModels, [Int64]))
+loadPlutusV2CostModelFromGenesis mAeo filePath = withFrozenCallStack . runExceptT $ do
   genesisBs <- H.lbsReadFile filePath
-  genesis <- H.leftFailM . runExceptT $ decodeAlonzoGenesis (Just aeo) genesisBs
-  fmap ((genesis,) . L.getCostModelParams)
-    . H.nothingFail
+  costModels <- modifyError show $ L.agCostModels <$> decodeAlonzoGenesis mAeo genesisBs
+  liftEither
+    . fmap ((costModels,) . L.getCostModelParams)
+    . maybe (Left "No PlutusV2 model found") Right
     . M.lookup L.PlutusV2
-    . L.costModelsValid
-    $ L.agCostModels genesis
+    $ L.costModelsValid costModels
+
+decodeCborInEraCostModels
+  :: forall era. AlonzoEraOnwards era
+  -> LBS.ByteString
+  -> Either L.DecoderError L.CostModels
+decodeCborInEraCostModels aeo = CB.decodeFullDecoder "AlonzoGenesis" fromEraCbor'
+  where
+    fromEraCbor' :: CBOR.Decoder s L.CostModels
+    fromEraCbor' = alonzoEraOnwardsConstraints aeo $ L.fromEraCBOR @(ShelleyLedgerEra era)
+
+encodeCborInEraCostModels
+  :: forall era. AlonzoEraOnwards era
+  -> L.CostModels
+  -> LBS.ByteString
+encodeCborInEraCostModels aeo = CBOR.toLazyByteString . toEraCbor'
+  where
+    toEraCbor' :: L.CostModels -> CBOR.Encoding
+    toEraCbor' = alonzoEraOnwardsConstraints aeo $ L.toEraCBOR @(ShelleyLedgerEra era)
 
 -- * List all test cases
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Genesis"
-  [ testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - Babbage" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Map175
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - Conway" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Map175
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - era insensitive" $ prop_reading_plutus_v2_costmodel Map175
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 185 params - Babbage" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Map185
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 185 params - Conway" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Map185
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 185 params - era insensitive" $ prop_reading_plutus_v2_costmodel Map185
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 175 params - Babbage" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Array175
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 175 params - Conway" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Array175
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 175 params - era insensitive" $ prop_reading_plutus_v2_costmodel Array175
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 185 params - Babbage" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Array185
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 185 params - Conway" $ prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Array185
-  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 185 params - era insensitive" $ prop_reading_plutus_v2_costmodel Array185
-  , testProperty "Make sure that last 10 PlutusV2 cost model parameters are the ones we expect" prop_verify_plutus_v2_costmodel
+  [ testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - Babbage" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Map175
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - Conway" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Map175
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 175 params - era insensitive" $
+      prop_reading_plutus_v2_costmodel Map175
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 185 params - Babbage" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Map185
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 185 params - Conway" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Map185
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model map with 185 params - era insensitive" $
+      prop_reading_plutus_v2_costmodel Map185
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 175 params - Babbage" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Array175
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 175 params - Conway" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Array175
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 175 params - era insensitive" $
+      prop_reading_plutus_v2_costmodel Array175
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 185 params - Babbage" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsBabbage Array185
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 185 params - Conway" $
+      prop_reading_plutus_v2_era_sensitive_costmodel AlonzoEraOnwardsConway Array185
+  , testProperty "Read Alonzo genesis with PlutusV2 cost model array with 185 params - era insensitive" $
+      prop_reading_plutus_v2_costmodel Array185
+  , testProperty "Make sure that last 10 PlutusV2 cost model parameters are the ones we expect"
+      prop_verify_plutus_v2_costmodel
   ]
 
