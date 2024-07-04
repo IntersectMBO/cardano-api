@@ -19,8 +19,6 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 -- | Check the txOuts in a TxBodyContent after a ledger roundtrip.
 prop_roundtrip_txbodycontent_txouts:: Property
 prop_roundtrip_txbodycontent_txouts =

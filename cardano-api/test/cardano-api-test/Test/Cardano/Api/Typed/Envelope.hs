@@ -16,81 +16,79 @@ import qualified Hedgehog as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-{- HLINT ignore "Use camelCase" -}
-
 prop_roundtrip_ByronVerificationKey_envelope :: Property
 prop_roundtrip_ByronVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsByronKey
+  roundtripVerificationKeyEnvelope AsByronKey
 
 prop_roundtrip_ByronSigningKey_envelope :: Property
 prop_roundtrip_ByronSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsByronKey
+  roundtripSigningKeyEnvelope AsByronKey
 
 prop_roundtrip_PaymentVerificationKey_envelope :: Property
 prop_roundtrip_PaymentVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsPaymentKey
+  roundtripVerificationKeyEnvelope AsPaymentKey
 
 prop_roundtrip_PaymentSigningKey_envelope :: Property
 prop_roundtrip_PaymentSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsPaymentKey
+  roundtripSigningKeyEnvelope AsPaymentKey
 
 
 prop_roundtrip_StakeVerificationKey_envelope :: Property
 prop_roundtrip_StakeVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsStakeKey
+  roundtripVerificationKeyEnvelope AsStakeKey
 
 prop_roundtrip_StakeSigningKey_envelope :: Property
 prop_roundtrip_StakeSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsStakeKey
+  roundtripSigningKeyEnvelope AsStakeKey
 
 
 prop_roundtrip_StakePoolVerificationKey_envelope :: Property
 prop_roundtrip_StakePoolVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsStakePoolKey
+  roundtripVerificationKeyEnvelope AsStakePoolKey
 
 prop_roundtrip_StakePoolSigningKey_envelope :: Property
 prop_roundtrip_StakePoolSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsStakePoolKey
+  roundtripSigningKeyEnvelope AsStakePoolKey
 
 
 prop_roundtrip_GenesisVerificationKey_envelope :: Property
 prop_roundtrip_GenesisVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsGenesisKey
+  roundtripVerificationKeyEnvelope AsGenesisKey
 
 prop_roundtrip_GenesisSigningKey_envelope :: Property
 prop_roundtrip_GenesisSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsGenesisKey
+  roundtripSigningKeyEnvelope AsGenesisKey
 
 
 prop_roundtrip_GenesisDelegateVerificationKey_envelope :: Property
 prop_roundtrip_GenesisDelegateVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsGenesisDelegateKey
+  roundtripVerificationKeyEnvelope AsGenesisDelegateKey
 
 prop_roundtrip_GenesisDelegateSigningKey_envelope :: Property
 prop_roundtrip_GenesisDelegateSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsGenesisDelegateKey
+  roundtripSigningKeyEnvelope AsGenesisDelegateKey
 
 
 prop_roundtrip_KesVerificationKey_envelope :: Property
 prop_roundtrip_KesVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsKesKey
+  roundtripVerificationKeyEnvelope AsKesKey
 
 prop_roundtrip_KesSigningKey_envelope :: Property
 prop_roundtrip_KesSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsKesKey
+  roundtripSigningKeyEnvelope AsKesKey
 
 
 prop_roundtrip_VrfVerificationKey_envelope :: Property
 prop_roundtrip_VrfVerificationKey_envelope =
-  roundtrip_VerificationKey_envelope AsVrfKey
+  roundtripVerificationKeyEnvelope AsVrfKey
 
 prop_roundtrip_VrfSigningKey_envelope :: Property
 prop_roundtrip_VrfSigningKey_envelope =
-  roundtrip_SigningKey_envelope AsVrfKey
+  roundtripSigningKeyEnvelope AsVrfKey
 
 -- -----------------------------------------------------------------------------
 
-roundtrip_VerificationKey_envelope :: ()
+roundtripVerificationKeyEnvelope :: ()
 #if MIN_VERSION_base(4,17,0)
     -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.2 and above complains if its
     -- not present.
@@ -99,17 +97,17 @@ roundtrip_VerificationKey_envelope :: ()
     => Key keyrole
     => AsType keyrole
     -> Property
-roundtrip_VerificationKey_envelope roletoken =
+roundtripVerificationKeyEnvelope roletoken =
   H.property $ do
     vkey <- H.forAll (genVerificationKey roletoken)
     H.tripping vkey (serialiseToTextEnvelope Nothing)
                     (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
 
-roundtrip_SigningKey_envelope :: (Key keyrole,
+roundtripSigningKeyEnvelope :: (Key keyrole,
                                   Eq (SigningKey keyrole),
                                   Show (SigningKey keyrole))
                               => AsType keyrole -> Property
-roundtrip_SigningKey_envelope roletoken =
+roundtripSigningKeyEnvelope roletoken =
   H.property $ do
     vkey <- H.forAll (genSigningKey roletoken)
     H.tripping vkey (serialiseToTextEnvelope Nothing)
