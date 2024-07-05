@@ -6,7 +6,8 @@
 module Test.Gen.Cardano.Api
   ( genMetadata
   , genAlonzoGenesis
-  ) where
+  )
+where
 
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
@@ -15,21 +16,18 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Plutus.CostModels as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Alonzo
-import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
-
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import qualified Data.Map.Strict as Map
-import           Data.Word (Word64)
-
-import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
-
-import           Hedgehog (Gen, Range)
+import Data.Word (Word64)
+import Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Range as Range
+import Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
 genMetadata :: Ledger.Era era => Gen (ShelleyTxAuxData era)
 genMetadata = do
   numberOfIndices <- Gen.integral (Range.linear 1 15)
-  let indices = map (\i -> fromIntegral i :: Word64) [1..numberOfIndices]
+  let indices = map (\i -> fromIntegral i :: Word64) [1 .. numberOfIndices]
   mData <- Gen.list (Range.singleton numberOfIndices) genMetadatum
   return . ShelleyTxAuxData . Map.fromList $ zip indices mData
 
@@ -63,22 +61,24 @@ genPrice = do
 
 genPrices :: Gen Alonzo.Prices
 genPrices = do
-  prMem'   <- genPrice
+  prMem' <- genPrice
   prSteps' <- genPrice
 
-  return Alonzo.Prices
-    { Alonzo.prMem = prMem'
-    , Alonzo.prSteps = prSteps'
-    }
+  return
+    Alonzo.Prices
+      { Alonzo.prMem = prMem'
+      , Alonzo.prSteps = prSteps'
+      }
 
 genExUnits :: Gen Alonzo.ExUnits
 genExUnits = do
   exUnitsMem' <- Gen.integral (Range.linear 0 10)
   exUnitsSteps' <- Gen.integral (Range.linear 0 10)
-  return Alonzo.ExUnits
-    { Alonzo.exUnitsMem = exUnitsMem'
-    , Alonzo.exUnitsSteps = exUnitsSteps'
-    }
+  return
+    Alonzo.ExUnits
+      { Alonzo.exUnitsMem = exUnitsMem'
+      , Alonzo.exUnitsSteps = exUnitsSteps'
+      }
 
 genCostModels :: Gen Alonzo.CostModels
 genCostModels = do
@@ -101,13 +101,14 @@ genAlonzoGenesis = do
   collateralPercentage' <- Gen.integral (Range.linear 0 10)
   maxCollateralInputs' <- Gen.integral (Range.linear 0 10)
 
-  return Alonzo.AlonzoGenesis
-    { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
-    , Alonzo.agCostModels = mempty
-    , Alonzo.agPrices = prices'
-    , Alonzo.agMaxTxExUnits = maxTxExUnits'
-    , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
-    , Alonzo.agMaxValSize = maxValSize'
-    , Alonzo.agCollateralPercentage = collateralPercentage'
-    , Alonzo.agMaxCollateralInputs = maxCollateralInputs'
-    }
+  return
+    Alonzo.AlonzoGenesis
+      { Alonzo.agCoinsPerUTxOWord = Ledger.CoinPerWord coinsPerUTxOWord
+      , Alonzo.agCostModels = mempty
+      , Alonzo.agPrices = prices'
+      , Alonzo.agMaxTxExUnits = maxTxExUnits'
+      , Alonzo.agMaxBlockExUnits = maxBlockExUnits'
+      , Alonzo.agMaxValSize = maxValSize'
+      , Alonzo.agCollateralPercentage = collateralPercentage'
+      , Alonzo.agMaxCollateralInputs = maxCollateralInputs'
+      }

@@ -8,20 +8,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
-
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Gen.Cardano.Api.Typed
   ( genFeaturedInEra
   , genMaybeFeaturedInEra
 
-  -- * Byron
+    -- * Byron
   , genAddressInEraByron
   , genAddressByron
   , genTxBodyByron
   , genTxByron
   , genWitnessesByron
-
   , genAddressInEra
   , genAddressShelley
   , genCertificate
@@ -36,7 +34,6 @@ module Test.Gen.Cardano.Api.Typed
   , genByronKeyWitness
   , genCardanoKeyWitness
   , genShelleyKeyWitness
-
   , genTxId
   , genTxIn
   , genTxOutTxContext
@@ -55,7 +52,6 @@ module Test.Gen.Cardano.Api.Typed
   , genScriptData
   , genScriptDataSchema
   , genScriptValidity
-
   , genAssetName
   , genAssetId
   , genEpochNo
@@ -121,30 +117,29 @@ module Test.Gen.Cardano.Api.Typed
   , genValueForTxOut
   , genWitnesses
   , genWitnessNetworkIdOrByronAddress
-
   , genRational
-
   , genGovernancePoll
   , genGovernancePollAnswer
-
   , genProposals
   , genProposal
   , genVotingProcedures
-  ) where
+  )
+where
 
-import           Cardano.Api hiding (txIns)
+import Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
-                   WitnessNetworkIdOrByronAddress (..))
+import Cardano.Api.Byron
+  ( KeyWitness (ByronKeyWitness)
+  , WitnessNetworkIdOrByronAddress (..)
+  )
 import qualified Cardano.Api.Byron as Byron
-import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
-import           Cardano.Api.Error
+import Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
+import Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
-import           Cardano.Api.Script (scriptInEraToRefScript)
-import           Cardano.Api.Shelley
+import Cardano.Api.Script (scriptInEraToRefScript)
+import Cardano.Api.Shelley
 import qualified Cardano.Api.Shelley as ShelleyApi
-
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
@@ -152,46 +147,46 @@ import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-
-import           Control.Applicative (Alternative (..), optional)
-import           Data.ByteString (ByteString)
+import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import Control.Applicative (Alternative (..), optional)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
-import           Data.Coerce
-import           Data.Int (Int64)
-import           Data.Maybe
-import           Data.OSet.Strict (OSet)
+import Data.Coerce
+import Data.Int (Int64)
+import Data.Maybe
+import Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
-import           Data.Ratio (Ratio, (%))
-import           Data.String
-import           Data.Word (Word16, Word32, Word64)
-import           Numeric.Natural (Natural)
-
-import           Test.Gen.Cardano.Api.Era
-import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
-
-import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
-import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import           Test.Cardano.Ledger.Conway.Arbitrary ()
-import           Test.Cardano.Ledger.Core.Arbitrary ()
-
-import           Hedgehog (Gen, MonadGen, Range)
+import Data.Ratio (Ratio, (%))
+import Data.String
+import Data.Word (Word16, Word32, Word64)
+import Hedgehog (Gen, MonadGen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
+import Numeric.Natural (Natural)
+import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
+import Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Gen.Cardano.Api.Era
+import Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use let" -}
 
 genAddressByron :: Gen (Address ByronAddr)
-genAddressByron = makeByronAddress <$> genNetworkId
-                                   <*> genVerificationKey AsByronKey
+genAddressByron =
+  makeByronAddress
+    <$> genNetworkId
+    <*> genVerificationKey AsByronKey
 
 genAddressShelley :: Gen (Address ShelleyAddr)
-genAddressShelley = makeShelleyAddress <$> genNetworkId
-                                       <*> genPaymentCredential
-                                       <*> genStakeAddressReference
+genAddressShelley =
+  makeShelleyAddress
+    <$> genNetworkId
+    <*> genPaymentCredential
+    <*> genStakeAddressReference
 
 genAddressInEra :: ShelleyBasedEra era -> Gen (AddressInEra era)
 genAddressInEra sbe = shelleyAddressInEra sbe <$> genAddressShelley
@@ -208,45 +203,43 @@ genLovelace = L.Coin <$> Gen.integral (Range.linear 0 5000)
 genPositiveLovelace :: Gen L.Coin
 genPositiveLovelace = L.Coin <$> Gen.integral (Range.linear 1 5000)
 
-
 ----------------------------------------------------------------------------
 -- SimpleScript generators
 --
 
 genScript :: ScriptLanguage lang -> Gen (Script lang)
 genScript SimpleScriptLanguage =
-    SimpleScript <$> genSimpleScript
+  SimpleScript <$> genSimpleScript
 genScript (PlutusScriptLanguage lang) =
-    PlutusScript lang <$> genPlutusScript lang
+  PlutusScript lang <$> genPlutusScript lang
 
 genSimpleScript :: Gen SimpleScript
 genSimpleScript =
-    genTerm
-  where
-    genTerm = Gen.recursive Gen.choice nonRecursive recursive
+  genTerm
+ where
+  genTerm = Gen.recursive Gen.choice nonRecursive recursive
 
-    -- Non-recursive generators
-    nonRecursive =
-      [ RequireSignature . verificationKeyHash <$> genVerificationKey AsPaymentKey
-      , RequireTimeBefore <$> genSlotNo
-      , RequireTimeAfter <$> genSlotNo
-      ]
+  -- Non-recursive generators
+  nonRecursive =
+    [ RequireSignature . verificationKeyHash <$> genVerificationKey AsPaymentKey
+    , RequireTimeBefore <$> genSlotNo
+    , RequireTimeAfter <$> genSlotNo
+    ]
 
-    -- Recursive generators
-    recursive =
-      [ RequireAllOf <$> Gen.list (Range.linear 0 10) genTerm
-
-      , RequireAnyOf <$> Gen.list (Range.linear 0 10) genTerm
-
-      , do ts <- Gen.list (Range.linear 0 10) genTerm
-           m  <- Gen.integral (Range.constant 0 (length ts))
-           return (RequireMOf m ts)
-      ]
+  -- Recursive generators
+  recursive =
+    [ RequireAllOf <$> Gen.list (Range.linear 0 10) genTerm
+    , RequireAnyOf <$> Gen.list (Range.linear 0 10) genTerm
+    , do
+        ts <- Gen.list (Range.linear 0 10) genTerm
+        m <- Gen.integral (Range.constant 0 (length ts))
+        return (RequireMOf m ts)
+    ]
 
 genPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
 genPlutusScript _ =
-    -- We make no attempt to create a valid script
-    PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
+  -- We make no attempt to create a valid script
+  PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
 
 genScriptDataSchema :: Gen ScriptDataJsonSchema
 genScriptDataSchema = Gen.element [ScriptDataJsonNoSchema, ScriptDataJsonDetailedSchema]
@@ -261,46 +254,53 @@ genHashableScriptData = do
 {-# DEPRECATED genScriptData "Use genHashableScriptData" #-}
 genScriptData :: Gen ScriptData
 genScriptData =
-    Gen.recursive
-      Gen.choice
-        [ ScriptDataNumber <$> genInteger
-        , ScriptDataBytes  <$> genByteString
-        ]
-        -- The Gen.recursive combinator calls these with the size halved
-        [ ScriptDataConstructor <$> genConstructorInteger
-                                <*> genScriptDataList
-        , ScriptDataList <$> genScriptDataList
-        , ScriptDataMap  <$> genScriptDataMap
-        ]
-  where
-    genInteger :: Gen Integer
-    genInteger = Gen.integral
-                  (Range.linear
-                    (-fromIntegral (maxBound :: Word64) :: Integer)
-                    (2 * fromIntegral (maxBound :: Word64) :: Integer))
+  Gen.recursive
+    Gen.choice
+    [ ScriptDataNumber <$> genInteger
+    , ScriptDataBytes <$> genByteString
+    ]
+    -- The Gen.recursive combinator calls these with the size halved
+    [ ScriptDataConstructor
+        <$> genConstructorInteger
+        <*> genScriptDataList
+    , ScriptDataList <$> genScriptDataList
+    , ScriptDataMap <$> genScriptDataMap
+    ]
+ where
+  genInteger :: Gen Integer
+  genInteger =
+    Gen.integral
+      ( Range.linear
+          (-fromIntegral (maxBound :: Word64) :: Integer)
+          (2 * fromIntegral (maxBound :: Word64) :: Integer)
+      )
 
+  genConstructorInteger :: Gen Integer
+  genConstructorInteger =
+    Gen.integral
+      ( Range.linear
+          0 -- TODO: Alonzo should be -> (-fromIntegral (maxBound :: Word64) :: Integer)
+          -- Wrapping bug needs to be fixed in Plutus library
+          (fromIntegral (maxBound :: Word64) :: Integer)
+      )
 
-    genConstructorInteger :: Gen Integer
-    genConstructorInteger = Gen.integral
-                  (Range.linear
-                    0 -- TODO: Alonzo should be -> (-fromIntegral (maxBound :: Word64) :: Integer)
-                      -- Wrapping bug needs to be fixed in Plutus library
-                    (fromIntegral (maxBound :: Word64) :: Integer))
+  genByteString :: Gen ByteString
+  genByteString =
+    BS.pack
+      <$> Gen.list
+        (Range.linear 0 64)
+        (Gen.word8 Range.constantBounded)
 
-    genByteString :: Gen ByteString
-    genByteString = BS.pack <$> Gen.list (Range.linear 0 64)
-                                         (Gen.word8 Range.constantBounded)
+  genScriptDataList :: Gen [ScriptData]
+  genScriptDataList =
+    Gen.sized $ \sz ->
+      Gen.list (Range.linear 0 (fromIntegral sz)) genScriptData
 
-    genScriptDataList :: Gen [ScriptData]
-    genScriptDataList =
-      Gen.sized $ \sz ->
-        Gen.list (Range.linear 0 (fromIntegral sz)) genScriptData
-
-    genScriptDataMap  :: Gen [(ScriptData, ScriptData)]
-    genScriptDataMap =
-      Gen.sized $ \sz ->
-        Gen.list (Range.linear 0 (fromIntegral sz)) $
-          (,) <$> genScriptData <*> genScriptData
+  genScriptDataMap :: Gen [(ScriptData, ScriptData)]
+  genScriptDataMap =
+    Gen.sized $ \sz ->
+      Gen.list (Range.linear 0 (fromIntegral sz)) $
+        (,) <$> genScriptData <*> genScriptData
 
 -- ----------------------------------------------------------------------------
 -- Script generators for any language, or any language valid in a specific era
@@ -308,23 +308,24 @@ genScriptData =
 
 genScriptInAnyLang :: Gen ScriptInAnyLang
 genScriptInAnyLang =
-    Gen.choice
-      [ ScriptInAnyLang lang <$> genScript lang
-      | AnyScriptLanguage lang <- [minBound..maxBound] ]
+  Gen.choice
+    [ ScriptInAnyLang lang <$> genScript lang
+    | AnyScriptLanguage lang <- [minBound .. maxBound]
+    ]
 
 genScriptInEra :: ShelleyBasedEra era -> Gen (ScriptInEra era)
 genScriptInEra era =
-    Gen.choice
-      [ ScriptInEra langInEra <$> genScript lang
-      | AnyScriptLanguage lang <- [minBound..maxBound]
-        -- TODO: scriptLanguageSupportedInEra should be parameterized on ShelleyBasedEra
-      , Just langInEra <- [scriptLanguageSupportedInEra era lang] ]
+  Gen.choice
+    [ ScriptInEra langInEra <$> genScript lang
+    | AnyScriptLanguage lang <- [minBound .. maxBound]
+    , -- TODO: scriptLanguageSupportedInEra should be parameterized on ShelleyBasedEra
+    Just langInEra <- [scriptLanguageSupportedInEra era lang]
+    ]
 
 genScriptHash :: Gen ScriptHash
 genScriptHash = do
-    ScriptInAnyLang _ script <- genScriptInAnyLang
-    return (hashScript script)
-
+  ScriptInAnyLang _ script <- genScriptInAnyLang
+  return (hashScript script)
 
 ----------------------------------------------------------------------------
 -- Multi-asset generators
@@ -335,18 +336,17 @@ genAssetName =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
     [ (9, Gen.element ["", "a", "b", "c"])
-    , (1, AssetName <$> Gen.bytes (Range.singleton  32))
+    , (1, AssetName <$> Gen.bytes (Range.singleton 32))
     , (1, AssetName <$> Gen.bytes (Range.constant 1 31))
     ]
 
 genPolicyId :: Gen PolicyId
 genPolicyId =
   Gen.frequency
-      -- mostly from a small number of choices, so we get plenty of repetition
-    [ (9, Gen.element [ fromString (x : replicate 55 '0') | x <- ['a'..'c'] ])
-
-       -- and some from the full range of the type
-    , (1, PolicyId <$> genScriptHash)
+    -- mostly from a small number of choices, so we get plenty of repetition
+    [ (9, Gen.element [fromString (x : replicate 55 '0') | x <- ['a' .. 'c']])
+    , -- and some from the full range of the type
+      (1, PolicyId <$> genScriptHash)
     ]
 
 genAssetId :: Gen AssetId
@@ -363,9 +363,10 @@ genSignedQuantity = genQuantity (Range.constantFrom 0 (-2) 2)
 -- | Generate a positive or negative, but not zero quantity.
 genSignedNonZeroQuantity :: Gen Quantity
 genSignedNonZeroQuantity =
-  Gen.choice [ genQuantity (Range.constant (-2) (-1))
-             , genQuantity (Range.constant 1 2)
-             ]
+  Gen.choice
+    [ genQuantity (Range.constant (-2) (-1))
+    , genQuantity (Range.constant 1 2)
+    ]
 
 genUnsignedQuantity :: Gen Quantity
 genUnsignedQuantity = genQuantity (Range.constant 0 2)
@@ -373,11 +374,13 @@ genUnsignedQuantity = genQuantity (Range.constant 0 2)
 genPositiveQuantity :: Gen Quantity
 genPositiveQuantity = genQuantity (Range.constant 1 2)
 
-genValue :: MaryEraOnwards era -> Gen AssetId -> Gen Quantity -> Gen (L.Value (ShelleyLedgerEra era))
+genValue
+  :: MaryEraOnwards era -> Gen AssetId -> Gen Quantity -> Gen (L.Value (ShelleyLedgerEra era))
 genValue w genAId genQuant =
-  toLedgerValue w . valueFromList <$>
-    Gen.list (Range.constant 0 10)
-             ((,) <$> genAId <*> genQuant)
+  toLedgerValue w . valueFromList
+    <$> Gen.list
+      (Range.constant 0 10)
+      ((,) <$> genAId <*> genQuant)
 
 -- | Generate a 'Value' with any asset ID and a positive or negative quantity.
 genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
@@ -388,10 +391,10 @@ genValueDefault w = genValue w genAssetId genSignedNonZeroQuantity
 genValueForMinting :: MaryEraOnwards era -> Gen Value
 genValueForMinting w =
   fromLedgerValue sbe <$> genValue w genAssetIdNoAda genSignedNonZeroQuantity
-  where
-    sbe = maryEraOnwardsToShelleyBasedEra w
-    genAssetIdNoAda :: Gen AssetId
-    genAssetIdNoAda = AssetId <$> genPolicyId <*> genAssetName
+ where
+  sbe = maryEraOnwardsToShelleyBasedEra w
+  genAssetIdNoAda :: Gen AssetId
+  genAssetIdNoAda = AssetId <$> genPolicyId <*> genAssetName
 
 -- | Generate a 'Value' suitable for usage in a transaction output, i.e. any
 -- asset ID and a positive quantity.
@@ -404,12 +407,11 @@ genValueForTxOut sbe = do
   -- Generate a potentially empty list with multi assets
   caseShelleyToAllegraOrMaryEraOnwards
     (const (pure ada))
-    (\w -> do
-      v <- genValue w genAssetId genPositiveQuantity
-      pure $ ada <> v
+    ( \w -> do
+        v <- genValue w genAssetId genPositiveQuantity
+        pure $ ada <> v
     )
     sbe
-
 
 -- Note that we expect to sometimes generate duplicate policy id keys since we
 -- pick 90% of policy ids from a set of just three.
@@ -421,9 +423,11 @@ genValueNestedBundle :: Gen ValueNestedBundle
 genValueNestedBundle =
   Gen.choice
     [ ValueNestedBundleAda <$> genSignedQuantity
-    , ValueNestedBundle <$> genPolicyId
-                        <*> Gen.map (Range.constant 0 5)
-                                    ((,) <$> genAssetName <*> genSignedQuantity)
+    , ValueNestedBundle
+        <$> genPolicyId
+        <*> Gen.map
+          (Range.constant 0 5)
+          ((,) <$> genAssetName <*> genSignedQuantity)
     ]
 
 genNetworkId :: Gen NetworkId
@@ -442,28 +446,35 @@ genOperationalCertificate = fst <$> genOperationalCertificateWithCounter
 genOperationalCertificateIssueCounter :: Gen OperationalCertificateIssueCounter
 genOperationalCertificateIssueCounter = snd <$> genOperationalCertificateWithCounter
 
-genOperationalCertificateWithCounter :: Gen (OperationalCertificate, OperationalCertificateIssueCounter)
+genOperationalCertificateWithCounter
+  :: Gen (OperationalCertificate, OperationalCertificateIssueCounter)
 genOperationalCertificateWithCounter = do
-    kesVKey <- genVerificationKey AsKesKey
-    stkPoolOrGenDelExtSign <- Gen.either (genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
-    kesP <- genKESPeriod
-    c <- Gen.integral $ Range.linear 0 1000
-    let stakePoolVer = either getVerificationKey (convert . getVerificationKey) stkPoolOrGenDelExtSign
-        iCounter = OperationalCertificateIssueCounter c stakePoolVer
+  kesVKey <- genVerificationKey AsKesKey
+  stkPoolOrGenDelExtSign <-
+    Gen.either (genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
+  kesP <- genKESPeriod
+  c <- Gen.integral $ Range.linear 0 1000
+  let stakePoolVer = either getVerificationKey (convert . getVerificationKey) stkPoolOrGenDelExtSign
+      iCounter = OperationalCertificateIssueCounter c stakePoolVer
 
-    case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
-      -- This case should be impossible as we clearly derive the verification
-      -- key from the generated signing key.
-      Left err -> fail $ docToString $ prettyError err
-      Right pair -> return pair
-  where
-    convert :: VerificationKey GenesisDelegateExtendedKey
-            -> VerificationKey StakePoolKey
-    convert = (castVerificationKey :: VerificationKey GenesisDelegateKey
-                                   -> VerificationKey StakePoolKey)
-            . (castVerificationKey :: VerificationKey GenesisDelegateExtendedKey
-                                   -> VerificationKey GenesisDelegateKey)
-
+  case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
+    -- This case should be impossible as we clearly derive the verification
+    -- key from the generated signing key.
+    Left err -> fail $ docToString $ prettyError err
+    Right pair -> return pair
+ where
+  convert
+    :: VerificationKey GenesisDelegateExtendedKey
+    -> VerificationKey StakePoolKey
+  convert =
+    ( castVerificationKey
+        :: VerificationKey GenesisDelegateKey
+        -> VerificationKey StakePoolKey
+    )
+      . ( castVerificationKey
+            :: VerificationKey GenesisDelegateExtendedKey
+            -> VerificationKey GenesisDelegateKey
+        )
 
 -- TODO: Generate payment credential via script
 genPaymentCredential :: Gen PaymentCredential
@@ -473,12 +484,12 @@ genPaymentCredential = do
 
 genSigningKey :: Key keyrole => ShelleyApi.AsType keyrole -> Gen (SigningKey keyrole)
 genSigningKey roletoken = do
-    seed <- genSeed (fromIntegral seedSize)
-    let sk = deterministicSigningKey roletoken seed
-    return sk
-  where
-    seedSize :: Word
-    seedSize = deterministicSigningKeySeedSize roletoken
+  seed <- genSeed (fromIntegral seedSize)
+  let sk = deterministicSigningKey roletoken seed
+  return sk
+ where
+  seedSize :: Word
+  seedSize = deterministicSigningKeySeedSize roletoken
 
 genStakeAddress :: Gen StakeAddress
 genStakeAddress = makeStakeAddress <$> genNetworkId <*> genStakeCredential
@@ -517,24 +528,27 @@ genTxOutValue sbe = shelleyBasedEraConstraints sbe $ TxOutValueShelleyBased sbe 
 
 genTxOutTxContext :: ShelleyBasedEra era -> Gen (TxOut CtxTx era)
 genTxOutTxContext era =
-  TxOut <$> genAddressInEra era
-        <*> genTxOutValue era
-        <*> genTxOutDatumHashTxContext era
-        <*> genReferenceScript era
+  TxOut
+    <$> genAddressInEra era
+    <*> genTxOutValue era
+    <*> genTxOutDatumHashTxContext era
+    <*> genReferenceScript era
 
 genTxOutUTxOContext :: ShelleyBasedEra era -> Gen (TxOut CtxUTxO era)
 genTxOutUTxOContext era =
-  TxOut <$> genAddressInEra era
-        <*> genTxOutValue era
-        <*> genTxOutDatumHashUTxOContext era
-        <*> genReferenceScript era
+  TxOut
+    <$> genAddressInEra era
+    <*> genTxOutValue era
+    <*> genTxOutDatumHashUTxOContext era
+    <*> genReferenceScript era
 
 genReferenceScript :: ShelleyBasedEra era -> Gen (ReferenceScript era)
 genReferenceScript era = scriptInEraToRefScript <$> genScriptInEra era
 
 genUTxO :: ShelleyBasedEra era -> Gen (UTxO era)
 genUTxO era =
-  UTxO <$> Gen.map (Range.constant 0 5) ((,) <$> genTxIn <*> (toCtxUTxOTxOut <$> genTxOutTxContext era))
+  UTxO
+    <$> Gen.map (Range.constant 0 5) ((,) <$> genTxIn <*> (toCtxUTxOTxOut <$> genTxOutTxContext era))
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo
@@ -555,43 +569,48 @@ genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
   inEonForEra
     (pure TxMetadataNone)
-    (\w ->
-      Gen.choice
-        [ pure TxMetadataNone
-        , TxMetadataInEra w <$> genTxMetadata
-        ]
+    ( \w ->
+        Gen.choice
+          [ pure TxMetadataNone
+          , TxMetadataInEra w <$> genTxMetadata
+          ]
     )
 
 genTxAuxScripts :: ShelleyBasedEra era -> Gen (TxAuxScripts era)
 genTxAuxScripts era =
-  forEraInEon (toCardanoEra era)
+  forEraInEon
+    (toCardanoEra era)
     (pure TxAuxScriptsNone)
-    (\w -> TxAuxScripts w <$> Gen.list (Range.linear 0 3)
-                                       (genScriptInEra (allegraEraOnwardsToShelleyBasedEra w)))
+    ( \w ->
+        TxAuxScripts w
+          <$> Gen.list
+            (Range.linear 0 3)
+            (genScriptInEra (allegraEraOnwardsToShelleyBasedEra w))
+    )
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
 genTxWithdrawals =
   inEonForEra
     (pure TxWithdrawalsNone)
-    (\w ->
-      Gen.choice
-        [ pure TxWithdrawalsNone
-        , pure (TxWithdrawals w mempty)
+    ( \w ->
+        Gen.choice
+          [ pure TxWithdrawalsNone
+          , pure (TxWithdrawals w mempty)
           -- TODO: Generate withdrawals
-        ]
+          ]
     )
 
 genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates =
   inEonForEra
     (pure TxCertificatesNone)
-    (\w -> do
-      certs <- Gen.list (Range.constant 0 3) $ genCertificate w
-      Gen.choice
-        [ pure TxCertificatesNone
-        , pure (TxCertificates w certs $ BuildTxWith mempty)
+    ( \w -> do
+        certs <- Gen.list (Range.constant 0 3) $ genCertificate w
+        Gen.choice
+          [ pure TxCertificatesNone
+          , pure (TxCertificates w certs $ BuildTxWith mempty)
           -- TODO: Generate certificates
-        ]
+          ]
     )
 
 -- TODO: Add remaining certificates
@@ -606,36 +625,41 @@ genCertificate sbe =
 genStakeAddressRequirements :: ShelleyBasedEra era -> Gen (StakeAddressRequirements era)
 genStakeAddressRequirements =
   caseShelleyToBabbageOrConwayEraOnwards
-    (\w ->
-      StakeAddrRegistrationPreConway w
-        <$> genStakeCredential)
-    (\w -> StakeAddrRegistrationConway w
-        <$> genLovelace
-        <*> genStakeCredential)
+    ( \w ->
+        StakeAddrRegistrationPreConway w
+          <$> genStakeCredential
+    )
+    ( \w ->
+        StakeAddrRegistrationConway w
+          <$> genLovelace
+          <*> genStakeCredential
+    )
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal sbe =
-  Gen.choice $ catMaybes
-    [ Just $ pure TxUpdateProposalNone
-    , forEraInEon sbe Nothing $ \w ->
-        Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
-    ]
+  Gen.choice $
+    catMaybes
+      [ Just $ pure TxUpdateProposalNone
+      , forEraInEon sbe Nothing $ \w ->
+          Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
+      ]
 
 genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue =
   inEonForEra
     (pure TxMintNone)
-    (\supported ->
-      Gen.choice
-        [ pure TxMintNone
-        , TxMintValue supported <$> genValueForMinting supported <*> return (BuildTxWith mempty)
-        ]
+    ( \supported ->
+        Gen.choice
+          [ pure TxMintNone
+          , TxMintValue supported <$> genValueForMinting supported <*> return (BuildTxWith mempty)
+          ]
     )
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent sbe = do
   let era = toCardanoEra sbe
-  txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
+  txIns <-
+    map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
   txInsReference <- genTxInsReference era
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext sbe)
@@ -646,8 +670,9 @@ genTxBodyContent sbe = do
   txValidityUpperBound <- genTxValidityUpperBound sbe
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts sbe
-  let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
-  txProtocolParams <- BuildTxWith <$> forEraInEon era (pure Nothing) (Gen.maybe . genValidProtocolParameters)
+  let txExtraKeyWits = TxExtraKeyWitnessesNone -- TODO: Alonzo era: Generate witness key hashes
+  txProtocolParams <-
+    BuildTxWith <$> forEraInEon era (pure Nothing) (Gen.maybe . genValidProtocolParameters)
   txWithdrawals <- genTxWithdrawals era
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
@@ -657,40 +682,41 @@ genTxBodyContent sbe = do
   txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
   txCurrentTreasuryValue <- genMaybeFeaturedInEra genCurrentTreasuryValue era
   txTreasuryDonation <- genMaybeFeaturedInEra genTreasuryDonation era
-  pure $ TxBodyContent
-    { Api.txIns
-    , Api.txInsCollateral
-    , Api.txInsReference
-    , Api.txOuts
-    , Api.txTotalCollateral
-    , Api.txReturnCollateral
-    , Api.txFee
-    , Api.txValidityLowerBound
-    , Api.txValidityUpperBound
-    , Api.txMetadata
-    , Api.txAuxScripts
-    , Api.txExtraKeyWits
-    , Api.txProtocolParams
-    , Api.txWithdrawals
-    , Api.txCertificates
-    , Api.txUpdateProposal
-    , Api.txMintValue
-    , Api.txScriptValidity
-    , Api.txProposalProcedures
-    , Api.txVotingProcedures
-    , Api.txCurrentTreasuryValue
-    , Api.txTreasuryDonation
-    }
-
+  pure $
+    TxBodyContent
+      { Api.txIns
+      , Api.txInsCollateral
+      , Api.txInsReference
+      , Api.txOuts
+      , Api.txTotalCollateral
+      , Api.txReturnCollateral
+      , Api.txFee
+      , Api.txValidityLowerBound
+      , Api.txValidityUpperBound
+      , Api.txMetadata
+      , Api.txAuxScripts
+      , Api.txExtraKeyWits
+      , Api.txProtocolParams
+      , Api.txWithdrawals
+      , Api.txCertificates
+      , Api.txUpdateProposal
+      , Api.txMintValue
+      , Api.txScriptValidity
+      , Api.txProposalProcedures
+      , Api.txVotingProcedures
+      , Api.txCurrentTreasuryValue
+      , Api.txTreasuryDonation
+      }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
 genTxInsCollateral =
   inEonForEra
     (pure TxInsCollateralNone)
-    (\w -> Gen.choice
-      [ pure TxInsCollateralNone
-      , TxInsCollateral w <$> Gen.list (Range.linear 0 10) genTxIn
-      ]
+    ( \w ->
+        Gen.choice
+          [ pure TxInsCollateralNone
+          , TxInsCollateral w <$> Gen.list (Range.linear 0 10) genTxIn
+          ]
     )
 
 genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)
@@ -701,9 +727,10 @@ genTxInsReference =
 
 genTxReturnCollateral :: ShelleyBasedEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
-  forEraInEon (toCardanoEra era)
+  forEraInEon
+    (toCardanoEra era)
     (pure TxReturnCollateralNone)
-    (\w -> TxReturnCollateral w <$>  genTxOutTxContext era)
+    (\w -> TxReturnCollateral w <$> genTxOutTxContext era)
 
 genTxTotalCollateral :: CardanoEra era -> Gen (TxTotalCollateral era)
 genTxTotalCollateral =
@@ -728,14 +755,16 @@ genTxOutValueByron = TxOutValueByron <$> genPositiveLovelace
 
 genTxOutByron :: Gen (TxOut CtxTx ByronEra)
 genTxOutByron =
-  TxOut <$> genAddressInEraByron
-        <*> genTxOutValueByron
-        <*> pure TxOutDatumNone
-        <*> pure ReferenceScriptNone
+  TxOut
+    <$> genAddressInEraByron
+    <*> genTxOutValueByron
+    <*> pure TxOutDatumNone
+    <*> pure ReferenceScriptNone
 
 genTxBodyByron :: Gen (L.Annotated L.Tx ByteString)
 genTxBodyByron = do
-  txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
+  txIns <-
+    map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txOuts <- Gen.list (Range.constant 1 10) genTxOutByron
   case Api.makeByronTransactionBody txIns txOuts of
     Left err -> fail (displayError err)
@@ -752,7 +781,8 @@ genTxBody era = do
     Right txBody -> pure txBody
 
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
-genFeaturedInEra :: ()
+genFeaturedInEra
+  :: ()
   => Alternative f
   => eon era
   -> f a
@@ -761,7 +791,8 @@ genFeaturedInEra witness gen =
   Featured witness <$> gen
 
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
-genMaybeFeaturedInEra :: ()
+genMaybeFeaturedInEra
+  :: ()
   => Eon eon
   => Alternative f
   => (eon era -> f a)
@@ -780,7 +811,8 @@ genTxScriptValidity =
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 
-genTx :: ()
+genTx
+  :: ()
   => ShelleyBasedEra era
   -> Gen (Tx era)
 genTx era =
@@ -790,31 +822,32 @@ genTx era =
 
 genWitnesses :: ShelleyBasedEra era -> Gen [KeyWitness era]
 genWitnesses sbe = do
-  bsWits  <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
+  bsWits <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
   keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
   return $ bsWits ++ keyWits
 
-
-genVerificationKey :: ()
+genVerificationKey
+  :: ()
 #if MIN_VERSION_base(4,17,0)
-    -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
-    -- present.
-    => HasTypeProxy keyrole
+  -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
+  -- present.
+  => HasTypeProxy keyrole
 #endif
-    => Key keyrole
-    => ShelleyApi.AsType keyrole
-    -> Gen (VerificationKey keyrole)
+  => Key keyrole
+  => ShelleyApi.AsType keyrole
+  -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
-genVerificationKeyHash :: ()
+genVerificationKeyHash
+  :: ()
 #if MIN_VERSION_base(4,17,0)
-    -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
-    -- present.
-    => HasTypeProxy keyrole
+  -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.6 complains if its not
+  -- present.
+  => HasTypeProxy keyrole
 #endif
-    => Key keyrole
-    => ShelleyApi.AsType keyrole
-    -> Gen (Hash keyrole)
+  => Key keyrole
+  => ShelleyApi.AsType keyrole
+  -> Gen (Hash keyrole)
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken
 
@@ -831,16 +864,18 @@ genWitnessNetworkIdOrByronAddress =
     , WitnessByronAddress <$> genAddressByron
     ]
 
-genShelleyBootstrapWitness :: ()
+genShelleyBootstrapWitness
+  :: ()
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genShelleyBootstrapWitness sbe =
- makeShelleyBootstrapWitness sbe
-   <$> genWitnessNetworkIdOrByronAddress
-   <*> genTxBody sbe
-   <*> genSigningKey AsByronKey
+  makeShelleyBootstrapWitness sbe
+    <$> genWitnessNetworkIdOrByronAddress
+    <*> genTxBody sbe
+    <*> genSigningKey AsByronKey
 
-genShelleyKeyWitness :: ()
+genShelleyKeyWitness
+  :: ()
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genShelleyKeyWitness sbe =
@@ -848,26 +883,29 @@ genShelleyKeyWitness sbe =
     <$> genTxBody sbe
     <*> genShelleyWitnessSigningKey
 
-genShelleyWitness :: ()
+genShelleyWitness
+  :: ()
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genShelleyWitness sbe =
   Gen.choice
-   [ genShelleyKeyWitness sbe
-   , genShelleyBootstrapWitness sbe
-   ]
+    [ genShelleyKeyWitness sbe
+    , genShelleyBootstrapWitness sbe
+    ]
 
 genShelleyWitnessSigningKey :: Gen ShelleyWitnessSigningKey
 genShelleyWitnessSigningKey =
-  Gen.choice [ WitnessPaymentKey <$>  genSigningKey AsPaymentKey
-             , WitnessPaymentExtendedKey <$>  genSigningKey AsPaymentExtendedKey
-             , WitnessStakeKey <$>  genSigningKey AsStakeKey
-             , WitnessStakePoolKey <$>  genSigningKey AsStakePoolKey
-             , WitnessGenesisDelegateKey <$>  genSigningKey AsGenesisDelegateKey
-             , WitnessGenesisUTxOKey <$>  genSigningKey AsGenesisUTxOKey
-             ]
+  Gen.choice
+    [ WitnessPaymentKey <$> genSigningKey AsPaymentKey
+    , WitnessPaymentExtendedKey <$> genSigningKey AsPaymentExtendedKey
+    , WitnessStakeKey <$> genSigningKey AsStakeKey
+    , WitnessStakePoolKey <$> genSigningKey AsStakePoolKey
+    , WitnessGenesisDelegateKey <$> genSigningKey AsGenesisDelegateKey
+    , WitnessGenesisUTxOKey <$> genSigningKey AsGenesisUTxOKey
+    ]
 
-genCardanoKeyWitness :: ()
+genCardanoKeyWitness
+  :: ()
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genCardanoKeyWitness = genShelleyWitness
@@ -886,25 +924,25 @@ genWord32 = Gen.integral (Range.linear 0 10)
 
 genRational :: Gen Rational
 genRational =
-    (\d -> ratioToRational (1 % d)) <$> genDenominator
-  where
-    genDenominator :: Gen Word64
-    genDenominator = Gen.integral (Range.linear 1 maxBound)
+  (\d -> ratioToRational (1 % d)) <$> genDenominator
+ where
+  genDenominator :: Gen Word64
+  genDenominator = Gen.integral (Range.linear 1 maxBound)
 
-    ratioToRational :: Ratio Word64 -> Rational
-    ratioToRational = toRational
+  ratioToRational :: Ratio Word64 -> Rational
+  ratioToRational = toRational
 
 -- TODO: consolidate this back to just genRational once this is merged:
 -- https://github.com/input-output-hk/cardano-ledger-specs/pull/2330
 genRationalInt64 :: Gen Rational
 genRationalInt64 =
-    (\d -> ratioToRational (1 % d)) <$> genDenominator
-  where
-    genDenominator :: Gen Int64
-    genDenominator = Gen.integral (Range.linear 1 maxBound)
+  (\d -> ratioToRational (1 % d)) <$> genDenominator
+ where
+  genDenominator :: Gen Int64
+  genDenominator = Gen.integral (Range.linear 1 maxBound)
 
-    ratioToRational :: Ratio Int64 -> Rational
-    ratioToRational = toRational
+  ratioToRational :: Ratio Int64 -> Rational
+  ratioToRational = toRational
 
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 10)
@@ -938,7 +976,7 @@ genProtocolParameters era = do
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
   protocolParamCostModels <- pure mempty
-  --TODO: Babbage figure out how to deal with
+  -- TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
   protocolParamPrices <- Gen.maybe genExecutionUnitPrices
   protocolParamMaxTxExUnits <- Gen.maybe genExecutionUnits
@@ -946,7 +984,8 @@ genProtocolParameters era = do
   protocolParamMaxValueSize <- Gen.maybe genNat
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <- inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
+  protocolParamUTxOCostPerByte <-
+    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
   pure ProtocolParameters {..}
 
@@ -956,45 +995,46 @@ genValidProtocolParameters sbe = shelleyBasedEraTestConstraints sbe $ LedgerProt
 
 genProtocolParametersUpdate :: CardanoEra era -> Gen ProtocolParametersUpdate
 genProtocolParametersUpdate era = do
-  protocolUpdateProtocolVersion     <- Gen.maybe ((,) <$> genNat <*> genNat)
-  protocolUpdateDecentralization    <- Gen.maybe genRational
-  protocolUpdateExtraPraosEntropy   <- Gen.maybe genMaybePraosNonce
-  protocolUpdateMaxBlockHeaderSize  <- Gen.maybe genWord16
-  protocolUpdateMaxBlockBodySize    <- Gen.maybe genWord32
-  protocolUpdateMaxTxSize           <- Gen.maybe genWord32
-  protocolUpdateTxFeeFixed          <- Gen.maybe genLovelace
-  protocolUpdateTxFeePerByte        <- Gen.maybe genLovelace
-  protocolUpdateMinUTxOValue        <- Gen.maybe genLovelace
+  protocolUpdateProtocolVersion <- Gen.maybe ((,) <$> genNat <*> genNat)
+  protocolUpdateDecentralization <- Gen.maybe genRational
+  protocolUpdateExtraPraosEntropy <- Gen.maybe genMaybePraosNonce
+  protocolUpdateMaxBlockHeaderSize <- Gen.maybe genWord16
+  protocolUpdateMaxBlockBodySize <- Gen.maybe genWord32
+  protocolUpdateMaxTxSize <- Gen.maybe genWord32
+  protocolUpdateTxFeeFixed <- Gen.maybe genLovelace
+  protocolUpdateTxFeePerByte <- Gen.maybe genLovelace
+  protocolUpdateMinUTxOValue <- Gen.maybe genLovelace
   protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
-  protocolUpdateStakePoolDeposit    <- Gen.maybe genLovelace
-  protocolUpdateMinPoolCost         <- Gen.maybe genLovelace
-  protocolUpdatePoolRetireMaxEpoch  <- Gen.maybe genEpochInterval
-  protocolUpdateStakePoolTargetNum  <- Gen.maybe genNat
+  protocolUpdateStakePoolDeposit <- Gen.maybe genLovelace
+  protocolUpdateMinPoolCost <- Gen.maybe genLovelace
+  protocolUpdatePoolRetireMaxEpoch <- Gen.maybe genEpochInterval
+  protocolUpdateStakePoolTargetNum <- Gen.maybe genNat
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
-  protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
-  protocolUpdateTreasuryCut         <- Gen.maybe genRational
+  protocolUpdateMonetaryExpansion <- Gen.maybe genRational
+  protocolUpdateTreasuryCut <- Gen.maybe genRational
   let protocolUpdateCostModels = mempty -- genCostModels
-  --TODO: Babbage figure out how to deal with
+  -- TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
-  protocolUpdatePrices              <- Gen.maybe genExecutionUnitPrices
-  protocolUpdateMaxTxExUnits        <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxBlockExUnits     <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxValueSize        <- Gen.maybe genNat
-  protocolUpdateCollateralPercent   <- Gen.maybe genNat
+  protocolUpdatePrices <- Gen.maybe genExecutionUnitPrices
+  protocolUpdateMaxTxExUnits <- Gen.maybe genExecutionUnits
+  protocolUpdateMaxBlockExUnits <- Gen.maybe genExecutionUnits
+  protocolUpdateMaxValueSize <- Gen.maybe genNat
+  protocolUpdateCollateralPercent <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
-  protocolUpdateUTxOCostPerByte     <- inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
+  protocolUpdateUTxOCostPerByte <-
+    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
-  pure ProtocolParametersUpdate{..}
-
+  pure ProtocolParametersUpdate {..}
 
 genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
 genUpdateProposal era =
   UpdateProposal
-    <$> Gen.map (Range.constant 1 3)
-        ( (,)
+    <$> Gen.map
+      (Range.constant 1 3)
+      ( (,)
           <$> genVerificationKeyHash AsGenesisKey
           <*> genProtocolParametersUpdate era
-        )
+      )
     <*> genEpochNo
 
 genCostModel :: MonadGen m => m Alonzo.CostModel
@@ -1004,60 +1044,62 @@ genCostModels :: MonadGen m => m Alonzo.CostModels
 genCostModels = Q.arbitrary
 
 genExecutionUnits :: Gen ExecutionUnits
-genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
-                                   <*> Gen.integral (Range.constant 0 1000)
+genExecutionUnits =
+  ExecutionUnits
+    <$> Gen.integral (Range.constant 0 1000)
+    <*> Gen.integral (Range.constant 0 1000)
 
 genExecutionUnitPrices :: Gen ExecutionUnitPrices
 genExecutionUnitPrices = ExecutionUnitPrices <$> genRational <*> genRational
 
 genTxOutDatumHashTxContext :: ShelleyBasedEra era -> Gen (TxOutDatum CtxTx era)
 genTxOutDatumHashTxContext era = case era of
-    ShelleyBasedEraShelley -> pure TxOutDatumNone
-    ShelleyBasedEraAllegra -> pure TxOutDatumNone
-    ShelleyBasedEraMary    -> pure TxOutDatumNone
-    ShelleyBasedEraAlonzo  ->
-      Gen.choice
-        [ pure TxOutDatumNone
-        , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
-        , TxOutDatumInTx AlonzoEraOnwardsAlonzo <$> genHashableScriptData
-        ]
-    ShelleyBasedEraBabbage ->
-      Gen.choice
-        [ pure TxOutDatumNone
-        , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
-        , TxOutDatumInTx AlonzoEraOnwardsBabbage <$> genHashableScriptData
-        , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
-        ]
-    ShelleyBasedEraConway ->
-      Gen.choice
-        [ pure TxOutDatumNone
-        , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
-        , TxOutDatumInTx AlonzoEraOnwardsConway <$> genHashableScriptData
-        , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
-        ]
+  ShelleyBasedEraShelley -> pure TxOutDatumNone
+  ShelleyBasedEraAllegra -> pure TxOutDatumNone
+  ShelleyBasedEraMary -> pure TxOutDatumNone
+  ShelleyBasedEraAlonzo ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
+      , TxOutDatumInTx AlonzoEraOnwardsAlonzo <$> genHashableScriptData
+      ]
+  ShelleyBasedEraBabbage ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
+      , TxOutDatumInTx AlonzoEraOnwardsBabbage <$> genHashableScriptData
+      , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
+      ]
+  ShelleyBasedEraConway ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
+      , TxOutDatumInTx AlonzoEraOnwardsConway <$> genHashableScriptData
+      , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
+      ]
 
 genTxOutDatumHashUTxOContext :: ShelleyBasedEra era -> Gen (TxOutDatum CtxUTxO era)
 genTxOutDatumHashUTxOContext era = case era of
-    ShelleyBasedEraShelley -> pure TxOutDatumNone
-    ShelleyBasedEraAllegra -> pure TxOutDatumNone
-    ShelleyBasedEraMary    -> pure TxOutDatumNone
-    ShelleyBasedEraAlonzo  ->
-      Gen.choice
-        [ pure TxOutDatumNone
-        , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
-        ]
-    ShelleyBasedEraBabbage ->
-      Gen.choice
-        [ pure TxOutDatumNone
-        , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
-        , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
-        ]
-    ShelleyBasedEraConway ->
-      Gen.choice
-        [ pure TxOutDatumNone
-        , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
-        , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
-        ]
+  ShelleyBasedEraShelley -> pure TxOutDatumNone
+  ShelleyBasedEraAllegra -> pure TxOutDatumNone
+  ShelleyBasedEraMary -> pure TxOutDatumNone
+  ShelleyBasedEraAlonzo ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
+      ]
+  ShelleyBasedEraBabbage ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
+      , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
+      ]
+  ShelleyBasedEraConway ->
+    Gen.choice
+      [ pure TxOutDatumNone
+      , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
+      , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
+      ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
 mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR
@@ -1078,24 +1120,24 @@ genGovernancePollAnswer =
     <$> genGovernancePollHash
     <*> Gen.word (Range.constant 0 10)
  where
-   genGovernancePollHash =
-     GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
+  genGovernancePollHash =
+    GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
 
 -- TODO: Left off here. Fix this then get back to incorporating proposal procedure
 -- script witnesses in the api and then propagate to the cli
 genProposals :: ConwayEraOnwards era -> Gen (TxProposalProcedures BuildTx era)
 genProposals w =
-  conwayEraOnwardsConstraints w
-    $ TxProposalProcedures
-        <$> genTxProposalsOSet w
-        <*> return (BuildTxWith mempty)
+  conwayEraOnwardsConstraints w $
+    TxProposalProcedures
+      <$> genTxProposalsOSet w
+      <*> return (BuildTxWith mempty)
 
 genTxProposalsOSet
   :: ConwayEraOnwards era
   -> Gen (OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
 genTxProposalsOSet w =
-  conwayEraOnwardsConstraints w
-    $ OSet.fromFoldable <$> Gen.list (Range.constant 1 10) (genProposal w)
+  conwayEraOnwardsConstraints w $
+    OSet.fromFoldable <$> Gen.list (Range.constant 1 10) (genProposal w)
 
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =
@@ -1104,8 +1146,8 @@ genProposal w =
 -- TODO: Generate map of script witnesses
 genVotingProcedures :: ConwayEraOnwards era -> Gen (Api.TxVotingProcedures BuildTx era)
 genVotingProcedures w =
-  conwayEraOnwardsConstraints w
-    $ Api.TxVotingProcedures <$> Q.arbitrary <*> return (BuildTxWith mempty)
+  conwayEraOnwardsConstraints w $
+    Api.TxVotingProcedures <$> Q.arbitrary <*> return (BuildTxWith mempty)
 
 genCurrentTreasuryValue :: ConwayEraOnwards era -> Gen L.Coin
 genCurrentTreasuryValue _era = Q.arbitrary

@@ -10,23 +10,20 @@ module Test.Golden.Cardano.Api.Typed.Script
   , test_roundtrip_SimpleScript_JSON
   , test_roundtrip_ScriptData
   , test_roundtrip_HashableScriptData_JSON
-  ) where
+  )
+where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
-
+import Cardano.Api
+import Cardano.Api.Shelley
 import qualified Cardano.Ledger.Api.Era as L
-
-import           Data.Aeson
-import           System.FilePath ((</>))
-
-import           Test.Gen.Cardano.Api.Typed
-
-import           Hedgehog ((===))
+import Data.Aeson
+import Hedgehog ((===))
 import qualified Hedgehog as H
-import           Hedgehog.Extras.Aeson
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog.Extras.Aeson
+import System.FilePath ((</>))
+import Test.Gen.Cardano.Api.Typed
+import Test.Tasty (TestTree)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -56,13 +53,13 @@ exampleSimpleScriptV1_Any =
 
 exampleSimpleScriptV1_MofN :: SimpleScript
 exampleSimpleScriptV1_MofN =
-  RequireMOf 2
+  RequireMOf
+    2
     [ RequireSignature "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"
     , RequireSignature "f856c0c5839bab22673747d53f1ae9eed84afafb085f086e8e988614"
     , RequireSignature "b275b08c999097247f7c17e77007c7010cd19f20cc086ad99d398538"
     , RequireSignature "686024aecb5884d73a11b9ae4e63931112ba737e878d74638b78513a"
     ]
-
 
 exampleSimpleScriptV2_All :: SimpleScript
 exampleSimpleScriptV2_All =
@@ -80,7 +77,8 @@ exampleSimpleScriptV2_Any =
 
 exampleSimpleScriptV2_MofN :: SimpleScript
 exampleSimpleScriptV2_MofN =
-  RequireMOf 1
+  RequireMOf
+    1
     [ RequireSignature "2f3d4cf10d0471a1db9f2d2907de867968c27bca6272f062cd1c2413"
     , RequireSignature "f856c0c5839bab22673747d53f1ae9eed84afafb085f086e8e988614"
     , RequireTimeBefore (SlotNo 42)

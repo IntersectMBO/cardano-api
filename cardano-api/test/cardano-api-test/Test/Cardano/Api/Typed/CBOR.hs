@@ -1,28 +1,26 @@
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO remove when serialiseTxLedgerCddl is removed
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+-- TODO remove when serialiseTxLedgerCddl is removed
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Cardano.Api.Typed.CBOR
   ( tests
-  ) where
+  )
+where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (AsType (..))
-
-import           Data.Proxy (Proxy (..))
-
-import           Test.Gen.Cardano.Api.Typed
-
-import           Test.Cardano.Api.Typed.Orphans ()
-
-import           Hedgehog (Property, forAll, property, tripping)
+import Cardano.Api
+import Cardano.Api.Shelley (AsType (..))
+import Data.Proxy (Proxy (..))
+import Hedgehog (Property, forAll, property, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
+import Test.Cardano.Api.Typed.Orphans ()
+import Test.Gen.Cardano.Api.Typed
+import Test.Hedgehog.Roundtrip.CBOR
 import qualified Test.Hedgehog.Roundtrip.CBOR as H
-import           Test.Hedgehog.Roundtrip.CBOR
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -31,19 +29,19 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 prop_roundtrip_txbody_CBOR :: Property
 prop_roundtrip_txbody_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ makeSignedTransaction [] <$> genTxBody era
   H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
 
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genCardanoKeyWitness era
   shelleyBasedEraConstraints era $ H.trippingCbor (AsKeyWitness (proxyToAsType Proxy)) x
 
@@ -170,13 +168,13 @@ prop_roundtrip_UpdateProposal_CBOR = H.property $ do
 
 prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound..maxBound]
+  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
   x <- forAll $ genTx era
   H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do
-  AnyShelleyBasedEra sbe <- H.forAll $ Gen.element [minBound..maxBound]
+  AnyShelleyBasedEra sbe <- H.forAll $ Gen.element [minBound .. maxBound]
   x <- forAll $ genShelleyKeyWitness sbe
   tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 
@@ -191,36 +189,88 @@ prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.Typed.CBOR"
-  [ testProperty "roundtrip witness CBOR"                               prop_roundtrip_witness_CBOR
-  , testProperty "roundtrip operational certificate CBOR"               prop_roundtrip_operational_certificate_CBOR
-  , testProperty "roundtrip operational certificate issue counter CBOR" prop_roundtrip_operational_certificate_issue_counter_CBOR
-  , testProperty "roundtrip verification key byron CBOR"                prop_roundtrip_verification_key_byron_CBOR
-  , testProperty "roundtrip signing key byron CBOR"                     prop_roundtrip_signing_key_byron_CBOR
-  , testProperty "roundtrip verification key payment CBOR"              prop_roundtrip_verification_key_payment_CBOR
-  , testProperty "roundtrip signing key payment CBOR"                   prop_roundtrip_signing_key_payment_CBOR
-  , testProperty "roundtrip verification key stake CBOR"                prop_roundtrip_verification_key_stake_CBOR
-  , testProperty "roundtrip signing key stake CBOR"                     prop_roundtrip_signing_key_stake_CBOR
-  , testProperty "roundtrip verification key genesis CBOR"              prop_roundtrip_verification_key_genesis_CBOR
-  , testProperty "roundtrip signing key genesis CBOR"                   prop_roundtrip_signing_key_genesis_CBOR
-  , testProperty "roundtrip verification key genesis delegate CBOR"     prop_roundtrip_verification_key_genesis_delegate_CBOR
-  , testProperty "roundtrip signing key genesis delegate CBOR"          prop_roundtrip_signing_key_genesis_delegate_CBOR
-  , testProperty "roundtrip verification key stake pool CBOR"           prop_roundtrip_verification_key_stake_pool_CBOR
-  , testProperty "roundtrip signing key stake pool CBOR"                prop_roundtrip_signing_key_stake_pool_CBOR
-  , testProperty "roundtrip verification key vrf CBOR"                  prop_roundtrip_verification_key_vrf_CBOR
-  , testProperty "roundtrip signing key vrf CBOR"                       prop_roundtrip_signing_key_vrf_CBOR
-  , testProperty "roundtrip verification key kes CBOR"                  prop_roundtrip_verification_key_kes_CBOR
-  , testProperty "roundtrip signing key kes CBOR"                       prop_roundtrip_signing_key_kes_CBOR
-  , testProperty "roundtrip script SimpleScriptV1 CBOR"                 prop_roundtrip_script_SimpleScriptV1_CBOR
-  , testProperty "roundtrip script SimpleScriptV2 CBOR"                 prop_roundtrip_script_SimpleScriptV2_CBOR
-  , testProperty "roundtrip script PlutusScriptV1 CBOR"                 prop_roundtrip_script_PlutusScriptV1_CBOR
-  , testProperty "roundtrip script PlutusScriptV2 CBOR"                 prop_roundtrip_script_PlutusScriptV2_CBOR
-  , testProperty "roundtrip UpdateProposal CBOR"                        prop_roundtrip_UpdateProposal_CBOR
-  , testProperty "roundtrip ScriptData CBOR"                            prop_roundtrip_ScriptData_CBOR
-  , testProperty "roundtrip txbody CBOR"                                prop_roundtrip_txbody_CBOR
-  , testProperty "roundtrip Tx Cddl"                                    prop_roundtrip_Tx_Cddl
-  , testProperty "roundtrip TxWitness Cddl"                             prop_roundtrip_TxWitness_Cddl
-  , testProperty "roundtrip tx CBOR"                                    prop_roundtrip_tx_CBOR
-  , testProperty "roundtrip GovernancePoll CBOR"                        prop_roundtrip_GovernancePoll_CBOR
-  , testProperty "roundtrip GovernancePollAnswer CBOR"                  prop_roundtrip_GovernancePollAnswer_CBOR
-  ]
+tests =
+  testGroup
+    "Test.Cardano.Api.Typed.CBOR"
+    [ testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
+    , testProperty
+        "roundtrip operational certificate CBOR"
+        prop_roundtrip_operational_certificate_CBOR
+    , testProperty
+        "roundtrip operational certificate issue counter CBOR"
+        prop_roundtrip_operational_certificate_issue_counter_CBOR
+    , testProperty
+        "roundtrip verification key byron CBOR"
+        prop_roundtrip_verification_key_byron_CBOR
+    , testProperty
+        "roundtrip signing key byron CBOR"
+        prop_roundtrip_signing_key_byron_CBOR
+    , testProperty
+        "roundtrip verification key payment CBOR"
+        prop_roundtrip_verification_key_payment_CBOR
+    , testProperty
+        "roundtrip signing key payment CBOR"
+        prop_roundtrip_signing_key_payment_CBOR
+    , testProperty
+        "roundtrip verification key stake CBOR"
+        prop_roundtrip_verification_key_stake_CBOR
+    , testProperty
+        "roundtrip signing key stake CBOR"
+        prop_roundtrip_signing_key_stake_CBOR
+    , testProperty
+        "roundtrip verification key genesis CBOR"
+        prop_roundtrip_verification_key_genesis_CBOR
+    , testProperty
+        "roundtrip signing key genesis CBOR"
+        prop_roundtrip_signing_key_genesis_CBOR
+    , testProperty
+        "roundtrip verification key genesis delegate CBOR"
+        prop_roundtrip_verification_key_genesis_delegate_CBOR
+    , testProperty
+        "roundtrip signing key genesis delegate CBOR"
+        prop_roundtrip_signing_key_genesis_delegate_CBOR
+    , testProperty
+        "roundtrip verification key stake pool CBOR"
+        prop_roundtrip_verification_key_stake_pool_CBOR
+    , testProperty
+        "roundtrip signing key stake pool CBOR"
+        prop_roundtrip_signing_key_stake_pool_CBOR
+    , testProperty
+        "roundtrip verification key vrf CBOR"
+        prop_roundtrip_verification_key_vrf_CBOR
+    , testProperty
+        "roundtrip signing key vrf CBOR"
+        prop_roundtrip_signing_key_vrf_CBOR
+    , testProperty
+        "roundtrip verification key kes CBOR"
+        prop_roundtrip_verification_key_kes_CBOR
+    , testProperty
+        "roundtrip signing key kes CBOR"
+        prop_roundtrip_signing_key_kes_CBOR
+    , testProperty
+        "roundtrip script SimpleScriptV1 CBOR"
+        prop_roundtrip_script_SimpleScriptV1_CBOR
+    , testProperty
+        "roundtrip script SimpleScriptV2 CBOR"
+        prop_roundtrip_script_SimpleScriptV2_CBOR
+    , testProperty
+        "roundtrip script PlutusScriptV1 CBOR"
+        prop_roundtrip_script_PlutusScriptV1_CBOR
+    , testProperty
+        "roundtrip script PlutusScriptV2 CBOR"
+        prop_roundtrip_script_PlutusScriptV2_CBOR
+    , testProperty
+        "roundtrip UpdateProposal CBOR"
+        prop_roundtrip_UpdateProposal_CBOR
+    , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
+    , testProperty "roundtrip txbody CBOR" prop_roundtrip_txbody_CBOR
+    , testProperty "roundtrip Tx Cddl" prop_roundtrip_Tx_Cddl
+    , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
+    , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
+    , testProperty
+        "roundtrip GovernancePoll CBOR"
+        prop_roundtrip_GovernancePoll_CBOR
+    , testProperty
+        "roundtrip GovernancePollAnswer CBOR"
+        prop_roundtrip_GovernancePollAnswer_CBOR
+    ]

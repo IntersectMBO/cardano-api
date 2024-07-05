@@ -10,15 +10,14 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | TextEnvelope Serialisation
---
 module Cardano.Api.SerialiseTextEnvelope
-  ( HasTextEnvelope(..)
+  ( HasTextEnvelope (..)
   , textEnvelopeTypeInEra
-  , TextEnvelope(..)
-  , TextEnvelopeType(..)
-  , TextEnvelopeDescr(..)
+  , TextEnvelope (..)
+  , TextEnvelopeType (..)
+  , TextEnvelopeDescr (..)
   , textEnvelopeRawCBOR
-  , TextEnvelopeError(..)
+  , TextEnvelopeError (..)
   , serialiseToTextEnvelope
   , deserialiseFromTextEnvelope
   , readFileTextEnvelope
@@ -29,40 +28,39 @@ module Cardano.Api.SerialiseTextEnvelope
   , legacyComparison
 
     -- * Reading one of several key types
-  , FromSomeType(..)
+  , FromSomeType (..)
   , deserialiseFromTextEnvelopeAnyOf
   , readFileTextEnvelopeAnyOf
 
     -- * Data family instances
-  , AsType(..)
-  ) where
+  , AsType (..)
+  )
+where
 
-import           Cardano.Api.Eras
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.IO
-import           Cardano.Api.Orphans ()
-import           Cardano.Api.Pretty
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.Utils (readFileBlocking)
-
-import           Cardano.Binary (DecoderError)
-
-import           Control.Monad (unless)
-import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import Cardano.Api.Eras
+import Cardano.Api.Error
+import Cardano.Api.HasTypeProxy
+import Cardano.Api.IO
+import Cardano.Api.Orphans ()
+import Cardano.Api.Pretty
+import Cardano.Api.SerialiseCBOR
+import Cardano.Api.Utils (readFileBlocking)
+import Cardano.Binary (DecoderError)
+import Control.Monad (unless)
+import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
-import           Data.Bifunctor (first)
-import           Data.ByteString (ByteString)
+import Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
+import Data.Bifunctor (first)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Data (Data)
+import Data.Data (Data)
 import qualified Data.List as List
-import           Data.Maybe (fromMaybe)
-import           Data.String (IsString)
-import           Data.Text (Text)
+import Data.Maybe (fromMaybe)
+import Data.String (IsString)
+import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 
 -- ----------------------------------------------------------------------------
@@ -86,48 +84,48 @@ newtype TextEnvelopeDescr = TextEnvelopeDescr String
 --
 -- It also contains a \"title\" field which is free-form, and could be used
 -- to indicate the role or purpose to a reader.
---
 data TextEnvelope = TextEnvelope
-  { teType        :: !TextEnvelopeType
+  { teType :: !TextEnvelopeType
   , teDescription :: !TextEnvelopeDescr
-  , teRawCBOR     :: !ByteString
-  } deriving (Eq, Show)
+  , teRawCBOR :: !ByteString
+  }
+  deriving (Eq, Show)
 
 instance HasTypeProxy TextEnvelope where
-    data AsType TextEnvelope = AsTextEnvelope
-    proxyToAsType _ = AsTextEnvelope
+  data AsType TextEnvelope = AsTextEnvelope
+  proxyToAsType _ = AsTextEnvelope
 
 instance ToJSON TextEnvelope where
   toJSON TextEnvelope {teType, teDescription, teRawCBOR} =
-    object [ "type"        .= teType
-           , "description" .= teDescription
-           , "cborHex"     .= Text.decodeUtf8 (Base16.encode teRawCBOR)
-           ]
+    object
+      [ "type" .= teType
+      , "description" .= teDescription
+      , "cborHex" .= Text.decodeUtf8 (Base16.encode teRawCBOR)
+      ]
 
 instance FromJSON TextEnvelope where
   parseJSON = withObject "TextEnvelope" $ \v ->
-                TextEnvelope <$> (v .: "type")
-                             <*> (v .: "description")
-                             <*> (parseJSONBase16 =<< v .: "cborHex")
-    where
-      parseJSONBase16 v =
-        either fail return . Base16.decode . Text.encodeUtf8 =<< parseJSON v
+    TextEnvelope
+      <$> (v .: "type")
+      <*> (v .: "description")
+      <*> (parseJSONBase16 =<< v .: "cborHex")
+   where
+    parseJSONBase16 v =
+      either fail return . Base16.decode . Text.encodeUtf8 =<< parseJSON v
 
 textEnvelopeJSONConfig :: Config
-textEnvelopeJSONConfig = defConfig { confCompare = textEnvelopeJSONKeyOrder }
+textEnvelopeJSONConfig = defConfig {confCompare = textEnvelopeJSONKeyOrder}
 
 textEnvelopeJSONKeyOrder :: Text -> Text -> Ordering
 textEnvelopeJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
 
-
 textEnvelopeRawCBOR :: TextEnvelope -> ByteString
 textEnvelopeRawCBOR = teRawCBOR
 
-
 -- | The errors that the pure 'TextEnvelope' parsing\/decoding functions can return.
---
 data TextEnvelopeError
-  = TextEnvelopeTypeError   ![TextEnvelopeType] !TextEnvelopeType -- ^ expected, actual
+  = -- | expected, actual
+    TextEnvelopeTypeError ![TextEnvelopeType] !TextEnvelopeType
   | TextEnvelopeDecodeError !DecoderError
   | TextEnvelopeAesonDecodeError !String
   deriving (Eq, Show, Data)
@@ -140,7 +138,6 @@ instance Error TextEnvelopeError where
         , " Expected: " <> pretty expType
         , " Actual: " <> pretty actType
         ]
-
     TextEnvelopeTypeError expTypes (TextEnvelopeType actType) ->
       mconcat
         [ "TextEnvelope type error: "
@@ -153,15 +150,13 @@ instance Error TextEnvelopeError where
     TextEnvelopeDecodeError decErr ->
       "TextEnvelope decode error: " <> pshow decErr
 
-
 -- | Check that the \"type\" of the 'TextEnvelope' is as expected.
 --
 -- For example, one might check that the type is \"TxSignedShelley\".
---
 expectTextEnvelopeOfType :: TextEnvelopeType -> TextEnvelope -> Either TextEnvelopeError ()
-expectTextEnvelopeOfType expectedType TextEnvelope { teType = actualType } =
-    unless (expectedType `legacyComparison` actualType) $
-      Left (TextEnvelopeTypeError [expectedType] actualType)
+expectTextEnvelopeOfType expectedType TextEnvelope {teType = actualType} =
+  unless (expectedType `legacyComparison` actualType) $
+    Left (TextEnvelopeTypeError [expectedType] actualType)
 
 -- | This is a backwards-compatibility patch to ensure that old envelopes
 -- generated by 'serialiseTxLedgerCddl' can be deserialised after switching
@@ -183,18 +178,18 @@ legacyComparison (TextEnvelopeType expectedType) (TextEnvelopeType actualType) =
     ("Tx ConwayEra", "Unwitnessed Tx ConwayEra") -> True
     (expectedOther, expectedActual) -> expectedOther == expectedActual
 
-
 -- ----------------------------------------------------------------------------
 -- Serialisation in text envelope format
 --
 
 class SerialiseAsCBOR a => HasTextEnvelope a where
-    textEnvelopeType :: AsType a -> TextEnvelopeType
+  textEnvelopeType :: AsType a -> TextEnvelopeType
 
-    textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
-    textEnvelopeDefaultDescr _ = ""
+  textEnvelopeDefaultDescr :: a -> TextEnvelopeDescr
+  textEnvelopeDefaultDescr _ = ""
 
-textEnvelopeTypeInEra :: ()
+textEnvelopeTypeInEra
+  :: ()
   => HasTextEnvelope (f era)
   => CardanoEra era
   -> AsType (f era)
@@ -202,90 +197,95 @@ textEnvelopeTypeInEra :: ()
 textEnvelopeTypeInEra _ =
   textEnvelopeType
 
-serialiseToTextEnvelope :: forall a. HasTextEnvelope a
-                        => Maybe TextEnvelopeDescr -> a -> TextEnvelope
+serialiseToTextEnvelope
+  :: forall a
+   . HasTextEnvelope a
+  => Maybe TextEnvelopeDescr -> a -> TextEnvelope
 serialiseToTextEnvelope mbDescr a =
-    TextEnvelope {
-      teType    = textEnvelopeType ttoken
-    , teDescription   = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
+  TextEnvelope
+    { teType = textEnvelopeType ttoken
+    , teDescription = fromMaybe (textEnvelopeDefaultDescr a) mbDescr
     , teRawCBOR = serialiseToCBOR a
     }
-  where
-    ttoken :: AsType a
-    ttoken = proxyToAsType Proxy
+ where
+  ttoken :: AsType a
+  ttoken = proxyToAsType Proxy
 
-
-deserialiseFromTextEnvelope :: HasTextEnvelope a
-                            => AsType a
-                            -> TextEnvelope
-                            -> Either TextEnvelopeError a
+deserialiseFromTextEnvelope
+  :: HasTextEnvelope a
+  => AsType a
+  -> TextEnvelope
+  -> Either TextEnvelopeError a
 deserialiseFromTextEnvelope ttoken te = do
-    expectTextEnvelopeOfType (textEnvelopeType ttoken) te
-    first TextEnvelopeDecodeError $
-      deserialiseFromCBOR ttoken (teRawCBOR te) --TODO: You have switched from CBOR to JSON
+  expectTextEnvelopeOfType (textEnvelopeType ttoken) te
+  first TextEnvelopeDecodeError $
+    deserialiseFromCBOR ttoken (teRawCBOR te) -- TODO: You have switched from CBOR to JSON
 
-
-deserialiseFromTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                                 -> TextEnvelope
-                                 -> Either TextEnvelopeError b
+deserialiseFromTextEnvelopeAnyOf
+  :: [FromSomeType HasTextEnvelope b]
+  -> TextEnvelope
+  -> Either TextEnvelopeError b
 deserialiseFromTextEnvelopeAnyOf types te =
-    case List.find matching types of
-      Nothing ->
-        Left (TextEnvelopeTypeError expectedTypes actualType)
+  case List.find matching types of
+    Nothing ->
+      Left (TextEnvelopeTypeError expectedTypes actualType)
+    Just (FromSomeType ttoken f) ->
+      first TextEnvelopeDecodeError $
+        f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
+ where
+  actualType = teType te
+  expectedTypes =
+    [ textEnvelopeType ttoken
+    | FromSomeType ttoken _f <- types
+    ]
 
-      Just (FromSomeType ttoken f) ->
-        first TextEnvelopeDecodeError $
-          f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
-  where
-    actualType    = teType te
-    expectedTypes = [ textEnvelopeType ttoken
-                    | FromSomeType ttoken _f <- types ]
+  matching (FromSomeType ttoken _f) = textEnvelopeType ttoken `legacyComparison` actualType
 
-    matching (FromSomeType ttoken _f) = textEnvelopeType ttoken `legacyComparison` actualType
-
-writeFileTextEnvelope :: HasTextEnvelope a
-                      => File content Out
-                      -> Maybe TextEnvelopeDescr
-                      -> a
-                      -> IO (Either (FileError ()) ())
+writeFileTextEnvelope
+  :: HasTextEnvelope a
+  => File content Out
+  -> Maybe TextEnvelopeDescr
+  -> a
+  -> IO (Either (FileError ()) ())
 writeFileTextEnvelope outputFile mbDescr a =
   writeLazyByteStringFile outputFile (textEnvelopeToJSON mbDescr a)
 
-textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> LBS.ByteString
-textEnvelopeToJSON mbDescr a  =
+textEnvelopeToJSON :: HasTextEnvelope a => Maybe TextEnvelopeDescr -> a -> LBS.ByteString
+textEnvelopeToJSON mbDescr a =
   encodePretty' textEnvelopeJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
 
-readFileTextEnvelope :: HasTextEnvelope a
-                     => AsType a
-                     -> File content In
-                     -> IO (Either (FileError TextEnvelopeError) a)
+readFileTextEnvelope
+  :: HasTextEnvelope a
+  => AsType a
+  -> File content In
+  -> IO (Either (FileError TextEnvelopeError) a)
 readFileTextEnvelope ttoken path =
-    runExceptT $ do
-      content <- fileIOExceptT (unFile path) readFileBlocking
-      firstExceptT (FileError (unFile path)) $ hoistEither $ do
-        te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelope ttoken te
+  runExceptT $ do
+    content <- fileIOExceptT (unFile path) readFileBlocking
+    firstExceptT (FileError (unFile path)) $ hoistEither $ do
+      te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
+      deserialiseFromTextEnvelope ttoken te
 
-
-readFileTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                          -> File content In
-                          -> IO (Either (FileError TextEnvelopeError) b)
+readFileTextEnvelopeAnyOf
+  :: [FromSomeType HasTextEnvelope b]
+  -> File content In
+  -> IO (Either (FileError TextEnvelopeError) b)
 readFileTextEnvelopeAnyOf types path =
-    runExceptT $ do
-      content <- fileIOExceptT (unFile path) readFileBlocking
-      firstExceptT (FileError (unFile path)) $ hoistEither $ do
-        te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-        deserialiseFromTextEnvelopeAnyOf types te
+  runExceptT $ do
+    content <- fileIOExceptT (unFile path) readFileBlocking
+    firstExceptT (FileError (unFile path)) $ hoistEither $ do
+      te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
+      deserialiseFromTextEnvelopeAnyOf types te
 
-
-readTextEnvelopeFromFile :: FilePath
-                         -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
+readTextEnvelopeFromFile
+  :: FilePath
+  -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
 readTextEnvelopeFromFile path =
   runExceptT $ do
     bs <- fileIOExceptT path readFileBlocking
     firstExceptT (FileError path . TextEnvelopeAesonDecodeError)
-      . hoistEither $ Aeson.eitherDecodeStrict' bs
-
+      . hoistEither
+      $ Aeson.eitherDecodeStrict' bs
 
 readTextEnvelopeOfTypeFromFile
   :: TextEnvelopeType
@@ -294,7 +294,7 @@ readTextEnvelopeOfTypeFromFile
 readTextEnvelopeOfTypeFromFile expectedType path =
   runExceptT $ do
     te <- ExceptT (readTextEnvelopeFromFile path)
-    firstExceptT (FileError path) $ hoistEither $
-      expectTextEnvelopeOfType expectedType te
+    firstExceptT (FileError path) $
+      hoistEither $
+        expectTextEnvelopeOfType expectedType te
     return te
-

@@ -9,19 +9,18 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Eon.MaryEraOnwards
-  ( MaryEraOnwards(..)
+  ( MaryEraOnwards (..)
   , maryEraOnwardsConstraints
   , maryEraOnwardsToShelleyBasedEra
-
   , MaryEraOnwardsConstraints
-  ) where
+  )
+where
 
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras.Core
-import           Cardano.Api.Modes
-import           Cardano.Api.Query.Types
-
-import           Cardano.Binary
+import Cardano.Api.Eon.ShelleyBasedEra
+import Cardano.Api.Eras.Core
+import Cardano.Api.Modes
+import Cardano.Api.Query.Types
+import Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
@@ -31,38 +30,38 @@ import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
+import Data.Aeson
+import Data.Typeable (Typeable)
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
-import           Data.Aeson
-import           Data.Typeable (Typeable)
-
 data MaryEraOnwards era where
-  MaryEraOnwardsMary  :: MaryEraOnwards MaryEra
-  MaryEraOnwardsAlonzo  :: MaryEraOnwards AlonzoEra
+  MaryEraOnwardsMary :: MaryEraOnwards MaryEra
+  MaryEraOnwardsAlonzo :: MaryEraOnwards AlonzoEra
   MaryEraOnwardsBabbage :: MaryEraOnwards BabbageEra
-  MaryEraOnwardsConway  :: MaryEraOnwards ConwayEra
+  MaryEraOnwardsConway :: MaryEraOnwards ConwayEra
 
 deriving instance Show (MaryEraOnwards era)
+
 deriving instance Eq (MaryEraOnwards era)
 
 instance Eon MaryEraOnwards where
   inEonForEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> no
-    AllegraEra  -> no
-    MaryEra     -> yes MaryEraOnwardsMary
-    AlonzoEra   -> yes MaryEraOnwardsAlonzo
-    BabbageEra  -> yes MaryEraOnwardsBabbage
-    ConwayEra   -> yes MaryEraOnwardsConway
+    ByronEra -> no
+    ShelleyEra -> no
+    AllegraEra -> no
+    MaryEra -> yes MaryEraOnwardsMary
+    AlonzoEra -> yes MaryEraOnwardsAlonzo
+    BabbageEra -> yes MaryEraOnwardsBabbage
+    ConwayEra -> yes MaryEraOnwardsConway
 
 instance ToCardanoEra MaryEraOnwards where
   toCardanoEra = \case
-    MaryEraOnwardsMary    -> MaryEra
-    MaryEraOnwardsAlonzo  -> AlonzoEra
+    MaryEraOnwardsMary -> MaryEra
+    MaryEraOnwardsAlonzo -> AlonzoEra
     MaryEraOnwardsBabbage -> BabbageEra
-    MaryEraOnwardsConway  -> ConwayEra
+    MaryEraOnwardsConway -> ConwayEra
 
 type MaryEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
@@ -83,7 +82,6 @@ type MaryEraOnwardsConstraints era =
   , L.MaryEraTxBody (ShelleyLedgerEra era)
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.MaryValue L.StandardCrypto
-
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
@@ -92,19 +90,20 @@ type MaryEraOnwardsConstraints era =
   , Typeable era
   )
 
-maryEraOnwardsConstraints :: ()
+maryEraOnwardsConstraints
+  :: ()
   => MaryEraOnwards era
   -> (MaryEraOnwardsConstraints era => a)
   -> a
 maryEraOnwardsConstraints = \case
-  MaryEraOnwardsMary    -> id
-  MaryEraOnwardsAlonzo  -> id
+  MaryEraOnwardsMary -> id
+  MaryEraOnwardsAlonzo -> id
   MaryEraOnwardsBabbage -> id
-  MaryEraOnwardsConway  -> id
+  MaryEraOnwardsConway -> id
 
 maryEraOnwardsToShelleyBasedEra :: MaryEraOnwards era -> ShelleyBasedEra era
 maryEraOnwardsToShelleyBasedEra = \case
-  MaryEraOnwardsMary    -> ShelleyBasedEraMary
-  MaryEraOnwardsAlonzo  -> ShelleyBasedEraAlonzo
+  MaryEraOnwardsMary -> ShelleyBasedEraMary
+  MaryEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
   MaryEraOnwardsBabbage -> ShelleyBasedEraBabbage
-  MaryEraOnwardsConway  -> ShelleyBasedEraConway
+  MaryEraOnwardsConway -> ShelleyBasedEraConway

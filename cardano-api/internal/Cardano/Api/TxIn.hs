@@ -10,60 +10,57 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-
 -- | Transaction bodies
---
-module Cardano.Api.TxIn (
-    -- * Transaction inputs
-    TxIn(..),
-    TxIx(..),
+module Cardano.Api.TxIn
+  ( -- * Transaction inputs
+    TxIn (..)
+  , TxIx (..)
 
     -- * Transaction Ids
-    TxId(..),
-    parseTxId,
+  , TxId (..)
+  , parseTxId
 
     -- * Data family instances
-    AsType(AsTxId),
+  , AsType (AsTxId)
 
     -- * Internal conversion functions
-    toByronTxId,
-    toShelleyTxId,
-    fromShelleyTxId,
-    toByronTxIn,
-    fromByronTxIn,
-    toShelleyTxIn,
-    fromShelleyTxIn,
-    renderTxIn,
-  ) where
+  , toByronTxId
+  , toShelleyTxId
+  , fromShelleyTxId
+  , toByronTxIn
+  , fromByronTxIn
+  , toShelleyTxIn
+  , fromShelleyTxIn
+  , renderTxIn
+  )
+where
 
-import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Pretty
-import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.Utils
-
+import Cardano.Api.Error
+import Cardano.Api.HasTypeProxy
+import Cardano.Api.Pretty
+import Cardano.Api.SerialiseJSON
+import Cardano.Api.SerialiseRaw
+import Cardano.Api.SerialiseUsing
+import Cardano.Api.Utils
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
-
-import           Control.Applicative (some)
-import           Data.Aeson (withText)
+import Control.Applicative (some)
+import Data.Aeson (withText)
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Char8 as BSC
-import           Data.String
-import           Data.Text (Text)
+import Data.String
+import Data.Text (Text)
 import qualified Data.Text as Text
+import Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
-import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
@@ -78,32 +75,31 @@ import qualified Text.Parsec.Token as Parsec
 newtype TxId = TxId (Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody)
   -- We use the Shelley representation and convert to/from the Byron one
   deriving stock (Eq, Ord)
-  deriving (Show, IsString)         via UsingRawBytesHex TxId
-  deriving (ToJSON, FromJSON)       via UsingRawBytesHex TxId
+  deriving (Show, IsString) via UsingRawBytesHex TxId
+  deriving (ToJSON, FromJSON) via UsingRawBytesHex TxId
   deriving (ToJSONKey, FromJSONKey) via UsingRawBytesHex TxId
 
 instance HasTypeProxy TxId where
-    data AsType TxId = AsTxId
-    proxyToAsType _ = AsTxId
+  data AsType TxId = AsTxId
+  proxyToAsType _ = AsTxId
 
 instance SerialiseAsRawBytes TxId where
-    serialiseToRawBytes (TxId h) = Crypto.hashToBytes h
-    deserialiseFromRawBytes AsTxId bs = case Crypto.hashFromBytes bs of
-      Just a -> Right (TxId a)
-      Nothing -> Left $ SerialiseAsRawBytesError "Unable to deserialise TxId"
+  serialiseToRawBytes (TxId h) = Crypto.hashToBytes h
+  deserialiseFromRawBytes AsTxId bs = case Crypto.hashFromBytes bs of
+    Just a -> Right (TxId a)
+    Nothing -> Left $ SerialiseAsRawBytesError "Unable to deserialise TxId"
 
 toByronTxId :: TxId -> Byron.TxId
 toByronTxId (TxId h) =
-    Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
+  Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
 
 toShelleyTxId :: TxId -> Ledger.TxId StandardCrypto
 toShelleyTxId (TxId h) =
-    Ledger.TxId (SafeHash.unsafeMakeSafeHash (Crypto.castHash h))
+  Ledger.TxId (SafeHash.unsafeMakeSafeHash (Crypto.castHash h))
 
 fromShelleyTxId :: Ledger.TxId StandardCrypto -> TxId
 fromShelleyTxId (Ledger.TxId h) =
-    TxId (Crypto.castHash (SafeHash.extractHash h))
-
+  TxId (Crypto.castHash (SafeHash.extractHash h))
 
 -- ----------------------------------------------------------------------------
 -- Transaction inputs
@@ -140,13 +136,11 @@ parseTxIx :: Parsec.Parser TxIx
 parseTxIx = TxIx . fromIntegral <$> decimal
 
 decimal :: Parsec.Parser Integer
-Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
-
+Parsec.TokenParser {Parsec.decimal = decimal} = Parsec.haskell
 
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txId (TxIx ix)) =
   serialiseToRawBytesHexText txId <> "#" <> Text.pack (show ix)
-
 
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
@@ -157,20 +151,20 @@ fromByronTxIn :: Byron.TxIn -> TxIn
 fromByronTxIn (Byron.TxInUtxo txId index) =
   let shortBs = Byron.abstractHashToShort txId
       mApiHash = Crypto.hashFromBytesShort shortBs
-  in case mApiHash of
-       Just apiHash -> TxIn (TxId apiHash) (TxIx . fromIntegral $ toInteger index)
-       Nothing -> error $ "Error converting Byron era TxId: " <> show txId
+   in case mApiHash of
+        Just apiHash -> TxIn (TxId apiHash) (TxIx . fromIntegral $ toInteger index)
+        Nothing -> error $ "Error converting Byron era TxId: " <> show txId
 
 toByronTxIn :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
-    Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
+  Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
 -- | This function may overflow on the transaction index. Call sites must ensure
 -- that all uses of this function are appropriately guarded.
 toShelleyTxIn :: TxIn -> Ledger.TxIn StandardCrypto
 toShelleyTxIn (TxIn txid (TxIx txix)) =
-    Ledger.TxIn (toShelleyTxId txid) (Ledger.TxIx $ fromIntegral txix)
+  Ledger.TxIn (toShelleyTxId txid) (Ledger.TxIx $ fromIntegral txix)
 
 fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
 fromShelleyTxIn (Ledger.TxIn txid (Ledger.TxIx txix)) =
-    TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
+  TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))

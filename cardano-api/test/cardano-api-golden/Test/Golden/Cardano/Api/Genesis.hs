@@ -1,32 +1,38 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Test.Golden.Cardano.Api.Genesis
   ( exampleShelleyGenesis
-  ) where
+  )
+where
 
-import           Cardano.Api.Shelley (ShelleyGenesis (..))
-
-import           Cardano.Ledger.Address (Addr (..))
-import           Cardano.Ledger.BaseTypes (Network (..))
-import           Cardano.Ledger.Coin (Coin (..))
-import           Cardano.Ledger.Core
-import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeCredential,
-                   StakeReference (..))
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
-                   VerKeyVRF)
-import           Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
-import           Cardano.Slotting.Slot (EpochSize (..))
-
-import           Data.ListMap (ListMap (ListMap))
+import Cardano.Api.Shelley (ShelleyGenesis (..))
+import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
+import Cardano.Ledger.Credential
+  ( Credential (..)
+  , PaymentCredential
+  , StakeCredential
+  , StakeReference (..)
+  )
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys
+  ( GenDelegPair (..)
+  , Hash
+  , KeyHash (..)
+  , KeyRole (..)
+  , VerKeyVRF
+  )
+import Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
+import Cardano.Slotting.Slot (EpochSize (..))
+import Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           Lens.Micro
-
-import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Lens.Micro
+import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 
 exampleShelleyGenesis :: ShelleyGenesis StandardCrypto
 exampleShelleyGenesis =
@@ -42,15 +48,19 @@ exampleShelleyGenesis =
     , sgSlotLength = 8
     , sgUpdateQuorum = 16991
     , sgMaxLovelaceSupply = 71
-    , sgProtocolParams = emptyPParams
-        & ppDL .~ unsafeBoundRational 1.9e-2
-        & ppMaxBBSizeL .~ 65535
-        & ppMaxBHSizeL .~ 65535
-    , sgGenDelegs = Map.fromList
-                      [( genesisVerKeyHash
-                       , GenDelegPair delegVerKeyHash delegVrfKeyHash)
-                      ]
-    , sgInitialFunds = ListMap [(initialFundedAddress,initialFunds)]
+    , sgProtocolParams =
+        emptyPParams
+          & ppDL .~ unsafeBoundRational 1.9e-2
+          & ppMaxBBSizeL .~ 65535
+          & ppMaxBHSizeL .~ 65535
+    , sgGenDelegs =
+        Map.fromList
+          [
+            ( genesisVerKeyHash
+            , GenDelegPair delegVerKeyHash delegVrfKeyHash
+            )
+          ]
+    , sgInitialFunds = ListMap [(initialFundedAddress, initialFunds)]
     , sgStaking = emptyGenesisStaking
     }
  where
@@ -64,15 +74,17 @@ exampleShelleyGenesis =
   delegVrfKeyHash = "231391e7ec1c450a8518134cf6fad1a8e0ed7ffd66d740f8e8271347a6de7bf2"
   initialFundedAddress :: Addr StandardCrypto
   initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
-    where
-      paymentCredential :: PaymentCredential StandardCrypto
-      paymentCredential =
-        KeyHashObj $ KeyHash
+   where
+    paymentCredential :: PaymentCredential StandardCrypto
+    paymentCredential =
+      KeyHashObj $
+        KeyHash
           "1c14ee8e58fbcbd48dc7367c95a63fd1d937ba989820015db16ac7e5"
 
-      stakingCredential :: StakeCredential StandardCrypto
-      stakingCredential =
-        KeyHashObj $ KeyHash
+    stakingCredential :: StakeCredential StandardCrypto
+    stakingCredential =
+      KeyHashObj $
+        KeyHash
           "e37a65ea2f9bcefb645de4312cf13d8ac12ae61cf242a9aa2973c9ee"
 
   initialFunds :: Coin

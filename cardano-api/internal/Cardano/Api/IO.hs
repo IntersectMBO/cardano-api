@@ -7,76 +7,78 @@ module Cardano.Api.IO
   ( readByteStringFile
   , readLazyByteStringFile
   , readTextFile
-
   , writeByteStringFileWithOwnerPermissions
   , writeByteStringFile
   , writeByteStringOutput
-
   , writeLazyByteStringFileWithOwnerPermissions
   , writeLazyByteStringFile
   , writeLazyByteStringOutput
-
   , writeTextFileWithOwnerPermissions
   , writeTextFile
   , writeTextOutput
-
-  , File(..)
-  , FileDirection(..)
+  , File (..)
+  , FileDirection (..)
   , SocketPath
-
   , mapFile
   , onlyIn
   , onlyOut
-
   , intoFile
-
   , checkVrfFilePermissions
   , writeSecrets
-  ) where
+  )
+where
 
-import           Cardano.Api.Error (FileError (..), fileIOExceptT)
-import           Cardano.Api.IO.Base
-import           Cardano.Api.IO.Compat
-
-import           Control.Monad.Except (runExceptT)
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Data.ByteString (ByteString)
+import Cardano.Api.Error (FileError (..), fileIOExceptT)
+import Cardano.Api.IO.Base
+import Cardano.Api.IO.Compat
+import Control.Monad.Except (runExceptT)
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy as LBSC
-import           Data.Text (Text)
+import Data.Text (Text)
 import qualified Data.Text.IO as Text
 
-readByteStringFile :: ()
+readByteStringFile
+  :: ()
   => MonadIO m
   => File content In
   -> m (Either (FileError e) ByteString)
-readByteStringFile fp = runExceptT $
-  fileIOExceptT (unFile fp) BS.readFile
+readByteStringFile fp =
+  runExceptT $
+    fileIOExceptT (unFile fp) BS.readFile
 
-readLazyByteStringFile :: ()
+readLazyByteStringFile
+  :: ()
   => MonadIO m
   => File content In
   -> m (Either (FileError e) LBS.ByteString)
-readLazyByteStringFile fp = runExceptT $
-  fileIOExceptT (unFile fp) LBS.readFile
+readLazyByteStringFile fp =
+  runExceptT $
+    fileIOExceptT (unFile fp) LBS.readFile
 
-readTextFile :: ()
+readTextFile
+  :: ()
   => MonadIO m
   => File content In
   -> m (Either (FileError e) Text)
-readTextFile fp = runExceptT $
-  fileIOExceptT (unFile fp) Text.readFile
+readTextFile fp =
+  runExceptT $
+    fileIOExceptT (unFile fp) Text.readFile
 
-writeByteStringFile :: ()
+writeByteStringFile
+  :: ()
   => MonadIO m
   => File content Out
   -> ByteString
   -> m (Either (FileError e) ())
-writeByteStringFile fp bs = runExceptT $
-  handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
+writeByteStringFile fp bs =
+  runExceptT $
+    handleIOExceptT (FileIOError (unFile fp)) $
+      BS.writeFile (unFile fp) bs
 
 writeByteStringFileWithOwnerPermissions
   :: FilePath
@@ -86,7 +88,8 @@ writeByteStringFileWithOwnerPermissions fp bs =
   handleFileForWritingWithOwnerPermission fp $ \h ->
     BS.hPut h bs
 
-writeByteStringOutput :: ()
+writeByteStringOutput
+  :: ()
   => MonadIO m
   => Maybe (File content Out)
   -> ByteString
@@ -96,13 +99,16 @@ writeByteStringOutput mOutput bs = runExceptT $
     Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ BS.writeFile (unFile fp) bs
     Nothing -> liftIO $ BSC.putStr bs
 
-writeLazyByteStringFile :: ()
+writeLazyByteStringFile
+  :: ()
   => MonadIO m
   => File content Out
   -> LBS.ByteString
   -> m (Either (FileError e) ())
-writeLazyByteStringFile fp bs = runExceptT $
-  handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
+writeLazyByteStringFile fp bs =
+  runExceptT $
+    handleIOExceptT (FileIOError (unFile fp)) $
+      LBS.writeFile (unFile fp) bs
 
 writeLazyByteStringFileWithOwnerPermissions
   :: File content Out
@@ -112,7 +118,8 @@ writeLazyByteStringFileWithOwnerPermissions fp lbs =
   handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     LBS.hPut h lbs
 
-writeLazyByteStringOutput :: ()
+writeLazyByteStringOutput
+  :: ()
   => MonadIO m
   => Maybe (File content Out)
   -> LBS.ByteString
@@ -122,13 +129,16 @@ writeLazyByteStringOutput mOutput bs = runExceptT $
     Just fp -> handleIOExceptT (FileIOError (unFile fp)) $ LBS.writeFile (unFile fp) bs
     Nothing -> liftIO $ LBSC.putStr bs
 
-writeTextFile :: ()
+writeTextFile
+  :: ()
   => MonadIO m
   => File content Out
   -> Text
   -> m (Either (FileError e) ())
-writeTextFile fp t = runExceptT $
-  handleIOExceptT (FileIOError (unFile fp)) $ Text.writeFile (unFile fp) t
+writeTextFile fp t =
+  runExceptT $
+    handleIOExceptT (FileIOError (unFile fp)) $
+      Text.writeFile (unFile fp) t
 
 writeTextFileWithOwnerPermissions
   :: File content Out
@@ -138,7 +148,8 @@ writeTextFileWithOwnerPermissions fp t =
   handleFileForWritingWithOwnerPermission (unFile fp) $ \h ->
     Text.hPutStr h t
 
-writeTextOutput :: ()
+writeTextOutput
+  :: ()
   => MonadIO m
   => Maybe (File content Out)
   -> Text
@@ -166,7 +177,8 @@ onlyOut = File . unFile
 --
 -- Using this function ensures that the content type of the file always matches with the
 -- content value and prevents any type mismatches.
-intoFile :: ()
+intoFile
+  :: ()
   => File content 'Out
   -> content
   -> (File content 'Out -> stream -> result)

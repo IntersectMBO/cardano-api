@@ -2,18 +2,17 @@
 
 module Test.Cardano.Api.IO
   ( tests
-  ) where
+  )
+where
 
-import           Cardano.Api
-import           Cardano.Api.IO
-
-import           System.Directory (removeFile)
-
-import           Hedgehog
+import Cardano.Api
+import Cardano.Api.IO
+import Hedgehog
 import qualified Hedgehog.Extras as H
-import           Hedgehog.Internal.Property
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog
+import Hedgehog.Internal.Property
+import System.Directory (removeFile)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog
 
 prop_createVrfFileWithOwnerPermissions :: Property
 prop_createVrfFileWithOwnerPermissions =
@@ -33,6 +32,8 @@ prop_createVrfFileWithOwnerPermissions =
       Right () -> liftIO (removeFile file) >> success
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.IO"
-  [ testProperty "Create VRF File with Owner Permissions" prop_createVrfFileWithOwnerPermissions
-  ]
+tests =
+  testGroup
+    "Test.Cardano.Api.IO"
+    [ testProperty "Create VRF File with Owner Permissions" prop_createVrfFileWithOwnerPermissions
+    ]

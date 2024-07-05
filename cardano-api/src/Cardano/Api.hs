@@ -10,1052 +10,1057 @@
 -- Most simple tools should be able to work just using this interface,
 -- however you can go deeper and expose the types from the underlying libraries
 -- using "Cardano.Api.Byron" or "Cardano.Api.Shelley".
---
-
-module Cardano.Api (
-    -- * Eras
-    ByronEra,
-    ShelleyEra,
-    AllegraEra,
-    MaryEra,
-    AlonzoEra,
-    BabbageEra,
-    ConwayEra,
-    CardanoEra(..),
-    IsCardanoEra(..),
-    AnyCardanoEra(..),
-    anyCardanoEra,
-    InAnyCardanoEra(..),
-    inAnyCardanoEra,
-    cardanoEraConstraints,
-    ToCardanoEra(..),
+module Cardano.Api
+  ( -- * Eras
+    ByronEra
+  , ShelleyEra
+  , AllegraEra
+  , MaryEra
+  , AlonzoEra
+  , BabbageEra
+  , ConwayEra
+  , CardanoEra (..)
+  , IsCardanoEra (..)
+  , AnyCardanoEra (..)
+  , anyCardanoEra
+  , InAnyCardanoEra (..)
+  , inAnyCardanoEra
+  , cardanoEraConstraints
+  , ToCardanoEra (..)
 
     -- * Eon support
-    Eon(..),
-    EraInEon(..),
-
-    inEonForEraMaybe,
-    forEraInEon,
-    forEraInEonMaybe,
-    forEraMaybeEon,
-    maybeEon,
-    monoidForEraInEon,
-    monoidForEraInEonA,
-
-
-    inEonForShelleyBasedEra,
-    inEonForShelleyBasedEraMaybe,
-    forShelleyBasedEraInEon,
-    forShelleyBasedEraInEonMaybe,
-    forShelleyBasedEraMaybeEon,
-
-    Featured(..),
-    unFeatured,
-    asFeaturedInEra,
-    asFeaturedInShelleyBasedEra,
+  , Eon (..)
+  , EraInEon (..)
+  , inEonForEraMaybe
+  , forEraInEon
+  , forEraInEonMaybe
+  , forEraMaybeEon
+  , maybeEon
+  , monoidForEraInEon
+  , monoidForEraInEonA
+  , inEonForShelleyBasedEra
+  , inEonForShelleyBasedEraMaybe
+  , forShelleyBasedEraInEon
+  , forShelleyBasedEraInEonMaybe
+  , forShelleyBasedEraMaybeEon
+  , Featured (..)
+  , unFeatured
+  , asFeaturedInEra
+  , asFeaturedInShelleyBasedEra
 
     -- * Eons
 
     -- ** From Byron
-
-    ByronToAlonzoEra(..),
-    byronToAlonzoEraConstraints,
+  , ByronToAlonzoEra (..)
+  , byronToAlonzoEraConstraints
 
     -- ** From Shelley
-
-    ShelleyEraOnly(..),
-    shelleyEraOnlyConstraints,
-    shelleyEraOnlyToShelleyBasedEra,
-
-    ShelleyToAllegraEra(..),
-    shelleyToAllegraEraConstraints,
-    shelleyToAllegraEraToShelleyBasedEra,
-
-    ShelleyToMaryEra(..),
-    shelleyToMaryEraConstraints,
-    shelleyToMaryEraToShelleyBasedEra,
-
-    ShelleyToAlonzoEra(..),
-    shelleyToAlonzoEraConstraints,
-    shelleyToAlonzoEraToShelleyBasedEra,
-
-    ShelleyToBabbageEra(..),
-    shelleyToBabbageEraConstraints,
-    shelleyToBabbageEraToShelleyBasedEra,
-
-    ShelleyBasedEra(..),
-    IsShelleyBasedEra(..),
-    AnyShelleyBasedEra(..),
-    InAnyShelleyBasedEra(..),
-    inAnyShelleyBasedEra,
-    shelleyBasedEraConstraints,
+  , ShelleyEraOnly (..)
+  , shelleyEraOnlyConstraints
+  , shelleyEraOnlyToShelleyBasedEra
+  , ShelleyToAllegraEra (..)
+  , shelleyToAllegraEraConstraints
+  , shelleyToAllegraEraToShelleyBasedEra
+  , ShelleyToMaryEra (..)
+  , shelleyToMaryEraConstraints
+  , shelleyToMaryEraToShelleyBasedEra
+  , ShelleyToAlonzoEra (..)
+  , shelleyToAlonzoEraConstraints
+  , shelleyToAlonzoEraToShelleyBasedEra
+  , ShelleyToBabbageEra (..)
+  , shelleyToBabbageEraConstraints
+  , shelleyToBabbageEraToShelleyBasedEra
+  , ShelleyBasedEra (..)
+  , IsShelleyBasedEra (..)
+  , AnyShelleyBasedEra (..)
+  , InAnyShelleyBasedEra (..)
+  , inAnyShelleyBasedEra
+  , shelleyBasedEraConstraints
 
     -- ** From Allegra
-    AllegraEraOnwards(..),
+  , AllegraEraOnwards (..)
 
     -- ** From Mary
-    MaryEraOnwards(..),
-    maryEraOnwardsConstraints,
-    maryEraOnwardsToShelleyBasedEra,
+  , MaryEraOnwards (..)
+  , maryEraOnwardsConstraints
+  , maryEraOnwardsToShelleyBasedEra
 
     -- ** From Alonzo
-
-    AlonzoEraOnwards(..),
-    alonzoEraOnwardsConstraints,
-    alonzoEraOnwardsToShelleyBasedEra,
+  , AlonzoEraOnwards (..)
+  , alonzoEraOnwardsConstraints
+  , alonzoEraOnwardsToShelleyBasedEra
 
     -- ** From Babbage
-
-    BabbageEraOnwards(..),
-    babbageEraOnwardsConstraints,
-    babbageEraOnwardsToShelleyBasedEra,
+  , BabbageEraOnwards (..)
+  , babbageEraOnwardsConstraints
+  , babbageEraOnwardsToShelleyBasedEra
 
     -- ** From Conway
-
-    ConwayEraOnwards(..),
-    conwayEraOnwardsConstraints,
-    conwayEraOnwardsToShelleyBasedEra,
+  , ConwayEraOnwards (..)
+  , conwayEraOnwardsConstraints
+  , conwayEraOnwardsToShelleyBasedEra
 
     -- * Era case handling
 
     -- ** Case on CardanoEra
-    caseByronOrShelleyBasedEra,
-    caseByronToAlonzoOrBabbageEraOnwards,
+  , caseByronOrShelleyBasedEra
+  , caseByronToAlonzoOrBabbageEraOnwards
 
     -- ** Case on ShelleyBasedEra
-    caseShelleyEraOnlyOrAllegraEraOnwards,
-    caseShelleyToAllegraOrMaryEraOnwards,
-    caseShelleyToMaryOrAlonzoEraOnwards,
-    caseShelleyToAlonzoOrBabbageEraOnwards,
-    caseShelleyToBabbageOrConwayEraOnwards,
+  , caseShelleyEraOnlyOrAllegraEraOnwards
+  , caseShelleyToAllegraOrMaryEraOnwards
+  , caseShelleyToMaryOrAlonzoEraOnwards
+  , caseShelleyToAlonzoOrBabbageEraOnwards
+  , caseShelleyToBabbageOrConwayEraOnwards
 
     -- ** Eon relaxation
 
     -- *** for AlonzoEraOnly
-    shelleyToAlonzoEraToShelleyToBabbageEra,
+  , shelleyToAlonzoEraToShelleyToBabbageEra
 
     -- *** for AlonzoEraOnwards
-    alonzoEraOnwardsToMaryEraOnwards,
+  , alonzoEraOnwardsToMaryEraOnwards
 
     -- *** for BabbageEraOnwards
-    babbageEraOnwardsToMaryEraOnwards,
-    babbageEraOnwardsToAlonzoEraOnwards,
+  , babbageEraOnwardsToMaryEraOnwards
+  , babbageEraOnwardsToAlonzoEraOnwards
 
     -- *** Assertions on era
-    requireShelleyBasedEra,
+  , requireShelleyBasedEra
 
     -- ** IO
-    File(..),
-    FileDirection(..),
-
-    mapFile,
-    onlyIn,
-    onlyOut,
-    intoFile,
-
-    readByteStringFile,
-    readLazyByteStringFile,
-    readTextFile,
-
-    writeByteStringFileWithOwnerPermissions,
-    writeByteStringFile,
-    writeByteStringOutput,
-
-    writeLazyByteStringFileWithOwnerPermissions,
-    writeLazyByteStringFile,
-    writeLazyByteStringOutput,
-
-    writeTextFileWithOwnerPermissions,
-    writeTextFile,
-    writeTextOutput,
+  , File (..)
+  , FileDirection (..)
+  , mapFile
+  , onlyIn
+  , onlyOut
+  , intoFile
+  , readByteStringFile
+  , readLazyByteStringFile
+  , readTextFile
+  , writeByteStringFileWithOwnerPermissions
+  , writeByteStringFile
+  , writeByteStringOutput
+  , writeLazyByteStringFileWithOwnerPermissions
+  , writeLazyByteStringFile
+  , writeLazyByteStringOutput
+  , writeTextFileWithOwnerPermissions
+  , writeTextFile
+  , writeTextOutput
 
     -- * Type tags
-    HasTypeProxy(..),
-    AsType(..),
+  , HasTypeProxy (..)
+  , AsType (..)
+
     -- * Cryptographic key interface
     -- $keys
-    Key(..),
-    SigningKey(..),
-    VerificationKey(..),
-    castVerificationKey,
-    castSigningKey,
-    generateSigningKey,
-    generateInsecureSigningKey,
+  , Key (..)
+  , SigningKey (..)
+  , VerificationKey (..)
+  , castVerificationKey
+  , castSigningKey
+  , generateSigningKey
+  , generateInsecureSigningKey
 
     -- ** Hashes
+
     -- | In Cardano most keys are identified by their hash, and hashes are
     -- used in many other places.
-    Hash,
-    castHash,
-    renderSafeHashAsHex,
+  , Hash
+  , castHash
+  , renderSafeHashAsHex
 
     -- * Payment addresses
+
     -- | Constructing and inspecting normal payment addresses
-    Address,
-    ByronAddr,
-    ShelleyAddr,
-    NetworkId(..),
+  , Address
+  , ByronAddr
+  , ShelleyAddr
+  , NetworkId (..)
+
     -- ** Byron addresses
-    makeByronAddress,
-    ByronKey,
-    ByronKeyLegacy,
+  , makeByronAddress
+  , ByronKey
+  , ByronKeyLegacy
 
     -- ** Shelley addresses
-    makeShelleyAddress,
-    PaymentCredential(..),
-    StakeAddressPointer(..),
-    StakeAddressReference(..),
-    PaymentKey,
-    PaymentExtendedKey,
+  , makeShelleyAddress
+  , PaymentCredential (..)
+  , StakeAddressPointer (..)
+  , StakeAddressReference (..)
+  , PaymentKey
+  , PaymentExtendedKey
 
     -- ** Addresses in any era
-    AddressAny(..),
-    lexPlausibleAddressString,
-    parseAddressAny,
+  , AddressAny (..)
+  , lexPlausibleAddressString
+  , parseAddressAny
 
     -- ** Addresses in specific eras
-    AddressInEra(..),
-    isKeyAddress,
-    AddressTypeInEra(..),
-    byronAddressInEra,
-    shelleyAddressInEra,
-    anyAddressInShelleyBasedEra,
-    anyAddressInEra,
-    toAddressAny,
-    makeByronAddressInEra,
-    makeShelleyAddressInEra,
+  , AddressInEra (..)
+  , isKeyAddress
+  , AddressTypeInEra (..)
+  , byronAddressInEra
+  , shelleyAddressInEra
+  , anyAddressInShelleyBasedEra
+  , anyAddressInEra
+  , toAddressAny
+  , makeByronAddressInEra
+  , makeShelleyAddressInEra
 
     -- * Stake addresses
+
     -- | Constructing and inspecting stake addresses
-    StakeAddress,
-    StakeCredential,
-    makeStakeAddress,
-    stakeAddressCredential,
-    StakeKey,
-    StakeExtendedKey,
+  , StakeAddress
+  , StakeCredential
+  , makeStakeAddress
+  , stakeAddressCredential
+  , StakeKey
+  , StakeExtendedKey
 
     -- ** Multi-asset values
-    Quantity(..),
-    PolicyId(..),
-    scriptPolicyId,
-    AssetName(..),
-    AssetId(..),
-    Value,
-    parseValue,
-    policyId,
-    selectAsset,
-    valueFromList,
-    valueToList,
-    filterValue,
-    negateValue,
-    ValueNestedRep(..),
-    ValueNestedBundle(..),
-    valueToNestedRep,
-    valueFromNestedRep,
-    renderValue,
-    renderValuePretty,
-    toLedgerValue,
-    fromLedgerValue,
+  , Quantity (..)
+  , PolicyId (..)
+  , scriptPolicyId
+  , AssetName (..)
+  , AssetId (..)
+  , Value
+  , parseValue
+  , policyId
+  , selectAsset
+  , valueFromList
+  , valueToList
+  , filterValue
+  , negateValue
+  , ValueNestedRep (..)
+  , ValueNestedBundle (..)
+  , valueToNestedRep
+  , valueFromNestedRep
+  , renderValue
+  , renderValuePretty
+  , toLedgerValue
+  , fromLedgerValue
 
     -- ** Ada \/ Lovelace within multi-asset values
-    quantityToLovelace,
-    lovelaceToQuantity,
-    selectLovelace,
-    lovelaceToValue,
-    valueToLovelace,
+  , quantityToLovelace
+  , lovelaceToQuantity
+  , selectLovelace
+  , lovelaceToValue
+  , valueToLovelace
 
     -- * Blocks
 
     -- ** Blocks in the context of an era
-    Block(..),
-    pattern Block,
-    BlockHeader(..),
-    getBlockHeader,
+  , Block (..)
+  , pattern Block
+  , BlockHeader (..)
+  , getBlockHeader
 
     -- ** Points on the chain
-    ChainPoint(..),
-    EpochNo(..),
+  , ChainPoint (..)
+  , EpochNo (..)
 
     -- ** Tip of the chain
-    ChainTip(..),
-    BlockNo(..),
-    chainTipToChainPoint,
+  , ChainTip (..)
+  , BlockNo (..)
+  , chainTipToChainPoint
 
     -- * Building transactions
 
     -- * Building transactions
+
     -- | Constructing and inspecting transactions
 
     -- ** Transaction bodies
-    TxBody(..),
-    createAndValidateTransactionBody,
-    makeByronTransactionBody,
-    TxBodyContent(..),
-    getTxBodyContent,
+  , TxBody (..)
+  , createAndValidateTransactionBody
+  , makeByronTransactionBody
+  , TxBodyContent (..)
+  , getTxBodyContent
 
     -- ** Transaction body builders
-    defaultTxBodyContent,
-    defaultTxFee,
-    defaultTxValidityUpperBound,
-    setTxIns,
-    modTxIns,
-    addTxIn,
-    setTxInsCollateral,
-    setTxInsReference,
-    setTxOuts,
-    modTxOuts,
-    addTxOut,
-    setTxTotalCollateral,
-    setTxReturnCollateral,
-    setTxFee,
-    setTxValidityLowerBound,
-    setTxValidityUpperBound,
-    setTxMetadata,
-    setTxAuxScripts,
-    setTxExtraKeyWits,
-    setTxProtocolParams,
-    setTxWithdrawals,
-    setTxCertificates,
-    setTxUpdateProposal,
-    setTxMintValue,
-    setTxScriptValidity,
-    setTxCurrentTreasuryValue,
-    setTxTreasuryDonation,
-    TxBodyError(..),
-    TxBodyScriptData(..),
+  , defaultTxBodyContent
+  , defaultTxFee
+  , defaultTxValidityUpperBound
+  , setTxIns
+  , modTxIns
+  , addTxIn
+  , setTxInsCollateral
+  , setTxInsReference
+  , setTxOuts
+  , modTxOuts
+  , addTxOut
+  , setTxTotalCollateral
+  , setTxReturnCollateral
+  , setTxFee
+  , setTxValidityLowerBound
+  , setTxValidityUpperBound
+  , setTxMetadata
+  , setTxAuxScripts
+  , setTxExtraKeyWits
+  , setTxProtocolParams
+  , setTxWithdrawals
+  , setTxCertificates
+  , setTxUpdateProposal
+  , setTxMintValue
+  , setTxScriptValidity
+  , setTxCurrentTreasuryValue
+  , setTxTreasuryDonation
+  , TxBodyError (..)
+  , TxBodyScriptData (..)
 
     -- ** Transaction Ids
-    TxId(..),
-    getTxId,
-    getTxIdByron,
+  , TxId (..)
+  , getTxId
+  , getTxIdByron
 
     -- ** Transaction inputs
-    TxIn(TxIn),
-    TxIns,
-    TxIx(TxIx),
-    renderTxIn,
-    getReferenceInputsSizeForTxIds,
+  , TxIn (TxIn)
+  , TxIns
+  , TxIx (TxIx)
+  , renderTxIn
+  , getReferenceInputsSizeForTxIds
 
     -- ** Transaction outputs
-    CtxTx, CtxUTxO,
-    TxOut(TxOut),
-    TxOutValue(..),
-    TxOutInAnyEra(..),
-    txOutInAnyEra,
-    txOutValueToLovelace,
-    txOutValueToValue,
-    lovelaceToTxOutValue,
-    TxOutDatum(..),
-    parseHash,
+  , CtxTx
+  , CtxUTxO
+  , TxOut (TxOut)
+  , TxOutValue (..)
+  , TxOutInAnyEra (..)
+  , txOutInAnyEra
+  , txOutValueToLovelace
+  , txOutValueToValue
+  , lovelaceToTxOutValue
+  , TxOutDatum (..)
+  , parseHash
 
     -- ** Other transaction body types
-    TxInsCollateral(..),
-    TxInsReference(..),
-    TxTotalCollateral(..),
-    TxReturnCollateral(..),
-    TxFee(..),
-    TxValidityLowerBound(..),
-    TxValidityUpperBound(..),
-    SlotNo(..),
-    EpochSlots(..),
-    TxMetadataInEra(..),
-    TxAuxScripts(..),
-    TxExtraKeyWitnesses(..),
-    TxWithdrawals(..),
-    TxCertificates(..),
-    TxUpdateProposal(..),
-    TxMintValue(..),
-    TxVotingProcedures(..),
-    TxProposalProcedures(..),
+  , TxInsCollateral (..)
+  , TxInsReference (..)
+  , TxTotalCollateral (..)
+  , TxReturnCollateral (..)
+  , TxFee (..)
+  , TxValidityLowerBound (..)
+  , TxValidityUpperBound (..)
+  , SlotNo (..)
+  , EpochSlots (..)
+  , TxMetadataInEra (..)
+  , TxAuxScripts (..)
+  , TxExtraKeyWitnesses (..)
+  , TxWithdrawals (..)
+  , TxCertificates (..)
+  , TxUpdateProposal (..)
+  , TxMintValue (..)
+  , TxVotingProcedures (..)
+  , TxProposalProcedures (..)
 
     -- ** Building vs viewing transactions
-    BuildTxWith(..),
-    BuildTx,
-    ViewTx,
+  , BuildTxWith (..)
+  , BuildTx
+  , ViewTx
 
     -- ** Fee calculation
-    LedgerEpochInfo(..),
-    toLedgerEpochInfo,
-    evaluateTransactionFee,
-    calculateMinTxFee,
-    estimateTransactionKeyWitnessCount,
+  , LedgerEpochInfo (..)
+  , toLedgerEpochInfo
+  , evaluateTransactionFee
+  , calculateMinTxFee
+  , estimateTransactionKeyWitnessCount
 
     -- ** Minimum required UTxO calculation
-    calculateMinimumUTxO,
+  , calculateMinimumUTxO
 
     -- ** Script execution units
-    evaluateTransactionExecutionUnits,
-    ScriptExecutionError(..),
-    TransactionValidityError(..),
+  , evaluateTransactionExecutionUnits
+  , ScriptExecutionError (..)
+  , TransactionValidityError (..)
 
     -- ** Transaction balance
-    evaluateTransactionBalance,
+  , evaluateTransactionBalance
 
     -- ** Building transactions with automated fees and balancing
-    estimateBalancedTxBody,
-    estimateOrCalculateBalancedTxBody,
-    makeTransactionBodyAutoBalance,
-    AutoBalanceError(..),
-    BalancedTxBody(..),
-    FeeEstimationMode(..),
-    RequiredShelleyKeyWitnesses(..),
-    RequiredByronKeyWitnesses(..),
-    TotalReferenceScriptsSize(..),
-    TxFeeEstimationError(..),
-    TxBodyErrorAutoBalance(..),
-    TxScriptValidity(..),
-    ScriptValidity(..),
-    txScriptValidityToScriptValidity,
+  , estimateBalancedTxBody
+  , estimateOrCalculateBalancedTxBody
+  , makeTransactionBodyAutoBalance
+  , AutoBalanceError (..)
+  , BalancedTxBody (..)
+  , FeeEstimationMode (..)
+  , RequiredShelleyKeyWitnesses (..)
+  , RequiredByronKeyWitnesses (..)
+  , TotalReferenceScriptsSize (..)
+  , TxFeeEstimationError (..)
+  , TxBodyErrorAutoBalance (..)
+  , TxScriptValidity (..)
+  , ScriptValidity (..)
+  , txScriptValidityToScriptValidity
 
     -- * Signing transactions
+
     -- | Creating transaction witnesses one by one, or all in one go.
-    Tx(Tx),
-    getTxBody,
-    getTxWitnesses,
+  , Tx (Tx)
+  , getTxBody
+  , getTxWitnesses
 
     -- ** Signing in one go
-    signByronTransaction,
-    signShelleyTransaction,
+  , signByronTransaction
+  , signShelleyTransaction
 
     -- ** Incremental signing and separate witnesses
-    makeSignedByronTransaction,
-    makeSignedTransaction,
-    KeyWitness,
-    makeByronKeyWitness,
-    ShelleyWitnessSigningKey(..),
-    makeShelleyKeyWitness,
-    makeShelleyBootstrapWitness,
+  , makeSignedByronTransaction
+  , makeSignedTransaction
+  , KeyWitness
+  , makeByronKeyWitness
+  , ShelleyWitnessSigningKey (..)
+  , makeShelleyKeyWitness
+  , makeShelleyBootstrapWitness
 
     -- * Transaction metadata
+
     -- | Embedding additional structured data within transactions.
-    TxMetadata(..),
-    AsTxMetadata(..),
+  , TxMetadata (..)
+  , AsTxMetadata (..)
 
     -- ** Constructing metadata
-    TxMetadataValue(..),
-    makeTransactionMetadata,
-    mergeTransactionMetadata,
-    metaTextChunks,
-    metaBytesChunks,
+  , TxMetadataValue (..)
+  , makeTransactionMetadata
+  , mergeTransactionMetadata
+  , metaTextChunks
+  , metaBytesChunks
 
     -- ** Validating metadata
-    validateTxMetadata,
-    TxMetadataRangeError (..),
+  , validateTxMetadata
+  , TxMetadataRangeError (..)
 
     -- ** Conversion to\/from JSON
-    TxMetadataJsonSchema (..),
-    metadataFromJson,
-    metadataToJson,
-    metadataValueToJsonNoSchema,
-    TxMetadataJsonError (..),
-    TxMetadataJsonSchemaError (..),
+  , TxMetadataJsonSchema (..)
+  , metadataFromJson
+  , metadataToJson
+  , metadataValueToJsonNoSchema
+  , TxMetadataJsonError (..)
+  , TxMetadataJsonSchemaError (..)
 
     -- * Certificates
-    Certificate(..),
+  , Certificate (..)
 
     -- ** Registering stake address and delegating
+
     -- | Certificates that are embedded in transactions for registering and
     -- unregistering stake address, and for setting the stake pool delegation
     -- choice for a stake address.
-    StakeAddressRequirements(..),
-    StakeDelegationRequirements(..),
-    makeStakeAddressDelegationCertificate,
-    makeStakeAddressRegistrationCertificate,
-    makeStakeAddressUnregistrationCertificate,
-
-    makeStakeAddressAndDRepDelegationCertificate,
+  , StakeAddressRequirements (..)
+  , StakeDelegationRequirements (..)
+  , makeStakeAddressDelegationCertificate
+  , makeStakeAddressRegistrationCertificate
+  , makeStakeAddressUnregistrationCertificate
+  , makeStakeAddressAndDRepDelegationCertificate
 
     -- ** Registering stake pools
+
     -- | Certificates that are embedded in transactions for registering and
     -- retiring stake pools. This includes updating the stake pool parameters.
-    StakePoolRegistrationRequirements(..),
-    StakePoolRetirementRequirements(..),
-    makeStakePoolRegistrationCertificate,
-    makeStakePoolRetirementCertificate,
-    StakePoolParameters,
-    StakePoolRelay,
-    StakePoolMetadataReference,
+  , StakePoolRegistrationRequirements (..)
+  , StakePoolRetirementRequirements (..)
+  , makeStakePoolRegistrationCertificate
+  , makeStakePoolRetirementCertificate
+  , StakePoolParameters
+  , StakePoolRelay
+  , StakePoolMetadataReference
 
     -- * Rewards
-    DelegationsAndRewards(..),
-    mergeDelegsAndRewards,
+  , DelegationsAndRewards (..)
+  , mergeDelegsAndRewards
 
     -- * Stake pool off-chain metadata
-    StakePoolMetadata,
-    validateAndHashStakePoolMetadata,
-    StakePoolMetadataValidationError(..),
+  , StakePoolMetadata
+  , validateAndHashStakePoolMetadata
+  , StakePoolMetadataValidationError (..)
 
     -- * Scripts
+
     -- | Both 'PaymentCredential's and 'StakeCredential's can use scripts.
 
     -- ** Script languages
-    SimpleScript',
-    PlutusScriptV1,
-    PlutusScriptV2,
-    PlutusScriptV3,
-    ScriptLanguage(..),
-    PlutusScriptVersion(..),
-    AnyScriptLanguage(..),
-    AnyPlutusScriptVersion(..),
-    IsPlutusScriptLanguage(..),
-    IsScriptLanguage(..),
+  , SimpleScript'
+  , PlutusScriptV1
+  , PlutusScriptV2
+  , PlutusScriptV3
+  , ScriptLanguage (..)
+  , PlutusScriptVersion (..)
+  , AnyScriptLanguage (..)
+  , AnyPlutusScriptVersion (..)
+  , IsPlutusScriptLanguage (..)
+  , IsScriptLanguage (..)
 
     -- ** Scripts in a specific language
-    Script(..),
+  , Script (..)
 
     -- ** Scripts in any language
-    ScriptInAnyLang(..),
-    toScriptInAnyLang,
+  , ScriptInAnyLang (..)
+  , toScriptInAnyLang
 
     -- ** Scripts in a specific era
-    ScriptInEra(..),
-    toScriptInEra,
-    eraOfScriptInEra,
+  , ScriptInEra (..)
+  , toScriptInEra
+  , eraOfScriptInEra
 
     -- ** Use of a script in an era as a witness
-    WitCtxTxIn, WitCtxMint, WitCtxStake,
-    WitCtx(..),
-    ScriptWitness(..),
-    Witness(..),
-    KeyWitnessInCtx(..),
-    ScriptWitnessInCtx(..),
-    IsScriptWitnessInCtx(..),
-    ScriptDatum(..),
-    ScriptRedeemer,
-    scriptWitnessScript,
+  , WitCtxTxIn
+  , WitCtxMint
+  , WitCtxStake
+  , WitCtx (..)
+  , ScriptWitness (..)
+  , Witness (..)
+  , KeyWitnessInCtx (..)
+  , ScriptWitnessInCtx (..)
+  , IsScriptWitnessInCtx (..)
+  , ScriptDatum (..)
+  , ScriptRedeemer
+  , scriptWitnessScript
 
     -- ** Inspecting 'ScriptWitness'es
-    AnyScriptWitness(..),
-    ScriptWitnessIndex(..),
-    renderScriptWitnessIndex,
-    collectTxBodyScriptWitnesses,
-    mapTxScriptWitnesses,
+  , AnyScriptWitness (..)
+  , ScriptWitnessIndex (..)
+  , renderScriptWitnessIndex
+  , collectTxBodyScriptWitnesses
+  , mapTxScriptWitnesses
 
     -- ** Languages supported in each era
-    ScriptLanguageInEra(..),
-    scriptLanguageSupportedInEra,
-    languageOfScriptLanguageInEra,
-    eraOfScriptLanguageInEra,
+  , ScriptLanguageInEra (..)
+  , scriptLanguageSupportedInEra
+  , languageOfScriptLanguageInEra
+  , eraOfScriptLanguageInEra
 
     -- ** Simple scripts
+
     -- | Making multi-signature and time-lock scripts.
-    SimpleScript(..),
+  , SimpleScript (..)
 
     -- ** Plutus scripts
-    PlutusScript,
-    examplePlutusScriptAlwaysSucceeds,
-    examplePlutusScriptAlwaysFails,
+  , PlutusScript
+  , examplePlutusScriptAlwaysSucceeds
+  , examplePlutusScriptAlwaysFails
 
     -- ** Script data
-    HashableScriptData,
-    hashScriptDataBytes,
-    getOriginalScriptDataBytes,
-    getScriptData,
-    unsafeHashableScriptData,
-    ScriptData(..),
+  , HashableScriptData
+  , hashScriptDataBytes
+  , getOriginalScriptDataBytes
+  , getScriptData
+  , unsafeHashableScriptData
+  , ScriptData (..)
 
     -- ** Validation
-    ScriptDataRangeError (..),
-    validateScriptData,
+  , ScriptDataRangeError (..)
+  , validateScriptData
 
     -- ** Conversion to\/from JSON
-    ScriptDataJsonSchema (..),
-    scriptDataFromJson,
-    scriptDataToJson,
-    ScriptDataJsonError (..),
-    ScriptDataJsonSchemaError (..),
-    ScriptDataJsonBytesError(..),
-    scriptDataJsonToHashable,
+  , ScriptDataJsonSchema (..)
+  , scriptDataFromJson
+  , scriptDataToJson
+  , ScriptDataJsonError (..)
+  , ScriptDataJsonSchemaError (..)
+  , ScriptDataJsonBytesError (..)
+  , scriptDataJsonToHashable
 
     -- ** Script execution units
-    ExecutionUnits(..),
-    ExecutionUnitPrices(..),
-    CostModel(..),
-    toAlonzoCostModel,
-    fromAlonzoCostModel,
-    toAlonzoCostModels,
+  , ExecutionUnits (..)
+  , ExecutionUnitPrices (..)
+  , CostModel (..)
+  , toAlonzoCostModel
+  , fromAlonzoCostModel
+  , toAlonzoCostModels
 
     -- ** Script addresses
+
     -- | Making addresses from scripts.
-    ScriptHash(..),
-    hashScript,
+  , ScriptHash (..)
+  , hashScript
 
     -- * Serialisation
-    -- | Support for serialising data in JSON, CBOR and text files.
-    InputFormat (..),
-    InputDecodeError (..),
-    deserialiseInput,
-    deserialiseInputAnyOf,
-    renderInputDecodeError,
 
-    SomeAddressVerificationKey(..),
-    deserialiseAnyVerificationKey,
-    deserialiseAnyVerificationKeyBech32,
-    deserialiseAnyVerificationKeyTextEnvelope,
-    renderSomeAddressVerificationKey,
-    mapSomeAddressVerificationKey,
+    -- | Support for serialising data in JSON, CBOR and text files.
+  , InputFormat (..)
+  , InputDecodeError (..)
+  , deserialiseInput
+  , deserialiseInputAnyOf
+  , renderInputDecodeError
+  , SomeAddressVerificationKey (..)
+  , deserialiseAnyVerificationKey
+  , deserialiseAnyVerificationKeyBech32
+  , deserialiseAnyVerificationKeyTextEnvelope
+  , renderSomeAddressVerificationKey
+  , mapSomeAddressVerificationKey
 
     -- ** CBOR
-    SerialiseAsCBOR,
-    ToCBOR,
-    FromCBOR,
-    serialiseToCBOR,
-    deserialiseFromCBOR,
+  , SerialiseAsCBOR
+  , ToCBOR
+  , FromCBOR
+  , serialiseToCBOR
+  , deserialiseFromCBOR
 
     -- ** JSON
-    ToJSON,
-    FromJSON,
-    serialiseToJSON,
-    deserialiseFromJSON,
-    JsonDecodeError(..),
-    readFileJSON,
-    writeFileJSON,
-    prettyPrintJSON,
+  , ToJSON
+  , FromJSON
+  , serialiseToJSON
+  , deserialiseFromJSON
+  , JsonDecodeError (..)
+  , readFileJSON
+  , writeFileJSON
+  , prettyPrintJSON
 
     -- ** Bech32
-    SerialiseAsBech32,
-    serialiseToBech32,
-    deserialiseFromBech32,
-    deserialiseAnyOfFromBech32,
-    Bech32DecodeError(..),
-    UsingBech32(..),
+  , SerialiseAsBech32
+  , serialiseToBech32
+  , deserialiseFromBech32
+  , deserialiseAnyOfFromBech32
+  , Bech32DecodeError (..)
+  , UsingBech32 (..)
 
     -- ** Addresses
+
     -- | Address serialisation is (sadly) special
-    SerialiseAddress,
-    serialiseAddress,
-    deserialiseAddress,
+  , SerialiseAddress
+  , serialiseAddress
+  , deserialiseAddress
 
     -- ** Raw binary
+
     -- | Some types have a natural raw binary format.
-    SerialiseAsRawBytes,
-    serialiseToRawBytes,
-    deserialiseFromRawBytes,
-    SerialiseAsRawBytesError(..),
-    serialiseToRawBytesHex,
-    deserialiseFromRawBytesHex,
-    serialiseToRawBytesHexText,
-    RawBytesHexError(..),
-    UsingRawBytes(..),
-    UsingRawBytesHex(..),
+  , SerialiseAsRawBytes
+  , serialiseToRawBytes
+  , deserialiseFromRawBytes
+  , SerialiseAsRawBytesError (..)
+  , serialiseToRawBytesHex
+  , deserialiseFromRawBytesHex
+  , serialiseToRawBytesHexText
+  , RawBytesHexError (..)
+  , UsingRawBytes (..)
+  , UsingRawBytesHex (..)
 
     -- ** Text envelope
+
     -- | Support for a envelope file format with text headers and a hex-encoded
     -- binary payload.
-    HasTextEnvelope(..),
-    TextEnvelope(..),
-    TextEnvelopeType(..),
-    TextEnvelopeDescr,
-    TextEnvelopeError(..),
-    textEnvelopeTypeInEra,
-    textEnvelopeRawCBOR,
-    textEnvelopeToJSON,
-    serialiseToTextEnvelope,
-    deserialiseFromTextEnvelope,
-    readFileTextEnvelope,
-    writeFileTextEnvelope,
-    readTextEnvelopeFromFile,
-    readTextEnvelopeOfTypeFromFile,
+  , HasTextEnvelope (..)
+  , TextEnvelope (..)
+  , TextEnvelopeType (..)
+  , TextEnvelopeDescr
+  , TextEnvelopeError (..)
+  , textEnvelopeTypeInEra
+  , textEnvelopeRawCBOR
+  , textEnvelopeToJSON
+  , serialiseToTextEnvelope
+  , deserialiseFromTextEnvelope
+  , readFileTextEnvelope
+  , writeFileTextEnvelope
+  , readTextEnvelopeFromFile
+  , readTextEnvelopeOfTypeFromFile
 
     -- ** Text envelope CDDL
+
     -- | Support for serialising values in the ledger's CDDL format.
     -- Note, this will be deprecated in the future in favour of a
     -- single API.
-    FromSomeTypeCDDL(..),
-    readFileTextEnvelopeCddlAnyOf,
-    deserialiseFromTextEnvelopeCddlAnyOf,
-    writeTxFileTextEnvelopeCddl,
-    writeTxWitnessFileTextEnvelopeCddl,
-    serialiseTxLedgerCddl,
-    deserialiseTxLedgerCddl,
-    deserialiseByronTxCddl,
-    serialiseWitnessLedgerCddl,
-    deserialiseWitnessLedgerCddl,
-    TextEnvelopeCddlError(..),
+  , FromSomeTypeCDDL (..)
+  , readFileTextEnvelopeCddlAnyOf
+  , deserialiseFromTextEnvelopeCddlAnyOf
+  , writeTxFileTextEnvelopeCddl
+  , writeTxWitnessFileTextEnvelopeCddl
+  , serialiseTxLedgerCddl
+  , deserialiseTxLedgerCddl
+  , deserialiseByronTxCddl
+  , serialiseWitnessLedgerCddl
+  , deserialiseWitnessLedgerCddl
+  , TextEnvelopeCddlError (..)
 
     -- *** Reading one of several key types
-    readKeyFile,
-    readKeyFileTextEnvelope,
-    readKeyFileAnyOf,
+  , readKeyFile
+  , readKeyFileTextEnvelope
+  , readKeyFileAnyOf
 
     -- *** Read one of several types
-    FromSomeType(..),
-    deserialiseFromTextEnvelopeAnyOf,
-    readFileTextEnvelopeAnyOf,
-
-
+  , FromSomeType (..)
+  , deserialiseFromTextEnvelopeAnyOf
+  , readFileTextEnvelopeAnyOf
 
     -- * Errors
-    Error(..),
-    throwErrorAsException,
-    FileError(..),
+  , Error (..)
+  , throwErrorAsException
+  , FileError (..)
 
     -- * Node interaction
+
     -- | Operations that involve talking to a local Cardano node.
 
     -- ** Node Config
-    NodeConfig (..),
-    NodeConfigFile,
-    readNodeConfig,
+  , NodeConfig (..)
+  , NodeConfigFile
+  , readNodeConfig
+
     -- ** Genesis Files
-    ByronGenesisFile,
-    ShelleyGenesisFile,
-    AlonzoGenesisFile,
-    ConwayGenesisFile,
+  , ByronGenesisFile
+  , ShelleyGenesisFile
+  , AlonzoGenesisFile
+  , ConwayGenesisFile
+
     -- *** Genesis Config
-    GenesisConfig (..),
-    readCardanoGenesisConfig,
-    mkProtocolInfoCardano,
+  , GenesisConfig (..)
+  , readCardanoGenesisConfig
+  , mkProtocolInfoCardano
+
     -- **** Byron Genesis Config
-    readByronGenesisConfig,
+  , readByronGenesisConfig
+
     -- **** Shelley Genesis Config
-    ShelleyConfig (..),
-    GenesisHashShelley (..),
-    readShelleyGenesisConfig,
-    shelleyPraosNonce,
+  , ShelleyConfig (..)
+  , GenesisHashShelley (..)
+  , readShelleyGenesisConfig
+  , shelleyPraosNonce
+
     -- **** Alonzo Genesis Config
-    GenesisHashAlonzo (..),
-    readAlonzoGenesisConfig,
+  , GenesisHashAlonzo (..)
+  , readAlonzoGenesisConfig
+
     -- **** Conway Genesis Config
-    GenesisHashConway (..),
-    readConwayGenesisConfig,
+  , GenesisHashConway (..)
+  , readConwayGenesisConfig
+
     -- *** Environment
-    Env(..),
-    genesisConfigToEnv,
+  , Env (..)
+  , genesisConfigToEnv
 
     -- ** Queries
+
     -- ** Submitting transactions
 
     -- ** High level protocol interaction with a Cardano node
+
     -- *** Initialization / Accumulation
-    envSecurityParam,
-    LedgerState(..),
-    initialLedgerState,
-    encodeLedgerState,
-    decodeLedgerState,
-    applyBlock,
-    ValidationMode(..),
+  , envSecurityParam
+  , LedgerState (..)
+  , initialLedgerState
+  , encodeLedgerState
+  , decodeLedgerState
+  , applyBlock
+  , ValidationMode (..)
 
     -- *** Traversing the block chain
-    foldBlocks,
-    FoldStatus(..),
-    chainSyncClientWithLedgerState,
-    chainSyncClientPipelinedWithLedgerState,
+  , foldBlocks
+  , FoldStatus (..)
+  , chainSyncClientWithLedgerState
+  , chainSyncClientPipelinedWithLedgerState
 
     -- *** Ledger state conditions
-    ConditionResult(..),
-    fromConditionResult,
-    toConditionResult,
-    AnyNewEpochState(..),
-    foldEpochState,
-    getAnyNewEpochState,
+  , ConditionResult (..)
+  , fromConditionResult
+  , toConditionResult
+  , AnyNewEpochState (..)
+  , foldEpochState
+  , getAnyNewEpochState
 
     -- *** Errors
-    LedgerStateError(..),
-    FoldBlocksError(..),
-    GenesisConfigError(..),
-    InitialLedgerStateError(..),
+  , LedgerStateError (..)
+  , FoldBlocksError (..)
+  , GenesisConfigError (..)
+  , InitialLedgerStateError (..)
 
     -- ** Low level protocol interaction with a Cardano node
-    connectToLocalNode,
-    connectToLocalNodeWithVersion,
-    LocalNodeConnectInfo(..),
-    ConsensusModeParams(..),
-    ConsensusProtocol,
-    ChainDepStateProtocol,
-    ConsensusBlockForEra,
-    LocalNodeClientProtocols(..),
-    LocalNodeClientParams(..),
-    mkLocalNodeClientParams,
-    LocalChainSyncClient(..),
-    --  connectToRemoteNode,
+  , connectToLocalNode
+  , connectToLocalNodeWithVersion
+  , LocalNodeConnectInfo (..)
+  , ConsensusModeParams (..)
+  , ConsensusProtocol
+  , ChainDepStateProtocol
+  , ConsensusBlockForEra
+  , LocalNodeClientProtocols (..)
+  , LocalNodeClientParams (..)
+  , mkLocalNodeClientParams
+  , LocalChainSyncClient (..)
+  --  connectToRemoteNode,
 
     -- ** Protocol related types
-    BlockType(..),
-    SomeBlockType (..),
-    reflBlockType,
-    Protocol(..),
-    ProtocolInfoArgs(..),
-
+  , BlockType (..)
+  , SomeBlockType (..)
+  , reflBlockType
+  , Protocol (..)
+  , ProtocolInfoArgs (..)
 
     -- *** Chain sync protocol
+
     -- | To construct a @ChainSyncClient@ see @Cardano.Api.Client@ or
     -- @Cardano.Api.ClientPipelined@.
-    ChainSyncClient(..),
-    ChainSyncClientPipelined(..),
-    BlockInMode(..),
-    LocalNodeClientProtocolsInMode,
+  , ChainSyncClient (..)
+  , ChainSyncClientPipelined (..)
+  , BlockInMode (..)
+  , LocalNodeClientProtocolsInMode
 
     -- *** Local tx submission
-    LocalTxSubmissionClient(..),
-    TxInMode(..),
-    TxValidationErrorInCardanoMode(..),
-    SubmitResult(..),
-    submitTxToNodeLocal,
+  , LocalTxSubmissionClient (..)
+  , TxInMode (..)
+  , TxValidationErrorInCardanoMode (..)
+  , SubmitResult (..)
+  , submitTxToNodeLocal
 
     -- *** Local state query
-    LocalStateQueryClient(..),
-    QueryInMode(..),
-    SystemStart(..),
-    QueryInEra(..),
-    QueryInShelleyBasedEra(..),
-    QueryUTxOFilter(..),
-    UTxO(..),
-    queryNodeLocalState,
-    executeQueryCardanoMode,
-    UnsupportedNtcVersionError(..),
+  , LocalStateQueryClient (..)
+  , QueryInMode (..)
+  , SystemStart (..)
+  , QueryInEra (..)
+  , QueryInShelleyBasedEra (..)
+  , QueryUTxOFilter (..)
+  , UTxO (..)
+  , queryNodeLocalState
+  , executeQueryCardanoMode
+  , UnsupportedNtcVersionError (..)
 
     -- *** Local tx monitoring
-    LocalTxMonitorClient(..),
-    LocalTxMonitoringQuery(..),
-    LocalTxMonitoringResult(..),
-    MempoolSizeAndCapacity(..),
-    queryTxMonitoringLocal,
-
-    TxIdInMode(..),
-
-    EraHistory(..),
-    getProgress,
-    getSlotForRelativeTime,
+  , LocalTxMonitorClient (..)
+  , LocalTxMonitoringQuery (..)
+  , LocalTxMonitoringResult (..)
+  , MempoolSizeAndCapacity (..)
+  , queryTxMonitoringLocal
+  , TxIdInMode (..)
+  , EraHistory (..)
+  , getProgress
+  , getSlotForRelativeTime
 
     -- *** Common queries
-    determineEra,
-    getLocalChainTip,
+  , determineEra
+  , getLocalChainTip
 
     -- * Node operation
+
     -- | Support for the steps needed to operate a node
 
     -- ** Operational certificates
-    OperationalCertificate,
-    OperationalCertificateIssueCounter,
-    OperationalCertIssueError,
-    getHotKey,
-    getKesPeriod,
-    getOpCertCount,
-    issueOperationalCertificate,
+  , OperationalCertificate
+  , OperationalCertificateIssueCounter
+  , OperationalCertIssueError
+  , getHotKey
+  , getKesPeriod
+  , getOpCertCount
+  , issueOperationalCertificate
 
     -- * Constitutional Committee keys
-    CommitteeColdKey,
-    CommitteeColdExtendedKey,
-    CommitteeHotKey,
-    CommitteeHotExtendedKey,
+  , CommitteeColdKey
+  , CommitteeColdExtendedKey
+  , CommitteeHotKey
+  , CommitteeHotExtendedKey
 
     -- * Genesis file
+
     -- | Types and functions needed to inspect or create a genesis file.
-    GenesisKey,
-    GenesisExtendedKey,
-    GenesisDelegateKey,
-    GenesisDelegateExtendedKey,
-    GenesisUTxOKey,
-    genesisUTxOPseudoTxIn,
+  , GenesisKey
+  , GenesisExtendedKey
+  , GenesisDelegateKey
+  , GenesisDelegateExtendedKey
+  , GenesisUTxOKey
+  , genesisUTxOPseudoTxIn
 
     -- ** Genesis parameters
-    GenesisParameters(..),
+  , GenesisParameters (..)
 
     -- * Special transactions
+
     -- | There are various additional things that can be embedded in a
     -- transaction for special operations.
-    GenesisKeyDelegationRequirements(..),
-    MirCertificateRequirements(..),
-    makeMIRCertificate,
-    makeGenesisKeyDelegationCertificate,
-    MIRTarget (..),
-    MIRPot(..),
-    selectStakeCredentialWitness,
+  , GenesisKeyDelegationRequirements (..)
+  , MirCertificateRequirements (..)
+  , makeMIRCertificate
+  , makeGenesisKeyDelegationCertificate
+  , MIRTarget (..)
+  , MIRPot (..)
+  , selectStakeCredentialWitness
 
     -- * Protocol parameter updates
-    UpdateProposal(..),
-    ProtocolParametersUpdate(..),
-    makeShelleyUpdateProposal,
-    PraosNonce,
-    makePraosNonce,
-
-    NetworkMagic(..),
+  , UpdateProposal (..)
+  , ProtocolParametersUpdate (..)
+  , makeShelleyUpdateProposal
+  , PraosNonce
+  , makePraosNonce
+  , NetworkMagic (..)
 
     -- * Protocol parameters
-    ProtocolParametersConversionError(..),
+  , ProtocolParametersConversionError (..)
 
     -- ** Conversions
-    toLedgerPParams,
-    fromLedgerPParams,
-    toCtxUTxOTxOut,
-    --TODO: arrange not to export these
-    fromNetworkMagic,
-    toNetworkMagic,
-    fromLedgerTxOuts,
-    toLedgerUTxO,
-    runParsecParser,
-
-    SlotsInEpoch(..),
-    SlotsToEpochEnd(..),
-    slotToEpoch,
+  , toLedgerPParams
+  , fromLedgerPParams
+  , toCtxUTxOTxOut
+  -- TODO: arrange not to export these
+  , fromNetworkMagic
+  , toNetworkMagic
+  , fromLedgerTxOuts
+  , toLedgerUTxO
+  , runParsecParser
+  , SlotsInEpoch (..)
+  , SlotsToEpochEnd (..)
+  , slotToEpoch
 
     -- * Node socket related
-    SocketPath,
+  , SocketPath
+  , NodeToClientVersion (..)
 
-    NodeToClientVersion(..),
     -- ** Queries
-    executeQueryAnyMode,
+  , executeQueryAnyMode
 
     -- ** Monadic queries
-    LocalStateQueryExpr,
-    executeLocalStateQueryExpr,
-    queryExpr,
-
-    chainPointToSlotNo,
-    chainPointToHeaderHash,
-    makeChainTip,
-    parseFilePath,
-    writeSecrets,
+  , LocalStateQueryExpr
+  , executeLocalStateQueryExpr
+  , queryExpr
+  , chainPointToSlotNo
+  , chainPointToHeaderHash
+  , makeChainTip
+  , parseFilePath
+  , writeSecrets
 
     -- * Convenience functions
 
     -- ** Transaction construction
-    constructBalancedTx,
+  , constructBalancedTx
 
     -- ** Queries
-    QueryConvenienceError(..),
-    TxCurrentTreasuryValue(..),
-    queryStateForBalancedTx,
-    renderQueryConvenienceError,
+  , QueryConvenienceError (..)
+  , TxCurrentTreasuryValue (..)
+  , queryStateForBalancedTx
+  , renderQueryConvenienceError
 
     -- ** Misc
-    ScriptLockedTxInsError(..),
-    TxInsExistError(..),
-    renderNotScriptLockedTxInsError,
-    renderTxInsExistError,
-    txInsExistInUTxO,
-    notScriptLockedTxIns,
-    textShow,
+  , ScriptLockedTxInsError (..)
+  , TxInsExistError (..)
+  , renderNotScriptLockedTxInsError
+  , renderTxInsExistError
+  , txInsExistInUTxO
+  , notScriptLockedTxIns
+  , textShow
 
     -- ** CLI option parsing
-    bounded,
+  , bounded
 
     -- ** Query expressions
-    queryChainBlockNo,
-    queryChainPoint,
-    queryCurrentEpochState,
-    queryCurrentEra,
-    queryDebugLedgerState,
-    queryEpoch,
-    queryConstitutionHash,
-    queryEraHistory,
-    queryGenesisParameters,
-    queryPoolDistribution,
-    queryPoolState,
-    queryProtocolParameters,
-    queryProtocolParametersUpdate,
-    queryProtocolState,
-    queryStakeAddresses,
-    queryStakeDelegDeposits,
-    queryStakeDistribution,
-    queryStakePoolParameters,
-    queryStakePools,
-    queryStakeSnapshot,
-    querySystemStart,
-    queryUtxo,
-    queryConstitution,
-    queryGovState,
-    queryDRepState,
-    queryDRepStakeDistribution,
-    queryCommitteeMembersState,
-    queryStakeVoteDelegatees,
+  , queryChainBlockNo
+  , queryChainPoint
+  , queryCurrentEpochState
+  , queryCurrentEra
+  , queryDebugLedgerState
+  , queryEpoch
+  , queryConstitutionHash
+  , queryEraHistory
+  , queryGenesisParameters
+  , queryPoolDistribution
+  , queryPoolState
+  , queryProtocolParameters
+  , queryProtocolParametersUpdate
+  , queryProtocolState
+  , queryStakeAddresses
+  , queryStakeDelegDeposits
+  , queryStakeDistribution
+  , queryStakePoolParameters
+  , queryStakePools
+  , queryStakeSnapshot
+  , querySystemStart
+  , queryUtxo
+  , queryConstitution
+  , queryGovState
+  , queryDRepState
+  , queryDRepStakeDistribution
+  , queryCommitteeMembersState
+  , queryStakeVoteDelegatees
 
     -- ** Committee State Query
-    MemberStatus (..),
-    CommitteeMembersState (..),
+  , MemberStatus (..)
+  , CommitteeMembersState (..)
+
     -- ** DReps
-    DRepKey,
-    DRepExtendedKey,
-    DRepMetadata,
-    DRepMetadataReference,
-    hashDRepMetadata,
+  , DRepKey
+  , DRepExtendedKey
+  , DRepMetadata
+  , DRepMetadataReference
+  , hashDRepMetadata
 
     -- ** Governance related certificates
-    AnchorDataHash(..),
-    AnchorUrl(..),
-    CommitteeColdkeyResignationRequirements(..),
-    CommitteeHotKeyAuthorizationRequirements(..),
-    DRepRegistrationRequirements(..),
-    DRepUnregistrationRequirements(..),
-    DRepUpdateRequirements(..),
-    makeCommitteeColdkeyResignationCertificate,
-    makeCommitteeHotKeyAuthorizationCertificate,
-    makeDrepRegistrationCertificate,
-    makeDrepUnregistrationCertificate,
-    makeDrepUpdateCertificate,
+  , AnchorDataHash (..)
+  , AnchorUrl (..)
+  , CommitteeColdkeyResignationRequirements (..)
+  , CommitteeHotKeyAuthorizationRequirements (..)
+  , DRepRegistrationRequirements (..)
+  , DRepUnregistrationRequirements (..)
+  , DRepUpdateRequirements (..)
+  , makeCommitteeColdkeyResignationCertificate
+  , makeCommitteeHotKeyAuthorizationCertificate
+  , makeDrepRegistrationCertificate
+  , makeDrepUnregistrationCertificate
+  , makeDrepUpdateCertificate
+  , ResolvablePointers (..)
+  , unsafeBoundedRational
 
-    ResolvablePointers(..),
-
-    unsafeBoundedRational,
     -- ** Supporting modules
-    module Cardano.Api.Monad.Error,
-    module Cardano.Api.Pretty
-  ) where
+  , module Cardano.Api.Monad.Error
+  , module Cardano.Api.Pretty
+  )
+where
 
-import           Cardano.Api.Address
-import           Cardano.Api.Anchor
-import           Cardano.Api.Block
-import           Cardano.Api.Certificate
-import           Cardano.Api.Convenience.Construction
-import           Cardano.Api.Convenience.Query
-import           Cardano.Api.DeserialiseAnyOf
-import           Cardano.Api.DRepMetadata
-import           Cardano.Api.Eon.AllegraEraOnwards
-import           Cardano.Api.Eon.AlonzoEraOnwards
-import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronToAlonzoEra
-import           Cardano.Api.Eon.ConwayEraOnwards
-import           Cardano.Api.Eon.MaryEraOnwards
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyEraOnly
-import           Cardano.Api.Eon.ShelleyToAllegraEra
-import           Cardano.Api.Eon.ShelleyToAlonzoEra
-import           Cardano.Api.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Eon.ShelleyToMaryEra
-import           Cardano.Api.Eras
-import           Cardano.Api.Eras.Case
-import           Cardano.Api.Error
-import           Cardano.Api.Feature
-import           Cardano.Api.Fees
-import           Cardano.Api.Genesis
-import           Cardano.Api.GenesisParameters
-import           Cardano.Api.Governance.Actions.ProposalProcedure
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.InMode
-import           Cardano.Api.IO
-import           Cardano.Api.IPC
-import           Cardano.Api.IPC.Monad
-import           Cardano.Api.Keys.Byron
-import           Cardano.Api.Keys.Class
-import           Cardano.Api.Keys.Read
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.LedgerState
-import           Cardano.Api.Modes
-import           Cardano.Api.Monad.Error
-import           Cardano.Api.NetworkId
-import           Cardano.Api.OperationalCertificate
-import           Cardano.Api.Orphans ()
-import           Cardano.Api.Pretty
-import           Cardano.Api.Protocol
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query hiding (LedgerState (..))
-import           Cardano.Api.Query.Expr
-import           Cardano.Api.Rewards
-import           Cardano.Api.Script
-import           Cardano.Api.ScriptData
-import           Cardano.Api.SerialiseBech32
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseLedgerCddl
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.Tx.Body
-import           Cardano.Api.Tx.Sign
-import           Cardano.Api.TxMetadata
-import           Cardano.Api.Utils
-import           Cardano.Api.Value
-import           Cardano.Api.ValueParser
+import Cardano.Api.Address
+import Cardano.Api.Anchor
+import Cardano.Api.Block
+import Cardano.Api.Certificate
+import Cardano.Api.Convenience.Construction
+import Cardano.Api.Convenience.Query
+import Cardano.Api.DRepMetadata
+import Cardano.Api.DeserialiseAnyOf
+import Cardano.Api.Eon.AllegraEraOnwards
+import Cardano.Api.Eon.AlonzoEraOnwards
+import Cardano.Api.Eon.BabbageEraOnwards
+import Cardano.Api.Eon.ByronToAlonzoEra
+import Cardano.Api.Eon.ConwayEraOnwards
+import Cardano.Api.Eon.MaryEraOnwards
+import Cardano.Api.Eon.ShelleyBasedEra
+import Cardano.Api.Eon.ShelleyEraOnly
+import Cardano.Api.Eon.ShelleyToAllegraEra
+import Cardano.Api.Eon.ShelleyToAlonzoEra
+import Cardano.Api.Eon.ShelleyToBabbageEra
+import Cardano.Api.Eon.ShelleyToMaryEra
+import Cardano.Api.Eras
+import Cardano.Api.Eras.Case
+import Cardano.Api.Error
+import Cardano.Api.Feature
+import Cardano.Api.Fees
+import Cardano.Api.Genesis
+import Cardano.Api.GenesisParameters
+import Cardano.Api.Governance.Actions.ProposalProcedure
+import Cardano.Api.HasTypeProxy
+import Cardano.Api.Hash
+import Cardano.Api.IO
+import Cardano.Api.IPC
+import Cardano.Api.IPC.Monad
+import Cardano.Api.InMode
+import Cardano.Api.Keys.Byron
+import Cardano.Api.Keys.Class
+import Cardano.Api.Keys.Read
+import Cardano.Api.Keys.Shelley
+import Cardano.Api.LedgerState
+import Cardano.Api.Modes
+import Cardano.Api.Monad.Error
+import Cardano.Api.NetworkId
+import Cardano.Api.OperationalCertificate
+import Cardano.Api.Orphans ()
+import Cardano.Api.Pretty
+import Cardano.Api.Protocol
+import Cardano.Api.ProtocolParameters
+import Cardano.Api.Query hiding (LedgerState (..))
+import Cardano.Api.Query.Expr
+import Cardano.Api.Rewards
+import Cardano.Api.Script
+import Cardano.Api.ScriptData
+import Cardano.Api.SerialiseBech32
+import Cardano.Api.SerialiseCBOR
+import Cardano.Api.SerialiseJSON
+import Cardano.Api.SerialiseLedgerCddl
+import Cardano.Api.SerialiseRaw
+import Cardano.Api.SerialiseTextEnvelope
+import Cardano.Api.SerialiseUsing
+import Cardano.Api.StakePoolMetadata
+import Cardano.Api.Tx.Body
+import Cardano.Api.Tx.Sign
+import Cardano.Api.TxMetadata
+import Cardano.Api.Utils
+import Cardano.Api.Value
+import Cardano.Api.ValueParser

@@ -1,9 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
 {- HLINT ignore "Redundant do" -}
-
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Test.Golden.ErrorsSpec
@@ -28,41 +26,41 @@ module Test.Golden.ErrorsSpec
   , test_TxBodyErrorAutoBalance
   , test_TxMetadataJsonError
   , test_TxMetadataRangeError
-  ) where
+  )
+where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
-
-import           Cardano.Binary as CBOR
+import Cardano.Api
+import Cardano.Api.Shelley
+import Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Ledger
 import qualified Cardano.Ledger.Api.Era as Ledger
 import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Plutus.Language as Plutus
+import qualified Codec.Binary.Bech32 as Bech32
+import Control.Error.Util (hush)
+import qualified Data.Aeson as Aeson
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as LBS
+import Data.Data
+import qualified Data.Map as Map
+import Data.Maybe (fromJust)
+import qualified Data.Set as Set
+import Data.Text (Text)
+import GHC.Stack (HasCallStack)
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus hiding (PlutusV2)
-
-import qualified Codec.Binary.Bech32 as Bech32
-import           Control.Error.Util (hush)
-import qualified Data.Aeson as Aeson
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Data
-import qualified Data.Map as Map
-import           Data.Maybe (fromJust)
-import qualified Data.Set as Set
-import           Data.Text (Text)
-import           GHC.Stack (HasCallStack)
-
 import qualified Test.Hedgehog.Golden.ErrorMessage as ErrorMessage
-import           Test.Tasty
+import Test.Tasty
 
 seed1 :: ByteString
-seed1 = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+seed1 =
+  "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
 seed2 :: ByteString
-seed2 = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
+seed2 =
+  "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
 
 json :: Aeson.Value
 json = Aeson.String "<JSON>"
@@ -89,7 +87,10 @@ paymentVerKey1 :: VerificationKey PaymentKey
 paymentVerKey1 = getVerificationKey $ deterministicSigningKey AsPaymentKey (Crypto.mkSeedFromBytes seed1)
 
 txid1 :: TxId
-txid1 = fromJust $ hush $ deserialiseFromRawBytesHex AsTxId "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
+txid1 =
+  fromJust $
+    hush $
+      deserialiseFromRawBytesHex AsTxId "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
 
 txin1 :: TxIn
 txin1 = TxIn txid1 (TxIx 1)
@@ -113,8 +114,11 @@ changeaddr1 :: AddressInEra AllegraEra
 changeaddr1 =
   AddressInEra
     (ShelleyAddressInEra ShelleyBasedEraAllegra)
-    (makeShelleyAddress Mainnet
-      (PaymentCredentialByKey (verificationKeyHash paymentVerKey1)) NoStakeAddress)
+    ( makeShelleyAddress
+        Mainnet
+        (PaymentCredentialByKey (verificationKeyHash paymentVerKey1))
+        NoStakeAddress
+    )
 
 txOutValue1 :: TxOutValue AllegraEra
 txOutValue1 = TxOutValueShelleyBased ShelleyBasedEraAllegra (L.Coin 1)
@@ -126,8 +130,12 @@ txOutInAnyEra1 :: TxOutInAnyEra
 txOutInAnyEra1 = txOutInAnyEra AllegraEra txout1
 
 poolId :: Hash StakePoolKey
-poolId = fromJust $ hush $ deserialiseFromRawBytesHex (AsHash AsStakePoolKey)
-      "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
+poolId =
+  fromJust $
+    hush $
+      deserialiseFromRawBytesHex
+        (AsHash AsStakePoolKey)
+        "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
 
 test_Bech32DecodeError :: TestTree
 test_Bech32DecodeError =
@@ -164,13 +172,21 @@ test_JsonDecodeError =
 
 test_LeadershipError :: TestTree
 test_LeadershipError =
-  testAllErrorMessages_ "Cardano.Api.LedgerState" "LeadershipError"
+  testAllErrorMessages_
+    "Cardano.Api.LedgerState"
+    "LeadershipError"
     [ ("LeaderErrDecodeLedgerStateFailure", LeaderErrDecodeLedgerStateFailure)
-    , ("LeaderErrDecodeProtocolStateFailure", LeaderErrDecodeProtocolStateFailure
+    ,
+      ( "LeaderErrDecodeProtocolStateFailure"
+      , LeaderErrDecodeProtocolStateFailure
           ( lazyBytestring
           , CBOR.DecoderErrorVoid
-          ))
-    , ("LeaderErrDecodeProtocolEpochStateFailure", LeaderErrDecodeProtocolEpochStateFailure CBOR.DecoderErrorVoid)
+          )
+      )
+    ,
+      ( "LeaderErrDecodeProtocolEpochStateFailure"
+      , LeaderErrDecodeProtocolEpochStateFailure CBOR.DecoderErrorVoid
+      )
     , ("LeaderErrGenesisSlot", LeaderErrGenesisSlot)
     , ("LeaderErrStakePoolHasNoStake", LeaderErrStakePoolHasNoStake poolId)
     , ("LeaderErrStakeDistribUnstable", LeaderErrStakeDistribUnstable 1 2 3 4)
@@ -180,26 +196,35 @@ test_LeadershipError =
 
 test_OperationalCertIssueError :: TestTree
 test_OperationalCertIssueError =
-  testAllErrorMessages_ "Cardano.Api.OperationalCertificate" "OperationalCertIssueError"
-      [ ("OperationalCertKeyMismatch", OperationalCertKeyMismatch stakePoolVerKey1 stakePoolVerKey2)
-      ]
+  testAllErrorMessages_
+    "Cardano.Api.OperationalCertificate"
+    "OperationalCertIssueError"
+    [ ("OperationalCertKeyMismatch", OperationalCertKeyMismatch stakePoolVerKey1 stakePoolVerKey2)
+    ]
 
 test_ProtocolParametersError :: TestTree
 test_ProtocolParametersError =
-  testAllErrorMessages_ "Cardano.Api.ProtocolParameters" "ProtocolParametersError"
-      [ ("PParamsErrorMissingMinUTxoValue", PParamsErrorMissingMinUTxoValue (AnyCardanoEra ConwayEra))
-      , ("PParamsErrorMissingAlonzoProtocolParameter", PParamsErrorMissingAlonzoProtocolParameter)
-      ]
+  testAllErrorMessages_
+    "Cardano.Api.ProtocolParameters"
+    "ProtocolParametersError"
+    [ ("PParamsErrorMissingMinUTxoValue", PParamsErrorMissingMinUTxoValue (AnyCardanoEra ConwayEra))
+    , ("PParamsErrorMissingAlonzoProtocolParameter", PParamsErrorMissingAlonzoProtocolParameter)
+    ]
 
 test_RawBytesHexError :: TestTree
 test_RawBytesHexError =
-  testAllErrorMessages_ "Cardano.Api.SerialiseRaw" "RawBytesHexError"
-      [ ("RawBytesHexErrorBase16DecodeFail", RawBytesHexErrorBase16DecodeFail bytestring string)
-      , ("RawBytesHexErrorRawBytesDecodeFail", RawBytesHexErrorRawBytesDecodeFail
+  testAllErrorMessages_
+    "Cardano.Api.SerialiseRaw"
+    "RawBytesHexError"
+    [ ("RawBytesHexErrorBase16DecodeFail", RawBytesHexErrorBase16DecodeFail bytestring string)
+    ,
+      ( "RawBytesHexErrorRawBytesDecodeFail"
+      , RawBytesHexErrorRawBytesDecodeFail
           bytestring
           (typeRep (AsVerificationKey AsGenesisKey))
-          (SerialiseAsRawBytesError string))
-      ]
+          (SerialiseAsRawBytesError string)
+      )
+    ]
 
 test_ScriptDataJsonBytesError :: TestTree
 test_ScriptDataJsonBytesError =
@@ -235,15 +260,31 @@ test_ScriptDataRangeError =
 
 test_ScriptExecutionError :: TestTree
 test_ScriptExecutionError =
-  testAllErrorMessages_ "Cardano.Api.Fees" "ScriptExecutionError"
+  testAllErrorMessages_
+    "Cardano.Api.Fees"
+    "ScriptExecutionError"
     [ ("ScriptErrorMissingTxIn", ScriptErrorMissingTxIn txin1)
     , ("ScriptErrorTxInWithoutDatum", ScriptErrorTxInWithoutDatum txin1)
     , ("ScriptErrorWrongDatum", ScriptErrorWrongDatum hashScriptData1)
-    , ("ScriptErrorEvaluationFailed", ScriptErrorEvaluationFailed Plutus.CostModelParameterMismatch (replicate 5 text))
+    ,
+      ( "ScriptErrorEvaluationFailed"
+      , ScriptErrorEvaluationFailed Plutus.CostModelParameterMismatch (replicate 5 text)
+      )
     , ("ScriptErrorExecutionUnitsOverflow", ScriptErrorExecutionUnitsOverflow)
-    , ("ScriptErrorNotPlutusWitnessedTxIn", ScriptErrorNotPlutusWitnessedTxIn (ScriptWitnessIndexTxIn 0) scriptHash)
-    , ("ScriptErrorRedeemerPointsToUnknownScriptHash", ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0))
-    , ("ScriptErrorMissingScript", ScriptErrorMissingScript (ScriptWitnessIndexMint 0) (ResolvablePointers ShelleyBasedEraBabbage Map.empty)) -- TODO CIP-1694 make work in all eras
+    ,
+      ( "ScriptErrorNotPlutusWitnessedTxIn"
+      , ScriptErrorNotPlutusWitnessedTxIn (ScriptWitnessIndexTxIn 0) scriptHash
+      )
+    ,
+      ( "ScriptErrorRedeemerPointsToUnknownScriptHash"
+      , ScriptErrorRedeemerPointsToUnknownScriptHash (ScriptWitnessIndexTxIn 0)
+      )
+    ,
+      ( "ScriptErrorMissingScript"
+      , ScriptErrorMissingScript
+          (ScriptWitnessIndexMint 0)
+          (ResolvablePointers ShelleyBasedEraBabbage Map.empty) -- TODO CIP-1694 make work in all eras
+      )
     , ("ScriptErrorMissingCostModel", ScriptErrorMissingCostModel Plutus.PlutusV2)
     , ("ScriptErrorTranslationError", ScriptErrorTranslationError testPastHorizonValue)
     ]
@@ -279,24 +320,31 @@ testPastHorizonValue = Ledger.TimeTranslationPastHorizon text
 
 test_TransactionValidityError :: TestTree
 test_TransactionValidityError =
-  testAllErrorMessages_ "Cardano.Api.Fees" "TransactionValidityError"
-    [ ("TransactionValidityCostModelError", TransactionValidityCostModelError
-        (Map.fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
-        string)
-    -- TODO Implement this when we get access to data constructors of PastHorizon or its fields' types' constructors
-    -- or we get a dummy value for such purposes.
-    --
-    -- , ("TransactionValidityIntervalError", TransactionValidityIntervalError $
-    --     Qry.PastHorizon
-    --     { Qry.pastHorizonCallStack = GHC.callStack
-    --     , Qry.pastHorizonExpression = error "" -- Some $ Qry.ClosedExpr $ Qry.ELit 0
-    --     , Qry.pastHorizonSummary = []
-    --     })
+  testAllErrorMessages_
+    "Cardano.Api.Fees"
+    "TransactionValidityError"
+    [
+      ( "TransactionValidityCostModelError"
+      , TransactionValidityCostModelError
+          (Map.fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
+          string
+      )
+      -- TODO Implement this when we get access to data constructors of PastHorizon or its fields' types' constructors
+      -- or we get a dummy value for such purposes.
+      --
+      -- , ("TransactionValidityIntervalError", TransactionValidityIntervalError $
+      --     Qry.PastHorizon
+      --     { Qry.pastHorizonCallStack = GHC.callStack
+      --     , Qry.pastHorizonExpression = error "" -- Some $ Qry.ClosedExpr $ Qry.ELit 0
+      --     , Qry.pastHorizonSummary = []
+      --     })
     ]
 
 test_TxBodyError :: TestTree
 test_TxBodyError =
-  testAllErrorMessages_ "Cardano.Api.Tx.Body" "TxBodyError"
+  testAllErrorMessages_
+    "Cardano.Api.Tx.Body"
+    "TxBodyError"
     [ ("TxBodyEmptyTxIns", TxBodyEmptyTxIns)
     , ("TxBodyEmptyTxInsCollateral", TxBodyEmptyTxInsCollateral)
     , ("TxBodyEmptyTxOuts", TxBodyEmptyTxOuts)
@@ -310,20 +358,34 @@ test_TxBodyError =
 
 test_TxBodyErrorAutoBalance :: TestTree
 test_TxBodyErrorAutoBalance =
-  testAllErrorMessages_ "Cardano.Api.Fees" "TxBodyErrorAutoBalance"
+  testAllErrorMessages_
+    "Cardano.Api.Fees"
+    "TxBodyErrorAutoBalance"
     [ ("TxBodyError", TxBodyError TxBodyEmptyTxIns)
-    , ("TxBodyScriptExecutionError", TxBodyScriptExecutionError [(ScriptWitnessIndexTxIn 1, ScriptErrorExecutionUnitsOverflow)])
+    ,
+      ( "TxBodyScriptExecutionError"
+      , TxBodyScriptExecutionError [(ScriptWitnessIndexTxIn 1, ScriptErrorExecutionUnitsOverflow)]
+      )
     , ("TxBodyScriptBadScriptValidity", TxBodyScriptBadScriptValidity)
     , ("TxBodyErrorAdaBalanceNegative", TxBodyErrorAdaBalanceNegative 1)
     , ("TxBodyErrorAdaBalanceTooSmall", TxBodyErrorAdaBalanceTooSmall txOutInAnyEra1 0 1)
     , ("TxBodyErrorByronEraNotSupported", TxBodyErrorByronEraNotSupported)
     , ("TxBodyErrorMissingParamMinUTxO", TxBodyErrorMissingParamMinUTxO)
-    , ("TxBodyErrorValidityInterval", TxBodyErrorValidityInterval $ TransactionValidityCostModelError Map.empty string)
+    ,
+      ( "TxBodyErrorValidityInterval"
+      , TxBodyErrorValidityInterval $ TransactionValidityCostModelError Map.empty string
+      )
     , ("TxBodyErrorMinUTxONotMet", TxBodyErrorMinUTxONotMet txOutInAnyEra1 1)
-    , ("TxBodyErrorNonAdaAssetsUnbalanced", TxBodyErrorNonAdaAssetsUnbalanced (valueFromList [(AdaAssetId, Quantity 1)]))
-    , ("TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap", TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
-                (ScriptWitnessIndexTxIn 1)
-                (Map.fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)]))
+    ,
+      ( "TxBodyErrorNonAdaAssetsUnbalanced"
+      , TxBodyErrorNonAdaAssetsUnbalanced (valueFromList [(AdaAssetId, Quantity 1)])
+      )
+    ,
+      ( "TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap"
+      , TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
+          (ScriptWitnessIndexTxIn 1)
+          (Map.fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)])
+      )
     ]
 
 test_TxMetadataJsonError :: TestTree
@@ -349,9 +411,14 @@ goldenFilesPath = "test/cardano-api-golden/files/golden/errors"
 testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a) => [a] -> TestTree
 testAllErrorMessages = ErrorMessage.testAllErrorMessages goldenFilesPath
 
-testAllErrorMessages_ :: forall a. (HasCallStack, Error a)
-                      => String -- ^ module name
-                      -> String -- ^ type name
-                      -> [(String, a)]  -- ^ list of constructor names and values
-                      -> TestTree
+testAllErrorMessages_
+  :: forall a
+   . (HasCallStack, Error a)
+  => String
+  -- ^ module name
+  -> String
+  -- ^ type name
+  -> [(String, a)]
+  -- ^ list of constructor names and values
+  -> TestTree
 testAllErrorMessages_ = ErrorMessage.testAllErrorMessages_ goldenFilesPath

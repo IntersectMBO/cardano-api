@@ -5,29 +5,31 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.IO.Base
-  ( FileDirection(..)
-  , File(..)
+  ( FileDirection (..)
+  , File (..)
   , Socket
   , SocketPath
-  , VRFPrivateKeyFilePermissionError(..)
-  ) where
+  , VRFPrivateKeyFilePermissionError (..)
+  )
+where
 
-import           Data.Aeson (FromJSON, ToJSON)
-import           Data.String (IsString)
+import Data.Aeson (FromJSON, ToJSON)
+import Data.String (IsString)
 
 data FileDirection
-  = In
-  -- ^ Indicate the file is to be used for reading.
-  | Out
-  -- ^ Indicate the file is to be used for writing.
-  | InOut
-  -- ^ Indicate the file is to be used for both reading and writing.
+  = -- | Indicate the file is to be used for reading.
+    In
+  | -- | Indicate the file is to be used for writing.
+    Out
+  | -- | Indicate the file is to be used for both reading and writing.
+    InOut
 
 -- | A file path with additional type information to indicate what the file is meant to
 -- contain and whether it is to be used for reading or writing.
 newtype File content (direction :: FileDirection) = File
   { unFile :: FilePath
-  } deriving newtype (Eq, Ord, Read, Show, IsString, FromJSON, ToJSON)
+  }
+  deriving newtype (Eq, Ord, Read, Show, IsString, FromJSON, ToJSON)
 
 data Socket
 
@@ -37,4 +39,4 @@ data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath
   | GroupPermissionsExist FilePath
   | GenericPermissionsExist FilePath
-  deriving Show
+  deriving (Show)
