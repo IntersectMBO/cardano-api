@@ -20,12 +20,14 @@ import           Cardano.Api.Protocol.AvailableEras
 import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
 
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Babbage as Ledger
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.Conway as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Typeable
 
@@ -57,7 +59,7 @@ be able to avoid parameterizing on versions.
 -- the complexity of deciding which scripts are available in which eras.
 
 newtype Script (availableera :: AvailableEras)
-  = Script (Ledger.Script (ToConstrainedEra availableera))
+  = Script { unScript :: Ledger.Script (ToConstrainedEra availableera) }
 
 instance ( HasTypeProxy (Script availableera)
          , ToCBOR (Ledger.Script (ToConstrainedEra availableera))
@@ -100,3 +102,43 @@ instance ConstrainedDecoder BabbageEra Ledger.Babbage where
 instance ConstrainedDecoder ConwayEra Ledger.Conway where
   fromEraCBORConstrained = Ledger.fromEraCBOR @Ledger.Conway
 
+-- You need a function that lets a user decode a script in a given era
+-- The function must only try to decode script versions available in a given era
+-- Can we create a type class that enforces the behavior? Or a type family?
+{-
+data DeserializationError
+deserialiseNativeScript
+  :: AvailableEras
+  -> ByteString
+  -> Either DeserializationError (NativeScript (ToConstrainedEra availableera))
+  -}
+
+data NativeScriptDeserializationError
+  = NotAScript DecoderError
+  | NotASimpleScript -- We can improve this and potentially
+                     -- tell the consumer its a plutus script
+                     -- and which version it is.
+
+
+deserialiseNativeScript
+  :: DecCBOR (Ledger.AlonzoScript (ToConstrainedEra availableera))
+  => Era availableera
+  -> ByteString
+  -> Either NativeScriptDeserializationError (Ledger.NativeScript (ToConstrainedEra availableera))
+deserialiseNativeScript availableEra  bs =
+  case availableEra of
+    CurrentEraInternal -> deserialise AsMainnetScript bs
+    UpcomingEraInternal -> deserialise AsUpcomingEraScript bs
+  where
+   deserialise
+     :: SerialiseAsCBOR (Script availableera)
+     => Ledger.EraScript (ToConstrainedEra availableera)
+     => AsType (Script availableera)
+     -> ByteString
+     -> Either NativeScriptDeserializationError (Ledger.NativeScript (ToConstrainedEra availableera))
+   deserialise as bs' =
+     case deserialiseFromCBOR as bs' of
+       Right s -> case Ledger.getNativeScript $ unScript s of
+                    Just nScript -> Right nScript
+                    Nothing -> Left NotASimpleScript
+       Left e -> Left $ NotAScript e
