@@ -142,3 +142,31 @@ deserialiseNativeScript availableEra  bs =
                     Just nScript -> Right nScript
                     Nothing -> Left NotASimpleScript
        Left e -> Left $ NotAScript e
+
+data PlutusScriptDeserializationError
+  = NotAPlutusScript
+  | NotAnyScript DecoderError
+
+deserialisePlutusScript
+  :: DecCBOR (Ledger.AlonzoScript (ToConstrainedEra availableera))
+  => Era availableera
+  -> ByteString
+  -> Either PlutusScriptDeserializationError (Ledger.PlutusScript (ToConstrainedEra availableera))
+deserialisePlutusScript era bs =
+  case era of
+    CurrentEraInternal -> deserialise AsMainnetScript bs
+    UpcomingEraInternal -> deserialise AsUpcomingEraScript bs
+ where
+  deserialise
+   :: SerialiseAsCBOR (Script availableera)
+   => Ledger.AlonzoEraScript (ToConstrainedEra availableera)
+   => AsType (Script availableera)
+   -> ByteString
+   -> Either PlutusScriptDeserializationError (Ledger.PlutusScript (ToConstrainedEra availableera))
+  deserialise as bs' =
+    case deserialiseFromCBOR as bs' of
+      Right s -> case Ledger.toPlutusScript $ unScript s of
+                   Just nScript -> Right nScript
+                   Nothing -> Left NotAPlutusScript
+      Left e -> Left $ NotAnyScript e
+
