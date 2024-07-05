@@ -2,15 +2,17 @@
 
 module Cardano.Api.Experimental
   ( -- * New Era interface
-    BabbageEra
-  , ConwayEra
+  --  BabbageEra
+  --, ConwayEra
+    AvailableEras(..)
   , Era
   , pattern CurrentEra
   , pattern UpcomingEra
   , UseEra
-  , VersionToSbe
+  , AvailableErasToSbe
+  , ToConstrainedEra
   , useEra
   , protocolVersionToSbe
   ) where
 
-import           Cardano.Api.Protocol.Version
+import           Cardano.Api.Protocol.AvailableEras

@@ -12,14 +12,14 @@
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 -- | This module defines the protocol versions corresponding to the eras in the Cardano blockchain.
-module Cardano.Api.Protocol.Version
-  ( BabbageEra
-  , ConwayEra
+module Cardano.Api.Protocol.AvailableEras
+  ( AvailableEras(..)
   , pattern CurrentEra
   , pattern UpcomingEra
   , Era (..)
+  , ToConstrainedEra
   , UseEra
-  , VersionToSbe
+  , AvailableErasToSbe
   , useEra
   , protocolVersionToSbe
   ) where
@@ -27,19 +27,28 @@ module Cardano.Api.Protocol.Version
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
 import qualified Cardano.Api.Eras.Core as Api
 
+import qualified Cardano.Ledger.Babbage as Ledger
+import qualified Cardano.Ledger.Conway as Ledger
+
 import           GHC.TypeLits
 
 -- | Users typically interact with the latest features on the mainnet or experiment with features
 -- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era
 -- and the next era (upcoming era).
-data BabbageEra
-data ConwayEra
+
+data AvailableEras
+  = BabbageEra
+  | ConwayEra
 
 -- Allows us to gradually change the api without breaking things.
 -- This will eventually be removed.
-type family VersionToSbe version where
-  VersionToSbe BabbageEra = Api.BabbageEra
-  VersionToSbe ConwayEra = Api.ConwayEra
+type family AvailableErasToSbe era where
+  AvailableErasToSbe BabbageEra = Api.BabbageEra
+  AvailableErasToSbe ConwayEra = Api.ConwayEra
+
+type family ToConstrainedEra (era :: AvailableEras) where
+  ToConstrainedEra BabbageEra = Ledger.Babbage
+  ToConstrainedEra ConwayEra = Ledger.Conway
 
 {- | Represents the eras in Cardano's blockchain.
 
@@ -56,7 +65,7 @@ After a hardfork, 'cardano-api' should be updated promptly to reflect
 the new mainnet era in 'CurrentEra'.
 
 -}
-data Era version where
+data Era (era :: AvailableEras) where
   -- | The era currently active on Cardano's mainnet.
   CurrentEraInternal :: Era BabbageEra
   -- | The era planned for the next hardfork on Cardano's mainnet.
@@ -72,7 +81,7 @@ data BabbageEra
 
   2. Add a new era type tag.
 @
-data Era version where
+data Era era where
   -- | The era currently active on Cardano's mainnet.
   CurrentEraInternal :: Era ConwayEra
   -- | The era planned for the next hardfork on Cardano's mainnet.
@@ -100,8 +109,8 @@ instance UseEra ConwayEra where
   5. Update 'protocolVersionToSbe' as follows:
 @
 protocolVersionToSbe
-  :: Era version
-  -> Maybe (ShelleyBasedEra (VersionToSbe version))
+  :: Era era
+  -> Maybe (ShelleyBasedEra (AvailableErasToSbe era))
 protocolVersionToSbe CurrentEraInternal = Just ShelleyBasedEraBabbage
 protocolVersionToSbe UpcomingEraInternal = Nothing
 @
@@ -133,8 +142,8 @@ pattern UpcomingEra = UpcomingEraInternal
 {-# COMPLETE CurrentEra, UpcomingEra #-}
 
 protocolVersionToSbe
-  :: Era version
-  -> Maybe (ShelleyBasedEra (VersionToSbe version))
+  :: Era era
+  -> Maybe (ShelleyBasedEra (AvailableErasToSbe era))
 protocolVersionToSbe CurrentEraInternal = Just ShelleyBasedEraBabbage
 protocolVersionToSbe UpcomingEraInternal = Nothing
 
@@ -142,8 +151,8 @@ protocolVersionToSbe UpcomingEraInternal = Nothing
 
 -- | Type class interface for the 'Era' type.
 
-class UseEra version where
-  useEra :: Era version
+class UseEra era where
+  useEra :: Era era
 
 instance UseEra BabbageEra where
   useEra = CurrentEra
