@@ -2,27 +2,24 @@
 
 module Test.Cardano.Api.Typed.TxBody
   ( tests
-  ) where
+  )
+where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
-
-import           Data.Maybe (isJust)
-import           Data.Type.Equality (TestEquality (testEquality))
-
-import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
-
-import           Test.Cardano.Api.Typed.Orphans ()
-
-import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))
+import Cardano.Api
+import Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
+import Data.Maybe (isJust)
+import Data.Type.Equality (TestEquality (testEquality))
+import Hedgehog (MonadTest, Property, annotateShow, failure, (===))
 import qualified Hedgehog as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Test.Cardano.Api.Typed.Orphans ()
+import Test.Gen.Cardano.Api.Typed (genTxBodyContent)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
 -- | Check the txOuts in a TxBodyContent after a ledger roundtrip.
-prop_roundtrip_txbodycontent_txouts:: Property
+prop_roundtrip_txbodycontent_txouts :: Property
 prop_roundtrip_txbodycontent_txouts =
   H.property $ do
     let era = ShelleyBasedEraBabbage
@@ -63,9 +60,10 @@ prop_roundtrip_txbodycontent_txouts =
   matchRefScript :: MonadTest m => (ReferenceScript BabbageEra, ReferenceScript BabbageEra) -> m ()
   matchRefScript (a, b)
     | isSimpleScriptV2 a && isSimpleScriptV2 b =
-      refScriptToShelleyScript ShelleyBasedEraBabbage a === refScriptToShelleyScript ShelleyBasedEraBabbage b
+        refScriptToShelleyScript ShelleyBasedEraBabbage a
+          === refScriptToShelleyScript ShelleyBasedEraBabbage b
     | otherwise =
-      a === b
+        a === b
 
   isSimpleScriptV2 :: ReferenceScript era -> Bool
   isSimpleScriptV2 = isLang SimpleScriptLanguage
@@ -76,6 +74,8 @@ prop_roundtrip_txbodycontent_txouts =
     _ -> False
 
 tests :: TestTree
-tests = testGroup "Test.Cardano.Api.Typed.TxBody"
-  [ testProperty "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
-  ]
+tests =
+  testGroup
+    "Test.Cardano.Api.Typed.TxBody"
+    [ testProperty "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
+    ]

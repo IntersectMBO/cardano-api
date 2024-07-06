@@ -2,7 +2,6 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Api.Feature
@@ -10,10 +9,11 @@ module Cardano.Api.Feature
   , unFeatured
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
-  ) where
+  )
+where
 
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras.Core
+import Cardano.Api.Eon.ShelleyBasedEra
+import Cardano.Api.Eras.Core
 
 -- | A value only if the eon includes era
 data Featured eon era a where
@@ -25,6 +25,7 @@ data Featured eon era a where
     -> Featured eon era a
 
 deriving instance (Eq a, Eq (eon era)) => Eq (Featured eon era a)
+
 deriving instance (Show a, Show (eon era)) => Show (Featured eon era a)
 
 instance Functor (Featured eon era) where
@@ -35,7 +36,8 @@ unFeatured (Featured _ a) = a
 
 -- | Attempt to construct a 'FeatureValue' from a value and era.
 -- If the eon is not supported in the era, then 'NoFeatureValue' is returned.
-asFeaturedInEra :: ()
+asFeaturedInEra
+  :: ()
   => Eon eon
   => a
   -> CardanoEra era
@@ -43,7 +45,8 @@ asFeaturedInEra :: ()
 asFeaturedInEra value = inEonForEra Nothing (Just . flip Featured value)
 
 -- | Attempt to construct a 'FeatureValue' from a value and a shelley-based-era.
-asFeaturedInShelleyBasedEra :: ()
+asFeaturedInShelleyBasedEra
+  :: ()
   => Eon eon
   => a
   -> ShelleyBasedEra era

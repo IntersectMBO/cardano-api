@@ -5,25 +5,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Class of errors used in the Api.
---
 module Cardano.Api.Error
-  ( Error(..)
+  ( Error (..)
   , throwErrorAsException
-  , ErrorAsException(..)
-  , FileError(..)
+  , ErrorAsException (..)
+  , FileError (..)
   , fileIOExceptT
   , displayError
-  ) where
+  )
+where
 
-import           Cardano.Api.Pretty
-
-import           Control.Exception (Exception (..), IOException, throwIO)
-import           Control.Monad.Except (throwError)
-import           Control.Monad.IO.Class (MonadIO)
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           System.Directory (doesFileExist)
-import           System.IO (Handle)
+import Cardano.Api.Pretty
+import Control.Exception (Exception (..), IOException, throwIO)
+import Control.Monad.Except (throwError)
+import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import System.Directory (doesFileExist)
+import System.IO (Handle)
 
 class Error e where
   prettyError :: e -> Doc ann
@@ -33,7 +32,6 @@ instance Error () where
 
 -- | The preferred approach is to use 'Except' or 'ExceptT', but you can if
 -- necessary use IO exceptions.
---
 throwErrorAsException :: Error e => e -> IO a
 throwErrorAsException e = throwIO (ErrorAsException e)
 
@@ -55,15 +53,16 @@ instance Exception ErrorAsException where
 displayError :: Error a => a -> String
 displayError = docToString . prettyError
 
-data FileError e = FileError FilePath e
-                 | FileErrorTempFile
-                     FilePath
-                     -- ^ Target path
-                     FilePath
-                     -- ^ Temporary path
-                     Handle
-                 | FileDoesNotExistError FilePath
-                 | FileIOError FilePath IOException
+data FileError e
+  = FileError FilePath e
+  | FileErrorTempFile
+      FilePath
+      -- ^ Target path
+      FilePath
+      -- ^ Temporary path
+      Handle
+  | FileDoesNotExistError FilePath
+  | FileIOError FilePath IOException
   deriving (Show, Eq, Functor)
 
 instance Error e => Error (FileError e) where
@@ -84,12 +83,13 @@ instance Error e => Error (FileError e) where
 instance Error IOException where
   prettyError = pretty . show
 
-fileIOExceptT :: MonadIO m
-              => FilePath
-              -> (FilePath -> IO s)
-              -> ExceptT (FileError e) m s
+fileIOExceptT
+  :: MonadIO m
+  => FilePath
+  -> (FilePath -> IO s)
+  -> ExceptT (FileError e) m s
 fileIOExceptT fp readFile' = do
   fileExists <- handleIOExceptT (FileIOError fp) $ doesFileExist fp
-  if fileExists then handleIOExceptT (FileIOError fp) $ readFile' fp
-                else throwError (FileDoesNotExistError fp)
-
+  if fileExists
+    then handleIOExceptT (FileIOError fp) $ readFile' fp
+    else throwError (FileDoesNotExistError fp)

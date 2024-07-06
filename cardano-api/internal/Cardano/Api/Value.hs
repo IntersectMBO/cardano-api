@@ -8,16 +8,15 @@
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Currency values
---
 module Cardano.Api.Value
-  ( L.Coin(..)
+  ( L.Coin (..)
 
     -- * Multi-asset values
-  , Quantity(..)
-  , PolicyId(..)
+  , Quantity (..)
+  , PolicyId (..)
   , scriptPolicyId
-  , AssetName(..)
-  , AssetId(..)
+  , AssetName (..)
+  , AssetId (..)
   , Value
   , selectAsset
   , valueFromList
@@ -35,8 +34,8 @@ module Cardano.Api.Value
   , valueToLovelace
 
     -- ** Alternative nested representation
-  , ValueNestedRep(..)
-  , ValueNestedBundle(..)
+  , ValueNestedRep (..)
+  , ValueNestedBundle (..)
   , valueToNestedRep
   , valueFromNestedRep
 
@@ -54,62 +53,60 @@ module Cardano.Api.Value
   , toLedgerValue
 
     -- * Data family instances
-  , AsType(..)
-  ) where
+  , AsType (..)
+  )
+where
 
-import           Cardano.Api.Eon.MaryEraOnwards
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras.Case
-import           Cardano.Api.Error (displayError)
-import           Cardano.Api.HasTypeProxy
+import Cardano.Api.Eon.MaryEraOnwards
+import Cardano.Api.Eon.ShelleyBasedEra
+import Cardano.Api.Eras.Case
+import Cardano.Api.Error (displayError)
+import Cardano.Api.HasTypeProxy
 import qualified Cardano.Api.Ledger.Lens as A
-import           Cardano.Api.Script
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.Utils (failEitherWith)
-
+import Cardano.Api.Script
+import Cardano.Api.SerialiseRaw
+import Cardano.Api.SerialiseUsing
+import Cardano.Api.Utils (failEitherWith)
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
-import           Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
+import Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
-
-import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
-import           Data.Aeson.Types (Parser, ToJSONKey)
-import           Data.ByteString (ByteString)
+import Data.Aeson.Types (Parser, ToJSONKey)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Short as Short
-import           Data.Data (Data)
-import           Data.Function ((&))
-import           Data.Group (invert)
+import Data.Data (Data)
+import Data.Function ((&))
+import Data.Group (invert)
 import qualified Data.List as List
 import qualified Data.Map.Merge.Strict as Map
-import           Data.Map.Strict (Map)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.String (IsString (..))
-import           Data.Text (Text)
+import Data.String (IsString (..))
+import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Lens.Micro ((%~))
+import Lens.Micro ((%~))
 
 toByronLovelace :: L.Coin -> Maybe Byron.Lovelace
 toByronLovelace (L.Coin x) =
-    case Byron.integerToLovelace x of
-      Left  _  -> Nothing
-      Right x' -> Just x'
+  case Byron.integerToLovelace x of
+    Left _ -> Nothing
+    Right x' -> Just x'
 
 fromByronLovelace :: Byron.Lovelace -> L.Coin
 fromByronLovelace = L.Coin . Byron.lovelaceToInteger
 
 fromShelleyDeltaLovelace :: L.DeltaCoin -> L.Coin
 fromShelleyDeltaLovelace (L.DeltaCoin d) = L.Coin d
-
 
 -- ----------------------------------------------------------------------------
 -- Multi asset Value
@@ -131,60 +128,62 @@ lovelaceToQuantity (L.Coin x) = Quantity x
 quantityToLovelace :: Quantity -> L.Coin
 quantityToLovelace (Quantity x) = L.Coin x
 
-
-newtype PolicyId = PolicyId { unPolicyId :: ScriptHash }
+newtype PolicyId = PolicyId {unPolicyId :: ScriptHash}
   deriving stock (Eq, Ord)
   deriving (Show, IsString, ToJSON, FromJSON) via UsingRawBytesHex PolicyId
 
 instance HasTypeProxy PolicyId where
-    data AsType PolicyId = AsPolicyId
-    proxyToAsType _ = AsPolicyId
+  data AsType PolicyId = AsPolicyId
+  proxyToAsType _ = AsPolicyId
 
 instance SerialiseAsRawBytes PolicyId where
-    serialiseToRawBytes (PolicyId sh) = serialiseToRawBytes sh
-    deserialiseFromRawBytes AsPolicyId bs =
-      PolicyId <$> deserialiseFromRawBytes AsScriptHash bs
+  serialiseToRawBytes (PolicyId sh) = serialiseToRawBytes sh
+  deserialiseFromRawBytes AsPolicyId bs =
+    PolicyId <$> deserialiseFromRawBytes AsScriptHash bs
 
 scriptPolicyId :: Script lang -> PolicyId
 scriptPolicyId = PolicyId . hashScript
 
-
 newtype AssetName = AssetName ByteString
   deriving stock (Eq, Ord)
   deriving newtype (Show)
-  deriving (ToJSON, FromJSON, ToJSONKey, FromJSONKey)
+  deriving
+    (ToJSON, FromJSON, ToJSONKey, FromJSONKey)
     via UsingRawBytesHex AssetName
 
 instance IsString AssetName where
-    fromString s
-      | let bs = Text.encodeUtf8 (Text.pack s)
-      , BS.length bs <= 32 = AssetName (BSC.pack s)
-      | otherwise          = error "fromString: AssetName over 32 bytes"
+  fromString s
+    | let bs = Text.encodeUtf8 (Text.pack s)
+    , BS.length bs <= 32 =
+        AssetName (BSC.pack s)
+    | otherwise = error "fromString: AssetName over 32 bytes"
 
 instance HasTypeProxy AssetName where
-    data AsType AssetName = AsAssetName
-    proxyToAsType _ = AsAssetName
+  data AsType AssetName = AsAssetName
+  proxyToAsType _ = AsAssetName
 
 instance SerialiseAsRawBytes AssetName where
-    serialiseToRawBytes (AssetName bs) = bs
-    deserialiseFromRawBytes AsAssetName bs
-      | BS.length bs <= 32 = Right (AssetName bs)
-      | otherwise          = Left $ SerialiseAsRawBytesError $
-          "Unable to deserialise AssetName (the bytestring should be no longer than 32 bytes long " <>
-          "which corresponds to a hex representation of 64 characters)"
+  serialiseToRawBytes (AssetName bs) = bs
+  deserialiseFromRawBytes AsAssetName bs
+    | BS.length bs <= 32 = Right (AssetName bs)
+    | otherwise =
+        Left $
+          SerialiseAsRawBytesError $
+            "Unable to deserialise AssetName (the bytestring should be no longer than 32 bytes long "
+              <> "which corresponds to a hex representation of 64 characters)"
 
-
-data AssetId = AdaAssetId
-             | AssetId !PolicyId !AssetName
+data AssetId
+  = AdaAssetId
+  | AssetId !PolicyId !AssetName
   deriving (Eq, Ord, Show)
 
-
 newtype Value = Value (Map AssetId Quantity)
-  deriving Eq
+  deriving (Eq)
 
 instance Show Value where
-  showsPrec d v = showParen (d > 10) $
-    showString "valueFromList " . shows (valueToList v)
+  showsPrec d v =
+    showParen (d > 10) $
+      showString "valueFromList " . shows (valueToList v)
 
 instance Semigroup Value where
   Value a <> Value b = Value (mergeAssetMaps a b)
@@ -192,22 +191,22 @@ instance Semigroup Value where
 instance Monoid Value where
   mempty = Value Map.empty
 
-
 {-# NOINLINE mergeAssetMaps #-} -- as per advice in Data.Map.Merge docs
-mergeAssetMaps :: Map AssetId Quantity
-               -> Map AssetId Quantity
-               -> Map AssetId Quantity
+mergeAssetMaps
+  :: Map AssetId Quantity
+  -> Map AssetId Quantity
+  -> Map AssetId Quantity
 mergeAssetMaps =
-    Map.merge
-      Map.preserveMissing
-      Map.preserveMissing
-      (Map.zipWithMaybeMatched mergeQuantity)
-  where
-    mergeQuantity :: AssetId -> Quantity -> Quantity -> Maybe Quantity
-    mergeQuantity _k a b =
-      case a <> b of
-        Quantity 0 -> Nothing
-        c          -> Just c
+  Map.merge
+    Map.preserveMissing
+    Map.preserveMissing
+    (Map.zipWithMaybeMatched mergeQuantity)
+ where
+  mergeQuantity :: AssetId -> Quantity -> Quantity -> Maybe Quantity
+  mergeQuantity _k a b =
+    case a <> b of
+      Quantity 0 -> Nothing
+      c -> Just c
 
 instance ToJSON Value where
   toJSON = toJSON . valueToNestedRep
@@ -215,24 +214,24 @@ instance ToJSON Value where
 instance FromJSON Value where
   parseJSON v = valueFromNestedRep <$> parseJSON v
 
-
 selectAsset :: Value -> (AssetId -> Quantity)
 selectAsset (Value m) a = Map.findWithDefault mempty a m
 
 valueFromList :: [(AssetId, Quantity)] -> Value
-valueFromList = Value
-              . Map.filter (/= 0)
-              . Map.fromListWith (<>)
+valueFromList =
+  Value
+    . Map.filter (/= 0)
+    . Map.fromListWith (<>)
 
 valueToList :: Value -> [(AssetId, Quantity)]
 valueToList (Value m) = Map.toList m
 
 -- | This lets you write @a - b@ as @a <> negateValue b@.
---
 negateValue :: Value -> Value
 negateValue (Value m) = Value (Map.map negate m)
 
-negateLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> L.Value (ShelleyLedgerEra era)
+negateLedgerValue
+  :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> L.Value (ShelleyLedgerEra era)
 negateLedgerValue sbe v =
   caseShelleyToAllegraOrMaryEraOnwards
     (\_ -> v & A.adaAssetL sbe %~ L.Coin . negate . L.unCoin)
@@ -256,27 +255,28 @@ coinToValue = lovelaceToValue -- jky
 --
 -- See also 'selectLovelace' to select the L.Coin quantity from the Value,
 -- ignoring other assets.
---
 valueToLovelace :: Value -> Maybe L.Coin
 valueToLovelace v =
-    case valueToList v of
-      []                -> Just (L.Coin 0)
-      [(AdaAssetId, q)] -> Just (quantityToLovelace q)
-      _                 -> Nothing
+  case valueToList v of
+    [] -> Just (L.Coin 0)
+    [(AdaAssetId, q)] -> Just (quantityToLovelace q)
+    _ -> Nothing
 
 toMaryValue :: Value -> MaryValue StandardCrypto
 toMaryValue v =
-    Mary.valueFromList (L.Coin lovelace) other
-  where
-    Quantity lovelace = selectAsset v AdaAssetId
-    other = [ (toMaryPolicyID pid, toMaryAssetName name, q)
-            | (AssetId pid name, Quantity q) <- valueToList v ]
+  Mary.valueFromList (L.Coin lovelace) other
+ where
+  Quantity lovelace = selectAsset v AdaAssetId
+  other =
+    [ (toMaryPolicyID pid, toMaryAssetName name, q)
+    | (AssetId pid name, Quantity q) <- valueToList v
+    ]
 
-    toMaryPolicyID :: PolicyId -> Mary.PolicyID StandardCrypto
-    toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
+  toMaryPolicyID :: PolicyId -> Mary.PolicyID StandardCrypto
+  toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
 
-    toMaryAssetName :: AssetName -> Mary.AssetName
-    toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
+  toMaryAssetName :: AssetName -> Mary.AssetName
+  toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
 
 toLedgerValue :: MaryEraOnwards era -> Value -> L.Value (ShelleyLedgerEra era)
 toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
@@ -290,18 +290,19 @@ fromLedgerValue sbe v =
 
 fromMaryValue :: MaryValue StandardCrypto -> Value
 fromMaryValue (MaryValue (L.Coin lovelace) other) =
-    Value $
-      --TODO: write QC tests to show it's ok to use Map.fromAscList here
-      Map.fromList $
-        [ (AdaAssetId, Quantity lovelace) | lovelace /= 0 ]
-     ++ [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
-        | (pid, name, q) <- Mary.flattenMultiAsset other ]
-  where
-    fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
-    fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
+  Value $
+    -- TODO: write QC tests to show it's ok to use Map.fromAscList here
+    Map.fromList $
+      [(AdaAssetId, Quantity lovelace) | lovelace /= 0]
+        ++ [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
+           | (pid, name, q) <- Mary.flattenMultiAsset other
+           ]
+ where
+  fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
+  fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
 
-    fromMaryAssetName :: Mary.AssetName -> AssetName
-    fromMaryAssetName (Mary.AssetName n) = AssetName $ Short.fromShort n
+  fromMaryAssetName :: Mary.AssetName -> AssetName
+  fromMaryAssetName (Mary.AssetName n) = AssetName $ Short.fromShort n
 
 -- | Calculate cost of making a UTxO entry for a given 'Value' and
 -- mininimum UTxO value derived from the 'ProtocolParameters'
@@ -315,63 +316,69 @@ calcMinimumDeposit v =
 
 -- | An alternative nested representation for 'Value' that groups assets that
 -- share a 'PolicyId'.
---
 newtype ValueNestedRep = ValueNestedRep [ValueNestedBundle]
   deriving (Eq, Ord, Show)
 
 -- | A bundle within a 'ValueNestedRep' for a single 'PolicyId', or for the
 -- special case of ada.
---
-data ValueNestedBundle = ValueNestedBundleAda Quantity
-                       | ValueNestedBundle PolicyId (Map AssetName Quantity)
+data ValueNestedBundle
+  = ValueNestedBundleAda Quantity
+  | ValueNestedBundle PolicyId (Map AssetName Quantity)
   deriving (Eq, Ord, Show)
-
 
 valueToNestedRep :: Value -> ValueNestedRep
 valueToNestedRep v =
-    -- unflatten all the non-ada assets, and add ada separately
-    ValueNestedRep $
-        [ ValueNestedBundleAda q | let q = selectAsset v AdaAssetId, q /= 0 ]
-     ++ [ ValueNestedBundle pId qs | (pId, qs) <- Map.toList nonAdaAssets ]
-  where
-    nonAdaAssets :: Map PolicyId (Map AssetName Quantity)
-    nonAdaAssets =
-      Map.fromListWith (Map.unionWith (<>))
-        [ (pId, Map.singleton aName q)
-        | (AssetId pId aName, q) <- valueToList v ]
+  -- unflatten all the non-ada assets, and add ada separately
+  ValueNestedRep $
+    [ValueNestedBundleAda q | let q = selectAsset v AdaAssetId, q /= 0]
+      ++ [ValueNestedBundle pId qs | (pId, qs) <- Map.toList nonAdaAssets]
+ where
+  nonAdaAssets :: Map PolicyId (Map AssetName Quantity)
+  nonAdaAssets =
+    Map.fromListWith
+      (Map.unionWith (<>))
+      [ (pId, Map.singleton aName q)
+      | (AssetId pId aName, q) <- valueToList v
+      ]
 
 valueFromNestedRep :: ValueNestedRep -> Value
 valueFromNestedRep (ValueNestedRep bundles) =
-    valueFromList
-      [ (aId, q)
-      | bundle   <- bundles
-      , (aId, q) <- case bundle of
-                      ValueNestedBundleAda  q  -> [ (AdaAssetId, q) ]
-                      ValueNestedBundle pId qs -> [ (AssetId pId aName, q)
-                                                  | (aName, q) <- Map.toList qs ]
-      ]
+  valueFromList
+    [ (aId, q)
+    | bundle <- bundles
+    , (aId, q) <- case bundle of
+        ValueNestedBundleAda q -> [(AdaAssetId, q)]
+        ValueNestedBundle pId qs ->
+          [ (AssetId pId aName, q)
+          | (aName, q) <- Map.toList qs
+          ]
+    ]
 
 instance ToJSON ValueNestedRep where
   toJSON (ValueNestedRep bundles) = object $ map toPair bundles
-    where
-     toPair :: ValueNestedBundle -> (Aeson.Key, Aeson.Value)
-     toPair (ValueNestedBundleAda q) = ("lovelace", toJSON q)
-     toPair (ValueNestedBundle pid assets) = (Aeson.fromText $ renderPolicyId pid, toJSON assets)
+   where
+    toPair :: ValueNestedBundle -> (Aeson.Key, Aeson.Value)
+    toPair (ValueNestedBundleAda q) = ("lovelace", toJSON q)
+    toPair (ValueNestedBundle pid assets) = (Aeson.fromText $ renderPolicyId pid, toJSON assets)
 
 instance FromJSON ValueNestedRep where
   parseJSON =
-      withObject "ValueNestedRep" $ \obj ->
-        ValueNestedRep <$> sequenceA [ parsePid keyValTuple
-                                   | keyValTuple <- KeyMap.toList obj ]
-    where
-      parsePid :: (Aeson.Key, Aeson.Value) -> Parser ValueNestedBundle
-      parsePid ("lovelace", q) = ValueNestedBundleAda <$> parseJSON q
-      parsePid (Aeson.toText -> pid, quantityBundleJson) = do
-        sHash <-
-          failEitherWith
-            (\e -> "Failure when deserialising PolicyId: " ++ displayError e) $
-          deserialiseFromRawBytesHex AsScriptHash $ Text.encodeUtf8 pid
-        ValueNestedBundle (PolicyId sHash) <$> parseJSON quantityBundleJson
+    withObject "ValueNestedRep" $ \obj ->
+      ValueNestedRep
+        <$> sequenceA
+          [ parsePid keyValTuple
+          | keyValTuple <- KeyMap.toList obj
+          ]
+   where
+    parsePid :: (Aeson.Key, Aeson.Value) -> Parser ValueNestedBundle
+    parsePid ("lovelace", q) = ValueNestedBundleAda <$> parseJSON q
+    parsePid (Aeson.toText -> pid, quantityBundleJson) = do
+      sHash <-
+        failEitherWith
+          (\e -> "Failure when deserialising PolicyId: " ++ displayError e)
+          $ deserialiseFromRawBytesHex AsScriptHash
+          $ Text.encodeUtf8 pid
+      ValueNestedBundle (PolicyId sHash) <$> parseJSON quantityBundleJson
 
 -- ----------------------------------------------------------------------------
 -- Printing and pretty-printing
@@ -390,9 +397,9 @@ renderValueSep sep v =
   if List.null valueList
     then "0 lovelace"
     else Text.intercalate sep (map renderAssetIdQuantityPair valueList)
-  where
-    valueList :: [(AssetId, Quantity)]
-    valueList = valueToList v
+ where
+  valueList :: [(AssetId, Quantity)]
+  valueList = valueToList v
 
 renderAssetIdQuantityPair :: (AssetId, Quantity) -> Text
 renderAssetIdQuantityPair (aId, quant) =

@@ -1,5 +1,4 @@
 -- | Cardano eras, sometimes we have to distinguish them.
---
 module Cardano.Api.Eras
   ( -- * Eras
     ByronEra
@@ -11,20 +10,19 @@ module Cardano.Api.Eras
   , ConwayEra
 
     -- * CardanoEra
-  , CardanoEra(..)
-  , IsCardanoEra(..)
-  , AnyCardanoEra(..)
+  , CardanoEra (..)
+  , IsCardanoEra (..)
+  , AnyCardanoEra (..)
   , anyCardanoEra
-  , InAnyCardanoEra(..)
+  , InAnyCardanoEra (..)
   , inAnyCardanoEra
   , cardanoEraConstraints
   , CardanoLedgerEra
-  , ToCardanoEra(..)
+  , ToCardanoEra (..)
 
     -- * IsEon
-  , Eon(..)
-  , EraInEon(..)
-
+  , Eon (..)
+  , EraInEon (..)
   , inEonForEraMaybe
   , forEraInEon
   , forEraInEonMaybe
@@ -34,7 +32,7 @@ module Cardano.Api.Eras
   , monoidForEraInEonA
 
     -- * Data family instances
-  , AsType(AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
+  , AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
 
     -- * Era case handling
 
@@ -47,7 +45,8 @@ module Cardano.Api.Eras
   , caseShelleyToMaryOrAlonzoEraOnwards
   , caseShelleyToAlonzoOrBabbageEraOnwards
   , caseShelleyToBabbageOrConwayEraOnwards
-  ) where
+  )
+where
 
-import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Core
+import Cardano.Api.Eras.Case
+import Cardano.Api.Eras.Core

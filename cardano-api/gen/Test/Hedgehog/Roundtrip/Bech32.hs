@@ -1,10 +1,10 @@
 module Test.Hedgehog.Roundtrip.Bech32
   ( roundtrip_Bech32
-  ) where
+  )
+where
 
-import           Cardano.Api
-
-import           Hedgehog (Gen, Property)
+import Cardano.Api
+import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 
 roundtrip_Bech32

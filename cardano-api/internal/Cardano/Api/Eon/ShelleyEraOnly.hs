@@ -9,19 +9,18 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Eon.ShelleyEraOnly
-  ( ShelleyEraOnly(..)
+  ( ShelleyEraOnly (..)
   , shelleyEraOnlyConstraints
   , shelleyEraOnlyToShelleyBasedEra
-
   , ShelleyEraOnlyConstraints
-  ) where
+  )
+where
 
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras.Core
-import           Cardano.Api.Modes
-import           Cardano.Api.Query.Types
-
-import           Cardano.Binary
+import Cardano.Api.Eon.ShelleyBasedEra
+import Cardano.Api.Eras.Core
+import Cardano.Api.Modes
+import Cardano.Api.Query.Types
+import Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
@@ -31,32 +30,32 @@ import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.Shelley.TxCert as L
+import Data.Aeson
+import Data.Typeable (Typeable)
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 
-import           Data.Aeson
-import           Data.Typeable (Typeable)
-
 data ShelleyEraOnly era where
-  ShelleyEraOnlyShelley  :: ShelleyEraOnly ShelleyEra
+  ShelleyEraOnlyShelley :: ShelleyEraOnly ShelleyEra
 
 deriving instance Show (ShelleyEraOnly era)
+
 deriving instance Eq (ShelleyEraOnly era)
 
 instance Eon ShelleyEraOnly where
   inEonForEra no yes = \case
-    ByronEra    -> no
-    ShelleyEra  -> yes ShelleyEraOnlyShelley
-    AllegraEra  -> no
-    MaryEra     -> no
-    AlonzoEra   -> no
-    BabbageEra  -> no
-    ConwayEra   -> no
+    ByronEra -> no
+    ShelleyEra -> yes ShelleyEraOnlyShelley
+    AllegraEra -> no
+    MaryEra -> no
+    AlonzoEra -> no
+    BabbageEra -> no
+    ConwayEra -> no
 
 instance ToCardanoEra ShelleyEraOnly where
   toCardanoEra = \case
-    ShelleyEraOnlyShelley  -> ShelleyEra
+    ShelleyEraOnlyShelley -> ShelleyEra
 
 type ShelleyEraOnlyConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
@@ -82,7 +81,6 @@ type ShelleyEraOnlyConstraints era =
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , L.TxCert (ShelleyLedgerEra era) ~ L.ShelleyTxCert (ShelleyLedgerEra era)
   , L.Value (ShelleyLedgerEra era) ~ L.Coin
-
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
@@ -91,13 +89,14 @@ type ShelleyEraOnlyConstraints era =
   , Typeable era
   )
 
-shelleyEraOnlyConstraints :: ()
+shelleyEraOnlyConstraints
+  :: ()
   => ShelleyEraOnly era
   -> (ShelleyEraOnlyConstraints era => a)
   -> a
 shelleyEraOnlyConstraints = \case
-  ShelleyEraOnlyShelley  -> id
+  ShelleyEraOnlyShelley -> id
 
 shelleyEraOnlyToShelleyBasedEra :: ShelleyEraOnly era -> ShelleyBasedEra era
 shelleyEraOnlyToShelleyBasedEra = \case
-  ShelleyEraOnlyShelley  -> ShelleyBasedEraShelley
+  ShelleyEraOnlyShelley -> ShelleyBasedEraShelley
