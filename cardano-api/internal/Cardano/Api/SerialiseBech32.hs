@@ -13,20 +13,21 @@ module Cardano.Api.SerialiseBech32
   )
 where
 
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Orphans ()
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.Utils
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils
+
 import qualified Codec.Binary.Bech32 as Bech32
-import Control.Monad (guard)
-import Data.ByteString (ByteString)
-import Data.Data (Data)
+import           Control.Monad (guard)
+import           Data.ByteString (ByteString)
+import           Data.Data (Data)
 import qualified Data.List as List
-import Data.Set (Set)
+import           Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (Text)
+import           Data.Text (Text)
 
 class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
   -- | The human readable prefix to use when encoding this value to Bech32.

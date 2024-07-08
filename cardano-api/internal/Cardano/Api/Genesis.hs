@@ -26,47 +26,44 @@ module Cardano.Api.Genesis
   )
 where
 
-import Cardano.Api.IO
-import Cardano.Api.Utils (unsafeBoundedRational)
+import           Cardano.Api.IO
+import           Cardano.Api.Utils (unsafeBoundedRational)
+
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
-import Cardano.Ledger.Api (CoinPerWord (..))
-import Cardano.Ledger.BaseTypes as Ledger
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.PParams
-  ( DRepVotingThresholds (..)
-  , PoolVotingThresholds (..)
-  , UpgradeConwayPParams (..)
-  )
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Plutus (Language (..))
-import Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
-import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Genesis
-  ( NominalDiffTimeMicro
-  , ShelleyGenesis (..)
-  , emptyGenesisStaking
-  )
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import           Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices (..))
+import           Cardano.Ledger.Api (CoinPerWord (..))
+import           Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import           Cardano.Ledger.Conway.PParams (DRepVotingThresholds (..),
+                   PoolVotingThresholds (..), UpgradeConwayPParams (..))
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Plutus (Language (..))
+import           Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
+import           Cardano.Ledger.Shelley.Core
+import           Cardano.Ledger.Shelley.Genesis (NominalDiffTimeMicro, ShelleyGenesis (..),
+                   emptyGenesisStaking)
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
-import Control.Monad.Trans.Fail.String (errorFail)
-import Data.ByteString (ByteString)
+import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
+
+import           Control.Monad.Trans.Fail.String (errorFail)
+import           Data.ByteString (ByteString)
 import qualified Data.Default.Class as DefaultClass
-import Data.Functor.Identity (Identity)
+import           Data.Functor.Identity (Identity)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
-import Data.Ratio
-import Data.Text (Text)
+import           Data.Ratio
+import           Data.Text (Text)
 import qualified Data.Time as Time
-import Data.Typeable
-import GHC.Stack (HasCallStack)
-import Lens.Micro
-import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
-import Test.Cardano.Ledger.Core.Rational ((%!))
-import Test.Cardano.Ledger.Plutus (testingCostModelV3)
+import           Data.Typeable
+import           GHC.Stack (HasCallStack)
+import           Lens.Micro
+
+import           Test.Cardano.Ledger.Core.Rational ((%!))
+import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
 
 data ShelleyConfig = ShelleyConfig
   { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)

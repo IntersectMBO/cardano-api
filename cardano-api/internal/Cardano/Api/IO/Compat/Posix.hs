@@ -18,39 +18,31 @@ where
 
 #ifdef UNIX
 
-import Cardano.Api.Error (FileError (..))
-import Cardano.Api.IO.Base
-import Control.Exception (IOException, bracket, bracketOnError, try)
-import Control.Monad (forM_, when)
-import Control.Monad.Except (ExceptT, runExceptT)
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
+import           Cardano.Api.Error (FileError (..))
+import           Cardano.Api.IO.Base
+
+import           Control.Exception (IOException, bracket, bracketOnError, try)
+import           Control.Monad (forM_, when)
+import           Control.Monad.Except (ExceptT, runExceptT)
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
-import System.Directory ()
-import System.FilePath ((</>))
-import System.IO (Handle)
+import           System.Directory ()
+import           System.FilePath ((</>))
 import qualified System.IO as IO
-import System.Posix.Files
-  ( fileMode
-  , getFileStatus
-  , groupModes
-  , intersectFileModes
-  , nullFileMode
-  , otherModes
-  , ownerModes
-  , ownerReadMode
-  , setFdOwnerAndGroup
-  , setFileMode
-  , stdFileMode
-  )
-# if MIN_VERSION_unix(2,8,0)
-import System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
+import           System.IO (Handle)
+import           System.Posix.Files (fileMode, getFileStatus, groupModes, intersectFileModes,
+                   nullFileMode, otherModes, ownerModes, ownerReadMode, setFdOwnerAndGroup,
+                   setFileMode, stdFileMode)
+#if MIN_VERSION_unix(2,8,0)
+import           System.Posix.IO (OpenFileFlags (..), OpenMode (..), closeFd, defaultFileFlags,
+                   fdToHandle, openFd)
 #else
-import System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
+import           System.Posix.IO (OpenMode (..), closeFd, defaultFileFlags, fdToHandle, openFd)
 #endif
-import System.Posix.Types (Fd, FileMode)
-import System.Posix.User (getRealUserID)
-import Text.Printf (printf)
+import           System.Posix.Types (Fd, FileMode)
+import           System.Posix.User (getRealUserID)
+import           Text.Printf (printf)
 
 handleFileForWritingWithOwnerPermissionImpl
   :: FilePath
@@ -123,9 +115,9 @@ openFileDescriptor fp openMode =
       ReadOnly ->
         defaultFileFlags
       ReadWrite ->
-        defaultFileFlags {creat = Just stdFileMode}
+        defaultFileFlags{creat = Just stdFileMode}
       WriteOnly ->
-        defaultFileFlags {creat = Just ownerModes}
+        defaultFileFlags{creat = Just ownerModes}
 
 # else
 openFileDescriptor fp openMode =

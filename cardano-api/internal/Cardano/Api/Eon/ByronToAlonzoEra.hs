@@ -14,8 +14,9 @@ module Cardano.Api.Eon.ByronToAlonzoEra
   )
 where
 
-import Cardano.Api.Eras.Core
-import Data.Typeable (Typeable)
+import           Cardano.Api.Eras.Core
+
+import           Data.Typeable (Typeable)
 
 data ByronToAlonzoEra era where
   ByronToAlonzoEraByron :: ByronToAlonzoEra ByronEra

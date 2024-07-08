@@ -9,10 +9,12 @@ module Cardano.Api.Hash
   )
 where
 
-import Cardano.Api.HasTypeProxy
+import           Cardano.Api.HasTypeProxy
+
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Ledger.SafeHash as Ledger
-import Data.Kind (Type)
+
+import           Data.Kind (Type)
 import qualified Data.Text as Text
 
 data family Hash keyrole :: Type

@@ -15,4 +15,4 @@ module Cardano.Api.ChainSync.Client
   )
 where
 
-import Ouroboros.Network.Protocol.ChainSync.Client
+import           Ouroboros.Network.Protocol.ChainSync.Client

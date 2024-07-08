@@ -18,22 +18,24 @@ module Cardano.Api.OperationalCertificate
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Certificate
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Keys.Byron
-import Cardano.Api.Keys.Class
-import Cardano.Api.Keys.Praos
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.ProtocolParameters
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.Tx.Sign
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.Tx.Sign
+
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Protocol.TPraos.OCert as Shelley
-import Data.Word
+
+import           Data.Word
 
 -- ----------------------------------------------------------------------------
 -- Operational certificates
@@ -44,7 +46,7 @@ data OperationalCertificate
       !(Shelley.OCert StandardCrypto)
       !(VerificationKey StakePoolKey)
   deriving (Eq, Show)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 data OperationalCertificateIssueCounter
   = OperationalCertificateIssueCounter
@@ -52,7 +54,7 @@ data OperationalCertificateIssueCounter
   , opCertIssueColdKey :: !(VerificationKey StakePoolKey) -- For consistency checking
   }
   deriving (Eq, Show)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance ToCBOR OperationalCertificate where
   toCBOR (OperationalCertificate ocert vkey) =
@@ -95,7 +97,7 @@ data OperationalCertIssueError
     OperationalCertKeyMismatch
       (VerificationKey StakePoolKey)
       (VerificationKey StakePoolKey)
-  deriving (Show)
+  deriving Show
 
 instance Error OperationalCertIssueError where
   prettyError (OperationalCertKeyMismatch _counterKey _signingKey) =

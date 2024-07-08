@@ -14,24 +14,26 @@ module Cardano.Api.Convenience.Construction
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Fees
-import Cardano.Api.ProtocolParameters
-import Cardano.Api.Query
-import Cardano.Api.Tx.Body
-import Cardano.Api.Tx.Sign
-import Cardano.Api.Utils
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Fees
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
+import           Cardano.Api.Utils
+
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
+
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import           Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 
 -- | Construct a balanced transaction.

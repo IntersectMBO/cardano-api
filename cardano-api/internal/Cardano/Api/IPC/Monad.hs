@@ -9,17 +9,19 @@ module Cardano.Api.IPC.Monad
   )
 where
 
-import Cardano.Api.Block
-import Cardano.Api.IPC
-import Cardano.Api.IPC.Version
-import Cardano.Ledger.Shelley.Scripts ()
-import Control.Concurrent.STM
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Reader
-import Control.Monad.Trans.Cont
+import           Cardano.Api.Block
+import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Version
+
+import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
+
+import           Control.Concurrent.STM
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader
+import           Control.Monad.Trans.Cont
 
 {- HLINT ignore "Use const" -}
 {- HLINT ignore "Use let" -}

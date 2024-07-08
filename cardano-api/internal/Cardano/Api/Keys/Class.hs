@@ -13,16 +13,18 @@ module Cardano.Api.Keys.Class
   )
 where
 
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import Control.Monad.IO.Class
-import Data.Kind (Type)
-import System.Random (StdGen)
+
+import           Control.Monad.IO.Class
+import           Data.Kind (Type)
 import qualified System.Random as Random
+import           System.Random (StdGen)
 
 -- | An interface for cryptographic keys used for signatures with a 'SigningKey'
 -- and a 'VerificationKey' key.

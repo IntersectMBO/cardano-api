@@ -18,19 +18,21 @@ module Cardano.Api.Crypto.Ed25519Bip32
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Crypto.DSIGN.Class
-import Cardano.Crypto.Seed
-import Cardano.Crypto.Util (SignableRepresentation (..))
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import           Cardano.Crypto.DSIGN.Class
+import           Cardano.Crypto.Seed
+import           Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as CC
-import Control.DeepSeq (NFData)
-import qualified Crypto.ECC.Edwards25519 as Ed25519
-import Crypto.Error (eitherCryptoError)
-import Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
-import Data.ByteString (ByteString)
+
+import           Control.DeepSeq (NFData)
+import           Data.ByteArray as BA (ByteArrayAccess, ScrubbedBytes, convert)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeap (..), NoThunks)
+import           GHC.Generics (Generic)
+
+import qualified Crypto.ECC.Edwards25519 as Ed25519
+import           Crypto.Error (eitherCryptoError)
+import           NoThunks.Class (InspectHeap (..), NoThunks)
 
 data Ed25519Bip32DSIGN
 
@@ -52,17 +54,17 @@ instance DSIGNAlgorithm Ed25519Bip32DSIGN where
 
   newtype VerKeyDSIGN Ed25519Bip32DSIGN = VerKeyEd25519Bip32DSIGN CC.XPub
     deriving (Show, Eq, Generic)
-    deriving newtype (NFData)
-    deriving (NoThunks) via InspectHeap CC.XPub
+    deriving newtype NFData
+    deriving NoThunks via InspectHeap CC.XPub
 
   newtype SignKeyDSIGN Ed25519Bip32DSIGN = SignKeyEd25519Bip32DSIGN CC.XPrv
     deriving (Generic, ByteArrayAccess)
-    deriving newtype (NFData)
-    deriving (NoThunks) via InspectHeap CC.XPrv
+    deriving newtype NFData
+    deriving NoThunks via InspectHeap CC.XPrv
 
   newtype SigDSIGN Ed25519Bip32DSIGN = SigEd25519Bip32DSIGN CC.XSignature
     deriving (Show, Eq, Generic, ByteArrayAccess)
-    deriving (NoThunks) via InspectHeap CC.XSignature
+    deriving NoThunks via InspectHeap CC.XSignature
 
   --
   -- Metadata and basic key operations

@@ -48,5 +48,5 @@ module Cardano.Api.Eras
   )
 where
 
-import Cardano.Api.Eras.Case
-import Cardano.Api.Eras.Core
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core

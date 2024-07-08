@@ -10,30 +10,26 @@ module Test.Cardano.Api.ProtocolParameters
   )
 where
 
-import Cardano.Api
-  ( CardanoEra (..)
-  , ProtocolParametersConversionError
-  , inEonForEra
-  , prettyPrintJSON
-  )
-import Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
-import Cardano.Api.Ledger (PParams (..))
-import Cardano.Api.ProtocolParameters
-  ( LedgerProtocolParameters (..)
-  , convertToLedgerProtocolParameters
-  , fromLedgerPParams
-  )
-import Control.Monad (void)
-import Data.Aeson (FromJSON, Object, ToJSON, eitherDecode)
+import           Cardano.Api (CardanoEra (..), ProtocolParametersConversionError, inEonForEra,
+                   prettyPrintJSON)
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
+import           Cardano.Api.Ledger (PParams (..))
+import           Cardano.Api.ProtocolParameters (LedgerProtocolParameters (..),
+                   convertToLedgerProtocolParameters, fromLedgerPParams)
+
+import           Control.Monad (void)
+import           Data.Aeson (FromJSON, Object, ToJSON, eitherDecode)
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.ByteString.Lazy as LBS
-import Data.Foldable (foldl')
-import Hedgehog (Gen, MonadTest, Property, forAll, property, success, (===))
-import Hedgehog.Extras (leftFail)
-import Test.Gen.Cardano.Api.Typed (genProtocolParameters)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import           Data.Foldable (foldl')
+
+import           Test.Gen.Cardano.Api.Typed (genProtocolParameters)
+
+import           Hedgehog (Gen, MonadTest, Property, forAll, property, success, (===))
+import           Hedgehog.Extras (leftFail)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 
 -- Originally, cardano-api used a different type than cardano-ledger to represent
 -- protocol parameters. From conway on, we aim to unify those types and use PParams.
@@ -133,7 +129,7 @@ data ValidatedSerializedPair era = ValidatedSerializedPair
   , serializedPParams :: LBS.ByteString
   -- ^ Serialized cardano-ledger's `PParams` as a ByteString.
   }
-  deriving (Show)
+  deriving Show
 
 -- | Produces a pair of a valid cardano-api's legacy ProtocolParameters and corresponding cardano-ledger's PParams by doing a round trip
 genValidSerializedPair

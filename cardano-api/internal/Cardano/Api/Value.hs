@@ -57,44 +57,46 @@ module Cardano.Api.Value
   )
 where
 
-import Cardano.Api.Eon.MaryEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras.Case
-import Cardano.Api.Error (displayError)
-import Cardano.Api.HasTypeProxy
+import           Cardano.Api.Eon.MaryEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Error (displayError)
+import           Cardano.Api.HasTypeProxy
 import qualified Cardano.Api.Ledger.Lens as A
-import Cardano.Api.Script
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseUsing
-import Cardano.Api.Utils (failEitherWith)
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Utils (failEitherWith)
+
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Coin as L
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
+import           Cardano.Ledger.Mary.Value (MaryValue (..))
 import qualified Cardano.Ledger.Mary.Value as Mary
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
+
+import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
-import Data.Aeson.Types (Parser, ToJSONKey)
-import Data.ByteString (ByteString)
+import           Data.Aeson.Types (Parser, ToJSONKey)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Short as Short
-import Data.Data (Data)
-import Data.Function ((&))
-import Data.Group (invert)
+import           Data.Data (Data)
+import           Data.Function ((&))
+import           Data.Group (invert)
 import qualified Data.List as List
 import qualified Data.Map.Merge.Strict as Map
-import Data.Map.Strict (Map)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.String (IsString (..))
-import Data.Text (Text)
+import           Data.String (IsString (..))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Lens.Micro ((%~))
+import           Lens.Micro ((%~))
 
 toByronLovelace :: L.Coin -> Maybe Byron.Lovelace
 toByronLovelace (L.Coin x) =
@@ -113,7 +115,7 @@ fromShelleyDeltaLovelace (L.DeltaCoin d) = L.Coin d
 --
 
 newtype Quantity = Quantity Integer
-  deriving stock (Data)
+  deriving stock Data
   deriving newtype (Eq, Ord, Num, Show, ToJSON, FromJSON)
 
 instance Semigroup Quantity where
@@ -146,7 +148,7 @@ scriptPolicyId = PolicyId . hashScript
 
 newtype AssetName = AssetName ByteString
   deriving stock (Eq, Ord)
-  deriving newtype (Show)
+  deriving newtype Show
   deriving
     (ToJSON, FromJSON, ToJSONKey, FromJSONKey)
     via UsingRawBytesHex AssetName
@@ -178,7 +180,7 @@ data AssetId
   deriving (Eq, Ord, Show)
 
 newtype Value = Value (Map AssetId Quantity)
-  deriving (Eq)
+  deriving Eq
 
 instance Show Value where
   showsPrec d v =

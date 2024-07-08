@@ -28,15 +28,16 @@ module Cardano.Api.Keys.Byron
   )
 where
 
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Class
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.SerialiseUsing
-import Cardano.Binary (cborError, toStrictByteString)
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+
+import           Cardano.Binary (cborError, toStrictByteString)
 import qualified Cardano.Chain.Common as Crypto
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hashing as Crypto
@@ -44,16 +45,17 @@ import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Signing as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto.HD
 import qualified Cardano.Crypto.Wallet as Wallet
+
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Read as CBOR
-import Control.Monad
-import Data.Bifunctor
+import           Control.Monad
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LB
-import Data.Either.Combinators
-import Data.String (IsString)
-import Data.Text (Text)
+import           Data.Either.Combinators
+import           Data.String (IsString)
+import           Data.Text (Text)
 import qualified Data.Text as Text
-import Formatting (build, formatToString)
+import           Formatting (build, formatToString)
 
 -- | Byron-era payment keys. Used for Byron addresses and witnessing
 -- transactions that spend from these addresses.
@@ -92,16 +94,16 @@ toByronSigningKey bWit =
 instance Key ByronKey where
   newtype VerificationKey ByronKey
     = ByronVerificationKey Crypto.VerificationKey
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey ByronKey
     = ByronSigningKey Crypto.SigningKey
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType ByronKey -> Crypto.Seed -> SigningKey ByronKey
   deterministicSigningKey AsByronKey seed =
@@ -147,7 +149,7 @@ newtype instance Hash ByronKey = ByronKeyHash Crypto.KeyHash
   deriving (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash ByronKey) where
   serialiseToRawBytes (ByronKeyHash (Crypto.KeyHash vkh)) =
@@ -183,16 +185,16 @@ instance IsByronKey ByronKey where
 instance Key ByronKeyLegacy where
   newtype VerificationKey ByronKeyLegacy
     = ByronVerificationKeyLegacy Crypto.VerificationKey
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKeyLegacy)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey ByronKeyLegacy
     = ByronSigningKeyLegacy Crypto.SigningKey
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKeyLegacy)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType ByronKeyLegacy -> Crypto.Seed -> SigningKey ByronKeyLegacy
   deterministicSigningKey _ _ = error "Please generate a non legacy Byron key instead"
@@ -222,7 +224,7 @@ newtype instance Hash ByronKeyLegacy = ByronKeyHashLegacy Crypto.KeyHash
   deriving (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKeyLegacy)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKeyLegacy)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash ByronKeyLegacy) where
   serialiseToRawBytes (ByronKeyHashLegacy (Crypto.KeyHash vkh)) =

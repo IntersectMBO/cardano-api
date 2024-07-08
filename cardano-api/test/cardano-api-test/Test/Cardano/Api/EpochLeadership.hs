@@ -8,47 +8,43 @@ module Test.Cardano.Api.EpochLeadership
   )
 where
 
-import Cardano.Api
-  ( Key (verificationKeyHash)
-  , deterministicSigningKey
-  , getVerificationKey
-  )
-import Cardano.Api.Block (EpochNo (..), Hash (StakePoolKeyHash), SlotNo (..))
-import Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
-import Cardano.Api.Genesis (shelleyGenesisDefaults)
-import Cardano.Api.GenesisParameters (EpochSize (..))
-import Cardano.Api.Ledger (KeyHash (..), StandardCrypto, toCBOR)
-import Cardano.Api.LedgerState (currentEpochEligibleLeadershipSlots)
-import Cardano.Api.Modes (ConsensusProtocol)
-import Cardano.Api.Query
-  ( ProtocolState (..)
-  , SerialisedPoolDistribution (SerialisedPoolDistribution)
-  )
-import Cardano.Api.Shelley (Hash (VrfKeyHash), VrfKey, proxyToAsType, unStakePoolKeyHash)
-import Cardano.Binary (ToCBOR, serialize)
-import Cardano.Crypto.Seed (mkSeedFromBytes)
-import Cardano.Ledger.Api.PParams (emptyPParams)
-import Cardano.Ledger.BaseTypes (Nonce (..), WithOrigin (..))
-import Cardano.Ledger.Binary.Encoding (toByronCBOR)
+import           Cardano.Api (Key (verificationKeyHash), deterministicSigningKey,
+                   getVerificationKey)
+import           Cardano.Api.Block (EpochNo (..), Hash (StakePoolKeyHash), SlotNo (..))
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
+import           Cardano.Api.Genesis (shelleyGenesisDefaults)
+import           Cardano.Api.GenesisParameters (EpochSize (..))
+import           Cardano.Api.Ledger (KeyHash (..), StandardCrypto, toCBOR)
+import           Cardano.Api.LedgerState (currentEpochEligibleLeadershipSlots)
+import           Cardano.Api.Modes (ConsensusProtocol)
+import           Cardano.Api.Query (ProtocolState (..),
+                   SerialisedPoolDistribution (SerialisedPoolDistribution))
+import           Cardano.Api.Shelley (Hash (VrfKeyHash), VrfKey, proxyToAsType, unStakePoolKeyHash)
+
+import           Cardano.Binary (ToCBOR, serialize)
+import           Cardano.Crypto.Seed (mkSeedFromBytes)
+import           Cardano.Ledger.Api.PParams (emptyPParams)
+import           Cardano.Ledger.BaseTypes (Nonce (..), WithOrigin (..))
+import           Cardano.Ledger.Binary.Encoding (toByronCBOR)
 import qualified Cardano.Protocol.TPraos.API as API
-import Cardano.Slotting.EpochInfo (EpochInfo (..))
-import Cardano.Slotting.Time (RelativeTime (..), mkSlotLength)
+import           Cardano.Slotting.EpochInfo (EpochInfo (..))
+import           Cardano.Slotting.Time (RelativeTime (..), mkSlotLength)
+import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosState (..))
+import           Ouroboros.Consensus.Shelley.Ledger.Query.Types (IndividualPoolStake (..),
+                   PoolDistr (..))
+import           Ouroboros.Network.Block (Serialised (..))
+
 import qualified Data.Map as Map
-import Data.Proxy (Proxy (..))
-import Data.Ratio ((%))
+import           Data.Proxy (Proxy (..))
+import           Data.Ratio ((%))
 import qualified Data.Set as Set
-import Data.Time.Clock (secondsToNominalDiffTime)
+import           Data.Time.Clock (secondsToNominalDiffTime)
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
-import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
-import Ouroboros.Consensus.Protocol.TPraos (TPraosState (..))
-import Ouroboros.Consensus.Shelley.Ledger.Query.Types
-  ( IndividualPoolStake (..)
-  , PoolDistr (..)
-  )
-import Ouroboros.Network.Block (Serialised (..))
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 
 --
 -- The list of all tests

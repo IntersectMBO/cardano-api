@@ -8,21 +8,22 @@ module Cardano.Api.SerialiseUsing
   )
 where
 
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseBech32
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseJSON
-import Cardano.Api.SerialiseRaw
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+
 import qualified Data.Aeson.Types as Aeson
-import Data.ByteString (ByteString)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
-import Data.String (IsString (..))
+import           Data.String (IsString (..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Data.Typeable (tyConName, typeRep, typeRepTyCon)
+import           Data.Typeable (tyConName, typeRep, typeRepTyCon)
 
 -- | For use with @deriving via@, to provide 'ToCBOR' and 'FromCBOR' instances,
 -- based on the 'SerialiseAsRawBytes' instance.

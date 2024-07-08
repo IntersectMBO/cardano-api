@@ -37,30 +37,32 @@ module Cardano.Api.SerialiseTextEnvelope
   )
 where
 
-import Cardano.Api.Eras
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.IO
-import Cardano.Api.Orphans ()
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.Utils (readFileBlocking)
-import Cardano.Binary (DecoderError)
-import Control.Monad (unless)
-import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
-import Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO
+import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.Utils (readFileBlocking)
+
+import           Cardano.Binary (DecoderError)
+
+import           Control.Monad (unless)
+import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither)
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
-import Data.Bifunctor (first)
-import Data.ByteString (ByteString)
+import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
+import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
-import Data.Data (Data)
+import           Data.Data (Data)
 import qualified Data.List as List
-import Data.Maybe (fromMaybe)
-import Data.String (IsString)
-import Data.Text (Text)
+import           Data.Maybe (fromMaybe)
+import           Data.String (IsString)
+import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 
 -- ----------------------------------------------------------------------------
@@ -96,7 +98,7 @@ instance HasTypeProxy TextEnvelope where
   proxyToAsType _ = AsTextEnvelope
 
 instance ToJSON TextEnvelope where
-  toJSON TextEnvelope {teType, teDescription, teRawCBOR} =
+  toJSON TextEnvelope{teType, teDescription, teRawCBOR} =
     object
       [ "type" .= teType
       , "description" .= teDescription
@@ -114,7 +116,7 @@ instance FromJSON TextEnvelope where
       either fail return . Base16.decode . Text.encodeUtf8 =<< parseJSON v
 
 textEnvelopeJSONConfig :: Config
-textEnvelopeJSONConfig = defConfig {confCompare = textEnvelopeJSONKeyOrder}
+textEnvelopeJSONConfig = defConfig{confCompare = textEnvelopeJSONKeyOrder}
 
 textEnvelopeJSONKeyOrder :: Text -> Text -> Ordering
 textEnvelopeJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
@@ -154,7 +156,7 @@ instance Error TextEnvelopeError where
 --
 -- For example, one might check that the type is \"TxSignedShelley\".
 expectTextEnvelopeOfType :: TextEnvelopeType -> TextEnvelope -> Either TextEnvelopeError ()
-expectTextEnvelopeOfType expectedType TextEnvelope {teType = actualType} =
+expectTextEnvelopeOfType expectedType TextEnvelope{teType = actualType} =
   unless (expectedType `legacyComparison` actualType) $
     Left (TextEnvelopeTypeError [expectedType] actualType)
 

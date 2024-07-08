@@ -74,37 +74,23 @@ module Cardano.Api.IPC
   )
 where
 
-import Cardano.Api.Block
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.IO
-import Cardano.Api.IPC.Version
-import Cardano.Api.InMode
-import Cardano.Api.Modes
-import Cardano.Api.Monad.Error (ExceptT (..))
-import Cardano.Api.NetworkId
-import Cardano.Api.Protocol
-import Cardano.Api.Query
-import Cardano.Api.Tx.Body
-import Cardano.Api.Tx.Sign
+import           Cardano.Api.Block
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.InMode
+import           Cardano.Api.IO
+import           Cardano.Api.IPC.Version
+import           Cardano.Api.Modes
+import           Cardano.Api.Monad.Error (ExceptT (..))
+import           Cardano.Api.NetworkId
+import           Cardano.Api.Protocol
+import           Cardano.Api.Query
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
+
 import qualified Cardano.Ledger.Api as L
-import Control.Concurrent.STM
-  ( TMVar
-  , atomically
-  , newEmptyTMVarIO
-  , putTMVar
-  , takeTMVar
-  , tryPutTMVar
-  )
-import Control.Monad (void)
-import Control.Monad.IO.Class
-import Control.Tracer (nullTracer)
-import Data.Aeson (ToJSON, object, toJSON, (.=))
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
-import Data.Void (Void)
 import qualified Ouroboros.Consensus.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import Ouroboros.Consensus.Cardano.CanHardFork
+import           Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
@@ -113,32 +99,36 @@ import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as Consensus
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
-import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
+import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
-import Ouroboros.Network.NodeToClient
-  ( NodeToClientProtocols (..)
-  , NodeToClientVersionData (..)
-  )
+import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
+                   NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as Net
-import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
-import Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
-import Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
-import Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
+import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
+import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
-import Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
-import Ouroboros.Network.Protocol.LocalTxMonitor.Client
-  ( LocalTxMonitorClient (..)
-  , localTxMonitorClientPeer
-  )
+import           Ouroboros.Network.Protocol.LocalTxMonitor.Client (LocalTxMonitorClient (..),
+                   localTxMonitorClientPeer)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Client as CTxMon
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as Consensus
-import Ouroboros.Network.Protocol.LocalTxSubmission.Client
-  ( LocalTxSubmissionClient (..)
-  , SubmitResult (..)
-  )
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
+                   SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
+
+import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
+                   tryPutTMVar)
+import           Control.Monad (void)
+import           Control.Monad.IO.Class
+import           Control.Tracer (nullTracer)
+import           Data.Aeson (ToJSON, object, toJSON, (.=))
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Map.Strict as Map
+import           Data.Void (Void)
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols

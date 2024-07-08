@@ -48,24 +48,25 @@ module Cardano.Api.Fees
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.AlonzoEraOnwards
-import Cardano.Api.Eon.BabbageEraOnwards
-import Cardano.Api.Eon.MaryEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras.Case
-import Cardano.Api.Eras.Core
-import Cardano.Api.Error
-import Cardano.Api.Feature
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.MaryEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Error
+import           Cardano.Api.Feature
 import qualified Cardano.Api.Ledger.Lens as A
-import Cardano.Api.Pretty
-import Cardano.Api.ProtocolParameters
-import Cardano.Api.Query
-import Cardano.Api.Script
-import Cardano.Api.Tx.Body
-import Cardano.Api.Tx.Sign
-import Cardano.Api.Value
+import           Cardano.Api.Pretty
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query
+import           Cardano.Api.Script
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
+import           Cardano.Api.Value
+
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -73,28 +74,29 @@ import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Core as L
-import Cardano.Ledger.Credential as Ledger (Credential)
+import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Plutus.Language as Plutus
-import Control.Monad (forM_)
-import Data.Bifunctor (bimap, first, second)
-import Data.ByteString.Short (ShortByteString)
-import Data.Foldable (toList)
-import Data.Function ((&))
-import qualified Data.List as List
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, maybeToList)
-import qualified Data.OSet.Strict as OSet
-import Data.Ratio
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Text (Text)
-import qualified Data.Text as Text
-import Lens.Micro ((.~), (^.))
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
+
+import           Control.Monad (forM_)
+import           Data.Bifunctor (bimap, first, second)
+import           Data.ByteString.Short (ShortByteString)
+import           Data.Foldable (toList)
+import           Data.Function ((&))
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import qualified Data.OSet.Strict as OSet
+import           Data.Ratio
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
 
@@ -105,7 +107,7 @@ type EvalTxExecutionUnitsLog = [Text]
 data AutoBalanceError era
   = AutoBalanceEstimationError (TxFeeEstimationError era)
   | AutoBalanceCalculationError (TxBodyErrorAutoBalance era)
-  deriving (Show)
+  deriving Show
 
 instance Error (AutoBalanceError era) where
   prettyError = \case
@@ -173,7 +175,7 @@ data TxFeeEstimationError era
   | TxFeeEstimationxBodyError TxBodyError
   | TxFeeEstimationFinalConstructionError TxBodyError
   | TxFeeEstimationOnlyMaryOnwardsSupportedError
-  deriving (Show)
+  deriving Show
 
 instance Error (TxFeeEstimationError era) where
   prettyError = \case
@@ -460,7 +462,7 @@ estimateTransactionKeyWitnessCount
     , txUpdateProposal
     } =
     fromIntegral $
-      length [() | (_txin, BuildTxWith KeyWitness {}) <- txIns]
+      length [() | (_txin, BuildTxWith KeyWitness{}) <- txIns]
         + case txInsCollateral of
           TxInsCollateral _ txins ->
             length txins
@@ -471,11 +473,11 @@ estimateTransactionKeyWitnessCount
           _ -> 0
         + case txWithdrawals of
           TxWithdrawals _ withdrawals ->
-            length [() | (_, _, BuildTxWith KeyWitness {}) <- withdrawals]
+            length [() | (_, _, BuildTxWith KeyWitness{}) <- withdrawals]
           _ -> 0
         + case txCertificates of
           TxCertificates _ _ (BuildTxWith witnesses) ->
-            length [() | KeyWitness {} <- Map.elems witnesses]
+            length [() | KeyWitness{} <- Map.elems witnesses]
           _ -> 0
         + case txUpdateProposal of
           TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _) ->
@@ -646,7 +648,7 @@ instance Error (TransactionValidityError era) where
         ]
      where
       timeHorizonSlots :: Consensus.PastHorizonException -> Word
-      timeHorizonSlots Consensus.PastHorizon {Consensus.pastHorizonSummary}
+      timeHorizonSlots Consensus.PastHorizon{Consensus.pastHorizonSummary}
         | eraSummaries@(_ : _) <- pastHorizonSummary
         , Consensus.StandardSafeZone slots <-
             (Consensus.eraSafeZone . Consensus.eraParams . last) eraSummaries =
@@ -863,7 +865,7 @@ data TxBodyErrorAutoBalance era
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
       ScriptWitnessIndex
       (Map ScriptWitnessIndex ExecutionUnits)
-  deriving (Show)
+  deriving Show
 
 instance Error (TxBodyErrorAutoBalance era) where
   prettyError = \case
@@ -942,19 +944,19 @@ data BalancedTxBody era
       -- ^ Transaction balance (change output)
       L.Coin
       -- ^ Estimated transaction fee
-  deriving (Show)
+  deriving Show
 
 newtype RequiredShelleyKeyWitnesses
   = RequiredShelleyKeyWitnesses {unRequiredShelleyKeyWitnesses :: Int}
-  deriving (Show)
+  deriving Show
 
 newtype RequiredByronKeyWitnesses
   = RequiredByronKeyWitnesses {unRequiredByronKeyWitnesses :: Int}
-  deriving (Show)
+  deriving Show
 
 newtype TotalReferenceScriptsSize
   = TotalReferenceScriptsSize {unTotalReferenceScriptsSize :: Int}
-  deriving (Show)
+  deriving Show
 
 data FeeEstimationMode era
   = -- | Accurate fee calculation.
@@ -1274,8 +1276,8 @@ calcReturnAndTotalCollateral
   -- ^ Total available collateral in lovelace
   -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
 calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _ = (TxReturnCollateralNone, TxTotalCollateralNone)
-calcReturnAndTotalCollateral _ _ _ _ rc@TxReturnCollateral {} tc@TxTotalCollateral {} _ _ = (rc, tc)
-calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral {} txReturnCollateral txTotalCollateral cAddr totalAvailableAda =
+calcReturnAndTotalCollateral _ _ _ _ rc@TxReturnCollateral{} tc@TxTotalCollateral{} _ _ = (rc, tc)
+calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableAda =
   do
     let colPerc = pp' ^. Ledger.ppCollateralPercentageL
     -- We must first figure out how much lovelace we have committed
@@ -1297,12 +1299,12 @@ calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral {} txReturnCollat
 #if MIN_VERSION_base(4,16,0)
 #else
       -- For ghc-9.2, this pattern match is redundant, but ghc-8.10 will complain if its missing.
-      (rc@TxReturnCollateral {}, tc@TxTotalCollateral {}) ->
+      (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
         (rc, tc)
 #endif
-      (rc@TxReturnCollateral {}, TxTotalCollateralNone) ->
+      (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
         (rc, TxTotalCollateralNone)
-      (TxReturnCollateralNone, tc@TxTotalCollateral {}) ->
+      (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
         (TxReturnCollateralNone, tc)
       (TxReturnCollateralNone, TxTotalCollateralNone) ->
         if totalCollateralLovelace * 100 >= requiredCollateral
@@ -1367,10 +1369,10 @@ maybeDummyTotalCollAndCollReturnOutput
   -> TxBodyContent BuildTx era
   -> AddressInEra era
   -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
-maybeDummyTotalCollAndCollReturnOutput sbe TxBodyContent {txInsCollateral, txReturnCollateral, txTotalCollateral} cAddr =
+maybeDummyTotalCollAndCollReturnOutput sbe TxBodyContent{txInsCollateral, txReturnCollateral, txTotalCollateral} cAddr =
   case txInsCollateral of
     TxInsCollateralNone -> (TxReturnCollateralNone, TxTotalCollateralNone)
-    TxInsCollateral {} ->
+    TxInsCollateral{} ->
       forShelleyBasedEraInEon
         sbe
         (TxReturnCollateralNone, TxTotalCollateralNone)
@@ -1386,9 +1388,9 @@ maybeDummyTotalCollAndCollReturnOutput sbe TxBodyContent {txInsCollateral, txRet
                     )
                 dummyTotCol = TxTotalCollateral w (L.Coin (2 ^ (32 :: Integer) - 1))
              in case (txReturnCollateral, txTotalCollateral) of
-                  (rc@TxReturnCollateral {}, tc@TxTotalCollateral {}) -> (rc, tc)
-                  (rc@TxReturnCollateral {}, TxTotalCollateralNone) -> (rc, dummyTotCol)
-                  (TxReturnCollateralNone, tc@TxTotalCollateral {}) -> (dummyRetCol, tc)
+                  (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) -> (rc, tc)
+                  (rc@TxReturnCollateral{}, TxTotalCollateralNone) -> (rc, dummyTotCol)
+                  (TxReturnCollateralNone, tc@TxTotalCollateral{}) -> (dummyRetCol, tc)
                   (TxReturnCollateralNone, TxTotalCollateralNone) -> (dummyRetCol, dummyTotCol)
         )
 
@@ -1403,7 +1405,7 @@ substituteExecutionUnits exUnitsMap =
     :: ScriptWitnessIndex
     -> ScriptWitness witctx era
     -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era)
-  f _ wit@SimpleScriptWitness {} = Right wit
+  f _ wit@SimpleScriptWitness{} = Right wit
   f idx (PlutusScriptWitness langInEra version script datum redeemer _) =
     case Map.lookup idx exUnitsMap of
       Nothing ->
@@ -1461,7 +1463,7 @@ mapTxScriptWitnesses
             | -- The tx ins are indexed in the map order by txid
             (ix, (txin, BuildTxWith wit)) <- zip [0 ..] (orderTxIns txins)
             , let wit' = case wit of
-                    KeyWitness {} -> Right wit
+                    KeyWitness{} -> Right wit
                     ScriptWitness ctx witness -> ScriptWitness ctx <$> witness'
                      where
                       witness' = f (ScriptWitnessIndexTxIn ix) witness

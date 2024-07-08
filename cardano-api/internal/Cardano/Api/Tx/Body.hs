@@ -161,38 +161,39 @@ module Cardano.Api.Tx.Body
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.AllegraEraOnwards
-import Cardano.Api.Eon.AlonzoEraOnwards
-import Cardano.Api.Eon.BabbageEraOnwards
-import Cardano.Api.Eon.ConwayEraOnwards
-import Cardano.Api.Eon.MaryEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eon.ShelleyToAllegraEra
-import Cardano.Api.Eon.ShelleyToBabbageEra
-import Cardano.Api.Eras.Case
-import Cardano.Api.Eras.Core
-import Cardano.Api.Error (Error (..), displayError)
-import Cardano.Api.Feature
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Byron
-import Cardano.Api.Keys.Shelley
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.AllegraEraOnwards
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.MaryEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToAllegraEra
+import           Cardano.Api.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Error (Error (..), displayError)
+import           Cardano.Api.Feature
+import           Cardano.Api.Hash
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Shelley
 import qualified Cardano.Api.Ledger.Lens as A
-import Cardano.Api.NetworkId
-import Cardano.Api.Pretty
-import Cardano.Api.ProtocolParameters
+import           Cardano.Api.NetworkId
+import           Cardano.Api.Pretty
+import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import Cardano.Api.Script
-import Cardano.Api.ScriptData
-import Cardano.Api.SerialiseJSON
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.Tx.Sign
-import Cardano.Api.TxIn
-import Cardano.Api.TxMetadata
-import Cardano.Api.Utils
-import Cardano.Api.Value
-import Cardano.Api.ValueParser
+import           Cardano.Api.Script
+import           Cardano.Api.ScriptData
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Tx.Sign
+import           Cardano.Api.TxIn
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
+import           Cardano.Api.Value
+import           Cardano.Api.ValueParser
+
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -204,18 +205,18 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Babbage.UTxO as L
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary (Annotated (..))
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Cardano.Ledger.Binary (Annotated (..))
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Core as L
-import Cardano.Ledger.Core ()
+import           Cardano.Ledger.Core ()
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
-import Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
+import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
 import qualified Cardano.Ledger.Plutus.Data as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.SafeHash as SafeHash
@@ -223,51 +224,46 @@ import qualified Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import qualified Cardano.Ledger.Shelley.TxCert as Shelley
 import qualified Cardano.Ledger.TxIn as L
-import Cardano.Ledger.Val as L (isZero)
-import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Applicative (some)
-import Control.Monad (guard, unless)
-import Data.Aeson (object, withObject, (.:), (.:?), (.=))
+import           Cardano.Ledger.Val as L (isZero)
+import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardBabbage,
+                   StandardConway, StandardMary, StandardShelley)
+
+import           Control.Applicative (some)
+import           Control.Monad (guard, unless)
+import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Types as Aeson
-import Data.Bifunctor (Bifunctor (..))
-import Data.ByteString (ByteString)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
-import Data.Foldable (for_, toList)
-import Data.Function (on)
-import Data.Functor (($>))
-import Data.List (sortBy)
+import           Data.Foldable (for_, toList)
+import           Data.Function (on)
+import           Data.Functor (($>))
+import           Data.List (sortBy)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
-import Data.Map.Strict (Map)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe
-import Data.Monoid
-import Data.OSet.Strict (OSet)
+import           Data.Maybe
+import           Data.Monoid
+import           Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
-import Data.Scientific (toBoundedInteger)
+import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
-import Data.Set (Set)
+import           Data.Set (Set)
 import qualified Data.Set as Set
-import Data.String
-import Data.Text (Text)
+import           Data.String
+import           Data.Text (Text)
 import qualified Data.Text as Text
-import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import Data.Word (Word16, Word32, Word64)
-import Lens.Micro hiding (ix)
-import Lens.Micro.Extras (view)
-import Ouroboros.Consensus.Shelley.Eras
-  ( StandardAllegra
-  , StandardAlonzo
-  , StandardBabbage
-  , StandardConway
-  , StandardMary
-  , StandardShelley
-  )
-import Text.Parsec ((<?>))
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Word (Word16, Word32, Word64)
+import           Lens.Micro hiding (ix)
+import           Lens.Micro.Extras (view)
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
 -- ----------------------------------------------------------------------------
@@ -380,8 +376,8 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
   inlineDatumJsonVal d =
     case d of
       TxOutDatumNone -> Aeson.Null
-      TxOutDatumHash {} -> Aeson.Null
-      TxOutDatumInTx' {} -> Aeson.Null
+      TxOutDatumHash{} -> Aeson.Null
+      TxOutDatumInTx'{} -> Aeson.Null
       TxOutDatumInline _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
 
   refScriptJsonVal :: ReferenceScript era -> Aeson.Value
@@ -680,7 +676,7 @@ toByronTxOut = \case
     Byron.TxOut addr <$> toByronLovelace value
   TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValueShelleyBased w _) _ _ ->
     case w of {}
-  TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress {}) _ _ _ ->
+  TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ ->
     case sbe of {}
 
 toShelleyTxOut
@@ -717,7 +713,7 @@ toAlonzoTxOutDatumHashUTxO
   :: TxOutDatum CtxUTxO era -> StrictMaybe (Plutus.DataHash StandardCrypto)
 toAlonzoTxOutDatumHashUTxO TxOutDatumNone = SNothing
 toAlonzoTxOutDatumHashUTxO (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
-toAlonzoTxOutDatumHashUTxO (TxOutDatumInline {}) = SNothing
+toAlonzoTxOutDatumHashUTxO (TxOutDatumInline{}) = SNothing
 
 toBabbageTxOutDatumUTxO
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
@@ -784,7 +780,7 @@ toAlonzoTxOutDatumHash
   :: TxOutDatum ctx era -> StrictMaybe (Plutus.DataHash StandardCrypto)
 toAlonzoTxOutDatumHash TxOutDatumNone = SNothing
 toAlonzoTxOutDatumHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
-toAlonzoTxOutDatumHash (TxOutDatumInline {}) = SNothing
+toAlonzoTxOutDatumHash (TxOutDatumInline{}) = SNothing
 toAlonzoTxOutDatumHash (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
 
 toBabbageTxOutDatum
@@ -1293,11 +1289,11 @@ defaultTxBodyContent era =
     }
 
 setTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
-setTxIns v txBodyContent = txBodyContent {txIns = v}
+setTxIns v txBodyContent = txBodyContent{txIns = v}
 
 modTxIns
   :: (TxIns build era -> TxIns build era) -> TxBodyContent build era -> TxBodyContent build era
-modTxIns f txBodyContent = txBodyContent {txIns = f (txIns txBodyContent)}
+modTxIns f txBodyContent = txBodyContent{txIns = f (txIns txBodyContent)}
 
 addTxIn
   :: (TxIn, BuildTxWith build (Witness WitCtxTxIn era))
@@ -1306,79 +1302,79 @@ addTxIn
 addTxIn txIn = modTxIns (txIn :)
 
 setTxInsCollateral :: TxInsCollateral era -> TxBodyContent build era -> TxBodyContent build era
-setTxInsCollateral v txBodyContent = txBodyContent {txInsCollateral = v}
+setTxInsCollateral v txBodyContent = txBodyContent{txInsCollateral = v}
 
 setTxInsReference :: TxInsReference build era -> TxBodyContent build era -> TxBodyContent build era
-setTxInsReference v txBodyContent = txBodyContent {txInsReference = v}
+setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
 
 setTxOuts :: [TxOut CtxTx era] -> TxBodyContent build era -> TxBodyContent build era
-setTxOuts v txBodyContent = txBodyContent {txOuts = v}
+setTxOuts v txBodyContent = txBodyContent{txOuts = v}
 
 modTxOuts
   :: ([TxOut CtxTx era] -> [TxOut CtxTx era]) -> TxBodyContent build era -> TxBodyContent build era
-modTxOuts f txBodyContent = txBodyContent {txOuts = f (txOuts txBodyContent)}
+modTxOuts f txBodyContent = txBodyContent{txOuts = f (txOuts txBodyContent)}
 
 addTxOut :: TxOut CtxTx era -> TxBodyContent build era -> TxBodyContent build era
 addTxOut txOut = modTxOuts (txOut :)
 
 setTxTotalCollateral :: TxTotalCollateral era -> TxBodyContent build era -> TxBodyContent build era
-setTxTotalCollateral v txBodyContent = txBodyContent {txTotalCollateral = v}
+setTxTotalCollateral v txBodyContent = txBodyContent{txTotalCollateral = v}
 
 setTxReturnCollateral
   :: TxReturnCollateral CtxTx era -> TxBodyContent build era -> TxBodyContent build era
-setTxReturnCollateral v txBodyContent = txBodyContent {txReturnCollateral = v}
+setTxReturnCollateral v txBodyContent = txBodyContent{txReturnCollateral = v}
 
 setTxFee :: TxFee era -> TxBodyContent build era -> TxBodyContent build era
-setTxFee v txBodyContent = txBodyContent {txFee = v}
+setTxFee v txBodyContent = txBodyContent{txFee = v}
 
 setTxValidityLowerBound
   :: TxValidityLowerBound era -> TxBodyContent build era -> TxBodyContent build era
-setTxValidityLowerBound v txBodyContent = txBodyContent {txValidityLowerBound = v}
+setTxValidityLowerBound v txBodyContent = txBodyContent{txValidityLowerBound = v}
 
 setTxValidityUpperBound
   :: TxValidityUpperBound era -> TxBodyContent build era -> TxBodyContent build era
-setTxValidityUpperBound v txBodyContent = txBodyContent {txValidityUpperBound = v}
+setTxValidityUpperBound v txBodyContent = txBodyContent{txValidityUpperBound = v}
 
 setTxMetadata :: TxMetadataInEra era -> TxBodyContent build era -> TxBodyContent build era
-setTxMetadata v txBodyContent = txBodyContent {txMetadata = v}
+setTxMetadata v txBodyContent = txBodyContent{txMetadata = v}
 
 setTxAuxScripts :: TxAuxScripts era -> TxBodyContent build era -> TxBodyContent build era
-setTxAuxScripts v txBodyContent = txBodyContent {txAuxScripts = v}
+setTxAuxScripts v txBodyContent = txBodyContent{txAuxScripts = v}
 
 setTxExtraKeyWits :: TxExtraKeyWitnesses era -> TxBodyContent build era -> TxBodyContent build era
-setTxExtraKeyWits v txBodyContent = txBodyContent {txExtraKeyWits = v}
+setTxExtraKeyWits v txBodyContent = txBodyContent{txExtraKeyWits = v}
 
 setTxProtocolParams
   :: BuildTxWith build (Maybe (LedgerProtocolParameters era))
   -> TxBodyContent build era
   -> TxBodyContent build era
-setTxProtocolParams v txBodyContent = txBodyContent {txProtocolParams = v}
+setTxProtocolParams v txBodyContent = txBodyContent{txProtocolParams = v}
 
 setTxWithdrawals :: TxWithdrawals build era -> TxBodyContent build era -> TxBodyContent build era
-setTxWithdrawals v txBodyContent = txBodyContent {txWithdrawals = v}
+setTxWithdrawals v txBodyContent = txBodyContent{txWithdrawals = v}
 
 setTxCertificates :: TxCertificates build era -> TxBodyContent build era -> TxBodyContent build era
-setTxCertificates v txBodyContent = txBodyContent {txCertificates = v}
+setTxCertificates v txBodyContent = txBodyContent{txCertificates = v}
 
 setTxUpdateProposal :: TxUpdateProposal era -> TxBodyContent build era -> TxBodyContent build era
-setTxUpdateProposal v txBodyContent = txBodyContent {txUpdateProposal = v}
+setTxUpdateProposal v txBodyContent = txBodyContent{txUpdateProposal = v}
 
 setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
-setTxMintValue v txBodyContent = txBodyContent {txMintValue = v}
+setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
 
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
-setTxScriptValidity v txBodyContent = txBodyContent {txScriptValidity = v}
+setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
 
 setTxCurrentTreasuryValue
   :: Maybe (Featured ConwayEraOnwards era L.Coin) -> TxBodyContent build era -> TxBodyContent build era
-setTxCurrentTreasuryValue v txBodyContent = txBodyContent {txCurrentTreasuryValue = v}
+setTxCurrentTreasuryValue v txBodyContent = txBodyContent{txCurrentTreasuryValue = v}
 
 setTxTreasuryDonation
   :: Maybe (Featured ConwayEraOnwards era L.Coin) -> TxBodyContent build era -> TxBodyContent build era
-setTxTreasuryDonation v txBodyContent = txBodyContent {txTreasuryDonation = v}
+setTxTreasuryDonation v txBodyContent = txBodyContent{txTreasuryDonation = v}
 
 getTxIdByron :: Byron.ATxAux ByteString -> TxId
-getTxIdByron (Byron.ATxAux {Byron.aTaTx = txbody}) =
+getTxIdByron (Byron.ATxAux{Byron.aTaTx = txbody}) =
   TxId
     . fromMaybe impossible
     . Crypto.hashFromBytesShort
@@ -2154,11 +2150,11 @@ makeByronTransactionBody txIns txOuts = do
 classifyRangeError :: TxOut CtxTx ByronEra -> TxBodyError
 classifyRangeError txout =
   case txout of
-    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress {}) (TxOutValueByron value) _ _
+    TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutValueByron value) _ _
       | value < 0 -> TxBodyOutputNegative (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
       | otherwise -> TxBodyOutputOverflow (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
     TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValueShelleyBased w _) _ _ -> case w of {}
-    TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress {}) _ _ _ -> case sbe of {}
+    TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ -> case sbe of {}
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
 convTxIns txIns = Set.fromList (map (toShelleyTxIn . fst) txIns)
@@ -2760,7 +2756,7 @@ makeShelleyTransactionBody
     getScriptLanguage :: ScriptWitness witctx era -> Maybe Plutus.Language
     getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
       Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
-    getScriptLanguage SimpleScriptWitness {} = Nothing
+    getScriptLanguage SimpleScriptWitness{} = Nothing
 
     txAuxData :: Maybe (L.TxAuxData StandardBabbage)
     txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts
@@ -2898,7 +2894,7 @@ makeShelleyTransactionBody
     getScriptLanguage :: ScriptWitness witctx era -> Maybe Plutus.Language
     getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
       Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
-    getScriptLanguage SimpleScriptWitness {} = Nothing
+    getScriptLanguage SimpleScriptWitness{} = Nothing
 
     txAuxData :: Maybe (L.TxAuxData StandardConway)
     txAuxData = toAuxiliaryData sbe txMetadata txAuxScripts

@@ -14,23 +14,25 @@ module Cardano.Api.LedgerEvents.LedgerEvent
   )
 where
 
-import Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
-import Cardano.Api.Block (EpochNo)
-import Cardano.Api.Keys.Shelley (Hash (..), StakePoolKey)
+import           Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
+import           Cardano.Api.Block (EpochNo)
+import           Cardano.Api.Keys.Shelley (Hash (..), StakePoolKey)
+
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import qualified Cardano.Ledger.Core as Ledger.Core
 import qualified Cardano.Ledger.Credential as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
-import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext)
-import Cardano.Ledger.Shelley.Rewards (Reward)
+import           Cardano.Ledger.Plutus.Evaluate (PlutusWithContext)
+import           Cardano.Ledger.Shelley.Rewards (Reward)
 import qualified Cardano.Ledger.TxIn as Ledger
-import Data.List.NonEmpty (NonEmpty)
-import Data.Map.Strict (Map)
+
+import           Data.List.NonEmpty (NonEmpty)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import           Data.Set (Set)
 
 data AnyProposals
   = forall era. Ledger.Core.EraPParams era => AnyProposals (Ledger.Proposals era)
@@ -68,7 +70,7 @@ data LedgerEvent
   | -- | The current state of governance matters at the epoch boundary.
     -- I.E the current constitution, committee, protocol parameters, etc.
     EpochBoundaryRatificationState AnyRatificationState
-  deriving (Show)
+  deriving Show
 
 --------------------------------------------------------------------------------
 -- Event details
@@ -85,7 +87,7 @@ data MIRDistributionDetails = MIRDistributionDetails
   , mirddReservesToTreasury :: L.Coin
   , mirddTreasuryToReserves :: L.Coin
   }
-  deriving (Show)
+  deriving Show
 
 data PoolReapDetails = PoolReapDetails
   { prdEpochNo :: EpochNo
@@ -97,7 +99,7 @@ data PoolReapDetails = PoolReapDetails
   -- actively registered at the time of the pool reaping, and as such the
   -- funds are returned to the treasury.
   }
-  deriving (Show)
+  deriving Show
 
 convertRetiredPoolsMap
   :: Map

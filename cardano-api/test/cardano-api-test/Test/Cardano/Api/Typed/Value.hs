@@ -3,23 +3,20 @@ module Test.Cardano.Api.Typed.Value
   )
 where
 
-import Cardano.Api
-  ( MaryEraOnwards (..)
-  , ShelleyBasedEra (..)
-  , ValueNestedBundle (..)
-  , ValueNestedRep (..)
-  , fromLedgerValue
-  , valueFromNestedRep
-  , valueToNestedRep
-  )
-import Data.Aeson (eitherDecode, encode)
-import Data.List (groupBy, sort)
+import           Cardano.Api (MaryEraOnwards (..), ShelleyBasedEra (..), ValueNestedBundle (..),
+                   ValueNestedRep (..), fromLedgerValue, valueFromNestedRep, valueToNestedRep)
+
+import           Prelude
+
+import           Data.Aeson (eitherDecode, encode)
+import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
-import Hedgehog (Property, forAll, property, tripping, (===))
-import Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
-import Prelude
+
+import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+
+import           Hedgehog (Property, forAll, property, tripping, (===))
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
@@ -49,8 +46,8 @@ canonicalise =
     . (\(ValueNestedRep bundles) -> bundles)
  where
   samePolicyId
-    ValueNestedBundleAda {}
-    ValueNestedBundleAda {} = True
+    ValueNestedBundleAda{}
+    ValueNestedBundleAda{} = True
   samePolicyId
     (ValueNestedBundle pid _)
     (ValueNestedBundle pid' _) = pid == pid'
@@ -68,7 +65,7 @@ canonicalise =
           ValueNestedBundle pid (Map.unionWith (<>) as as')
   mergeBundle _ _ = error "canonicalise.mergeBundle: impossible"
 
-  filterZeros b@ValueNestedBundleAda {} = b
+  filterZeros b@ValueNestedBundleAda{} = b
   filterZeros (ValueNestedBundle pid as) =
     ValueNestedBundle pid (Map.filter (/= 0) as)
 

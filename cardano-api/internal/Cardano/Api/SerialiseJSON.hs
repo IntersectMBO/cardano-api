@@ -15,18 +15,19 @@ module Cardano.Api.SerialiseJSON
   )
 where
 
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Pretty
-import Control.Monad.Trans.Except (runExceptT)
-import Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
-import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
+
+import           Control.Monad.Trans.Except (runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
+import           Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Encode.Pretty (encodePretty)
-import Data.ByteString (ByteString)
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.Data (Data)
+import           Data.Data (Data)
 
 newtype JsonDecodeError = JsonDecodeError String
   deriving (Eq, Show, Data)

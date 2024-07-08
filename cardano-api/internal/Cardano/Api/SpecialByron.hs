@@ -18,46 +18,31 @@ module Cardano.Api.SpecialByron
   )
 where
 
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Keys.Byron
-import Cardano.Api.NetworkId (NetworkId, toByronProtocolMagicId)
-import Cardano.Api.SerialiseRaw
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.NetworkId (NetworkId, toByronProtocolMagicId)
+import           Cardano.Api.SerialiseRaw
+
 import qualified Cardano.Binary as Binary
-import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
-import Cardano.Chain.Slotting
-import Cardano.Chain.Update
-  ( AProposal (aBody, annotation)
-  , InstallerHash
-  , ProposalBody (ProposalBody)
-  , ProtocolParametersUpdate (..)
-  , ProtocolVersion
-  , SoftforkRule
-  , SoftwareVersion
-  , SystemTag
-  , UpId
-  , mkVote
-  , recoverUpId
-  , recoverVoteId
-  , signProposal
-  )
+import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
+import           Cardano.Chain.Slotting
+import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerHash,
+                   ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion,
+                   SoftforkRule, SoftwareVersion, SystemTag, UpId, mkVote, recoverUpId,
+                   recoverVoteId, signProposal)
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Vote as ByronVote
-import Cardano.Crypto (SafeSigner, noPassSafeSigner)
-import qualified Cardano.Ledger.Binary as Binary
-  ( Annotated (..)
-  , ByteSpan (..)
-  , annotation
-  , annotationBytes
-  , byronProtVer
-  , reAnnotate
-  )
-import Data.ByteString (ByteString)
+import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
+import qualified Cardano.Ledger.Binary as Binary (Annotated (..), ByteSpan (..), annotation,
+                   annotationBytes, byronProtVer, reAnnotate)
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
+
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as M
-import Data.Word
-import Numeric.Natural
-import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
+import           Data.Word
+import           Numeric.Natural
 
 {- HLINT ignore "Use void" -}
 
@@ -155,7 +140,7 @@ data ByronProtocolParametersUpdate
   -- ^ This has been re-purposed for unlocking the OuroborosBFT logic in the software.
   -- Relevant: [CDEC-610](https://iohk.myjetbrains.com/youtrack/issue/CDEC-610)
   }
-  deriving (Show)
+  deriving Show
 
 makeProtocolParametersUpdate
   :: ByronProtocolParametersUpdate

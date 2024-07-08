@@ -16,24 +16,26 @@
 
 module Cardano.Api.Governance.Actions.VotingProcedure where
 
-import Cardano.Api.Address
-import Cardano.Api.Eon.ConwayEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Governance.Actions.ProposalProcedure
-import Cardano.Api.HasTypeProxy
+import           Cardano.Api.Address
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Governance.Actions.ProposalProcedure
+import           Cardano.Api.HasTypeProxy
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseTextEnvelope
+
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.Api as L
-import Cardano.Ledger.Core (EraCrypto)
+import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as L
-import Control.Monad (foldM)
+
+import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import GHC.Generics
+import           GHC.Generics
 
 newtype GovernanceActionId era = GovernanceActionId
   { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (ShelleyLedgerEra era))

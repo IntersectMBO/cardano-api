@@ -5,23 +5,24 @@ module Cardano.Api.ValueParser
   )
 where
 
-import Cardano.Api.Error (displayError)
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.Utils (failEitherWith)
-import Cardano.Api.Value
-import Control.Applicative (many, some, (<|>))
+import           Cardano.Api.Error (displayError)
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils (failEitherWith)
+import           Cardano.Api.Value
+
+import           Control.Applicative (many, some, (<|>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
-import Data.Functor (void, ($>))
-import Data.List (foldl')
+import           Data.Functor (void, ($>))
+import           Data.List (foldl')
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Data.Word (Word64)
-import Text.Parsec as Parsec (notFollowedBy, try, (<?>))
-import Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
-import Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
-import Text.Parsec.String (Parser)
-import Text.ParserCombinators.Parsec.Combinator (many1)
+import           Data.Word (Word64)
+import           Text.Parsec as Parsec (notFollowedBy, try, (<?>))
+import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
+import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
+import           Text.Parsec.String (Parser)
+import           Text.ParserCombinators.Parsec.Combinator (many1)
 
 -- | Parse a 'Value' from its string representation.
 parseValue :: Parser Value

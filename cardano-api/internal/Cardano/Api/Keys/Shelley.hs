@@ -39,31 +39,33 @@ module Cardano.Api.Keys.Shelley
   )
 where
 
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Class
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseBech32
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseJSON
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.SerialiseUsing
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto.HD
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Shelley (DSIGN)
 import qualified Cardano.Ledger.Keys as Shelley
-import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
-import Data.Bifunctor (first)
-import Data.ByteString (ByteString)
+
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
+import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.Either.Combinators (maybeToRight)
-import Data.Maybe
-import Data.String (IsString (..))
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Maybe
+import           Data.String (IsString (..))
 
 --
 -- Shelley payment keys
@@ -82,16 +84,16 @@ instance HasTypeProxy PaymentKey where
 instance Key PaymentKey where
   newtype VerificationKey PaymentKey
     = PaymentVerificationKey (Shelley.VKey Shelley.Payment StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey PaymentKey
     = PaymentSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType PaymentKey -> Crypto.Seed -> SigningKey PaymentKey
   deterministicSigningKey AsPaymentKey seed =
@@ -146,7 +148,7 @@ newtype instance Hash PaymentKey
   deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash PaymentKey)
   deriving (ToJSONKey, ToJSON, FromJSON) via UsingRawBytesHex (Hash PaymentKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash PaymentKey) where
   serialiseToRawBytes (PaymentKeyHash (Shelley.KeyHash vkh)) =
@@ -201,13 +203,13 @@ instance HasTypeProxy PaymentExtendedKey where
 instance Key PaymentExtendedKey where
   newtype VerificationKey PaymentExtendedKey
     = PaymentExtendedVerificationKey Crypto.HD.XPub
-    deriving stock (Eq)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving stock Eq
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey PaymentExtendedKey
     = PaymentExtendedSigningKey Crypto.HD.XPrv
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
@@ -296,7 +298,7 @@ newtype instance Hash PaymentExtendedKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash PaymentExtendedKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash PaymentExtendedKey) where
   serialiseToRawBytes (PaymentExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -338,15 +340,15 @@ instance Key StakeKey where
   newtype VerificationKey StakeKey = StakeVerificationKey
     { unStakeVerificationKey :: Shelley.VKey Shelley.Staking StandardCrypto
     }
-    deriving stock (Eq)
+    deriving stock Eq
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakeKey)
 
   newtype SigningKey StakeKey
     = StakeSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakeKey)
 
   deterministicSigningKey :: AsType StakeKey -> Crypto.Seed -> SigningKey StakeKey
@@ -398,7 +400,7 @@ newtype instance Hash StakeKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash StakeKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakeKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash StakeKey) where
   serialiseToRawBytes (StakeKeyHash (Shelley.KeyHash vkh)) =
@@ -452,13 +454,13 @@ instance HasTypeProxy StakeExtendedKey where
 instance Key StakeExtendedKey where
   newtype VerificationKey StakeExtendedKey
     = StakeExtendedVerificationKey Crypto.HD.XPub
-    deriving stock (Eq)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving stock Eq
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakeExtendedKey)
 
   newtype SigningKey StakeExtendedKey
     = StakeExtendedSigningKey Crypto.HD.XPrv
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakeExtendedKey)
 
   deterministicSigningKey
@@ -546,7 +548,7 @@ newtype instance Hash StakeExtendedKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash StakeExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakeExtendedKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash StakeExtendedKey) where
   serialiseToRawBytes (StakeExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -587,16 +589,16 @@ instance HasTypeProxy GenesisKey where
 instance Key GenesisKey where
   newtype VerificationKey GenesisKey
     = GenesisVerificationKey (Shelley.VKey Shelley.Genesis StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey GenesisKey
     = GenesisSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType GenesisKey -> Crypto.Seed -> SigningKey GenesisKey
   deterministicSigningKey AsGenesisKey seed =
@@ -640,7 +642,7 @@ newtype instance Hash GenesisKey
   deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisKey)
   deriving (ToJSONKey, ToJSON, FromJSON) via UsingRawBytesHex (Hash GenesisKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisKey) where
   serialiseToRawBytes (GenesisKeyHash (Shelley.KeyHash vkh)) =
@@ -683,16 +685,16 @@ instance HasTypeProxy CommitteeHotKey where
 instance Key CommitteeHotKey where
   newtype VerificationKey CommitteeHotKey
     = CommitteeHotVerificationKey (Shelley.VKey Shelley.HotCommitteeRole StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeHotKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey CommitteeHotKey
     = CommitteeHotSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey CommitteeHotKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType CommitteeHotKey -> Crypto.Seed -> SigningKey CommitteeHotKey
   deterministicSigningKey AsCommitteeHotKey seed =
@@ -738,7 +740,7 @@ newtype instance Hash CommitteeHotKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeHotKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeHotKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash CommitteeHotKey) where
   serialiseToRawBytes (CommitteeHotKeyHash (Shelley.KeyHash vkh)) =
@@ -794,16 +796,16 @@ instance HasTypeProxy CommitteeColdKey where
 instance Key CommitteeColdKey where
   newtype VerificationKey CommitteeColdKey
     = CommitteeColdVerificationKey (Shelley.VKey Shelley.ColdCommitteeRole StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeColdKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey CommitteeColdKey
     = CommitteeColdSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey CommitteeColdKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType CommitteeColdKey -> Crypto.Seed -> SigningKey CommitteeColdKey
   deterministicSigningKey AsCommitteeColdKey seed =
@@ -849,7 +851,7 @@ newtype instance Hash CommitteeColdKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeColdKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeColdKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash CommitteeColdKey) where
   serialiseToRawBytes (CommitteeColdKeyHash (Shelley.KeyHash vkh)) =
@@ -904,13 +906,13 @@ instance HasTypeProxy CommitteeColdExtendedKey where
 instance Key CommitteeColdExtendedKey where
   newtype VerificationKey CommitteeColdExtendedKey
     = CommitteeColdExtendedVerificationKey Crypto.HD.XPub
-    deriving stock (Eq)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving stock Eq
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey CommitteeColdExtendedKey
     = CommitteeColdExtendedSigningKey Crypto.HD.XPrv
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
@@ -949,7 +951,7 @@ newtype instance Hash CommitteeColdExtendedKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeColdKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeColdKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance ToCBOR (VerificationKey CommitteeColdExtendedKey) where
   toCBOR (CommitteeColdExtendedVerificationKey xpub) =
@@ -1039,13 +1041,13 @@ instance HasTypeProxy CommitteeHotExtendedKey where
 instance Key CommitteeHotExtendedKey where
   newtype VerificationKey CommitteeHotExtendedKey
     = CommitteeHotExtendedVerificationKey Crypto.HD.XPub
-    deriving stock (Eq)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving stock Eq
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey CommitteeHotExtendedKey
     = CommitteeHotExtendedSigningKey Crypto.HD.XPrv
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
@@ -1084,7 +1086,7 @@ newtype instance Hash CommitteeHotExtendedKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeHotKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeHotKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance ToCBOR (VerificationKey CommitteeHotExtendedKey) where
   toCBOR (CommitteeHotExtendedVerificationKey xpub) =
@@ -1187,13 +1189,13 @@ instance HasTypeProxy GenesisExtendedKey where
 instance Key GenesisExtendedKey where
   newtype VerificationKey GenesisExtendedKey
     = GenesisExtendedVerificationKey Crypto.HD.XPub
-    deriving stock (Eq)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving stock Eq
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisExtendedKey)
 
   newtype SigningKey GenesisExtendedKey
     = GenesisExtendedSigningKey Crypto.HD.XPrv
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisExtendedKey)
 
   deterministicSigningKey
@@ -1273,7 +1275,7 @@ newtype instance Hash GenesisExtendedKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisExtendedKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisExtendedKey) where
   serialiseToRawBytes (GenesisExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -1314,16 +1316,16 @@ instance HasTypeProxy GenesisDelegateKey where
 instance Key GenesisDelegateKey where
   newtype VerificationKey GenesisDelegateKey
     = GenesisDelegateVerificationKey (Shelley.VKey Shelley.GenesisDelegate StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisDelegateKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey GenesisDelegateKey
     = GenesisDelegateSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisDelegateKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType GenesisDelegateKey -> Crypto.Seed -> SigningKey GenesisDelegateKey
   deterministicSigningKey AsGenesisDelegateKey seed =
@@ -1367,7 +1369,7 @@ newtype instance Hash GenesisDelegateKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisDelegateKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisDelegateKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisDelegateKey) where
   serialiseToRawBytes (GenesisDelegateKeyHash (Shelley.KeyHash vkh)) =
@@ -1430,13 +1432,13 @@ instance HasTypeProxy GenesisDelegateExtendedKey where
 instance Key GenesisDelegateExtendedKey where
   newtype VerificationKey GenesisDelegateExtendedKey
     = GenesisDelegateExtendedVerificationKey Crypto.HD.XPub
-    deriving stock (Eq)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving stock Eq
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisDelegateExtendedKey)
 
   newtype SigningKey GenesisDelegateExtendedKey
     = GenesisDelegateExtendedSigningKey Crypto.HD.XPrv
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisDelegateExtendedKey)
 
   deterministicSigningKey
@@ -1522,7 +1524,7 @@ newtype instance Hash GenesisDelegateExtendedKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisDelegateExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisDelegateExtendedKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisDelegateExtendedKey) where
   serialiseToRawBytes (GenesisDelegateExtendedKeyHash (Shelley.KeyHash vkh)) =
@@ -1563,16 +1565,16 @@ instance HasTypeProxy GenesisUTxOKey where
 instance Key GenesisUTxOKey where
   newtype VerificationKey GenesisUTxOKey
     = GenesisUTxOVerificationKey (Shelley.VKey Shelley.Payment StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisUTxOKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey GenesisUTxOKey
     = GenesisUTxOSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisUTxOKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType GenesisUTxOKey -> Crypto.Seed -> SigningKey GenesisUTxOKey
   deterministicSigningKey AsGenesisUTxOKey seed =
@@ -1614,7 +1616,7 @@ newtype instance Hash GenesisUTxOKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisUTxOKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisUTxOKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash GenesisUTxOKey) where
   serialiseToRawBytes (GenesisUTxOKeyHash (Shelley.KeyHash vkh)) =
@@ -1664,16 +1666,16 @@ instance HasTypeProxy StakePoolKey where
 instance Key StakePoolKey where
   newtype VerificationKey StakePoolKey
     = StakePoolVerificationKey (Shelley.VKey Shelley.StakePool StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakePoolKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey StakePoolKey
     = StakePoolSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakePoolKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType StakePoolKey -> Crypto.Seed -> SigningKey StakePoolKey
   deterministicSigningKey AsStakePoolKey seed =
@@ -1726,7 +1728,7 @@ newtype instance Hash StakePoolKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash StakePoolKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakePoolKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash StakePoolKey) where
   serialiseToRawBytes (StakePoolKeyHash (Shelley.KeyHash vkh)) =
@@ -1788,16 +1790,16 @@ instance HasTypeProxy DRepKey where
 instance Key DRepKey where
   newtype VerificationKey DRepKey
     = DRepVerificationKey (Shelley.VKey Shelley.DRepRole StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey DRepKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey DRepKey
     = DRepSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey DRepKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType DRepKey -> Crypto.Seed -> SigningKey DRepKey
   deterministicSigningKey AsDRepKey seed =
@@ -1850,7 +1852,7 @@ newtype instance Hash DRepKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash DRepKey) where
   serialiseToRawBytes (DRepKeyHash (Shelley.KeyHash vkh)) =
@@ -1911,13 +1913,13 @@ instance HasTypeProxy DRepExtendedKey where
 instance Key DRepExtendedKey where
   newtype VerificationKey DRepExtendedKey
     = DRepExtendedVerificationKey Crypto.HD.XPub
-    deriving stock (Eq)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving stock Eq
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey DRepExtendedKey
     = DRepExtendedSigningKey Crypto.HD.XPrv
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
@@ -1955,7 +1957,7 @@ newtype instance Hash DRepExtendedKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance ToCBOR (VerificationKey DRepExtendedKey) where
   toCBOR (DRepExtendedVerificationKey xpub) =

@@ -47,41 +47,43 @@ module Cardano.Api.TxMetadata
   )
 where
 
-import Cardano.Api.Eras
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
+
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
+
 import qualified Codec.CBOR.Magic as CBOR
-import Control.Applicative (Alternative (..))
-import Control.Monad (guard, when)
+import           Control.Applicative (Alternative (..))
+import           Control.Monad (guard, when)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Text as Aeson.Text
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import Data.Bifunctor (bimap, first)
-import Data.ByteString (ByteString)
+import           Data.Bifunctor (bimap, first)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import Data.Data (Data)
+import           Data.Data (Data)
 import qualified Data.List as List
 import qualified Data.Map.Lazy as Map.Lazy
-import Data.Map.Strict (Map)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Scientific as Scientific
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Data.Vector as Vector
-import Data.Word
+import           Data.Word
 
 -- ----------------------------------------------------------------------------
 -- TxMetadata types
@@ -551,7 +553,7 @@ metadataValueFromJsonNoSchema = conv
     :: Aeson.Value
     -> Either TxMetadataJsonSchemaError TxMetadataValue
   conv Aeson.Null = Left TxMetadataJsonNullNotAllowed
-  conv Aeson.Bool {} = Left TxMetadataJsonBoolNotAllowed
+  conv Aeson.Bool{} = Left TxMetadataJsonBoolNotAllowed
   conv (Aeson.Number d) =
     case Scientific.floatingOrInteger d :: Either Double Integer of
       Left n -> Left (TxMetadataJsonNumberNotInteger n)

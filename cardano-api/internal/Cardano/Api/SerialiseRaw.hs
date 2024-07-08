@@ -13,17 +13,18 @@ module Cardano.Api.SerialiseRaw
   )
 where
 
-import Cardano.Api.Error (Error, prettyError)
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Pretty
-import Data.Bifunctor (Bifunctor (..))
-import Data.ByteString (ByteString)
+import           Cardano.Api.Error (Error, prettyError)
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
+
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
-import Data.Data (typeRep)
-import Data.Text (Text)
+import           Data.Data (typeRep)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Data.Typeable (TypeRep, Typeable)
+import           Data.Typeable (TypeRep, Typeable)
 
 newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
   -- TODO We can do better than use String to carry the error message
@@ -56,7 +57,7 @@ data RawBytesHexError
       -- ^ expected type
       SerialiseAsRawBytesError
       -- ^ error message
-  deriving (Show)
+  deriving Show
 
 instance Error RawBytesHexError where
   prettyError = \case

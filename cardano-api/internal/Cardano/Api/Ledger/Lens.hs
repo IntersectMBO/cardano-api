@@ -41,31 +41,33 @@ module Cardano.Api.Ledger.Lens
   )
 where
 
-import Cardano.Api.Eon.AllegraEraOnwards
-import Cardano.Api.Eon.AlonzoEraOnwards
-import Cardano.Api.Eon.BabbageEraOnwards
-import Cardano.Api.Eon.ConwayEraOnwards
-import Cardano.Api.Eon.MaryEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eon.ShelleyEraOnly
-import Cardano.Api.Eon.ShelleyToAllegraEra
-import Cardano.Api.Eon.ShelleyToBabbageEra
-import Cardano.Api.Eras.Case
-import Cardano.Api.Orphans ()
+import           Cardano.Api.Eon.AllegraEraOnwards
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.MaryEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyEraOnly
+import           Cardano.Api.Eon.ShelleyToAllegraEra
+import           Cardano.Api.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Orphans ()
+
 import qualified Cardano.Ledger.Allegra.Core as L
 import qualified Cardano.Ledger.Alonzo.Core as L
 import qualified Cardano.Ledger.Api as L
-import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
+import           Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Core as L
 import qualified Cardano.Ledger.Keys as L
 import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.Shelley.PParams as L
 import qualified Cardano.Ledger.TxIn as L
+
 import qualified Data.OSet.Strict as L
 import qualified Data.Sequence.Strict as L
-import Data.Set (Set)
-import Lens.Micro
+import           Data.Set (Set)
+import           Lens.Micro
 
 newtype TxBody era = TxBody
   { unTxBody :: L.TxBody (ShelleyLedgerEra era)

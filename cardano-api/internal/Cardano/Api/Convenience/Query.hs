@@ -20,41 +20,43 @@ module Cardano.Api.Convenience.Query
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.ConwayEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras
-import Cardano.Api.Feature (Featured (..))
-import Cardano.Api.IO
-import Cardano.Api.IPC
-import Cardano.Api.IPC.Monad
-import Cardano.Api.Monad.Error
-import Cardano.Api.NetworkId
-import Cardano.Api.ProtocolParameters
-import Cardano.Api.Query
-import Cardano.Api.Query.Expr
-import Cardano.Api.Tx.Body
-import Cardano.Api.Utils
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras
+import           Cardano.Api.Feature (Featured (..))
+import           Cardano.Api.IO
+import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Monad
+import           Cardano.Api.Monad.Error
+import           Cardano.Api.NetworkId
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query
+import           Cardano.Api.Query.Expr
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Utils
+
 import qualified Cardano.Ledger.Api as L
-import Cardano.Ledger.CertState (DRepState (..))
+import           Cardano.Ledger.CertState (DRepState (..))
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
-import Control.Exception.Safe (SomeException, displayException)
-import Control.Monad
-import Data.Bifunctor (first)
-import Data.Function ((&))
-import Data.Map (Map)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
+
+import           Control.Exception.Safe (SomeException, displayException)
+import           Control.Monad
+import           Data.Bifunctor (first)
+import           Data.Function ((&))
+import           Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (mapMaybe)
-import Data.Set (Set)
+import           Data.Maybe (mapMaybe)
+import           Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (Text)
-import GHC.Exts (IsString (..))
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
-import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
+import           Data.Text (Text)
+import           GHC.Exts (IsString (..))
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
@@ -62,7 +64,7 @@ data QueryConvenienceError
   | ByronEraNotSupported
   | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
   | QceUnexpectedException !SomeException
-  deriving (Show)
+  deriving Show
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
 renderQueryConvenienceError (AcqFailure e) =
@@ -88,7 +90,7 @@ renderQueryConvenienceError (QceUnexpectedException e) =
   "Unexpected exception while processing query:\n" <> fromString (displayException e)
 
 newtype TxCurrentTreasuryValue = TxCurrentTreasuryValue {unTxCurrentTreasuryValue :: L.Coin}
-  deriving newtype (Show)
+  deriving newtype Show
 
 -- | A convenience function to query the relevant information, from
 -- the local node, for Cardano.Api.Convenience.Construction.constructBalancedTx
@@ -165,7 +167,7 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ pure Nothing)
       ( \cOnwards -> do
-          L.AccountState {L.asTreasury} <-
+          L.AccountState{L.asTreasury} <-
             lift (queryAccountState cOnwards)
               & onLeft (left . QceUnsupportedNtcVersion)
               & onLeft (left . QueryEraMismatch)

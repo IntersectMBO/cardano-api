@@ -34,37 +34,33 @@ module Cardano.Api.Eon.ShelleyBasedEra
   )
 where
 
-import Cardano.Api.Eras.Core
-import Cardano.Api.Modes
-import Cardano.Api.Orphans ()
-import Cardano.Api.Pretty (Pretty)
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Modes
+import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty (Pretty)
+
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.BaseTypes as L
-import Cardano.Ledger.Binary (FromCBOR)
+import           Cardano.Ledger.Binary (FromCBOR)
 import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.Shelley.Rules as L
 import qualified Cardano.Ledger.UTxO as L
-import Control.DeepSeq
-import Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
-import qualified Data.Text as Text
-import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import Data.Typeable (Typeable)
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
-import Ouroboros.Consensus.Shelley.Eras as Consensus
-  ( StandardAllegra
-  , StandardAlonzo
-  , StandardBabbage
-  , StandardConway
-  , StandardMary
-  , StandardShelley
-  )
+import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
+                   StandardBabbage, StandardConway, StandardMary, StandardShelley)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import Text.Pretty (Pretty (..))
+
+import           Control.DeepSeq
+import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
+import qualified Data.Text as Text
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
+import           Text.Pretty (Pretty (..))
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 inEonForShelleyBasedEra
