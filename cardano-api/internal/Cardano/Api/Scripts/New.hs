@@ -8,9 +8,12 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Api.Scripts.New where
@@ -18,17 +21,23 @@ module Cardano.Api.Scripts.New where
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Protocol.AvailableEras
 import           Cardano.Api.SerialiseCBOR (SerialiseAsCBOR (..))
+import           Cardano.Api.TxIn
 
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Ledger.Allegra.Scripts as Ledger
 import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
+import qualified Cardano.Ledger.Alonzo.TxWits as Ledger
 import qualified Cardano.Ledger.Babbage as Ledger
 import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.Conway as Ledger
 import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Plutus.Data as Ledger
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Typeable
 
 {-
@@ -93,25 +102,14 @@ instance ( Typeable availableera
          ) => FromCBOR (Script availableera) where
   fromCBOR = Script <$> fromEraCBORConstrained @availableera
 
-class ConstrainedDecoder (availableera :: AvailableEras) era | availableera -> era where
-  fromEraCBORConstrained :: (Ledger.Era era, DecCBOR t) => Plain.Decoder s t
 
-instance ConstrainedDecoder BabbageEra Ledger.Babbage where
-  fromEraCBORConstrained = Ledger.fromEraCBOR @Ledger.Babbage
 
-instance ConstrainedDecoder ConwayEra Ledger.Conway where
-  fromEraCBORConstrained = Ledger.fromEraCBOR @Ledger.Conway
 
--- You need a function that lets a user decode a script in a given era
--- The function must only try to decode script versions available in a given era
--- Can we create a type class that enforces the behavior? Or a type family?
-{-
-data DeserializationError
-deserialiseNativeScript
-  :: AvailableEras
-  -> ByteString
-  -> Either DeserializationError (NativeScript (ToConstrainedEra availableera))
-  -}
+-- The following serialization functions depend on the ledger's CBOR serialization
+-- of Plutus scripts. Taking a Plutus ShortByteString and deserializing it to
+-- the ledger's types will allow us to leverage the ledger's plutus type classes.
+--
+
 
 data NativeScriptDeserializationError
   = NotAScript DecoderError
@@ -169,4 +167,101 @@ deserialisePlutusScript era bs =
                    Just nScript -> Right nScript
                    Nothing -> Left NotAPlutusScript
       Left e -> Left $ NotAnyScript e
+
+
+newtype ReferenceTxInput era
+  = ReferenceTxInput {unReferenceTxInput :: TxIn}
+  deriving Eq
+
+data PlutusScriptWitness era
+ = PlutusScriptWitness
+     (Ledger.TxWits (ToConstrainedEra era))
+ | PlutusScriptWitnessRefInput
+     (Ledger.TxWits (ToConstrainedEra era))
+     (ReferenceTxInput (ToConstrainedEra era))
+
+deriving instance Eq (Ledger.TxWits (ToConstrainedEra era)) => Eq (PlutusScriptWitness era)
+
+data SimpleScriptWitness era
+  = SimpleScriptWitness
+      (Ledger.TxWits (ToConstrainedEra era))
+  | SimpleScriptWitnessRefInput
+      (ReferenceTxInput (ToConstrainedEra era))
+
+deriving instance Eq (Ledger.TxWits (ToConstrainedEra era)) => Eq (SimpleScriptWitness era)
+
+
+createPlutusScriptWitness
+  :: Ledger.Script (ToConstrainedEra era) ~ Ledger.AlonzoScript (ToConstrainedEra era)
+  => Ledger.AlonzoEraScript (ToConstrainedEra era)
+  => Era era
+  -> Ledger.PlutusScript (ToConstrainedEra era)
+  -> Ledger.Data (ToConstrainedEra era)
+  -> Map (Ledger.PlutusPurpose Ledger.AsIx (ToConstrainedEra era)) (Ledger.Data (ToConstrainedEra era), Ledger.ExUnits)
+  -> PlutusScriptWitness era
+createPlutusScriptWitness era plutusScript txdatum redeemerMap =
+  case era of
+    CurrentEraInternal -> PlutusScriptWitness createScriptWit
+    UpcomingEraInternal -> PlutusScriptWitness createScriptWit
+ where
+   createScriptWit =
+    let script = Ledger.PlutusScript plutusScript
+        scriptHashMap = Map.singleton (Ledger.hashScript script) script
+        datumHashMap = Ledger.TxDats $ Map.singleton (Ledger.hashData txdatum) txdatum
+    in Ledger.AlonzoTxWits mempty mempty scriptHashMap datumHashMap $ Ledger.Redeemers redeemerMap
+
+
+createPlutusReferenceScriptWitness
+  :: Ledger.Script (ToConstrainedEra era) ~ Ledger.AlonzoScript (ToConstrainedEra era)
+  => Ledger.AlonzoEraScript (ToConstrainedEra era)
+  => Era era
+  -> ReferenceTxInput (ToConstrainedEra era)
+  -> Ledger.Data (ToConstrainedEra era)
+  -> Map (Ledger.PlutusPurpose Ledger.AsIx (ToConstrainedEra era)) (Ledger.Data (ToConstrainedEra era), Ledger.ExUnits)
+  -> PlutusScriptWitness era
+createPlutusReferenceScriptWitness era txin txdatum redeemerMap =
+  case era of
+    CurrentEraInternal -> PlutusScriptWitnessRefInput createScriptWit txin
+    UpcomingEraInternal -> PlutusScriptWitnessRefInput createScriptWit txin
+ where
+  createScriptWit =
+   let datumHashMap = Ledger.TxDats $ Map.singleton (Ledger.hashData txdatum) txdatum
+   in Ledger.AlonzoTxWits mempty mempty mempty datumHashMap $ Ledger.Redeemers redeemerMap
+
+createSimpleScriptWitness
+  :: Ledger.AlonzoEraScript (ToConstrainedEra era)
+  => Ledger.Script (ToConstrainedEra era) ~ Ledger.AlonzoScript (ToConstrainedEra era)
+  => Ledger.NativeScript (ToConstrainedEra era) ~ Ledger.Timelock (ToConstrainedEra era)
+  => Era era
+  -> Ledger.NativeScript (ToConstrainedEra era)
+  -> SimpleScriptWitness era
+createSimpleScriptWitness era simpleScript =   case era of
+    CurrentEraInternal -> SimpleScriptWitness createScriptWit
+    UpcomingEraInternal -> SimpleScriptWitness createScriptWit
+ where
+   createScriptWit =
+    let script = Ledger.TimelockScript simpleScript
+        scriptHashMap = Map.singleton (Ledger.hashScript script) script
+    in Ledger.AlonzoTxWits mempty mempty scriptHashMap mempty (Ledger.Redeemers mempty)
+
+
+createSimpleReferenceScriptWitness
+  :: Era era
+  -> ReferenceTxInput (ToConstrainedEra era)
+  -> SimpleScriptWitness era
+createSimpleReferenceScriptWitness era refInput  =   case era of
+    CurrentEraInternal -> SimpleScriptWitnessRefInput refInput
+    UpcomingEraInternal -> SimpleScriptWitnessRefInput refInput
+
+
+class ConstrainedDecoder (availableera :: AvailableEras) era | availableera -> era where
+  fromEraCBORConstrained :: (Ledger.Era era, DecCBOR t) => Plain.Decoder s t
+
+instance ConstrainedDecoder BabbageEra Ledger.Babbage where
+  fromEraCBORConstrained = Ledger.fromEraCBOR @Ledger.Babbage
+
+instance ConstrainedDecoder ConwayEra Ledger.Conway where
+  fromEraCBORConstrained = Ledger.fromEraCBOR @Ledger.Conway
+
+
 
