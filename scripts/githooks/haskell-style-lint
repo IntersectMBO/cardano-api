@@ -15,6 +15,7 @@ for x in $(git diff --staged --name-only --diff-filter=ACM "*.hs" | tr '\n' ' ')
     echo "$x contains CPP.  Skipping."
   else
     fourmolu -q -i "$x"
+    stylish-haskell -i "$x"
   fi
   hlint "$x" || hlint_rc="1"
 done
