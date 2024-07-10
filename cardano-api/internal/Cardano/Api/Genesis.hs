@@ -338,8 +338,13 @@ decodeAlonzoGenesis (Just era) genesisBs = modifyError ("Cannot decode era-sensi
 
 -- | Some reasonable starting defaults for constructing a 'AlonzoGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
-alonzoGenesisDefaults :: AlonzoGenesis
-alonzoGenesisDefaults =
+-- The era determines Plutus V2 cost model parameters:
+-- * Conway: 185
+-- * <= Babbage: 175
+alonzoGenesisDefaults
+  :: CardanoEra era
+  -> AlonzoGenesis
+alonzoGenesisDefaults era =
   AlonzoGenesis
     { agPrices =
         Prices
@@ -714,15 +719,21 @@ alonzoGenesisDefaults =
       , 38887044
       , 32947
       , 10
-      , -- New Conway costmodel parameters below
-        1292075
-      , 24469
-      , 74
-      , 0
-      , 1
-      , 936157
-      , 49601
-      , 237
-      , 0
-      , 1
       ]
+        <> defaultV2CostModelNewConwayParams
+
+    -- New Conway cost model parameters
+    defaultV2CostModelNewConwayParams =
+      monoidForEraInEon @ConwayEraOnwards era $
+        const
+          [ 1292075
+          , 24469
+          , 74
+          , 0
+          , 1
+          , 936157
+          , 49601
+          , 237
+          , 0
+          , 1
+          ]

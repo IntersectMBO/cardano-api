@@ -1343,6 +1343,8 @@ shelleyPraosNonce genesisHash =
 readCardanoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => Maybe (CardanoEra era)
+  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
+  -- 'Cardano.Api.Genesis.decodeAlonzGenesis' for more details)
   -> NodeConfig
   -> t m GenesisConfig
 readCardanoGenesisConfig mEra enc = do
@@ -1427,6 +1429,8 @@ readShelleyGenesisConfig enc = do
 readAlonzoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => Maybe (CardanoEra era)
+  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
+  -- 'Cardano.Api.Genesis.decodeAlonzGenesis' for more details)
   -> NodeConfig
   -> t m AlonzoGenesis
 readAlonzoGenesisConfig mEra enc = do
@@ -1508,6 +1512,8 @@ readAlonzoGenesis
   :: forall m t era
    . MonadIOTransError AlonzoGenesisError t m
   => Maybe (CardanoEra era)
+  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
+  -- 'Cardano.Api.Genesis.decodeAlonzGenesis' for more details)
   -> File AlonzoGenesis 'In
   -> GenesisHashAlonzo
   -> t m AlonzoGenesis

@@ -65,10 +65,19 @@ prop_reading_plutus_v2_era_sensitive_costmodel era cmf = H.propertyOnce $ do
         else last10CostModelValues === last10CostModelCorrectValues
     else length v2costModelValues === 175
 
+  -- Make sure that our just read genesis is CBOR encoding roundtripping
   aeo <- H.nothingFail $ maybeEon @AlonzoEraOnwards @era
   let allCostModelsBs = encodeCborInEraCostModels aeo allCostModels
   allCostModels' <- H.leftFail $ decodeCborInEraCostModels aeo allCostModelsBs
+  H.note_ "Check that read genesis is CBOR encoding roundtripping"
   allCostModels' === allCostModels
+
+  -- Yeah, let's check the default one if it's roundtripping as well
+  let defaultCostModels = L.agCostModels $ alonzoGenesisDefaults era
+      defaultCostModelsBs = encodeCborInEraCostModels aeo defaultCostModels
+  defaultCostModels' <- H.leftFail $ decodeCborInEraCostModels aeo defaultCostModelsBs
+  H.note_ "Check that the default genesis is CBOR encoding roundtripping"
+  defaultCostModels' === defaultCostModels
 
 -- | Test reading and decoding of AlonzoGenesis with cost models - an era independent test
 prop_reading_plutus_v2_costmodel
