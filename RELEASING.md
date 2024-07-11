@@ -97,25 +97,26 @@ In order to generate changelog files in markdown format use the following steps:
     * updated changelogs
     * bumped version fields in cabal files
 
-### Tagging the commit
-**After verifying the release PR diff** that it contains the correct contents, prepare the tag.
+>:high_brightness: **Note**
+>
+>Usually the release PR should only contain a changelog update and a version bump.
+>If you are making a release which aims to contain everything from `main` branch, there should be no additional code changes in the release PR.
+>An exception to that would be a release with a backported fix for example, where the release PR should contain required code changes too.
 
-Firstly, make sure that:
-1. Your `HEAD` is on the commit which you are planning to make a release from.
-1. Your `HEAD` is in `release/packagename-version.x` branch history on the origin remote (the `.x` suffix is optional).
+>:bulb: **Tip**
+>
+>Hold off on tagging and merging of the release PR, until CHaP PR gets merged. See: p. 5 in [Releasing to `cardano-haskell-packages`](#releasing-to-cardano-haskell-packages).
 
-Then you can use the following script to prepare the tag:
-```bash
-../cardano-dev/scripts/tag.sh
-```
-This script will extract the version numbers from cabal files, create the tag and **push it to the `origin` remote**.
-Please note that the tagging process will fail if:
-1. The tag already exists on the origin remote
-1. The `packagename/CHANGELOG.md` does not contain entry for the new version.
+>:bulb: **Tip**
+>
+>Avoid unnecessary rebasing of the release PR to prevent accidental inclusion of unwanted changes.
+>The release PR should be merged using merge queue with an explicit merge commit.
 
 
 ### Releasing to `cardano-haskell-packages`
-After the `cardano-api` version gets tagged, it needs to be uploaded to `cardano-haskell-packages` (aka **CHaP**).
+
+**After verifying the release PR diff** that it contains the correct contents, it should be uploaded to `cardano-haskell-packages` (aka **CHaP**).
+
 Detailed description of the release process is described in [CHaP repository README](https://github.com/intersectmbo/cardano-haskell-packages#how-to-add-a-new-package-version).
 Briefly speaking, it requires executing of the following steps:
 
@@ -141,15 +142,36 @@ Briefly speaking, it requires executing of the following steps:
     Don't forget to bump the CHaP index in cabal.project and flake.lock too.
     See [`CONTRIBUTING.md` section on updating dependencies](https://github.com/IntersectMBO/cardano-cli/blob/main/CONTRIBUTING.md#updating-dependencies) how to to do so.
 
-1. After successful CI build in CHaP, the release PR (in the `cardano-api` repo) can be enqueued to merge.
-    >:bulb: **Tip**
-    >
-    >CHaP CI build can fail due to various reasons, like invalid haddock syntax.
-    >Merging the release PR later allows easier adjusting of the tag to include the fix for the potential issues.
+>:bulb: **Tip**
+>
+>CHaP CI build can fail due to various reasons, like invalid haddock syntax.
+>Tagging and merging the release PR after CHaP PR allows to accommodate for potential issues which can arise here.
+
+### Tagging the release version
+
+After successful CI build in CHaP, the release PR (in the `cardano-api` repo) can be tagged and then enqueued to merge.
+
+1. Make sure that:
+   1. Your `HEAD` is on the commit you're going to tag - **this has to be the same commit which was released to CHaP**
+   1. Your `HEAD` is in `release/packagename-version.x` branch history on the `origin` remote (the `.x` suffix is optional).
+
+1. Use the following script to prepare the tag:
+   ```bash
+   ../cardano-dev/scripts/tag.sh
+   ```
+   This script will extract the version numbers from cabal files, create the tag and **push it to the `origin` remote**.
+   Please note that the tagging process will fail if either:
+   1. The tag already exists on the origin remote
+   1. The `packagename/CHANGELOG.md` does not contain an entry for the new version.
+
+#### GitHub release pipeline
+
+If the repo has a release pipeline configured, it will be triggered on the tag push.
+
 1. If the release pipeline (if any, see e.g. [here for CLI](https://github.com/IntersectMBO/cardano-cli/actions/workflows/release-upload.yaml)) fails
    during the _Get specific check run status_ step of the _Wait for Hydra check-runs_ pipeline, this means Hydra did not
-   run on the tagged commit. This can happen if the tagged commit is not the remote `HEAD` when you create the PR,
-   or if you change the tag after the fact.
+   run on the tagged commit.
+   This can happen if the tagged commit is not the remote `HEAD` when you create the PR, or if you change the tag after the fact.
 
    To make hydra run on the tagged commit, checkout this commit, create a branch whose name starts with `ci/`
    (see [Hydra's code](https://github.com/input-output-hk/hydra-tools/commit/854620a3426957be72fa618c4dfc68f03842617b)) and push this branch.
