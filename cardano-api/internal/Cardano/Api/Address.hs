@@ -90,35 +90,37 @@ module Cardano.Api.Address
   )
 where
 
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Byron
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.NetworkId
-import Cardano.Api.Script
-import Cardano.Api.SerialiseBech32
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.Utils
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.NetworkId
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils
+
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Address as Shelley
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Credential as Shelley
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Plutus.TxInfo as Plutus
-import Control.Applicative ((<|>))
-import Control.DeepSeq (NFData (..), deepseq)
-import Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
+import qualified PlutusLedgerApi.V1 as PlutusAPI
+
+import           Control.Applicative ((<|>))
+import           Control.DeepSeq (NFData (..), deepseq)
+import           Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
 import qualified Data.Aeson as Aeson
-import Data.Bifunctor (first)
+import           Data.Bifunctor (first)
 import qualified Data.ByteString.Base58 as Base58
-import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
-import Data.Either.Combinators (rightToMaybe)
-import Data.Text (Text)
+import           Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import           Data.Either.Combinators (rightToMaybe)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified PlutusLedgerApi.V1 as PlutusAPI
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 
@@ -229,7 +231,7 @@ instance SerialiseAsRawBytes (Address ByronAddr) where
   deserialiseFromRawBytes (AsAddress AsByronAddr) bs =
     case Shelley.decodeAddr bs :: Maybe (Shelley.Addr StandardCrypto) of
       Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
-      Just Shelley.Addr {} -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
+      Just Shelley.Addr{} -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
       Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
         Right (ByronAddress addr)
 
@@ -241,7 +243,7 @@ instance SerialiseAsRawBytes (Address ShelleyAddr) where
     case Shelley.decodeAddr bs of
       Nothing ->
         Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
-      Just Shelley.AddrBootstrap {} -> Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
+      Just Shelley.AddrBootstrap{} -> Left (SerialiseAsRawBytesError "Unable to deserialise bootstrap Address ShelleyAddr")
       Just (Shelley.Addr nw pc scr) -> Right (ShelleyAddress nw pc scr)
 
 instance SerialiseAsBech32 (Address ShelleyAddr) where
@@ -251,7 +253,7 @@ instance SerialiseAsBech32 (Address ShelleyAddr) where
   bech32PrefixesPermitted (AsAddress AsShelleyAddr) = ["addr", "addr_test"]
 
 instance SerialiseAddress (Address ByronAddr) where
-  serialiseAddress addr@ByronAddress {} =
+  serialiseAddress addr@ByronAddress{} =
     Text.decodeLatin1
       . Base58.encodeBase58 Base58.bitcoinAlphabet
       . serialiseToRawBytes
@@ -262,7 +264,7 @@ instance SerialiseAddress (Address ByronAddr) where
     rightToMaybe (deserialiseFromRawBytes (AsAddress AsByronAddr) bs)
 
 instance SerialiseAddress (Address ShelleyAddr) where
-  serialiseAddress addr@ShelleyAddress {} =
+  serialiseAddress addr@ShelleyAddress{} =
     serialiseToBech32 addr
 
   deserialiseAddress (AsAddress AsShelleyAddr) t =
@@ -404,13 +406,13 @@ instance Eq (AddressInEra era) where
     (AddressInEra ByronAddressInAnyEra addr1)
     (AddressInEra ByronAddressInAnyEra addr2) = addr1 == addr2
   (==)
-    (AddressInEra ShelleyAddressInEra {} addr1)
-    (AddressInEra ShelleyAddressInEra {} addr2) = addr1 == addr2
+    (AddressInEra ShelleyAddressInEra{} addr1)
+    (AddressInEra ShelleyAddressInEra{} addr2) = addr1 == addr2
   (==)
     (AddressInEra ByronAddressInAnyEra _)
-    (AddressInEra ShelleyAddressInEra {} _) = False
+    (AddressInEra ShelleyAddressInEra{} _) = False
   (==)
-    (AddressInEra ShelleyAddressInEra {} _)
+    (AddressInEra ShelleyAddressInEra{} _)
     (AddressInEra ByronAddressInAnyEra _) = False
 
 instance Ord (AddressInEra era) where
@@ -418,13 +420,13 @@ instance Ord (AddressInEra era) where
     (AddressInEra ByronAddressInAnyEra addr1)
     (AddressInEra ByronAddressInAnyEra addr2) = compare addr1 addr2
   compare
-    (AddressInEra ShelleyAddressInEra {} addr1)
-    (AddressInEra ShelleyAddressInEra {} addr2) = compare addr1 addr2
+    (AddressInEra ShelleyAddressInEra{} addr1)
+    (AddressInEra ShelleyAddressInEra{} addr2) = compare addr1 addr2
   compare
     (AddressInEra ByronAddressInAnyEra _)
-    (AddressInEra ShelleyAddressInEra {} _) = LT
+    (AddressInEra ShelleyAddressInEra{} _) = LT
   compare
-    (AddressInEra ShelleyAddressInEra {} _)
+    (AddressInEra ShelleyAddressInEra{} _)
     (AddressInEra ByronAddressInAnyEra _) = GT
 
 deriving instance Show (AddressInEra era)
@@ -449,7 +451,7 @@ instance HasTypeProxy era => HasTypeProxy (AddressInEra era) where
 instance IsCardanoEra era => SerialiseAsRawBytes (AddressInEra era) where
   serialiseToRawBytes (AddressInEra ByronAddressInAnyEra addr) =
     serialiseToRawBytes addr
-  serialiseToRawBytes (AddressInEra ShelleyAddressInEra {} addr) =
+  serialiseToRawBytes (AddressInEra ShelleyAddressInEra{} addr) =
     serialiseToRawBytes addr
 
   deserialiseFromRawBytes _ bs =
@@ -460,7 +462,7 @@ instance IsCardanoEra era => SerialiseAsRawBytes (AddressInEra era) where
 instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
   serialiseAddress (AddressInEra ByronAddressInAnyEra addr) =
     serialiseAddress addr
-  serialiseAddress (AddressInEra ShelleyAddressInEra {} addr) =
+  serialiseAddress (AddressInEra ShelleyAddressInEra{} addr) =
     serialiseAddress addr
 
   deserialiseAddress _ t =
@@ -500,8 +502,8 @@ anyAddressInEra era = \case
       (\sbe -> Right (AddressInEra (ShelleyAddressInEra sbe) addr))
 
 toAddressAny :: Address addr -> AddressAny
-toAddressAny a@ShelleyAddress {} = AddressShelley a
-toAddressAny a@ByronAddress {} = AddressByron a
+toAddressAny a@ShelleyAddress{} = AddressShelley a
+toAddressAny a@ByronAddress{} = AddressByron a
 
 makeByronAddressInEra
   :: NetworkId
@@ -581,7 +583,7 @@ instance SerialiseAsBech32 StakeAddress where
   bech32PrefixesPermitted AsStakeAddress = ["stake", "stake_test"]
 
 instance SerialiseAddress StakeAddress where
-  serialiseAddress addr@StakeAddress {} =
+  serialiseAddress addr@StakeAddress{} =
     serialiseToBech32 addr
 
   deserialiseAddress AsStakeAddress t =

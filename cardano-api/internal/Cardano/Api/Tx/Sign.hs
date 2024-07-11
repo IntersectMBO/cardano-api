@@ -76,18 +76,19 @@ module Cardano.Api.Tx.Sign
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.AlonzoEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Keys.Byron
-import Cardano.Api.Keys.Class
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.NetworkId
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.NetworkId
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseTextEnvelope
+
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
@@ -99,23 +100,24 @@ import qualified Cardano.Crypto.Wallet as Crypto.HD
 import qualified Cardano.Ledger.Alonzo.Core as L
 import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
 import qualified Cardano.Ledger.Api as L
-import Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import Cardano.Ledger.Binary (Annotated (..))
+import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import           Cardano.Ledger.Binary (Annotated (..))
 import qualified Cardano.Ledger.Binary as CBOR
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.Core as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as Ledger
-import Data.ByteString (ByteString)
+
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
-import Data.Maybe
+import           Data.Maybe
 import qualified Data.Set as Set
-import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
-import Lens.Micro
+import           Lens.Micro
 
 -- ----------------------------------------------------------------------------
 -- Signed transactions
@@ -852,10 +854,10 @@ signShelleyTransaction sbe txbody sks =
   witnesses = map (makeShelleyKeyWitness sbe txbody) sks
 
 getByronTxBody :: Byron.ATxAux ByteString -> Annotated Byron.Tx ByteString
-getByronTxBody (Byron.ATxAux {Byron.aTaTx = txbody}) = txbody
+getByronTxBody (Byron.ATxAux{Byron.aTaTx = txbody}) = txbody
 
 getTxWitnessesByron :: Byron.ATxAux ByteString -> [KeyWitness ByronEra]
-getTxWitnessesByron (Byron.ATxAux {Byron.aTaWitness = witnesses}) =
+getTxWitnessesByron (Byron.ATxAux{Byron.aTaWitness = witnesses}) =
   map ByronKeyWitness
     . Vector.toList
     . unAnnotated

@@ -5,16 +5,20 @@ module Test.Cardano.Api.Typed.TxBody
   )
 where
 
-import Cardano.Api
-import Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
-import Data.Maybe (isJust)
-import Data.Type.Equality (TestEquality (testEquality))
-import Hedgehog (MonadTest, Property, annotateShow, failure, (===))
+import           Cardano.Api
+import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
+
+import           Data.Maybe (isJust)
+import           Data.Type.Equality (TestEquality (testEquality))
+
+import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
+
+import           Test.Cardano.Api.Typed.Orphans ()
+
+import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))
 import qualified Hedgehog as H
-import Test.Cardano.Api.Typed.Orphans ()
-import Test.Gen.Cardano.Api.Typed (genTxBodyContent)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 

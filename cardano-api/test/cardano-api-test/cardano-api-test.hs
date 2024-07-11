@@ -1,7 +1,11 @@
 module Main where
 
-import Cardano.Crypto.Libsodium (sodiumInit)
-import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+import           Cardano.Crypto.Libsodium (sodiumInit)
+
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+
+import qualified Test.Gen.Cardano.Api.Byron
+
 import qualified Test.Cardano.Api.Crypto
 import qualified Test.Cardano.Api.EpochLeadership
 import qualified Test.Cardano.Api.Eras
@@ -20,8 +24,8 @@ import qualified Test.Cardano.Api.Typed.Ord
 import qualified Test.Cardano.Api.Typed.RawBytes
 import qualified Test.Cardano.Api.Typed.TxBody
 import qualified Test.Cardano.Api.Typed.Value
-import qualified Test.Gen.Cardano.Api.Byron
-import Test.Tasty (TestTree, defaultMain, testGroup)
+
+import           Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
 main = do

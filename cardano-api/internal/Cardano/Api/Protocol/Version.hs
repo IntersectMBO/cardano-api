@@ -24,9 +24,10 @@ module Cardano.Api.Protocol.Version
   )
 where
 
-import Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
 import qualified Cardano.Api.Eras.Core as Api
-import GHC.TypeLits
+
+import           GHC.TypeLits
 
 -- | Users typically interact with the latest features on the mainnet or experiment with features
 -- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era

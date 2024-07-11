@@ -71,38 +71,40 @@ module Cardano.Api.Certificate
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.DRepMetadata
-import Cardano.Api.Eon.ConwayEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eon.ShelleyToBabbageEra
-import Cardano.Api.Eras
-import Cardano.Api.Governance.Actions.VotingProcedure
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Keys.Praos
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.ReexposeLedger (EraCrypto, StandardCrypto)
+import           Cardano.Api.Address
+import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Eras
+import           Cardano.Api.Governance.Actions.VotingProcedure
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.ReexposeLedger (EraCrypto, StandardCrypto)
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import Cardano.Api.Script
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.StakePoolMetadata
-import Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
-import Cardano.Api.Value
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
+import           Cardano.Api.Value
+
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Keys as Ledger
-import Data.ByteString (ByteString)
+
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.Foldable as Foldable
-import Data.IP (IPv4, IPv6)
-import Data.Maybe
+import           Data.IP (IPv4, IPv6)
+import           Data.Maybe
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Data.Typeable
-import Network.Socket (PortNumber)
+import           Data.Typeable
+import           Network.Socket (PortNumber)
 
 -- ----------------------------------------------------------------------------
 -- Certificates embedded in transactions
@@ -127,7 +129,7 @@ data Certificate era where
     :: ConwayEraOnwards era
     -> Ledger.ConwayTxCert (ShelleyLedgerEra era)
     -> Certificate era
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 deriving instance Eq (Certificate era)
 
@@ -164,26 +166,26 @@ instance
       "CertificateShelley"
       (const "CertificateConway")
   textEnvelopeDefaultDescr cert = case cert of
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyRegCert {}) -> "Stake address registration"
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyUnRegCert {}) -> "Stake address deregistration"
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyDelegCert {}) -> "Stake address delegation"
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RetirePool {}) -> "Pool retirement"
-    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RegPool {}) -> "Pool registration"
-    ShelleyRelatedCertificate _ Ledger.ShelleyTxCertGenesisDeleg {} -> "Genesis key delegation"
-    ShelleyRelatedCertificate _ Ledger.ShelleyTxCertMir {} -> "MIR"
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyRegCert{}) -> "Stake address registration"
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyUnRegCert{}) -> "Stake address deregistration"
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertDelegCert Ledger.ShelleyDelegCert{}) -> "Stake address delegation"
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
+    ShelleyRelatedCertificate _ (Ledger.ShelleyTxCertPool Ledger.RegPool{}) -> "Pool registration"
+    ShelleyRelatedCertificate _ Ledger.ShelleyTxCertGenesisDeleg{} -> "Genesis key delegation"
+    ShelleyRelatedCertificate _ Ledger.ShelleyTxCertMir{} -> "MIR"
     -- Conway and onwards related
     -- Constitutional Committee related
-    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayRegDRep {}) -> "Constitution committee member key registration"
-    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayUnRegDRep {}) -> "Constitution committee member key unregistration"
-    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayUpdateDRep {}) -> "Constitution committee member key registration update"
-    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayAuthCommitteeHotKey {}) -> "Constitution committee member hot key registration"
-    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayResignCommitteeColdKey {}) -> "Constitution committee member hot key resignation"
-    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegCert {}) -> "Stake address registration"
-    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayUnRegCert {}) -> "Stake address deregistration"
-    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayDelegCert {}) -> "Stake address delegation"
-    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegDelegCert {}) -> "Stake address registration and delegation"
-    ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RegPool {}) -> "Pool registration"
-    ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool {}) -> "Pool retirement"
+    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayRegDRep{}) -> "Constitution committee member key registration"
+    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayUnRegDRep{}) -> "Constitution committee member key unregistration"
+    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayUpdateDRep{}) -> "Constitution committee member key registration update"
+    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayAuthCommitteeHotKey{}) -> "Constitution committee member hot key registration"
+    ConwayCertificate _ (Ledger.ConwayTxCertGov Ledger.ConwayResignCommitteeColdKey{}) -> "Constitution committee member hot key resignation"
+    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegCert{}) -> "Stake address registration"
+    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayUnRegCert{}) -> "Stake address deregistration"
+    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayDelegCert{}) -> "Stake address delegation"
+    ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegDelegCert{}) -> "Stake address registration and delegation"
+    ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RegPool{}) -> "Pool registration"
+    ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
@@ -523,7 +525,7 @@ filterUnRegCreds =
         Ledger.RegPoolTxCert _ -> Nothing
         Ledger.RetirePoolTxCert _ _ -> Nothing
         Ledger.MirTxCert _ -> Nothing
-        Ledger.GenesisDelegTxCert {} -> Nothing
+        Ledger.GenesisDelegTxCert{} -> Nothing
     ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
       case conwayCert of
         Ledger.RegTxCert _ -> Nothing
@@ -533,12 +535,12 @@ filterUnRegCreds =
         Ledger.RegDepositTxCert _ _ -> Nothing
         Ledger.UnRegDepositTxCert _ _ -> Nothing
         Ledger.DelegTxCert _ _ -> Nothing
-        Ledger.RegDepositDelegTxCert {} -> Nothing
-        Ledger.AuthCommitteeHotKeyTxCert {} -> Nothing
-        Ledger.ResignCommitteeColdTxCert {} -> Nothing
-        Ledger.RegDRepTxCert {} -> Nothing
-        Ledger.UnRegDRepTxCert {} -> Nothing
-        Ledger.UpdateDRepTxCert {} -> Nothing
+        Ledger.RegDepositDelegTxCert{} -> Nothing
+        Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
+        Ledger.ResignCommitteeColdTxCert{} -> Nothing
+        Ledger.RegDRepTxCert{} -> Nothing
+        Ledger.UnRegDRepTxCert{} -> Nothing
+        Ledger.UpdateDRepTxCert{} -> Nothing
 
 filterUnRegDRepCreds
   :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto)
@@ -553,12 +555,12 @@ filterUnRegDRepCreds = \case
       Ledger.RegDepositTxCert _ _ -> Nothing
       Ledger.UnRegDepositTxCert _ _ -> Nothing
       Ledger.DelegTxCert _ _ -> Nothing
-      Ledger.RegDepositDelegTxCert {} -> Nothing
-      Ledger.AuthCommitteeHotKeyTxCert {} -> Nothing
-      Ledger.ResignCommitteeColdTxCert {} -> Nothing
-      Ledger.RegDRepTxCert {} -> Nothing
+      Ledger.RegDepositDelegTxCert{} -> Nothing
+      Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
+      Ledger.ResignCommitteeColdTxCert{} -> Nothing
+      Ledger.RegDRepTxCert{} -> Nothing
       Ledger.UnRegDRepTxCert cred _ -> Just cred
-      Ledger.UpdateDRepTxCert {} -> Nothing
+      Ledger.UpdateDRepTxCert{} -> Nothing
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions

@@ -21,19 +21,19 @@ module Cardano.Api.Eras.Case
   )
 where
 
-import Cardano.Api.Eon.AllegraEraOnwards
-import Cardano.Api.Eon.AlonzoEraOnwards
-import Cardano.Api.Eon.BabbageEraOnwards
-import Cardano.Api.Eon.ByronToAlonzoEra
-import Cardano.Api.Eon.ConwayEraOnwards
-import Cardano.Api.Eon.MaryEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eon.ShelleyEraOnly
-import Cardano.Api.Eon.ShelleyToAllegraEra
-import Cardano.Api.Eon.ShelleyToAlonzoEra
-import Cardano.Api.Eon.ShelleyToBabbageEra
-import Cardano.Api.Eon.ShelleyToMaryEra
-import Cardano.Api.Eras.Core
+import           Cardano.Api.Eon.AllegraEraOnwards
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ByronToAlonzoEra
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.MaryEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyEraOnly
+import           Cardano.Api.Eon.ShelleyToAllegraEra
+import           Cardano.Api.Eon.ShelleyToAlonzoEra
+import           Cardano.Api.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Eon.ShelleyToMaryEra
+import           Cardano.Api.Eras.Core
 
 -- | @caseByronOrShelleyBasedEra f g era@ returns @f@ in Byron and applies @g@ to Shelley-based eras.
 caseByronOrShelleyBasedEra

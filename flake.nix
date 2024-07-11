@@ -121,6 +121,9 @@
           shell.withHoogle = false;
           # Skip cross compilers for the shell
           shell.crossPlatforms = _: [];
+          shell.shellHook = ''
+            export PATH="$(git rev-parse --show-toplevel)/scripts/devshell:$PATH"
+          '';
 
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.

@@ -4,13 +4,15 @@ module Cardano.Api.Rewards
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Certificate
+import           Cardano.Api.Address
+import           Cardano.Api.Certificate
+
 import qualified Cardano.Ledger.Coin as L
-import Data.Aeson as Aeson
+
+import           Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
-import Data.List (nub)
-import Data.Map.Strict (Map)
+import           Data.List (nub)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Vector as Vector
 

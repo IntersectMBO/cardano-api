@@ -2,16 +2,18 @@
 
 module Test.Hedgehog.Golden.ErrorMessage where
 
-import Cardano.Api (Error (..))
-import Cardano.Api.Pretty
-import Data.Data
-import GHC.Stack (HasCallStack, withFrozenCallStack)
-import Hedgehog
+import           Cardano.Api (Error (..))
+import           Cardano.Api.Pretty
+
+import           Data.Data
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import           System.FilePath ((</>))
+
+import           Hedgehog
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Golden as H
-import System.FilePath ((</>))
-import Test.Tasty
-import Test.Tasty.Hedgehog
+import           Test.Tasty
+import           Test.Tasty.Hedgehog
 
 -- | Generate test tree for the list of values. This 'TestTree' will serialize the values using 'Error'
 -- instance and compare them against golden files in the provided location.

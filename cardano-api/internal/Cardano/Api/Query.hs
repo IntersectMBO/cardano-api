@@ -64,62 +64,44 @@ module Cardano.Api.Query
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Block
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras.Case
-import Cardano.Api.Eras.Core
-import Cardano.Api.GenesisParameters
-import Cardano.Api.IPC.Version
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.Modes
-import Cardano.Api.NetworkId
-import Cardano.Api.ProtocolParameters
-import Cardano.Api.Query.Types
+import           Cardano.Api.Address
+import           Cardano.Api.Block
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.GenesisParameters
+import           Cardano.Api.IPC.Version
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Modes
+import           Cardano.Api.NetworkId
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query.Types
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Body
+
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as L
-import Cardano.Ledger.Binary
+import           Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.CertState as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as Shelley
-import Cardano.Ledger.Crypto (Crypto)
+import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import Cardano.Slotting.EpochInfo (hoistEpochInfo)
-import Cardano.Slotting.Slot (WithOrigin (..))
-import Cardano.Slotting.Time (SystemStart (..))
-import Control.Monad.Trans.Except
-import Data.Aeson (FromJSON (..), ToJSON (..), withObject)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
-import Data.Aeson.Types (Parser)
-import Data.Bifunctor (bimap, first)
-import qualified Data.ByteString.Lazy as LBS
-import Data.Either.Combinators (rightToMaybe)
-import qualified Data.HashMap.Strict as HMS
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
-import Data.SOP.Constraint (SListI)
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Text (Text)
-import qualified Data.Text as Text
-import Data.Word (Word64)
-import GHC.Stack
-import Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
+import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
+import           Cardano.Slotting.Slot (WithOrigin (..))
+import           Cardano.Slotting.Time (SystemStart (..))
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
+import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.HardFork.History as History
@@ -128,9 +110,29 @@ import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
-import Ouroboros.Network.Block (Serialised (..))
-import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
-import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
+import           Ouroboros.Network.Block (Serialised (..))
+import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
+
+import           Control.Monad.Trans.Except
+import           Data.Aeson (FromJSON (..), ToJSON (..), withObject)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
+import           Data.Aeson.Types (Parser)
+import           Data.Bifunctor (bimap, first)
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Either.Combinators (rightToMaybe)
+import qualified Data.HashMap.Strict as HMS
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (mapMaybe)
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.SOP.Constraint (SListI)
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import           Data.Word (Word64)
+import           GHC.Stack
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -318,10 +320,10 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryAccountState = NodeToClientV_16
   nodeToClientVersionOf QueryConstitution = NodeToClientV_16
   nodeToClientVersionOf QueryGovState = NodeToClientV_16
-  nodeToClientVersionOf QueryDRepState {} = NodeToClientV_16
-  nodeToClientVersionOf QueryDRepStakeDistr {} = NodeToClientV_16
-  nodeToClientVersionOf QueryCommitteeMembersState {} = NodeToClientV_16
-  nodeToClientVersionOf QueryStakeVoteDelegatees {} = NodeToClientV_16
+  nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
+  nodeToClientVersionOf QueryDRepStakeDistr{} = NodeToClientV_16
+  nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
+  nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -350,7 +352,7 @@ instance NodeToClientVersionOf QueryUTxOFilter where
   nodeToClientVersionOf (QueryUTxOByTxIn _) = NodeToClientV_9
 
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
-  deriving (Show)
+  deriving Show
 
 newtype UTxO era = UTxO {unUTxO :: Map TxIn (TxOut CtxUTxO era)}
   deriving (Eq, Show)
@@ -874,17 +876,17 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
       case q' of
         Consensus.GetUTxOWhole -> fromLedgerUTxO sbe r'
         _ -> fromConsensusQueryResultMismatch
-    QueryUTxO QueryUTxOByAddress {} ->
+    QueryUTxO QueryUTxOByAddress{} ->
       case q' of
-        Consensus.GetUTxOByAddress {} -> fromLedgerUTxO sbe r'
+        Consensus.GetUTxOByAddress{} -> fromLedgerUTxO sbe r'
         _ -> fromConsensusQueryResultMismatch
-    QueryUTxO QueryUTxOByTxIn {} ->
+    QueryUTxO QueryUTxOByTxIn{} ->
       case q' of
-        Consensus.GetUTxOByTxIn {} -> fromLedgerUTxO sbe r'
+        Consensus.GetUTxOByTxIn{} -> fromLedgerUTxO sbe r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakeAddresses _ nId ->
       case q' of
-        Consensus.GetFilteredDelegationsAndRewardAccounts {} ->
+        Consensus.GetFilteredDelegationsAndRewardAccounts{} ->
           let (delegs, rwaccs) = r'
            in ( Map.mapKeys (makeStakeAddress nId) $ fromShelleyRewardAccounts rwaccs
               , Map.mapKeys (makeStakeAddress nId) $ fromShelleyDelegations delegs
@@ -894,14 +896,14 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
       case q' of
         Consensus.GetStakePools -> Set.map StakePoolKeyHash r'
         _ -> fromConsensusQueryResultMismatch
-    QueryStakePoolParameters {} ->
+    QueryStakePoolParameters{} ->
       case q' of
-        Consensus.GetStakePoolParams {} ->
+        Consensus.GetStakePoolParams{} ->
           Map.map fromShelleyPoolParams
             . Map.mapKeysMonotonic StakePoolKeyHash
             $ r'
         _ -> fromConsensusQueryResultMismatch
-    QueryDebugLedgerState {} ->
+    QueryDebugLedgerState{} ->
       case q' of
         Consensus.GetCBOR Consensus.DebugNewEpochState ->
           SerialisedDebugLedgerState r'
@@ -916,54 +918,54 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetCBOR Consensus.DebugEpochState ->
           SerialisedCurrentEpochState r'
         _ -> fromConsensusQueryResultMismatch
-    QueryPoolState {} ->
+    QueryPoolState{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetPoolState {} ->
+        Consensus.GetCBOR Consensus.GetPoolState{} ->
           SerialisedPoolState r'
         _ -> fromConsensusQueryResultMismatch
-    QueryPoolDistribution {} ->
+    QueryPoolDistribution{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetPoolDistr {} ->
+        Consensus.GetCBOR Consensus.GetPoolDistr{} ->
           SerialisedPoolDistribution r'
         _ -> fromConsensusQueryResultMismatch
-    QueryStakeSnapshot {} ->
+    QueryStakeSnapshot{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetStakeSnapshots {} ->
+        Consensus.GetCBOR Consensus.GetStakeSnapshots{} ->
           SerialisedStakeSnapshots r'
         _ -> fromConsensusQueryResultMismatch
-    QueryStakeDelegDeposits {} ->
+    QueryStakeDelegDeposits{} ->
       case q' of
-        Consensus.GetStakeDelegDeposits {} ->
+        Consensus.GetStakeDelegDeposits{} ->
           Map.mapKeysMonotonic fromShelleyStakeCredential r'
         _ -> fromConsensusQueryResultMismatch
-    QueryAccountState {} ->
+    QueryAccountState{} ->
       case q' of
-        Consensus.GetAccountState {} ->
+        Consensus.GetAccountState{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryGovState {} ->
+    QueryGovState{} ->
       case q' of
-        Consensus.GetGovState {} ->
+        Consensus.GetGovState{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryDRepState {} ->
+    QueryDRepState{} ->
       case q' of
-        Consensus.GetDRepState {} ->
+        Consensus.GetDRepState{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryDRepStakeDistr {} ->
+    QueryDRepStakeDistr{} ->
       case q' of
-        Consensus.GetDRepStakeDistr {} ->
+        Consensus.GetDRepStakeDistr{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryCommitteeMembersState {} ->
+    QueryCommitteeMembersState{} ->
       case q' of
-        Consensus.GetCommitteeMembersState {} ->
+        Consensus.GetCommitteeMembersState{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-    QueryStakeVoteDelegatees {} ->
+    QueryStakeVoteDelegatees{} ->
       case q' of
-        Consensus.GetFilteredVoteDelegatees {} ->
+        Consensus.GetFilteredVoteDelegatees{} ->
           Map.mapKeys fromShelleyStakeCredential r'
         _ -> fromConsensusQueryResultMismatch
 

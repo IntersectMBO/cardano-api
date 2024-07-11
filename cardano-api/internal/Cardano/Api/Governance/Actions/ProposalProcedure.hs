@@ -12,32 +12,34 @@
 
 module Cardano.Api.Governance.Actions.ProposalProcedure where
 
-import Cardano.Api.Address
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.ProtocolParameters
+import           Cardano.Api.Address
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.TxIn
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.TxIn
+
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.Address as L
-import Cardano.Ledger.BaseTypes
+import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway as Conway
 import qualified Cardano.Ledger.Conway.Governance as Gov
 import qualified Cardano.Ledger.Conway.Governance as Ledger
-import Cardano.Ledger.Core (EraCrypto)
+import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Core as Shelley
 import qualified Cardano.Ledger.Credential as L
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
-import Data.ByteString (ByteString)
-import Data.Map.Strict (Map)
-import Data.Maybe (fromMaybe)
-import Data.Word
-import GHC.Exts (IsList (..))
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
+
+import           Data.ByteString (ByteString)
+import           Data.Map.Strict (Map)
+import           Data.Maybe (fromMaybe)
+import           Data.Word
+import           GHC.Exts (IsList (..))
 
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 

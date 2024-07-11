@@ -111,61 +111,63 @@ module Cardano.Api.Script
   )
 where
 
-import Cardano.Api.Eon.BabbageEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras.Case
-import Cardano.Api.Eras.Core
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.ScriptData
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseJSON
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.SerialiseUsing
-import Cardano.Api.TxIn
-import Cardano.Api.Utils (failEitherWith)
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.ScriptData
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.TxIn
+import           Cardano.Api.Utils (failEitherWith)
+
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Timelock
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Babbage.Scripts as Babbage
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Binary as Binary (decCBOR, decodeFullAnnotator)
 import qualified Cardano.Ledger.Conway.Scripts as Conway
-import Cardano.Ledger.Core (Era (EraCrypto))
+import           Cardano.Ledger.Core (Era (EraCrypto))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
-import Cardano.Slotting.Slot (SlotNo)
-import Control.Applicative
-import Control.Monad
-import Data.Aeson (Value (..), object, (.:), (.=))
+import           Cardano.Slotting.Slot (SlotNo)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import qualified PlutusLedgerApi.Test.Examples as Plutus
+
+import           Control.Applicative
+import           Control.Monad
+import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Lazy as LBS
-import Data.ByteString.Short (ShortByteString)
+import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
-import Data.Either.Combinators (maybeToRight)
-import Data.Foldable (toList)
-import Data.Functor
-import Data.Scientific (toBoundedInteger)
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Foldable (toList)
+import           Data.Functor
+import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
-import Data.String (IsString)
-import Data.Text (Text)
+import           Data.String (IsString)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import Data.Typeable (Typeable)
-import Data.Vector (Vector)
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Typeable (Typeable)
+import           Data.Vector (Vector)
 import qualified Data.Vector as Vector
-import Numeric.Natural (Natural)
-import Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import qualified PlutusLedgerApi.Test.Examples as Plutus
+import           Numeric.Natural (Natural)
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -859,7 +861,7 @@ data ExecutionUnits
   deriving (Eq, Show)
 
 instance ToCBOR ExecutionUnits where
-  toCBOR ExecutionUnits {executionSteps, executionMemory} =
+  toCBOR ExecutionUnits{executionSteps, executionMemory} =
     CBOR.encodeListLen 2
       <> toCBOR executionSteps
       <> toCBOR executionMemory
@@ -872,7 +874,7 @@ instance FromCBOR ExecutionUnits where
       <*> fromCBOR
 
 instance ToJSON ExecutionUnits where
-  toJSON ExecutionUnits {executionSteps, executionMemory} =
+  toJSON ExecutionUnits{executionSteps, executionMemory} =
     object
       [ "steps" .= executionSteps
       , "memory" .= executionMemory
@@ -886,14 +888,14 @@ instance FromJSON ExecutionUnits where
         <*> o .: "memory"
 
 toAlonzoExUnits :: ExecutionUnits -> Alonzo.ExUnits
-toAlonzoExUnits ExecutionUnits {executionSteps, executionMemory} =
+toAlonzoExUnits ExecutionUnits{executionSteps, executionMemory} =
   Alonzo.ExUnits
     { Alonzo.exUnitsSteps = executionSteps
     , Alonzo.exUnitsMem = executionMemory
     }
 
 fromAlonzoExUnits :: Alonzo.ExUnits -> ExecutionUnits
-fromAlonzoExUnits Alonzo.ExUnits {Alonzo.exUnitsSteps, Alonzo.exUnitsMem} =
+fromAlonzoExUnits Alonzo.ExUnits{Alonzo.exUnitsSteps, Alonzo.exUnitsMem} =
   ExecutionUnits
     { executionSteps = exUnitsSteps
     , executionMemory = exUnitsMem
@@ -995,11 +997,11 @@ data SimpleScript
 data PlutusScript lang where
   PlutusScriptSerialised :: ShortByteString -> PlutusScript lang
   deriving stock (Eq, Ord)
-  deriving stock (Show) -- TODO: would be nice to use via UsingRawBytesHex
+  deriving stock Show -- TODO: would be nice to use via UsingRawBytesHex
   -- however that adds an awkward HasTypeProxy lang =>
   -- constraint to other Show instances elsewhere
   deriving (ToCBOR, FromCBOR) via (UsingRawBytes (PlutusScript lang))
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
   data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
@@ -1178,7 +1180,7 @@ fromShelleyBasedScript sbe script =
             . SimpleScript
             $ fromAllegraTimelock s
 
-data MultiSigError = MultiSigErrorTimelockNotsupported deriving (Show)
+data MultiSigError = MultiSigErrorTimelockNotsupported deriving Show
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
 toShelleyMultiSig

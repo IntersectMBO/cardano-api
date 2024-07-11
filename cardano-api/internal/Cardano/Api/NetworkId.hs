@@ -18,12 +18,10 @@ where
 
 import qualified Cardano.Chain.Common as Byron (NetworkMagic (..))
 import qualified Cardano.Chain.Genesis as Byron (mainnetProtocolMagicId)
-import qualified Cardano.Crypto.ProtocolMagic as Byron
-  ( ProtocolMagicId (..)
-  , RequiresNetworkMagic (..)
-  )
+import qualified Cardano.Crypto.ProtocolMagic as Byron (ProtocolMagicId (..),
+                   RequiresNetworkMagic (..))
 import qualified Cardano.Ledger.BaseTypes as Shelley (Network (..))
-import Ouroboros.Network.Magic (NetworkMagic (..))
+import           Ouroboros.Network.Magic (NetworkMagic (..))
 
 -- ----------------------------------------------------------------------------
 -- NetworkId type
@@ -64,7 +62,7 @@ toByronNetworkMagic (Testnet (NetworkMagic nm)) = Byron.NetworkTestnet nm
 
 toByronRequiresNetworkMagic :: NetworkId -> Byron.RequiresNetworkMagic
 toByronRequiresNetworkMagic Mainnet = Byron.RequiresNoMagic
-toByronRequiresNetworkMagic Testnet {} = Byron.RequiresMagic
+toByronRequiresNetworkMagic Testnet{} = Byron.RequiresMagic
 
 -- ----------------------------------------------------------------------------
 -- Shelley conversion functions

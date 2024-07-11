@@ -21,29 +21,31 @@ module Cardano.Api.DeserialiseAnyOf
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Error
-import Cardano.Api.Keys.Byron
-import Cardano.Api.Keys.Class
-import Cardano.Api.Keys.Praos
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.SerialiseBech32
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.Address
+import           Cardano.Api.Error
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+
 import qualified Cardano.Chain.Common as Common
 import qualified Cardano.Crypto.Signing as Crypto
+
 import qualified Data.Aeson as Aeson
-import Data.Bifunctor (first)
-import Data.ByteString (ByteString)
+import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
-import Data.Char (toLower)
-import Data.Data (Data)
-import Data.List.NonEmpty (NonEmpty)
+import           Data.Char (toLower)
+import           Data.Data (Data)
+import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import Formatting (build, sformat, (%))
-import Prettyprinter
+import           Formatting (build, sformat, (%))
+import           Prettyprinter
 
 ------------------------------------------------------------------------------
 -- Formatted/encoded input deserialisation
@@ -139,7 +141,7 @@ deserialiseInput asType acceptedFormats inputBs =
       Right res -> DeserialiseInputSuccess res
       -- The input was valid a text envelope, but there was a type mismatch
       -- error.
-      Left err@TextEnvelopeTypeError {} ->
+      Left err@TextEnvelopeTypeError{} ->
         DeserialiseInputError (InputTextEnvelopeError err)
       -- The input was not valid a text envelope.
       Left _ -> DeserialiseInputErrorFormatMismatch
@@ -208,7 +210,7 @@ deserialiseInputAnyOf bech32Types textEnvTypes inputBs =
       Right res -> DeserialiseInputSuccess res
       -- The input was valid a text envelope, but there was a type mismatch
       -- error.
-      Left err@TextEnvelopeTypeError {} ->
+      Left err@TextEnvelopeTypeError{} ->
         DeserialiseInputError (InputTextEnvelopeError err)
       -- The input was not valid a text envelope.
       Left _ -> DeserialiseInputErrorFormatMismatch
@@ -240,7 +242,7 @@ data SomeAddressVerificationKey
   | ACommitteeColdExtendedVerificationKey (VerificationKey CommitteeColdExtendedKey)
   | ACommitteeHotVerificationKey (VerificationKey CommitteeHotKey)
   | ACommitteeHotExtendedVerificationKey (VerificationKey CommitteeHotExtendedKey)
-  deriving (Show)
+  deriving Show
 
 renderSomeAddressVerificationKey :: SomeAddressVerificationKey -> Text
 renderSomeAddressVerificationKey =

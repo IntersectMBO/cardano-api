@@ -7,32 +7,26 @@ module Test.Golden.Cardano.Api.Genesis
   )
 where
 
-import Cardano.Api.Shelley (ShelleyGenesis (..))
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Network (..))
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
-import Cardano.Ledger.Credential
-  ( Credential (..)
-  , PaymentCredential
-  , StakeCredential
-  , StakeReference (..)
-  )
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..)
-  , Hash
-  , KeyHash (..)
-  , KeyRole (..)
-  , VerKeyVRF
-  )
-import Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
-import Cardano.Slotting.Slot (EpochSize (..))
-import Data.ListMap (ListMap (ListMap))
+import           Cardano.Api.Shelley (ShelleyGenesis (..))
+
+import           Cardano.Ledger.Address (Addr (..))
+import           Cardano.Ledger.BaseTypes (Network (..))
+import           Cardano.Ledger.Coin (Coin (..))
+import           Cardano.Ledger.Core
+import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeCredential,
+                   StakeReference (..))
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
+                   VerKeyVRF)
+import           Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
+import           Cardano.Slotting.Slot (EpochSize (..))
+
+import           Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Lens.Micro
-import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Lens.Micro
+
+import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 
 exampleShelleyGenesis :: ShelleyGenesis StandardCrypto
 exampleShelleyGenesis =

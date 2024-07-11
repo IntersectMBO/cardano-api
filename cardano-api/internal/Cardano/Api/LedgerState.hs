@@ -94,121 +94,66 @@ module Cardano.Api.LedgerState
   )
 where
 
-import Cardano.Api.Block
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras.Case
-import Cardano.Api.Eras.Core (forEraMaybeEon)
-import Cardano.Api.Error as Api
-import Cardano.Api.Genesis
-import Cardano.Api.IO
-import Cardano.Api.IPC
-  ( ConsensusModeParams (..)
-  , LocalChainSyncClient (LocalChainSyncClientPipelined)
-  , LocalNodeClientProtocols (..)
-  , LocalNodeClientProtocolsInMode
-  , LocalNodeConnectInfo (..)
-  , connectToLocalNode
-  )
-import Cardano.Api.Keys.Praos
-import Cardano.Api.LedgerEvents.ConvertLedgerEvent
-import Cardano.Api.LedgerEvents.LedgerEvent
-import Cardano.Api.Modes (EpochSlots (..))
+import           Cardano.Api.Block
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core (forEraMaybeEon)
+import           Cardano.Api.Error as Api
+import           Cardano.Api.Genesis
+import           Cardano.Api.IO
+import           Cardano.Api.IPC (ConsensusModeParams (..),
+                   LocalChainSyncClient (LocalChainSyncClientPipelined),
+                   LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
+                   LocalNodeConnectInfo (..), connectToLocalNode)
+import           Cardano.Api.Keys.Praos
+import           Cardano.Api.LedgerEvents.ConvertLedgerEvent
+import           Cardano.Api.LedgerEvents.LedgerEvent
+import           Cardano.Api.Modes (EpochSlots (..))
 import qualified Cardano.Api.Modes as Api
-import Cardano.Api.Monad.Error
-import Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
-import Cardano.Api.Pretty
-import Cardano.Api.Query
-  ( CurrentEpochState (..)
-  , PoolDistribution (unPoolDistr)
-  , ProtocolState
-  , SerialisedCurrentEpochState (..)
-  , SerialisedPoolDistribution
-  , decodeCurrentEpochState
-  , decodePoolDistribution
-  , decodeProtocolState
-  )
+import           Cardano.Api.Monad.Error
+import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
+import           Cardano.Api.Pretty
+import           Cardano.Api.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
+                   ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
+                   decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
 import qualified Cardano.Api.ReexposeLedger as Ledger
-import Cardano.Api.SpecialByron as Byron
-import Cardano.Api.Utils (textShow)
+import           Cardano.Api.SpecialByron as Byron
+import           Cardano.Api.Utils (textShow)
+
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
-import Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
+import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as Crypto
 import qualified Cardano.Crypto.VRF.Class as VRF
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import qualified Cardano.Ledger.Api.Era as Ledger
 import qualified Cardano.Ledger.Api.Transition as Ledger
-import qualified Cardano.Ledger.BHeaderView as Ledger
-import Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
+import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import Cardano.Ledger.Binary (DecoderError)
+import qualified Cardano.Ledger.BHeaderView as Ledger
+import           Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Coin as SL
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import qualified Cardano.Ledger.Keys as SL
 import qualified Cardano.Ledger.PoolDistr as SL
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Core as Core
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
 import qualified Cardano.Protocol.TPraos.API as TPraos
-import Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
+import           Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
-import Cardano.Slotting.EpochInfo (EpochInfo)
+import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
-import Cardano.Slotting.Slot (WithOrigin (At, Origin))
+import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
-import Control.Concurrent
-import Control.DeepSeq
-import Control.Error.Util (note)
-import Control.Exception.Safe
-import Control.Monad
-import Control.Monad.State.Strict
-import Data.Aeson as Aeson
-  ( FromJSON (parseJSON)
-  , Object
-  , eitherDecodeStrict'
-  , withObject
-  , (.:)
-  , (.:?)
-  )
-import Data.Aeson.Types (Parser)
-import Data.Bifunctor
-import Data.ByteArray (ByteArrayAccess)
-import qualified Data.ByteArray
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LB
-import Data.ByteString.Short as BSS
-import Data.Foldable
-import Data.IORef
-import qualified Data.List as List
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe
-import Data.Proxy (Proxy (Proxy))
-import Data.SOP.Strict.NP
-import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as LT
-import Data.Text.Lazy.Builder (toLazyText)
-import Data.Word
-import qualified Data.Yaml as Yaml
-import Formatting.Buildable (build)
-import Lens.Micro
-import Network.TypedProtocol.Pipelined (Nat (..))
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
-import Ouroboros.Consensus.Block.Forging (BlockForging)
+import           Ouroboros.Consensus.Block.Forging (BlockForging)
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
@@ -222,21 +167,61 @@ import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
-import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
+import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
-import Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
+import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
 import qualified Ouroboros.Consensus.Shelley.HFEras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
-import Ouroboros.Consensus.Storage.Serialisation
-import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
-import Ouroboros.Network.Block (blockNo)
+import           Ouroboros.Consensus.Storage.Serialisation
+import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
+import           Ouroboros.Network.Block (blockNo)
 import qualified Ouroboros.Network.Block
-import Ouroboros.Network.Mux (MuxError)
+import           Ouroboros.Network.Mux (MuxError)
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
-import Ouroboros.Network.Protocol.ChainSync.PipelineDecision
-import System.FilePath
+import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
+
+import           Control.Concurrent
+import           Control.DeepSeq
+import           Control.Error.Util (note)
+import           Control.Exception.Safe
+import           Control.Monad
+import           Control.Monad.State.Strict
+import           Data.Aeson as Aeson (FromJSON (parseJSON), Object, eitherDecodeStrict', withObject,
+                   (.:), (.:?))
+import           Data.Aeson.Types (Parser)
+import           Data.Bifunctor
+import           Data.ByteArray (ByteArrayAccess)
+import qualified Data.ByteArray
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as LB
+import           Data.ByteString.Short as BSS
+import           Data.Foldable
+import           Data.IORef
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe
+import           Data.Proxy (Proxy (Proxy))
+import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.SOP.Strict.NP
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.Lazy as LT
+import           Data.Text.Lazy.Builder (toLazyText)
+import           Data.Word
+import qualified Data.Yaml as Yaml
+import           Formatting.Buildable (build)
+import           Lens.Micro
+import           Network.TypedProtocol.Pipelined (Nat (..))
+import           System.FilePath
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.
@@ -245,7 +230,7 @@ data InitialLedgerStateError
     ILSEGenesisFile GenesisConfigError
   | -- | Failed to derive the Ledger or Consensus config.
     ILSELedgerConsensusConfig GenesisConfigError
-  deriving (Show)
+  deriving Show
 
 instance Exception InitialLedgerStateError
 
@@ -281,7 +266,7 @@ data LedgerStateError
       -- ^ Ledgerstate from an unexpected era
   | ByronEraUnsupported
   | DebugError !String
-  deriving (Show)
+  deriving Show
 
 instance Exception LedgerStateError
 
@@ -390,7 +375,7 @@ data FoldBlocksError
   | FoldBlocksApplyBlockError !LedgerStateError
   | FoldBlocksIOException !IOException
   | FoldBlocksMuxError !MuxError
-  deriving (Show)
+  deriving Show
 
 instance Error FoldBlocksError where
   prettyError = \case
@@ -1191,7 +1176,7 @@ initLedgerStateVar genesisConfig =
 newtype LedgerState = LedgerState
   { clsState :: Consensus.CardanoLedgerState Consensus.StandardCrypto
   }
-  deriving (Show)
+  deriving Show
 
 -- | Retrieve new epoch state from the ledger state, or an error on failure
 getAnyNewEpochState
@@ -1281,12 +1266,12 @@ data GenesisConfig
 newtype LedgerStateDir = LedgerStateDir
   { unLedgerStateDir :: FilePath
   }
-  deriving (Show)
+  deriving Show
 
 newtype NetworkName = NetworkName
   { unNetworkName :: Text
   }
-  deriving (Show)
+  deriving Show
 
 type NodeConfigFile = File NodeConfig
 
@@ -1374,7 +1359,7 @@ data GenesisConfigError
   | NEAlonzoConfig !FilePath !Text
   | NEConwayConfig !FilePath !Text
   | NECardanoConfig !Text
-  deriving (Show)
+  deriving Show
 
 instance Exception GenesisConfigError
 
@@ -1486,7 +1471,7 @@ data ShelleyGenesisError
   = ShelleyGenesisReadError !FilePath !Text
   | ShelleyGenesisHashMismatch !GenesisHashShelley !GenesisHashShelley -- actual, expected
   | ShelleyGenesisDecodeError !FilePath !Text
-  deriving (Show)
+  deriving Show
 
 instance Exception ShelleyGenesisError
 
@@ -1539,7 +1524,7 @@ data AlonzoGenesisError
   = AlonzoGenesisReadError !FilePath !Text
   | AlonzoGenesisHashMismatch !GenesisHashAlonzo !GenesisHashAlonzo -- actual, expected
   | AlonzoGenesisDecodeError !FilePath !Text
-  deriving (Show)
+  deriving Show
 
 instance Exception AlonzoGenesisError
 
@@ -1597,7 +1582,7 @@ data ConwayGenesisError
   | ConwayGenesisHashMissing !FilePath
   | ConwayGenesisFileMissing
   | ConwayGenesisDecodeError !FilePath !Text
-  deriving (Show)
+  deriving Show
 
 instance Exception ConwayGenesisError
 
@@ -1770,7 +1755,7 @@ data LeadershipError
       -- ^ Predicted last slot of the epoch
   | LeaderErrSlotRangeCalculationFailure Text
   | LeaderErrCandidateNonceStillEvolving
-  deriving (Show)
+  deriving Show
 
 instance Api.Error LeadershipError where
   prettyError = \case
@@ -1853,7 +1838,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
     -- We need the candidate nonce, the previous epoch's last block header hash
     -- and the extra entropy from the protocol parameters. We then need to combine them
     -- with the (⭒) operator.
-    let Consensus.PraosNonces {Consensus.candidateNonce, Consensus.evolvingNonce} =
+    let Consensus.PraosNonces{Consensus.candidateNonce, Consensus.evolvingNonce} =
           Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState
 
     -- Let's do a nonce check. The candidate nonce and the evolving nonce should not be equal.

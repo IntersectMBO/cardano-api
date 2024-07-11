@@ -9,19 +9,18 @@ module Cardano.Api.LedgerEvents.Rule.BBODY.LEDGER
   )
 where
 
-import Cardano.Api.LedgerEvents.LedgerEvent
-import Cardano.Api.LedgerEvents.Rule.BBODY.DELEGS
-import Cardano.Api.LedgerEvents.Rule.BBODY.UTXOW
-import Cardano.Ledger.Alonzo.Rules
-  ( AlonzoUtxoEvent (..)
-  , AlonzoUtxosEvent (..)
-  , AlonzoUtxowEvent (..)
-  )
+import           Cardano.Api.LedgerEvents.LedgerEvent
+import           Cardano.Api.LedgerEvents.Rule.BBODY.DELEGS
+import           Cardano.Api.LedgerEvents.Rule.BBODY.UTXOW
+
+import           Cardano.Ledger.Alonzo.Rules (AlonzoUtxoEvent (..), AlonzoUtxosEvent (..),
+                   AlonzoUtxowEvent (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Core as Ledger.Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Control.State.Transition.Extended
+
+import           Control.State.Transition.Extended
 
 type LatestBBodyEventConstraints ledgerera =
   ( Event (Ledger.Core.EraRule "BBODY" ledgerera) ~ Alonzo.AlonzoBbodyEvent ledgerera

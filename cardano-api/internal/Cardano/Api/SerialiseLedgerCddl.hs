@@ -33,41 +33,33 @@ module Cardano.Api.SerialiseLedgerCddl
   )
 where
 
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.IO
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseTextEnvelope
-  ( TextEnvelope (..)
-  , TextEnvelopeDescr (TextEnvelopeDescr)
-  , TextEnvelopeError (..)
-  , TextEnvelopeType (TextEnvelopeType)
-  , deserialiseFromTextEnvelope
-  , legacyComparison
-  , serialiseToTextEnvelope
-  )
-import Cardano.Api.Tx.Sign
-import Cardano.Api.Utils
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseTextEnvelope (TextEnvelope (..),
+                   TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
+                   TextEnvelopeType (TextEnvelopeType), deserialiseFromTextEnvelope,
+                   legacyComparison, serialiseToTextEnvelope)
+import           Cardano.Api.Tx.Sign
+import           Cardano.Api.Utils
+
 import qualified Cardano.Chain.UTxO as Byron
-import Cardano.Ledger.Binary (DecoderError)
+import           Cardano.Ledger.Binary (DecoderError)
 import qualified Cardano.Ledger.Binary as CBOR
-import Control.Monad.Trans.Except.Extra
-  ( firstExceptT
-  , handleIOExceptT
-  , hoistEither
-  , newExceptT
-  , runExceptT
-  )
+
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   newExceptT, runExceptT)
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
-import Data.Bifunctor (first)
-import Data.ByteString (ByteString)
+import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
+import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Data (Data)
-import Data.Either.Combinators (mapLeft)
+import           Data.Data (Data)
+import           Data.Either.Combinators (mapLeft)
 import qualified Data.List as List
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text as T
 
 -- Why have we gone this route? The serialization format of `TxBody era`
@@ -202,9 +194,9 @@ serialiseWitnessLedgerCddl sbe kw =
     serialiseToTextEnvelope (Just (TextEnvelopeDescr $ T.unpack $ genDesc kw)) kw
  where
   genDesc :: KeyWitness era -> Text
-  genDesc ByronKeyWitness {} = case sbe of {}
-  genDesc ShelleyBootstrapWitness {} = "Key BootstrapWitness ShelleyEra"
-  genDesc ShelleyKeyWitness {} = "Key Witness ShelleyEra"
+  genDesc ByronKeyWitness{} = case sbe of {}
+  genDesc ShelleyBootstrapWitness{} = "Key BootstrapWitness ShelleyEra"
+  genDesc ShelleyKeyWitness{} = "Key Witness ShelleyEra"
 
 deserialiseWitnessLedgerCddl
   :: forall era
@@ -226,7 +218,7 @@ deserialiseWitnessLedgerCddl sbe te =
     :: TextEnvelope
     -> Either TextEnvelopeCddlError (KeyWitness era)
     -> Either TextEnvelopeCddlError (KeyWitness era)
-  legacyDecoding TextEnvelope {teDescription, teRawCBOR} (Left (TextEnvelopeCddlErrCBORDecodingError _)) =
+  legacyDecoding TextEnvelope{teDescription, teRawCBOR} (Left (TextEnvelopeCddlErrCBORDecodingError _)) =
     case teDescription of
       "Key BootstrapWitness ShelleyEra" -> do
         w <-
@@ -274,7 +266,7 @@ writeTxWitnessFileTextEnvelopeCddl sbe path w =
 
 textEnvelopeCddlJSONConfig :: Config
 textEnvelopeCddlJSONConfig =
-  defConfig {confCompare = textEnvelopeCddlJSONKeyOrder}
+  defConfig{confCompare = textEnvelopeCddlJSONKeyOrder}
 
 textEnvelopeCddlJSONKeyOrder :: Text -> Text -> Ordering
 textEnvelopeCddlJSONKeyOrder = keyOrder ["type", "description", "cborHex"]

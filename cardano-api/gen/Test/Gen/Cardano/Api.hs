@@ -16,13 +16,16 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Plutus.CostModels as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Alonzo
-import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
+import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
+
 import qualified Data.Map.Strict as Map
-import Data.Word (Word64)
-import Hedgehog (Gen, Range)
+import           Data.Word (Word64)
+
+import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
+
+import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Range as Range
-import Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
 genMetadata :: Ledger.Era era => Gen (ShelleyTxAuxData era)
 genMetadata = do

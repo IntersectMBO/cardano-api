@@ -7,11 +7,13 @@
 
 module Test.Cardano.Api.Typed.Orphans () where
 
-import Cardano.Api.Shelley
-import Cardano.Crypto.Hash hiding (Hash)
-import Cardano.Crypto.KES
-import Cardano.Crypto.Libsodium (SodiumHashAlgorithm)
-import Test.Cardano.Crypto.Orphans ()
+import           Cardano.Api.Shelley
+
+import           Cardano.Crypto.Hash hiding (Hash)
+import           Cardano.Crypto.KES
+import           Cardano.Crypto.Libsodium (SodiumHashAlgorithm)
+
+import           Test.Cardano.Crypto.Orphans ()
 
 -- Signing Key instances
 

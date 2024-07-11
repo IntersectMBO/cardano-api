@@ -35,32 +35,34 @@ module Cardano.Api.TxIn
   )
 where
 
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseJSON
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseUsing
-import Cardano.Api.Utils
+import           Cardano.Api.Error
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Utils
+
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
-import Control.Applicative (some)
-import Data.Aeson (withText)
+
+import           Control.Applicative (some)
+import           Data.Aeson (withText)
 import qualified Data.Aeson as Aeson
-import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Char8 as BSC
-import Data.String
-import Data.Text (Text)
+import           Data.String
+import           Data.Text (Text)
 import qualified Data.Text as Text
-import Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
@@ -136,7 +138,7 @@ parseTxIx :: Parsec.Parser TxIx
 parseTxIx = TxIx . fromIntegral <$> decimal
 
 decimal :: Parsec.Parser Integer
-Parsec.TokenParser {Parsec.decimal = decimal} = Parsec.haskell
+Parsec.TokenParser{Parsec.decimal = decimal} = Parsec.haskell
 
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txId (TxIx ix)) =
@@ -144,7 +146,7 @@ renderTxIn (TxIn txId (TxIx ix)) =
 
 newtype TxIx = TxIx Word
   deriving stock (Eq, Ord, Show)
-  deriving newtype (Enum)
+  deriving newtype Enum
   deriving newtype (ToJSON, FromJSON)
 
 fromByronTxIn :: Byron.TxIn -> TxIn

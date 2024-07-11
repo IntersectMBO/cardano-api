@@ -44,50 +44,52 @@ module Cardano.Api.ScriptData
   )
 where
 
-import Cardano.Api.Eras
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.Pretty
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseJSON
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseUsing
-import Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Pretty
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
+
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import Cardano.Ledger.Core (Era)
+import           Cardano.Ledger.Core (Era)
 import qualified Cardano.Ledger.Plutus.Data as Plutus
 import qualified Cardano.Ledger.SafeHash as Ledger
-import Codec.Serialise.Class (Serialise (..))
-import Control.Applicative (Alternative (..))
+import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
+import qualified PlutusLedgerApi.V1 as PlutusAPI
+
+import           Codec.Serialise.Class (Serialise (..))
+import           Control.Applicative (Alternative (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Text as Aeson.Text
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import Data.Bifunctor (first)
+import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.ByteString.Short as SB
 import qualified Data.Char as Char
-import Data.Data (Data)
-import Data.Either.Combinators
+import           Data.Data (Data)
+import           Data.Either.Combinators
 import qualified Data.List as List
-import Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Scientific as Scientific
-import Data.String (IsString)
-import Data.Text (Text)
+import           Data.String (IsString)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Vector as Vector
-import Data.Word
-import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
-import qualified PlutusLedgerApi.V1 as PlutusAPI
+import           Data.Word
 
 -- Original script data bytes
 data HashableScriptData
@@ -188,7 +190,7 @@ hashScriptDataBytes =
 -- Conversion functions
 --
 
-newtype ScriptBytesError = ScriptBytesError String deriving (Show)
+newtype ScriptBytesError = ScriptBytesError String deriving Show
 
 -- There is a subtlety here. We must use the original bytes
 -- when converting to and from `HashableScriptData`/`Data`. This
@@ -439,7 +441,7 @@ scriptDataFromJsonNoSchema = fmap (\sd -> HashableScriptData (serialiseToCBOR sd
     :: Aeson.Value
     -> Either ScriptDataJsonSchemaError ScriptData
   conv Aeson.Null = Left ScriptDataJsonNullNotAllowed
-  conv Aeson.Bool {} = Left ScriptDataJsonBoolNotAllowed
+  conv Aeson.Bool{} = Left ScriptDataJsonBoolNotAllowed
   conv (Aeson.Number d) =
     case Scientific.floatingOrInteger d :: Either Double Integer of
       Left n -> Left (ScriptDataJsonNumberNotInteger n)

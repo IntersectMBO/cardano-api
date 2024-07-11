@@ -95,73 +95,67 @@ module Cardano.Api.ProtocolParameters
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Eon.AlonzoEraOnwards
-import Cardano.Api.Eon.BabbageEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras
-import Cardano.Api.Error
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Json (toRationalJSON)
-import Cardano.Api.Keys.Byron
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.Orphans ()
-import Cardano.Api.Pretty
-import Cardano.Api.Script
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.SerialiseUsing
-import Cardano.Api.StakePoolMetadata
-import Cardano.Api.TxMetadata
-import Cardano.Api.Utils
-import Cardano.Api.Value
+import           Cardano.Api.Address
+import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Json (toRationalJSON)
+import           Cardano.Api.Keys.Byron
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Orphans ()
+import           Cardano.Api.Pretty
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.StakePoolMetadata
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
+import           Cardano.Api.Value
+
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.PParams as Ledger
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Api.Era as Ledger
-import Cardano.Ledger.Api.PParams
+import           Cardano.Ledger.Api.PParams
 import qualified Cardano.Ledger.Babbage.Core as Ledger
-import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.PParams as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Plutus.CostModels as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.API as Ledger
-import Cardano.Slotting.Slot (EpochNo (..))
-import Control.Monad
-import Data.Aeson
-  ( FromJSON (..)
-  , ToJSON (..)
-  , object
-  , withObject
-  , (.!=)
-  , (.:)
-  , (.:?)
-  , (.=)
-  )
-import Data.Bifunctor (bimap, first)
-import Data.ByteString (ByteString)
-import Data.Data (Data)
-import Data.Either.Combinators (maybeToRight)
-import Data.Int (Int64)
-import Data.Map.Strict (Map)
+import           Cardano.Slotting.Slot (EpochNo (..))
+import           PlutusLedgerApi.Common (CostModelApplyError)
+
+import           Control.Monad
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
+                   (.=))
+import           Data.Bifunctor (bimap, first)
+import           Data.ByteString (ByteString)
+import           Data.Data (Data)
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Int (Int64)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust)
-import Data.Maybe.Strict (StrictMaybe (..))
-import Data.String (IsString)
-import Data.Text (Text)
-import Data.Word
-import GHC.Generics
-import Lens.Micro
-import Numeric.Natural
-import PlutusLedgerApi.Common (CostModelApplyError)
-import Text.PrettyBy.Default (display)
+import           Data.Maybe (isJust)
+import           Data.Maybe.Strict (StrictMaybe (..))
+import           Data.String (IsString)
+import           Data.Text (Text)
+import           Data.Word
+import           GHC.Generics
+import           Lens.Micro
+import           Numeric.Natural
+import           Text.PrettyBy.Default (display)
 
 -- -----------------------------------------------------------------------------
 -- Era based ledger protocol parameters
@@ -258,13 +252,13 @@ data IntroducedInConwayPParams era
   , icDRepActivity :: StrictMaybe Ledger.EpochInterval
   , icMinFeeRefScriptCostPerByte :: StrictMaybe Ledger.NonNegativeInterval
   }
-  deriving (Show)
+  deriving Show
 
 createIntroducedInConwayPParams
   :: Ledger.ConwayEraPParams ledgerera
   => IntroducedInConwayPParams ledgerera
   -> Ledger.PParamsUpdate ledgerera
-createIntroducedInConwayPParams IntroducedInConwayPParams {..} =
+createIntroducedInConwayPParams IntroducedInConwayPParams{..} =
   Ledger.emptyPParamsUpdate
     & Ledger.ppuPoolVotingThresholdsL .~ icPoolVotingThresholds
     & Ledger.ppuDRepVotingThresholdsL .~ icDRepVotingThresholds
@@ -337,12 +331,12 @@ data CommonProtocolParametersUpdate
   , cppMonetaryExpansion :: StrictMaybe Ledger.UnitInterval
   , cppMinPoolCost :: StrictMaybe Ledger.Coin
   }
-  deriving (Show)
+  deriving Show
 
 -- | Create a protocol parameters update with parameters common to all eras
 createCommonPParamsUpdate
   :: EraPParams ledgerera => CommonProtocolParametersUpdate -> Ledger.PParamsUpdate ledgerera
-createCommonPParamsUpdate CommonProtocolParametersUpdate {..} =
+createCommonPParamsUpdate CommonProtocolParametersUpdate{..} =
   emptyPParamsUpdate
     & Ledger.ppuMinFeeAL .~ cppMinFeeA
     & Ledger.ppuMinFeeBL .~ cppMinFeeB
@@ -373,11 +367,11 @@ createPreConwayProtocolVersionUpdate (DeprecatedAfterBabbagePParams cppProtocolV
 
 newtype DeprecatedAfterMaryPParams ledgerera
   = DeprecatedAfterMaryPParams (StrictMaybe Ledger.Coin) -- Minimum UTxO value
-  deriving (Show)
+  deriving Show
 
 newtype DeprecatedAfterBabbagePParams ledgerera
   = DeprecatedAfterBabbagePParams (StrictMaybe Ledger.ProtVer)
-  deriving (Show)
+  deriving Show
 
 type MaxMaryEra ledgerera = Ledger.ProtVerAtMost ledgerera 4
 
@@ -394,7 +388,7 @@ data ShelleyToAlonzoPParams ledgerera
       -- ^ Extra entropy
       (StrictMaybe Ledger.UnitInterval)
       -- ^ Decentralization parameter
-  deriving (Show)
+  deriving Show
 
 type MaxAlonzoEra ledgerera = Ledger.ProtVerAtMost ledgerera 6
 
@@ -419,14 +413,14 @@ data AlonzoOnwardsPParams ledgerera
   , alCollateralPercentage :: StrictMaybe Natural
   , alMaxCollateralInputs :: StrictMaybe Natural
   }
-  deriving (Show)
+  deriving Show
 
 createPParamsUpdateIntroducedInAlonzo
   :: ()
   => AlonzoEraOnwards era
   -> AlonzoOnwardsPParams era
   -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-createPParamsUpdateIntroducedInAlonzo w (AlonzoOnwardsPParams {..}) =
+createPParamsUpdateIntroducedInAlonzo w (AlonzoOnwardsPParams{..}) =
   alonzoEraOnwardsConstraints w $
     Ledger.emptyPParamsUpdate
       & Ledger.ppuCostModelsL .~ alCostModels
@@ -441,7 +435,7 @@ newtype IntroducedInBabbagePParams era
   = -- | Coins per UTxO byte
     IntroducedInBabbagePParams
       (StrictMaybe CoinPerByte)
-  deriving (Show)
+  deriving Show
 
 createIntroducedInBabbagePParams
   :: ()
@@ -616,7 +610,7 @@ instance FromJSON ProtocolParameters where
         <*> o .:? "utxoCostPerByte"
 
 instance ToJSON ProtocolParameters where
-  toJSON ProtocolParameters {..} =
+  toJSON ProtocolParameters{..} =
     object
       [ "extraPraosEntropy" .= protocolParamExtraPraosEntropy
       , "stakePoolTargetNum" .= protocolParamStakePoolTargetNum
@@ -842,7 +836,7 @@ instance Monoid ProtocolParametersUpdate where
 
 instance ToCBOR ProtocolParametersUpdate where
   toCBOR :: ProtocolParametersUpdate -> CBOR.Encoding
-  toCBOR ProtocolParametersUpdate {..} =
+  toCBOR ProtocolParametersUpdate{..} =
     CBOR.encodeListLen 26
       <> toCBOR protocolUpdateProtocolVersion
       <> toCBOR protocolUpdateDecentralization
@@ -949,7 +943,7 @@ data ExecutionUnitPrices
   deriving (Eq, Show)
 
 instance ToCBOR ExecutionUnitPrices where
-  toCBOR ExecutionUnitPrices {priceExecutionSteps, priceExecutionMemory} =
+  toCBOR ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
     CBOR.encodeListLen 2
       <> toCBOR priceExecutionSteps
       <> toCBOR priceExecutionMemory
@@ -962,7 +956,7 @@ instance FromCBOR ExecutionUnitPrices where
       <*> fromCBOR
 
 instance ToJSON ExecutionUnitPrices where
-  toJSON ExecutionUnitPrices {priceExecutionSteps, priceExecutionMemory} =
+  toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
     object
       [ "priceSteps" .= toRationalJSON priceExecutionSteps
       , "priceMemory" .= toRationalJSON priceExecutionMemory
@@ -990,7 +984,7 @@ toAlonzoPrices
         }
 
 fromAlonzoPrices :: Alonzo.Prices -> ExecutionUnitPrices
-fromAlonzoPrices Alonzo.Prices {Alonzo.prSteps, Alonzo.prMem} =
+fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
   ExecutionUnitPrices
     { priceExecutionSteps = Ledger.unboundRational prSteps
     , priceExecutionMemory = Ledger.unboundRational prMem
@@ -1065,7 +1059,7 @@ data UpdateProposal
       !(Map (Hash GenesisKey) ProtocolParametersUpdate)
       !EpochNo
   deriving stock (Eq, Show)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy UpdateProposal where
   data AsType UpdateProposal = AsUpdateProposal
@@ -1764,7 +1758,7 @@ checkProtocolParameters
   => ShelleyBasedEra era
   -> ProtocolParameters
   -> Either ProtocolParametersError ()
-checkProtocolParameters sbe ProtocolParameters {..} =
+checkProtocolParameters sbe ProtocolParameters{..} =
   case sbe of
     ShelleyBasedEraShelley -> checkMinUTxOVal
     ShelleyBasedEraAllegra -> checkMinUTxOVal
@@ -1833,7 +1827,7 @@ checkProtocolParameters sbe ProtocolParameters {..} =
 data ProtocolParametersError
   = PParamsErrorMissingMinUTxoValue !AnyCardanoEra
   | PParamsErrorMissingAlonzoProtocolParameter
-  deriving (Show)
+  deriving Show
 
 instance Error ProtocolParametersError where
   prettyError = \case

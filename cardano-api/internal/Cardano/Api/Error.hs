@@ -15,14 +15,15 @@ module Cardano.Api.Error
   )
 where
 
-import Cardano.Api.Pretty
-import Control.Exception (Exception (..), IOException, throwIO)
-import Control.Monad.Except (throwError)
-import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.Trans.Except (ExceptT)
-import Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import System.Directory (doesFileExist)
-import System.IO (Handle)
+import           Cardano.Api.Pretty
+
+import           Control.Exception (Exception (..), IOException, throwIO)
+import           Control.Monad.Except (throwError)
+import           Control.Monad.IO.Class (MonadIO)
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import           System.Directory (doesFileExist)
+import           System.IO (Handle)
 
 class Error e where
   prettyError :: e -> Doc ann

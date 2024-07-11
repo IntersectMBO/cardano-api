@@ -16,11 +16,12 @@ module Cardano.Api.Eon.AlonzoEraOnwards
   )
 where
 
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras.Core
-import Cardano.Api.Modes
-import Cardano.Api.Query.Types
-import Cardano.Binary
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras.Core
+import           Cardano.Api.Modes
+import           Cardano.Api.Query.Types
+
+import           Cardano.Binary
 import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
 import qualified Cardano.Crypto.Hash.Class as C
 import qualified Cardano.Crypto.VRF as C
@@ -35,11 +36,12 @@ import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
-import Data.Aeson
-import Data.Typeable (Typeable)
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+
+import           Data.Aeson
+import           Data.Typeable (Typeable)
 
 data AlonzoEraOnwards era where
   AlonzoEraOnwardsAlonzo :: AlonzoEraOnwards AlonzoEra

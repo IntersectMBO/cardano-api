@@ -37,35 +37,37 @@ module Cardano.Api.Governance.Poll
   )
 where
 
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.SerialiseUsing
-import Cardano.Api.Tx.Body
-import Cardano.Api.Tx.Sign
-import Cardano.Api.TxMetadata
-import Cardano.Api.Utils
-import Cardano.Binary (DecoderError (..))
-import Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
+
+import           Cardano.Binary (DecoderError (..))
+import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Crypto (HASH, StandardCrypto)
-import Control.Arrow (left)
-import Control.Monad (foldM, when)
-import Data.Either.Combinators (maybeToRight)
-import Data.Function ((&))
+import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
+
+import           Control.Arrow (left)
+import           Control.Monad (foldM, when)
+import           Data.Either.Combinators (maybeToRight)
+import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
-import Data.String (IsString (..))
-import Data.Text (Text)
+import           Data.String (IsString (..))
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
-import Data.Word (Word64)
-import Formatting (build, sformat)
+import           Data.Word (Word64)
+import           Formatting (build, sformat)
 
 -- | Associated metadata label as defined in CIP-0094
 pollMetadataLabel :: Word64
@@ -120,7 +122,7 @@ instance HasTypeProxy GovernancePoll where
   proxyToAsType _ = AsGovernancePoll
 
 instance AsTxMetadata GovernancePoll where
-  asTxMetadata GovernancePoll {govPollQuestion, govPollAnswers, govPollNonce} =
+  asTxMetadata GovernancePoll{govPollQuestion, govPollAnswers, govPollNonce} =
     makeTransactionMetadata $
       Map.fromList
         [
@@ -216,7 +218,7 @@ instance HasTypeProxy GovernancePollAnswer where
   proxyToAsType _ = AsGovernancePollAnswer
 
 instance AsTxMetadata GovernancePollAnswer where
-  asTxMetadata GovernancePollAnswer {govAnsPoll, govAnsChoice} =
+  asTxMetadata GovernancePollAnswer{govAnsPoll, govAnsChoice} =
     makeTransactionMetadata $
       Map.fromList
         [
@@ -276,19 +278,19 @@ data GovernancePollError
   | ErrGovernancePollUnauthenticated
   | ErrGovernancePollMalformedAnswer DecoderError
   | ErrGovernancePollInvalidAnswer GovernancePollInvalidAnswerError
-  deriving (Show)
+  deriving Show
 
 data GovernancePollInvalidAnswerError = GovernancePollInvalidAnswerError
   { invalidAnswerAcceptableAnswers :: [(Word, Text)]
   , invalidAnswerReceivedAnswer :: Word
   }
-  deriving (Show)
+  deriving Show
 
 data GovernancePollMismatchError = GovernancePollMismatchError
   { specifiedHashInAnswer :: Hash GovernancePoll
   , calculatedHashFromPoll :: Hash GovernancePoll
   }
-  deriving (Show)
+  deriving Show
 
 renderGovernancePollError :: GovernancePollError -> Text
 renderGovernancePollError err =

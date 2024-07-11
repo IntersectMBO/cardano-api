@@ -29,30 +29,33 @@ module Test.Golden.ErrorsSpec
   )
 where
 
-import Cardano.Api
-import Cardano.Api.Shelley
-import Cardano.Binary as CBOR
+import           Cardano.Api
+import           Cardano.Api.Shelley
+
+import           Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Ledger
 import qualified Cardano.Ledger.Api.Era as Ledger
 import qualified Cardano.Ledger.Coin as L
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Plutus.Language as Plutus
-import qualified Codec.Binary.Bech32 as Bech32
-import Control.Error.Util (hush)
-import qualified Data.Aeson as Aeson
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import Data.Data
-import qualified Data.Map as Map
-import Data.Maybe (fromJust)
-import qualified Data.Set as Set
-import Data.Text (Text)
-import GHC.Stack (HasCallStack)
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus hiding (PlutusV2)
+
+import qualified Codec.Binary.Bech32 as Bech32
+import           Control.Error.Util (hush)
+import qualified Data.Aeson as Aeson
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Data
+import qualified Data.Map as Map
+import           Data.Maybe (fromJust)
+import qualified Data.Set as Set
+import           Data.Text (Text)
+import           GHC.Stack (HasCallStack)
+
 import qualified Test.Hedgehog.Golden.ErrorMessage as ErrorMessage
-import Test.Tasty
+import           Test.Tasty
 
 seed1 :: ByteString
 seed1 =

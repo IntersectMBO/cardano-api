@@ -25,24 +25,26 @@ module Cardano.Api.Keys.Praos
   )
 where
 
-import Cardano.Api.HasTypeProxy
-import Cardano.Api.Hash
-import Cardano.Api.Keys.Class
-import Cardano.Api.SerialiseBech32
-import Cardano.Api.SerialiseCBOR
-import Cardano.Api.SerialiseRaw
-import Cardano.Api.SerialiseTextEnvelope
-import Cardano.Api.SerialiseUsing
+import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Keys.Class
+import           Cardano.Api.SerialiseBech32
+import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.SerialiseTextEnvelope
+import           Cardano.Api.SerialiseUsing
+
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.KES.Class as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
-import Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Shelley (KES, VRF)
 import qualified Cardano.Ledger.Keys as Shelley
-import Data.ByteString (ByteString)
-import Data.Either.Combinators (maybeToRight)
-import Data.String (IsString (..))
+
+import           Data.ByteString (ByteString)
+import           Data.Either.Combinators (maybeToRight)
+import           Data.String (IsString (..))
 
 --
 -- KES keys
@@ -57,16 +59,16 @@ instance HasTypeProxy KesKey where
 instance Key KesKey where
   newtype VerificationKey KesKey
     = KesVerificationKey (Shelley.VerKeyKES StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey KesKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey KesKey
     = KesSigningKey (Shelley.SignKeyKES StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey KesKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   -- This loses the mlock safety of the seed, since it starts from a normal in-memory seed.
   deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
@@ -121,7 +123,7 @@ newtype instance Hash KesKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash KesKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash KesKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash KesKey) where
   serialiseToRawBytes (KesKeyHash vkh) =
@@ -170,16 +172,16 @@ instance HasTypeProxy VrfKey where
 instance Key VrfKey where
   newtype VerificationKey VrfKey
     = VrfVerificationKey (Shelley.VerKeyVRF StandardCrypto)
-    deriving stock (Eq)
+    deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey VrfKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey VrfKey
     = VrfSigningKey (Shelley.SignKeyVRF StandardCrypto)
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey VrfKey)
     deriving newtype (ToCBOR, FromCBOR)
-    deriving anyclass (SerialiseAsCBOR)
+    deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey :: AsType VrfKey -> Crypto.Seed -> SigningKey VrfKey
   deterministicSigningKey AsVrfKey seed =
@@ -233,7 +235,7 @@ newtype instance Hash VrfKey
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash VrfKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash VrfKey)
-  deriving anyclass (SerialiseAsCBOR)
+  deriving anyclass SerialiseAsCBOR
 
 instance SerialiseAsRawBytes (Hash VrfKey) where
   serialiseToRawBytes (VrfKeyHash vkh) =

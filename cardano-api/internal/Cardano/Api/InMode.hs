@@ -27,27 +27,29 @@ module Cardano.Api.InMode
   )
 where
 
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras
-import Cardano.Api.Modes
-import Cardano.Api.Orphans ()
-import Cardano.Api.Tx.Body
-import Cardano.Api.Tx.Sign
-import Cardano.Api.Utils (textShow)
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras
+import           Cardano.Api.Modes
+import           Cardano.Api.Orphans ()
+import           Cardano.Api.Tx.Body
+import           Cardano.Api.Tx.Sign
+import           Cardano.Api.Utils (textShow)
+
 import qualified Cardano.Ledger.Api as L
-import Data.Aeson (ToJSON (..), (.=))
-import qualified Data.Aeson as Aeson
-import Data.SOP.Strict (NS (S, Z))
-import qualified Data.Text as Text
-import GHC.Generics
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
+
+import           Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as Aeson
+import           Data.SOP.Strict (NS (S, Z))
+import qualified Data.Text as Text
+import           GHC.Generics
 
 -- ----------------------------------------------------------------------------
 -- Transactions in the context of a consensus mode

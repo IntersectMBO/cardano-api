@@ -14,7 +14,7 @@ for x in $(git diff --staged --name-only --diff-filter=ACM "*.hs" | tr '\n' ' ')
   if grep -qE '^#' "$x"; then
     echo "$x contains CPP.  Skipping."
   else
-    fourmolu -q -i "$x"
+    "$(git rev-parse --show-toplevel)/scripts/devshell/prettify" "$x"
   fi
   hlint "$x" || hlint_rc="1"
 done

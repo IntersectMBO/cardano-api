@@ -6,20 +6,25 @@ module Test.Cardano.Api.Ledger
   )
 where
 
-import Cardano.Api
-import Cardano.Api.Shelley
+import           Cardano.Api
+import           Cardano.Api.Shelley
+
 import qualified Cardano.Ledger.Api as L
-import Cardano.Ledger.Api.Tx.Address
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.SafeHash
-import Control.Monad.Identity
+import           Cardano.Ledger.Api.Tx.Address
+import           Cardano.Ledger.Crypto
+import           Cardano.Ledger.SafeHash
+
+import           Control.Monad.Identity
+
+import           Test.Gen.Cardano.Api.Typed
+
+import           Test.Cardano.Ledger.Core.Arbitrary ()
+
 import qualified Hedgehog as H
-import Hedgehog.Gen.QuickCheck (arbitrary)
-import Hedgehog.Internal.Property
-import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Gen.Cardano.Api.Typed
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import           Hedgehog.Gen.QuickCheck (arbitrary)
+import           Hedgehog.Internal.Property
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 
 -- Keep this here to make sure serialiseAddr/deserialiseAddr are working.
 -- They are defined in the Shelley executable spec and have been wrong at

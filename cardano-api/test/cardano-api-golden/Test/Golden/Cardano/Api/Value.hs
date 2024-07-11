@@ -1,28 +1,23 @@
 module Test.Golden.Cardano.Api.Value where
 
-import Cardano.Api
-  ( MaryEraOnwards (..)
-  , ShelleyBasedEra (..)
-  , ValueNestedBundle (..)
-  , ValueNestedRep (..)
-  , fromLedgerValue
-  , parseValue
-  , renderValue
-  , renderValuePretty
-  , valueFromNestedRep
-  , valueToNestedRep
-  )
+import           Cardano.Api (MaryEraOnwards (..), ShelleyBasedEra (..), ValueNestedBundle (..),
+                   ValueNestedRep (..), fromLedgerValue, parseValue, renderValue, renderValuePretty,
+                   valueFromNestedRep, valueToNestedRep)
 import qualified Cardano.Api as Api
-import Data.Aeson (eitherDecode, encode)
-import Data.List (groupBy, sort)
+
+import           Prelude
+
+import           Data.Aeson (eitherDecode, encode)
+import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import Hedgehog (Property, forAll, property, tripping, (===))
+import qualified Text.Parsec as Parsec (parse)
+
+import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+
+import           Hedgehog (Property, forAll, property, tripping, (===))
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Test.Golden as H
-import Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
-import qualified Text.Parsec as Parsec (parse)
-import Prelude
 
 {- HLINT ignore "Use let" -}
 
@@ -96,8 +91,8 @@ canonicalise =
     . (\(ValueNestedRep bundles) -> bundles)
  where
   samePolicyId
-    ValueNestedBundleAda {}
-    ValueNestedBundleAda {} = True
+    ValueNestedBundleAda{}
+    ValueNestedBundleAda{} = True
   samePolicyId
     (ValueNestedBundle pid _)
     (ValueNestedBundle pid' _) = pid == pid'
@@ -115,7 +110,7 @@ canonicalise =
           ValueNestedBundle pid (Map.unionWith (<>) as as')
   mergeBundle _ _ = error "canonicalise.mergeBundle: impossible"
 
-  filterZeros b@ValueNestedBundleAda {} = b
+  filterZeros b@ValueNestedBundleAda{} = b
   filterZeros (ValueNestedBundle pid as) =
     ValueNestedBundle pid (Map.filter (/= 0) as)
 

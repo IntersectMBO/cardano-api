@@ -8,12 +8,14 @@ module Cardano.Api.Query.Types
   )
 where
 
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Orphans ()
-import Cardano.Binary
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Orphans ()
+
+import           Cardano.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Cardano.Ledger.Shelley.API as Shelley
-import Data.Aeson (ToJSON (..), object, (.=))
+
+import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 
 newtype DebugLedgerState era = DebugLedgerState

@@ -13,8 +13,8 @@ module Cardano.Api.IO.Base
   )
 where
 
-import Data.Aeson (FromJSON, ToJSON)
-import Data.String (IsString)
+import           Data.Aeson (FromJSON, ToJSON)
+import           Data.String (IsString)
 
 data FileDirection
   = -- | Indicate the file is to be used for reading.
@@ -39,4 +39,4 @@ data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath
   | GroupPermissionsExist FilePath
   | GenericPermissionsExist FilePath
-  deriving (Show)
+  deriving Show

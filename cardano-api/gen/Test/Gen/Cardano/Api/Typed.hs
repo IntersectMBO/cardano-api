@@ -126,20 +126,19 @@ module Test.Gen.Cardano.Api.Typed
   )
 where
 
-import Cardano.Api hiding (txIns)
+import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import Cardano.Api.Byron
-  ( KeyWitness (ByronKeyWitness)
-  , WitnessNetworkIdOrByronAddress (..)
-  )
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
+                   WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Byron as Byron
-import Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
-import Cardano.Api.Error
+import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
+import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
-import Cardano.Api.Script (scriptInEraToRefScript)
-import Cardano.Api.Shelley
+import           Cardano.Api.Script (scriptInEraToRefScript)
+import           Cardano.Api.Shelley
 import qualified Cardano.Api.Shelley as ShelleyApi
+
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
@@ -147,30 +146,34 @@ import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import Control.Applicative (Alternative (..), optional)
-import Data.ByteString (ByteString)
+import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+
+import           Control.Applicative (Alternative (..), optional)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
-import Data.Coerce
-import Data.Int (Int64)
-import Data.Maybe
-import Data.OSet.Strict (OSet)
+import           Data.Coerce
+import           Data.Int (Int64)
+import           Data.Maybe
+import           Data.OSet.Strict (OSet)
 import qualified Data.OSet.Strict as OSet
-import Data.Ratio (Ratio, (%))
-import Data.String
-import Data.Word (Word16, Word32, Word64)
-import Hedgehog (Gen, MonadGen, Range)
+import           Data.Ratio (Ratio, (%))
+import           Data.String
+import           Data.Word (Word16, Word32, Word64)
+import           Numeric.Natural (Natural)
+
+import           Test.Gen.Cardano.Api.Era
+import           Test.Gen.Cardano.Api.Metadata (genTxMetadata)
+
+import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
+import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import           Test.Cardano.Ledger.Conway.Arbitrary ()
+import           Test.Cardano.Ledger.Core.Arbitrary ()
+
+import           Hedgehog (Gen, MonadGen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
-import Numeric.Natural (Natural)
-import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
-import Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Gen.Cardano.Api.Era
-import Test.Gen.Cardano.Api.Metadata (genTxMetadata)
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use let" -}
@@ -987,7 +990,7 @@ genProtocolParameters era = do
   protocolParamUTxOCostPerByte <-
     inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
-  pure ProtocolParameters {..}
+  pure ProtocolParameters{..}
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
 genValidProtocolParameters :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
@@ -1024,7 +1027,7 @@ genProtocolParametersUpdate era = do
   protocolUpdateUTxOCostPerByte <-
     inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
-  pure ProtocolParametersUpdate {..}
+  pure ProtocolParametersUpdate{..}
 
 genUpdateProposal :: CardanoEra era -> Gen UpdateProposal
 genUpdateProposal era =

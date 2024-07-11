@@ -11,35 +11,33 @@ module Test.Golden.Cardano.Api.ProtocolParameters
   )
 where
 
-import Cardano.Api
-  ( AnyPlutusScriptVersion (AnyPlutusScriptVersion)
-  , CostModel (..)
-  , ExecutionUnits (..)
-  , PlutusScriptVersion (..)
-  , makePraosNonce
-  )
-import Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval), StandardCrypto)
-import Cardano.Api.ProtocolParameters (ExecutionUnitPrices (..), ProtocolParameters (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..))
-import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
-import Cardano.Ledger.Plutus.CostModels (costModelParamsCount)
-import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
-import Data.Aeson (FromJSON, eitherDecode, encode)
-import Data.ByteString.Lazy (ByteString)
-import Data.Functor.Identity (Identity)
-import Data.Int (Int64)
-import Data.Map (Map)
+import           Cardano.Api (AnyPlutusScriptVersion (AnyPlutusScriptVersion), CostModel (..),
+                   ExecutionUnits (..), PlutusScriptVersion (..), makePraosNonce)
+import           Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval), StandardCrypto)
+import           Cardano.Api.ProtocolParameters (ExecutionUnitPrices (..), ProtocolParameters (..))
+
+import           Cardano.Ledger.Alonzo (AlonzoEra)
+import           Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..))
+import           Cardano.Ledger.Babbage (BabbageEra)
+import           Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
+import           Cardano.Ledger.Plutus.CostModels (costModelParamsCount)
+import           Cardano.Ledger.Plutus.Language (Language (..))
+import           Cardano.Ledger.Shelley (ShelleyEra)
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
+
+import           Data.Aeson (FromJSON, eitherDecode, encode)
+import           Data.ByteString.Lazy (ByteString)
+import           Data.Functor.Identity (Identity)
+import           Data.Int (Int64)
+import           Data.Map (Map)
 import qualified Data.Map as M
-import Data.Proxy (Proxy (..))
-import Hedgehog (Property, property, success)
+import           Data.Proxy (Proxy (..))
+
+import           Hedgehog (Property, property, success)
 import qualified Hedgehog.Extras.Aeson as H
-import Hedgehog.Internal.Property (failWith)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import           Hedgehog.Internal.Property (failWith)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 
 test_golden_ProtocolParameters :: TestTree
 test_golden_ProtocolParameters = testProperty "golden ProtocolParameters" $ do

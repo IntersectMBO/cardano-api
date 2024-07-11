@@ -36,35 +36,37 @@ module Cardano.Api.Query.Expr
   )
 where
 
-import Cardano.Api.Address
-import Cardano.Api.Block
-import Cardano.Api.Certificate
-import Cardano.Api.Eon.BabbageEraOnwards
-import Cardano.Api.Eon.ConwayEraOnwards
-import Cardano.Api.Eon.ShelleyBasedEra
-import Cardano.Api.Eras
-import Cardano.Api.GenesisParameters
-import Cardano.Api.IPC
-import Cardano.Api.IPC.Monad
-import Cardano.Api.Keys.Shelley
-import Cardano.Api.NetworkId
-import Cardano.Api.ProtocolParameters
-import Cardano.Api.Query
+import           Cardano.Api.Address
+import           Cardano.Api.Block
+import           Cardano.Api.Certificate
+import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.ConwayEraOnwards
+import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eras
+import           Cardano.Api.GenesisParameters
+import           Cardano.Api.IPC
+import           Cardano.Api.IPC.Monad
+import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.NetworkId
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query
 import qualified Cardano.Api.ReexposeLedger as Ledger
+
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as L
 import qualified Cardano.Ledger.CertState as L
 import qualified Cardano.Ledger.Coin as L
-import Cardano.Ledger.Core (EraCrypto)
+import           Cardano.Ledger.Core (EraCrypto)
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
-import Cardano.Ledger.SafeHash
+import           Cardano.Ledger.SafeHash
 import qualified Cardano.Ledger.Shelley.LedgerState as L
-import Cardano.Slotting.Slot
-import Data.Map (Map)
-import Data.Set (Set)
+import           Cardano.Slotting.Slot
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
+
+import           Data.Map (Map)
+import           Data.Set (Set)
 import qualified Data.Set as S
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
 queryChainBlockNo
   :: ()

@@ -27,24 +27,23 @@ module Cardano.Api.Modes
   )
 where
 
-import Cardano.Api.Eras.Core
+import           Cardano.Api.Eras.Core
+
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 import qualified Cardano.Ledger.Api as L
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Data.SOP (K (K))
-import Data.SOP.Strict (NS (S, Z))
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
-import Ouroboros.Consensus.HardFork.Combinator as Consensus
-  ( EraIndex (..)
-  , eraIndexSucc
-  , eraIndexZero
-  )
+import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
+                   eraIndexZero)
 import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
 import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
+
+import           Data.SOP (K (K))
+import           Data.SOP.Strict (NS (S, Z))
 
 -- ----------------------------------------------------------------------------
 -- Consensus modes
