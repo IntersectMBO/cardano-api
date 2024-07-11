@@ -53,11 +53,30 @@ case $1 in
         ;;
 esac
 
+if !(which stylish-haskell > /dev/null 2>&1); then
+    echo "ERROR: stylish-haskell is not available!"
+    echo -e
+    echo "Try entering the development shell with:"
+    echo "  nix develop"
+    exit 1
+fi
+
+if !(which fourmolu > /dev/null 2>&1); then
+    echo "ERROR: fourmolu is not available!"
+    echo -e
+    echo "Try entering the development shell with:"
+    echo "  nix develop"
+    exit 1
+fi
+
+
 if [[ -z $files ]]; then
     echo "No files to format!"
-    echo -e
-    show_help
-    exit 1
+    if [[ -z $1 ]]; then
+      echo -e
+      show_help
+      exit 1
+    fi
 fi
 
 run_format $files

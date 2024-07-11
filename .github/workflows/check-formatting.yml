@@ -57,8 +57,7 @@ jobs:
             if grep -qE '^#' "$x"; then
               echo "$x contains CPP.  Skipping."
             else
-              fourmolu -q -i "$x"
-              stylish-haskell -i "$x"
+              "$(git rev-parse --show-toplevel)/scripts/devshell/prettify" "$x"
             fi
           fi
         done
@@ -75,8 +74,7 @@ jobs:
             if grep -qE '^#' "$x"; then
               echo "$x contains CPP.  Skipping."
             else
-              fourmolu -q -i "$x"
-              stylish-haskell -i "$x"
+              "$(git rev-parse --show-toplevel)/scripts/devshell/prettify" "$x"
             fi
           fi
         done
