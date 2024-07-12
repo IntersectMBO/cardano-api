@@ -24,7 +24,7 @@ jobs:
 
     env:
       FOURMOLU_VERSION: "0.16.2.0"
-      STYLISH_HASKELL_VERSION: "0.14.5.0"
+      STYLISH_HASKELL_VERSION: "0.14.6.0"
 
     steps:
     - name: Download Fourmolu
