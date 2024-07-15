@@ -29,7 +29,7 @@
     # see flake `variants` below for alternative compilers
     defaultCompiler = "ghc982";
     haddockShellCompiler = defaultCompiler;
-    mingwVersion = "ghc965";
+    mingwCompiler = "ghc965";
 
     cabalHeadOverlay = final: prev: {
       cabal-head =
@@ -83,7 +83,7 @@
 
           # we also want cross compilation to windows on linux (and only with default compiler).
           crossPlatforms = p:
-            lib.optional (system == "x86_64-linux" && config.compiler-nix-name == mingwVersion)
+            lib.optional (system == "x86_64-linux" && config.compiler-nix-name == mingwCompiler)
             p.mingwW64;
 
           # CHaP input map, so we can find CHaP packages (needs to be more
@@ -152,7 +152,7 @@
         flake = cabalProject.flake (
           lib.optionalAttrs (system == "x86_64-linux") {
             # on linux, build/test other supported compilers
-            variants = lib.genAttrs ["ghc8107" mingwVersion] (compiler-nix-name: {
+            variants = lib.genAttrs ["ghc8107" mingwCompiler] (compiler-nix-name: {
               inherit compiler-nix-name;
             });
           }
