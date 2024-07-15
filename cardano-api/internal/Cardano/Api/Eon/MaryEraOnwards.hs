@@ -13,6 +13,7 @@ module Cardano.Api.Eon.MaryEraOnwards
   , maryEraOnwardsConstraints
   , maryEraOnwardsToShelleyBasedEra
   , MaryEraOnwardsConstraints
+  , IsMaryBasedEra (..)
   )
 where
 
@@ -109,3 +110,18 @@ maryEraOnwardsToShelleyBasedEra = \case
   MaryEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
   MaryEraOnwardsBabbage -> ShelleyBasedEraBabbage
   MaryEraOnwardsConway -> ShelleyBasedEraConway
+
+class IsMaryBasedEra era where
+  maryBasedEra :: MaryEraOnwards era
+
+instance IsMaryBasedEra MaryEra where
+  maryBasedEra = MaryEraOnwardsMary
+
+instance IsMaryBasedEra AlonzoEra where
+  maryBasedEra = MaryEraOnwardsAlonzo
+
+instance IsMaryBasedEra BabbageEra where
+  maryBasedEra = MaryEraOnwardsBabbage
+
+instance IsMaryBasedEra ConwayEra where
+  maryBasedEra = MaryEraOnwardsConway
