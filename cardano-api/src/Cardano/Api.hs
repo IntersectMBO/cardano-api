@@ -943,6 +943,7 @@ module Cardano.Api
   , bounded
 
     -- ** Query expressions
+  , queryAccountState
   , queryChainBlockNo
   , queryChainPoint
   , queryCurrentEpochState
