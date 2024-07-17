@@ -27,10 +27,11 @@ run_format() {
               fourmolu -q -i "$top_level/$file"
               stylish-haskell -i "$top_level/$file"
             fi
-
         fi
     done
 }
+
+flag_passed="true"
 
 # Parse command line arguments
 case $1 in
@@ -55,25 +56,38 @@ case $1 in
         ;;
     *)
         files="$@"
+        flag_passed="false"
         ;;
 esac
 
-if !(which stylish-haskell > /dev/null 2>&1); then
-    echo "ERROR: stylish-haskell is not available!"
+if [[ $flag_passed == "true" ]] && [[ $# -gt 1 ]]; then
+  echo "ERROR: only one flag is allowed!"
+  echo -e
+  show_help
+  exit 1
+fi
+
+for file in $files; do
+  if [[ ! -a $file ]]; then
+    echo "ERROR: $file does not exist"
+    exit 1
+    if ![[ -f $file ]]; then
+      echo "ERROR: $file is not a regular file"
+      exit
+    fi
+  fi
+done
+
+for tool in stylish-haskell fourmolu
+do
+  if !(which $tool > /dev/null 2>&1); then
+    echo "ERROR: $tool is not available!"
     echo -e
     echo "Try entering the development shell with:"
     echo "  nix develop"
     exit 1
-fi
-
-if !(which fourmolu > /dev/null 2>&1); then
-    echo "ERROR: fourmolu is not available!"
-    echo -e
-    echo "Try entering the development shell with:"
-    echo "  nix develop"
-    exit 1
-fi
-
+  fi
+done
 
 if [[ -z $files ]]; then
     echo "No files to format!"
