@@ -46,7 +46,7 @@ common maybe-Win32
     build-depends: Win32
 
 common text
-  if impl(ghc == 8.10.7)&& os(darwin)&& arch(aarch64)
+  if impl(ghc == 8.10.7)&& os(osx)&& arch(aarch64)
     build-depends: text >=1.2.5.0
   else
     build-depends: text >=2.0
@@ -192,6 +192,7 @@ library internal
     iproute,
     memory,
     microlens,
+    microlens-aeson,
     mtl,
     network,
     optparse-applicative-fork,
@@ -313,11 +314,13 @@ test-suite cardano-api-test
     cardano-crypto-class ^>=2.1.2,
     cardano-crypto-test ^>=1.5,
     cardano-crypto-tests ^>=2.1,
+    cardano-ledger-alonzo,
     cardano-ledger-api ^>=1.9,
     cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.8,
     cardano-protocol-tpraos,
     cardano-slotting,
+    cborg,
     containers,
     directory,
     hedgehog >=1.1,
@@ -329,6 +332,7 @@ test-suite cardano-api-test
     ouroboros-consensus-cardano,
     ouroboros-consensus-protocol,
     ouroboros-network-api,
+    plutus-ledger-api,
     tasty,
     tasty-hedgehog,
     tasty-quickcheck,
@@ -338,6 +342,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Crypto
     Test.Cardano.Api.EpochLeadership
     Test.Cardano.Api.Eras
+    Test.Cardano.Api.Genesis
     Test.Cardano.Api.IO
     Test.Cardano.Api.Json
     Test.Cardano.Api.KeysByron

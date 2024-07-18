@@ -98,7 +98,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
-import           Cardano.Api.Eras.Core (forEraMaybeEon)
+import           Cardano.Api.Eras.Core (CardanoEra, forEraMaybeEon)
 import           Cardano.Api.Error as Api
 import           Cardano.Api.Genesis
 import           Cardano.Api.IO
@@ -197,7 +197,7 @@ import qualified Data.ByteArray
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.IORef
@@ -306,7 +306,7 @@ initialLedgerState nodeConfigFile = do
   -- can remove the nodeConfigFile argument and much of the code in this
   -- module.
   config <- modifyError ILSEConfigFile (readNodeConfig nodeConfigFile)
-  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig config)
+  genesisConfig <- modifyError ILSEGenesisFile (readCardanoGenesisConfig Nothing config)
   env <- modifyError ILSELedgerConsensusConfig (except (genesisConfigToEnv genesisConfig))
   let ledgerState = initLedgerStateVar genesisConfig
   return (env, ledgerState)
@@ -1342,12 +1342,15 @@ shelleyPraosNonce genesisHash =
 
 readCardanoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
+  => Maybe (CardanoEra era)
+  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
+  -- 'Cardano.Api.Genesis.decodeAlonzGenesis' for more details)
+  -> NodeConfig
   -> t m GenesisConfig
-readCardanoGenesisConfig enc = do
+readCardanoGenesisConfig mEra enc = do
   byronGenesis <- readByronGenesisConfig enc
   ShelleyConfig shelleyGenesis shelleyGenesisHash <- readShelleyGenesisConfig enc
-  alonzoGenesis <- readAlonzoGenesisConfig enc
+  alonzoGenesis <- readAlonzoGenesisConfig mEra enc
   conwayGenesis <- readConwayGenesisConfig enc
   let transCfg = Ledger.mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis
   pure $ GenesisCardano enc byronGenesis shelleyGenesisHash transCfg
@@ -1425,12 +1428,15 @@ readShelleyGenesisConfig enc = do
 
 readAlonzoGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
-  => NodeConfig
+  => Maybe (CardanoEra era)
+  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
+  -- 'Cardano.Api.Genesis.decodeAlonzGenesis' for more details)
+  -> NodeConfig
   -> t m AlonzoGenesis
-readAlonzoGenesisConfig enc = do
+readAlonzoGenesisConfig mEra enc = do
   let file = ncAlonzoGenesisFile enc
   modifyError (NEAlonzoConfig (unFile file) . renderAlonzoGenesisError) $
-    readAlonzoGenesis file (ncAlonzoGenesisHash enc)
+    readAlonzoGenesis mEra file (ncAlonzoGenesisHash enc)
 
 -- | If the conway genesis file does not exist we simply put in a default.
 readConwayGenesisConfig
@@ -1503,17 +1509,21 @@ renderShelleyGenesisError sge =
         ]
 
 readAlonzoGenesis
-  :: forall m t
+  :: forall m t era
    . MonadIOTransError AlonzoGenesisError t m
-  => File AlonzoGenesis 'In
+  => Maybe (CardanoEra era)
+  -- ^ Provide era witness to read Alonzo Genesis in an era-sensitive manner (see
+  -- 'Cardano.Api.Genesis.decodeAlonzGenesis' for more details)
+  -> File AlonzoGenesis 'In
   -> GenesisHashAlonzo
   -> t m AlonzoGenesis
-readAlonzoGenesis (File file) expectedGenesisHash = do
+readAlonzoGenesis mEra (File file) expectedGenesisHash = do
   content <-
-    modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ BS.readFile file
-  let genesisHash = GenesisHashAlonzo (Cardano.Crypto.Hash.Class.hashWith id content)
+    modifyError id $ handleIOExceptT (AlonzoGenesisReadError file . textShow) $ LBS.readFile file
+  let genesisHash = GenesisHashAlonzo . Cardano.Crypto.Hash.Class.hashWith id $ LBS.toStrict content
   checkExpectedGenesisHash genesisHash
-  liftEither . first (AlonzoGenesisDecodeError file . Text.pack) $ Aeson.eitherDecodeStrict' content
+  modifyError (AlonzoGenesisDecodeError file . Text.pack) $
+    decodeAlonzoGenesis mEra content
  where
   checkExpectedGenesisHash :: GenesisHashAlonzo -> t m ()
   checkExpectedGenesisHash actual =
@@ -1626,8 +1636,7 @@ renderHash
   :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString -> Text
 renderHash h = Text.decodeUtf8 $ Base16.encode (Cardano.Crypto.Hash.Class.hashToBytes h)
 
-newtype StakeCred
-  = StakeCred {_unStakeCred :: Ledger.Credential 'Ledger.Staking Consensus.StandardCrypto}
+newtype StakeCred = StakeCred {_unStakeCred :: Ledger.Credential 'Ledger.Staking Consensus.StandardCrypto}
   deriving (Eq, Ord)
 
 data Env = Env
@@ -1740,7 +1749,7 @@ unChainHash ch =
 
 data LeadershipError
   = LeaderErrDecodeLedgerStateFailure
-  | LeaderErrDecodeProtocolStateFailure (LB.ByteString, DecoderError)
+  | LeaderErrDecodeProtocolStateFailure (LBS.ByteString, DecoderError)
   | LeaderErrDecodeProtocolEpochStateFailure DecoderError
   | LeaderErrGenesisSlot
   | LeaderErrStakePoolHasNoStake PoolId
@@ -1917,7 +1926,8 @@ isLeadingSlotsTPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey
   let certifiedVrf s = Crypto.evalCertified () (TPraos.mkSeed TPraos.seedL s eNonce) vrfSkey
 
   stakePoolStake <-
-    ShelleyAPI.individualPoolStake <$> Map.lookup poolHash snapshotPoolDistr
+    ShelleyAPI.individualPoolStake
+      <$> Map.lookup poolHash snapshotPoolDistr
       & note (LeaderErrStakePoolHasNoStake poolid)
 
   let isLeader s = TPraos.checkLeaderValue (Crypto.certifiedOutput (certifiedVrf s)) stakePoolStake activeSlotCoeff'

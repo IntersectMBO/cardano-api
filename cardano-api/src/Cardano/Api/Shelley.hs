@@ -8,6 +8,7 @@ module Cardano.Api.Shelley
   , ShelleyGenesis (..)
   , shelleyGenesisDefaults
   , alonzoGenesisDefaults
+  , decodeAlonzoGenesis
   , conwayGenesisDefaults
 
     -- * Cryptographic key interface
