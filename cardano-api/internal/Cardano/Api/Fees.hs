@@ -1400,14 +1400,9 @@ substituteExecutionUnits
   -> Either (TxBodyErrorAutoBalance era) (TxBodyContent BuildTx era)
 substituteExecutionUnits
   exUnitsMap
-  txbodycontent@TxBodyContent
-    { txIns
-    , txWithdrawals
-    , txCertificates
-    , txMintValue
-    , txVotingProcedures
-    , txProposalProcedures
-    } = do
+  txbodycontent@(TxBodyContent txIns _ _ _ _ _ _ _ _ _ _ _ _ txWithdrawals txCertificates _
+                   txMintValue _ txProposalProcedures txVotingProcedures _ _) = do
+
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
     mappedMintedVals <- mapScriptWitnessesMinting txMintValue
