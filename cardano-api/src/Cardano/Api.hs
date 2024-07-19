@@ -528,7 +528,6 @@ module Cardano.Api
   , ScriptWitnessIndex (..)
   , renderScriptWitnessIndex
   , collectTxBodyScriptWitnesses
-  , mapTxScriptWitnesses
 
     -- ** Languages supported in each era
   , ScriptLanguageInEra (..)
