@@ -55,6 +55,8 @@ module Cardano.Api.Tx.Body
   , setTxWithdrawals
   , setTxCertificates
   , setTxUpdateProposal
+  , setTxProposalProcedures
+  , setTxVotingProcedures
   , setTxMintValue
   , setTxScriptValidity
   , setTxCurrentTreasuryValue
@@ -717,7 +719,8 @@ toAlonzoTxOutDatumHashUTxO (TxOutDatumInline{}) = SNothing
 
 toBabbageTxOutDatumUTxO
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum CtxUTxO era -> Plutus.Datum (ShelleyLedgerEra era)
+  => TxOutDatum CtxUTxO era
+  -> Plutus.Datum (ShelleyLedgerEra era)
 toBabbageTxOutDatumUTxO TxOutDatumNone = Plutus.NoDatum
 toBabbageTxOutDatumUTxO (TxOutDatumHash _ (ScriptDataHash dh)) = Plutus.DatumHash dh
 toBabbageTxOutDatumUTxO (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
@@ -785,7 +788,8 @@ toAlonzoTxOutDatumHash (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
 
 toBabbageTxOutDatum
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
-  => TxOutDatum ctx era -> Plutus.Datum (ShelleyLedgerEra era)
+  => TxOutDatum ctx era
+  -> Plutus.Datum (ShelleyLedgerEra era)
 toBabbageTxOutDatum TxOutDatumNone = Plutus.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Plutus.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
@@ -1356,6 +1360,18 @@ setTxWithdrawals v txBodyContent = txBodyContent{txWithdrawals = v}
 setTxCertificates :: TxCertificates build era -> TxBodyContent build era -> TxBodyContent build era
 setTxCertificates v txBodyContent = txBodyContent{txCertificates = v}
 
+setTxProposalProcedures
+  :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+setTxProposalProcedures v txBodyContent = txBodyContent{txProposalProcedures = v}
+
+setTxVotingProcedures
+  :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+setTxVotingProcedures v txBodyContent = txBodyContent{txVotingProcedures = v}
+
 setTxUpdateProposal :: TxUpdateProposal era -> TxBodyContent build era -> TxBodyContent build era
 setTxUpdateProposal v txBodyContent = txBodyContent{txUpdateProposal = v}
 
@@ -1393,7 +1409,9 @@ getTxId (ShelleyTxBody sbe tx _ _ _ _) =
 getTxIdShelley
   :: Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
   => Ledger.EraTxBody (ShelleyLedgerEra era)
-  => ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxId
+  => ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxId
 getTxIdShelley _ tx =
   TxId
     . Crypto.castHash
@@ -2183,7 +2201,9 @@ convTotalCollateral txTotalCollateral =
 convTxOuts
   :: forall ctx era ledgerera
    . ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era -> [TxOut ctx era] -> Seq.StrictSeq (Ledger.TxOut ledgerera)
+  => ShelleyBasedEra era
+  -> [TxOut ctx era]
+  -> Seq.StrictSeq (Ledger.TxOut ledgerera)
 convTxOuts sbe txOuts = Seq.fromList $ map (toShelleyTxOutAny sbe) txOuts
 
 convCertificates
