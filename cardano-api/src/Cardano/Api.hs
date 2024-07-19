@@ -439,6 +439,7 @@ module Cardano.Api
   , TxMetadataJsonSchema (..)
   , metadataFromJson
   , metadataToJson
+  , metadataValueFromJsonNoSchema
   , metadataValueToJsonNoSchema
   , TxMetadataJsonError (..)
   , TxMetadataJsonSchemaError (..)
