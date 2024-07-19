@@ -766,7 +766,7 @@ instance Eq (ScriptWitness witctx era) where
 type ScriptRedeemer = HashableScriptData
 
 data ScriptDatum witctx where
-  ScriptDatumForTxIn :: HashableScriptData -> ScriptDatum WitCtxTxIn
+  ScriptDatumForTxIn :: Maybe HashableScriptData -> ScriptDatum WitCtxTxIn
   InlineScriptDatum :: ScriptDatum WitCtxTxIn
   NoScriptDatumForMint :: ScriptDatum WitCtxMint
   NoScriptDatumForStake :: ScriptDatum WitCtxStake
