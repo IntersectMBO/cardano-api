@@ -1,5 +1,32 @@
 # Changelog for cardano-api
 
+## 9.1.0.0
+
+- Export metadataValueFromJsonNoSchema
+  (feature, compatible)
+  [PR 591](https://github.com/IntersectMBO/cardano-api/pull/591)
+
+- Make ScriptDatum in spending scripts optional in accordance with CIP-0069
+  (feature, compatible)
+  [PR 575](https://github.com/IntersectMBO/cardano-api/pull/575)
+
+- Update substituteExecutionUnits to include proposal and vote script witnesses
+  (feature, breaking)
+  [PR 587](https://github.com/IntersectMBO/cardano-api/pull/587)
+
+- Fix reading of Plutus V2 cost models with different lengths in AlonzoGenesis in different eras
+  (compatible, bugfix)
+  [PR 564](https://github.com/IntersectMBO/cardano-api/pull/564)
+
+- Export queryAccountState
+  (compatible)
+  [PR 588](https://github.com/IntersectMBO/cardano-api/pull/588)
+
+- Add `IsAllegraBasedEra`, `IsAlonzoBasedEra`, `IsBabbageBasedEra`, `IsConwayBasedEra`, `IsMaryBasedEra` type classes.
+  Add `ToAlonzoScript` and `HasScriptLanguageInEra` type classes.
+  (feature, compatible)
+  [PR 585](https://github.com/IntersectMBO/cardano-api/pull/585)
+
 ## 9.0.0.0
 
 - - Remove redundant era conversion functions. Use `toCardanoEra` instead.
@@ -18,7 +45,7 @@
   (breaking, refactoring)
   [PR 559](https://github.com/IntersectMBO/cardano-api/pull/559)
 
-## 8.48.0.1 
+## 8.48.0.1
 
 - Deserialize `ouroboros-consensus`'s `PoolDistr` instead of `cardano-ledger`'s `PoolDist` to maintain backwards compatibility with the `PoolDistr` query. This is needed because `cardano-ledger`'s `PoolDistr` datatype has changed.
   (compatible)
@@ -79,7 +106,7 @@
   (feature, compatible, improvement)
   [PR 527](https://github.com/IntersectMBO/cardano-api/pull/527)
 
-## 8.45.1.0 
+## 8.45.1.0
 
 - Adding `MinFeeRefScriptCostPerByte` to Conway PParams
   (feature)
