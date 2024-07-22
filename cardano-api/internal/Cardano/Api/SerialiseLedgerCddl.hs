@@ -278,11 +278,13 @@ data FromSomeTypeCDDL c b where
     :: Text
     -- ^ CDDL type that we want
     -> (InAnyShelleyBasedEra Tx -> b)
+    -- ^ Function to convert the tx to the desired type
     -> FromSomeTypeCDDL TextEnvelope b
   FromCDDLWitness
     :: Text
     -- ^ CDDL type that we want
     -> (InAnyShelleyBasedEra KeyWitness -> b)
+    -- ^ Function to convert the witness to the desired type
     -> FromSomeTypeCDDL TextEnvelope b
 
 deserialiseFromTextEnvelopeCddlAnyOf
