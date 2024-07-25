@@ -1156,7 +1156,8 @@ data TxCertificates build era where
   TxCertificates
     :: ShelleyBasedEra era
     -> [Certificate era]
-    -> BuildTxWith build (Map StakeCredential (Witness WitCtxStake era))
+    -> BuildTxWith build [(StakeCredential, Witness WitCtxStake era)]
+    -- ^ There can be more than one script witness per stake credential
     -> TxCertificates build era
 
 deriving instance Eq (TxCertificates build era)
@@ -3157,7 +3158,7 @@ collectTxBodyScriptWitnesses
       (ix, cert) <- zip [0 ..] certs
       , ScriptWitness _ witness <- maybeToList $ do
           stakecred <- selectStakeCredentialWitness cert
-          Map.lookup stakecred witnesses
+          List.lookup stakecred witnesses
       ]
 
     scriptWitnessesMinting
