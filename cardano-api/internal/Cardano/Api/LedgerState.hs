@@ -220,7 +220,7 @@ import qualified Data.Yaml as Yaml
 import           Formatting.Buildable (build)
 import           GHC.Exts (IsList (..))
 import           Lens.Micro
-import           Network.TypedProtocol.Pipelined (Nat (..))
+import           Network.TypedProtocol.Core (Nat (..))
 import           System.FilePath
 
 data InitialLedgerStateError
@@ -1097,45 +1097,45 @@ instance FromJSON NodeConfig where
         <*> parseBabbageHardForkEpoch o
         <*> parseConwayHardForkEpoch o
 
-    parseShelleyHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
+    parseShelleyHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseShelleyHardForkEpoch o =
       asum
-        [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestShelleyHardForkAtEpoch"
-        , pure $ Consensus.TriggerHardForkAtVersion 2 -- Mainnet default
+        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestShelleyHardForkAtEpoch"
+        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
         ]
 
-    parseAllegraHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
+    parseAllegraHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseAllegraHardForkEpoch o =
       asum
-        [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestAllegraHardForkAtEpoch"
-        , pure $ Consensus.TriggerHardForkAtVersion 3 -- Mainnet default
+        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestAllegraHardForkAtEpoch"
+        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
         ]
 
-    parseMaryHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
+    parseMaryHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseMaryHardForkEpoch o =
       asum
-        [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestMaryHardForkAtEpoch"
-        , pure $ Consensus.TriggerHardForkAtVersion 4 -- Mainnet default
+        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestMaryHardForkAtEpoch"
+        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
         ]
 
-    parseAlonzoHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
+    parseAlonzoHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseAlonzoHardForkEpoch o =
       asum
-        [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestAlonzoHardForkAtEpoch"
-        , pure $ Consensus.TriggerHardForkAtVersion 5 -- Mainnet default
+        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestAlonzoHardForkAtEpoch"
+        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
         ]
-    parseBabbageHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
+    parseBabbageHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseBabbageHardForkEpoch o =
       asum
-        [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestBabbageHardForkAtEpoch"
-        , pure $ Consensus.TriggerHardForkAtVersion 7 -- Mainnet default
+        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestBabbageHardForkAtEpoch"
+        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
         ]
 
-    parseConwayHardForkEpoch :: Object -> Parser Consensus.TriggerHardFork
+    parseConwayHardForkEpoch :: Object -> Parser (Consensus.CardanoHardForkTrigger blk)
     parseConwayHardForkEpoch o =
       asum
-        [ Consensus.TriggerHardForkAtEpoch <$> o .: "TestConwayHardForkAtEpoch"
-        , pure $ Consensus.TriggerHardForkAtVersion 9 -- Mainnet default
+        [ Consensus.CardanoTriggerHardForkAtEpoch <$> o .: "TestConwayHardForkAtEpoch"
+        , pure Consensus.CardanoTriggerHardForkAtDefaultVersion
         ]
 
 ----------------------------------------------------------------------
