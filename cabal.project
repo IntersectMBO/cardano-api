@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-06-23T23:01:13Z
+  , hackage.haskell.org 2024-08-14T01:45:12Z
   , cardano-haskell-packages 2024-07-02T13:27:37Z
 
 packages:
@@ -48,3 +48,39 @@ write-ghc-environment-files: always
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/typed-protocols
+  tag: f36ac61d188be2252eed859937fdf3f98c9d0bbb
+  --sha256: sha256-QWTulG6okgE5nNbl8l/lkTv7IaxZ/nLHhSsc7Dmhgtc=
+  subdir:
+    typed-protocols
+    typed-protocols-cborg
+    typed-protocols-stateful
+    typed-protocols-stateful-cborg
+    typed-protocols-examples
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: 0789fc1e6df63065671eaa5f9845a479bc78518f
+  --sha256: sha256-tOo0OzbtHiwEKEYtFHarCvmXlGLBX1N5kmCMZtI5m9s=
+  subdir: network-mux
+          ouroboros-network
+          ouroboros-network-api
+          ouroboros-network-framework
+          ouroboros-network-protocols
+          ouroboros-network-testing
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 6a9a7c53b8c7c2c96553aab8864fa33200b078ef
+  --sha256: sha256-YntmUOzyDda34VEaQHU/dgC8RiCMKr/WOkbBN/P6nVI=
+  subdir: ouroboros-consensus
+          ouroboros-consensus-cardano
+          ouroboros-consensus-diffusion
