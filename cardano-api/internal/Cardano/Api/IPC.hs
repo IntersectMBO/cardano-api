@@ -302,10 +302,11 @@ mkVersionedProtocols networkid ptcl unversionedClients =
                   )
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
-              Net.mkMiniProtocolCbFromPeer $
+              Net.mkMiniProtocolCbFromPeerSt $
                 const
                   ( nullTracer
                   , cStateQueryCodec
+                  , Net.Query.StateIdle
                   , maybe
                       Net.localStateQueryPeerNull
                       Net.Query.localStateQueryClientPeer
