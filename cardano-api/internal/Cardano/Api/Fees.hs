@@ -477,7 +477,7 @@ estimateTransactionKeyWitnessCount
           _ -> 0
         + case txCertificates of
           TxCertificates _ _ (BuildTxWith witnesses) ->
-            length [() | KeyWitness{} <- Map.elems witnesses]
+            length [() | (_, KeyWitness{}) <- witnesses]
           _ -> 0
         + case txUpdateProposal of
           TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _) ->
@@ -1517,10 +1517,10 @@ substituteExecutionUnits
               (ix, cert) <- zip [0 ..] certs
               , stakecred <- maybeToList (selectStakeCredentialWitness cert)
               , ScriptWitness ctx witness <-
-                  maybeToList (Map.lookup stakecred witnesses)
+                  maybeToList (List.lookup stakecred witnesses)
               , let witness' = substituteExecUnits (ScriptWitnessIndexCertificate ix) witness
               ]
-         in TxCertificates supported certs . BuildTxWith . Map.fromList
+         in TxCertificates supported certs . BuildTxWith
               <$> traverse
                 ( \(sCred, eScriptWitness) ->
                     case eScriptWitness of
