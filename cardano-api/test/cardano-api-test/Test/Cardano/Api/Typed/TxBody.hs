@@ -29,7 +29,7 @@ prop_roundtrip_txbodycontent_txouts =
     let era = ShelleyBasedEraBabbage
     content <- H.forAll $ genTxBodyContent era
     -- Create the ledger body & auxiliaries
-    body <- case createAndValidateTransactionBody era content of
+    body <- case createTransactionBody era content of
       Left err -> annotateShow err >> failure
       Right body -> pure body
     annotateShow body
