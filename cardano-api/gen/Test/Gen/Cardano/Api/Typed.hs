@@ -790,7 +790,7 @@ genValidTxBody sbe =
 -- | Partial! This function will throw an error when the generated transaction is invalid.
 genTxBody :: HasCallStack => ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
-  res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
+  res <- Api.createTransactionBody era <$> genTxBodyContent era
   case res of
     Left err -> error (docToString (prettyError err))
     Right txBody -> pure txBody

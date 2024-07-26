@@ -280,6 +280,7 @@ module Cardano.Api
 
     -- ** Transaction bodies
   , TxBody (..)
+  , createTransactionBody
   , createAndValidateTransactionBody
   , makeByronTransactionBody
   , TxBodyContent (..)

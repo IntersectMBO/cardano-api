@@ -294,7 +294,7 @@ estimateBalancedTxBody
     let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
     txbody1ForFeeEstimateOnly <-
       first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
-        createAndValidateTransactionBody
+        createTransactionBody
           sbe
           txbodycontent1
             { txFee = TxFeeExplicit sbe maxLovelaceFee
@@ -336,7 +336,7 @@ estimateBalancedTxBody
     --  3. Return and total collateral
     txbody2 <-
       first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
-        createAndValidateTransactionBody
+        createTransactionBody
           sbe
           txbodycontent1
             { txFee = TxFeeExplicit sbe fee
@@ -376,7 +376,7 @@ estimateBalancedTxBody
       first TxFeeEstimationFinalConstructionError $ -- TODO: impossible to fail now. We need to implement a function
       -- that simply creates a transaction body because we have already
       -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-        createAndValidateTransactionBody sbe finalTxBodyContent
+        createTransactionBody sbe finalTxBodyContent
     return
       ( BalancedTxBody
           finalTxBodyContent
