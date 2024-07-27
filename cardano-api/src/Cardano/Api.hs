@@ -970,6 +970,7 @@ module Cardano.Api
   , queryGovState
   , queryDRepState
   , queryDRepStakeDistribution
+  , querySPOStakeDistribution
   , queryCommitteeMembersState
   , queryStakeVoteDelegatees
 
