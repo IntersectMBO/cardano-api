@@ -15,6 +15,7 @@ import           Data.List (nub)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Vector as Vector
+import           GHC.Exts (IsList (..))
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they
 -- delegate to and their reward account balance.
@@ -40,7 +41,7 @@ instance ToJSON DelegationsAndRewards where
 
 instance FromJSON DelegationsAndRewards where
   parseJSON = withArray "DelegationsAndRewards" $ \arr -> do
-    let vals = Vector.toList arr
+    let vals = toList arr
     decoded <- mapM decodeObject vals
     pure $ zipper decoded
    where

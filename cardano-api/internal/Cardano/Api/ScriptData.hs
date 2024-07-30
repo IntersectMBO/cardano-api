@@ -90,6 +90,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Vector as Vector
 import           Data.Word
+import           GHC.Exts (IsList (..))
 
 -- Original script data bytes
 data HashableScriptData
@@ -457,13 +458,13 @@ scriptDataFromJsonNoSchema = fmap (\sd -> HashableScriptData (serialiseToCBOR sd
   conv (Aeson.Array vs) =
     fmap ScriptDataList
       . traverse conv
-      $ Vector.toList vs
+      $ toList vs
   conv (Aeson.Object kvs) =
     fmap ScriptDataMap
       . traverse (\(k, v) -> (,) (convKey k) <$> conv v)
       . List.sortOn fst
       . fmap (first Aeson.toText)
-      $ KeyMap.toList kvs
+      $ toList kvs
 
   convKey :: Text -> ScriptData
   convKey s =
@@ -548,7 +549,7 @@ scriptDataFromJsonDetailedSchema = fmap (\sd -> HashableScriptData (serialiseToC
     :: Aeson.Value
     -> Either ScriptDataJsonSchemaError ScriptData
   conv (Aeson.Object m) =
-    case List.sort $ KeyMap.toList m of
+    case List.sort $ toList m of
       [("int", Aeson.Number d)] ->
         case Scientific.floatingOrInteger d :: Either Double Integer of
           Left n -> Left (ScriptDataJsonNumberNotInteger n)
@@ -559,11 +560,11 @@ scriptDataFromJsonDetailedSchema = fmap (\sd -> HashableScriptData (serialiseToC
       [("list", Aeson.Array vs)] ->
         fmap ScriptDataList
           . traverse conv
-          $ Vector.toList vs
+          $ toList vs
       [("map", Aeson.Array kvs)] ->
         fmap ScriptDataMap
           . traverse convKeyValuePair
-          $ Vector.toList kvs
+          $ toList kvs
       [ ("constructor", Aeson.Number d)
         , ("fields", Aeson.Array vs)
         ] ->
@@ -572,7 +573,7 @@ scriptDataFromJsonDetailedSchema = fmap (\sd -> HashableScriptData (serialiseToC
             Right n ->
               fmap (ScriptDataConstructor n)
                 . traverse conv
-                $ Vector.toList vs
+                $ toList vs
       (key, v) : _
         | key `elem` ["int", "bytes", "list", "map", "constructor"] ->
             Left (ScriptDataJsonTypeMismatch (Aeson.toText key) v)

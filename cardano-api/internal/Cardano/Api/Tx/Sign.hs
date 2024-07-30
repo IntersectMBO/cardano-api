@@ -117,6 +117,7 @@ import           Data.Maybe
 import qualified Data.Set as Set
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
+import           GHC.Exts (IsList (..))
 import           Lens.Micro
 
 -- ----------------------------------------------------------------------------
@@ -859,7 +860,7 @@ getByronTxBody (Byron.ATxAux{Byron.aTaTx = txbody}) = txbody
 getTxWitnessesByron :: Byron.ATxAux ByteString -> [KeyWitness ByronEra]
 getTxWitnessesByron (Byron.ATxAux{Byron.aTaWitness = witnesses}) =
   map ByronKeyWitness
-    . Vector.toList
+    . toList
     . unAnnotated
     $ witnesses
 

@@ -82,7 +82,6 @@ import qualified PlutusLedgerApi.V1 as Plutus
 import           Control.Monad (forM_)
 import           Data.Bifunctor (bimap, first, second)
 import           Data.ByteString.Short (ShortByteString)
-import           Data.Foldable (toList)
 import           Data.Function ((&))
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
@@ -94,6 +93,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           GHC.Exts (IsList (..))
 import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
@@ -263,7 +263,10 @@ estimateBalancedTxBody
            in sum
                 [ maryEraOnwardsConstraints w $
                     L.getTotalDepositsTxCerts pparams assumeStakePoolHasNotBeenRegistered certificates
-                , mconcat $ map (^. L.pProcDepositL) $ toList proposalProcedures
+                , maryEraOnwardsConstraints w $
+                    mconcat $
+                      map (^. L.pProcDepositL) $
+                        toList proposalProcedures
                 ]
 
         availableUTxOValue =
@@ -716,7 +719,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
       [ ( toScriptIndex aOnwards rdmrptr
         , bimap (fromAlonzoScriptExecutionError aOnwards) (second fromAlonzoExUnits) exunitsOrFailure
         )
-      | (rdmrptr, exunitsOrFailure) <- Map.toList exmap
+      | (rdmrptr, exunitsOrFailure) <- toList exmap
       ]
 
   fromAlonzoScriptExecutionError
@@ -929,7 +932,7 @@ handleExUnitsErrors ScriptValid failuresMap exUnitsMap =
     else Left (TxBodyScriptExecutionError failures)
  where
   failures :: [(ScriptWitnessIndex, ScriptExecutionError)]
-  failures = Map.toList failuresMap
+  failures = toList failuresMap
 handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
@@ -1555,7 +1558,7 @@ substituteExecutionUnits
       let eSubstitutedExecutionUnits =
             [ (vote, updatedWitness)
             | let allVoteMap = L.unVotingProcedures vProcedures
-            , (vote, scriptWitness) <- Map.toList sWitMap
+            , (vote, scriptWitness) <- toList sWitMap
             , index <- maybeToList $ Map.lookupIndex vote allVoteMap
             , let updatedWitness = substituteExecUnits (ScriptWitnessIndexVoting $ fromIntegral index) scriptWitness
             ]
@@ -1578,7 +1581,7 @@ substituteExecutionUnits
       let eSubstitutedExecutionUnits =
             [ (proposal, updatedWitness)
             | let allProposalsList = toList osetProposalProcedures
-            , (proposal, scriptWitness) <- Map.toList sWitMap
+            , (proposal, scriptWitness) <- toList sWitMap
             , index <- maybeToList $ List.elemIndex proposal allProposalsList
             , let updatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) scriptWitness
             ]

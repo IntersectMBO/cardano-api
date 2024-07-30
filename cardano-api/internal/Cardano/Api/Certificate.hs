@@ -95,7 +95,6 @@ import qualified Cardano.Ledger.Keys as Ledger
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.Foldable as Foldable
 import           Data.IP (IPv4, IPv6)
 import           Data.Maybe
 import qualified Data.Sequence.Strict as Seq
@@ -104,6 +103,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable
+import           GHC.Exts (IsList (..))
 import           Network.Socket (PortNumber)
 
 -- ----------------------------------------------------------------------------
@@ -678,11 +678,11 @@ fromShelleyPoolParams
       , stakePoolMargin = Ledger.unboundRational ppMargin
       , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAccount
       , stakePoolPledge = ppPledge
-      , stakePoolOwners = map StakeKeyHash (Set.toList ppOwners)
+      , stakePoolOwners = map StakeKeyHash (toList ppOwners)
       , stakePoolRelays =
           map
             fromShelleyStakePoolRelay
-            (Foldable.toList ppRelays)
+            (toList ppRelays)
       , stakePoolMetadata =
           fromShelleyPoolMetadata
             <$> Ledger.strictMaybeToMaybe ppMetadata

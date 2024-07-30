@@ -169,7 +169,6 @@ import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
-import qualified Data.Vector as Vector
 import           Numeric.Natural (Natural)
 
 -- ----------------------------------------------------------------------------
@@ -1397,7 +1396,7 @@ parseScriptAtLeast =
       _ -> fail "\"atLeast\" script value not found"
 
 gatherSimpleScriptTerms :: Vector Value -> Aeson.Parser [SimpleScript]
-gatherSimpleScriptTerms = mapM parseSimpleScript . Vector.toList
+gatherSimpleScriptTerms = mapM parseSimpleScript . toList
 
 parseScriptSig :: Value -> Aeson.Parser SimpleScript
 parseScriptSig =

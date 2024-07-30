@@ -28,6 +28,7 @@ import qualified Data.List as List
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
+import           GHC.Exts (IsList (..))
 
 class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
   -- | The human readable prefix to use when encoding this value to Bech32.
@@ -151,7 +152,7 @@ instance Error Bech32DecodeError where
       mconcat
         [ "Unexpected Bech32 prefix: the actual prefix is " <> pshow actual
         , ", but it was expected to be "
-        , mconcat $ List.intersperse " or " (map pshow (Set.toList permitted))
+        , mconcat $ List.intersperse " or " (map pshow (toList permitted))
         ]
     Bech32DataPartToBytesError _dataPart ->
       mconcat

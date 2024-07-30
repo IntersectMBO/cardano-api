@@ -85,6 +85,7 @@ import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import qualified Data.Vector as Vector
 import           Data.Word
+import           GHC.Exts (IsList (..))
 
 -- ----------------------------------------------------------------------------
 -- TxMetadata types
@@ -291,7 +292,7 @@ validateTxMetadata :: TxMetadata -> Either [(Word64, TxMetadataRangeError)] ()
 validateTxMetadata (TxMetadata m) =
   -- Collect all errors and do a top-level check to see if there are any.
   case [ (k, err)
-       | (k, v) <- Map.toList m
+       | (k, v) <- toList m
        , err <- validateTxMetadataValue v
        ] of
     [] -> Right ()
@@ -440,7 +441,7 @@ metadataFromJson schema =
     Aeson.Object m ->
       fmap (TxMetadata . Map.fromList)
         . mapM (uncurry metadataKeyPairFromJson)
-        $ KeyMap.toList m
+        $ toList m
     _ -> Left TxMetadataJsonToplevelNotMap
  where
   metadataKeyPairFromJson
@@ -495,7 +496,7 @@ metadataToJson schema =
   \(TxMetadata mdMap) ->
     Aeson.object
       [ (Aeson.fromString (show k), metadataValueToJson v)
-      | (k, v) <- Map.toList mdMap
+      | (k, v) <- toList mdMap
       ]
  where
   metadataValueToJson :: TxMetadataValue -> Aeson.Value
@@ -569,7 +570,7 @@ metadataValueFromJsonNoSchema = conv
   conv (Aeson.Array vs) =
     fmap TxMetaList
       . traverse conv
-      $ Vector.toList vs
+      $ toList vs
   conv (Aeson.Object kvs) =
     fmap
       ( TxMetaMap
@@ -577,7 +578,7 @@ metadataValueFromJsonNoSchema = conv
       )
       . traverse
         ((\(k, v) -> (,) (convKey k) <$> conv v) . first Aeson.toText)
-      $ KeyMap.toList kvs
+      $ toList kvs
 
   convKey :: Text -> TxMetadataValue
   convKey s =
@@ -656,7 +657,7 @@ metadataValueFromJsonDetailedSchema = conv
     :: Aeson.Value
     -> Either TxMetadataJsonSchemaError TxMetadataValue
   conv (Aeson.Object m) =
-    case KeyMap.toList m of
+    case toList m of
       [("int", Aeson.Number d)] ->
         case Scientific.floatingOrInteger d :: Either Double Integer of
           Left n -> Left (TxMetadataJsonNumberNotInteger n)
@@ -668,11 +669,11 @@ metadataValueFromJsonDetailedSchema = conv
       [("list", Aeson.Array vs)] ->
         fmap TxMetaList
           . traverse conv
-          $ Vector.toList vs
+          $ toList vs
       [("map", Aeson.Array kvs)] ->
         fmap TxMetaMap
           . traverse convKeyValuePair
-          $ Vector.toList kvs
+          $ toList kvs
       [(key, v)]
         | key `elem` ["int", "bytes", "string", "list", "map"] ->
             Left (TxMetadataJsonTypeMismatch (Aeson.toText key) v)

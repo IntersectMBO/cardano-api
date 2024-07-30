@@ -41,10 +41,10 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toLower)
 import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           Formatting (build, sformat, (%))
+import           GHC.Exts (IsList (..))
 import           Prettyprinter
 
 ------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ deserialiseInput
   -> ByteString
   -> Either InputDecodeError a
 deserialiseInput asType acceptedFormats inputBs =
-  go (NE.toList acceptedFormats)
+  go (toList acceptedFormats)
  where
   inputText :: Text
   inputText = Text.decodeUtf8 inputBs
