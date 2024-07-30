@@ -220,7 +220,7 @@ import           Data.Word
 import qualified Data.Yaml as Yaml
 import           Formatting.Buildable (build)
 import           Lens.Micro
-import           Network.TypedProtocol.Pipelined (Nat (..))
+import           Network.TypedProtocol.Core (Nat (..))
 import           System.FilePath
 
 data InitialLedgerStateError
