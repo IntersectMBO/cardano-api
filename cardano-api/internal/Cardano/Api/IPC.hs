@@ -127,8 +127,8 @@ import           Control.Monad.IO.Class
 import           Control.Tracer (nullTracer)
 import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
 import           Data.Void (Void)
+import           GHC.Exts (IsList (..))
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
@@ -255,7 +255,7 @@ mkVersionedProtocols networkid ptcl unversionedClients =
             }
           (protocols (unversionedClients ptclVersion) ptclBlockVersion ptclVersion)
     )
-    (Map.toList (Consensus.supportedNodeToClientVersions proxy))
+    (toList (Consensus.supportedNodeToClientVersions proxy))
  where
   proxy :: Proxy block
   proxy = Proxy

@@ -236,12 +236,11 @@ import           Control.Monad (guard, unless)
 import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
-import           Data.Foldable (for_, toList)
+import           Data.Foldable (for_)
 import           Data.Function (on)
 import           Data.Functor (($>))
 import           Data.List (sortBy)
@@ -262,6 +261,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
+import           GHC.Exts (IsList (..))
 import           Lens.Micro hiding (ix)
 import           Lens.Micro.Extras (view)
 import qualified Text.Parsec as Parsec
@@ -894,7 +894,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
                 A.mkAdaValue (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg) ll
       )
       ( \w -> do
-          let l = KeyMap.toList o
+          let l = toList o
           vals <- mapM decodeAssetId l
           pure $
             shelleyBasedEraConstraints (maryEraOnwardsToShelleyBasedEra w) $
@@ -920,7 +920,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
 
     decodeAssets :: Aeson.Object -> Aeson.Parser [(AssetName, Quantity)]
     decodeAssets assetNameHm =
-      let l = KeyMap.toList assetNameHm
+      let l = toList assetNameHm
        in mapM (\(aName, q) -> (,) <$> parseAssetName aName <*> decodeQuantity q) l
 
     parseAssetName :: Aeson.Key -> Aeson.Parser AssetName
@@ -1829,7 +1829,7 @@ fromLedgerTxIns
   -> [(TxIn, BuildTxWith ViewTx (Witness WitCtxTxIn era))]
 fromLedgerTxIns sbe body =
   [ (fromShelleyTxIn input, ViewTx)
-  | input <- Set.toList (inputs_ sbe body)
+  | input <- toList (inputs_ sbe body)
   ]
  where
   inputs_
@@ -1859,7 +1859,7 @@ fromLedgerTxInsReference
 fromLedgerTxInsReference sbe txBody =
   caseShelleyToAlonzoOrBabbageEraOnwards
     (const TxInsReferenceNone)
-    (\w -> TxInsReference w $ map fromShelleyTxIn . Set.toList $ txBody ^. L.referenceInputsTxBodyL)
+    (\w -> TxInsReference w $ map fromShelleyTxIn . toList $ txBody ^. L.referenceInputsTxBodyL)
     sbe
 
 fromLedgerTxOuts
@@ -2080,7 +2080,7 @@ fromLedgerTxExtraKeyWitnesses sbe body =
                 TxExtraKeyWitnesses
                   w
                   [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
-                  | keyhash <- Set.toList $ body ^. L.reqSignerHashesTxBodyL
+                  | keyhash <- toList $ body ^. L.reqSignerHashesTxBodyL
                   ]
     )
     sbe
@@ -3179,7 +3179,7 @@ collectTxBodyScriptWitnesses
     scriptWitnessesVoting TxVotingProceduresNone = []
     scriptWitnessesVoting (TxVotingProcedures (L.VotingProcedures votes) (BuildTxWith witnesses)) =
       [ (ScriptWitnessIndexVoting ix, AnyScriptWitness witness)
-      | let voterList = Map.toList votes
+      | let voterList = toList votes
       , (ix, (voter, _)) <- zip [0 ..] voterList
       , witness <- maybeToList (Map.lookup voter witnesses)
       ]
@@ -3192,7 +3192,7 @@ collectTxBodyScriptWitnesses
       | Map.null mScriptWitnesses = []
       | otherwise =
           [ (ScriptWitnessIndexProposing ix, AnyScriptWitness witness)
-          | let proposalsList = Set.toList $ OSet.toSet proposalProcedures
+          | let proposalsList = toList $ OSet.toSet proposalProcedures
           , (ix, proposal) <- zip [0 ..] proposalsList
           , witness <- maybeToList (Map.lookup proposal mScriptWitnesses)
           ]

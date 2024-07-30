@@ -79,7 +79,6 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Parser, ToJSONKey)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -96,6 +95,7 @@ import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           GHC.Exts (IsList (..))
 import           Lens.Micro ((%~))
 
 toByronLovelace :: L.Coin -> Maybe Byron.Lovelace
@@ -226,7 +226,7 @@ valueFromList =
     . Map.fromListWith (<>)
 
 valueToList :: Value -> [(AssetId, Quantity)]
-valueToList (Value m) = Map.toList m
+valueToList (Value m) = toList m
 
 -- | This lets you write @a - b@ as @a <> negateValue b@.
 negateValue :: Value -> Value
@@ -333,7 +333,7 @@ valueToNestedRep v =
   -- unflatten all the non-ada assets, and add ada separately
   ValueNestedRep $
     [ValueNestedBundleAda q | let q = selectAsset v AdaAssetId, q /= 0]
-      ++ [ValueNestedBundle pId qs | (pId, qs) <- Map.toList nonAdaAssets]
+      ++ [ValueNestedBundle pId qs | (pId, qs) <- toList nonAdaAssets]
  where
   nonAdaAssets :: Map PolicyId (Map AssetName Quantity)
   nonAdaAssets =
@@ -352,7 +352,7 @@ valueFromNestedRep (ValueNestedRep bundles) =
         ValueNestedBundleAda q -> [(AdaAssetId, q)]
         ValueNestedBundle pId qs ->
           [ (AssetId pId aName, q)
-          | (aName, q) <- Map.toList qs
+          | (aName, q) <- toList qs
           ]
     ]
 
@@ -369,7 +369,7 @@ instance FromJSON ValueNestedRep where
       ValueNestedRep
         <$> sequenceA
           [ parsePid keyValTuple
-          | keyValTuple <- KeyMap.toList obj
+          | keyValTuple <- toList obj
           ]
    where
     parsePid :: (Aeson.Key, Aeson.Value) -> Parser ValueNestedBundle

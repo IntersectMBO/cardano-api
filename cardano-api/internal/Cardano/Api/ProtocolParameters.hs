@@ -152,6 +152,7 @@ import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.String (IsString)
 import           Data.Text (Text)
 import           Data.Word
+import           GHC.Exts (IsList (..))
 import           GHC.Generics
 import           Lens.Micro
 import           Numeric.Natural
@@ -1014,7 +1015,7 @@ toAlonzoCostModels
   :: Map AnyPlutusScriptVersion CostModel
   -> Either ProtocolParametersConversionError Alonzo.CostModels
 toAlonzoCostModels m = do
-  f <- mapM conv $ Map.toList m
+  f <- mapM conv $ toList m
   Right $ Plutus.mkCostModels $ Map.fromList f
  where
   conv
@@ -1030,7 +1031,7 @@ fromAlonzoCostModels
 fromAlonzoCostModels cModels =
   Map.fromList
     . map (bimap fromAlonzoScriptLanguage fromAlonzoCostModel)
-    $ Map.toList
+    $ toList
     $ Plutus.costModelsValid cModels
 
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Plutus.Language

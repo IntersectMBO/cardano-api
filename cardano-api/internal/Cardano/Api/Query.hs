@@ -122,7 +122,6 @@ import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either.Combinators (rightToMaybe)
-import qualified Data.HashMap.Strict as HMS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
@@ -132,6 +131,7 @@ import           Data.SOP.Constraint (SListI)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
+import           GHC.Exts (IsList (..))
 import           GHC.Stack
 
 -- ----------------------------------------------------------------------------
@@ -374,7 +374,7 @@ instance
   => FromJSON (UTxO era)
   where
   parseJSON = withObject "UTxO" $ \hm -> do
-    let l = HMS.toList $ KeyMap.toHashMapText hm
+    let l = toList $ KeyMap.toHashMapText hm
     res <- mapM toTxIn l
     pure . UTxO $ Map.fromList res
    where
@@ -475,7 +475,7 @@ toShelleyAddrSet era =
     -- e.g. Shelley addresses in the Byron era, as these would not
     -- appear in the UTxO anyway.
     . mapMaybe (rightToMaybe . anyAddressInEra era)
-    . Set.toList
+    . toList
 
 toLedgerUTxO
   :: ()
@@ -487,7 +487,7 @@ toLedgerUTxO sbe (UTxO utxo) =
     $ Shelley.UTxO
       . Map.fromList
       . map (bimap toShelleyTxIn (toShelleyTxOut sbe))
-      . Map.toList
+      . toList
     $ utxo
 
 fromLedgerUTxO
@@ -500,7 +500,7 @@ fromLedgerUTxO sbe (Shelley.UTxO utxo) =
     $ UTxO
       . Map.fromList
       . map (bimap fromShelleyTxIn (fromShelleyTxOut sbe))
-      . Map.toList
+      . toList
     $ utxo
 
 fromShelleyPoolDistr
@@ -511,7 +511,7 @@ fromShelleyPoolDistr =
   -- Map.fromListAsc or to use Map.mapKeysMonotonic
   Map.fromList
     . map (bimap StakePoolKeyHash Consensus.individualPoolStake)
-    . Map.toList
+    . toList
     . Consensus.unPoolDistr
 
 fromShelleyDelegations
@@ -526,7 +526,7 @@ fromShelleyDelegations =
   -- do not match the one for StakeCredential
   Map.fromList
     . map (bimap fromShelleyStakeCredential StakePoolKeyHash)
-    . Map.toList
+    . toList
 
 fromShelleyRewardAccounts
   :: Shelley.RewardAccounts Consensus.StandardCrypto
@@ -536,7 +536,7 @@ fromShelleyRewardAccounts =
   -- Map.fromListAsc or to use Map.mapKeysMonotonic
   Map.fromList
     . map (first fromShelleyStakeCredential)
-    . Map.toList
+    . toList
 
 -- ----------------------------------------------------------------------------
 -- Conversions of queries into the consensus types.

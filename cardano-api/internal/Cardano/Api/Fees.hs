@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,7 +8,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 -- | Fee calculation
 module Cardano.Api.Fees
@@ -84,7 +82,6 @@ import qualified PlutusLedgerApi.V1 as Plutus
 import           Control.Monad (forM_)
 import           Data.Bifunctor (bimap, first, second)
 import           Data.ByteString.Short (ShortByteString)
-import           Data.Foldable (toList)
 import           Data.Function ((&))
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
@@ -96,6 +93,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           GHC.Exts (IsList (..))
 import           Lens.Micro ((.~), (^.))
 
 {- HLINT ignore "Redundant return" -}
@@ -265,7 +263,10 @@ estimateBalancedTxBody
            in sum
                 [ maryEraOnwardsConstraints w $
                     L.getTotalDepositsTxCerts pparams assumeStakePoolHasNotBeenRegistered certificates
-                , mconcat $ map (^. L.pProcDepositL) $ toList proposalProcedures
+                , maryEraOnwardsConstraints w $
+                    mconcat $
+                      map (^. L.pProcDepositL) $
+                        toList proposalProcedures
                 ]
 
         availableUTxOValue =
@@ -718,7 +719,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
       [ ( toScriptIndex aOnwards rdmrptr
         , bimap (fromAlonzoScriptExecutionError aOnwards) (second fromAlonzoExUnits) exunitsOrFailure
         )
-      | (rdmrptr, exunitsOrFailure) <- Map.toList exmap
+      | (rdmrptr, exunitsOrFailure) <- toList exmap
       ]
 
   fromAlonzoScriptExecutionError
@@ -931,7 +932,7 @@ handleExUnitsErrors ScriptValid failuresMap exUnitsMap =
     else Left (TxBodyScriptExecutionError failures)
  where
   failures :: [(ScriptWitnessIndex, ScriptExecutionError)]
-  failures = Map.toList failuresMap
+  failures = toList failuresMap
 handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
@@ -1276,14 +1277,13 @@ calcReturnAndTotalCollateral
   -- ^ Total available collateral in lovelace
   -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
 calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _ = (TxReturnCollateralNone, TxTotalCollateralNone)
-calcReturnAndTotalCollateral _ _ _ _ rc@TxReturnCollateral{} tc@TxTotalCollateral{} _ _ = (rc, tc)
 calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableAda =
   do
     let colPerc = pp' ^. Ledger.ppCollateralPercentageL
-    -- We must first figure out how much lovelace we have committed
-    -- as collateral and we must determine if we have enough lovelace at our
-    -- collateral tx inputs to cover the tx
-    let totalCollateralLovelace = totalAvailableAda
+        -- We must first figure out how much lovelace we have committed
+        -- as collateral and we must determine if we have enough lovelace at our
+        -- collateral tx inputs to cover the tx
+        totalCollateralLovelace = totalAvailableAda
         requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
         totalCollateral =
           TxTotalCollateral retColSup . L.rationalToCoinViaCeiling $
@@ -1296,12 +1296,8 @@ calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollate
         L.Coin amt = totalCollateralLovelace * 100 - requiredCollateral
         returnCollateral = L.rationalToCoinViaFloor $ amt % 100
     case (txReturnCollateral, txTotalCollateral) of
-#if MIN_VERSION_base(4,16,0)
-#else
-      -- For ghc-9.2, this pattern match is redundant, but ghc-8.10 will complain if its missing.
       (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
         (rc, tc)
-#endif
       (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
         (rc, TxTotalCollateralNone)
       (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
@@ -1395,14 +1391,36 @@ maybeDummyTotalCollAndCollReturnOutput sbe TxBodyContent{txInsCollateral, txRetu
         )
 
 substituteExecutionUnits
-  :: forall era. Map ScriptWitnessIndex ExecutionUnits
+  :: forall era
+   . Map ScriptWitnessIndex ExecutionUnits
   -> TxBodyContent BuildTx era
   -> Either (TxBodyErrorAutoBalance era) (TxBodyContent BuildTx era)
 substituteExecutionUnits
   exUnitsMap
-  txbodycontent@(TxBodyContent txIns _ _ _ _ _ _ _ _ _ _ _ _ txWithdrawals txCertificates _
-                   txMintValue _ txProposalProcedures txVotingProcedures _ _) = do
-
+  txbodycontent@( TxBodyContent
+                    txIns
+                    _
+                    _
+                    _
+                    _
+                    _
+                    _
+                    _
+                    _
+                    _
+                    _
+                    _
+                    _
+                    txWithdrawals
+                    txCertificates
+                    _
+                    txMintValue
+                    _
+                    txProposalProcedures
+                    txVotingProcedures
+                    _
+                    _
+                  ) = do
     mappedTxIns <- mapScriptWitnessesTxIns txIns
     mappedWithdrawals <- mapScriptWitnessesWithdrawals txWithdrawals
     mappedMintedVals <- mapScriptWitnessesMinting txMintValue
@@ -1418,7 +1436,6 @@ substituteExecutionUnits
         & setTxWithdrawals mappedWithdrawals
         & setTxVotingProcedures mappedVotes
         & setTxProposalProcedures mappedProposals
-
    where
     substituteExecUnits
       :: ScriptWitnessIndex
@@ -1531,27 +1548,32 @@ substituteExecutionUnits
 
     mapScriptWitnessesVotes
       :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))
-      -> Either (TxBodyErrorAutoBalance era) (Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era)))
+      -> Either
+          (TxBodyErrorAutoBalance era)
+          (Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era)))
     mapScriptWitnessesVotes Nothing = return Nothing
     mapScriptWitnessesVotes (Just (Featured _ TxVotingProceduresNone)) = return Nothing
     mapScriptWitnessesVotes (Just (Featured _ (TxVotingProcedures _ ViewTx))) = return Nothing
     mapScriptWitnessesVotes (Just (Featured era (TxVotingProcedures vProcedures (BuildTxWith sWitMap)))) = do
-
       let eSubstitutedExecutionUnits =
             [ (vote, updatedWitness)
             | let allVoteMap = L.unVotingProcedures vProcedures
-            , (vote, scriptWitness) <- Map.toList sWitMap
+            , (vote, scriptWitness) <- toList sWitMap
             , index <- maybeToList $ Map.lookupIndex vote allVoteMap
             , let updatedWitness = substituteExecUnits (ScriptWitnessIndexVoting $ fromIntegral index) scriptWitness
             ]
 
-      substitutedExecutionUnits  <- traverseScriptWitnesses eSubstitutedExecutionUnits
+      substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
 
-      return $ Just (Featured era (TxVotingProcedures vProcedures (BuildTxWith $ Map.fromList substitutedExecutionUnits)))
+      return $
+        Just
+          (Featured era (TxVotingProcedures vProcedures (BuildTxWith $ Map.fromList substitutedExecutionUnits)))
 
     mapScriptWitnessesProposals
       :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
-      -> Either (TxBodyErrorAutoBalance era) (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
+      -> Either
+          (TxBodyErrorAutoBalance era)
+          (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
     mapScriptWitnessesProposals Nothing = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures _ ViewTx))) = return Nothing
@@ -1559,15 +1581,19 @@ substituteExecutionUnits
       let eSubstitutedExecutionUnits =
             [ (proposal, updatedWitness)
             | let allProposalsList = toList osetProposalProcedures
-            , (proposal, scriptWitness) <- Map.toList sWitMap
+            , (proposal, scriptWitness) <- toList sWitMap
             , index <- maybeToList $ List.elemIndex proposal allProposalsList
             , let updatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) scriptWitness
             ]
 
-      substitutedExecutionUnits  <- traverseScriptWitnesses eSubstitutedExecutionUnits
+      substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
 
-      return $ Just (Featured era (TxProposalProcedures osetProposalProcedures (BuildTxWith $ Map.fromList substitutedExecutionUnits)))
-
+      return $
+        Just
+          ( Featured
+              era
+              (TxProposalProcedures osetProposalProcedures (BuildTxWith $ Map.fromList substitutedExecutionUnits))
+          )
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era
