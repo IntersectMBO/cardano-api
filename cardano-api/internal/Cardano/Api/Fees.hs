@@ -937,15 +937,18 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
 
-data BalancedTxBody era
-  = BalancedTxBody
-      (TxBodyContent BuildTx era)
-      (TxBody era)
-      (TxOut CtxTx era)
-      -- ^ Transaction balance (change output)
-      L.Coin
-      -- ^ Estimated transaction fee
-  deriving Show
+data BalancedTxBody era where
+  BalancedTxBody
+    :: (TxBodyContent BuildTx era)
+    -> (UnsignedTx (Exp.ApiEraToExperimentalEra era))
+    -> (TxOut CtxTx era)
+    -- ^ Transaction balance (change output)
+    -> L.Coin
+    -- ^ Estimated transaction fee
+    -> BalancedTxBody era
+
+deriving instance
+  (Exp.UseEra (Exp.ApiEraToExperimentalEra era), IsShelleyBasedEra era) => Show (BalancedTxBody era)
 
 newtype RequiredShelleyKeyWitnesses
   = RequiredShelleyKeyWitnesses {unRequiredShelleyKeyWitnesses :: Int}
