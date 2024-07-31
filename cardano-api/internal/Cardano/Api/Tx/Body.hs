@@ -132,6 +132,28 @@ module Cardano.Api.Tx.Body
   , scriptDataToInlineDatum
 
     -- * Internal conversion functions & types
+  , convCertificates
+  , convCollateralTxIns
+  , convExtraKeyWitnesses
+  , convLanguages
+  , convMintValue
+  , convProposalProcedures
+  , convReferenceInputs
+  , convReturnCollateral
+  , convScripts
+  , convScriptData
+  , convTotalCollateral
+  , convTransactionFee
+  , convTxIns
+  , convTxOuts
+  , convTxUpdateProposal
+  , convValidityLowerBound
+  , convValidityUpperBound
+  , convVotingProcedures
+  , convWithdrawals
+  , getScriptIntegrityHash
+  , mkCommonTxBody
+  , toAuxiliaryData
   , toByronTxId
   , toShelleyTxId
   , toShelleyTxIn

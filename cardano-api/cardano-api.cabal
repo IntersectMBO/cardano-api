@@ -123,7 +123,7 @@ library internal
     Cardano.Api.Orphans
     Cardano.Api.Pretty
     Cardano.Api.Protocol
-    Cardano.Api.Protocol.Version
+    Cardano.Api.Protocol.AvailableEras
     Cardano.Api.ProtocolParameters
     Cardano.Api.Query
     Cardano.Api.Query.Expr
@@ -132,6 +132,8 @@ library internal
     Cardano.Api.ReexposeNetwork
     Cardano.Api.Rewards
     Cardano.Api.Script
+    Cardano.Api.Experimental.Eras
+    Cardano.Api.Experimental.Tx
     Cardano.Api.ScriptData
     Cardano.Api.SerialiseBech32
     Cardano.Api.SerialiseCBOR
@@ -237,7 +239,6 @@ library
     Cardano.Api.ChainSync.Client
     Cardano.Api.ChainSync.ClientPipelined
     Cardano.Api.Crypto.Ed25519Bip32
-    Cardano.Api.Experimental
     Cardano.Api.Ledger
     Cardano.Api.Network
     Cardano.Api.Shelley
