@@ -30,6 +30,7 @@ module Cardano.Api.Query.Expr
   , L.CommitteeMembersState (..)
   , queryCommitteeMembersState
   , queryDRepStakeDistribution
+  , querySPOStakeDistribution
   , queryDRepState
   , queryGovState
   , queryStakeVoteDelegatees
@@ -415,6 +416,25 @@ queryDRepStakeDistribution
 queryDRepStakeDistribution era dreps = do
   let sbe = conwayEraOnwardsToShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
+
+querySPOStakeDistribution
+  :: ()
+  => ConwayEraOnwards era
+  -> Set (L.KeyHash 'L.StakePool L.StandardCrypto)
+  -- ^ An empty SPO key hash set means that distributions for all SPOs will be returned
+  -> LocalStateQueryExpr
+      block
+      point
+      QueryInMode
+      r
+      IO
+      ( Either
+          UnsupportedNtcVersionError
+          (Either EraMismatch (Map (L.KeyHash 'L.StakePool L.StandardCrypto) L.Coin))
+      )
+querySPOStakeDistribution era spos = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QuerySPOStakeDistr spos
 
 -- | Returns info about committee members filtered by: cold credentials, hot credentials and statuses.
 -- If empty sets are passed as filters, then no filtering is done.

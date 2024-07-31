@@ -285,6 +285,9 @@ data QueryInShelleyBasedEra era result where
   QueryDRepStakeDistr
     :: Set (Ledger.DRep StandardCrypto)
     -> QueryInShelleyBasedEra era (Map (Ledger.DRep StandardCrypto) L.Coin)
+  QuerySPOStakeDistr
+    :: Set (Ledger.KeyHash 'Ledger.StakePool StandardCrypto)
+    -> QueryInShelleyBasedEra era (Map (Ledger.KeyHash 'Ledger.StakePool Ledger.StandardCrypto) L.Coin)
   QueryCommitteeMembersState
     :: Set (Shelley.Credential Shelley.ColdCommitteeRole StandardCrypto)
     -> Set (Shelley.Credential Shelley.HotCommitteeRole StandardCrypto)
@@ -322,6 +325,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryGovState = NodeToClientV_16
   nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
   nodeToClientVersionOf QueryDRepStakeDistr{} = NodeToClientV_16
+  nodeToClientVersionOf QuerySPOStakeDistr{} = NodeToClientV_16
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
   nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
 
@@ -666,6 +670,13 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era (Consensus.GetDRepStakeDistr dreps)))
       sbe
+  QuerySPOStakeDistr spos ->
+    caseShelleyToBabbageOrConwayEraOnwards
+      ( const $
+          error "toConsensusQueryShelleyBased: QuerySPOStakeDistr is only available in the Conway era"
+      )
+      (const $ Some (consensusQueryInEraInMode era (Consensus.GetSPOStakeDistr spos)))
+      sbe
   QueryCommitteeMembersState coldCreds hotCreds statuses ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
@@ -956,6 +967,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryDRepStakeDistr{} ->
       case q' of
         Consensus.GetDRepStakeDistr{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QuerySPOStakeDistr{} ->
+      case q' of
+        Consensus.GetSPOStakeDistr{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryCommitteeMembersState{} ->
