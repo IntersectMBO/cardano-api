@@ -28,13 +28,13 @@ module Cardano.Api.Experimental.Eras
   )
 where
 
+import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
 import qualified Cardano.Api.Eras.Core as Api
 import           Cardano.Api.Via.ShowOf
 
 import qualified Cardano.Ledger.Babbage as Ledger
 import qualified Cardano.Ledger.Conway as Ledger
-import Cardano.Api.Eon.BabbageEraOnwards
 
 import           Data.Kind
 import           Prettyprinter
@@ -103,7 +103,6 @@ data Era era where
 -- instance UseEra ConwayEra where
 --   useEra = ConwayEra
 -- @
-
 protocolVersionToSbe
   :: Era era
   -> ShelleyBasedEra (AvailableErasToSbe era)
@@ -127,7 +126,6 @@ sbeToEra e@ShelleyBasedEraShelley = Left $ DeprecatedEra e
 babbageEraOnwardsToEra :: BabbageEraOnwards era -> Era (ApiEraToExperimentalEra era)
 babbageEraOnwardsToEra BabbageEraOnwardsBabbage = BabbageEra
 babbageEraOnwardsToEra BabbageEraOnwardsConway = ConwayEra
-
 
 -------------------------------------------------------------------------
 
