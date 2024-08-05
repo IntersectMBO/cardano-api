@@ -22,7 +22,7 @@ import           Data.Aeson (FromJSON, Object, ToJSON, eitherDecode)
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Foldable (foldl')
+import           Data.Foldable as Foldable (foldl')
 
 import           Test.Gen.Cardano.Api.Typed (genProtocolParameters)
 
@@ -204,7 +204,7 @@ patchProtocolParamsJSONOrFail era s =
   filtersForEra era' = fail $ "filtersForEra is not defined for: " <> show era'
 
   applyFilters :: [String] -> Object -> Object
-  applyFilters filters o = foldl' (flip Aeson.delete) o (map Aeson.fromString filters)
+  applyFilters filters o = Foldable.foldl' (flip Aeson.delete) o (map Aeson.fromString filters)
 
   -- Renames the key of an entry in a JSON object.
   -- If there already is a key with the new name in the object the function fails.
