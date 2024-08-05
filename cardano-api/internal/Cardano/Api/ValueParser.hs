@@ -14,7 +14,7 @@ import           Control.Applicative (many, some, (<|>))
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import           Data.Functor (void, ($>))
-import           Data.List (foldl')
+import           Data.List as List (foldl')
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
@@ -109,7 +109,7 @@ word64 = do
 decimal :: Parser Integer
 decimal = do
   digits <- many1 digit
-  return $! foldl' (\x d -> 10 * x + toInteger (Char.digitToInt d)) 0 digits
+  return $! List.foldl' (\x d -> 10 * x + toInteger (Char.digitToInt d)) 0 digits
 
 -- | Asset name parser.
 assetName :: Parser AssetName

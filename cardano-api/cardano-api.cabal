@@ -23,7 +23,7 @@ extra-doc-files:
 common project-config
   default-language: Haskell2010
   default-extensions: OverloadedStrings
-  build-depends: base >=4.14 && <4.20
+  build-depends: base >=4.14 && <4.21
   ghc-options:
     -Wall
     -Wcompat
@@ -205,10 +205,10 @@ library internal
     ouroboros-network-framework,
     ouroboros-network-protocols,
     parsec,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.30,
+    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.31,
     prettyprinter,
     prettyprinter-ansi-terminal,
-    prettyprinter-configurable ^>=1.30,
+    prettyprinter-configurable ^>=1.31,
     random,
     safe-exceptions,
     scientific,
@@ -393,8 +393,8 @@ test-suite cardano-api-golden
     hedgehog-extras ^>=0.6.1.0,
     microlens,
     parsec,
-    plutus-core ^>=1.30,
-    plutus-ledger-api ^>=1.30,
+    plutus-core ^>=1.31,
+    plutus-ledger-api ^>=1.31,
     tasty,
     tasty-hedgehog,
     text,

@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-06-23T23:01:13Z
-  , cardano-haskell-packages 2024-07-02T13:27:37Z
+  , hackage.haskell.org 2024-07-30T01:49:10Z
+  , cardano-haskell-packages 2024-07-30T02:20:18Z
 
 packages:
     cardano-api
@@ -44,6 +44,17 @@ test-show-details: direct
 
 -- Always write GHC env files, because they are needed for ghci.
 write-ghc-environment-files: always
+
+constraints:
+  , plutus-ledger-api ^>= 1.31
+
+allow-newer:
+  -- These are required due to the above.
+  , cardano-ledger-alonzo:plutus-ledger-api
+  , cardano-ledger-alonzo-test:plutus-ledger-api
+  , cardano-ledger-babbage:plutus-ledger-api
+  , cardano-ledger-binary:plutus-ledger-api
+  , cardano-ledger-conway:plutus-ledger-api
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
