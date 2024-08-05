@@ -29,7 +29,7 @@
     # see flake `variants` below for alternative compilers
     defaultCompiler = "ghc982";
     haddockShellCompiler = defaultCompiler;
-    mingwCompiler = "ghc965";
+    mingwCompiler = "ghc966";
 
     cabalHeadOverlay = final: prev: {
       cabal-head =
