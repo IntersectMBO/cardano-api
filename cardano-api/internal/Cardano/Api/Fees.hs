@@ -56,6 +56,7 @@ import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
+import           Cardano.Api.Governance.Actions.ProposalProcedure
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
@@ -79,14 +80,15 @@ import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
 
-import           Control.Monad (forM_)
+import           Control.Monad
 import           Data.Bifunctor (bimap, first, second)
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Function ((&))
 import qualified Data.List as List
+import qualified Data.Map.Ordered as OMap
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.Maybe
 import qualified Data.OSet.Strict as OSet
 import           Data.Ratio
 import           Data.Set (Set)
@@ -95,8 +97,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           Lens.Micro ((.~), (^.))
-
-{- HLINT ignore "Redundant return" -}
 
 -- | Type synonym for logs returned by the ledger's @evalTxExUnitsWithLogs@ function.
 -- for scripts in transactions.
@@ -233,8 +233,9 @@ estimateBalancedTxBody
 
     let sbe = maryEraOnwardsToShelleyBasedEra w
     txbodycontent1 <-
-      first TxFeeEstimationScriptExecutionError $
-        substituteExecutionUnits exUnitsMap txbodycontent
+      maryEraOnwardsConstraints w $
+        first TxFeeEstimationScriptExecutionError $
+          substituteExecutionUnits exUnitsMap txbodycontent
 
     -- Step 2. We need to calculate the current balance of the tx. The user
     -- must at least provide the total value of the UTxOs they intend to spend
@@ -249,10 +250,10 @@ estimateBalancedTxBody
 
         proposalProcedures :: OSet.OSet (L.ProposalProcedure (ShelleyLedgerEra era))
         proposalProcedures =
-          case unFeatured <$> txProposalProcedures txbodycontent1 of
-            Nothing -> OSet.empty
-            Just TxProposalProceduresNone -> OSet.empty
-            Just (TxProposalProcedures procedures _) -> procedures
+          maryEraOnwardsConstraints w $
+            fromList $
+              maybe [] (map (unProposal . fst) . toList) $
+                (getProposalProcedures . unFeatured) =<< txProposalProcedures txbodycontent1
 
         totalDeposits :: L.Coin
         totalDeposits =
@@ -1392,7 +1393,8 @@ maybeDummyTotalCollAndCollReturnOutput sbe TxBodyContent{txInsCollateral, txRetu
 
 substituteExecutionUnits
   :: forall era
-   . Map ScriptWitnessIndex ExecutionUnits
+   . IsShelleyBasedEra era
+  => Map ScriptWitnessIndex ExecutionUnits
   -> TxBodyContent BuildTx era
   -> Either (TxBodyErrorAutoBalance era) (TxBodyContent BuildTx era)
 substituteExecutionUnits
@@ -1570,30 +1572,29 @@ substituteExecutionUnits
           (Featured era (TxVotingProcedures vProcedures (BuildTxWith $ fromList substitutedExecutionUnits)))
 
     mapScriptWitnessesProposals
-      :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
+      :: forall build
+       . Applicative (BuildTxWith build)
+      => Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
       -> Either
           (TxBodyErrorAutoBalance era)
           (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
     mapScriptWitnessesProposals Nothing = return Nothing
-    mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = return Nothing
-    mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures _ ViewTx))) = return Nothing
-    mapScriptWitnessesProposals (Just (Featured era (TxProposalProcedures osetProposalProcedures (BuildTxWith sWitMap)))) = do
-      let eSubstitutedExecutionUnits =
-            [ (proposal, updatedWitness)
-            | let allProposalsList = toList osetProposalProcedures
-            , (proposal, scriptWitness) <- toList sWitMap
-            , index <- maybeToList $ List.elemIndex proposal allProposalsList
-            , let updatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) scriptWitness
+    mapScriptWitnessesProposals (Just (Featured era proposalProcedures)) = forM (getProposalProcedures proposalProcedures) $ \pp -> do
+      let substitutedExecutionUnits =
+            [ (proposal, mUpdatedWitness)
+            | (proposal, mScriptWitness) <- toList $ fmap (join . buildTxWithToMaybe) pp
+            , index <- maybeToList $ OMap.findIndex proposal pp
+            , let mUpdatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) <$> mScriptWitness
             ]
+      final <- fmap fromList . forM substitutedExecutionUnits $ \(p, meExecUnits) ->
+        case meExecUnits of
+          Nothing -> pure (p, Nothing)
+          Just eExecUnits -> do
+            -- TODO aggregate errors instead of shortcircuiting here
+            execUnits <- eExecUnits
+            pure (p, pure execUnits)
 
-      substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
-
-      return $
-        Just
-          ( Featured
-              era
-              (TxProposalProcedures osetProposalProcedures (BuildTxWith $ fromList substitutedExecutionUnits))
-          )
+      pure . Featured era $ mkTxProposalProcedures final
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era
@@ -1622,8 +1623,8 @@ substituteExecutionUnits
                 fromList final
 
 traverseScriptWitnesses
-  :: [(a, Either (TxBodyErrorAutoBalance era) (ScriptWitness ctx era))]
-  -> Either (TxBodyErrorAutoBalance era) [(a, ScriptWitness ctx era)]
+  :: [(a, Either l r)]
+  -> Either l [(a, r)]
 traverseScriptWitnesses =
   traverse (\(item, eScriptWitness) -> eScriptWitness >>= (\sWit -> Right (item, sWit)))
 

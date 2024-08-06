@@ -6,6 +6,7 @@
 
 module Cardano.Api.Feature
   ( Featured (..)
+  , mkFeatured
   , unFeatured
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
@@ -30,6 +31,17 @@ deriving instance (Show a, Show (eon era)) => Show (Featured eon era a)
 
 instance Functor (Featured eon era) where
   fmap f (Featured eon a) = Featured eon (f a)
+
+-- | Create a Featured with automatic witness conjuring
+mkFeatured
+  :: forall eon era a
+   . IsCardanoEra era
+  => Eon eon
+  => a
+  -- ^ a value featured in eon
+  -> Maybe (Featured eon era a)
+  -- ^ 'Just' if era is in eon
+mkFeatured a = asFeaturedInEra a cardanoEra
 
 unFeatured :: Featured eon era a -> a
 unFeatured (Featured _ a) = a

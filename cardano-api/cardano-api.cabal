@@ -196,6 +196,7 @@ library internal
     mtl,
     network,
     optparse-applicative-fork,
+    ordered-containers,
     ouroboros-consensus ^>=0.20,
     ouroboros-consensus-cardano ^>=0.18,
     ouroboros-consensus-diffusion ^>=0.17,

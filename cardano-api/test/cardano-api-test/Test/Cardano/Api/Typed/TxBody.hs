@@ -10,32 +10,33 @@ import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleySc
 
 import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))
+import           GHC.Exts (IsList (..))
 
 import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
 
 import           Test.Cardano.Api.Typed.Orphans ()
 
-import           Hedgehog (MonadTest, Property, annotateShow, failure, (===))
+import           Hedgehog (MonadTest, Property, annotateShow, (===))
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
+era :: ShelleyBasedEra BabbageEra
+era = ShelleyBasedEraBabbage
+
 -- | Check the txOuts in a TxBodyContent after a ledger roundtrip.
 prop_roundtrip_txbodycontent_txouts :: Property
-prop_roundtrip_txbodycontent_txouts =
-  H.property $ do
-    let era = ShelleyBasedEraBabbage
-    content <- H.forAll $ genTxBodyContent era
-    -- Create the ledger body & auxiliaries
-    body <- case createAndValidateTransactionBody era content of
-      Left err -> annotateShow err >> failure
-      Right body -> pure body
-    annotateShow body
-    -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
-    let (TxBody content') = body
-    matchTxOuts (txOuts content) (txOuts content')
+prop_roundtrip_txbodycontent_txouts = H.property $ do
+  content <- H.forAll $ genTxBodyContent era
+  -- Create the ledger body & auxiliaries
+  body <- H.leftFail $ createAndValidateTransactionBody era content
+  annotateShow body
+  -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
+  let (TxBody content') = body
+  matchTxOuts (txOuts content) (txOuts content')
  where
   matchTxOuts :: MonadTest m => [TxOut CtxTx BabbageEra] -> [TxOut CtxTx BabbageEra] -> m ()
   matchTxOuts as bs =
@@ -77,9 +78,36 @@ prop_roundtrip_txbodycontent_txouts =
     (ReferenceScript _ (ScriptInAnyLang actual _)) -> isJust $ testEquality expected actual
     _ -> False
 
+prop_roundtrip_txbodycontent_conway_fields :: Property
+prop_roundtrip_txbodycontent_conway_fields = H.property $ do
+  content <- H.forAll $ genTxBodyContent era
+  -- Create the ledger body & auxiliaries
+  body <- H.leftFail $ createAndValidateTransactionBody era content
+  annotateShow body
+  -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
+  let (TxBody content') = body
+
+  let proposals = fmap (fmap fst . toList) . getProposalProcedures . unFeatured <$> txProposalProcedures content
+      proposals' = fmap (fmap fst . toList) . getProposalProcedures . unFeatured <$> txProposalProcedures content'
+      votes = getVotingProcedures . unFeatured <$> txVotingProcedures content
+      votes' = getVotingProcedures . unFeatured <$> txVotingProcedures content'
+      currTreasury = unFeatured <$> txCurrentTreasuryValue content
+      currTreasury' = unFeatured <$> txCurrentTreasuryValue content'
+      treasuryDonation = unFeatured <$> txTreasuryDonation content
+      treasuryDonation' = unFeatured <$> txTreasuryDonation content'
+
+  proposals === proposals'
+  votes === votes'
+  currTreasury === currTreasury'
+  treasuryDonation === treasuryDonation'
+ where
+  getVotingProcedures TxVotingProceduresNone = Nothing
+  getVotingProcedures (TxVotingProcedures vps _) = Just vps
+
 tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.TxBody"
     [ testProperty "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
+    , testProperty "roundtrip txbodycontent new conway fields" prop_roundtrip_txbodycontent_conway_fields
     ]

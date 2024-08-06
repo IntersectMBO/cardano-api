@@ -575,6 +575,12 @@ parsePlutusParamName t =
 
 deriving instance Show V2.ParamName
 
+-- Required instance, to be able to use the type as the map key
+-- TODO upstream to cardano-ledger
+deriving instance Ord (L.VotingProcedures ledgerera)
+
+deriving instance Ord (L.VotingProcedure ledgerera)
+
 -- TODO upstream to cardano-ledger
 instance IsList (ListMap k a) where
   type Item (ListMap k a) = (k, a)

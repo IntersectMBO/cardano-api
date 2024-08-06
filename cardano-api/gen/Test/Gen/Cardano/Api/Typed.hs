@@ -149,17 +149,17 @@ import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 import           Control.Applicative (Alternative (..), optional)
+import           Control.Monad
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Maybe
-import           Data.OSet.Strict (OSet)
-import qualified Data.OSet.Strict as OSet
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word16, Word32, Word64)
+import           GHC.Exts (IsList(..))
 import           Numeric.Natural (Natural)
 
 import           Test.Gen.Cardano.Api.Era
@@ -318,8 +318,7 @@ genScriptInEra era =
   Gen.choice
     [ ScriptInEra langInEra <$> genScript lang
     | AnyScriptLanguage lang <- [minBound .. maxBound]
-    , -- TODO: scriptLanguageSupportedInEra should be parameterized on ShelleyBasedEra
-    Just langInEra <- [scriptLanguageSupportedInEra era lang]
+    , Just langInEra <- [scriptLanguageSupportedInEra era lang]
     ]
 
 genScriptHash :: Gen ScriptHash
@@ -588,7 +587,7 @@ genTxAuxScripts era =
             (genScriptInEra (allegraEraOnwardsToShelleyBasedEra w))
     )
 
-genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals BuildTx era)
+genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals build era)
 genTxWithdrawals =
   inEonForEra
     (pure TxWithdrawalsNone)
@@ -648,12 +647,12 @@ genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue =
   inEonForEra
     (pure TxMintNone)
-    ( \supported ->
-        Gen.choice
-          [ pure TxMintNone
-          , TxMintValue supported <$> genValueForMinting supported <*> return (BuildTxWith mempty)
-          ]
-    )
+    $ \supported ->
+      Gen.choice
+        [ pure TxMintNone
+        -- TODO write a generator for the last parameter of 'TxMintValue' constructor
+        , TxMintValue supported <$> genValueForMinting supported <*> return (pure mempty)
+        ]
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent sbe = do
@@ -680,7 +679,7 @@ genTxBodyContent sbe = do
   txScriptValidity <- genTxScriptValidity era
   txProposalProcedures <- genMaybeFeaturedInEra genProposals era
   txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
-  txCurrentTreasuryValue <- genMaybeFeaturedInEra genCurrentTreasuryValue era
+  txCurrentTreasuryValue <- genMaybeFeaturedInEra (Gen.maybe . genCurrentTreasuryValue) era
   txTreasuryDonation <- genMaybeFeaturedInEra genTreasuryDonation era
   pure $
     TxBodyContent
@@ -719,7 +718,7 @@ genTxInsCollateral =
           ]
     )
 
-genTxInsReference :: CardanoEra era -> Gen (TxInsReference BuildTx era)
+genTxInsReference :: CardanoEra era -> Gen (TxInsReference era)
 genTxInsReference =
   caseByronToAlonzoOrBabbageEraOnwards
     (const (pure TxInsReferenceNone))
@@ -1123,34 +1122,61 @@ genGovernancePollAnswer =
   genGovernancePollHash =
     GovernancePollHash . mkDummyHash <$> Gen.int (Range.linear 0 10)
 
--- TODO: Left off here. Fix this then get back to incorporating proposal procedure
--- script witnesses in the api and then propagate to the cli
-genProposals :: ConwayEraOnwards era -> Gen (TxProposalProcedures BuildTx era)
-genProposals w =
-  conwayEraOnwardsConstraints w $
-    TxProposalProcedures
-      <$> genTxProposalsOSet w
-      <*> return (BuildTxWith mempty)
-
-genTxProposalsOSet
-  :: ConwayEraOnwards era
-  -> Gen (OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
-genTxProposalsOSet w =
-  conwayEraOnwardsConstraints w $
-    OSet.fromFoldable <$> Gen.list (Range.constant 1 10) (genProposal w)
+genProposals :: Applicative (BuildTxWith build)
+             => ConwayEraOnwards era
+             -> Gen (TxProposalProcedures build era)
+genProposals w = conwayEraOnwardsConstraints w $ do
+  proposals <- fmap Proposal <$> Gen.list (Range.constant 0 10) (genProposal w)
+  let sbe = conwayEraOnwardsToShelleyBasedEra w
+  proposalsWithWitnesses <- fmap fromList . forM proposals $ \proposal ->
+    (proposal,) <$> Gen.maybe (genScriptWitnessForStake sbe)
+  pure $ mkTxProposalProcedures proposalsWithWitnesses
 
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =
   conwayEraOnwardsTestConstraints w Q.arbitrary
 
--- TODO: Generate map of script witnesses
-genVotingProcedures :: ConwayEraOnwards era -> Gen (Api.TxVotingProcedures BuildTx era)
-genVotingProcedures w =
-  conwayEraOnwardsConstraints w $
-    Api.TxVotingProcedures <$> Q.arbitrary <*> return (BuildTxWith mempty)
+genVotingProcedures :: Applicative (BuildTxWith build)
+                    => ConwayEraOnwards era
+                    -> Gen (Api.TxVotingProcedures build era)
+genVotingProcedures w = conwayEraOnwardsConstraints w $ do
+  voters <- Gen.list (Range.constant 0 10) Q.arbitrary
+  let sbe = conwayEraOnwardsToShelleyBasedEra w
+  votersWithWitnesses <- fmap fromList . forM voters $ \voter ->
+    (voter,) <$> genScriptWitnessForStake sbe
+  Api.TxVotingProcedures <$> Q.arbitrary <*> pure (pure votersWithWitnesses)
 
 genCurrentTreasuryValue :: ConwayEraOnwards era -> Gen L.Coin
 genCurrentTreasuryValue _era = Q.arbitrary
 
 genTreasuryDonation :: ConwayEraOnwards era -> Gen L.Coin
 genTreasuryDonation _era = Q.arbitrary
+
+-- | This generator does not generate a valid witness - just a random one.
+genScriptWitnessForStake :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxStake era)
+genScriptWitnessForStake sbe = do
+  ScriptInEra scriptLangInEra script' <- genScriptInEra sbe
+  case script' of
+    SimpleScript simpleScript -> do
+      simpleScriptOrReferenceInput <- Gen.choice
+        [ pure $ SScript simpleScript
+        , SReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        ]
+      pure $ Api.SimpleScriptWitness scriptLangInEra simpleScriptOrReferenceInput
+    PlutusScript plutusScriptVersion' plutusScript -> do
+      plutusScriptOrReferenceInput <- Gen.choice
+        [ pure $ PScript plutusScript
+        , PReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        ]
+      scriptRedeemer <- genHashableScriptData
+      PlutusScriptWitness
+        scriptLangInEra
+        plutusScriptVersion'
+        plutusScriptOrReferenceInput
+        NoScriptDatumForStake
+        scriptRedeemer
+        <$> genExecutionUnits
+
+
+
+
