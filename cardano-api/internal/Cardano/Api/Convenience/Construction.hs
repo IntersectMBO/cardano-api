@@ -32,9 +32,9 @@ import qualified Cardano.Ledger.Keys as L
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           GHC.Exts (IsList (..))
 
 -- | Construct a balanced transaction.
 -- See Cardano.Api.Convenience.Query.queryStateForBalancedTx for a
@@ -120,7 +120,7 @@ renderNotScriptLockedTxInsError (ScriptLockedTxIns txins) =
 
 notScriptLockedTxIns :: [TxIn] -> UTxO era -> Either ScriptLockedTxInsError ()
 notScriptLockedTxIns collTxIns (UTxO utxo) = do
-  let onlyCollateralUTxOs = Map.restrictKeys utxo $ Set.fromList collTxIns
+  let onlyCollateralUTxOs = Map.restrictKeys utxo $ fromList collTxIns
       scriptLockedTxIns =
         filter (\(_, TxOut aInEra _ _ _) -> not $ isKeyAddress aInEra) $ Map.assocs onlyCollateralUTxOs
   if null scriptLockedTxIns

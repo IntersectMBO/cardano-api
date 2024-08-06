@@ -380,7 +380,7 @@ instance
   parseJSON = withObject "UTxO" $ \hm -> do
     let l = toList $ KeyMap.toHashMapText hm
     res <- mapM toTxIn l
-    pure . UTxO $ Map.fromList res
+    pure . UTxO $ fromList res
    where
     toTxIn :: (Text, Aeson.Value) -> Parser (TxIn, TxOut CtxUTxO era)
     toTxIn (txinText, txOutVal) = do
@@ -473,7 +473,7 @@ toShelleyAddrSet
   -> Set AddressAny
   -> Set (Shelley.Addr Consensus.StandardCrypto)
 toShelleyAddrSet era =
-  Set.fromList
+  fromList
     . map toShelleyAddr
     -- Ignore any addresses that are not appropriate for the era,
     -- e.g. Shelley addresses in the Byron era, as these would not
@@ -489,7 +489,7 @@ toLedgerUTxO
 toLedgerUTxO sbe (UTxO utxo) =
   shelleyBasedEraConstraints sbe
     $ Shelley.UTxO
-      . Map.fromList
+      . fromList
       . map (bimap toShelleyTxIn (toShelleyTxOut sbe))
       . toList
     $ utxo
@@ -502,7 +502,7 @@ fromLedgerUTxO
 fromLedgerUTxO sbe (Shelley.UTxO utxo) =
   shelleyBasedEraConstraints sbe
     $ UTxO
-      . Map.fromList
+      . fromList
       . map (bimap fromShelleyTxIn (fromShelleyTxOut sbe))
       . toList
     $ utxo
@@ -513,7 +513,7 @@ fromShelleyPoolDistr
 fromShelleyPoolDistr =
   -- TODO: write an appropriate property to show it is safe to use
   -- Map.fromListAsc or to use Map.mapKeysMonotonic
-  Map.fromList
+  fromList
     . map (bimap StakePoolKeyHash Consensus.individualPoolStake)
     . toList
     . Consensus.unPoolDistr
@@ -528,7 +528,7 @@ fromShelleyDelegations =
   -- Map.fromListAsc or to use Map.mapKeysMonotonic
   -- In this case it may not be: the Ord instances for Shelley.Credential
   -- do not match the one for StakeCredential
-  Map.fromList
+  fromList
     . map (bimap fromShelleyStakeCredential StakePoolKeyHash)
     . toList
 
@@ -538,7 +538,7 @@ fromShelleyRewardAccounts
 fromShelleyRewardAccounts =
   -- TODO: write an appropriate property to show it is safe to use
   -- Map.fromListAsc or to use Map.mapKeysMonotonic
-  Map.fromList
+  fromList
     . map (first fromShelleyStakeCredential)
     . toList
 

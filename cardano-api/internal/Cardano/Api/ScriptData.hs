@@ -88,7 +88,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.Vector as Vector
 import           Data.Word
 import           GHC.Exts (IsList (..))
 
@@ -402,7 +401,7 @@ scriptDataToJsonNoSchema = conv . getScriptData
         Aeson.String s
     | otherwise =
         Aeson.String (bytesPrefix <> Text.decodeLatin1 (Base16.encode bs))
-  conv (ScriptDataList vs) = Aeson.Array (Vector.fromList (map conv vs))
+  conv (ScriptDataList vs) = Aeson.Array (fromList (map conv vs))
   conv (ScriptDataMap kvs) =
     Aeson.object
       [ (convKey k, conv v)
@@ -410,9 +409,9 @@ scriptDataToJsonNoSchema = conv . getScriptData
       ]
   conv (ScriptDataConstructor n vs) =
     Aeson.Array $
-      Vector.fromList
+      fromList
         [ Aeson.Number (fromInteger n)
-        , Aeson.Array (Vector.fromList (map conv vs))
+        , Aeson.Array (fromList (map conv vs))
         ]
 
   -- Script data allows any value as a key, not just string as JSON does.
@@ -522,18 +521,18 @@ scriptDataToJsonDetailedSchema = conv . getScriptData
   conv (ScriptDataList vs) =
     singleFieldObject "list"
       . Aeson.Array
-      $ Vector.fromList (map conv vs)
+      $ fromList (map conv vs)
   conv (ScriptDataMap kvs) =
     singleFieldObject "map"
       . Aeson.Array
-      $ Vector.fromList
+      $ fromList
         [ Aeson.object [("k", conv k), ("v", conv v)]
         | (k, v) <- kvs
         ]
   conv (ScriptDataConstructor n vs) =
     Aeson.object
       [ ("constructor", Aeson.Number (fromInteger n))
-      , ("fields", Aeson.Array (Vector.fromList (map conv vs)))
+      , ("fields", Aeson.Array (fromList (map conv vs)))
       ]
 
   singleFieldObject name v = Aeson.object [(name, v)]
@@ -642,7 +641,7 @@ instance Error ScriptDataJsonSchemaError where
         [ "JSON object does not match the schema.\nExpected a single field named "
         , "\"int\", \"bytes\", \"list\" or \"map\".\n"
         , "Unexpected object field(s): "
-        , pretty (LBS.unpack (Aeson.encode (KeyMap.fromList $ first Aeson.fromText <$> v)))
+        , pretty (LBS.unpack (Aeson.encode (fromList @Aeson.Object $ first Aeson.fromText <$> v)))
         ]
     ScriptDataJsonBadMapPair v ->
       mconcat

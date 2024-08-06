@@ -68,6 +68,7 @@ import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
 import           Data.Word (Word64)
 import           Formatting (build, sformat)
+import           GHC.Exts (IsList (..))
 
 -- | Associated metadata label as defined in CIP-0094
 pollMetadataLabel :: Word64
@@ -124,7 +125,7 @@ instance HasTypeProxy GovernancePoll where
 instance AsTxMetadata GovernancePoll where
   asTxMetadata GovernancePoll{govPollQuestion, govPollAnswers, govPollNonce} =
     makeTransactionMetadata $
-      Map.fromList
+      fromList
         [
           ( pollMetadataLabel
           , TxMetaMap $
@@ -220,7 +221,7 @@ instance HasTypeProxy GovernancePollAnswer where
 instance AsTxMetadata GovernancePollAnswer where
   asTxMetadata GovernancePollAnswer{govAnsPoll, govAnsChoice} =
     makeTransactionMetadata $
-      Map.fromList
+      fromList
         [
           ( pollMetadataLabel
           , TxMetaMap

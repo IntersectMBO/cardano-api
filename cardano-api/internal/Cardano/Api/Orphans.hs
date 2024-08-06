@@ -86,11 +86,14 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS
 import           Data.Data (Data)
 import           Data.Kind (Constraint, Type)
+import           Data.ListMap (ListMap)
+import qualified Data.ListMap as ListMap
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (Typeable)
+import           GHC.Exts (IsList (..))
 import           GHC.Generics
 import           GHC.Stack (HasCallStack)
 import           GHC.TypeLits
@@ -571,3 +574,9 @@ parsePlutusParamName t =
     Nothing -> fail $ "Cannot parse cost model parameter name: " <> T.unpack t
 
 deriving instance Show V2.ParamName
+
+-- TODO upstream to cardano-ledger
+instance IsList (ListMap k a) where
+  type Item (ListMap k a) = (k, a)
+  fromList = ListMap.fromList
+  toList = ListMap.toList

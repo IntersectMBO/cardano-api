@@ -715,7 +715,7 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
         (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) (EvalTxExecutionUnitsLog, Alonzo.ExUnits))
     -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
   fromLedgerScriptExUnitsMap aOnwards exmap =
-    Map.fromList
+    fromList
       [ ( toScriptIndex aOnwards rdmrptr
         , bimap (fromAlonzoScriptExecutionError aOnwards) (second fromAlonzoExUnits) exunitsOrFailure
         )
@@ -1349,7 +1349,7 @@ createFakeUTxO sbe txbodycontent totalAdaInUTxO =
             txOuts txbodycontent
    in -- Take one txin and one txout. Replace the out value with totalAdaInUTxO
       -- Return an empty UTxO if there are no txins or txouts
-      UTxO $ Map.fromList $ zip singleTxIn singleTxOut
+      UTxO $ fromList $ zip singleTxIn singleTxOut
 
 updateTxOut :: ShelleyBasedEra era -> Coin -> TxOut CtxUTxO era -> TxOut CtxUTxO era
 updateTxOut sbe updatedValue txout =
@@ -1567,7 +1567,7 @@ substituteExecutionUnits
 
       return $
         Just
-          (Featured era (TxVotingProcedures vProcedures (BuildTxWith $ Map.fromList substitutedExecutionUnits)))
+          (Featured era (TxVotingProcedures vProcedures (BuildTxWith $ fromList substitutedExecutionUnits)))
 
     mapScriptWitnessesProposals
       :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
@@ -1592,7 +1592,7 @@ substituteExecutionUnits
         Just
           ( Featured
               era
-              (TxProposalProcedures osetProposalProcedures (BuildTxWith $ Map.fromList substitutedExecutionUnits))
+              (TxProposalProcedures osetProposalProcedures (BuildTxWith $ fromList substitutedExecutionUnits))
           )
 
     mapScriptWitnessesMinting
@@ -1605,7 +1605,7 @@ substituteExecutionUnits
           value
           (BuildTxWith witnesses)
         ) =
-        -- TxMintValue supported value $ BuildTxWith $ Map.fromList
+        -- TxMintValue supported value $ BuildTxWith $ fromList
         let mappedScriptWitnesses
               :: [(PolicyId, Either (TxBodyErrorAutoBalance era) (ScriptWitness WitCtxMint era))]
             mappedScriptWitnesses =
@@ -1619,7 +1619,7 @@ substituteExecutionUnits
          in do
               final <- traverseScriptWitnesses mappedScriptWitnesses
               Right . TxMintValue supported value . BuildTxWith $
-                Map.fromList final
+                fromList final
 
 traverseScriptWitnesses
   :: [(a, Either (TxBodyErrorAutoBalance era) (ScriptWitness ctx era))]

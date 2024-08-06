@@ -231,8 +231,8 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardBabbage,
                    StandardConway, StandardMary, StandardShelley)
 
-import           Control.Applicative (some)
-import           Control.Monad (guard, unless)
+import           Control.Applicative
+import           Control.Monad
 import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
@@ -811,9 +811,9 @@ fromBabbageTxOutDatum _ w (Plutus.Datum binData) =
 -- Building vs viewing transactions
 --
 
-data BuildTx
-
 data ViewTx
+
+data BuildTx
 
 data BuildTxWith build a where
   ViewTx :: BuildTxWith ViewTx a
@@ -1588,10 +1588,11 @@ validateTxBodyContent
     } =
     let witnesses = collectTxBodyScriptWitnesses sbe txBodContent
         languages =
-          Set.fromList
+          fromList
             [ toAlonzoLanguage (AnyPlutusScriptVersion v)
             | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
             ]
+            :: Set Plutus.Language
      in case sbe of
           ShelleyBasedEraShelley -> do
             validateTxIns txIns
@@ -2176,13 +2177,13 @@ classifyRangeError txout =
     TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ -> case sbe of {}
 
 convTxIns :: TxIns BuildTx era -> Set (L.TxIn StandardCrypto)
-convTxIns txIns = Set.fromList (map (toShelleyTxIn . fst) txIns)
+convTxIns txIns = fromList (map (toShelleyTxIn . fst) txIns)
 
 convCollateralTxIns :: TxInsCollateral era -> Set (Ledger.TxIn StandardCrypto)
 convCollateralTxIns txInsCollateral =
   case txInsCollateral of
     TxInsCollateralNone -> Set.empty
-    TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+    TxInsCollateral _ txins -> fromList (map toShelleyTxIn txins)
 
 convReturnCollateral
   :: ShelleyBasedEra era
@@ -2205,7 +2206,7 @@ convTxOuts
   => ShelleyBasedEra era
   -> [TxOut ctx era]
   -> Seq.StrictSeq (Ledger.TxOut ledgerera)
-convTxOuts sbe txOuts = Seq.fromList $ map (toShelleyTxOutAny sbe) txOuts
+convTxOuts sbe txOuts = fromList $ map (toShelleyTxOutAny sbe) txOuts
 
 convCertificates
   :: ShelleyBasedEra era
@@ -2213,7 +2214,7 @@ convCertificates
   -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
 convCertificates _ = \case
   TxCertificatesNone -> Seq.empty
-  TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
+  TxCertificates _ cs _ -> fromList (map toShelleyCertificate cs)
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
@@ -2266,7 +2267,7 @@ convExtraKeyWitnesses txExtraKeyWits =
   case txExtraKeyWits of
     TxExtraKeyWitnessesNone -> Set.empty
     TxExtraKeyWitnesses _ khs ->
-      Set.fromList
+      fromList
         [ Shelley.asWitness kh
         | PaymentKeyHash kh <- khs
         ]
@@ -2294,7 +2295,7 @@ convScriptData sbe txOuts scriptWitnesses =
     ( \w ->
         let redeemers =
               Alonzo.Redeemers $
-                Map.fromList
+                fromList
                   [ (i, (toAlonzoData d, toAlonzoExUnits e))
                   | ( idx
                       , AnyScriptWitness
@@ -2306,7 +2307,7 @@ convScriptData sbe txOuts scriptWitnesses =
 
             datums =
               Alonzo.TxDats $
-                Map.fromList
+                fromList
                   [ (L.hashData d', d')
                   | d <- scriptdata
                   , let d' = toAlonzoData d
@@ -2350,7 +2351,7 @@ convPParamsToScriptIntegrityHash w txProtocolParams redeemers datums languages =
 
 convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Plutus.Language
 convLanguages witnesses =
-  Set.fromList
+  fromList
     [ toAlonzoLanguage (AnyPlutusScriptVersion v)
     | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
     ]
@@ -2359,7 +2360,7 @@ convReferenceInputs :: TxInsReference build era -> Set (Ledger.TxIn StandardCryp
 convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
-    TxInsReference _ refTxins -> Set.fromList $ map toShelleyTxIn refTxins
+    TxInsReference _ refTxins -> fromList $ map toShelleyTxIn refTxins
 
 convProposalProcedures
   :: TxProposalProcedures build era -> OSet (L.ProposalProcedure (ShelleyLedgerEra era))
@@ -2604,7 +2605,7 @@ makeShelleyTransactionBody
     datums :: Alonzo.TxDats StandardAlonzo
     datums =
       Alonzo.TxDats $
-        Map.fromList
+        fromList
           [ (L.hashData d, d)
           | d <- toAlonzoData <$> scriptdata
           ]
@@ -2630,7 +2631,7 @@ makeShelleyTransactionBody
     redeemers :: Alonzo.Redeemers StandardAlonzo
     redeemers =
       Alonzo.Redeemers $
-        Map.fromList
+        fromList
           [ (i, (toAlonzoData d, toAlonzoExUnits e))
           | ( idx
               , AnyScriptWitness
@@ -2642,7 +2643,7 @@ makeShelleyTransactionBody
 
     languages :: Set Plutus.Language
     languages =
-      Set.fromList
+      fromList
         [ toAlonzoLanguage (AnyPlutusScriptVersion v)
         | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
         ]
@@ -2684,7 +2685,7 @@ makeShelleyTransactionBody
               & A.collateralInputsTxBodyL azOn
                 .~ case txInsCollateral of
                   TxInsCollateralNone -> Set.empty
-                  TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+                  TxInsCollateral _ txins -> fromList (map toShelleyTxIn txins)
               & A.referenceInputsTxBodyL bOn .~ convReferenceInputs txInsReference
               & A.collateralReturnTxBodyL bOn .~ convReturnCollateral sbe txReturnCollateral
               & A.totalCollateralTxBodyL bOn .~ convTotalCollateral txTotalCollateral
@@ -2729,7 +2730,7 @@ makeShelleyTransactionBody
     datums :: Alonzo.TxDats StandardBabbage
     datums =
       Alonzo.TxDats $
-        Map.fromList
+        fromList
           [ (L.hashData d', d')
           | d <- scriptdata
           , let d' = toAlonzoData d
@@ -2756,7 +2757,7 @@ makeShelleyTransactionBody
     redeemers :: Alonzo.Redeemers StandardBabbage
     redeemers =
       Alonzo.Redeemers $
-        Map.fromList
+        fromList
           [ (i, (toAlonzoData d, toAlonzoExUnits e))
           | ( idx
               , AnyScriptWitness
@@ -2768,7 +2769,7 @@ makeShelleyTransactionBody
 
     languages :: Set Plutus.Language
     languages =
-      Set.fromList $
+      fromList $
         catMaybes
           [ getScriptLanguage sw
           | (_, AnyScriptWitness sw) <- witnesses
@@ -2818,7 +2819,7 @@ makeShelleyTransactionBody
               & A.collateralInputsTxBodyL azOn
                 .~ case txInsCollateral of
                   TxInsCollateralNone -> Set.empty
-                  TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+                  TxInsCollateral _ txins -> fromList (map toShelleyTxIn txins)
               & A.referenceInputsTxBodyL bOn .~ convReferenceInputs txInsReference
               & A.collateralReturnTxBodyL bOn .~ convReturnCollateral sbe txReturnCollateral
               & A.totalCollateralTxBodyL bOn .~ convTotalCollateral txTotalCollateral
@@ -2868,7 +2869,7 @@ makeShelleyTransactionBody
     datums :: Alonzo.TxDats StandardConway
     datums =
       Alonzo.TxDats $
-        Map.fromList
+        fromList
           [ (L.hashData d, d)
           | d <- toAlonzoData <$> scriptdata
           ]
@@ -2894,7 +2895,7 @@ makeShelleyTransactionBody
     redeemers :: Alonzo.Redeemers StandardConway
     redeemers =
       Alonzo.Redeemers $
-        Map.fromList
+        fromList
           [ (i, (toAlonzoData d, toAlonzoExUnits e))
           | ( idx
               , AnyScriptWitness
@@ -2906,7 +2907,7 @@ makeShelleyTransactionBody
 
     languages :: Set Plutus.Language
     languages =
-      Set.fromList $
+      fromList $
         catMaybes
           [ getScriptLanguage sw
           | (_, AnyScriptWitness sw) <- witnesses
@@ -3213,7 +3214,7 @@ orderStakeAddrs = sortBy (compare `on` (\(k, _, _) -> k))
 toShelleyWithdrawal :: [(StakeAddress, L.Coin, a)] -> L.Withdrawals StandardCrypto
 toShelleyWithdrawal withdrawals =
   L.Withdrawals $
-    Map.fromList
+    fromList
       [ (toShelleyStakeAddr stakeAddr, value)
       | (stakeAddr, value, _) <- withdrawals
       ]
@@ -3245,9 +3246,9 @@ toAuxiliaryData sbe txMetadata txAuxScripts =
         ShelleyBasedEraShelley ->
           guard (not (Map.null ms)) $> L.ShelleyTxAuxData ms
         ShelleyBasedEraAllegra ->
-          guard (not (Map.null ms && null ss)) $> L.AllegraTxAuxData ms (Seq.fromList ss)
+          guard (not (Map.null ms && null ss)) $> L.AllegraTxAuxData ms (fromList ss)
         ShelleyBasedEraMary ->
-          guard (not (Map.null ms && null ss)) $> L.AllegraTxAuxData ms (Seq.fromList ss)
+          guard (not (Map.null ms && null ss)) $> L.AllegraTxAuxData ms (fromList ss)
         ShelleyBasedEraAlonzo ->
           guard (not (Map.null ms && null ss)) $> L.mkAlonzoTxAuxData ms ss
         ShelleyBasedEraBabbage ->

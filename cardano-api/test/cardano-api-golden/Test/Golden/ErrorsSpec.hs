@@ -52,6 +52,7 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import           Data.Text (Text)
+import           GHC.Exts (IsList (..))
 import           GHC.Stack (HasCallStack)
 
 import qualified Test.Hedgehog.Golden.ErrorMessage as ErrorMessage
@@ -329,7 +330,7 @@ test_TransactionValidityError =
     [
       ( "TransactionValidityCostModelError"
       , TransactionValidityCostModelError
-          (Map.fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
+          (fromList [(AnyPlutusScriptVersion PlutusScriptV2, costModel)])
           string
       )
       -- TODO Implement this when we get access to data constructors of PastHorizon or its fields' types' constructors
@@ -387,7 +388,7 @@ test_TxBodyErrorAutoBalance =
       ( "TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap"
       , TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
           (ScriptWitnessIndexTxIn 1)
-          (Map.fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)])
+          (fromList [(ScriptWitnessIndexTxIn 2, ExecutionUnits 1 1)])
       )
     ]
 

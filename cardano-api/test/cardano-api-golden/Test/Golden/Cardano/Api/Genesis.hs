@@ -22,8 +22,8 @@ import           Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Data.ListMap (ListMap (ListMap))
-import qualified Data.Map.Strict as Map
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           GHC.Exts (IsList (..))
 import           Lens.Micro
 
 import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
@@ -48,7 +48,7 @@ exampleShelleyGenesis =
           & ppMaxBBSizeL .~ 65535
           & ppMaxBHSizeL .~ 65535
     , sgGenDelegs =
-        Map.fromList
+        fromList
           [
             ( genesisVerKeyHash
             , GenDelegPair delegVerKeyHash delegVrfKeyHash
