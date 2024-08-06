@@ -778,7 +778,7 @@ genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
 
 genTxBody :: ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
-  res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
+  res <- Api.createTransactionBody era <$> genTxBodyContent era
   case res of
     Left err -> fail (docToString (prettyError err))
     Right txBody -> pure txBody

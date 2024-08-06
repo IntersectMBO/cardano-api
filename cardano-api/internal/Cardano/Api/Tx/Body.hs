@@ -1720,6 +1720,8 @@ maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 maxTxOut :: Quantity
 maxTxOut = fromIntegral (maxBound :: Word64)
 
+
+{-# DEPRECATED createAndValidateTransactionBody "Use createTransactionBody instead"  #-}
 createAndValidateTransactionBody
   :: ()
   => ShelleyBasedEra era
@@ -2681,10 +2683,7 @@ makeShelleyTransactionBody
           convPParamsToScriptIntegrityHash AlonzoEraOnwardsBabbage txProtocolParams redeemers datums languages
     let txbody =
           ( mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData
-              & A.collateralInputsTxBodyL azOn
-                .~ case txInsCollateral of
-                  TxInsCollateralNone -> Set.empty
-                  TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+              & A.collateralInputsTxBodyL azOn .~ convCollateralTxIns txInsCollateral
               & A.referenceInputsTxBodyL bOn .~ convReferenceInputs txInsReference
               & A.collateralReturnTxBodyL bOn .~ convReturnCollateral sbe txReturnCollateral
               & A.totalCollateralTxBodyL bOn .~ convTotalCollateral txTotalCollateral

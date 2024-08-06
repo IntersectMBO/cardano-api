@@ -291,7 +291,7 @@ estimateBalancedTxBody
     let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
     txbody1ForFeeEstimateOnly <-
       first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
-        createAndValidateTransactionBody
+        createTransactionBody
           sbe
           txbodycontent1
             { txFee = TxFeeExplicit sbe maxLovelaceFee
@@ -333,7 +333,7 @@ estimateBalancedTxBody
     --  3. Return and total collateral
     txbody2 <-
       first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
-        createAndValidateTransactionBody
+        createTransactionBody
           sbe
           txbodycontent1
             { txFee = TxFeeExplicit sbe fee
@@ -373,7 +373,7 @@ estimateBalancedTxBody
       first TxFeeEstimationFinalConstructionError $ -- TODO: impossible to fail now. We need to implement a function
       -- that simply creates a transaction body because we have already
       -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-        createAndValidateTransactionBody sbe finalTxBodyContent
+        createTransactionBody sbe finalTxBodyContent
     return
       ( BalancedTxBody
           finalTxBodyContent
@@ -1048,7 +1048,7 @@ makeTransactionBodyAutoBalance
       -- 4. balance the transaction and update tx change output
       txbody0 <-
         first TxBodyError $
-          createAndValidateTransactionBody
+          createTransactionBody
             sbe
             txbodycontent
               { txOuts =
@@ -1108,7 +1108,7 @@ makeTransactionBodyAutoBalance
       let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput sbe txbodycontent changeaddr
       txbody1 <-
         first TxBodyError $ -- TODO: impossible to fail now
-          createAndValidateTransactionBody
+          createTransactionBody
             sbe
             txbodycontent1
               { txFee = TxFeeExplicit sbe maxLovelaceFee
@@ -1153,7 +1153,7 @@ makeTransactionBodyAutoBalance
       -- we need to calculate.
       txbody2 <-
         first TxBodyError $ -- TODO: impossible to fail now
-          createAndValidateTransactionBody
+          createTransactionBody
             sbe
             txbodycontent1
               { txFee = TxFeeExplicit sbe fee
@@ -1190,7 +1190,7 @@ makeTransactionBodyAutoBalance
         first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
         -- that simply creates a transaction body because we have already
         -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-          createAndValidateTransactionBody sbe finalTxBodyContent
+          createTransactionBody sbe finalTxBodyContent
       return
         ( BalancedTxBody
             finalTxBodyContent
