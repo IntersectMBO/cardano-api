@@ -15,11 +15,11 @@ import qualified Data.Aeson.Key as Aeson
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
-import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
+import           GHC.Exts (IsList (..))
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -36,8 +36,7 @@ genJsonForTxMetadata mapping =
     Aeson.object
       <$> Gen.list
         (Range.linear 0 (fromIntegral sz))
-        ( (,)
-            <$> (Aeson.fromString . show <$> Gen.word64 Range.constantBounded)
+        ( ((,) . Aeson.fromString . show <$> Gen.word64 Range.constantBounded)
             <*> genJsonForTxMetadataValue mapping
         )
 
@@ -167,7 +166,7 @@ genJsonForTxMetadataValue TxMetadataJsonDetailedSchema = genJsonValue
 genTxMetadata :: Gen TxMetadata
 genTxMetadata =
   Gen.sized $ \sz ->
-    TxMetadata . Map.fromList
+    TxMetadata . fromList
       <$> Gen.list
         (Range.linear 0 (fromIntegral sz))
         ( (,)

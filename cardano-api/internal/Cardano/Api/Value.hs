@@ -294,7 +294,7 @@ fromMaryValue :: MaryValue StandardCrypto -> Value
 fromMaryValue (MaryValue (L.Coin lovelace) other) =
   Value $
     -- TODO: write QC tests to show it's ok to use Map.fromAscList here
-    Map.fromList $
+    fromList $
       [(AdaAssetId, Quantity lovelace) | lovelace /= 0]
         ++ [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
            | (pid, name, q) <- Mary.flattenMultiAsset other

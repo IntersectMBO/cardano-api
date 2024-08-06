@@ -18,9 +18,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{- HLINT ignore "Redundant ==" -}
-{- HLINT ignore "Use mapM" -}
+{-# HLINT ignore "Redundant ==" #-}
 
 -- | The various Cardano protocol parameters, including:
 --
@@ -1016,7 +1016,7 @@ toAlonzoCostModels
   -> Either ProtocolParametersConversionError Alonzo.CostModels
 toAlonzoCostModels m = do
   f <- mapM conv $ toList m
-  Right $ Plutus.mkCostModels $ Map.fromList f
+  Right $ Plutus.mkCostModels $ fromList f
  where
   conv
     :: (AnyPlutusScriptVersion, CostModel)
@@ -1029,7 +1029,7 @@ fromAlonzoCostModels
   :: Plutus.CostModels
   -> Map AnyPlutusScriptVersion CostModel
 fromAlonzoCostModels cModels =
-  Map.fromList
+  fromList
     . map (bimap fromAlonzoScriptLanguage fromAlonzoCostModel)
     $ toList
     $ Plutus.costModelsValid cModels
@@ -1091,7 +1091,7 @@ makeShelleyUpdateProposal params genesisKeyHashes =
   -- TODO decide how to handle parameter validation
   --     for example we need to validate the Rational values can convert
   --     into the UnitInterval type ok.
-  UpdateProposal (Map.fromList [(kh, params) | kh <- genesisKeyHashes])
+  UpdateProposal (fromList [(kh, params) | kh <- genesisKeyHashes])
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions: updates to ledger types

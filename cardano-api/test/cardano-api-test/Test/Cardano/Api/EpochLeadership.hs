@@ -38,8 +38,8 @@ import           Ouroboros.Network.Block (Serialised (..))
 import qualified Data.Map as Map
 import           Data.Proxy (Proxy (..))
 import           Data.Ratio ((%))
-import qualified Data.Set as Set
 import           Data.Time.Clock (secondsToNominalDiffTime)
+import           GHC.Exts (IsList (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -94,7 +94,7 @@ test_currentEpochEligibleLeadershipSlots =
           VrfKeyHash hash3 = verificationKeyHash $ getVerificationKey vrskey3
           poolDistr :: PoolDistr StandardCrypto =
             PoolDistr $
-              Map.fromList
+              fromList
                 [
                   ( KeyHash "a2927c1e43974b036d8e6838d410279266946e8a094895cfc748c91d"
                   , IndividualPoolStake
@@ -132,7 +132,7 @@ test_currentEpochEligibleLeadershipSlots =
               currentEpoch
           expectedEligibleSlots = [SlotNo 406, SlotNo 432, SlotNo 437, SlotNo 443, SlotNo 484]
       eligibleSlots <- H.evalEither eEligibleSlots
-      eligibleSlots H.=== Set.fromList expectedEligibleSlots
+      eligibleSlots H.=== fromList expectedEligibleSlots
  where
   encodeProtocolState
     :: ToCBOR (Consensus.ChainDepState (ConsensusProtocol era))

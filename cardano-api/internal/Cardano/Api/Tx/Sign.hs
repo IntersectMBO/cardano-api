@@ -116,7 +116,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Set as Set
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import qualified Data.Vector as Vector
 import           GHC.Exts (IsList (..))
 import           Lens.Micro
 
@@ -829,7 +828,7 @@ makeSignedByronTransaction witnesses txbody =
   Byron.annotateTxAux $
     Byron.mkTxAux
       (unAnnotated txbody)
-      (Vector.fromList [w | ByronKeyWitness w <- witnesses])
+      (fromList [w | ByronKeyWitness w <- witnesses])
 
 -- order of signing keys must match txins
 signByronTransaction
@@ -922,14 +921,14 @@ makeSignedTransaction
       L.mkBasicTx txbody
         & L.witsTxL
           .~ ( L.mkBasicTxWits
-                & L.addrTxWitsL .~ Set.fromList [w | ShelleyKeyWitness _ w <- witnesses]
+                & L.addrTxWitsL .~ fromList [w | ShelleyKeyWitness _ w <- witnesses]
                 & L.scriptTxWitsL
-                  .~ Map.fromList
+                  .~ fromList
                     [ (Ledger.hashScript @ledgerera sw, sw)
                     | sw <- txscripts
                     ]
                 & L.bootAddrTxWitsL
-                  .~ Set.fromList [w | ShelleyBootstrapWitness _ w <- witnesses]
+                  .~ fromList [w | ShelleyBootstrapWitness _ w <- witnesses]
              )
         & L.auxDataTxL .~ maybeToStrictMaybe txmetadata
 

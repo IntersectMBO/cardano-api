@@ -16,6 +16,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Word (Word64)
+import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Text.InterpolatedString.Perl6
 
@@ -38,7 +39,7 @@ prop_golden_1 =
   matchMetadata
     TxMetadataJsonNoSchema
     [q|{"0": 1}|]
-    (TxMetadata (Map.fromList [(0, TxMetaNumber 1)]))
+    (TxMetadata (fromList [(0, TxMetaNumber 1)]))
 
 prop_golden_2 :: Property
 prop_golden_2 =
@@ -194,7 +195,7 @@ prop_golden_9 =
     )
 
 txMetadataSingleton :: Word64 -> TxMetadataValue -> TxMetadata
-txMetadataSingleton n v = TxMetadata (Map.fromList [(n, v)])
+txMetadataSingleton n v = TxMetadata (fromList [(n, v)])
 
 matchMetadata
   :: HasCallStack

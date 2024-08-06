@@ -54,9 +54,8 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
-import qualified Data.Set as Set
 import           Data.Text (Text)
-import           GHC.Exts (IsString (..))
+import           GHC.Exts (IsList (..), IsString (..))
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
@@ -122,12 +121,12 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     requireShelleyBasedEra era
       & onNothing (left ByronEraNotSupported)
 
-  let stakeCreds = Set.fromList $ mapMaybe filterUnRegCreds certs
-      drepCreds = Set.fromList $ mapMaybe filterUnRegDRepCreds certs
+  let stakeCreds = fromList $ mapMaybe filterUnRegCreds certs
+      drepCreds = fromList $ mapMaybe filterUnRegDRepCreds certs
 
   -- Query execution
   utxo <-
-    lift (queryUtxo sbe (QueryUTxOByTxIn (Set.fromList allTxIns)))
+    lift (queryUtxo sbe (QueryUTxOByTxIn (fromList allTxIns)))
       & onLeft (left . QceUnsupportedNtcVersion)
       & onLeft (left . QueryEraMismatch)
 

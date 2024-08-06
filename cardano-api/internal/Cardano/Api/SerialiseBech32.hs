@@ -26,7 +26,6 @@ import           Data.ByteString (ByteString)
 import           Data.Data (Data)
 import qualified Data.List as List
 import           Data.Set (Set)
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import           GHC.Exts (IsList (..))
 
@@ -64,7 +63,7 @@ deserialiseFromBech32 asType bech32Str = do
   let actualPrefix = Bech32.humanReadablePartToText prefix
       permittedPrefixes = bech32PrefixesPermitted asType
   guard (actualPrefix `elem` permittedPrefixes)
-    ?! Bech32UnexpectedPrefix actualPrefix (Set.fromList permittedPrefixes)
+    ?! Bech32UnexpectedPrefix actualPrefix (fromList permittedPrefixes)
 
   payload <-
     Bech32.dataPartToBytes dataPart
@@ -120,7 +119,7 @@ deserialiseAnyOfFromBech32 types bech32Str = do
 
   permittedPrefixes :: Set Text
   permittedPrefixes =
-    Set.fromList $
+    fromList $
       concat
         [ bech32PrefixesPermitted ttoken
         | FromSomeType ttoken _f <- types

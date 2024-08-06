@@ -83,7 +83,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Builder as Text.Builder
-import qualified Data.Vector as Vector
 import           Data.Word
 import           GHC.Exts (IsList (..))
 
@@ -439,7 +438,7 @@ metadataFromJson schema =
     -- The top level has to be an object
     -- with unsigned integer (decimal or hex) keys
     Aeson.Object m ->
-      fmap (TxMetadata . Map.fromList)
+      fmap (TxMetadata . fromList)
         . mapM (uncurry metadataKeyPairFromJson)
         $ toList m
     _ -> Left TxMetadataJsonToplevelNotMap
@@ -520,7 +519,7 @@ metadataValueToJsonNoSchema = conv
           <> Text.decodeLatin1 (Base16.encode bs)
       )
   conv (TxMetaText txt) = Aeson.String txt
-  conv (TxMetaList vs) = Aeson.Array (Vector.fromList (map conv vs))
+  conv (TxMetaList vs) = Aeson.Array (fromList (map conv vs))
   conv (TxMetaMap kvs) =
     Aeson.object
       [ (convKey k, conv v)
@@ -635,11 +634,11 @@ metadataValueToJsonDetailedSchema = conv
   conv (TxMetaList vs) =
     singleFieldObject "list"
       . Aeson.Array
-      $ Vector.fromList (map conv vs)
+      $ fromList (map conv vs)
   conv (TxMetaMap kvs) =
     singleFieldObject "map"
       . Aeson.Array
-      $ Vector.fromList
+      $ fromList
         [ Aeson.object [("k", conv k), ("v", conv v)]
         | (k, v) <- kvs
         ]

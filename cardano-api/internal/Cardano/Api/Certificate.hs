@@ -97,8 +97,6 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           Data.IP (IPv4, IPv6)
 import           Data.Maybe
-import qualified Data.Sequence.Strict as Seq
-import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -610,10 +608,10 @@ toShelleyPoolParams
             (Ledger.boundRational stakePoolMargin)
       , Ledger.ppRewardAccount = toShelleyStakeAddr stakePoolRewardAccount
       , Ledger.ppOwners =
-          Set.fromList
+          fromList
             [kh | StakeKeyHash kh <- stakePoolOwners]
       , Ledger.ppRelays =
-          Seq.fromList
+          fromList
             (map toShelleyStakePoolRelay stakePoolRelays)
       , Ledger.ppMetadata =
           toShelleyPoolMetadata

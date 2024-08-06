@@ -30,8 +30,8 @@ import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor.Identity (Identity)
 import           Data.Int (Int64)
 import           Data.Map (Map)
-import qualified Data.Map as M
 import           Data.Proxy (Proxy (..))
+import           GHC.Exts (IsList (..))
 
 import           Hedgehog (Property, property, success)
 import qualified Hedgehog.Extras.Aeson as H
@@ -99,12 +99,12 @@ legacyCardanoApiProtocolParameters =
     , protocolParamMinUTxOValue = Just $ Coin 3_000_000
     , protocolParamMinPoolCost = Coin 3_500_000
     , protocolParamMaxValueSize = Just 10
-    , protocolParamMaxTxSize = 3000
+    , protocolParamMaxTxSize = 3_000
     , protocolParamMaxTxExUnits = Just executionUnits
     , protocolParamMaxCollateralInputs = Just 10
-    , protocolParamMaxBlockHeaderSize = 1200
+    , protocolParamMaxBlockHeaderSize = 1_200
     , protocolParamMaxBlockExUnits = Just executionUnits2
-    , protocolParamMaxBlockBodySize = 5000
+    , protocolParamMaxBlockBodySize = 5_000
     , protocolParamExtraPraosEntropy = Just $ makePraosNonce "entropyEntropy"
     , protocolParamDecentralization = Just 0.52
     , protocolParamCostModels = costModels
@@ -120,7 +120,7 @@ legacyCardanoApiProtocolParameters =
 
   costModels :: Map AnyPlutusScriptVersion CostModel
   costModels =
-    M.fromList
+    fromList
       [ (AnyPlutusScriptVersion PlutusScriptV3, CostModel [1 .. numParams PlutusV3])
       , (AnyPlutusScriptVersion PlutusScriptV2, CostModel [1 .. numParams PlutusV2])
       , (AnyPlutusScriptVersion PlutusScriptV1, CostModel [1 .. numParams PlutusV1])
@@ -132,13 +132,13 @@ legacyCardanoApiProtocolParameters =
   executionUnits :: ExecutionUnits
   executionUnits =
     ExecutionUnits
-      { executionSteps = 4300
-      , executionMemory = 2300
+      { executionSteps = 4_300
+      , executionMemory = 2_300
       }
 
   executionUnits2 :: ExecutionUnits
   executionUnits2 =
     ExecutionUnits
-      { executionSteps = 5600
-      , executionMemory = 3400
+      { executionSteps = 5_600
+      , executionMemory = 3_400
       }

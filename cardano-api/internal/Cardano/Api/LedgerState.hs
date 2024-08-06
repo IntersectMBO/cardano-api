@@ -199,7 +199,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short as BSS
-import           Data.Foldable
+import           Data.Foldable (asum)
 import           Data.IORef
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
@@ -219,6 +219,7 @@ import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Word
 import qualified Data.Yaml as Yaml
 import           Formatting.Buildable (build)
+import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           Network.TypedProtocol.Pipelined (Nat (..))
 import           System.FilePath
@@ -1885,7 +1886,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         slotRangeOfInterest pp' =
           Set.filter
             (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
-            $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
+            $ fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
     caseShelleyToAlonzoOrBabbageEraOnwards
       ( const
@@ -1999,7 +2000,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
         slotRangeOfInterest pp' =
           Set.filter
             (not . Ledger.isOverlaySlot firstSlotOfEpoch (pp' ^. Core.ppDG))
-            $ Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
+            $ fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
     caseShelleyToAlonzoOrBabbageEraOnwards
       ( const

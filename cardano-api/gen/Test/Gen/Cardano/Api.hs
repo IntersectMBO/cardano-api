@@ -20,6 +20,7 @@ import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxD
 
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
+import           GHC.Exts (IsList (..))
 
 import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
@@ -32,7 +33,7 @@ genMetadata = do
   numberOfIndices <- Gen.integral (Range.linear 1 15)
   let indices = map (\i -> fromIntegral i :: Word64) [1 .. numberOfIndices]
   mData <- Gen.list (Range.singleton numberOfIndices) genMetadatum
-  return . ShelleyTxAuxData . Map.fromList $ zip indices mData
+  return . ShelleyTxAuxData . fromList $ zip indices mData
 
 genMetadatum :: Gen Metadatum
 genMetadatum = do

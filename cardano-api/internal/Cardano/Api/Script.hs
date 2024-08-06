@@ -158,10 +158,8 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
 import           Data.Either.Combinators (maybeToRight)
-import           Data.Foldable (toList)
 import           Data.Functor
 import           Data.Scientific (toBoundedInteger)
-import qualified Data.Sequence.Strict as Seq
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -169,6 +167,7 @@ import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
+import           GHC.Exts (IsList (..))
 import           Numeric.Natural (Natural)
 
 -- ----------------------------------------------------------------------------
@@ -1241,9 +1240,9 @@ toShelleyMultiSig = go
   go :: SimpleScript -> Either MultiSigError (Shelley.MultiSig (ShelleyLedgerEra ShelleyEra))
   go (RequireSignature (PaymentKeyHash kh)) =
     return $ Shelley.RequireSignature (Shelley.asWitness kh)
-  go (RequireAllOf s) = mapM go s <&> Shelley.RequireAllOf . Seq.fromList
-  go (RequireAnyOf s) = mapM go s <&> Shelley.RequireAnyOf . Seq.fromList
-  go (RequireMOf m s) = mapM go s <&> Shelley.RequireMOf m . Seq.fromList
+  go (RequireAllOf s) = mapM go s <&> Shelley.RequireAllOf . fromList
+  go (RequireAnyOf s) = mapM go s <&> Shelley.RequireAnyOf . fromList
+  go (RequireMOf m s) = mapM go s <&> Shelley.RequireMOf m . fromList
   go _ = Left MultiSigErrorTimelockNotsupported
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
@@ -1272,9 +1271,9 @@ toAllegraTimelock = go
   go :: SimpleScript -> Timelock.Timelock era
   go (RequireSignature (PaymentKeyHash kh)) =
     Shelley.RequireSignature (Shelley.asWitness kh)
-  go (RequireAllOf s) = Shelley.RequireAllOf (Seq.fromList (map go s))
-  go (RequireAnyOf s) = Shelley.RequireAnyOf (Seq.fromList (map go s))
-  go (RequireMOf m s) = Shelley.RequireMOf m (Seq.fromList (map go s))
+  go (RequireAllOf s) = Shelley.RequireAllOf (fromList (map go s))
+  go (RequireAnyOf s) = Shelley.RequireAnyOf (fromList (map go s))
+  go (RequireMOf m s) = Shelley.RequireMOf m (fromList (map go s))
   go (RequireTimeBefore t) = Allegra.RequireTimeExpire t
   go (RequireTimeAfter t) = Allegra.RequireTimeStart t
 
