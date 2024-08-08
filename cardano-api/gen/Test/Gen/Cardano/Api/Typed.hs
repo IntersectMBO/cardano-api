@@ -1126,11 +1126,12 @@ genProposals :: Applicative (BuildTxWith build)
              => ConwayEraOnwards era
              -> Gen (TxProposalProcedures build era)
 genProposals w = conwayEraOnwardsConstraints w $ do
-  proposals <- fmap Proposal <$> Gen.list (Range.constant 0 10) (genProposal w)
+  proposals <- Gen.list (Range.constant 0 10) (genProposal w)
   let sbe = conwayEraOnwardsToShelleyBasedEra w
-  proposalsWithWitnesses <- fmap fromList . forM proposals $ \proposal ->
-    (proposal,) <$> Gen.maybe (genScriptWitnessForStake sbe)
-  pure $ mkTxProposalProcedures proposalsWithWitnesses
+  proposalsWithWitnesses <- fmap fromList . forM proposals $ \proposal -> do
+    mWitness <- Gen.maybe (genScriptWitnessForStake sbe)
+    pure (proposal, pure mWitness)
+  pure $ TxProposalProcedures proposalsWithWitnesses
 
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =

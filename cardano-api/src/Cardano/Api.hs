@@ -366,9 +366,7 @@ module Cardano.Api
   , TxMintValue (..)
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
-  , TxProposalProcedures (TxProposalProceduresNone)
-  , mkTxProposalProcedures
-  , getProposalProcedures
+  , TxProposalProcedures (..)
 
     -- ** Building vs viewing transactions
   , BuildTxWith (..)

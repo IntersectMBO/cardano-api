@@ -6,8 +6,11 @@ module Test.Cardano.Api.Typed.TxBody
 where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
+import qualified Cardano.Api.Ledger as L
+import           Cardano.Api.Shelley (ReferenceScript (..), ShelleyLedgerEra,
+                   refScriptToShelleyScript)
 
+import           Data.Map.Ordered.Strict (OMap)
 import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))
 import           GHC.Exts (IsList (..))
@@ -103,6 +106,15 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
  where
   getVotingProcedures TxVotingProceduresNone = Nothing
   getVotingProcedures (TxVotingProcedures vps _) = Just vps
+  getProposalProcedures
+    :: TxProposalProcedures build era
+    -> Maybe
+        ( OMap
+            (L.ProposalProcedure (ShelleyLedgerEra era))
+            (BuildTxWith build (Maybe (ScriptWitness WitCtxStake era)))
+        )
+  getProposalProcedures TxProposalProceduresNone = Nothing
+  getProposalProcedures (TxProposalProcedures pps) = Just pps
 
 tests :: TestTree
 tests =

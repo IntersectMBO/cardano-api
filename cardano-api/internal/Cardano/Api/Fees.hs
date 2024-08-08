@@ -56,7 +56,6 @@ import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
 import           Cardano.Api.Feature
-import           Cardano.Api.Governance.Actions.ProposalProcedure
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
@@ -251,9 +250,11 @@ estimateBalancedTxBody
         proposalProcedures :: OSet.OSet (L.ProposalProcedure (ShelleyLedgerEra era))
         proposalProcedures =
           maryEraOnwardsConstraints w $
-            fromList $
-              maybe [] (map (unProposal . fst) . toList) $
-                (getProposalProcedures . unFeatured) =<< txProposalProcedures txbodycontent1
+            case unFeatured <$> txProposalProcedures txbodycontent1 of
+              Nothing -> mempty
+              Just TxProposalProceduresNone -> mempty
+              Just (TxProposalProcedures pp) ->
+                fromList $ (map fst . toList) pp
 
         totalDeposits :: L.Coin
         totalDeposits =
@@ -1578,23 +1579,23 @@ substituteExecutionUnits
       -> Either
           (TxBodyErrorAutoBalance era)
           (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
-    mapScriptWitnessesProposals Nothing = return Nothing
-    mapScriptWitnessesProposals (Just (Featured era proposalProcedures)) = forM (getProposalProcedures proposalProcedures) $ \pp -> do
+    mapScriptWitnessesProposals Nothing = pure Nothing
+    mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = pure Nothing
+    mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures proposalProcedures))) = do
       let substitutedExecutionUnits =
             [ (proposal, mUpdatedWitness)
-            | (proposal, mScriptWitness) <- toList $ fmap (join . buildTxWithToMaybe) pp
-            , index <- maybeToList $ OMap.findIndex proposal pp
+            | (proposal, BuildTxWith mScriptWitness) <- toList proposalProcedures
+            , index <- maybeToList $ OMap.findIndex proposal proposalProcedures
             , let mUpdatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) <$> mScriptWitness
             ]
       final <- fmap fromList . forM substitutedExecutionUnits $ \(p, meExecUnits) ->
         case meExecUnits of
-          Nothing -> pure (p, Nothing)
+          Nothing -> pure (p, pure Nothing)
           Just eExecUnits -> do
             -- TODO aggregate errors instead of shortcircuiting here
             execUnits <- eExecUnits
-            pure (p, pure execUnits)
-
-      pure . Featured era $ mkTxProposalProcedures final
+            pure (p, pure $ pure execUnits)
+      pure . mkFeatured $ TxProposalProcedures final
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era

@@ -114,9 +114,7 @@ module Cardano.Api.Tx.Body
   , TxMintValue (..)
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
-  , TxProposalProcedures (TxProposalProceduresNone)
-  , mkTxProposalProcedures
-  , getProposalProcedures
+  , TxProposalProcedures (..)
 
     -- ** Building vs viewing transactions
   , BuildTxWith (..)
@@ -180,7 +178,6 @@ import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error (Error (..), displayError)
 import           Cardano.Api.Feature
-import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.Keys.Byron
@@ -258,7 +255,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Monoid
 import           Data.OSet.Strict (OSet)
-import qualified Data.OSet.Strict as OSet
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -1278,54 +1274,14 @@ data TxProposalProcedures build era where
   TxProposalProceduresNone :: TxProposalProcedures build era
   TxProposalProcedures
     :: Ledger.EraPParams (ShelleyLedgerEra era)
-    => OSet (L.ProposalProcedure (ShelleyLedgerEra era))
-    -> BuildTxWith
-        build
-        (OMap (L.ProposalProcedure (ShelleyLedgerEra era)) (ScriptWitness WitCtxStake era))
+    => OMap
+        (L.ProposalProcedure (ShelleyLedgerEra era))
+        (BuildTxWith build (Maybe (ScriptWitness WitCtxStake era)))
     -> TxProposalProcedures build era
 
 deriving instance Eq (TxProposalProcedures build era)
 
 deriving instance Show (TxProposalProcedures build era)
-
--- | Create a 'TxProposalProcedures' value
-mkTxProposalProcedures
-  :: forall era build
-   . IsShelleyBasedEra era
-  => Applicative (BuildTxWith build)
-  => OMap (Proposal era) (Maybe (ScriptWitness WitCtxStake era))
-  -- ^ a map with proposals, with optional witnesses
-  -> TxProposalProcedures build era
-mkTxProposalProcedures proposalProcedures = shelleyBasedEraConstraints (shelleyBasedEra @era) $ do
-  let proposalsList = toList proposalProcedures
-      proposals = fromList $ map (unProposal . fst) proposalsList
-      sWitMap = fromList $ mapMaybe (\(p, mw) -> (unProposal p,) <$> mw) proposalsList
-  TxProposalProcedures proposals (pure sWitMap)
-
--- | Get map of the proposals with optional witnesses.
---
--- You can understand the return type as:
--- @
--- Maybe (OMap (Proposal era) (BuildTxWith build (Maybe (ScriptWitness WitCtxStake era))))
---   ▲             ▲               ▲                ▲
---   │             │               │                └─ Witness if it was provided
---   │             │               └─ Witnesses are only present for 'BuildTx'
---   │             └─ A proposal which might have a witness
---   └─ 'Just' if there were provided any proposals
--- @
-getProposalProcedures
-  :: IsShelleyBasedEra era
-  => TxProposalProcedures build era
-  -> Maybe (OMap (Proposal era) (BuildTxWith build (Maybe (ScriptWitness WitCtxStake era))))
-getProposalProcedures TxProposalProceduresNone = Nothing
-getProposalProcedures (TxProposalProcedures procedures ViewTx) =
-  Just . fromList $ map (,pure Nothing) (Proposal <$> toList procedures)
-getProposalProcedures (TxProposalProcedures procedures (BuildTxWith proposalProceduresWithWitnesses)) = do
-  Just $
-    OMap.unionWithL
-      (const (liftA2 (<|>)))
-      (fromList $ map (,pure Nothing) (Proposal <$> toList procedures))
-      (fromList $ map (bimap Proposal (pure . Just)) (toList proposalProceduresWithWitnesses))
 
 -- ----------------------------------------------------------------------------
 -- Transaction body content
@@ -1896,16 +1852,26 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
   (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
 
 fromLedgerProposalProcedures
-  :: ShelleyBasedEra era
+  :: forall era
+   . ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Featured ConwayEraOnwards era (TxProposalProcedures ViewTx era))
 fromLedgerProposalProcedures sbe body =
-  forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsConstraints w $
-      Featured w $
-        TxProposalProcedures
-          (body ^. L.proposalProceduresTxBodyL)
-          ViewTx
+  forShelleyBasedEraInEonMaybe sbe $ \w -> do
+    let lpp
+          :: [ ( L.ProposalProcedure (ShelleyLedgerEra era)
+               , BuildTxWith ViewTx (Maybe (ScriptWitness WitCtxStake era))
+               )
+             ]
+        lpp =
+          conwayEraOnwardsConstraints w $
+            map (,ViewTx) $
+              toList $
+                body ^. L.proposalProceduresTxBodyL
+    Featured w $
+      conwayEraOnwardsConstraints w $
+        TxProposalProcedures $
+          fromList lpp
 
 fromLedgerVotingProcedures
   :: ()
@@ -2483,10 +2449,12 @@ convProposalProcedures
   :: forall era build
    . IsShelleyBasedEra era
   => TxProposalProcedures build era -> OSet (L.ProposalProcedure (ShelleyLedgerEra era))
-convProposalProcedures pp =
+convProposalProcedures TxProposalProceduresNone =
+  shelleyBasedEraConstraints (shelleyBasedEra @era) mempty
+convProposalProcedures (TxProposalProcedures pp) =
   shelleyBasedEraConstraints (shelleyBasedEra @era) $
-    fromList . maybe [] (map (unProposal . fst) . toList) $
-      getProposalProcedures pp
+    fromList $
+      fst <$> toList pp
 
 convVotingProcedures :: TxVotingProcedures build era -> L.VotingProcedures (ShelleyLedgerEra era)
 convVotingProcedures txVotingProcedures =
@@ -3310,14 +3278,11 @@ collectTxBodyScriptWitnesses
       :: TxProposalProcedures BuildTx era
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesProposing TxProposalProceduresNone = []
-    scriptWitnessesProposing (TxProposalProcedures proposalProcedures (BuildTxWith mScriptWitnesses))
-      | OMap.null mScriptWitnesses = []
-      | otherwise =
-          [ (ScriptWitnessIndexProposing ix, AnyScriptWitness witness)
-          | let proposalsList = toList $ OSet.toSet proposalProcedures
-          , (ix, proposal) <- zip [0 ..] proposalsList
-          , witness <- maybeToList (OMap.lookup proposal mScriptWitnesses)
-          ]
+    scriptWitnessesProposing (TxProposalProcedures proposalProcedures) =
+      [ (ScriptWitnessIndexProposing (fromIntegral ix), AnyScriptWitness witness)
+      | (p, BuildTxWith (Just witness)) <- toList proposalProcedures
+      , ix <- maybeToList $ OMap.findIndex p proposalProcedures
+      ]
 
 -- This relies on the TxId Ord instance being consistent with the
 -- Ledger.TxId Ord instance via the toShelleyTxId conversion
