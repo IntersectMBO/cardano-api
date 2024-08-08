@@ -952,7 +952,7 @@ txOutValueToLovelace tv =
 txOutValueToValue :: TxOutValue era -> Value
 txOutValueToValue tv =
   case tv of
-    TxOutValueByron l -> lovelaceToValue l
+    TxOutValueByron l -> coinToValue l
     TxOutValueShelleyBased sbe v -> fromLedgerValue sbe v
 
 prettyRenderTxOut :: TxOutInAnyEra -> Text
@@ -1683,7 +1683,7 @@ validateMintValue :: TxMintValue build era -> Either TxBodyError ()
 validateMintValue txMintValue =
   case txMintValue of
     TxMintNone -> return ()
-    TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+    TxMintValue _ v _ -> guard (selectCoin v == 0) ?! TxBodyMintAdaError
 
 inputIndexDoesNotExceedMax :: [(TxIn, a)] -> Either TxBodyError ()
 inputIndexDoesNotExceedMax txIns =
@@ -2171,8 +2171,8 @@ classifyRangeError :: TxOut CtxTx ByronEra -> TxBodyError
 classifyRangeError txout =
   case txout of
     TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{}) (TxOutValueByron value) _ _
-      | value < 0 -> TxBodyOutputNegative (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
-      | otherwise -> TxBodyOutputOverflow (lovelaceToQuantity value) (txOutInAnyEra ByronEra txout)
+      | value < 0 -> TxBodyOutputNegative (coinToQuantity value) (txOutInAnyEra ByronEra txout)
+      | otherwise -> TxBodyOutputOverflow (coinToQuantity value) (txOutInAnyEra ByronEra txout)
     TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _)) (TxOutValueShelleyBased w _) _ _ -> case w of {}
     TxOut (AddressInEra (ShelleyAddressInEra sbe) ShelleyAddress{}) _ _ _ -> case sbe of {}
 
