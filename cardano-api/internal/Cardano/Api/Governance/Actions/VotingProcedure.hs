@@ -123,8 +123,6 @@ newtype VotingProcedures era = VotingProcedures
 
 deriving instance Eq (VotingProcedures era)
 
-deriving instance Ord (VotingProcedures era)
-
 deriving instance Generic (VotingProcedures era)
 
 deriving instance Show (VotingProcedures era)

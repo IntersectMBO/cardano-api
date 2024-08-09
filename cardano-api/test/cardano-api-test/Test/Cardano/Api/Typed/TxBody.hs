@@ -1,4 +1,7 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Api.Typed.TxBody
   ( tests
@@ -10,42 +13,35 @@ import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (ReferenceScript (..), ShelleyLedgerEra,
                    refScriptToShelleyScript)
 
-import           Data.Map.Ordered.Strict (OMap)
 import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))
 import           GHC.Exts (IsList (..))
 
-import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
+import           Test.Gen.Cardano.Api.Typed (genValidTxBody)
 
 import           Test.Cardano.Api.Typed.Orphans ()
 
-import           Hedgehog (MonadTest, Property, annotateShow, (===))
+import           Hedgehog (MonadTest, Property, (===))
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
-era :: ShelleyBasedEra BabbageEra
-era = ShelleyBasedEraBabbage
-
 -- | Check the txOuts in a TxBodyContent after a ledger roundtrip.
-prop_roundtrip_txbodycontent_txouts :: Property
-prop_roundtrip_txbodycontent_txouts = H.property $ do
-  content <- H.forAll $ genTxBodyContent era
-  -- Create the ledger body & auxiliaries
-  body <- H.leftFail $ createAndValidateTransactionBody era content
-  annotateShow body
+prop_roundtrip_txbodycontent_txouts :: forall era. ShelleyBasedEra era -> Property
+prop_roundtrip_txbodycontent_txouts era = H.property $ do
+  (body, content :: TxBodyContent BuildTx era) <-
+    shelleyBasedEraConstraints era $ H.forAll $ genValidTxBody era
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
   let (TxBody content') = body
   matchTxOuts (txOuts content) (txOuts content')
  where
-  matchTxOuts :: MonadTest m => [TxOut CtxTx BabbageEra] -> [TxOut CtxTx BabbageEra] -> m ()
+  matchTxOuts :: MonadTest m => [TxOut CtxTx era] -> [TxOut CtxTx era] -> m ()
   matchTxOuts as bs =
     mapM_ matchTxOut $ zip as bs
 
-  matchTxOut :: MonadTest m => (TxOut CtxTx BabbageEra, TxOut CtxTx BabbageEra) -> m ()
+  matchTxOut :: MonadTest m => (TxOut CtxTx era, TxOut CtxTx era) -> m ()
   matchTxOut (a, b) = do
     let TxOut aAddress aValue aDatum aRefScript = a
     let TxOut bAddress bValue bDatum bRefScript = b
@@ -65,11 +61,12 @@ prop_roundtrip_txbodycontent_txouts = H.property $ do
 
   -- NOTE: After Allegra, all eras interpret SimpleScriptV1 as SimpleScriptV2
   -- because V2 is a superset of V1. So we accept that as a valid conversion.
-  matchRefScript :: MonadTest m => (ReferenceScript BabbageEra, ReferenceScript BabbageEra) -> m ()
+  matchRefScript :: MonadTest m => (ReferenceScript era, ReferenceScript era) -> m ()
   matchRefScript (a, b)
     | isSimpleScriptV2 a && isSimpleScriptV2 b =
-        refScriptToShelleyScript ShelleyBasedEraBabbage a
-          === refScriptToShelleyScript ShelleyBasedEraBabbage b
+        shelleyBasedEraConstraints era $
+          refScriptToShelleyScript era a
+            === refScriptToShelleyScript era b
     | otherwise =
         a === b
 
@@ -83,15 +80,13 @@ prop_roundtrip_txbodycontent_txouts = H.property $ do
 
 prop_roundtrip_txbodycontent_conway_fields :: Property
 prop_roundtrip_txbodycontent_conway_fields = H.property $ do
-  content <- H.forAll $ genTxBodyContent era
-  -- Create the ledger body & auxiliaries
-  body <- H.leftFail $ createAndValidateTransactionBody era content
-  annotateShow body
+  let sbe = ShelleyBasedEraConway
+  (body, content) <- H.forAll $ genValidTxBody sbe
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
   let (TxBody content') = body
 
-  let proposals = fmap (fmap fst . toList) . getProposalProcedures . unFeatured <$> txProposalProcedures content
-      proposals' = fmap (fmap fst . toList) . getProposalProcedures . unFeatured <$> txProposalProcedures content'
+  let proposals = getProposalProcedures . unFeatured <$> txProposalProcedures content
+      proposals' = getProposalProcedures . unFeatured <$> txProposalProcedures content'
       votes = getVotingProcedures . unFeatured <$> txVotingProcedures content
       votes' = getVotingProcedures . unFeatured <$> txVotingProcedures content'
       currTreasury = unFeatured <$> txCurrentTreasuryValue content
@@ -108,18 +103,19 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
   getVotingProcedures (TxVotingProcedures vps _) = Just vps
   getProposalProcedures
     :: TxProposalProcedures build era
-    -> Maybe
-        ( OMap
-            (L.ProposalProcedure (ShelleyLedgerEra era))
-            (BuildTxWith build (Maybe (ScriptWitness WitCtxStake era)))
-        )
+    -> Maybe [L.ProposalProcedure (ShelleyLedgerEra era)]
   getProposalProcedures TxProposalProceduresNone = Nothing
-  getProposalProcedures (TxProposalProcedures pps) = Just pps
+  getProposalProcedures txpp@(TxProposalProcedures _ _) = Just . toList $ convProposalProcedures txpp
 
 tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.TxBody"
-    [ testProperty "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
-    , testProperty "roundtrip txbodycontent new conway fields" prop_roundtrip_txbodycontent_conway_fields
+    [ testProperty "roundtrip txbodycontent txouts Babbage" $
+        prop_roundtrip_txbodycontent_txouts ShelleyBasedEraBabbage
+    , testProperty "roundtrip txbodycontent txouts Conway" $
+        prop_roundtrip_txbodycontent_txouts ShelleyBasedEraConway
+    , testProperty
+        "roundtrip txbodycontent new conway fields"
+        prop_roundtrip_txbodycontent_conway_fields
     ]

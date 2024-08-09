@@ -84,7 +84,6 @@ import           Data.Bifunctor (bimap, first, second)
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Function ((&))
 import qualified Data.List as List
-import qualified Data.Map.Ordered as OMap
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
@@ -250,11 +249,7 @@ estimateBalancedTxBody
         proposalProcedures :: OSet.OSet (L.ProposalProcedure (ShelleyLedgerEra era))
         proposalProcedures =
           maryEraOnwardsConstraints w $
-            case unFeatured <$> txProposalProcedures txbodycontent1 of
-              Nothing -> mempty
-              Just TxProposalProceduresNone -> mempty
-              Just (TxProposalProcedures pp) ->
-                fromList $ (map fst . toList) pp
+            maybe mempty (convProposalProcedures . unFeatured) (txProposalProcedures txbodycontent1)
 
         totalDeposits :: L.Coin
         totalDeposits =
@@ -1394,8 +1389,7 @@ maybeDummyTotalCollAndCollReturnOutput sbe TxBodyContent{txInsCollateral, txRetu
 
 substituteExecutionUnits
   :: forall era
-   . IsShelleyBasedEra era
-  => Map ScriptWitnessIndex ExecutionUnits
+   . Map ScriptWitnessIndex ExecutionUnits
   -> TxBodyContent BuildTx era
   -> Either (TxBodyErrorAutoBalance era) (TxBodyContent BuildTx era)
 substituteExecutionUnits
@@ -1573,29 +1567,30 @@ substituteExecutionUnits
           (Featured era (TxVotingProcedures vProcedures (BuildTxWith $ fromList substitutedExecutionUnits)))
 
     mapScriptWitnessesProposals
-      :: forall build
-       . Applicative (BuildTxWith build)
-      => Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
+      :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
       -> Either
           (TxBodyErrorAutoBalance era)
           (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
-    mapScriptWitnessesProposals Nothing = pure Nothing
-    mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = pure Nothing
-    mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures proposalProcedures))) = do
-      let substitutedExecutionUnits =
-            [ (proposal, mUpdatedWitness)
-            | (proposal, BuildTxWith mScriptWitness) <- toList proposalProcedures
-            , index <- maybeToList $ OMap.findIndex proposal proposalProcedures
-            , let mUpdatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) <$> mScriptWitness
+    mapScriptWitnessesProposals Nothing = return Nothing
+    mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = return Nothing
+    mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures _ ViewTx))) = return Nothing
+    mapScriptWitnessesProposals (Just (Featured era txpp@(TxProposalProcedures osetProposalProcedures (BuildTxWith sWitMap)))) = do
+      let allProposalsList = toList $ convProposalProcedures txpp
+          eSubstitutedExecutionUnits =
+            [ (proposal, updatedWitness)
+            | (proposal, scriptWitness) <- toList sWitMap
+            , index <- maybeToList $ List.elemIndex proposal allProposalsList
+            , let updatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) scriptWitness
             ]
-      final <- fmap fromList . forM substitutedExecutionUnits $ \(p, meExecUnits) ->
-        case meExecUnits of
-          Nothing -> pure (p, pure Nothing)
-          Just eExecUnits -> do
-            -- TODO aggregate errors instead of shortcircuiting here
-            execUnits <- eExecUnits
-            pure (p, pure $ pure execUnits)
-      pure . mkFeatured $ TxProposalProcedures final
+
+      substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
+
+      return $
+        Just
+          ( Featured
+              era
+              (TxProposalProcedures osetProposalProcedures (BuildTxWith $ fromList substitutedExecutionUnits))
+          )
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era
@@ -1624,8 +1619,8 @@ substituteExecutionUnits
                 fromList final
 
 traverseScriptWitnesses
-  :: [(a, Either l r)]
-  -> Either l [(a, r)]
+  :: [(a, Either (TxBodyErrorAutoBalance era) (ScriptWitness ctx era))]
+  -> Either (TxBodyErrorAutoBalance era) [(a, ScriptWitness ctx era)]
 traverseScriptWitnesses =
   traverse (\(item, eScriptWitness) -> eScriptWitness >>= (\sWit -> Right (item, sWit)))
 

@@ -155,9 +155,6 @@ instance IsShelleyBasedEra era => Show (Proposal era) where
 instance IsShelleyBasedEra era => Eq (Proposal era) where
   (Proposal pp1) == (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ pp1 == pp2
 
-instance IsShelleyBasedEra era => Ord (Proposal era) where
-  compare (Proposal pp1) (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ compare pp1 pp2
-
 instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
   toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
 

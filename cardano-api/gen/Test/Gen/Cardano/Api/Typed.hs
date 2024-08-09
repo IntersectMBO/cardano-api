@@ -86,6 +86,7 @@ module Test.Gen.Cardano.Api.Typed
   , genTxAuxScripts
   , genTxBody
   , genTxBodyContent
+  , genValidTxBody
   , genTxCertificates
   , genTxFee
   , genTxIndex
@@ -160,6 +161,7 @@ import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Exts (IsList(..))
+import           GHC.Stack
 import           Numeric.Natural (Natural)
 
 import           Test.Gen.Cardano.Api.Era
@@ -446,7 +448,7 @@ genOperationalCertificateIssueCounter :: Gen OperationalCertificateIssueCounter
 genOperationalCertificateIssueCounter = snd <$> genOperationalCertificateWithCounter
 
 genOperationalCertificateWithCounter
-  :: Gen (OperationalCertificate, OperationalCertificateIssueCounter)
+  :: HasCallStack => Gen (OperationalCertificate, OperationalCertificateIssueCounter)
 genOperationalCertificateWithCounter = do
   kesVKey <- genVerificationKey AsKesKey
   stkPoolOrGenDelExtSign <-
@@ -459,7 +461,7 @@ genOperationalCertificateWithCounter = do
   case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
     -- This case should be impossible as we clearly derive the verification
     -- key from the generated signing key.
-    Left err -> fail $ docToString $ prettyError err
+    Left err -> error $ docToString $ prettyError err
     Right pair -> return pair
  where
   convert
@@ -760,23 +762,37 @@ genTxOutByron =
     <*> pure TxOutDatumNone
     <*> pure ReferenceScriptNone
 
-genTxBodyByron :: Gen (L.Annotated L.Tx ByteString)
+-- | Partial! It will throw if the generated transaction body is invalid.
+genTxBodyByron :: HasCallStack => Gen (L.Annotated L.Tx ByteString)
 genTxBodyByron = do
   txIns <-
     map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txOuts <- Gen.list (Range.constant 1 10) genTxOutByron
   case Api.makeByronTransactionBody txIns txOuts of
-    Left err -> fail (displayError err)
+    Left err -> error (displayError err)
     Right txBody -> pure txBody
 
 genWitnessesByron :: Gen [KeyWitness ByronEra]
 genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
 
-genTxBody :: ShelleyBasedEra era -> Gen (TxBody era)
+-- | This generator validates generated 'TxBodyContent' and backtracks when the generated body
+-- fails the validation. That also means that it is quite slow.
+genValidTxBody :: ShelleyBasedEra era
+               -> Gen (TxBody era, TxBodyContent BuildTx era) -- ^ validated 'TxBody' and 'TxBodyContent'
+genValidTxBody sbe =
+  Gen.mapMaybe
+    (\content ->
+        either (const Nothing) (Just . (, content)) $
+          createAndValidateTransactionBody sbe content
+    )
+    (genTxBodyContent sbe)
+
+-- | Partial! This function will throw an error when the generated transaction is invalid.
+genTxBody :: HasCallStack => ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- Api.createAndValidateTransactionBody era <$> genTxBodyContent era
   case res of
-    Left err -> fail (docToString (prettyError err))
+    Left err -> error (docToString (prettyError err))
     Right txBody -> pure txBody
 
 -- | Generate a 'Featured' for the given 'CardanoEra' with the provided generator.
@@ -799,7 +815,7 @@ genMaybeFeaturedInEra
   -> f (Maybe (Featured eon era a))
 genMaybeFeaturedInEra f =
   inEonForEra (pure Nothing) $ \w ->
-    pure Nothing <|> fmap Just (genFeaturedInEra w (f w))
+    Just <$> genFeaturedInEra w (f w)
 
 genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
 genTxScriptValidity =
@@ -817,7 +833,7 @@ genTx
 genTx era =
   makeSignedTransaction
     <$> genWitnesses era
-    <*> genTxBody era
+    <*> (fst <$> genValidTxBody era)
 
 genWitnesses :: ShelleyBasedEra era -> Gen [KeyWitness era]
 genWitnesses sbe = do
@@ -870,7 +886,7 @@ genShelleyBootstrapWitness
 genShelleyBootstrapWitness sbe =
   makeShelleyBootstrapWitness sbe
     <$> genWitnessNetworkIdOrByronAddress
-    <*> genTxBody sbe
+    <*> (fst <$> genValidTxBody sbe)
     <*> genSigningKey AsByronKey
 
 genShelleyKeyWitness
@@ -878,8 +894,8 @@ genShelleyKeyWitness
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genShelleyKeyWitness sbe =
-  makeShelleyKeyWitness sbe
-    <$> genTxBody sbe
+  makeShelleyKeyWitness sbe . fst
+    <$> genValidTxBody sbe
     <*> genShelleyWitnessSigningKey
 
 genShelleyWitness
@@ -1127,11 +1143,17 @@ genProposals :: Applicative (BuildTxWith build)
              -> Gen (TxProposalProcedures build era)
 genProposals w = conwayEraOnwardsConstraints w $ do
   proposals <- Gen.list (Range.constant 0 10) (genProposal w)
+  proposalsToBeWitnessed <- Gen.subsequence proposals
+  -- We're generating also some extra proposals, purposely not included in the proposals list, which results
+  -- in an invalid state of 'TxProposalProcedures'.
+  -- We're doing it for the complete representation of possible values space of TxProposalProcedures.
+  -- Proposal procedures code in cardano-api should handle such invalid values just fine.
+  extraProposals <- Gen.list (Range.constant 0 10) (genProposal w)
   let sbe = conwayEraOnwardsToShelleyBasedEra w
-  proposalsWithWitnesses <- fmap fromList . forM proposals $ \proposal -> do
-    mWitness <- Gen.maybe (genScriptWitnessForStake sbe)
-    pure (proposal, pure mWitness)
-  pure $ TxProposalProcedures proposalsWithWitnesses
+  proposalsWithWitnesses <-
+    forM (extraProposals <> proposalsToBeWitnessed) $ \proposal ->
+      (proposal,) <$> genScriptWitnessForStake sbe
+  pure $ TxProposalProcedures (fromList proposals) (pure $ fromList proposalsWithWitnesses)
 
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =

@@ -20,6 +20,7 @@ import           Test.Cardano.Api.Typed.Orphans ()
 
 import           Hedgehog (Property, forAll, property, tripping)
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
 import qualified Test.Hedgehog.Roundtrip.CBOR as H
 import           Test.Hedgehog.Roundtrip.CBOR
@@ -33,19 +34,19 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 prop_roundtrip_txbody_CBOR :: Property
 prop_roundtrip_txbody_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ makeSignedTransaction [] <$> genTxBody era
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
   H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genTx era
   shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
 
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ genCardanoKeyWitness era
   shelleyBasedEraConstraints era $ H.trippingCbor (AsKeyWitness (proxyToAsType Proxy)) x
 
@@ -166,19 +167,19 @@ prop_roundtrip_ScriptData_CBOR = H.property $ do
 
 prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR = H.property $ do
-  AnyCardanoEra era <- H.forAll $ Gen.element [minBound .. maxBound]
+  AnyCardanoEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   proposal <- H.forAll $ genUpdateProposal era
   H.trippingCbor AsUpdateProposal proposal
 
 prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
-  AnyShelleyBasedEra era <- H.forAll $ Gen.element [minBound .. maxBound]
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- forAll $ genTx era
   H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do
-  AnyShelleyBasedEra sbe <- H.forAll $ Gen.element [minBound .. maxBound]
+  AnyShelleyBasedEra sbe <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- forAll $ genShelleyKeyWitness sbe
   tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 
