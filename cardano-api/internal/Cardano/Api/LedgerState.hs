@@ -165,7 +165,6 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
@@ -1293,7 +1292,6 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transC
             , Consensus.byronProtocolVersion = ncByronProtocolVersion dnc
             , Consensus.byronSoftwareVersion = Byron.softwareVersion
             , Consensus.byronLeaderCredentials = Nothing
-            , Consensus.byronMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
       , Consensus.paramsShelleyBased =
           Consensus.ProtocolParamsShelleyBased
@@ -1303,32 +1301,26 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transC
       , Consensus.paramsShelley =
           Consensus.ProtocolParamsShelley
             { Consensus.shelleyProtVer = ProtVer (natVersion @3) 0
-            , Consensus.shelleyMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
       , Consensus.paramsAllegra =
           Consensus.ProtocolParamsAllegra
             { Consensus.allegraProtVer = ProtVer (natVersion @4) 0
-            , Consensus.allegraMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
       , Consensus.paramsMary =
           Consensus.ProtocolParamsMary
             { Consensus.maryProtVer = ProtVer (natVersion @5) 0
-            , Consensus.maryMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
       , Consensus.paramsAlonzo =
           Consensus.ProtocolParamsAlonzo
             { Consensus.alonzoProtVer = ProtVer (natVersion @7) 0
-            , Consensus.alonzoMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
       , Consensus.paramsBabbage =
           Consensus.ProtocolParamsBabbage
             { Consensus.babbageProtVer = ProtVer (natVersion @9) 0
-            , Consensus.babbageMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
       , Consensus.paramsConway =
           Consensus.ProtocolParamsConway
             { Consensus.conwayProtVer = ProtVer (natVersion @10) 0
-            , Consensus.conwayMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
       , Consensus.hardForkTriggers = ncHardForkTriggers dnc
       , Consensus.ledgerTransitionConfig = transCfg
