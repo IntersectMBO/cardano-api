@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PatternSynonyms #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilyDependencies #-}</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- UndecidableInstances needed for 9.2.7 and 8.10.7</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Only for UninhabitableType</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="annot"><span class="hs-comment">-- | This module defines the protocol versions corresponding to the eras in the Cardano blockchain.</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Protocol.Version</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#BabbageEra"><span class="hs-identifier">BabbageEra</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#ConwayEra"><span class="hs-identifier">ConwayEra</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#CurrentEra"><span class="hs-identifier">CurrentEra</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UpcomingEra"><span class="hs-identifier">UpcomingEra</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier">Era</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UseEra"><span class="hs-identifier">UseEra</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#VersionToSbe"><span class="hs-identifier">VersionToSbe</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#useEra"><span class="hs-identifier">useEra</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#protocolVersionToSbe"><span class="hs-identifier">protocolVersionToSbe</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Api.Eon.ShelleyBasedEra.html"><span class="hs-identifier">Cardano.Api.Eon.ShelleyBasedEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier">ShelleyBasedEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Api.Eras.Core.html"><span class="hs-identifier">Cardano.Api.Eras.Core</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/fky69z1cbalcvmp04la05zsdsgkb65g9-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.TypeLits.html"><span class="hs-identifier">GHC.TypeLits</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- | Users typically interact with the latest features on the mainnet or experiment with features</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- and the next era (upcoming era).</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">data</span><span> </span><span id="BabbageEra"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#BabbageEra"><span class="hs-identifier hs-var">BabbageEra</span></a></span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="ConwayEra"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Allows us to gradually change the api without breaking things.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- This will eventually be removed.</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="VersionToSbe"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#VersionToSbe"><span class="hs-identifier hs-var">VersionToSbe</span></a></span></span><span> </span><span id="local-6989586621681527573"><span class="annot"><a href="#local-6989586621681527573"><span class="hs-identifier hs-type">version</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>  </span><span id="VersionToSbe"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#VersionToSbe"><span class="hs-identifier hs-var">VersionToSbe</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Api.Eras.Core.html#BabbageEra"><span class="hs-identifier hs-type">Api.BabbageEra</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span id="VersionToSbe"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#VersionToSbe"><span class="hs-identifier hs-var">VersionToSbe</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Api.Eras.Core.html#ConwayEra"><span class="hs-identifier hs-type">Api.ConwayEra</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Represents the eras in Cardano's blockchain.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- Instead of enumerating every possible era, we use two constructors:</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- 'CurrentEra' and 'UpcomingEra'. This design simplifies the handling</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- of eras, especially for 'cardano-api' consumers who are primarily concerned</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- with the current mainnet era and the next era for an upcoming hardfork.</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- Usage:</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- - 'CurrentEra': Reflects the era currently active on mainnet.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- - 'UpcomingEra': Represents the era planned for the next hardfork.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- After a hardfork, 'cardano-api' should be updated promptly to reflect</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- the new mainnet era in 'CurrentEra'.</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">data</span><span> </span><span id="Era"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier hs-var">Era</span></a></span></span><span> </span><span id="local-6989586621681527574"><span class="annot"><a href="#local-6989586621681527574"><span class="hs-identifier hs-type">version</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><span class="hs-comment">-- | The era currently active on Cardano's mainnet.</span></span><span>
+</span><span id="line-60"></span><span>  </span><span id="CurrentEraInternal"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#CurrentEraInternal"><span class="hs-identifier hs-var">CurrentEraInternal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="hs-comment">-- | The era planned for the next hardfork on Cardano's mainnet.</span></span><span>
+</span><span id="line-62"></span><span>  </span><span id="UpcomingEraInternal"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UpcomingEraInternal"><span class="hs-identifier hs-var">UpcomingEraInternal</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- | How to deprecate an era</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--   1. Add DEPRECATED pragma to the era type tag.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- {-# DEPRECATED BabbageEra &quot;BabbageEra no longer supported, use ConwayEra&quot; #-}</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- data BabbageEra</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--   2. Add a new era type tag.</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- data Era version where</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--   -- | The era currently active on Cardano's mainnet.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--   CurrentEraInternal :: Era ConwayEra</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--   -- | The era planned for the next hardfork on Cardano's mainnet.</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--   UpcomingEraInternal :: Era (UninhabitableType EraCurrentlyNonExistent)</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--   3. Update pattern synonyms.</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- pattern CurrentEra :: Era ConwayEra</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- pattern CurrentEra = CurrentEraInternal</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- pattern UpcomingEra :: Era (UninhabitableType EraCurrentlyNonExistent)</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- pattern UpcomingEra = UpcomingEraInternal</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span class="hs-comment">--   4. Add new 'UseEra' instance and keep the deprecated era's instance.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- instance UseEra BabbageEra where</span><span>
+</span><span id="line-93"></span><span class="hs-comment">--   useEra = error &quot;useEra: BabbageEra no longer supported, use ConwayEra&quot;</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- instance UseEra ConwayEra where</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--   useEra = CurrentEra</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">--   5. Update 'protocolVersionToSbe' as follows:</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- protocolVersionToSbe</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--   :: Era version</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--   -&gt; Maybe (ShelleyBasedEra (VersionToSbe version))</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- protocolVersionToSbe CurrentEraInternal = Just ShelleyBasedEraBabbage</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- protocolVersionToSbe UpcomingEraInternal = Nothing</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- | 'CurrentEraInternal' and 'UpcomingEraInternal' are for internal use only.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- The above restriction combined with the following pattern synonyms</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- prevents a user from pattern matching on 'Era era' and</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- avoids the following situation:</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-114"></span><span class="hs-comment">-- doThing :: Era era -&gt; ()</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- doThing = \case</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--   CurrentEraInternal -&gt; enableFeature</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--   UpcomingEraInternal -&gt; disableFeature</span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- Consumers of this library must pick one of the two eras while</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- this library is responsibile for what happens at the boundary of the eras.</span><span>
+</span><span id="line-122"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#CurrentEra"><span class="hs-identifier hs-type">CurrentEra</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">pattern</span><span> </span><span id="CurrentEra"><span id="%24mCurrentEra"><span id="%24bCurrentEra"><span class="annot"><span class="annottext">$mCurrentEra :: forall {r}. Era BabbageEra -&gt; ((# #) -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bCurrentEra :: Era BabbageEra
+</span><a href="Cardano.Api.Protocol.Version.html#CurrentEra"><span class="hs-identifier hs-var hs-var hs-var">CurrentEra</span></a></span></span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#CurrentEraInternal"><span class="hs-identifier hs-type">CurrentEraInternal</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-keyword">pattern</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UpcomingEra"><span class="hs-identifier hs-type">UpcomingEra</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">pattern</span><span> </span><span id="UpcomingEra"><span id="%24mUpcomingEra"><span id="%24bUpcomingEra"><span class="annot"><span class="annottext">$mUpcomingEra :: forall {r}. Era ConwayEra -&gt; ((# #) -&gt; r) -&gt; ((# #) -&gt; r) -&gt; r
+$bUpcomingEra :: Era ConwayEra
+</span><a href="Cardano.Api.Protocol.Version.html#UpcomingEra"><span class="hs-identifier hs-var hs-var hs-var">UpcomingEra</span></a></span></span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UpcomingEraInternal"><span class="hs-identifier hs-type">UpcomingEraInternal</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-pragma">{-# COMPLETE</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#CurrentEra"><span class="hs-pragma hs-type">CurrentEra</span></a></span><span class="hs-pragma">,</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UpcomingEra"><span class="hs-pragma hs-type">UpcomingEra</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span id="local-6989586621681527560"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#protocolVersionToSbe"><span class="hs-identifier hs-type">protocolVersionToSbe</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681527560"><span class="hs-identifier hs-type">version</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/fky69z1cbalcvmp04la05zsdsgkb65g9-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#VersionToSbe"><span class="hs-identifier hs-type">VersionToSbe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681527560"><span class="hs-identifier hs-type">version</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-133"></span><span id="protocolVersionToSbe"><span class="annot"><span class="annottext">protocolVersionToSbe :: forall version.
+Era version -&gt; Maybe (ShelleyBasedEra (VersionToSbe version))
+</span><a href="Cardano.Api.Protocol.Version.html#protocolVersionToSbe"><span class="hs-identifier hs-var hs-var">protocolVersionToSbe</span></a></span></span><span> </span><span class="annot"><span class="annottext">Era version
+</span><a href="Cardano.Api.Protocol.Version.html#CurrentEraInternal"><span class="hs-identifier hs-var">CurrentEraInternal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra -&gt; Maybe (ShelleyBasedEra BabbageEra)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/fky69z1cbalcvmp04la05zsdsgkb65g9-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra BabbageEra
+</span><a href="Cardano.Api.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#protocolVersionToSbe"><span class="hs-identifier hs-var">protocolVersionToSbe</span></a></span><span> </span><span class="annot"><span class="annottext">Era version
+</span><a href="Cardano.Api.Protocol.Version.html#UpcomingEraInternal"><span class="hs-identifier hs-var">UpcomingEraInternal</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (ShelleyBasedEra ConwayEra)
+Maybe (ShelleyBasedEra (VersionToSbe version))
+forall a. Maybe a
+</span><a href="file:///nix/store/fky69z1cbalcvmp04la05zsdsgkb65g9-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-comment">-------------------------------------------------------------------------</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="annot"><span class="hs-comment">-- | Type class interface for the 'Era' type.</span></span><span>
+</span><span id="line-139"></span><span class="hs-keyword">class</span><span> </span><span id="UseEra"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UseEra"><span class="hs-identifier hs-var">UseEra</span></a></span></span><span> </span><span id="local-6989586621681527568"><span class="annot"><a href="#local-6989586621681527568"><span class="hs-identifier hs-type">version</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-140"></span><span>  </span><span id="useEra"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#useEra"><span class="hs-identifier hs-type">useEra</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681527568"><span class="hs-identifier hs-type">version</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UseEra"><span class="hs-identifier hs-type">UseEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>  </span><span id="local-6989586621681527589"><span class="annot"><span class="annottext">useEra :: Era BabbageEra
+</span><a href="Cardano.Api.Protocol.Version.html#useEra"><span class="hs-identifier hs-var hs-var hs-var hs-var">useEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Era BabbageEra
+</span><a href="Cardano.Api.Protocol.Version.html#CurrentEra"><span class="hs-identifier hs-var">CurrentEra</span></a></span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UseEra"><span class="hs-identifier hs-type">UseEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621681527592"><span class="annot"><span class="annottext">useEra :: Era ConwayEra
+</span><a href="Cardano.Api.Protocol.Version.html#useEra"><span class="hs-identifier hs-var hs-var hs-var hs-var">useEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Protocol.Version.html#UpcomingEra"><span class="hs-identifier hs-var">UpcomingEra</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- | After a hardfork there is usually no planned upcoming era</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- that we are able to experiment with. We force a type era</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- in this instance. See docs above.</span><span>
+</span><span id="line-151"></span><span class="hs-keyword">data</span><span> </span><span id="EraCurrentlyNonExistent"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#EraCurrentlyNonExistent"><span class="hs-identifier hs-var">EraCurrentlyNonExistent</span></a></span></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="UninhabitableType"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UninhabitableType"><span class="hs-identifier hs-var">UninhabitableType</span></a></span></span><span> </span><span id="local-6989586621681527595"><span class="annot"><a href="#local-6989586621681527595"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-154"></span><span>  </span><span id="UninhabitableType"><span class="annot"><a href="Cardano.Api.Protocol.Version.html#UninhabitableType"><span class="hs-identifier hs-var">UninhabitableType</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Protocol.Version.html#EraCurrentlyNonExistent"><span class="hs-identifier hs-type">EraCurrentlyNonExistent</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><a href="file:///nix/store/fky69z1cbalcvmp04la05zsdsgkb65g9-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.TypeError.html#TypeError"><span class="hs-identifier hs-type">TypeError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><span class="annot"><a href="file:///nix/store/fky69z1cbalcvmp04la05zsdsgkb65g9-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.TypeError.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;There is currently no planned upcoming era. Use CurrentEra instead.&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span></pre></body></html>
