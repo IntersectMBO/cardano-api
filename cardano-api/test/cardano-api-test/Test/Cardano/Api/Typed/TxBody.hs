@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Test.Cardano.Api.Typed.TxBody
@@ -10,7 +11,7 @@ import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (ReferenceScript (..), ShelleyLedgerEra,
                    refScriptToShelleyScript)
 
-import           Data.Map.Ordered.Strict (OMap)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))
 import           GHC.Exts (IsList (..))
@@ -90,8 +91,8 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
   let (TxBody content') = body
 
-  let proposals = fmap (fmap fst . toList) . getProposalProcedures . unFeatured <$> txProposalProcedures content
-      proposals' = fmap (fmap fst . toList) . getProposalProcedures . unFeatured <$> txProposalProcedures content'
+  let proposals = getProposalProcedures . unFeatured <$> txProposalProcedures content
+      proposals' = getProposalProcedures . unFeatured <$> txProposalProcedures content'
       votes = getVotingProcedures . unFeatured <$> txVotingProcedures content
       votes' = getVotingProcedures . unFeatured <$> txVotingProcedures content'
       currTreasury = unFeatured <$> txCurrentTreasuryValue content
@@ -107,14 +108,10 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
   getVotingProcedures TxVotingProceduresNone = Nothing
   getVotingProcedures (TxVotingProcedures vps _) = Just vps
   getProposalProcedures
-    :: TxProposalProcedures build era
-    -> Maybe
-        ( OMap
-            (L.ProposalProcedure (ShelleyLedgerEra era))
-            (BuildTxWith build (Maybe (ScriptWitness WitCtxStake era)))
-        )
+    :: TxProposalProcedures build era -> Maybe [L.ProposalProcedure (ShelleyLedgerEra era)]
   getProposalProcedures TxProposalProceduresNone = Nothing
-  getProposalProcedures (TxProposalProcedures pps) = Just pps
+  getProposalProcedures (TxProposalProcedures pps ViewTx) = Just $ toList pps
+  getProposalProcedures (TxProposalProcedures pps (BuildTxWith wits)) = Just $ toList pps <> Map.keys wits
 
 tests :: TestTree
 tests =

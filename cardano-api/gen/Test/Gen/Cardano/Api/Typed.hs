@@ -1127,11 +1127,17 @@ genProposals :: Applicative (BuildTxWith build)
              -> Gen (TxProposalProcedures build era)
 genProposals w = conwayEraOnwardsConstraints w $ do
   proposals <- Gen.list (Range.constant 0 10) (genProposal w)
+  proposalsToBeWitnessed <- Gen.subsequence proposals
+  -- we're generating also some extra proposals, not included in the proposals list, which is invalid
+  -- but we're doing it for the complete representation of possible values space of TxProposalProcedures
+  -- cardano-api codebase should handle such invalid values.
+  extraProposals <- Gen.list (Range.constant 0 10) (genProposal w)
   let sbe = conwayEraOnwardsToShelleyBasedEra w
-  proposalsWithWitnesses <- fmap fromList . forM proposals $ \proposal -> do
-    mWitness <- Gen.maybe (genScriptWitnessForStake sbe)
-    pure (proposal, pure mWitness)
-  pure $ TxProposalProcedures proposalsWithWitnesses
+  proposalsWithWitnesses <-
+    fmap fromList . forM (extraProposals <> proposalsToBeWitnessed) $ \proposal -> do
+      mWitness <- genScriptWitnessForStake sbe
+      pure (proposal, mWitness)
+  pure $ TxProposalProcedures (fromList proposals) (pure proposalsWithWitnesses)
 
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =

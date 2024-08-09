@@ -367,11 +367,13 @@ module Cardano.Api
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
   , TxProposalProcedures (..)
+  , mkTxProposalProcedures
 
     -- ** Building vs viewing transactions
   , BuildTxWith (..)
   , BuildTx
   , ViewTx
+  , buildTxWithToMaybe
 
     -- ** Fee calculation
   , LedgerEpochInfo (..)
