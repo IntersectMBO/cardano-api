@@ -14,6 +14,7 @@ import           Cardano.Ledger.Api.Tx.Address
 import           Cardano.Ledger.Crypto
 import           Cardano.Ledger.SafeHash
 
+import           Control.Monad
 import           Control.Monad.Identity
 
 import           Test.Gen.Cardano.Api.Typed
@@ -63,6 +64,12 @@ prop_roundtrip_scriptdata_plutusdata = H.property $ do
   sd <- getScriptData <$> forAll genHashableScriptData
   H.tripping sd toPlutusData (Identity . fromPlutusData)
 
+prop_roundtrip_ledger_txout :: Property
+prop_roundtrip_ledger_txout = H.property $ do
+  forM_ [minBound .. maxBound] $ \(AnyShelleyBasedEra era) -> do
+    txOut <- forAll $ genTxOutUTxOContext era
+    txOut H.=== fromShelleyTxOut era (toShelleyTxOut era txOut)
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
@@ -72,4 +79,5 @@ tests =
     [ testProperty "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
     , testProperty "roundtrip ScriptData" prop_roundtrip_scriptdata_plutusdata
     , testProperty "script data bytes preserved" prop_original_scriptdata_bytes_preserved
+    , testProperty "roundtrip Ledger TxOut" prop_roundtrip_ledger_txout
     ]

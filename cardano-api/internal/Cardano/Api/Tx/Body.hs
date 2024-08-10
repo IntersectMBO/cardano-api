@@ -748,7 +748,13 @@ fromShelleyTxOut sbe ledgerTxOut = shelleyBasedEraConstraints sbe $ do
     ShelleyBasedEraMary ->
       TxOut addressInEra txOutValue TxOutDatumNone ReferenceScriptNone
     ShelleyBasedEraAlonzo ->
-      TxOut addressInEra txOutValue TxOutDatumNone ReferenceScriptNone
+      TxOut
+        addressInEra
+        txOutValue
+        (fromAlonzoTxOutDatumHash AlonzoEraOnwardsAlonzo mDatumHash)
+        ReferenceScriptNone
+     where
+      mDatumHash = ledgerTxOut ^. L.dataHashTxOutL
     ShelleyBasedEraBabbage ->
       TxOut
         addressInEra
@@ -790,6 +796,13 @@ toAlonzoTxOutDatumHash TxOutDatumNone = SNothing
 toAlonzoTxOutDatumHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDatumHash (TxOutDatumInline{}) = SNothing
 toAlonzoTxOutDatumHash (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
+
+fromAlonzoTxOutDatumHash
+  :: AlonzoEraOnwards era
+  -> StrictMaybe (Plutus.DataHash StandardCrypto)
+  -> TxOutDatum ctx era
+fromAlonzoTxOutDatumHash _ SNothing = TxOutDatumNone
+fromAlonzoTxOutDatumHash w (SJust hash) = TxOutDatumHash w $ ScriptDataHash hash
 
 toBabbageTxOutDatum
   :: (L.Era (ShelleyLedgerEra era), Ledger.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto)
@@ -2009,7 +2022,7 @@ fromAlonzoTxOut w txOut =
     TxOut
       (fromShelleyAddr shelleyBasedEra (txOut ^. L.addrTxOutL))
       (TxOutValueShelleyBased sbe (txOut ^. L.valueTxOutL))
-      TxOutDatumNone
+      (fromAlonzoTxOutDatumHash w (txOut ^. L.dataHashTxOutL))
       ReferenceScriptNone
  where
   sbe = alonzoEraOnwardsToShelleyBasedEra w
