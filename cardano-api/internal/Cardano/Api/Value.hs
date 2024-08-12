@@ -27,6 +27,7 @@ module Cardano.Api.Value
   , calcMinimumDeposit
 
     -- ** Ada \/ L.Coin specifically
+  , Lovelace
   , quantityToLovelace
   , lovelaceToQuantity
   , selectLovelace
@@ -117,6 +118,9 @@ fromShelleyDeltaLovelace (L.DeltaCoin d) = L.Coin d
 newtype Quantity = Quantity Integer
   deriving stock Data
   deriving newtype (Eq, Ord, Num, Show, ToJSON, FromJSON)
+
+-- | A 'Coin' is a Lovelace.
+type Lovelace = L.Coin
 
 instance Semigroup Quantity where
   Quantity a <> Quantity b = Quantity (a + b)
@@ -249,9 +253,6 @@ selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 lovelaceToValue :: L.Coin -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
-coinToValue :: L.Coin -> Value
-coinToValue = lovelaceToValue -- jky
-
 -- | Check if the 'Value' consists of /only/ 'L.Coin' and no other assets,
 -- and if so then return the L.Coin.
 --
@@ -286,7 +287,7 @@ toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
 fromLedgerValue :: ShelleyBasedEra era -> L.Value (ShelleyLedgerEra era) -> Value
 fromLedgerValue sbe v =
   caseShelleyToAllegraOrMaryEraOnwards
-    (const (coinToValue v))
+    (const (lovelaceToValue v))
     (const (fromMaryValue v))
     sbe
 

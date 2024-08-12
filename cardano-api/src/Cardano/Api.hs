@@ -248,6 +248,7 @@ module Cardano.Api
   , fromLedgerValue
 
     -- ** Ada \/ Lovelace within multi-asset values
+  , Lovelace
   , quantityToLovelace
   , lovelaceToQuantity
   , selectLovelace
