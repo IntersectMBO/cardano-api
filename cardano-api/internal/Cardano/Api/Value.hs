@@ -27,15 +27,10 @@ module Cardano.Api.Value
   , calcMinimumDeposit
 
     -- ** Ada \/ L.Coin specifically
-  , quantityToCoin
   , quantityToLovelace
-  , coinToQuantity
   , lovelaceToQuantity
-  , selectCoin
   , selectLovelace
-  , coinToValue
   , lovelaceToValue
-  , valueToCoin
   , valueToLovelace
 
     -- ** Alternative nested representation
@@ -129,19 +124,11 @@ instance Semigroup Quantity where
 instance Monoid Quantity where
   mempty = Quantity 0
 
-{-# DEPRECATED lovelaceToQuantity "Use 'coinToQuantity' instead." #-}
 lovelaceToQuantity :: L.Coin -> Quantity
-lovelaceToQuantity = coinToQuantity
+lovelaceToQuantity (L.Coin x) = Quantity x
 
-coinToQuantity :: L.Coin -> Quantity
-coinToQuantity (L.Coin x) = Quantity x
-
-{-# DEPRECATED quantityToLovelace "Use 'quantityToCoin' instead." #-}
 quantityToLovelace :: Quantity -> L.Coin
-quantityToLovelace = quantityToCoin
-
-quantityToCoin :: Quantity -> L.Coin
-quantityToCoin (Quantity x) = L.Coin x
+quantityToLovelace (Quantity x) = L.Coin x
 
 newtype PolicyId = PolicyId {unPolicyId :: ScriptHash}
   deriving stock (Eq, Ord)
@@ -256,31 +243,22 @@ negateLedgerValue sbe v =
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
 
-{-# DEPRECATED selectLovelace "Use selectCoin instead." #-}
 selectLovelace :: Value -> L.Coin
-selectLovelace = selectCoin
+selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 
-selectCoin :: Value -> L.Coin
-selectCoin = quantityToLovelace . flip selectAsset AdaAssetId
-
-{-# DEPRECATED lovelaceToValue "Use 'coinToValue' instead." #-}
 lovelaceToValue :: L.Coin -> Value
-lovelaceToValue = coinToValue
+lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
 coinToValue :: L.Coin -> Value
-coinToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
-
-{-# DEPRECATED valueToLovelace "Use 'valueToCoin' instead." #-}
-valueToLovelace :: Value -> Maybe L.Coin
-valueToLovelace = valueToCoin
+coinToValue = lovelaceToValue -- jky
 
 -- | Check if the 'Value' consists of /only/ 'L.Coin' and no other assets,
 -- and if so then return the L.Coin.
 --
--- See also 'selectCoin' to select the L.Coin quantity from the Value,
+-- See also 'selectLovelace' to select the L.Coin quantity from the Value,
 -- ignoring other assets.
-valueToCoin :: Value -> Maybe L.Coin
-valueToCoin v =
+valueToLovelace :: Value -> Maybe L.Coin
+valueToLovelace v =
   case valueToList v of
     [] -> Just (L.Coin 0)
     [(AdaAssetId, q)] -> Just (quantityToLovelace q)

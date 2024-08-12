@@ -269,7 +269,7 @@ estimateBalancedTxBody
         availableUTxOValue =
           mconcat
             [ totalUTxOValue
-            , negateValue (coinToValue totalDeposits)
+            , negateValue (lovelaceToValue totalDeposits)
             ]
 
     let change = toLedgerValue w $ calculateChangeValue sbe availableUTxOValue txbodycontent1
@@ -338,7 +338,7 @@ estimateBalancedTxBody
             , txTotalCollateral = reqCol
             }
 
-    let fakeUTxO = createFakeUTxO sbe txbodycontent1 $ selectCoin availableUTxOValue
+    let fakeUTxO = createFakeUTxO sbe txbodycontent1 $ selectLovelace availableUTxOValue
         balance =
           evaluateTransactionBalance sbe pparams poolids stakeDelegDeposits drepDelegDeposits fakeUTxO txbody2
     -- check if the balance is positive or negative
