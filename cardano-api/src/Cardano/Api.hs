@@ -44,6 +44,7 @@ module Cardano.Api
   , forShelleyBasedEraInEonMaybe
   , forShelleyBasedEraMaybeEon
   , Featured (..)
+  , mkFeatured
   , unFeatured
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
@@ -314,6 +315,8 @@ module Cardano.Api
   , setTxUpdateProposal
   , setTxMintValue
   , setTxScriptValidity
+  , setTxProposalProcedures
+  , setTxVotingProcedures
   , setTxCurrentTreasuryValue
   , setTxTreasuryDonation
   , TxBodyError (..)
@@ -362,12 +365,16 @@ module Cardano.Api
   , TxUpdateProposal (..)
   , TxMintValue (..)
   , TxVotingProcedures (..)
+  , mkTxVotingProcedures
   , TxProposalProcedures (..)
+  , mkTxProposalProcedures
+  , convProposalProcedures
 
     -- ** Building vs viewing transactions
   , BuildTxWith (..)
   , BuildTx
   , ViewTx
+  , buildTxWithToMaybe
 
     -- ** Fee calculation
   , LedgerEpochInfo (..)

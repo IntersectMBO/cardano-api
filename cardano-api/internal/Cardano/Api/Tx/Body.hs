@@ -16,8 +16,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{- HLINT ignore "Redundant bracket" -}
-
 -- | Transaction bodies
 module Cardano.Api.Tx.Body
   ( parseTxId
@@ -114,12 +112,16 @@ module Cardano.Api.Tx.Body
   , TxUpdateProposal (..)
   , TxMintValue (..)
   , TxVotingProcedures (..)
+  , mkTxVotingProcedures
   , TxProposalProcedures (..)
+  , mkTxProposalProcedures
+  , convProposalProcedures
 
     -- ** Building vs viewing transactions
   , BuildTxWith (..)
   , BuildTx
   , ViewTx
+  , buildTxWithToMaybe
 
     -- * Inspecting 'ScriptWitness'es
   , AnyScriptWitness (..)
@@ -177,6 +179,7 @@ import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error (Error (..), displayError)
 import           Cardano.Api.Feature
+import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.Keys.Shelley
@@ -240,7 +243,9 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.DList as DList
 import           Data.Foldable (for_)
+import qualified Data.Foldable as Foldable
 import           Data.Function (on)
 import           Data.Functor (($>))
 import           Data.List (sortBy)
@@ -250,7 +255,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Monoid
-import           Data.OSet.Strict (OSet)
+import           Data.OSet.Strict (OSet, (|><))
 import qualified Data.OSet.Strict as OSet
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
@@ -823,6 +828,18 @@ instance Functor (BuildTxWith build) where
   fmap _ ViewTx = ViewTx
   fmap f (BuildTxWith x) = BuildTxWith (f x)
 
+instance Applicative (BuildTxWith ViewTx) where
+  pure _ = ViewTx
+  _ <*> _ = ViewTx
+
+instance Applicative (BuildTxWith BuildTx) where
+  pure = BuildTxWith
+  (BuildTxWith f) <*> (BuildTxWith a) = BuildTxWith (f a)
+
+buildTxWithToMaybe :: BuildTxWith build a -> Maybe a
+buildTxWithToMaybe ViewTx = Nothing
+buildTxWithToMaybe (BuildTxWith a) = Just a
+
 deriving instance Eq a => Eq (BuildTxWith build a)
 
 deriving instance Show a => Show (BuildTxWith build a)
@@ -845,16 +862,16 @@ deriving instance Eq (TxInsCollateral era)
 
 deriving instance Show (TxInsCollateral era)
 
-data TxInsReference build era where
-  TxInsReferenceNone :: TxInsReference build era
+data TxInsReference era where
+  TxInsReferenceNone :: TxInsReference era
   TxInsReference
     :: BabbageEraOnwards era
     -> [TxIn]
-    -> TxInsReference build era
+    -> TxInsReference era
 
-deriving instance Eq (TxInsReference build era)
+deriving instance Eq (TxInsReference era)
 
-deriving instance Show (TxInsReference build era)
+deriving instance Show (TxInsReference era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
@@ -1211,21 +1228,80 @@ deriving instance Eq (TxVotingProcedures build era)
 
 deriving instance Show (TxVotingProcedures build era)
 
+-- | Create voting procedures from map of voting procedures and optional witnesses.
+-- Validates the function argument, to make sure the list of votes is legal.
+-- See 'mergeVotingProcedures' for validation rules.
+mkTxVotingProcedures
+  :: Applicative (BuildTxWith build)
+  => [(VotingProcedures era, Maybe (ScriptWitness WitCtxStake era))]
+  -> Either (VotesMergingConflict era) (TxVotingProcedures build era)
+mkTxVotingProcedures votingProcedures = do
+  VotingProcedures procedure <-
+    foldM f emptyVotingProcedures votingProcedures
+  pure $ TxVotingProcedures procedure (pure votingScriptWitnessMap)
+ where
+  votingScriptWitnessMap =
+    foldl
+      (\acc next -> acc `Map.union` uncurry votingScriptWitnessSingleton next)
+      Map.empty
+      votingProcedures
+  f acc (procedure, _witness) = mergeVotingProcedures acc procedure
+
+  votingScriptWitnessSingleton
+    :: VotingProcedures era
+    -> Maybe (ScriptWitness WitCtxStake era)
+    -> Map (L.Voter (L.EraCrypto (ShelleyLedgerEra era))) (ScriptWitness WitCtxStake era)
+  votingScriptWitnessSingleton _ Nothing = Map.empty
+  votingScriptWitnessSingleton votingProcedures' (Just scriptWitness) = do
+    let voter = fromJust $ getVotingScriptCredentials votingProcedures'
+    Map.singleton voter scriptWitness
+
+  getVotingScriptCredentials
+    :: VotingProcedures era
+    -> Maybe (L.Voter (L.EraCrypto (ShelleyLedgerEra era)))
+  getVotingScriptCredentials (VotingProcedures (L.VotingProcedures m)) =
+    listToMaybe $ Map.keys m
+
 -- ----------------------------------------------------------------------------
 -- Proposals within transactions (era-dependent)
 --
 
 data TxProposalProcedures build era where
   TxProposalProceduresNone :: TxProposalProcedures build era
+  -- | Create Tx proposal procedures. Prefer 'mkTxProposalProcedures' smart constructor to using this constructor
+  -- directly.
   TxProposalProcedures
     :: Ledger.EraPParams (ShelleyLedgerEra era)
     => OSet (L.ProposalProcedure (ShelleyLedgerEra era))
+    -- ^ a set of proposals
     -> BuildTxWith build (Map (L.ProposalProcedure (ShelleyLedgerEra era)) (ScriptWitness WitCtxStake era))
+    -- ^ a map of witnesses for the proposals. If the proposals are not added to the first constructor
+    -- parameter too, the sky will fall on your head.
     -> TxProposalProcedures build era
 
 deriving instance Eq (TxProposalProcedures build era)
 
 deriving instance Show (TxProposalProcedures build era)
+
+-- | A smart constructor for 'TxProposalProcedures'. It makes sure that the value produced is consistent - the
+-- witnessed proposals are also present in the first constructor parameter.
+mkTxProposalProcedures
+  :: forall era build
+   . Applicative (BuildTxWith build)
+  => IsShelleyBasedEra era
+  => [(L.ProposalProcedure (ShelleyLedgerEra era), Maybe (ScriptWitness WitCtxStake era))]
+  -> TxProposalProcedures build era
+mkTxProposalProcedures proposalsWithWitnessesList = do
+  let (proposals, proposalsWithWitnesses) =
+        bimap toList toList $
+          Foldable.foldl' partitionProposals mempty proposalsWithWitnessesList
+  shelleyBasedEraConstraints (shelleyBasedEra @era) $
+    TxProposalProcedures (fromList proposals) (pure $ fromList proposalsWithWitnesses)
+ where
+  partitionProposals (ps, pws) (p, Nothing) =
+    (DList.snoc ps p, pws) -- add a proposal to the list
+  partitionProposals (ps, pws) (p, Just w) =
+    (DList.snoc ps p, DList.snoc pws (p, w)) -- add a proposal both to the list and to the witnessed list
 
 -- ----------------------------------------------------------------------------
 -- Transaction body content
@@ -1238,7 +1314,7 @@ data TxBodyContent build era
   = TxBodyContent
   { txIns :: TxIns build era
   , txInsCollateral :: TxInsCollateral era
-  , txInsReference :: TxInsReference build era
+  , txInsReference :: TxInsReference era
   , txOuts :: [TxOut CtxTx era]
   , txTotalCollateral :: TxTotalCollateral era
   , txReturnCollateral :: TxReturnCollateral CtxTx era
@@ -1256,7 +1332,7 @@ data TxBodyContent build era
   , txScriptValidity :: TxScriptValidity era
   , txProposalProcedures :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
   , txVotingProcedures :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))
-  , txCurrentTreasuryValue :: Maybe (Featured ConwayEraOnwards era L.Coin)
+  , txCurrentTreasuryValue :: Maybe (Featured ConwayEraOnwards era (Maybe L.Coin))
   -- ^ Current treasury value
   , txTreasuryDonation :: Maybe (Featured ConwayEraOnwards era L.Coin)
   -- ^ Treasury donation to perform
@@ -1309,7 +1385,7 @@ addTxIn txIn = modTxIns (txIn :)
 setTxInsCollateral :: TxInsCollateral era -> TxBodyContent build era -> TxBodyContent build era
 setTxInsCollateral v txBodyContent = txBodyContent{txInsCollateral = v}
 
-setTxInsReference :: TxInsReference build era -> TxBodyContent build era -> TxBodyContent build era
+setTxInsReference :: TxInsReference era -> TxBodyContent build era -> TxBodyContent build era
 setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
 
 setTxOuts :: [TxOut CtxTx era] -> TxBodyContent build era -> TxBodyContent build era
@@ -1361,6 +1437,15 @@ setTxWithdrawals v txBodyContent = txBodyContent{txWithdrawals = v}
 setTxCertificates :: TxCertificates build era -> TxBodyContent build era -> TxBodyContent build era
 setTxCertificates v txBodyContent = txBodyContent{txCertificates = v}
 
+setTxUpdateProposal :: TxUpdateProposal era -> TxBodyContent build era -> TxBodyContent build era
+setTxUpdateProposal v txBodyContent = txBodyContent{txUpdateProposal = v}
+
+setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
+setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
+
+setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
+setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
+
 setTxProposalProcedures
   :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
   -> TxBodyContent build era
@@ -1373,17 +1458,10 @@ setTxVotingProcedures
   -> TxBodyContent build era
 setTxVotingProcedures v txBodyContent = txBodyContent{txVotingProcedures = v}
 
-setTxUpdateProposal :: TxUpdateProposal era -> TxBodyContent build era -> TxBodyContent build era
-setTxUpdateProposal v txBodyContent = txBodyContent{txUpdateProposal = v}
-
-setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
-setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
-
-setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
-setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
-
 setTxCurrentTreasuryValue
-  :: Maybe (Featured ConwayEraOnwards era L.Coin) -> TxBodyContent build era -> TxBodyContent build era
+  :: Maybe (Featured ConwayEraOnwards era (Maybe L.Coin))
+  -> TxBodyContent build era
+  -> TxBodyContent build era
 setTxCurrentTreasuryValue v txBodyContent = txBodyContent{txCurrentTreasuryValue = v}
 
 setTxTreasuryDonation
@@ -1508,6 +1586,10 @@ createTransactionBody sbe bc =
         scripts = convScripts apiScriptWitnesses
         languages = convLanguages apiScriptWitnesses
         sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
+        votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
+        currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
+        treasuryDonation = maybe 0 unFeatured $ txTreasuryDonation bc
 
     setUpdateProposal <- monoidForEraInEonA era $ \w ->
       Endo . (A.updateTxBodyL w .~) <$> convTxUpdateProposal sbe (txUpdateProposal bc)
@@ -1538,6 +1620,18 @@ createTransactionBody sbe bc =
     setTotalCollateral <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.totalCollateralTxBodyL w .~ totalCollateral
 
+    setProposalProcedures <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.proposalProceduresTxBodyL w .~ proposalProcedures
+
+    setVotingProcedures <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.votingProceduresTxBodyL w .~ votingProcedures
+
+    setCurrentTreasuryValue <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.currentTreasuryValueTxBodyL w .~ currentTreasuryValue
+
+    setTreasuryDonation <- monoidForEraInEonA era $ \w ->
+      pure $ Endo $ A.treasuryDonationTxBodyL w .~ treasuryDonation
+
     let ledgerTxBody =
           mkCommonTxBody sbe (txIns bc) (txOuts bc) (txFee bc) (txWithdrawals bc) txAuxData
             & A.certsTxBodyL sbe .~ certs
@@ -1553,6 +1647,10 @@ createTransactionBody sbe bc =
                   , setReferenceInputs
                   , setCollateralReturn
                   , setTotalCollateral
+                  , setProposalProcedures
+                  , setVotingProcedures
+                  , setCurrentTreasuryValue
+                  , setTreasuryDonation
                   ]
               )
 
@@ -1802,16 +1900,11 @@ fromLedgerCurrentTreasuryValue
   :: ()
   => ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> Maybe (Featured ConwayEraOnwards era Coin)
-fromLedgerCurrentTreasuryValue sbe body =
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const Nothing)
-    ( \cOnwards -> conwayEraOnwardsConstraints cOnwards $
-        case body ^. L.currentTreasuryValueTxBodyL of
-          SNothing -> Nothing
-          SJust currentTreasuryValue -> Just $ Featured cOnwards currentTreasuryValue
-    )
-    sbe
+  -> Maybe (Featured ConwayEraOnwards era (Maybe Coin))
+fromLedgerCurrentTreasuryValue sbe body = forEraInEonMaybe (toCardanoEra sbe) $ \ceo ->
+  conwayEraOnwardsConstraints ceo $
+    Featured ceo . Ledger.strictMaybeToMaybe $
+      body ^. L.currentTreasuryValueTxBodyL
 
 fromLedgerTreasuryDonation
   :: ()
@@ -1856,7 +1949,7 @@ fromLedgerTxInsCollateral sbe body =
     sbe
 
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference era
 fromLedgerTxInsReference sbe txBody =
   caseShelleyToAlonzoOrBabbageEraOnwards
     (const TxInsReferenceNone)
@@ -2356,16 +2449,22 @@ convLanguages witnesses =
     | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
     ]
 
-convReferenceInputs :: TxInsReference build era -> Set (Ledger.TxIn StandardCrypto)
+convReferenceInputs :: TxInsReference era -> Set (Ledger.TxIn StandardCrypto)
 convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
     TxInsReference _ refTxins -> fromList $ map toShelleyTxIn refTxins
 
+-- | Returns an OSet of proposals from 'TxProposalProcedures'.
+--
+-- If 'pws' in 'TxProposalProcedures pps (BuildTxWith pws)' contained proposals not present in 'pps', the'll
+-- be sorted ascendingly and snoc-ed to 'pps' if they're not present in 'pps'.
 convProposalProcedures
   :: TxProposalProcedures build era -> OSet (L.ProposalProcedure (ShelleyLedgerEra era))
 convProposalProcedures TxProposalProceduresNone = OSet.empty
-convProposalProcedures (TxProposalProcedures procedures _) = procedures
+convProposalProcedures (TxProposalProcedures pp bWits) = do
+  let wits = fromMaybe mempty $ buildTxWithToMaybe bWits
+  pp |>< fromList (Map.keys wits)
 
 convVotingProcedures :: TxVotingProcedures build era -> L.VotingProcedures (ShelleyLedgerEra era)
 convVotingProcedures txVotingProcedures =
@@ -2834,8 +2933,8 @@ makeShelleyTransactionBody
               & A.proposalProceduresTxBodyL cOn
                 .~ convProposalProcedures (maybe TxProposalProceduresNone unFeatured txProposalProcedures)
               & A.currentTreasuryValueTxBodyL cOn
-                .~ (Ledger.maybeToStrictMaybe (unFeatured <$> txCurrentTreasuryValue))
-              & A.treasuryDonationTxBodyL cOn .~ (maybe (L.Coin 0) unFeatured txTreasuryDonation)
+                .~ Ledger.maybeToStrictMaybe (unFeatured =<< txCurrentTreasuryValue)
+              & A.treasuryDonationTxBodyL cOn .~ maybe (L.Coin 0) unFeatured txTreasuryDonation
               -- TODO Conway: support optional network id in TxBodyContent
               -- & L.networkIdTxBodyL .~ SNothing
           )
@@ -3193,7 +3292,7 @@ collectTxBodyScriptWitnesses
       | Map.null mScriptWitnesses = []
       | otherwise =
           [ (ScriptWitnessIndexProposing ix, AnyScriptWitness witness)
-          | let proposalsList = toList $ OSet.toSet proposalProcedures
+          | let proposalsList = toList proposalProcedures
           , (ix, proposal) <- zip [0 ..] proposalsList
           , witness <- maybeToList (Map.lookup proposal mScriptWitnesses)
           ]

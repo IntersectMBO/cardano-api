@@ -79,14 +79,14 @@ import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
 
-import           Control.Monad (forM_)
+import           Control.Monad
 import           Data.Bifunctor (bimap, first, second)
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Function ((&))
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.Maybe
 import qualified Data.OSet.Strict as OSet
 import           Data.Ratio
 import           Data.Set (Set)
@@ -95,8 +95,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           Lens.Micro ((.~), (^.))
-
-{- HLINT ignore "Redundant return" -}
 
 -- | Type synonym for logs returned by the ledger's @evalTxExUnitsWithLogs@ function.
 -- for scripts in transactions.
@@ -233,8 +231,9 @@ estimateBalancedTxBody
 
     let sbe = maryEraOnwardsToShelleyBasedEra w
     txbodycontent1 <-
-      first TxFeeEstimationScriptExecutionError $
-        substituteExecutionUnits exUnitsMap txbodycontent
+      maryEraOnwardsConstraints w $
+        first TxFeeEstimationScriptExecutionError $
+          substituteExecutionUnits exUnitsMap txbodycontent
 
     -- Step 2. We need to calculate the current balance of the tx. The user
     -- must at least provide the total value of the UTxOs they intend to spend
@@ -249,10 +248,8 @@ estimateBalancedTxBody
 
         proposalProcedures :: OSet.OSet (L.ProposalProcedure (ShelleyLedgerEra era))
         proposalProcedures =
-          case unFeatured <$> txProposalProcedures txbodycontent1 of
-            Nothing -> OSet.empty
-            Just TxProposalProceduresNone -> OSet.empty
-            Just (TxProposalProcedures procedures _) -> procedures
+          maryEraOnwardsConstraints w $
+            maybe mempty (convProposalProcedures . unFeatured) (txProposalProcedures txbodycontent1)
 
         totalDeposits :: L.Coin
         totalDeposits =
@@ -1577,11 +1574,11 @@ substituteExecutionUnits
     mapScriptWitnessesProposals Nothing = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures _ ViewTx))) = return Nothing
-    mapScriptWitnessesProposals (Just (Featured era (TxProposalProcedures osetProposalProcedures (BuildTxWith sWitMap)))) = do
-      let eSubstitutedExecutionUnits =
+    mapScriptWitnessesProposals (Just (Featured era txpp@(TxProposalProcedures osetProposalProcedures (BuildTxWith sWitMap)))) = do
+      let allProposalsList = toList $ convProposalProcedures txpp
+          eSubstitutedExecutionUnits =
             [ (proposal, updatedWitness)
-            | let allProposalsList = toList osetProposalProcedures
-            , (proposal, scriptWitness) <- toList sWitMap
+            | (proposal, scriptWitness) <- toList sWitMap
             , index <- maybeToList $ List.elemIndex proposal allProposalsList
             , let updatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) scriptWitness
             ]
