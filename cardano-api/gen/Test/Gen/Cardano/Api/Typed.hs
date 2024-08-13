@@ -94,8 +94,8 @@ module Test.Gen.Cardano.Api.Typed
   , genTxInsReference
   , genTxMetadataInEra
   , genTxMintValue
-  , genCoin
-  , genPositiveCoin
+  , genLovelace
+  , genPositiveLovelace
   , genValue
   , genValueDefault
   , genVerificationKey
@@ -199,11 +199,11 @@ _genAddressInEraByron = byronAddressInEra <$> genAddressByron
 genKESPeriod :: Gen KESPeriod
 genKESPeriod = KESPeriod <$> Gen.word Range.constantBounded
 
-genCoin :: Gen L.Coin
-genCoin = L.Coin <$> Gen.integral (Range.linear 0 5000)
+genLovelace :: Gen L.Coin
+genLovelace = L.Coin <$> Gen.integral (Range.linear 0 5000)
 
-genPositiveCoin :: Gen L.Coin
-genPositiveCoin = L.Coin <$> Gen.integral (Range.linear 1 5000)
+genPositiveLovelace :: Gen L.Coin
+genPositiveLovelace = L.Coin <$> Gen.integral (Range.linear 1 5000)
 
 ----------------------------------------------------------------------------
 -- SimpleScript generators
@@ -632,7 +632,7 @@ genStakeAddressRequirements =
     )
     ( \w ->
         StakeAddrRegistrationConway w
-          <$> genCoin
+          <$> genLovelace
           <*> genStakeCredential
     )
 
@@ -737,10 +737,10 @@ genTxTotalCollateral :: CardanoEra era -> Gen (TxTotalCollateral era)
 genTxTotalCollateral =
   inEonForEra
     (pure TxTotalCollateralNone)
-    (\w -> TxTotalCollateral w <$> genPositiveCoin)
+    (\w -> TxTotalCollateral w <$> genPositiveLovelace)
 
 genTxFee :: ShelleyBasedEra era -> Gen (TxFee era)
-genTxFee w = TxFeeExplicit w <$> genCoin
+genTxFee w = TxFeeExplicit w <$> genLovelace
 
 genAddressInEraByron :: Gen (AddressInEra ByronEra)
 genAddressInEraByron = byronAddressInEra <$> genAddressByron
@@ -752,7 +752,7 @@ genTxByron = do
     <*> genTxBodyByron
 
 genTxOutValueByron :: Gen (TxOutValue ByronEra)
-genTxOutValueByron = TxOutValueByron <$> genPositiveCoin
+genTxOutValueByron = TxOutValueByron <$> genPositiveLovelace
 
 genTxOutByron :: Gen (TxOut CtxTx ByronEra)
 genTxOutByron =
@@ -979,12 +979,12 @@ genProtocolParameters era = do
   protocolParamMaxBlockHeaderSize <- genNat
   protocolParamMaxBlockBodySize <- genNat
   protocolParamMaxTxSize <- genNat
-  protocolParamTxFeeFixed <- genCoin
-  protocolParamTxFeePerByte <- genCoin
-  protocolParamMinUTxOValue <- Gen.maybe genCoin
-  protocolParamStakeAddressDeposit <- genCoin
-  protocolParamStakePoolDeposit <- genCoin
-  protocolParamMinPoolCost <- genCoin
+  protocolParamTxFeeFixed <- genLovelace
+  protocolParamTxFeePerByte <- genLovelace
+  protocolParamMinUTxOValue <- Gen.maybe genLovelace
+  protocolParamStakeAddressDeposit <- genLovelace
+  protocolParamStakePoolDeposit <- genLovelace
+  protocolParamMinPoolCost <- genLovelace
   protocolParamPoolRetireMaxEpoch <- genEpochInterval
   protocolParamStakePoolTargetNum <- genNat
   protocolParamPoolPledgeInfluence <- genRationalInt64
@@ -1000,7 +1000,7 @@ genProtocolParameters era = do
   protocolParamCollateralPercent <- Gen.maybe genNat
   protocolParamMaxCollateralInputs <- Gen.maybe genNat
   protocolParamUTxOCostPerByte <-
-    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genCoin)) era
+    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
   pure ProtocolParameters{..}
 
@@ -1016,12 +1016,12 @@ genProtocolParametersUpdate era = do
   protocolUpdateMaxBlockHeaderSize <- Gen.maybe genWord16
   protocolUpdateMaxBlockBodySize <- Gen.maybe genWord32
   protocolUpdateMaxTxSize <- Gen.maybe genWord32
-  protocolUpdateTxFeeFixed <- Gen.maybe genCoin
-  protocolUpdateTxFeePerByte <- Gen.maybe genCoin
-  protocolUpdateMinUTxOValue <- Gen.maybe genCoin
-  protocolUpdateStakeAddressDeposit <- Gen.maybe genCoin
-  protocolUpdateStakePoolDeposit <- Gen.maybe genCoin
-  protocolUpdateMinPoolCost <- Gen.maybe genCoin
+  protocolUpdateTxFeeFixed <- Gen.maybe genLovelace
+  protocolUpdateTxFeePerByte <- Gen.maybe genLovelace
+  protocolUpdateMinUTxOValue <- Gen.maybe genLovelace
+  protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
+  protocolUpdateStakePoolDeposit <- Gen.maybe genLovelace
+  protocolUpdateMinPoolCost <- Gen.maybe genLovelace
   protocolUpdatePoolRetireMaxEpoch <- Gen.maybe genEpochInterval
   protocolUpdateStakePoolTargetNum <- Gen.maybe genNat
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
@@ -1037,7 +1037,7 @@ genProtocolParametersUpdate era = do
   protocolUpdateCollateralPercent <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
   protocolUpdateUTxOCostPerByte <-
-    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genCoin)) era
+    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
 
   pure ProtocolParametersUpdate{..}
 
