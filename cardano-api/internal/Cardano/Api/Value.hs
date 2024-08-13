@@ -99,16 +99,16 @@ import qualified Data.Text.Encoding as Text
 import           GHC.Exts (IsList (..))
 import           Lens.Micro ((%~))
 
-toByronLovelace :: L.Coin -> Maybe Byron.Lovelace
+toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
 toByronLovelace (L.Coin x) =
   case Byron.integerToLovelace x of
     Left _ -> Nothing
     Right x' -> Just x'
 
-fromByronLovelace :: Byron.Lovelace -> L.Coin
+fromByronLovelace :: Byron.Lovelace -> Lovelace
 fromByronLovelace = L.Coin . Byron.lovelaceToInteger
 
-fromShelleyDeltaLovelace :: L.DeltaCoin -> L.Coin
+fromShelleyDeltaLovelace :: L.DeltaCoin -> Lovelace
 fromShelleyDeltaLovelace (L.DeltaCoin d) = L.Coin d
 
 -- ----------------------------------------------------------------------------
@@ -128,10 +128,10 @@ instance Semigroup Quantity where
 instance Monoid Quantity where
   mempty = Quantity 0
 
-lovelaceToQuantity :: L.Coin -> Quantity
+lovelaceToQuantity :: Lovelace -> Quantity
 lovelaceToQuantity (L.Coin x) = Quantity x
 
-quantityToLovelace :: Quantity -> L.Coin
+quantityToLovelace :: Quantity -> Lovelace
 quantityToLovelace (Quantity x) = L.Coin x
 
 newtype PolicyId = PolicyId {unPolicyId :: ScriptHash}
@@ -247,18 +247,18 @@ negateLedgerValue sbe v =
 filterValue :: (AssetId -> Bool) -> Value -> Value
 filterValue p (Value m) = Value (Map.filterWithKey (\k _v -> p k) m)
 
-selectLovelace :: Value -> L.Coin
+selectLovelace :: Value -> Lovelace
 selectLovelace = quantityToLovelace . flip selectAsset AdaAssetId
 
-lovelaceToValue :: L.Coin -> Value
+lovelaceToValue :: Lovelace -> Value
 lovelaceToValue = Value . Map.singleton AdaAssetId . lovelaceToQuantity
 
--- | Check if the 'Value' consists of /only/ 'L.Coin' and no other assets,
--- and if so then return the L.Coin.
+-- | Check if the 'Value' consists of /only/ 'Lovelace' and no other assets,
+-- and if so then return the Lovelace
 --
--- See also 'selectLovelace' to select the L.Coin quantity from the Value,
+-- See also 'selectLovelace' to select the Lovelace quantity from the Value,
 -- ignoring other assets.
-valueToLovelace :: Value -> Maybe L.Coin
+valueToLovelace :: Value -> Maybe Lovelace
 valueToLovelace v =
   case valueToList v of
     [] -> Just (L.Coin 0)
@@ -309,7 +309,7 @@ fromMaryValue (MaryValue (L.Coin lovelace) other) =
 
 -- | Calculate cost of making a UTxO entry for a given 'Value' and
 -- mininimum UTxO value derived from the 'ProtocolParameters'
-calcMinimumDeposit :: Value -> L.Coin -> L.Coin
+calcMinimumDeposit :: Value -> Lovelace -> Lovelace
 calcMinimumDeposit v =
   Mary.scaledMinDeposit (toMaryValue v)
 
