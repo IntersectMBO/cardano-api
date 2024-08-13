@@ -1,5 +1,26 @@
 # Changelog for cardano-api
 
+## 9.2.0.0
+
+- Add `Lovelace` as a type synonym to `Coin`
+  (compatible)
+  [PR 614](https://github.com/IntersectMBO/cardano-api/pull/614)
+
+- `TxInsReference` is no longer parameterised by `build`.
+  New functions `mkFeatured`, `setTxProposalProcedures`, `setTxVotingProcedures`, `mkTxVotingProcedures`, `mkTxProposalProcedures`, `convProposalProcedures`, and `buildTxWithToMaybe`.
+  New generator `genValidTxBody`.
+  Fix missing script proposals in transaction building [#594](https://github.com/IntersectMBO/cardano-api/issues/594).
+  (breaking, refactoring, bugfix, test)
+  [PR 602](https://github.com/IntersectMBO/cardano-api/pull/602)
+
+- Exposed `querySPOStakeDistribution` query
+  (feature)
+  [PR 598](https://github.com/IntersectMBO/cardano-api/pull/598)
+
+- Modify TxCertificates allow multiple script witnesses for a single stake credential
+  (breaking, bugfix)
+  [PR 595](https://github.com/IntersectMBO/cardano-api/pull/595)
+
 ## 9.1.0.0
 
 - Export metadataValueFromJsonNoSchema
