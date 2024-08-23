@@ -83,6 +83,8 @@ library internal
     Cardano.Api.Eras.Case
     Cardano.Api.Eras.Core
     Cardano.Api.Error
+    Cardano.Api.Experimental.Eras
+    Cardano.Api.Experimental.Tx
     Cardano.Api.Feature
     Cardano.Api.Fees
     Cardano.Api.Genesis
@@ -123,7 +125,6 @@ library internal
     Cardano.Api.Orphans
     Cardano.Api.Pretty
     Cardano.Api.Protocol
-    Cardano.Api.Protocol.Version
     Cardano.Api.ProtocolParameters
     Cardano.Api.Query
     Cardano.Api.Query.Expr
