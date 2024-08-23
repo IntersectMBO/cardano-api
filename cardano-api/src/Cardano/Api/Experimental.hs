@@ -1,17 +1,36 @@
-{-# LANGUAGE PatternSynonyms #-}
-
+-- | This module provides an experimental library interface that is intended
+-- to replace the existing api. It is subject to dramatic changes so use with caution.
 module Cardano.Api.Experimental
-  ( -- * New Era interface
-    BabbageEra
+  ( -- * Tx related
+    UnsignedTx (..)
+  , UnsignedTxError (..)
+  , makeUnsignedTx
+  , makeKeyWitness
+  , signTx
+  , convertTxBodyToUnsignedTx
+  , EraCommonConstraints
+  , EraShimConstraints
+  , obtainShimConstraints
+  , obtainCommonConstraints
+  , hashTxBody
+  , evaluateTransactionExecutionUnitsShelley
+  -- Era related
+  , BabbageEra
   , ConwayEra
-  , Era
-  , pattern CurrentEra
-  , pattern UpcomingEra
-  , UseEra
-  , VersionToSbe
+  , Era (..)
+  , LedgerEra
+  , IsEra
+  , ApiEraToLedgerEra
+  , ExperimentalEraToApiEra
+  , ApiEraToExperimentalEra
+  , DeprecatedEra (..)
   , useEra
-  , protocolVersionToSbe
+  , eraToSbe
+  , babbageEraOnwardsToEra
+  , sbeToEra
   )
 where
 
-import           Cardano.Api.Protocol.Version
+import           Cardano.Api.Experimental.Eras
+import           Cardano.Api.Experimental.Tx
+import           Cardano.Api.Fees (evaluateTransactionExecutionUnitsShelley)

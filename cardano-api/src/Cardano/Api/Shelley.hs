@@ -269,6 +269,7 @@ module Cardano.Api.Shelley
     -- ** Various calculations
   , LeadershipError (..)
   , currentEpochEligibleLeadershipSlots
+  , evaluateTransactionExecutionUnitsShelley
   , nextEpochEligibleLeadershipSlots
 
     -- ** Conversions
@@ -293,6 +294,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.DRepMetadata
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Governance.Actions.VotingProcedure

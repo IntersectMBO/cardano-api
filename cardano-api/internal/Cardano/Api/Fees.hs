@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Fee calculation
 module Cardano.Api.Fees
@@ -18,6 +19,7 @@ module Cardano.Api.Fees
 
     -- * Script execution units
   , evaluateTransactionExecutionUnits
+  , evaluateTransactionExecutionUnitsShelley
   , ScriptExecutionError (..)
   , TransactionValidityError (..)
 
@@ -52,9 +54,13 @@ import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Eon.ShelleyToAlonzoEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
+import           Cardano.Api.Experimental.Eras (obtainShimConstraints, sbeToEra)
+import qualified Cardano.Api.Experimental.Eras as Exp
+import           Cardano.Api.Experimental.Tx
 import           Cardano.Api.Feature
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Pretty
@@ -374,7 +380,7 @@ estimateBalancedTxBody
     return
       ( BalancedTxBody
           finalTxBodyContent
-          txbody3
+          (convertTxBodyToUnsignedTx sbe txbody3)
           (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
           fee
       )
@@ -799,24 +805,26 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
     TxOutValueShelleyBased sbe $
       L.evalBalanceTxBody
         pp
-        lookupDelegDeposit
-        lookupDRepDeposit
-        isRegPool
+        (lookupDelegDeposit stakeDelegDeposits)
+        (lookupDRepDeposit drepDelegDeposits)
+        (isRegPool poolids)
         (toLedgerUTxO sbe utxo)
         txbody
- where
-  isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
-  isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
-  lookupDelegDeposit
-    :: Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe L.Coin
-  lookupDelegDeposit stakeCred =
-    Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
+isRegPool :: Set PoolId -> Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
+isRegPool poolids kh = StakePoolKeyHash kh `Set.member` poolids
 
-  lookupDRepDeposit
-    :: Ledger.Credential 'Ledger.DRepRole L.StandardCrypto -> Maybe L.Coin
-  lookupDRepDeposit drepCred =
-    Map.lookup drepCred drepDelegDeposits
+lookupDelegDeposit
+  :: Map StakeCredential L.Coin -> Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe L.Coin
+lookupDelegDeposit stakeDelegDeposits stakeCred =
+  Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
+
+lookupDRepDeposit
+  :: Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
+  -> Ledger.Credential 'Ledger.DRepRole L.StandardCrypto
+  -> Maybe L.Coin
+lookupDRepDeposit drepDelegDeposits drepCred =
+  Map.lookup drepCred drepDelegDeposits
 
 -- ----------------------------------------------------------------------------
 -- Automated transaction building
@@ -863,6 +871,7 @@ data TxBodyErrorAutoBalance era
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
       ScriptWitnessIndex
       (Map ScriptWitnessIndex ExecutionUnits)
+  | TxBodyErrorDeprecatedEra (Exp.DeprecatedEra era)
   deriving Show
 
 instance Error (TxBodyErrorAutoBalance era) where
@@ -916,6 +925,8 @@ instance Error (TxBodyErrorAutoBalance era) where
         [ "ScriptWitnessIndex (redeemer pointer): " <> pshow sIndex <> " is missing from the execution "
         , "units (redeemer pointer) map: " <> pshow eUnitsMap
         ]
+    TxBodyErrorDeprecatedEra deprecatedEra ->
+      "The era " <> pretty deprecatedEra <> " is deprecated and no longer supported."
 
 handleExUnitsErrors
   :: ScriptValidity
@@ -934,15 +945,18 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
 
-data BalancedTxBody era
-  = BalancedTxBody
-      (TxBodyContent BuildTx era)
-      (TxBody era)
-      (TxOut CtxTx era)
-      -- ^ Transaction balance (change output)
-      L.Coin
-      -- ^ Estimated transaction fee
-  deriving Show
+data BalancedTxBody era where
+  BalancedTxBody
+    :: (TxBodyContent BuildTx era)
+    -> (UnsignedTx (Exp.ApiEraToExperimentalEra era))
+    -> (TxOut CtxTx era)
+    -- ^ Transaction balance (change output)
+    -> L.Coin
+    -- ^ Estimated transaction fee
+    -> BalancedTxBody era
+
+deriving instance
+  (Exp.IsEra (Exp.ApiEraToExperimentalEra era), IsShelleyBasedEra era) => Show (BalancedTxBody era)
 
 newtype RequiredShelleyKeyWitnesses
   = RequiredShelleyKeyWitnesses {unRequiredShelleyKeyWitnesses :: Int}
@@ -1037,167 +1051,186 @@ makeTransactionBodyAutoBalance
   txbodycontent
   changeaddr
   mnkeys =
-    shelleyBasedEraConstraints sbe $ do
-      -- Our strategy is to:
-      -- 1. evaluate all the scripts to get the exec units, update with ex units
-      -- 2. figure out the overall min fees
-      -- 3. update tx with fees
-      -- 4. balance the transaction and update tx change output
-      txbody0 <-
-        first TxBodyError $
-          createAndValidateTransactionBody
-            sbe
-            txbodycontent
-              { txOuts =
-                  txOuts txbodycontent
-                    ++ [TxOut changeaddr (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone]
-                    -- TODO: think about the size of the change output
-                    -- 1,2,4 or 8 bytes?
-              }
+    caseShelleyToAlonzoOrBabbageEraOnwards
+      (Left . TxBodyErrorDeprecatedEra . Exp.DeprecatedEra . shelleyToAlonzoEraToShelleyBasedEra)
+      ( \bEraOnwards ->
+          shelleyBasedEraConstraints sbe $ do
+            availableEra <- first TxBodyErrorDeprecatedEra $ sbeToEra sbe
 
-      exUnitsMapWithLogs <-
-        first TxBodyErrorValidityInterval $
-          evaluateTransactionExecutionUnits
-            era
-            systemstart
-            history
-            lpp
-            utxo
-            txbody0
-      let exUnitsMap = Map.map (fmap snd) exUnitsMapWithLogs
+            -- Our strategy is to:
+            -- 1. evaluate all the scripts to get the exec units, update with ex units
+            -- 2. figure out the overall min fees
+            -- 3. update tx with fees
+            -- 4. balance the transaction and update tx change output
+            UnsignedTx unsignedTx0 <-
+              first TxBodyError
+                $ makeUnsignedTx
+                  availableEra
+                $ obtainShimConstraints bEraOnwards
+                $ txbodycontent
+                  { txOuts =
+                      txOuts txbodycontent
+                        ++ [TxOut changeaddr (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone]
+                        -- TODO: think about the size of the change output
+                        -- 1,2,4 or 8 bytes?
+                  }
+            exUnitsMapWithLogs <-
+              first TxBodyErrorValidityInterval
+                $ evaluateTransactionExecutionUnitsShelley
+                  sbe
+                  systemstart
+                  history
+                  lpp
+                  utxo
+                $ obtainShimConstraints bEraOnwards unsignedTx0
 
-      exUnitsMap' <-
-        case Map.mapEither id exUnitsMap of
-          (failures, exUnitsMap') ->
-            handleExUnitsErrors
-              (txScriptValidityToScriptValidity (txScriptValidity txbodycontent))
-              failures
-              exUnitsMap'
+            let exUnitsMap = Map.map (fmap snd) exUnitsMapWithLogs
 
-      txbodycontent1 <- substituteExecutionUnits exUnitsMap' txbodycontent
+            exUnitsMap' <-
+              case Map.mapEither id exUnitsMap of
+                (failures, exUnitsMap') ->
+                  handleExUnitsErrors
+                    (txScriptValidityToScriptValidity (txScriptValidity txbodycontent))
+                    failures
+                    exUnitsMap'
 
-      -- Make a txbody that we will use for calculating the fees. For the purpose
-      -- of fees we just need to make a txbody of the right size in bytes. We do
-      -- not need the right values for the fee or change output. We use
-      -- "big enough" values for the change output and set so that the CBOR
-      -- encoding size of the tx will be big enough to cover the size of the final
-      -- output and fee. Yes this means this current code will only work for
-      -- final fee of less than around 4000 ada (2^32-1 lovelace) and change output
-      -- of less than around 18 trillion ada  (2^64-1 lovelace).
-      -- However, since at this point we know how much non-Ada change to give
-      -- we can use the true values for that.
-      let maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
-      let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
+            txbodycontent1 <- substituteExecutionUnits exUnitsMap' txbodycontent
 
-      let totalValueAtSpendableUTxO = fromLedgerValue sbe $ calculateIncomingUTxOValue $ Map.elems $ unUTxO utxo
-      let change =
-            forShelleyBasedEraInEon
-              sbe
-              mempty
-              (\w -> toLedgerValue w $ calculateChangeValue sbe totalValueAtSpendableUTxO txbodycontent1)
-      let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
-      let changeTxOut =
-            forShelleyBasedEraInEon
-              sbe
-              (lovelaceToTxOutValue sbe maxLovelaceChange)
-              (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
+            -- Make a txbody that we will use for calculating the fees. For the purpose
+            -- of fees we just need to make a txbody of the right size in bytes. We do
+            -- not need the right values for the fee or change output. We use
+            -- "big enough" values for the change output and set so that the CBOR
+            -- encoding size of the tx will be big enough to cover the size of the final
+            -- output and fee. Yes this means this current code will only work for
+            -- final fee of less than around 4000 ada (2^32-1 lovelace) and change output
+            -- of less than around 18 trillion ada  (2^64-1 lovelace).
+            -- However, since at this point we know how much non-Ada change to give
+            -- we can use the true values for that.
+            let maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
+            let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
 
-      let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput sbe txbodycontent changeaddr
-      txbody1 <-
-        first TxBodyError $ -- TODO: impossible to fail now
-          createAndValidateTransactionBody
-            sbe
-            txbodycontent1
-              { txFee = TxFeeExplicit sbe maxLovelaceFee
-              , txOuts =
-                  TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone
-                    : txOuts txbodycontent
-              , txReturnCollateral = dummyCollRet
-              , txTotalCollateral = dummyTotColl
-              }
-      -- NB: This has the potential to over estimate the fees because estimateTransactionKeyWitnessCount
-      -- makes the conservative assumption that all inputs are from distinct
-      -- addresses.
-      let nkeys =
-            fromMaybe
-              (estimateTransactionKeyWitnessCount txbodycontent1)
-              mnkeys
-          fee = calculateMinTxFee sbe pp utxo txbody1 nkeys
-          (retColl, reqCol) =
-            caseShelleyToAlonzoOrBabbageEraOnwards
-              (const (TxReturnCollateralNone, TxTotalCollateralNone))
-              ( \w ->
-                  let collIns = case txInsCollateral txbodycontent of
-                        TxInsCollateral _ collIns' -> collIns'
-                        TxInsCollateralNone -> mempty
-                      collateralOuts = catMaybes [Map.lookup txin (unUTxO utxo) | txin <- collIns]
-                      totalPotentialCollateral = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) collateralOuts
-                   in calcReturnAndTotalCollateral
-                        w
-                        fee
+            let totalValueAtSpendableUTxO = fromLedgerValue sbe $ calculateIncomingUTxOValue $ Map.elems $ unUTxO utxo
+            let change =
+                  forShelleyBasedEraInEon
+                    sbe
+                    mempty
+                    (\w -> toLedgerValue w $ calculateChangeValue sbe totalValueAtSpendableUTxO txbodycontent1)
+            let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
+            let changeTxOut =
+                  forShelleyBasedEraInEon
+                    sbe
+                    (lovelaceToTxOutValue sbe maxLovelaceChange)
+                    (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
+
+            let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput sbe txbodycontent changeaddr
+            UnsignedTx txbody1 <-
+              first TxBodyError
+                $ makeUnsignedTx -- TODO: impossible to fail now
+                  availableEra
+                $ obtainShimConstraints bEraOnwards
+                $ txbodycontent1
+                  { txFee = TxFeeExplicit sbe maxLovelaceFee
+                  , txOuts =
+                      TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone
+                        : txOuts txbodycontent
+                  , txReturnCollateral = dummyCollRet
+                  , txTotalCollateral = dummyTotColl
+                  }
+            -- NB: This has the potential to over estimate the fees because estimateTransactionKeyWitnessCount
+            -- makes the conservative assumption that all inputs are from distinct
+            -- addresses.
+            let nkeys =
+                  fromMaybe
+                    (estimateTransactionKeyWitnessCount txbodycontent1)
+                    mnkeys
+                fee =
+                  obtainShimConstraints bEraOnwards $
+                    L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp txbody1 (fromIntegral nkeys)
+                (retColl, reqCol) =
+                  caseShelleyToAlonzoOrBabbageEraOnwards
+                    (const (TxReturnCollateralNone, TxTotalCollateralNone))
+                    ( \w ->
+                        let collIns = case txInsCollateral txbodycontent of
+                              TxInsCollateral _ collIns' -> collIns'
+                              TxInsCollateralNone -> mempty
+                            collateralOuts = catMaybes [Map.lookup txin (unUTxO utxo) | txin <- collIns]
+                            totalPotentialCollateral = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) collateralOuts
+                         in calcReturnAndTotalCollateral
+                              w
+                              fee
+                              pp
+                              (txInsCollateral txbodycontent)
+                              (txReturnCollateral txbodycontent)
+                              (txTotalCollateral txbodycontent)
+                              changeaddr
+                              totalPotentialCollateral
+                    )
+                    sbe
+
+            -- Make a txbody for calculating the balance. For this the size of the tx
+            -- does not matter, instead it's just the values of the fee and outputs.
+            -- Here we do not want to start with any change output, since that's what
+            -- we need to calculate.
+            UnsignedTx txbody2 <-
+              first TxBodyError
+                $ makeUnsignedTx -- TODO: impossible to fail now
+                  availableEra
+                $ obtainShimConstraints bEraOnwards
+                $ txbodycontent1
+                  { txFee = TxFeeExplicit sbe fee
+                  , txReturnCollateral = retColl
+                  , txTotalCollateral = reqCol
+                  }
+            let balance =
+                  TxOutValueShelleyBased sbe $
+                    obtainShimConstraints bEraOnwards $
+                      L.evalBalanceTxBody
                         pp
-                        (txInsCollateral txbodycontent)
-                        (txReturnCollateral txbodycontent)
-                        (txTotalCollateral txbodycontent)
-                        changeaddr
-                        totalPotentialCollateral
+                        (lookupDelegDeposit stakeDelegDeposits)
+                        (lookupDRepDeposit drepDelegDeposits)
+                        (isRegPool poolids)
+                        (toLedgerUTxO sbe utxo)
+                        (txbody2 ^. L.bodyTxL)
+
+            forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue sbe txout pp
+
+            -- check if the balance is positive or negative
+            -- in one case we can produce change, in the other the inputs are insufficient
+            balanceCheck sbe pp changeaddr balance
+
+            -- TODO: we could add the extra fee for the CBOR encoding of the change,
+            -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
+
+            -- The txbody with the final fee and change output. This should work
+            -- provided that the fee and change are less than 2^32-1, and so will
+            -- fit within the encoding size we picked above when calculating the fee.
+            -- Yes this could be an over-estimate by a few bytes if the fee or change
+            -- would fit within 2^16-1. That's a possible optimisation.
+            let finalTxBodyContent =
+                  txbodycontent1
+                    { txFee = TxFeeExplicit sbe fee
+                    , txOuts =
+                        accountForNoChange
+                          (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
+                          (txOuts txbodycontent)
+                    , txReturnCollateral = retColl
+                    , txTotalCollateral = reqCol
+                    }
+            txbody3 <-
+              first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
+              -- that simply creates a transaction body because we have already
+              -- validated the transaction body earlier within makeTransactionBodyAutoBalance
+                makeUnsignedTx availableEra $
+                  obtainShimConstraints bEraOnwards finalTxBodyContent
+            return
+              ( BalancedTxBody
+                  finalTxBodyContent
+                  txbody3
+                  (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
+                  fee
               )
-              sbe
-
-      -- Make a txbody for calculating the balance. For this the size of the tx
-      -- does not matter, instead it's just the values of the fee and outputs.
-      -- Here we do not want to start with any change output, since that's what
-      -- we need to calculate.
-      txbody2 <-
-        first TxBodyError $ -- TODO: impossible to fail now
-          createAndValidateTransactionBody
-            sbe
-            txbodycontent1
-              { txFee = TxFeeExplicit sbe fee
-              , txReturnCollateral = retColl
-              , txTotalCollateral = reqCol
-              }
-      let balance = evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo txbody2
-
-      forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue sbe txout pp
-
-      -- check if the balance is positive or negative
-      -- in one case we can produce change, in the other the inputs are insufficient
-      balanceCheck sbe pp changeaddr balance
-
-      -- TODO: we could add the extra fee for the CBOR encoding of the change,
-      -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
-
-      -- The txbody with the final fee and change output. This should work
-      -- provided that the fee and change are less than 2^32-1, and so will
-      -- fit within the encoding size we picked above when calculating the fee.
-      -- Yes this could be an over-estimate by a few bytes if the fee or change
-      -- would fit within 2^16-1. That's a possible optimisation.
-      let finalTxBodyContent =
-            txbodycontent1
-              { txFee = TxFeeExplicit sbe fee
-              , txOuts =
-                  accountForNoChange
-                    (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
-                    (txOuts txbodycontent)
-              , txReturnCollateral = retColl
-              , txTotalCollateral = reqCol
-              }
-      txbody3 <-
-        first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
-        -- that simply creates a transaction body because we have already
-        -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-          createAndValidateTransactionBody sbe finalTxBodyContent
-      return
-        ( BalancedTxBody
-            finalTxBodyContent
-            txbody3
-            (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
-            fee
-        )
-   where
-    era :: CardanoEra era
-    era = toCardanoEra sbe
+      )
+      sbe
 
 -- | In the event of spending the exact amount of lovelace in
 -- the specified input(s), this function excludes the change

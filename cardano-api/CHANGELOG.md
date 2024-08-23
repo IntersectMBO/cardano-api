@@ -350,7 +350,7 @@
   (feature, compatible)
   [PR 410](https://github.com/IntersectMBO/cardano-api/pull/410)
 
-- Implement Era GADT and UseEra class as an alternative to the existing era handling code
+- Implement Era GADT and IsEra class as an alternative to the existing era handling code
   (feature, compatible)
   [PR 402](https://github.com/IntersectMBO/cardano-api/pull/402)
 
