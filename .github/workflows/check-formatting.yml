@@ -53,13 +53,7 @@ jobs:
         git stash
 
         for x in $(git ls-tree --full-tree --name-only -r HEAD); do
-          if [ "${x##*.}" == "hs" ]; then
-            if grep -qE '^#' "$x"; then
-              echo "$x contains CPP.  Skipping."
-            else
-              "$(git rev-parse --show-toplevel)/scripts/devshell/prettify" "$x"
-            fi
-          fi
+          "$(git rev-parse --show-toplevel)/scripts/devshell/prettify" "$x"
         done
 
         git --no-pager diff
@@ -70,13 +64,7 @@ jobs:
         git stash
         git fetch origin ${{ github.base_ref }} --unshallow
         for x in $(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}..HEAD); do
-          if [ "${x##*.}" == "hs" ]; then
-            if grep -qE '^#' "$x"; then
-              echo "$x contains CPP.  Skipping."
-            else
-              "$(git rev-parse --show-toplevel)/scripts/devshell/prettify" "$x"
-            fi
-          fi
+          "$(git rev-parse --show-toplevel)/scripts/devshell/prettify" "$x"
         done
 
         git --no-pager diff --exit-code
