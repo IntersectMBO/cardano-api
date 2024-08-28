@@ -382,7 +382,7 @@ test_TxBodyErrorAutoBalance =
     , ("TxBodyErrorMinUTxONotMet", TxBodyErrorMinUTxONotMet txOutInAnyEra1 1)
     ,
       ( "TxBodyErrorNonAdaAssetsUnbalanced"
-      , TxBodyErrorNonAdaAssetsUnbalanced (valueFromList [(AdaAssetId, Quantity 1)])
+      , TxBodyErrorNonAdaAssetsUnbalanced (fromList [(AdaAssetId, Quantity 1)])
       )
     ,
       ( "TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap"

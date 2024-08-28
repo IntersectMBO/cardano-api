@@ -39,8 +39,8 @@ import           Cardano.Ledger.Hashes
 import qualified Cardano.Ledger.Keys as L
 import qualified Cardano.Ledger.SafeHash as L
 
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           GHC.Exts (IsList (..))
 import           Lens.Micro
 
 -- | A transaction that can contain everything
@@ -115,7 +115,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       scriptWitnesses =
         L.mkBasicTxWits
           & L.scriptTxWitsL
-            .~ Map.fromList
+            .~ fromList
               [ (L.hashScript sw, sw)
               | sw <- scripts
               ]
