@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLists #-}
+
 module Cardano.Api.ValueParser
   ( parseValue
   , assetName
@@ -34,9 +36,8 @@ evalValueExpr vExpr =
   case vExpr of
     ValueExprAdd x y -> evalValueExpr x <> evalValueExpr y
     ValueExprNegate x -> negateValue (evalValueExpr x)
-    ValueExprLovelace quant -> valueFromList [(AdaAssetId, quant)]
-    ValueExprMultiAsset polId aName quant ->
-      valueFromList [(AssetId polId aName, quant)]
+    ValueExprLovelace quant -> [(AdaAssetId, quant)]
+    ValueExprMultiAsset polId aName quant -> [(AssetId polId aName, quant)]
 
 ------------------------------------------------------------------------------
 -- Expression parser

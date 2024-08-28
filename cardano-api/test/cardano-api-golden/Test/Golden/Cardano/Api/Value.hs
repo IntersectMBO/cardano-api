@@ -11,6 +11,7 @@ import           Data.Aeson (eitherDecode, encode)
 import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import           GHC.Exts (IsList (..))
 import qualified Text.Parsec as Parsec (parse)
 
 import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
@@ -47,7 +48,7 @@ hprop_goldenValue_1_lovelace :: Property
 hprop_goldenValue_1_lovelace =
   H.propertyOnce $ do
     valueList <- pure [(Api.AdaAssetId, 1)]
-    value <- pure $ Text.unpack $ Api.renderValuePretty $ Api.valueFromList valueList
+    value <- pure $ Text.unpack $ Api.renderValuePretty $ fromList valueList
 
     H.diffVsGoldenFile value "test/cardano-api-golden/files/golden/Cardano/Api/Value/value-ada-1.json"
 
@@ -57,7 +58,7 @@ hprop_goldenValue1 =
     policyId <- pure $ Api.PolicyId "a0000000000000000000000000000000000000000000000000000000"
     assetName <- pure $ Api.AssetName "asset1"
     valueList <- pure [(Api.AssetId policyId assetName, 1)]
-    value <- pure $ Text.unpack $ Api.renderValuePretty $ Api.valueFromList valueList
+    value <- pure $ Text.unpack $ Api.renderValuePretty $ fromList valueList
 
     H.diffVsGoldenFile
       value
