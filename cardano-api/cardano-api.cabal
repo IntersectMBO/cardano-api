@@ -318,6 +318,8 @@ test-suite cardano-api-test
     cardano-ledger-api ^>=1.9,
     cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.8,
+    cardano-ledger-mary,
+    cardano-ledger-shelley,
     cardano-protocol-tpraos,
     cardano-slotting,
     cborg,

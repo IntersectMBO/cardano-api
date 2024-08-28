@@ -1062,6 +1062,12 @@ makeTransactionBodyAutoBalance
             -- 2. figure out the overall min fees
             -- 3. update tx with fees
             -- 4. balance the transaction and update tx change output
+
+            let totalValueAtSpendableUTxO = fromLedgerValue sbe . calculateIncomingUTxOValue . Map.elems $ unUTxO utxo
+                change =
+                  monoidForEraInEon (toCardanoEra sbe) $ \w ->
+                    toLedgerValue w $ calculateChangeValue sbe totalValueAtSpendableUTxO txbodycontent
+
             UnsignedTx unsignedTx0 <-
               first TxBodyError
                 $ makeUnsignedTx
@@ -1069,10 +1075,8 @@ makeTransactionBodyAutoBalance
                 $ obtainShimConstraints bEraOnwards
                 $ txbodycontent
                   { txOuts =
-                      txOuts txbodycontent
-                        ++ [TxOut changeaddr (lovelaceToTxOutValue sbe 0) TxOutDatumNone ReferenceScriptNone]
-                        -- TODO: think about the size of the change output
-                        -- 1,2,4 or 8 bytes?
+                      TxOut changeaddr (TxOutValueShelleyBased sbe change) TxOutDatumNone ReferenceScriptNone
+                        : txOuts txbodycontent
                   }
             exUnitsMapWithLogs <-
               first TxBodyErrorValidityInterval
@@ -1109,12 +1113,6 @@ makeTransactionBodyAutoBalance
             let maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
             let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
 
-            let totalValueAtSpendableUTxO = fromLedgerValue sbe $ calculateIncomingUTxOValue $ Map.elems $ unUTxO utxo
-            let change =
-                  forShelleyBasedEraInEon
-                    sbe
-                    mempty
-                    (\w -> toLedgerValue w $ calculateChangeValue sbe totalValueAtSpendableUTxO txbodycontent1)
             let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
             let changeTxOut =
                   forShelleyBasedEraInEon
@@ -1278,7 +1276,7 @@ isNotAda AdaAssetId = False
 isNotAda _ = True
 
 onlyAda :: Value -> Bool
-onlyAda = null . valueToList . filterValue isNotAda
+onlyAda = null . toList . filterValue isNotAda
 
 calculateIncomingUTxOValue
   :: Monoid (Ledger.Value (ShelleyLedgerEra era))
