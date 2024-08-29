@@ -89,7 +89,9 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       scripts = convScripts apiScriptWitnesses
       languages = convLanguages apiScriptWitnesses
       sData = convScriptData sbe apiTxOuts apiScriptWitnesses
-
+      (datums, redeemers) = case sData of
+        TxBodyScriptData _ ds rs -> (ds, rs)
+        TxBodyNoScriptData -> (mempty, L.Redeemers mempty)
   let setMint = convMintValue apiMintValue
       setReqSignerHashes = convExtraKeyWitnesses apiExtraKeyWitnesses
       ledgerTxBody =
@@ -117,6 +119,9 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
               [ (L.hashScript sw, sw)
               | sw <- scripts
               ]
+          & L.datsTxWitsL .~ datums
+          & L.rdmrsTxWitsL .~ redeemers
+
   eraSpecificTxBody <- eraSpecificLedgerTxBody era ledgerTxBody bc
 
   return . UnsignedTx $
