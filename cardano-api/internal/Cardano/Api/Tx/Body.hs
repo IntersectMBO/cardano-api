@@ -288,6 +288,7 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Exts (IsList (..))
+import           GHC.Stack
 import           Lens.Micro hiding (ix)
 import           Lens.Micro.Extras (view)
 import qualified Text.Parsec as Parsec
@@ -709,7 +710,8 @@ toByronTxOut = \case
 
 toShelleyTxOut
   :: forall era ledgerera
-   . ShelleyLedgerEra era ~ ledgerera
+   . HasCallStack
+  => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> TxOut CtxUTxO era
   -> Ledger.TxOut ledgerera
@@ -959,12 +961,12 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
     decodeAssetId (polid, Aeson.Object assetNameHm) = do
       let polId = fromString . Text.unpack $ Aeson.toText polid
       aNameQuantity <- decodeAssets assetNameHm
-      pure . valueFromList $
+      pure . fromList $
         map (first $ AssetId polId) aNameQuantity
     decodeAssetId ("lovelace", Aeson.Number sci) =
       case toBoundedInteger sci of
         Just (ll :: Word64) ->
-          pure $ valueFromList [(AdaAssetId, Quantity $ toInteger ll)]
+          pure $ fromList [(AdaAssetId, Quantity $ toInteger ll)]
         Nothing ->
           fail $ "Expected a Bounded number but got: " <> show sci
     decodeAssetId wrong = fail $ "Expected a policy id and a JSON object but got: " <> show wrong
@@ -1829,7 +1831,7 @@ outputDoesNotExceedMax
   -> TxOut CtxTx era
   -> Either TxBodyError ()
 outputDoesNotExceedMax era v txout =
-  case [q | (_, q) <- valueToList v, q > maxTxOut] of
+  case [q | (_, q) <- toList v, q > maxTxOut] of
     [] -> Right ()
     q : _ -> Left (TxBodyOutputOverflow q (txOutInAnyEra era txout))
 
@@ -1840,7 +1842,7 @@ positiveOutput
   -> TxOut CtxTx era
   -> Either TxBodyError ()
 positiveOutput era v txout =
-  case [q | (_, q) <- valueToList v, q < 0] of
+  case [q | (_, q) <- toList v, q < 0] of
     [] -> Right ()
     q : _ -> Left (TxBodyOutputNegative q (txOutInAnyEra era txout))
 
@@ -3057,7 +3059,8 @@ makeShelleyTransactionBody
 -- embedded datums (taking only their hash).
 toShelleyTxOutAny
   :: forall ctx era ledgerera
-   . ShelleyLedgerEra era ~ ledgerera
+   . HasCallStack
+  => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> TxOut ctx era
   -> Ledger.TxOut ledgerera

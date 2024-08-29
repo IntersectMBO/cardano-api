@@ -246,7 +246,7 @@ genPlutusScript _ =
 genScriptDataSchema :: Gen ScriptDataJsonSchema
 genScriptDataSchema = Gen.element [ScriptDataJsonNoSchema, ScriptDataJsonDetailedSchema]
 
-genHashableScriptData :: Gen HashableScriptData
+genHashableScriptData :: HasCallStack => Gen HashableScriptData
 genHashableScriptData = do
   sd <- genScriptData
   case deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR sd of

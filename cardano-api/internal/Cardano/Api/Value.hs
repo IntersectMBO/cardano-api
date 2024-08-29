@@ -189,13 +189,21 @@ newtype Value = Value (Map AssetId Quantity)
 instance Show Value where
   showsPrec d v =
     showParen (d > 10) $
-      showString "valueFromList " . shows (valueToList v)
+      showString "valueFromList " . shows (toList v)
 
 instance Semigroup Value where
   Value a <> Value b = Value (mergeAssetMaps a b)
 
 instance Monoid Value where
   mempty = Value Map.empty
+
+instance IsList Value where
+  type Item Value = (AssetId, Quantity)
+  fromList =
+    Value
+      . Map.filter (/= 0)
+      . Map.fromListWith (<>)
+  toList (Value m) = toList m
 
 {-# NOINLINE mergeAssetMaps #-} -- as per advice in Data.Map.Merge docs
 mergeAssetMaps
@@ -223,14 +231,13 @@ instance FromJSON Value where
 selectAsset :: Value -> (AssetId -> Quantity)
 selectAsset (Value m) a = Map.findWithDefault mempty a m
 
+{-# DEPRECATED valueFromList "Use 'fromList' instead." #-}
 valueFromList :: [(AssetId, Quantity)] -> Value
-valueFromList =
-  Value
-    . Map.filter (/= 0)
-    . Map.fromListWith (<>)
+valueFromList = fromList
 
+{-# DEPRECATED valueToList "Use 'toList' instead." #-}
 valueToList :: Value -> [(AssetId, Quantity)]
-valueToList (Value m) = toList m
+valueToList = toList
 
 -- | This lets you write @a - b@ as @a <> negateValue b@.
 negateValue :: Value -> Value
