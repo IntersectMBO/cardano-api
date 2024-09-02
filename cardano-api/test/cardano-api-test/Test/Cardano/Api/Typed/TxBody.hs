@@ -239,7 +239,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         address
         Nothing
   -- the correct amount with manual balancing of assets
-  335_729 === feeWithTxoutAsset
+  335_475 === feeWithTxoutAsset
 
   -- autobalanced body has assets and ADA in the change txout
   (BalancedTxBody balancedContent _ _ fee) <-

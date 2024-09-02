@@ -21,9 +21,10 @@ module Cardano.Api.Experimental.Tx
 where
 
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras.Case
+import           Cardano.Api.Eras.Core (ToCardanoEra (toCardanoEra), forEraInEon)
 import           Cardano.Api.Experimental.Eras
 import           Cardano.Api.Feature
+import           Cardano.Api.Pretty (docToString, pretty)
 import           Cardano.Api.ReexposeLedger (StrictMaybe (..), maybeToStrictMaybe)
 import qualified Cardano.Api.ReexposeLedger as L
 import           Cardano.Api.Tx.Body
@@ -41,6 +42,7 @@ import qualified Cardano.Ledger.SafeHash as L
 
 import qualified Data.Set as Set
 import           GHC.Exts (IsList (..))
+import           GHC.Stack
 import           Lens.Micro
 
 -- | A transaction that can contain everything
@@ -58,7 +60,7 @@ newtype UnsignedTxError
 
 makeUnsignedTx
   :: Era era
-  -> TxBodyContent BuildTx (ExperimentalEraToApiEra era)
+  -> TxBodyContent BuildTx era
   -> Either TxBodyError (UnsignedTx era)
 makeUnsignedTx era bc = obtainCommonConstraints era $ do
   let sbe = eraToSbe era
@@ -133,7 +135,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
 eraSpecificLedgerTxBody
   :: Era era
   -> Ledger.TxBody (LedgerEra era)
-  -> TxBodyContent BuildTx (ExperimentalEraToApiEra era)
+  -> TxBodyContent BuildTx era
   -> Either TxBodyError (Ledger.TxBody (LedgerEra era))
 eraSpecificLedgerTxBody BabbageEra ledgerbody bc = do
   let sbe = eraToSbe BabbageEra
@@ -154,7 +156,7 @@ eraSpecificLedgerTxBody ConwayEra ledgerbody bc =
             .~ convVotingProcedures (maybe TxVotingProceduresNone unFeatured voteProcedures)
           & L.treasuryDonationTxBodyL .~ maybe (L.Coin 0) unFeatured treasuryDonation
           & L.currentTreasuryValueTxBodyL
-            .~ L.maybeToStrictMaybe (maybe (Just $ L.Coin 0) unFeatured currentTresuryValue)
+            .~ L.maybeToStrictMaybe (unFeatured =<< currentTresuryValue)
 
 hashTxBody
   :: L.HashAnnotated (Ledger.TxBody era) EraIndependentTxBody L.StandardCrypto
@@ -198,12 +200,12 @@ signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
 -- Compatibility related. Will be removed once the old api has been deprecated and deleted.
 
 convertTxBodyToUnsignedTx
-  :: ShelleyBasedEra era -> TxBody era -> UnsignedTx (ApiEraToExperimentalEra era)
+  :: HasCallStack => ShelleyBasedEra era -> TxBody era -> UnsignedTx era
 convertTxBodyToUnsignedTx sbe txbody =
-  caseShelleyToAlonzoOrBabbageEraOnwards
-    (const $ error "convertTxBodyToUnsignedTx: Error")
-    ( \w ->
+  forEraInEon
+    (toCardanoEra sbe)
+    (error $ "convertTxBodyToUnsignedTx: Error - unsupported era " <> docToString (pretty sbe))
+    ( \w -> do
         let ShelleyTx _ unsignedLedgerTx = makeSignedTransaction [] txbody
-         in UnsignedTx $ obtainShimConstraints w unsignedLedgerTx
+        UnsignedTx $ obtainCommonConstraints w unsignedLedgerTx
     )
-    sbe
