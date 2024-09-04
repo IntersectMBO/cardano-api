@@ -207,7 +207,7 @@ library internal
     ouroboros-network-framework,
     ouroboros-network-protocols,
     parsec,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
+    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.32,
     prettyprinter,
     prettyprinter-ansi-terminal,
     prettyprinter-configurable ^>=1.32.1,
