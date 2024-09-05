@@ -1,5 +1,39 @@
 # Changelog for cardano-api
 
+## 9.3.0.0
+- Upgrade `cardano-ledger-*`, `ouroboros-consensus-cardano`, `ouroboros-network-api`, `plutus-core` and `plutus-ledger-api`.
+  (feature, breaking)
+  [PR 610](https://github.com/IntersectMBO/cardano-api/pull/610)
+
+- Fix current treasury value in transaction building: default to `Nothing` instead of `0`.
+  Experimental API: remove redundant type families and functions #625
+  (breaking, bugfix)
+  [PR 625](https://github.com/IntersectMBO/cardano-api/pull/625)
+
+- Deprecate `valueFromList` and valueToList. Add `IsList Value` instance.
+  Fix fee estimation when autobalancing assets minted in the transaction.
+  (breaking, bugfix)
+  [PR 622](https://github.com/IntersectMBO/cardano-api/pull/622)
+
+- Include datums and redeemers in makeUnsignedTx
+  (bugfix)
+  [PR 623](https://github.com/IntersectMBO/cardano-api/pull/623)
+
+- Deprecate createAndValidateTransactionBody. Use createTransactionBody instead.
+  (breaking)
+  [PR 597](https://github.com/IntersectMBO/cardano-api/pull/597)
+
+- Introduce new `newtype UnsignedTx` type which aims to eventually replace `data TxBody`
+  Introduce new `data Era` type which reduces the number of eras cardano-api exposes. It is only concerned with mainnet and the upcoming era
+  Update experimental api and propagate
+  `BalancedTxBody` now returns `UnsignedTx` which is a wrapped cardano-ledger `Tx`.
+  (feature, breaking)
+  [PR 604](https://github.com/IntersectMBO/cardano-api/pull/604)
+
+- Fix datum conversion in 'fromShelleyTxOut' when using 'ShelleyBasedEraAlonzo' as input
+  (bugfix)
+  [PR 613](https://github.com/IntersectMBO/cardano-api/pull/613)
+
 ## 9.2.0.0
 
 - Add `Lovelace` as a type synonym to `Coin`
