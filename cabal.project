@@ -39,11 +39,14 @@ package bitvec
    flags: -simd
 
 tests: True
-
 test-show-details: direct
 
 -- Always write GHC env files, because they are needed for ghci.
 write-ghc-environment-files: always
+
+-- enable parallel builds
+jobs: $ncpus
+semaphore: True
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
