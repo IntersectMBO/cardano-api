@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -22,18 +23,18 @@ where
 import           Cardano.Api.Modes
 
 import           Ouroboros.Consensus.Block.Forging (BlockForging)
-import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
 import           Ouroboros.Consensus.Cardano.Node
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
-import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
+import qualified Ouroboros.Consensus.Shelley.Eras as Consensus (ShelleyEra)
+import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 import           Ouroboros.Consensus.Util.IOLike (IOLike)
 
@@ -55,7 +56,7 @@ class RunNode blk => ProtocolClient blk where
 
 -- | Run PBFT against the Byron ledger
 instance IOLike m => Protocol m ByronBlockHFC where
-  data ProtocolInfoArgs ByronBlockHFC = ProtocolInfoArgsByron (ProtocolParams Byron.ByronBlock)
+  data ProtocolInfoArgs ByronBlockHFC = ProtocolInfoArgsByron ProtocolParamsByron
   protocolInfo (ProtocolInfoArgsByron params) =
     ( inject $ protocolInfoByron params
     , pure . map inject $ blockForgingByron params
@@ -95,7 +96,7 @@ instance
     = ProtocolInfoArgsShelley
         (ShelleyGenesis StandardCrypto)
         (ProtocolParamsShelleyBased StandardCrypto)
-        (ProtocolParams (Consensus.ShelleyBlock (Consensus.TPraos StandardCrypto) StandardShelley))
+        ProtVer
   protocolInfo (ProtocolInfoArgsShelley genesis paramsShelleyBased_ paramsShelley_) =
     bimap inject (fmap $ map inject) $ protocolInfoShelley genesis paramsShelleyBased_ paramsShelley_
 
