@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-api-gen
-version: 8.2.1.0
+version: 9.0.0.0
 synopsis: Generators for the cardano api
 description: Generators for the cardano api.
 category:
@@ -8,7 +8,7 @@ category:
   API,
   Test,
 
-copyright: 2020-2023 Input Output Global Inc (IOG).
+copyright: 2020-2024 Input Output Global Inc (IOG).
 author: IOHK
 maintainer: operations@iohk.io
 license: Apache-2.0
