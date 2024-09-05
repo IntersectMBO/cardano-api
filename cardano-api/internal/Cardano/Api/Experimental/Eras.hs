@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,27 +17,23 @@ module Cardano.Api.Experimental.Eras
   ( BabbageEra
   , ConwayEra
   , Era (..)
+  , IsEra (..)
+  , Some (..)
   , LedgerEra
-  , IsEra
-  , ApiEraToLedgerEra
-  , ExperimentalEraToApiEra
-  , ApiEraToExperimentalEra
   , DeprecatedEra (..)
   , EraCommonConstraints
-  , EraShimConstraints
   , obtainCommonConstraints
-  , obtainShimConstraints
-  , useEra
   , eraToSbe
   , babbageEraOnwardsToEra
+  , eraToBabbageEraOnwards
   , sbeToEra
   )
 where
 
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
-import           Cardano.Api.Eras.Core (BabbageEra, ConwayEra)
-import qualified Cardano.Api.Eras.Core as Api
+import qualified Cardano.Api.Eras as Api
+import           Cardano.Api.Eras.Core (BabbageEra, ConwayEra, Eon (..))
 import qualified Cardano.Api.ReexposeLedger as L
 import           Cardano.Api.Via.ShowOf
 
@@ -49,30 +46,46 @@ import qualified Cardano.Ledger.SafeHash as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Monad.Error.Class
+import           Data.Aeson (FromJSON (..), ToJSON, withText)
+import           Data.Aeson.Types (ToJSON (..))
 import           Data.Kind
+import           Data.Maybe (isJust)
+import qualified Data.Text as Text
+import           Data.Type.Equality
+import           Data.Typeable
+import           GHC.Exts (IsString)
 import           Prettyprinter
 
 -- | Users typically interact with the latest features on the mainnet or experiment with features
 -- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era
 -- and the next era (upcoming era).
-
--- Allows us to gradually change the api without breaking things.
--- This will eventually be removed.
-type family ExperimentalEraToApiEra era = (r :: Type) | r -> era where
-  ExperimentalEraToApiEra BabbageEra = Api.BabbageEra
-  ExperimentalEraToApiEra ConwayEra = Api.ConwayEra
-
-type family ApiEraToExperimentalEra era = (r :: Type) | r -> era where
-  ApiEraToExperimentalEra Api.BabbageEra = BabbageEra
-  ApiEraToExperimentalEra Api.ConwayEra = ConwayEra
-
 type family LedgerEra era = (r :: Type) | r -> era where
   LedgerEra BabbageEra = Ledger.Babbage
   LedgerEra ConwayEra = Ledger.Conway
 
-type family ApiEraToLedgerEra era = (r :: Type) | r -> era where
-  ApiEraToLedgerEra Api.BabbageEra = Ledger.Babbage
-  ApiEraToLedgerEra Api.ConwayEra = Ledger.Conway
+-- | An existential type for singleton types. Use to hold any era e.g. @Some Era@. One can then bring the
+-- era witness back into scope for example using this pattern:
+-- @
+-- anyEra = Some ConwayEra
+-- -- then later in the code
+-- Some era <- pure anyEra
+-- obtainCommonConstraints era foo
+-- @
+data Some (f :: Type -> Type) where
+  Some
+    :: forall f a
+     . (Typeable a, Typeable (f a))
+    => f a
+    -> Some f
+
+-- | Assumes that @f@ is a singleton
+instance Show (Some f) where
+  showsPrec _ (Some v) = showsTypeRep (typeOf v)
+
+-- | Assumes that @f@ is a singleton
+instance TestEquality f => Eq (Some f) where
+  Some era1 == Some era2 =
+    isJust $ testEquality era1 era2
 
 -- | Represents the eras in Cardano's blockchain.
 -- This type represents eras currently on mainnet and new eras which are
@@ -88,6 +101,62 @@ data Era era where
   ConwayEra :: Era ConwayEra
 
 deriving instance Show (Era era)
+
+deriving instance Eq (Era era)
+
+instance Pretty (Era era) where
+  pretty = eraToStringLike
+
+instance TestEquality Era where
+  testEquality BabbageEra BabbageEra = Just Refl
+  testEquality BabbageEra _ = Nothing
+  testEquality ConwayEra ConwayEra = Just Refl
+  testEquality ConwayEra _ = Nothing
+
+instance ToJSON (Era era) where
+  toJSON = eraToStringLike
+
+instance Bounded (Some Era) where
+  minBound = Some BabbageEra
+  maxBound = Some ConwayEra
+
+instance Enum (Some Era) where
+  toEnum 0 = Some BabbageEra
+  toEnum 1 = Some ConwayEra
+  toEnum i = error $ "Enum.toEnum: invalid argument " <> show i <> " - does not correspond to any era"
+  fromEnum (Some BabbageEra) = 0
+  fromEnum (Some ConwayEra) = 1
+
+instance Ord (Some Era) where
+  compare e1 e2 = compare (fromEnum e1) (fromEnum e2)
+
+instance Pretty (Some Era) where
+  pretty (Some era) = pretty era
+
+instance ToJSON (Some Era) where
+  toJSON (Some era) = toJSON era
+
+instance FromJSON (Some Era) where
+  parseJSON =
+    withText "Some Era" $
+      ( \case
+          Right era -> pure era
+          Left era -> fail $ "Failed to parse unknown era: " <> Text.unpack era
+      )
+        . eraFromStringLike
+
+eraToStringLike :: IsString a => Era era -> a
+{-# INLINE eraToStringLike #-}
+eraToStringLike = \case
+  BabbageEra -> "Babbage"
+  ConwayEra -> "Conway"
+
+eraFromStringLike :: (IsString a, Eq a) => a -> Either a (Some Era)
+{-# INLINE eraFromStringLike #-}
+eraFromStringLike = \case
+  "Babbage" -> pure $ Some BabbageEra
+  "Conway" -> pure $ Some ConwayEra
+  wrong -> Left wrong
 
 -- | How to deprecate an era
 --
@@ -117,7 +186,7 @@ deriving instance Show (Era era)
 -- @
 eraToSbe
   :: Era era
-  -> ShelleyBasedEra (ExperimentalEraToApiEra era)
+  -> ShelleyBasedEra era
 eraToSbe BabbageEra = ShelleyBasedEraBabbage
 eraToSbe ConwayEra = ShelleyBasedEraConway
 
@@ -128,7 +197,9 @@ newtype DeprecatedEra era
 deriving via (ShowOf (DeprecatedEra era)) instance Pretty (DeprecatedEra era)
 
 sbeToEra
-  :: MonadError (DeprecatedEra era) m => ShelleyBasedEra era -> m (Era (ApiEraToExperimentalEra era))
+  :: MonadError (DeprecatedEra era) m
+  => ShelleyBasedEra era
+  -> m (Era era)
 sbeToEra ShelleyBasedEraConway = return ConwayEra
 sbeToEra ShelleyBasedEraBabbage = return BabbageEra
 sbeToEra e@ShelleyBasedEraAlonzo = throwError $ DeprecatedEra e
@@ -136,9 +207,13 @@ sbeToEra e@ShelleyBasedEraMary = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraAllegra = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraShelley = throwError $ DeprecatedEra e
 
-babbageEraOnwardsToEra :: BabbageEraOnwards era -> Era (ApiEraToExperimentalEra era)
+babbageEraOnwardsToEra :: BabbageEraOnwards era -> Era era
 babbageEraOnwardsToEra BabbageEraOnwardsBabbage = BabbageEra
 babbageEraOnwardsToEra BabbageEraOnwardsConway = ConwayEra
+
+eraToBabbageEraOnwards :: Era era -> BabbageEraOnwards era
+eraToBabbageEraOnwards BabbageEra = BabbageEraOnwardsBabbage
+eraToBabbageEraOnwards ConwayEra = BabbageEraOnwardsConway
 
 -------------------------------------------------------------------------
 
@@ -152,20 +227,12 @@ instance IsEra BabbageEra where
 instance IsEra ConwayEra where
   useEra = ConwayEra
 
-obtainShimConstraints
-  :: BabbageEraOnwards era
-  -> (EraShimConstraints era => a)
-  -> a
-obtainShimConstraints BabbageEraOnwardsBabbage x = x
-obtainShimConstraints BabbageEraOnwardsConway x = x
-
--- We need these constraints in order to propagate the new
--- experimental api without changing the existing api
-type EraShimConstraints era =
-  ( LedgerEra (ApiEraToExperimentalEra era) ~ ShelleyLedgerEra era
-  , ExperimentalEraToApiEra (ApiEraToExperimentalEra era) ~ era
-  , L.EraTx (ApiEraToLedgerEra era)
-  )
+-- | A temporary compatibility instance, for easier conversion between experimental and old API.
+instance Eon Era where
+  inEonForEra v f = \case
+    Api.ConwayEra -> f ConwayEra
+    Api.BabbageEra -> f BabbageEra
+    _ -> v
 
 obtainCommonConstraints
   :: Era era
@@ -180,6 +247,7 @@ type EraCommonConstraints era =
   , L.EraTx (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
   , Ledger.EraCrypto (LedgerEra era) ~ L.StandardCrypto
-  , ShelleyLedgerEra (ExperimentalEraToApiEra era) ~ LedgerEra era
+  , ShelleyLedgerEra era ~ LedgerEra era
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) EraIndependentTxBody L.StandardCrypto
+  , IsEra era
   )

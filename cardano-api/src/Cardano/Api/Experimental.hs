@@ -9,8 +9,6 @@ module Cardano.Api.Experimental
   , signTx
   , convertTxBodyToUnsignedTx
   , EraCommonConstraints
-  , EraShimConstraints
-  , obtainShimConstraints
   , obtainCommonConstraints
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley
@@ -18,15 +16,13 @@ module Cardano.Api.Experimental
   , BabbageEra
   , ConwayEra
   , Era (..)
+  , IsEra (..)
+  , Some (..)
   , LedgerEra
-  , IsEra
-  , ApiEraToLedgerEra
-  , ExperimentalEraToApiEra
-  , ApiEraToExperimentalEra
   , DeprecatedEra (..)
-  , useEra
   , eraToSbe
   , babbageEraOnwardsToEra
+  , eraToBabbageEraOnwards
   , sbeToEra
   )
 where

@@ -17,8 +17,6 @@ where
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyToAlonzoEra
-import           Cardano.Api.Eras
 import           Cardano.Api.Experimental.Eras
 import           Cardano.Api.Experimental.Tx
 import           Cardano.Api.Fees
@@ -96,10 +94,7 @@ constructBalancedTx
     let alternateKeyWits = map (makeKeyWitness availableEra unsignedTx) shelleyWitSigningKeys
         signedTx = signTx availableEra [] alternateKeyWits unsignedTx
 
-    caseShelleyToAlonzoOrBabbageEraOnwards
-      (Left . TxBodyErrorDeprecatedEra . DeprecatedEra . shelleyToAlonzoEraToShelleyBasedEra)
-      (\w -> return $ ShelleyTx sbe $ obtainShimConstraints w signedTx)
-      sbe
+    return $ ShelleyTx sbe $ obtainCommonConstraints availableEra signedTx
 
 data TxInsExistError
   = TxInsDoNotExist [TxIn]
