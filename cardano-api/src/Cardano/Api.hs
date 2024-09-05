@@ -906,6 +906,7 @@ module Cardano.Api
   , toNetworkMagic
   , fromLedgerTxOuts
   , toLedgerUTxO
+  , fromLedgerUTxO
   , runParsecParser
   , SlotsInEpoch (..)
   , SlotsToEpochEnd (..)
