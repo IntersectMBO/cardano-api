@@ -280,13 +280,14 @@ getTxBody (ShelleyTx sbe tx) =
 
 instance IsShelleyBasedEra era => HasTextEnvelope (Tx era) where
   textEnvelopeType _ =
-    case shelleyBasedEra :: ShelleyBasedEra era of
-      ShelleyBasedEraShelley -> "TxSignedShelley"
-      ShelleyBasedEraAllegra -> "Tx AllegraEra"
-      ShelleyBasedEraMary -> "Tx MaryEra"
-      ShelleyBasedEraAlonzo -> "Tx AlonzoEra"
-      ShelleyBasedEraBabbage -> "Tx BabbageEra"
-      ShelleyBasedEraConway -> "Tx ConwayEra"
+    "Witnessed Tx" <>
+      case shelleyBasedEra :: ShelleyBasedEra era of
+        ShelleyBasedEraShelley -> "ShelleyEra"
+        ShelleyBasedEraAllegra -> "AllegraEra"
+        ShelleyBasedEraMary -> "MaryEra"
+        ShelleyBasedEraAlonzo -> "AlonzoEra"
+        ShelleyBasedEraBabbage -> "BabbageEra"
+        ShelleyBasedEraConway -> "ConwayEra"
 
 -- ----------------------------------------------------------------------------
 -- Transaction bodies

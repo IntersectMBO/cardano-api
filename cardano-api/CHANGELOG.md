@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 9.4.0.0 - UNRELEASED
+
+- **BREAKING** Text envelope type of `Tx era` is now always using the new `Witnessed Tx` prefix.
+
 ## 9.3.0.0
 - Upgrade `cardano-ledger-*`, `ouroboros-consensus-cardano`, `ouroboros-network-api`, `plutus-core` and `plutus-ledger-api`.
   (feature, breaking)
