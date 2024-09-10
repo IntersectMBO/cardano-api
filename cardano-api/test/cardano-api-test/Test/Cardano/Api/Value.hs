@@ -1,4 +1,4 @@
-module Test.Cardano.Api.Typed.Value
+module Test.Cardano.Api.Value
   ( tests
   )
 where

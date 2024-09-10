@@ -1,4 +1,4 @@
-module Test.Cardano.Api.Typed.Ord
+module Test.Cardano.Api.Ord
   ( tests
   )
 where

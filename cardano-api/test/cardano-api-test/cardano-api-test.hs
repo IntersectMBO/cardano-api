@@ -6,7 +6,11 @@ import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncod
 
 import qualified Test.Gen.Cardano.Api.Byron
 
+import qualified Test.Cardano.Api.Address
+import qualified Test.Cardano.Api.Bech32
+import qualified Test.Cardano.Api.CBOR
 import qualified Test.Cardano.Api.Crypto
+import qualified Test.Cardano.Api.Envelope
 import qualified Test.Cardano.Api.EpochLeadership
 import qualified Test.Cardano.Api.Eras
 import qualified Test.Cardano.Api.Genesis
@@ -15,16 +19,12 @@ import qualified Test.Cardano.Api.Json
 import qualified Test.Cardano.Api.KeysByron
 import qualified Test.Cardano.Api.Ledger
 import qualified Test.Cardano.Api.Metadata
+import qualified Test.Cardano.Api.Ord
 import qualified Test.Cardano.Api.ProtocolParameters
-import qualified Test.Cardano.Api.Typed.Address
-import qualified Test.Cardano.Api.Typed.Bech32
-import qualified Test.Cardano.Api.Typed.CBOR
-import qualified Test.Cardano.Api.Typed.Envelope
-import qualified Test.Cardano.Api.Typed.JSON
-import qualified Test.Cardano.Api.Typed.Ord
-import qualified Test.Cardano.Api.Typed.RawBytes
-import qualified Test.Cardano.Api.Typed.TxBody
-import qualified Test.Cardano.Api.Typed.Value
+import qualified Test.Cardano.Api.RawBytes
+import qualified Test.Cardano.Api.Transaction.Autobalance
+import qualified Test.Cardano.Api.TxBody
+import qualified Test.Cardano.Api.Value
 
 import           Test.Tasty (TestTree, defaultMain, testGroup)
 
@@ -41,7 +41,11 @@ tests =
   testGroup
     "Cardano.Api"
     [ Test.Gen.Cardano.Api.Byron.tests
+    , Test.Cardano.Api.Address.tests
+    , Test.Cardano.Api.Bech32.tests
+    , Test.Cardano.Api.CBOR.tests
     , Test.Cardano.Api.Crypto.tests
+    , Test.Cardano.Api.Envelope.tests
     , Test.Cardano.Api.EpochLeadership.tests
     , Test.Cardano.Api.Eras.tests
     , Test.Cardano.Api.Genesis.tests
@@ -50,14 +54,10 @@ tests =
     , Test.Cardano.Api.KeysByron.tests
     , Test.Cardano.Api.Ledger.tests
     , Test.Cardano.Api.Metadata.tests
+    , Test.Cardano.Api.Ord.tests
     , Test.Cardano.Api.ProtocolParameters.tests
-    , Test.Cardano.Api.Typed.Address.tests
-    , Test.Cardano.Api.Typed.Bech32.tests
-    , Test.Cardano.Api.Typed.CBOR.tests
-    , Test.Cardano.Api.Typed.Envelope.tests
-    , Test.Cardano.Api.Typed.JSON.tests
-    , Test.Cardano.Api.Typed.Ord.tests
-    , Test.Cardano.Api.Typed.RawBytes.tests
-    , Test.Cardano.Api.Typed.TxBody.tests
-    , Test.Cardano.Api.Typed.Value.tests
+    , Test.Cardano.Api.RawBytes.tests
+    , Test.Cardano.Api.Transaction.Autobalance.tests
+    , Test.Cardano.Api.TxBody.tests
+    , Test.Cardano.Api.Value.tests
     ]
