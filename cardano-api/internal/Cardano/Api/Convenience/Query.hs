@@ -48,7 +48,6 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
 import           Control.Exception.Safe (SomeException, displayException)
 import           Control.Monad
-import           Data.Bifunctor (first)
 import           Data.Function ((&))
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -200,7 +199,7 @@ executeQueryCardanoMode
   :: ()
   => SocketPath
   -> NetworkId
-  -> QueryInMode (Either EraMismatch result)
+  -> QueryInMode (Either QueryConvenienceError result)
   -> ExceptT QueryConvenienceError IO result
 executeQueryCardanoMode socketPath nid q = do
   let localNodeConnInfo =
@@ -213,15 +212,28 @@ executeQueryCardanoMode socketPath nid q = do
   executeQueryAnyMode localNodeConnInfo q
 
 -- | Execute a query against the local node in any mode.
+-- executeQueryAnyMode'
+--   :: forall result
+--    . ()
+--   => LocalNodeConnectInfo
+--   -> QueryInMode (Either EraMismatch result)
+--   -> ExceptT QueryConvenienceError IO result
+-- executeQueryAnyMode' localNodeConnInfo q =
+--   liftEither
+--     <=< fmap (first QueryEraMismatch)
+--       . handleIOExceptionsWith QceUnexpectedException
+--       . modifyError AcqFailure
+--     $ queryNodeLocalState localNodeConnInfo VolatileTip q
+
+
 executeQueryAnyMode
   :: forall result
    . ()
   => LocalNodeConnectInfo
-  -> QueryInMode (Either EraMismatch result)
+  -> QueryInMode (Either QueryConvenienceError result)
   -> ExceptT QueryConvenienceError IO result
 executeQueryAnyMode localNodeConnInfo q =
   liftEither
-    <=< fmap (first QueryEraMismatch)
-      . handleIOExceptionsWith QceUnexpectedException
+    <=< handleIOExceptionsWith QceUnexpectedException
       . modifyError AcqFailure
     $ queryNodeLocalState localNodeConnInfo VolatileTip q
