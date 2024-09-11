@@ -214,6 +214,8 @@ import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
+import           Cardano.Api.ScriptData ()
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Tx.Sign
@@ -266,6 +268,7 @@ import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.DList as DList
 import           Data.Foldable (for_)
@@ -288,6 +291,7 @@ import qualified Data.Set as Set
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Exts (IsList (..))
@@ -372,6 +376,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
         , datHashJsonVal dat
         , "datum" .= datJsonVal dat
         , "inlineDatum" .= inlineDatumJsonVal dat
+        , "inlineDatumRaw" .= inlineDatumRawJsonCbor dat
         , "referenceScript" .= refScriptJsonVal refScript
         ]
     ConwayEra ->
@@ -381,6 +386,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
         , datHashJsonVal dat
         , "datum" .= datJsonVal dat
         , "inlineDatum" .= inlineDatumJsonVal dat
+        , "inlineDatumRaw" .= inlineDatumRawJsonCbor dat
         , "referenceScript" .= refScriptJsonVal refScript
         ]
  where
@@ -411,6 +417,19 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
       TxOutDatumHash{} -> Aeson.Null
       TxOutDatumInTx'{} -> Aeson.Null
       TxOutDatumInline _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
+
+  inlineDatumRawJsonCbor :: TxOutDatum ctx era -> Aeson.Value
+  inlineDatumRawJsonCbor d =
+    case d of
+      TxOutDatumNone -> Aeson.Null
+      TxOutDatumHash{} -> Aeson.Null
+      TxOutDatumInTx'{} -> Aeson.Null
+      TxOutDatumInline _ datum ->
+        Aeson.String
+          . Text.decodeUtf8
+          . Base16.encode
+          . serialiseToCBOR
+          $ datum
 
   refScriptJsonVal :: ReferenceScript era -> Aeson.Value
   refScriptJsonVal rScript =
