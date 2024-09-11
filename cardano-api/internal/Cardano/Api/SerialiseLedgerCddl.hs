@@ -316,6 +316,12 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 -- a single sum data type.
 cddlTypeToEra :: Text -> Either TextEnvelopeCddlError AnyShelleyBasedEra
 cddlTypeToEra = \case
+  "TxSignedShelley" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+  "Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+  "Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+  "Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+  "Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+  "Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
   "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
   "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
   "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
