@@ -197,7 +197,6 @@ library internal
     microlens-aeson,
     mtl,
     network,
-    optparse-applicative-fork,
     ouroboros-consensus ^>=0.20,
     ouroboros-consensus-cardano ^>=0.19,
     ouroboros-consensus-diffusion ^>=0.17,

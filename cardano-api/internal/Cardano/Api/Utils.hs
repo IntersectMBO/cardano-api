@@ -19,14 +19,12 @@ module Cardano.Api.Utils
   , failEitherWith
   , noInlineMaybeToStrictMaybe
   , note
-  , parseFilePath
   , readFileBlocking
   , runParsecParser
   , textShow
   , modifyWith
 
     -- ** CLI option parsing
-  , bounded
   , unsafeBoundedRational
   )
 where
@@ -34,7 +32,6 @@ where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley ()
 import Control.Exception (bracket)
-import Control.Monad (when)
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as Builder
@@ -45,14 +42,10 @@ import qualified Data.Text as Text
 import Data.Typeable
 import GHC.IO.Handle.FD (openFileBlocking)
 import GHC.Stack
-import Options.Applicative (ReadM)
-import qualified Options.Applicative as Opt
-import Options.Applicative.Builder (eitherReader)
 import System.IO (IOMode (ReadMode), hClose)
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.ParserCombinators.Parsec.Error as Parsec
-import qualified Text.Read as Read
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -94,15 +87,6 @@ note msg = \case
   Nothing -> fail msg
   Just a -> pure a
 
-parseFilePath :: String -> String -> Opt.Parser FilePath
-parseFilePath optname desc =
-  Opt.strOption
-    ( Opt.long optname
-        <> Opt.metavar "FILEPATH"
-        <> Opt.help desc
-        <> Opt.completer (Opt.bashCompleter "file")
-    )
-
 readFileBlocking :: FilePath -> IO BS.ByteString
 readFileBlocking path =
   bracket
@@ -122,13 +106,6 @@ readFileBlocking path =
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show
-
-bounded :: forall a. (Bounded a, Integral a, Show a) => String -> ReadM a
-bounded t = eitherReader $ \s -> do
-  i <- Read.readEither @Integer s
-  when (i < fromIntegral (minBound @a)) $ Left $ t <> " must not be less than " <> show (minBound @a)
-  when (i > fromIntegral (maxBound @a)) $ Left $ t <> " must not greater than " <> show (maxBound @a)
-  pure (fromIntegral i)
 
 -- | Aids type inference.  Use this function to ensure the value is a function
 -- that modifies a value.
