@@ -22,7 +22,6 @@ module Cardano.Api.Utils
   , readFileBlocking
   , runParsecParser
   , textShow
-  , modifyWith
 
     -- ** CLI option parsing
   , unsafeBoundedRational
@@ -106,14 +105,6 @@ readFileBlocking path =
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show
-
--- | Aids type inference.  Use this function to ensure the value is a function
--- that modifies a value.
-modifyWith
-  :: ()
-  => (a -> a)
-  -> (a -> a)
-modifyWith = id
 
 -- | Convert Rational to a bounded rational. Throw an exception when the rational is out of bounds.
 unsafeBoundedRational
