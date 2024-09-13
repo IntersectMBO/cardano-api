@@ -926,7 +926,6 @@ module Cardano.Api
   , chainPointToSlotNo
   , chainPointToHeaderHash
   , makeChainTip
-  , parseFilePath
   , writeSecrets
 
     -- * Convenience functions
@@ -948,9 +947,6 @@ module Cardano.Api
   , txInsExistInUTxO
   , notScriptLockedTxIns
   , textShow
-
-    -- ** CLI option parsing
-  , bounded
 
     -- ** Query expressions
   , queryAccountState
