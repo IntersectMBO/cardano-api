@@ -1602,6 +1602,7 @@ createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
     let era = toCardanoEra sbe
         apiTxOuts = txOuts bc
+        apiTxIns = txIns bc
         apiScriptWitnesses = collectTxBodyScriptWitnesses sbe bc
         apiScriptValidity = txScriptValidity bc
         apiMintValue = txMintValue bc
@@ -1621,7 +1622,7 @@ createTransactionBody sbe bc =
         txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
         scripts = convScripts apiScriptWitnesses
         languages = convLanguages apiScriptWitnesses
-        sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        sData = convScriptData sbe apiTxIns apiTxOuts apiScriptWitnesses
         proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
         votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
         currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
@@ -2416,10 +2417,11 @@ convScripts scriptWitnesses =
 convScriptData
   :: ()
   => ShelleyBasedEra era
+  -> TxIns build era
   -> [TxOut CtxTx era]
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
   -> TxBodyScriptData era
-convScriptData sbe txOuts scriptWitnesses =
+convScriptData sbe txIns txOuts scriptWitnesses =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const TxBodyNoScriptData)
     ( \w ->
@@ -2460,6 +2462,17 @@ convScriptData sbe txOuts scriptWitnesses =
                       ) <-
                       scriptWitnesses
                    ]
+                ++ [ d
+                   | ( _
+                       , BuildTxWith
+                           ( KeyWitness
+                               _
+                               (PrivateKeyWitness (KeyDatumForTxIn (Just d)))
+                           )
+                     ) <-
+                     txIns
+                   ]
+
          in TxBodyScriptData w datums redeemers
     )
     sbe
@@ -2763,6 +2776,16 @@ makeShelleyTransactionBody
               ) <-
               witnesses
            ]
+        ++ [ d
+           | ( _
+               , BuildTxWith
+                   ( KeyWitness
+                       _
+                       (PrivateKeyWitness (KeyDatumForTxIn (Just d)))
+                   )
+             ) <-
+             txIns
+           ]
 
     redeemers :: Alonzo.Redeemers StandardAlonzo
     redeemers =
@@ -2886,7 +2909,17 @@ makeShelleyTransactionBody
               ) <-
               witnesses
            ]
-
+        ++ [ d
+           | ( _
+               , BuildTxWith
+                   ( KeyWitness
+                       _
+                       (PrivateKeyWitness (KeyDatumForTxIn (Just d)))
+                   )
+             ) <-
+             txIns
+           ]
+      
     redeemers :: Alonzo.Redeemers StandardBabbage
     redeemers =
       Alonzo.Redeemers $
@@ -3024,7 +3057,17 @@ makeShelleyTransactionBody
               ) <-
               witnesses
            ]
-
+        ++ [ d
+           | ( _
+               , BuildTxWith
+                   ( KeyWitness
+                       _
+                       (PrivateKeyWitness (KeyDatumForTxIn (Just d)))
+                   )
+             ) <-
+             txIns
+           ]
+      
     redeemers :: Alonzo.Redeemers StandardConway
     redeemers =
       Alonzo.Redeemers $

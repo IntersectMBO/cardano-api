@@ -1535,7 +1535,7 @@ substituteExecutionUnits
         :: (ScriptWitness witctx era -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era))
         -> Witness witctx era
         -> Either (TxBodyErrorAutoBalance era) (Witness witctx era)
-      adjustWitness _ (KeyWitness ctx) = Right $ KeyWitness ctx
+      adjustWitness _ (KeyWitness ctx witness') = Right $ KeyWitness ctx witness'
       adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
 
     mapScriptWitnessesCertificates

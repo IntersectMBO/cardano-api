@@ -54,11 +54,13 @@ module Cardano.Api.Script
   , WitCtxStake
   , WitCtx (..)
   , ScriptWitness (..)
+  , PrivateKeyWitness (..)
   , Witness (..)
   , KeyWitnessInCtx (..)
   , ScriptWitnessInCtx (..)
   , IsScriptWitnessInCtx (..)
   , ScriptDatum (..)
+  , KeyDatum (..)
   , ScriptRedeemer
   , scriptWitnessScript
 
@@ -722,6 +724,15 @@ data ScriptWitness witctx era where
 
 deriving instance Show (ScriptWitness witctx era)
 
+data PrivateKeyWitness witctx era where
+  PrivateKeyWitness
+    :: KeyDatum witctx
+    -> PrivateKeyWitness witctx era
+
+deriving instance Show (PrivateKeyWitness witctx era)
+
+deriving instance Eq (PrivateKeyWitness witctx era)
+
 -- The GADT in the SimpleScriptWitness constructor requires a custom instance
 instance Eq (ScriptWitness witctx era) where
   (==)
@@ -773,6 +784,14 @@ deriving instance Eq (ScriptDatum witctx)
 
 deriving instance Show (ScriptDatum witctx)
 
+data KeyDatum witctx where
+  KeyDatumForTxIn :: Maybe HashableScriptData -> KeyDatum WitCtxTxIn
+  NoKeyDatumForStake :: KeyDatum WitCtxStake
+
+deriving instance Eq (KeyDatum witctx)
+
+deriving instance Show (KeyDatum witctx)
+
 -- We cannot always extract a script from a script witness due to reference scripts.
 -- Reference scripts exist in the UTxO, so without access to the UTxO we cannot
 -- retrieve the script.
@@ -803,6 +822,7 @@ scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
 data Witness witctx era where
   KeyWitness
     :: KeyWitnessInCtx witctx
+    -> PrivateKeyWitness witctx era
     -> Witness witctx era
   ScriptWitness
     :: ScriptWitnessInCtx witctx
