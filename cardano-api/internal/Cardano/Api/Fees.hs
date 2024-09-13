@@ -234,7 +234,7 @@ estimateBalancedTxBody
   totalUTxOValue = do
     -- Step 1. Substitute those execution units into the tx
 
-    let sbe = maryEraOnwardsToShelleyBasedEra w
+    let sbe = inject w
     txbodycontent1 <-
       maryEraOnwardsConstraints w $
         first TxFeeEstimationScriptExecutionError $
@@ -1331,7 +1331,7 @@ calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollate
                 retColSup
                 ( TxOut
                     cAddr
-                    (lovelaceToTxOutValue (babbageEraOnwardsToShelleyBasedEra retColSup) returnCollateral)
+                    (lovelaceToTxOutValue (inject retColSup) returnCollateral)
                     TxOutDatumNone
                     ReferenceScriptNone
                 )

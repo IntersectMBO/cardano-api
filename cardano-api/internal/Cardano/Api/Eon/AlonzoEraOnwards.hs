@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -69,6 +70,15 @@ instance ToCardanoEra AlonzoEraOnwards where
     AlonzoEraOnwardsBabbage -> BabbageEra
     AlonzoEraOnwardsConway -> ConwayEra
 
+instance Inject (AlonzoEraOnwards era) (CardanoEra era) where
+  inject = toCardanoEra
+
+instance Inject (AlonzoEraOnwards era) (ShelleyBasedEra era) where
+  inject = \case
+    AlonzoEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
+    AlonzoEraOnwardsBabbage -> ShelleyBasedEraBabbage
+    AlonzoEraOnwardsConway -> ShelleyBasedEraConway
+
 type AlonzoEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
@@ -113,11 +123,9 @@ alonzoEraOnwardsConstraints = \case
   AlonzoEraOnwardsBabbage -> id
   AlonzoEraOnwardsConway -> id
 
+{-# DEPRECATED alonzoEraOnwardsToShelleyBasedEra "Use 'inject' instead." #-}
 alonzoEraOnwardsToShelleyBasedEra :: AlonzoEraOnwards era -> ShelleyBasedEra era
-alonzoEraOnwardsToShelleyBasedEra = \case
-  AlonzoEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
-  AlonzoEraOnwardsBabbage -> ShelleyBasedEraBabbage
-  AlonzoEraOnwardsConway -> ShelleyBasedEraConway
+alonzoEraOnwardsToShelleyBasedEra = inject
 
 class IsAlonzoBasedEra era where
   alonzoBasedEra :: AlonzoEraOnwards era
