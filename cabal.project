@@ -53,8 +53,8 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 440828510cd40f8f0cded91c89a21ed6fdbf7b9a
-  --sha256: sha256-f/b04vf7kqVRqnHGm6cKlis338qshTPuKP6bCrUtogw=
+  tag: f738f4ab146ceb25b2cc63dc00119516f5c0b6a7
+  --sha256: sha256-+xboWOhbtPkLfcjMmg6Vlfrn3DOvJ+7GkoQmtPBcy4o=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
