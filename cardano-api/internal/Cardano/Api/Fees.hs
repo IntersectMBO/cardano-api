@@ -236,7 +236,7 @@ estimateBalancedTxBody
   totalUTxOValue = do
     -- Step 1. Substitute those execution units into the tx
 
-    let sbe = maryEraOnwardsToShelleyBasedEra w
+    let sbe = inject w
     txbodycontent1 <-
       maryEraOnwardsConstraints w $
         first TxFeeEstimationScriptExecutionError $
@@ -1302,7 +1302,7 @@ calcReturnAndTotalCollateral
   -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
 calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _ = (TxReturnCollateralNone, TxTotalCollateralNone)
 calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableCollateral = babbageEraOnwardsConstraints w $ do
-  let sbe = babbageEraOnwardsToShelleyBasedEra w
+  let sbe = inject w
       colPerc = pp' ^. Ledger.ppCollateralPercentageL
       -- We must first figure out how much lovelace we have committed
       -- as collateral and we must determine if we have enough lovelace at our

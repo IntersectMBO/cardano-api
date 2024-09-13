@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -62,6 +63,14 @@ instance ToCardanoEra ShelleyToAllegraEra where
     ShelleyToAllegraEraShelley -> ShelleyEra
     ShelleyToAllegraEraAllegra -> AllegraEra
 
+instance Inject (ShelleyToAllegraEra era) (CardanoEra era) where
+  inject = toCardanoEra
+
+instance Inject (ShelleyToAllegraEra era) (ShelleyBasedEra era) where
+  inject = \case
+    ShelleyToAllegraEraShelley -> ShelleyBasedEraShelley
+    ShelleyToAllegraEraAllegra -> ShelleyBasedEraAllegra
+
 type ShelleyToAllegraEraConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
@@ -102,7 +111,6 @@ shelleyToAllegraEraConstraints = \case
   ShelleyToAllegraEraShelley -> id
   ShelleyToAllegraEraAllegra -> id
 
+{-# DEPRECATED shelleyToAllegraEraToShelleyBasedEra "Use 'inject' instead." #-}
 shelleyToAllegraEraToShelleyBasedEra :: ShelleyToAllegraEra era -> ShelleyBasedEra era
-shelleyToAllegraEraToShelleyBasedEra = \case
-  ShelleyToAllegraEraShelley -> ShelleyBasedEraShelley
-  ShelleyToAllegraEraAllegra -> ShelleyBasedEraAllegra
+shelleyToAllegraEraToShelleyBasedEra = inject

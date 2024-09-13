@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,6 +20,7 @@ module Cardano.Api.Experimental.Eras
   , Era (..)
   , IsEra (..)
   , Some (..)
+  , Inject (..)
   , LedgerEra
   , DeprecatedEra (..)
   , EraCommonConstraints
@@ -39,6 +41,7 @@ import           Cardano.Api.Via.ShowOf
 
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Babbage as Ledger
+import           Cardano.Ledger.BaseTypes (Inject (..))
 import qualified Cardano.Ledger.Conway as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Hashes
@@ -184,11 +187,31 @@ eraFromStringLike = \case
 -- instance IsEra ConwayEra where
 --   useEra = ConwayEra
 -- @
+{-# DEPRECATED eraToSbe "Use 'inject' instead." #-}
 eraToSbe
   :: Era era
   -> ShelleyBasedEra era
-eraToSbe BabbageEra = ShelleyBasedEraBabbage
-eraToSbe ConwayEra = ShelleyBasedEraConway
+eraToSbe = inject
+
+instance Inject (Era era) (Api.CardanoEra era) where
+  inject = \case
+    BabbageEra -> Api.BabbageEra
+    ConwayEra -> Api.ConwayEra
+
+instance Inject (Era era) (ShelleyBasedEra era) where
+  inject = \case
+    BabbageEra -> ShelleyBasedEraBabbage
+    ConwayEra -> ShelleyBasedEraConway
+
+instance Inject (Era era) (BabbageEraOnwards era) where
+  inject = \case
+    BabbageEra -> BabbageEraOnwardsBabbage
+    ConwayEra -> BabbageEraOnwardsConway
+
+instance Inject (BabbageEraOnwards era) (Era era) where
+  inject = \case
+    BabbageEraOnwardsBabbage -> BabbageEra
+    BabbageEraOnwardsConway -> ConwayEra
 
 newtype DeprecatedEra era
   = DeprecatedEra (ShelleyBasedEra era)
@@ -207,13 +230,13 @@ sbeToEra e@ShelleyBasedEraMary = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraAllegra = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraShelley = throwError $ DeprecatedEra e
 
+{-# DEPRECATED babbageEraOnwardsToEra "Use 'inject' instead." #-}
 babbageEraOnwardsToEra :: BabbageEraOnwards era -> Era era
-babbageEraOnwardsToEra BabbageEraOnwardsBabbage = BabbageEra
-babbageEraOnwardsToEra BabbageEraOnwardsConway = ConwayEra
+babbageEraOnwardsToEra = inject
 
+{-# DEPRECATED eraToBabbageEraOnwards "Use 'inject' instead." #-}
 eraToBabbageEraOnwards :: Era era -> BabbageEraOnwards era
-eraToBabbageEraOnwards BabbageEra = BabbageEraOnwardsBabbage
-eraToBabbageEraOnwards ConwayEra = BabbageEraOnwardsConway
+eraToBabbageEraOnwards = inject
 
 -------------------------------------------------------------------------
 

@@ -134,7 +134,6 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Byron as Byron
-import           Cardano.Api.Eon.AllegraEraOnwards (allegraEraOnwardsToShelleyBasedEra)
 import           Cardano.Api.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
@@ -392,7 +391,7 @@ genLedgerValue w genAId genQuant =
 genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
 genValueDefault w = genLedgerValue w genAssetId genSignedNonZeroQuantity
 
-genValueForRole :: MaryEraOnwards era -> ParserValueRole -> Gen Value
+genValueForRole :: forall era. MaryEraOnwards era -> ParserValueRole -> Gen Value
 genValueForRole w =
   \case
     RoleMint ->
@@ -400,7 +399,7 @@ genValueForRole w =
     RoleUTxO ->
       fromLedgerValue sbe <$> genValueForTxOut sbe
  where
-  sbe = maryEraOnwardsToShelleyBasedEra w
+  sbe = inject w :: ShelleyBasedEra era
 
 -- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
 -- positive or negative quantity.
@@ -600,7 +599,7 @@ genTxAuxScripts era =
         TxAuxScripts w
           <$> Gen.list
             (Range.linear 0 3)
-            (genScriptInEra (allegraEraOnwardsToShelleyBasedEra w))
+            (genScriptInEra (inject w))
     )
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals build era)
@@ -1163,7 +1162,7 @@ genProposals w = conwayEraOnwardsConstraints w $ do
   -- We're doing it for the complete representation of possible values space of TxProposalProcedures.
   -- Proposal procedures code in cardano-api should handle such invalid values just fine.
   extraProposals <- Gen.list (Range.constant 0 10) (genProposal w)
-  let sbe = conwayEraOnwardsToShelleyBasedEra w
+  let sbe = inject w
   proposalsWithWitnesses <-
     forM (extraProposals <> proposalsToBeWitnessed) $ \proposal ->
       (proposal,) <$> genScriptWitnessForStake sbe
@@ -1178,7 +1177,7 @@ genVotingProcedures :: Applicative (BuildTxWith build)
                     -> Gen (Api.TxVotingProcedures build era)
 genVotingProcedures w = conwayEraOnwardsConstraints w $ do
   voters <- Gen.list (Range.constant 0 10) Q.arbitrary
-  let sbe = conwayEraOnwardsToShelleyBasedEra w
+  let sbe = inject w
   votersWithWitnesses <- fmap fromList . forM voters $ \voter ->
     (voter,) <$> genScriptWitnessForStake sbe
   Api.TxVotingProcedures <$> Q.arbitrary <*> pure (pure votersWithWitnesses)
