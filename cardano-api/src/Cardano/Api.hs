@@ -48,6 +48,7 @@ module Cardano.Api
   , unFeatured
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
+  , Inject (..)
 
     -- * Eons
 

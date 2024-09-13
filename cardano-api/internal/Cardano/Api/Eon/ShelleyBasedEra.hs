@@ -1,8 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -176,6 +178,9 @@ instance ToCardanoEra ShelleyBasedEra where
     ShelleyBasedEraAlonzo -> AlonzoEra
     ShelleyBasedEraBabbage -> BabbageEra
     ShelleyBasedEraConway -> ConwayEra
+
+instance Inject (ShelleyBasedEra era) (CardanoEra era) where
+  inject = toCardanoEra
 
 -- | The class of eras that are based on Shelley. This allows uniform handling
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
