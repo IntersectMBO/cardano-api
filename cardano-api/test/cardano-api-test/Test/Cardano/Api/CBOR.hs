@@ -33,6 +33,10 @@ import           Test.Tasty.Hedgehog (testProperty)
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
 
+-- This is the same test as prop_roundtrip_witness_CBOR but uses the
+-- new function `serialiseTxLedgerCddl` instead of the deprecated
+-- `serialiseToTextEnvelope`. `deserialiseTxLedgerCddl` must be
+-- compatible with both during the transition.
 prop_forward_compatibility_txbody_CBOR :: Property
 prop_forward_compatibility_txbody_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
