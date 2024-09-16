@@ -144,6 +144,7 @@ module Cardano.Api.Tx.Body
   , convReturnCollateral
   , convScripts
   , convScriptData
+  , convSupplementalDatums
   , convTotalCollateral
   , convTransactionFee
   , convTxIns
@@ -1407,6 +1408,7 @@ defaultTxBodyContent era =
     , txFee = defaultTxFee era
     , txValidityLowerBound = TxValidityNoLowerBound
     , txValidityUpperBound = defaultTxValidityUpperBound era
+    , txSupplementalData = TxSupplementalDataNone
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
@@ -1628,6 +1630,7 @@ createTransactionBody sbe bc =
         apiExtraKeyWitnesses = txExtraKeyWits bc
         apiReturnCollateral = txReturnCollateral bc
         apiTotalCollateral = txTotalCollateral bc
+        apiSupplementalData = txSupplementalData bc
 
         -- Ledger types
         collTxIns = convCollateralTxIns apiCollateralTxIns
@@ -1638,7 +1641,7 @@ createTransactionBody sbe bc =
         txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
         scripts = convScripts apiScriptWitnesses
         languages = convLanguages apiScriptWitnesses
-        sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        sData = convScriptData sbe apiTxOuts apiScriptWitnesses apiSupplementalData
         proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
         votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
         currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
@@ -2435,8 +2438,9 @@ convScriptData
   => ShelleyBasedEra era
   -> [TxOut CtxTx era]
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
+  -> TxSupplementalData era
   -> TxBodyScriptData era
-convScriptData sbe txOuts scriptWitnesses =
+convScriptData sbe txOuts scriptWitnesses txSuppDatums =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const TxBodyNoScriptData)
     ( \w ->
@@ -2460,6 +2464,8 @@ convScriptData sbe txOuts scriptWitnesses =
                   , let d' = toAlonzoData d
                   ]
 
+            supplementalDatums = convSupplementalDatums sbe txSuppDatums
+
             scriptdata :: [HashableScriptData]
             scriptdata =
               [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
@@ -2477,7 +2483,7 @@ convScriptData sbe txOuts scriptWitnesses =
                       ) <-
                       scriptWitnesses
                    ]
-         in TxBodyScriptData w datums redeemers
+         in TxBodyScriptData w (datums <> supplementalDatums) redeemers
     )
     sbe
 
@@ -3377,6 +3383,20 @@ fromShelleyWithdrawal (L.Withdrawals withdrawals) =
   [ (fromShelleyStakeAddr stakeAddr, value, ViewTx)
   | (stakeAddr, value) <- Map.assocs withdrawals
   ]
+
+convSupplementalDatums
+  :: ShelleyBasedEra era
+  -> TxSupplementalData era
+  -> L.TxDats (ShelleyLedgerEra era)
+convSupplementalDatums sbe TxSupplementalDataNone =
+  shelleyBasedEraConstraints sbe mempty
+convSupplementalDatums sbe (TxSupplementalData datums) =
+  shelleyBasedEraConstraints sbe $
+    L.TxDats $
+      Map.fromList
+        [ (L.hashData d, d)
+        | d <- map toAlonzoData datums
+        ]
 
 -- | In the Allegra and Mary eras the auxiliary data consists of the tx metadata
 -- and the axiliary scripts. In the Alonzo and later eras the auxiliary data consists of the tx metadata
