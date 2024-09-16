@@ -76,6 +76,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       apiExtraKeyWitnesses = txExtraKeyWits bc
       apiReturnCollateral = txReturnCollateral bc
       apiTotalCollateral = txTotalCollateral bc
+      apiSupplementaryData = txSupplementalData bc
 
       -- Ledger types
       txins = convTxIns $ txIns bc
@@ -90,10 +91,11 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
       scripts = convScripts apiScriptWitnesses
       languages = convLanguages apiScriptWitnesses
-      sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+      sData = convScriptData sbe apiTxOuts apiScriptWitnesses apiSupplementaryData
       (datums, redeemers) = case sData of
         TxBodyScriptData _ ds rs -> (ds, rs)
         TxBodyNoScriptData -> (mempty, L.Redeemers mempty)
+
   let setMint = convMintValue apiMintValue
       setReqSignerHashes = convExtraKeyWitnesses apiExtraKeyWitnesses
       ledgerTxBody =
