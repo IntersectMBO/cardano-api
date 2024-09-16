@@ -57,6 +57,7 @@ module Cardano.Api.Tx.Body
   , setTxVotingProcedures
   , setTxMintValue
   , setTxScriptValidity
+  , setTxSupplementalDatums
   , setTxCurrentTreasuryValue
   , setTxTreasuryDonation
   , TxBodyError (..)
@@ -1376,7 +1377,7 @@ data TxBodyContent build era
   , txValidityUpperBound :: TxValidityUpperBound era
   , txMetadata :: TxMetadataInEra era
   , txAuxScripts :: TxAuxScripts era
-  , txSupplementalData :: TxSupplementalDatums era
+  , txSupplementalData :: BuildTxWith build (TxSupplementalDatums era)
   , txExtraKeyWits :: TxExtraKeyWitnesses era
   , txProtocolParams :: BuildTxWith build (Maybe (LedgerProtocolParameters era))
   , txWithdrawals :: TxWithdrawals build era
@@ -1408,7 +1409,7 @@ defaultTxBodyContent era =
     , txFee = defaultTxFee era
     , txValidityLowerBound = TxValidityNoLowerBound
     , txValidityUpperBound = defaultTxValidityUpperBound era
-    , txSupplementalData = TxSupplementalDataNone
+    , txSupplementalData = BuildTxWith TxSupplementalDataNone
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
@@ -1500,6 +1501,10 @@ setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
 
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
+
+setTxSupplementalDatums
+  :: TxSupplementalDatums era -> TxBodyContent BuildTx era -> TxBodyContent BuildTx era
+setTxSupplementalDatums v txBodyContent = txBodyContent{txSupplementalData = BuildTxWith v}
 
 setTxProposalProcedures
   :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
@@ -1917,6 +1922,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     , txMintValue = fromLedgerTxMintValue sbe body
     , txExtraKeyWits = fromLedgerTxExtraKeyWitnesses sbe body
     , txProtocolParams = ViewTx
+    , txSupplementalData = ViewTx
     , txMetadata
     , txAuxScripts
     , txScriptValidity = scriptValidity
@@ -2438,9 +2444,9 @@ convScriptData
   => ShelleyBasedEra era
   -> [TxOut CtxTx era]
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
-  -> TxSupplementalData era
+  -> BuildTxWith BuildTx (TxSupplementalDatums era)
   -> TxBodyScriptData era
-convScriptData sbe txOuts scriptWitnesses txSuppDatums =
+convScriptData sbe txOuts scriptWitnesses (BuildTxWith txSuppDatums) =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const TxBodyNoScriptData)
     ( \w ->
@@ -3386,14 +3392,14 @@ fromShelleyWithdrawal (L.Withdrawals withdrawals) =
 
 convSupplementalDatums
   :: ShelleyBasedEra era
-  -> TxSupplementalData era
+  -> TxSupplementalDatums era
   -> L.TxDats (ShelleyLedgerEra era)
 convSupplementalDatums sbe TxSupplementalDataNone =
   shelleyBasedEraConstraints sbe mempty
-convSupplementalDatums sbe (TxSupplementalData datums) =
+convSupplementalDatums sbe (TxSupplementalDatums datums) =
   shelleyBasedEraConstraints sbe $
     L.TxDats $
-      Map.fromList
+      fromList
         [ (L.hashData d, d)
         | d <- map toAlonzoData datums
         ]
