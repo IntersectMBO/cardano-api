@@ -1375,6 +1375,7 @@ data TxBodyContent build era
   , txValidityUpperBound :: TxValidityUpperBound era
   , txMetadata :: TxMetadataInEra era
   , txAuxScripts :: TxAuxScripts era
+  , txSupplementalData :: TxSupplementalDatums era
   , txExtraKeyWits :: TxExtraKeyWitnesses era
   , txProtocolParams :: BuildTxWith build (Maybe (LedgerProtocolParameters era))
   , txWithdrawals :: TxWithdrawals build era
