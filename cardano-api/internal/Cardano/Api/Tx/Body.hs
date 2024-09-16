@@ -105,6 +105,7 @@ module Cardano.Api.Tx.Body
   , TxValidityLowerBound (..)
   , TxValidityUpperBound (..)
   , TxMetadataInEra (..)
+  , TxSupplementalDatums (..)
   , TxAuxScripts (..)
   , TxExtraKeyWitnesses (..)
   , TxWithdrawals (..)
@@ -1150,6 +1151,21 @@ data TxMetadataInEra era where
 deriving instance Eq (TxMetadataInEra era)
 
 deriving instance Show (TxMetadataInEra era)
+
+-- ----------------------------------------------------------------------------
+-- Transaction supplemental data (era-dependent)
+--
+-- Supplemental datums can be added to the transaction if the corresponding
+-- datum hash exists at a input in that transaction.
+data TxSupplementalDatums era where
+  TxSupplementalDataNone :: TxSupplementalDatums era
+  TxSupplementalDatums
+    :: [HashableScriptData]
+    -> TxSupplementalDatums era
+
+deriving instance Eq (TxSupplementalDatums era)
+
+deriving instance Show (TxSupplementalDatums era)
 
 -- ----------------------------------------------------------------------------
 -- Auxiliary scripts (era-dependent)
