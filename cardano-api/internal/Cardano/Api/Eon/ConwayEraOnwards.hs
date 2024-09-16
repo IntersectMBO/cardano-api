@@ -12,11 +12,13 @@ module Cardano.Api.Eon.ConwayEraOnwards
   ( ConwayEraOnwards (..)
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToShelleyBasedEra
+  , conwayEraOnwardsToBabbageEraOnwards
   , ConwayEraOnwardsConstraints
   , IsConwayBasedEra (..)
   )
 where
 
+import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -113,6 +115,10 @@ conwayEraOnwardsConstraints = \case
 conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
 conwayEraOnwardsToShelleyBasedEra = \case
   ConwayEraOnwardsConway -> ShelleyBasedEraConway
+
+conwayEraOnwardsToBabbageEraOnwards :: ConwayEraOnwards era -> BabbageEraOnwards era
+conwayEraOnwardsToBabbageEraOnwards = \case
+  ConwayEraOnwardsConway -> BabbageEraOnwardsConway
 
 class IsConwayBasedEra era where
   conwayBasedEra :: ConwayEraOnwards era

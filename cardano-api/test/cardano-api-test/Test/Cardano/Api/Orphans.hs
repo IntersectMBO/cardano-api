@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Api.Typed.Orphans () where
+module Test.Cardano.Api.Orphans () where
 
 import           Cardano.Api.Shelley
 

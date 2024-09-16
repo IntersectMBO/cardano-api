@@ -6,6 +6,7 @@ module Test.Cardano.Api.Json
   )
 where
 
+import           Cardano.Api
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
 
@@ -14,8 +15,11 @@ import           Data.Aeson (eitherDecode, encode)
 import           Test.Gen.Cardano.Api (genAlonzoGenesis)
 import           Test.Gen.Cardano.Api.Typed
 
+import           Test.Cardano.Api.Orphans ()
+
 import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
+import qualified Hedgehog.Gen as Gen
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
@@ -56,6 +60,17 @@ prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
   sData <- forAll genHashableScriptData
   tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
 
+prop_roundtrip_praos_nonce_JSON :: Property
+prop_roundtrip_praos_nonce_JSON = H.property $ do
+  pNonce <- forAll $ Gen.just genMaybePraosNonce
+  tripping pNonce encode eitherDecode
+
+prop_roundtrip_protocol_parameters_JSON :: Property
+prop_roundtrip_protocol_parameters_JSON = H.property $ do
+  AnyCardanoEra era <- forAll $ Gen.element [minBound .. maxBound]
+  pp <- forAll (genProtocolParameters era)
+  tripping pp encode eitherDecode
+
 tests :: TestTree
 tests =
   testGroup
@@ -67,4 +82,6 @@ tests =
     , testProperty "json roundtrip txout tx context" prop_json_roundtrip_txout_tx_context
     , testProperty "json roundtrip txout utxo context" prop_json_roundtrip_txout_utxo_context
     , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
+    , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
+    , testProperty "json roundtrip protocol parameters" prop_roundtrip_protocol_parameters_JSON
     ]

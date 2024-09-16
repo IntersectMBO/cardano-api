@@ -7,7 +7,7 @@ where
 
 import           Cardano.Api (AsType (AsByronKey, AsSigningKey), Key (deterministicSigningKey))
 
-import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Orphans ()
 import qualified Test.Gen.Cardano.Crypto.Seed as Gen
 
 import           Hedgehog (Property)

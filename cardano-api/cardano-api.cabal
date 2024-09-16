@@ -318,16 +318,17 @@ test-suite cardano-api-test
     cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
     cardano-ledger-mary,
-    cardano-ledger-shelley,
     cardano-protocol-tpraos,
     cardano-slotting,
     cborg,
     containers,
+    data-default,
     directory,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
     interpolatedstring-perl6,
+    microlens,
     mtl,
     ouroboros-consensus,
     ouroboros-consensus-cardano,
@@ -340,7 +341,11 @@ test-suite cardano-api-test
     time,
 
   other-modules:
+    Test.Cardano.Api.Address
+    Test.Cardano.Api.Bech32
+    Test.Cardano.Api.CBOR
     Test.Cardano.Api.Crypto
+    Test.Cardano.Api.Envelope
     Test.Cardano.Api.EpochLeadership
     Test.Cardano.Api.Eras
     Test.Cardano.Api.Genesis
@@ -349,17 +354,13 @@ test-suite cardano-api-test
     Test.Cardano.Api.KeysByron
     Test.Cardano.Api.Ledger
     Test.Cardano.Api.Metadata
+    Test.Cardano.Api.Ord
+    Test.Cardano.Api.Orphans
     Test.Cardano.Api.ProtocolParameters
-    Test.Cardano.Api.Typed.Address
-    Test.Cardano.Api.Typed.Bech32
-    Test.Cardano.Api.Typed.CBOR
-    Test.Cardano.Api.Typed.Envelope
-    Test.Cardano.Api.Typed.JSON
-    Test.Cardano.Api.Typed.Ord
-    Test.Cardano.Api.Typed.Orphans
-    Test.Cardano.Api.Typed.RawBytes
-    Test.Cardano.Api.Typed.TxBody
-    Test.Cardano.Api.Typed.Value
+    Test.Cardano.Api.RawBytes
+    Test.Cardano.Api.Transaction.Autobalance
+    Test.Cardano.Api.TxBody
+    Test.Cardano.Api.Value
 
   ghc-options:
     -threaded
@@ -412,6 +413,6 @@ test-suite cardano-api-golden
     Test.Golden.Cardano.Api.Genesis
     Test.Golden.Cardano.Api.Ledger
     Test.Golden.Cardano.Api.ProtocolParameters
-    Test.Golden.Cardano.Api.Typed.Script
+    Test.Golden.Cardano.Api.Script
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec

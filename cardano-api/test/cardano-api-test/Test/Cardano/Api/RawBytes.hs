@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Test.Cardano.Api.Typed.RawBytes
+module Test.Cardano.Api.RawBytes
   ( tests
   )
 where
@@ -10,7 +10,7 @@ import           Cardano.Api
 
 import           Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Orphans ()
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H

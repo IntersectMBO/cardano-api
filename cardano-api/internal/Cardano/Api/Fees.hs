@@ -30,6 +30,7 @@ module Cardano.Api.Fees
   , estimateBalancedTxBody
   , estimateOrCalculateBalancedTxBody
   , makeTransactionBodyAutoBalance
+  , calcReturnAndTotalCollateral
   , AutoBalanceError (..)
   , BalancedTxBody (..)
   , FeeEstimationMode (..)
@@ -81,6 +82,7 @@ import           Cardano.Ledger.Credential as Ledger (Credential)
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Plutus.Language as Plutus
+import qualified Cardano.Ledger.Val as L
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified PlutusLedgerApi.V1 as Plutus
 
@@ -325,7 +327,7 @@ estimateBalancedTxBody
                   (txReturnCollateral txbodycontent)
                   (txTotalCollateral txbodycontent)
                   changeaddr
-                  totalPotentialCollateral
+                  (A.mkAdaValue sbe totalPotentialCollateral)
             )
             sbe
 
@@ -1070,10 +1072,8 @@ makeTransactionBodyAutoBalance
             availableEra
           $ obtainCommonConstraints availableEra
           $ txbodycontent
-            { txOuts =
-                txOuts txbodycontent
-                  <> [TxOut changeaddr (TxOutValueShelleyBased sbe change) TxOutDatumNone ReferenceScriptNone]
-            }
+            & modTxOuts
+              (<> [TxOut changeaddr (TxOutValueShelleyBased sbe change) TxOutDatumNone ReferenceScriptNone])
       exUnitsMapWithLogs <-
         first TxBodyErrorValidityInterval
           $ evaluateTransactionExecutionUnitsShelley
@@ -1143,21 +1143,23 @@ makeTransactionBodyAutoBalance
           (retColl, reqCol) =
             caseShelleyToAlonzoOrBabbageEraOnwards
               (const (TxReturnCollateralNone, TxTotalCollateralNone))
-              ( \w ->
-                  let collIns = case txInsCollateral txbodycontent of
-                        TxInsCollateral _ collIns' -> collIns'
-                        TxInsCollateralNone -> mempty
-                      collateralOuts = catMaybes [Map.lookup txin (unUTxO utxo) | txin <- collIns]
-                      totalPotentialCollateral = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) collateralOuts
-                   in calcReturnAndTotalCollateral
-                        w
-                        fee
-                        pp
-                        (txInsCollateral txbodycontent)
-                        (txReturnCollateral txbodycontent)
-                        (txTotalCollateral txbodycontent)
-                        changeaddr
-                        totalPotentialCollateral
+              ( \w -> do
+                  let totalPotentialCollateral =
+                        mconcat
+                          [ txOutValue
+                          | TxInsCollateral _ collInputs <- pure $ txInsCollateral txbodycontent
+                          , collTxIn <- collInputs
+                          , Just (TxOut _ (TxOutValueShelleyBased _ txOutValue) _ _) <- pure $ Map.lookup collTxIn (unUTxO utxo)
+                          ]
+                  calcReturnAndTotalCollateral
+                    w
+                    fee
+                    pp
+                    (txInsCollateral txbodycontent)
+                    (txReturnCollateral txbodycontent)
+                    (txTotalCollateral txbodycontent)
+                    changeaddr
+                    totalPotentialCollateral
               )
               sbe
 
@@ -1295,49 +1297,52 @@ calcReturnAndTotalCollateral
   -- ^ From the initial TxBodyContent
   -> AddressInEra era
   -- ^ Change address
-  -> Coin
-  -- ^ Total available collateral in lovelace
+  -> L.Value (ShelleyLedgerEra era)
+  -- ^ Total available collateral (can include non-ada)
   -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
 calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _ = (TxReturnCollateralNone, TxTotalCollateralNone)
-calcReturnAndTotalCollateral retColSup fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableAda =
-  do
-    let colPerc = pp' ^. Ledger.ppCollateralPercentageL
-        -- We must first figure out how much lovelace we have committed
-        -- as collateral and we must determine if we have enough lovelace at our
-        -- collateral tx inputs to cover the tx
-        totalCollateralLovelace = totalAvailableAda
-        requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
-        totalCollateral =
-          TxTotalCollateral retColSup . L.rationalToCoinViaCeiling $
-            reqAmt % 100
-        -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
-        -- We choose to multiply 100 rather than divide by 100 to make the calculation
-        -- easier to manage. At the end of the calculation we then use % 100 to perform our division
-        -- and round the returnCollateral down which has the effect of potentially slightly
-        -- overestimating the required collateral.
-        L.Coin amt = totalCollateralLovelace * 100 - requiredCollateral
-        returnCollateral = L.rationalToCoinViaFloor $ amt % 100
-    case (txReturnCollateral, txTotalCollateral) of
-      (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
-        (rc, tc)
-      (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
-        (rc, TxTotalCollateralNone)
-      (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
-        (TxReturnCollateralNone, tc)
-      (TxReturnCollateralNone, TxTotalCollateralNone) ->
-        if totalCollateralLovelace * 100 >= requiredCollateral
-          then
-            ( TxReturnCollateral
-                retColSup
-                ( TxOut
-                    cAddr
-                    (lovelaceToTxOutValue (babbageEraOnwardsToShelleyBasedEra retColSup) returnCollateral)
-                    TxOutDatumNone
-                    ReferenceScriptNone
-                )
-            , totalCollateral
-            )
-          else (TxReturnCollateralNone, TxTotalCollateralNone)
+calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableCollateral = babbageEraOnwardsConstraints w $ do
+  let sbe = babbageEraOnwardsToShelleyBasedEra w
+      colPerc = pp' ^. Ledger.ppCollateralPercentageL
+      -- We must first figure out how much lovelace we have committed
+      -- as collateral and we must determine if we have enough lovelace at our
+      -- collateral tx inputs to cover the tx
+      totalCollateralLovelace = totalAvailableCollateral ^. A.adaAssetL sbe
+      requiredCollateral@(L.Coin reqAmt) = fromIntegral colPerc * fee
+      totalCollateral =
+        TxTotalCollateral w . L.rationalToCoinViaCeiling $
+          reqAmt % 100
+      -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
+      -- We choose to multiply 100 rather than divide by 100 to make the calculation
+      -- easier to manage. At the end of the calculation we then use % 100 to perform our division
+      -- and round the returnCollateral down which has the effect of potentially slightly
+      -- overestimating the required collateral.
+      L.Coin returnCollateralAmount = totalCollateralLovelace * 100 - requiredCollateral
+      returnAdaCollateral = A.mkAdaValue sbe $ L.rationalToCoinViaFloor $ returnCollateralAmount % 100
+      -- non-ada collateral is not used, so just return it as is in the return collateral output
+      nonAdaCollateral = L.modifyCoin (const mempty) totalAvailableCollateral
+      returnCollateral = returnAdaCollateral <> nonAdaCollateral
+  case (txReturnCollateral, txTotalCollateral) of
+    (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
+      (rc, tc)
+    (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
+      (rc, TxTotalCollateralNone)
+    (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
+      (TxReturnCollateralNone, tc)
+    (TxReturnCollateralNone, TxTotalCollateralNone)
+      | returnCollateralAmount < 0 ->
+          (TxReturnCollateralNone, TxTotalCollateralNone)
+      | otherwise ->
+          ( TxReturnCollateral
+              w
+              ( TxOut
+                  cAddr
+                  (TxOutValueShelleyBased sbe returnCollateral)
+                  TxOutDatumNone
+                  ReferenceScriptNone
+              )
+          , totalCollateral
+          )
 
 calculateCreatedUTOValue
   :: ShelleyBasedEra era -> TxBodyContent build era -> Value

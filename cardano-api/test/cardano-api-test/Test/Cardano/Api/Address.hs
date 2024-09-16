@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Test.Cardano.Api.Typed.Address
+module Test.Cardano.Api.Address
   ( tests
   )
 where
@@ -11,7 +11,7 @@ import qualified Data.Aeson as Aeson
 
 import           Test.Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
 
-import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Orphans ()
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H

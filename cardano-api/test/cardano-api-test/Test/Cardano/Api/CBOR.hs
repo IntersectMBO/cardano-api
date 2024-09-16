@@ -4,7 +4,7 @@
 -- TODO remove when serialiseTxLedgerCddl is removed
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Test.Cardano.Api.Typed.CBOR
+module Test.Cardano.Api.CBOR
   ( tests
   )
 where
@@ -16,7 +16,7 @@ import           Data.Proxy (Proxy (..))
 
 import           Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Cardano.Api.Orphans ()
 
 import           Hedgehog (Property, forAll, property, tripping)
 import qualified Hedgehog as H

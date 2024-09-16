@@ -1,4 +1,4 @@
-module Test.Cardano.Api.Typed.Bech32
+module Test.Cardano.Api.Bech32
   ( tests
   )
 where

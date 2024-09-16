@@ -409,8 +409,8 @@ genValueForTxOut sbe = do
   caseShelleyToAllegraOrMaryEraOnwards
     (const (pure ada))
     ( \w -> do
-        v <- genValue w genAssetId genPositiveQuantity
-        pure $ ada <> v
+        v <- Gen.list (Range.constant 0 5) $ genValue w genAssetId genPositiveQuantity
+        pure $ ada <> mconcat v
     )
     sbe
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Golden.Cardano.Api.Typed.Script
+module Test.Golden.Cardano.Api.Script
   ( test_golden_SimpleScriptV1_All
   , test_golden_SimpleScriptV1_Any
   , test_golden_SimpleScriptV1_MofN

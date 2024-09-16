@@ -104,6 +104,7 @@ module Cardano.Api
   , ConwayEraOnwards (..)
   , conwayEraOnwardsConstraints
   , conwayEraOnwardsToShelleyBasedEra
+  , conwayEraOnwardsToBabbageEraOnwards
   , IsConwayBasedEra (..)
 
     -- * Era case handling
