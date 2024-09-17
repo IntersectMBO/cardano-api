@@ -12,6 +12,7 @@
 module Cardano.Api.SerialiseLedgerCddl
   ( TextEnvelopeCddlError (..)
   , FromSomeTypeCDDL (..)
+  , cddlTypeToEra
 
     -- * Reading one of several transaction or
 
@@ -315,26 +316,33 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
 -- will make it easier to keep track of the different Cddl descriptions via
 -- a single sum data type.
 cddlTypeToEra :: Text -> Either TextEnvelopeCddlError AnyShelleyBasedEra
-cddlTypeToEra = \case
-  "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
-  "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-  "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
-  "Witnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-  "Witnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-  "Witnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
-  "Unwitnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
-  "Unwitnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-  "Unwitnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
-  "Unwitnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-  "Unwitnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-  "Unwitnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
-  "TxWitness ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
-  "TxWitness AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
-  "TxWitness MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
-  "TxWitness AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
-  "TxWitness BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
-  "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
-  unknownCddlType -> Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
+cddlTypeToEra =
+  \case
+    "TxSignedShelley" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Witnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "Witnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "Witnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "Witnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "Witnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "Witnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "Unwitnessed Tx ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "Unwitnessed Tx AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "Unwitnessed Tx MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "Unwitnessed Tx AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "Unwitnessed Tx BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "Unwitnessed Tx ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    "TxWitness ShelleyEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraShelley
+    "TxWitness AllegraEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAllegra
+    "TxWitness MaryEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraMary
+    "TxWitness AlonzoEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraAlonzo
+    "TxWitness BabbageEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraBabbage
+    "TxWitness ConwayEra" -> return $ AnyShelleyBasedEra ShelleyBasedEraConway
+    unknownCddlType -> Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
 
 readFileTextEnvelopeCddlAnyOf
   :: [FromSomeTypeCDDL TextEnvelope b]

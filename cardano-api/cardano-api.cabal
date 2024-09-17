@@ -338,6 +338,7 @@ test-suite cardano-api-test
     tasty,
     tasty-hedgehog,
     tasty-quickcheck,
+    text,
     time,
 
   other-modules:
