@@ -10,10 +10,12 @@ module Test.Cardano.Api.CBOR
 where
 
 import           Cardano.Api
+import           Cardano.Api.SerialiseLedgerCddl (cddlTypeToEra)
 import           Cardano.Api.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
 import           Cardano.Api.Shelley (AsType (..))
 
 import           Data.Proxy (Proxy (..))
+import qualified Data.Text as T
 
 import           Test.Gen.Cardano.Api.Typed
 
@@ -188,6 +190,30 @@ prop_roundtrip_UpdateProposal_CBOR = H.property $ do
   proposal <- H.forAll $ genUpdateProposal era
   H.trippingCbor AsUpdateProposal proposal
 
+prop_Tx_cddlTypeToEra :: Property
+prop_Tx_cddlTypeToEra = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- forAll $ genTx era
+  shelleyBasedEraConstraints era $ do
+    let TextEnvelopeType d = textEnvelopeType (proxyToAsType (getProxy x))
+    H.note_ $ "Envelope type: " <> show d
+    cddlTypeToEra (T.pack d) H.=== Right (AnyShelleyBasedEra era)
+ where
+  getProxy :: forall a. a -> Proxy a
+  getProxy _ = Proxy
+
+prop_TxWitness_cddlTypeToEra :: Property
+prop_TxWitness_cddlTypeToEra = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- forAll $ genCardanoKeyWitness era
+  shelleyBasedEraConstraints era $ do
+    let TextEnvelopeType d = textEnvelopeType (proxyToAsType (getProxy x))
+    H.note_ $ "Envelope type: " <> show d
+    cddlTypeToEra (T.pack d) H.=== Right (AnyShelleyBasedEra era)
+ where
+  getProxy :: forall a. a -> Proxy a
+  getProxy _ = Proxy
+
 prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
@@ -281,6 +307,12 @@ tests =
     , testProperty
         "roundtrip script PlutusScriptV2 CBOR"
         prop_roundtrip_script_PlutusScriptV2_CBOR
+    , testProperty
+        "cddlTypeToEra for Tx types"
+        prop_Tx_cddlTypeToEra
+    , testProperty
+        "cddlTypeToEra for TxWitness types"
+        prop_TxWitness_cddlTypeToEra
     , testProperty
         "roundtrip UpdateProposal CBOR"
         prop_roundtrip_UpdateProposal_CBOR
