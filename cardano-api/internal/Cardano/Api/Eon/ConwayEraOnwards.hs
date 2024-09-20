@@ -120,7 +120,7 @@ conwayEraOnwardsToBabbageEraOnwards :: ConwayEraOnwards era -> BabbageEraOnwards
 conwayEraOnwardsToBabbageEraOnwards = \case
   ConwayEraOnwardsConway -> BabbageEraOnwardsConway
 
-class IsConwayBasedEra era where
+class IsBabbageBasedEra era => IsConwayBasedEra era where
   conwayBasedEra :: ConwayEraOnwards era
 
 instance IsConwayBasedEra ConwayEra where

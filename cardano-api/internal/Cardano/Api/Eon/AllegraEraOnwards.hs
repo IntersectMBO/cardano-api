@@ -111,7 +111,7 @@ allegraEraOnwardsToShelleyBasedEra = \case
   AllegraEraOnwardsBabbage -> ShelleyBasedEraBabbage
   AllegraEraOnwardsConway -> ShelleyBasedEraConway
 
-class IsAllegraBasedEra era where
+class IsShelleyBasedEra era => IsAllegraBasedEra era where
   allegraBasedEra :: AllegraEraOnwards era
 
 instance IsAllegraBasedEra AllegraEra where
