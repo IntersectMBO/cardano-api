@@ -1792,14 +1792,19 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         Slot.epochInfoRange eInfo (currentEpoch `Slot.addEpochInterval` Slot.EpochInterval 1)
 
     -- First we check if we are within 3k/f slots of the end of the current epoch.
+    -- In Conway era onwards, we use 4k/f slots instead of 3k/f slots.
+    -- see: https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/Glossary#epoch-structure
     -- Why? Because the stake distribution is stable at this point.
     -- k is the security parameter
     -- f is the active slot coefficient
     let stabilityWindowR :: Rational
-        stabilityWindowR = fromIntegral (3 * sgSecurityParam sGen) / Ledger.unboundRational (sgActiveSlotsCoeff sGen)
+        stabilityWindowR =
+          fromIntegral (stabilityWindowConst * sgSecurityParam sGen)
+            / Ledger.unboundRational (sgActiveSlotsCoeff sGen)
         stabilityWindowSlots :: SlotNo
         stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
         stableStakeDistribSlot = currentEpochLastSlot - stabilityWindowSlots
+        stabilityWindowConst = caseShelleyToBabbageOrConwayEraOnwards (const 3) (const 4) sbe
 
     case cTip of
       ChainTipAtGenesis -> Left LeaderErrGenesisSlot
