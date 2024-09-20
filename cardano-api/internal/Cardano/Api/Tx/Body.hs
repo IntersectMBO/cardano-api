@@ -57,6 +57,7 @@ module Cardano.Api.Tx.Body
   , setTxVotingProcedures
   , setTxMintValue
   , setTxScriptValidity
+  , setTxSupplementalDatums
   , setTxCurrentTreasuryValue
   , setTxTreasuryDonation
   , TxBodyError (..)
@@ -105,6 +106,7 @@ module Cardano.Api.Tx.Body
   , TxValidityLowerBound (..)
   , TxValidityUpperBound (..)
   , TxMetadataInEra (..)
+  , TxSupplementalDatums (..)
   , TxAuxScripts (..)
   , TxExtraKeyWitnesses (..)
   , TxWithdrawals (..)
@@ -143,6 +145,7 @@ module Cardano.Api.Tx.Body
   , convReturnCollateral
   , convScripts
   , convScriptData
+  , convSupplementalDatums
   , convTotalCollateral
   , convTransactionFee
   , convTxIns
@@ -1152,6 +1155,21 @@ deriving instance Eq (TxMetadataInEra era)
 deriving instance Show (TxMetadataInEra era)
 
 -- ----------------------------------------------------------------------------
+-- Transaction supplemental data (era-dependent)
+--
+-- Supplemental datums can be added to the transaction if the corresponding
+-- datum hash exists at a input in that transaction.
+data TxSupplementalDatums era where
+  TxSupplementalDataNone :: TxSupplementalDatums era
+  TxSupplementalDatums
+    :: [HashableScriptData]
+    -> TxSupplementalDatums era
+
+deriving instance Eq (TxSupplementalDatums era)
+
+deriving instance Show (TxSupplementalDatums era)
+
+-- ----------------------------------------------------------------------------
 -- Auxiliary scripts (era-dependent)
 --
 
@@ -1359,6 +1377,7 @@ data TxBodyContent build era
   , txValidityUpperBound :: TxValidityUpperBound era
   , txMetadata :: TxMetadataInEra era
   , txAuxScripts :: TxAuxScripts era
+  , txSupplementalData :: BuildTxWith build (TxSupplementalDatums era)
   , txExtraKeyWits :: TxExtraKeyWitnesses era
   , txProtocolParams :: BuildTxWith build (Maybe (LedgerProtocolParameters era))
   , txWithdrawals :: TxWithdrawals build era
@@ -1390,6 +1409,7 @@ defaultTxBodyContent era =
     , txFee = defaultTxFee era
     , txValidityLowerBound = TxValidityNoLowerBound
     , txValidityUpperBound = defaultTxValidityUpperBound era
+    , txSupplementalData = BuildTxWith TxSupplementalDataNone
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
@@ -1481,6 +1501,10 @@ setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
 
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
+
+setTxSupplementalDatums
+  :: TxSupplementalDatums era -> TxBodyContent BuildTx era -> TxBodyContent BuildTx era
+setTxSupplementalDatums v txBodyContent = txBodyContent{txSupplementalData = BuildTxWith v}
 
 setTxProposalProcedures
   :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
@@ -1611,6 +1635,7 @@ createTransactionBody sbe bc =
         apiExtraKeyWitnesses = txExtraKeyWits bc
         apiReturnCollateral = txReturnCollateral bc
         apiTotalCollateral = txTotalCollateral bc
+        apiSupplementalData = txSupplementalData bc
 
         -- Ledger types
         collTxIns = convCollateralTxIns apiCollateralTxIns
@@ -1621,7 +1646,7 @@ createTransactionBody sbe bc =
         txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
         scripts = convScripts apiScriptWitnesses
         languages = convLanguages apiScriptWitnesses
-        sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        sData = convScriptData sbe apiTxOuts apiScriptWitnesses apiSupplementalData
         proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
         votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
         currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
@@ -1897,6 +1922,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     , txMintValue = fromLedgerTxMintValue sbe body
     , txExtraKeyWits = fromLedgerTxExtraKeyWitnesses sbe body
     , txProtocolParams = ViewTx
+    , txSupplementalData = ViewTx
     , txMetadata
     , txAuxScripts
     , txScriptValidity = scriptValidity
@@ -2418,8 +2444,9 @@ convScriptData
   => ShelleyBasedEra era
   -> [TxOut CtxTx era]
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
+  -> BuildTxWith BuildTx (TxSupplementalDatums era)
   -> TxBodyScriptData era
-convScriptData sbe txOuts scriptWitnesses =
+convScriptData sbe txOuts scriptWitnesses (BuildTxWith txSuppDatums) =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const TxBodyNoScriptData)
     ( \w ->
@@ -2443,6 +2470,8 @@ convScriptData sbe txOuts scriptWitnesses =
                   , let d' = toAlonzoData d
                   ]
 
+            supplementalDatums = convSupplementalDatums sbe txSuppDatums
+
             scriptdata :: [HashableScriptData]
             scriptdata =
               [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
@@ -2460,7 +2489,7 @@ convScriptData sbe txOuts scriptWitnesses =
                       ) <-
                       scriptWitnesses
                    ]
-         in TxBodyScriptData w datums redeemers
+         in TxBodyScriptData w (datums <> supplementalDatums) redeemers
     )
     sbe
 
@@ -3360,6 +3389,20 @@ fromShelleyWithdrawal (L.Withdrawals withdrawals) =
   [ (fromShelleyStakeAddr stakeAddr, value, ViewTx)
   | (stakeAddr, value) <- Map.assocs withdrawals
   ]
+
+convSupplementalDatums
+  :: ShelleyBasedEra era
+  -> TxSupplementalDatums era
+  -> L.TxDats (ShelleyLedgerEra era)
+convSupplementalDatums sbe TxSupplementalDataNone =
+  shelleyBasedEraConstraints sbe mempty
+convSupplementalDatums sbe (TxSupplementalDatums datums) =
+  shelleyBasedEraConstraints sbe $
+    L.TxDats $
+      fromList
+        [ (L.hashData d, d)
+        | d <- map toAlonzoData datums
+        ]
 
 -- | In the Allegra and Mary eras the auxiliary data consists of the tx metadata
 -- and the axiliary scripts. In the Alonzo and later eras the auxiliary data consists of the tx metadata

@@ -313,6 +313,7 @@ module Cardano.Api
   , setTxUpdateProposal
   , setTxMintValue
   , setTxScriptValidity
+  , setTxSupplementalDatums
   , setTxProposalProcedures
   , setTxVotingProcedures
   , setTxCurrentTreasuryValue
@@ -357,6 +358,7 @@ module Cardano.Api
   , EpochSlots (..)
   , TxMetadataInEra (..)
   , TxAuxScripts (..)
+  , TxSupplementalDatums (..)
   , TxExtraKeyWitnesses (..)
   , TxWithdrawals (..)
   , TxCertificates (..)
