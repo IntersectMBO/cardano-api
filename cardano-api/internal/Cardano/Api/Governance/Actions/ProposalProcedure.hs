@@ -13,7 +13,7 @@
 module Cardano.Api.Governance.Actions.ProposalProcedure where
 
 import           Cardano.Api.Address
-import           Cardano.Api.Eon.ShelleyBasedEra
+import           Cardano.Api.Experimental.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
@@ -38,6 +38,7 @@ import           Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import           Data.Maybe (fromMaybe)
+import           Data.Typeable
 import           Data.Word
 import           GHC.Exts (IsList (..))
 
@@ -46,13 +47,13 @@ data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 -- TODO: Conway - Transitiion to Ledger.GovAction
 data GovernanceAction era
   = MotionOfNoConfidence
-      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (LedgerEra era)))
   | ProposeNewConstitution
-      (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose (LedgerEra era)))
       (Ledger.Anchor StandardCrypto)
       (StrictMaybe (Shelley.ScriptHash StandardCrypto))
   | ProposeNewCommittee
-      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (LedgerEra era)))
       [L.Credential ColdCommitteeRole StandardCrypto]
       -- ^ Old constitutional committee
       (Map (L.Credential ColdCommitteeRole StandardCrypto) EpochNo)
@@ -65,21 +66,20 @@ data GovernanceAction era
       [(Network, StakeCredential, L.Coin)]
       !(StrictMaybe (Shelley.ScriptHash StandardCrypto))
   | InitiateHardfork
-      (StrictMaybe (Ledger.GovPurposeId Ledger.HardForkPurpose (ShelleyLedgerEra era)))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.HardForkPurpose (LedgerEra era)))
       ProtVer
   | -- | Governance policy
     UpdatePParams
-      (StrictMaybe (Ledger.GovPurposeId Ledger.PParamUpdatePurpose (ShelleyLedgerEra era)))
-      (Ledger.PParamsUpdate (ShelleyLedgerEra era))
+      (StrictMaybe (Ledger.GovPurposeId Ledger.PParamUpdatePurpose (LedgerEra era)))
+      (Ledger.PParamsUpdate (LedgerEra era))
       !(StrictMaybe (Shelley.ScriptHash StandardCrypto))
 
 toGovernanceAction
   :: ()
-  => ShelleyBasedEra era
-  -> GovernanceAction era
-  -> Gov.GovAction (ShelleyLedgerEra era)
-toGovernanceAction sbe =
-  shelleyBasedEraConstraints sbe $ \case
+  => GovernanceAction ConwayEra
+  -> Gov.GovAction (LedgerEra ConwayEra)
+toGovernanceAction =
+  \case
     MotionOfNoConfidence prevGovId ->
       Gov.NoConfidence prevGovId
     ProposeNewConstitution prevGovAction anchor mConstitutionScriptHash ->
@@ -115,8 +115,8 @@ toGovernanceAction sbe =
       Gov.ParameterChange preGovId ppup govPol
 
 fromGovernanceAction
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Gov.GovAction (ShelleyLedgerEra era)
+  :: EraCrypto (LedgerEra era) ~ StandardCrypto
+  => Gov.GovAction (LedgerEra era)
   -> GovernanceAction era
 fromGovernanceAction = \case
   Gov.NoConfidence prevGovId ->
@@ -145,28 +145,28 @@ fromGovernanceAction = \case
   Gov.InfoAction ->
     InfoAct
 
-newtype Proposal era = Proposal {unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era)}
+newtype Proposal era = Proposal {unProposal :: Gov.ProposalProcedure (LedgerEra era)}
 
-instance IsShelleyBasedEra era => Show (Proposal era) where
+instance (IsEra era, Typeable era) => Show (Proposal era) where
   show (Proposal pp) = do
-    let ppStr = shelleyBasedEraConstraints (shelleyBasedEra @era) $ show pp
+    let ppStr = obtainCommonConstraints (useEra @era) $ show pp
     "Proposal {unProposal = " <> ppStr <> "}"
 
-instance IsShelleyBasedEra era => Eq (Proposal era) where
-  (Proposal pp1) == (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ pp1 == pp2
+instance (IsEra era, Typeable era) => Eq (Proposal era) where
+  (Proposal pp1) == (Proposal pp2) = obtainCommonConstraints (useEra @era) $ pp1 == pp2
 
-instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
-  toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
+instance (IsEra era, Typeable era) => ToCBOR (Proposal era) where
+  toCBOR (Proposal vp) = obtainCommonConstraints (useEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
 
-instance IsShelleyBasedEra era => FromCBOR (Proposal era) where
+instance (IsEra era, Typeable era) => FromCBOR (Proposal era) where
   fromCBOR =
-    Proposal <$> shelleyBasedEraConstraints (shelleyBasedEra @era) (Shelley.fromEraCBOR @Conway.Conway)
+    Proposal <$> obtainCommonConstraints (useEra @era) (Shelley.fromEraCBOR @Conway.Conway)
 
-instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
-  serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
-  deserialiseFromCBOR _proxy = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.decodeFull'
+instance (IsEra era, Typeable era, HasTypeProxy era) => SerialiseAsCBOR (Proposal era) where
+  serialiseToCBOR = obtainCommonConstraints (useEra @era) CBOR.serialize'
+  deserialiseFromCBOR _proxy = obtainCommonConstraints (useEra @era) CBOR.decodeFull'
 
-instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
+instance (IsEra era, Typeable era, HasTypeProxy era) => HasTextEnvelope (Proposal era) where
   textEnvelopeType _ = "Governance proposal"
 
 instance HasTypeProxy era => HasTypeProxy (Proposal era) where
@@ -174,7 +174,7 @@ instance HasTypeProxy era => HasTypeProxy (Proposal era) where
   proxyToAsType _ = AsProposal
 
 createProposalProcedure
-  :: ShelleyBasedEra era
+  :: Era era
   -> Network
   -> L.Coin
   -- ^ Deposit
@@ -183,37 +183,37 @@ createProposalProcedure
   -> GovernanceAction era
   -> Ledger.Anchor StandardCrypto
   -> Proposal era
-createProposalProcedure sbe nw dep cred govAct anchor =
-  shelleyBasedEraConstraints sbe $
-    Proposal
-      Gov.ProposalProcedure
-        { Gov.pProcDeposit = dep
-        , Gov.pProcReturnAddr = L.RewardAccount nw $ toShelleyStakeCredential cred
-        , Gov.pProcGovAction = toGovernanceAction sbe govAct
-        , Gov.pProcAnchor = anchor
-        }
+createProposalProcedure BabbageEra _nw _dep _cred _govAct _anchor =
+  error "This case should not exist because mainnet is conway"
+createProposalProcedure ConwayEra nw dep cred govAct anchor =
+  Proposal
+    Gov.ProposalProcedure
+      { Gov.pProcDeposit = dep
+      , Gov.pProcReturnAddr = L.RewardAccount nw $ toShelleyStakeCredential cred
+      , Gov.pProcGovAction = toGovernanceAction govAct
+      , Gov.pProcAnchor = anchor
+      }
 
 fromProposalProcedure
-  :: ShelleyBasedEra era
+  :: Era era
   -> Proposal era
   -> (L.Coin, Hash StakeKey, GovernanceAction era)
-fromProposalProcedure sbe (Proposal pp) =
-  shelleyBasedEraConstraints
-    sbe
-    ( Gov.pProcDeposit pp
-    , case fromShelleyStakeCredential (L.raCredential (Gov.pProcReturnAddr pp)) of
-        StakeCredentialByKey keyhash -> keyhash
-        StakeCredentialByScript _scripthash ->
-          error "fromProposalProcedure TODO: Conway era script reward addresses not yet supported"
-    , fromGovernanceAction (Gov.pProcGovAction pp)
-    )
+fromProposalProcedure BabbageEra _ = error "This case should not exist because mainnet is conway"
+fromProposalProcedure ConwayEra (Proposal pp) =
+  ( Gov.pProcDeposit pp
+  , case fromShelleyStakeCredential (L.raCredential (Gov.pProcReturnAddr pp)) of
+      StakeCredentialByKey keyhash -> keyhash
+      StakeCredentialByScript _scripthash ->
+        error "fromProposalProcedure TODO: Conway era script reward addresses not yet supported"
+  , fromGovernanceAction (Gov.pProcGovAction pp)
+  )
 
 createPreviousGovernanceActionId
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+  :: EraCrypto (LedgerEra era) ~ StandardCrypto
   => TxId
   -> Word16
   -- ^ Governance action transation index
-  -> Ledger.GovPurposeId (r :: Ledger.GovActionPurpose) (ShelleyLedgerEra era)
+  -> Ledger.GovPurposeId (r :: Ledger.GovActionPurpose) (LedgerEra era)
 createPreviousGovernanceActionId txid index =
   Ledger.GovPurposeId $ createGovernanceActionId txid index
 
