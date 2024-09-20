@@ -199,6 +199,8 @@ import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error (Error (..), displayError)
+import           Cardano.Api.Experimental.Eras hiding (Era (..))
+import qualified Cardano.Api.Experimental.Eras as Exp
 import           Cardano.Api.Feature
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.Hash
@@ -1254,10 +1256,10 @@ deriving instance Show (TxMintValue build era)
 data TxVotingProcedures build era where
   TxVotingProceduresNone :: TxVotingProcedures build era
   TxVotingProcedures
-    :: L.VotingProcedures (ShelleyLedgerEra era)
+    :: L.VotingProcedures (LedgerEra era)
     -> BuildTxWith
         build
-        (Map (Ledger.Voter (Ledger.EraCrypto (ShelleyLedgerEra era))) (ScriptWitness WitCtxStake era))
+        (Map (Ledger.Voter (Ledger.EraCrypto (LedgerEra era))) (ScriptWitness WitCtxStake era))
     -> TxVotingProcedures build era
 
 deriving instance Eq (TxVotingProcedures build era)
@@ -1286,7 +1288,7 @@ mkTxVotingProcedures votingProcedures = do
   votingScriptWitnessSingleton
     :: VotingProcedures era
     -> Maybe (ScriptWitness WitCtxStake era)
-    -> Map (L.Voter (L.EraCrypto (ShelleyLedgerEra era))) (ScriptWitness WitCtxStake era)
+    -> Map (L.Voter (L.EraCrypto (LedgerEra era))) (ScriptWitness WitCtxStake era)
   votingScriptWitnessSingleton _ Nothing = Map.empty
   votingScriptWitnessSingleton votingProcedures' (Just scriptWitness) = do
     let voter = fromJust $ getVotingScriptCredentials votingProcedures'
@@ -1294,7 +1296,7 @@ mkTxVotingProcedures votingProcedures = do
 
   getVotingScriptCredentials
     :: VotingProcedures era
-    -> Maybe (L.Voter (L.EraCrypto (ShelleyLedgerEra era)))
+    -> Maybe (L.Voter (L.EraCrypto (LedgerEra era)))
   getVotingScriptCredentials (VotingProcedures (L.VotingProcedures m)) =
     listToMaybe $ Map.keys m
 
@@ -1593,6 +1595,11 @@ instance Error TxBodyError where
     TxBodyProtocolParamsConversionError ppces ->
       "Errors in protocol parameters conversion: " <> prettyError ppces
 
+-- TODO: Slight predicament. We want to propagate the experimental api
+-- however QA needs a cli command that can handle update proposals between all eras
+-- Let's do that first. We would need to start in cardano-api and then expose
+-- that interface in cardano-cli. After that is done we can go ahead and break the
+-- rest of the cli
 createTransactionBody
   :: ()
   => ShelleyBasedEra era
@@ -1901,7 +1908,7 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     , txAuxScripts
     , txScriptValidity = scriptValidity
     , txProposalProcedures = fromLedgerProposalProcedures sbe body
-    , txVotingProcedures = fromLedgerVotingProcedures sbe body
+    , txVotingProcedures = error "TODO" -- fromLedgerVotingProcedures sbe body
     , txCurrentTreasuryValue = fromLedgerCurrentTreasuryValue sbe body
     , txTreasuryDonation = fromLedgerTreasuryDonation sbe body
     }
@@ -1922,16 +1929,16 @@ fromLedgerProposalProcedures sbe body =
 
 fromLedgerVotingProcedures
   :: ()
-  => ShelleyBasedEra era
-  -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> Maybe (Featured ConwayEraOnwards era (TxVotingProcedures ViewTx era))
-fromLedgerVotingProcedures sbe body =
-  forShelleyBasedEraInEonMaybe sbe $ \w ->
-    conwayEraOnwardsConstraints w $
-      Featured w $
-        TxVotingProcedures
-          (body ^. L.votingProceduresTxBodyL)
-          ViewTx
+  => Exp.Era era
+  -> Ledger.TxBody (LedgerEra era)
+  -> Maybe (Featured Exp.Era era (TxVotingProcedures ViewTx era))
+fromLedgerVotingProcedures Exp.BabbageEra _ = Nothing
+fromLedgerVotingProcedures e@Exp.ConwayEra body =
+  Just $
+    Featured e $
+      TxVotingProcedures
+        (body ^. L.votingProceduresTxBodyL)
+        ViewTx
 
 fromLedgerCurrentTreasuryValue
   :: ()
@@ -2503,7 +2510,7 @@ convProposalProcedures (TxProposalProcedures pp bWits) = do
   let wits = fromMaybe mempty $ buildTxWithToMaybe bWits
   pp |>< fromList (Map.keys wits)
 
-convVotingProcedures :: TxVotingProcedures build era -> L.VotingProcedures (ShelleyLedgerEra era)
+convVotingProcedures :: TxVotingProcedures build era -> L.VotingProcedures (LedgerEra era)
 convVotingProcedures txVotingProcedures =
   case txVotingProcedures of
     TxVotingProceduresNone -> L.VotingProcedures Map.empty

@@ -251,3 +251,5 @@ type EraCommonConstraints era =
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) EraIndependentTxBody L.StandardCrypto
   , IsEra era
   )
+
+-- L.ConwayEraTxBody (LedgerEra era) is missing from
