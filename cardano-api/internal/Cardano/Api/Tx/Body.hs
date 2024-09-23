@@ -154,6 +154,7 @@ module Cardano.Api.Tx.Body
   , convWithdrawals
   , getScriptIntegrityHash
   , mkCommonTxBody
+  , scriptWitnessesProposing
   , toAuxiliaryData
   , toByronTxId
   , toShelleyTxId
@@ -3319,18 +3320,18 @@ collectTxBodyScriptWitnesses
       , witness <- maybeToList (Map.lookup voter witnesses)
       ]
 
-    scriptWitnessesProposing
-      :: TxProposalProcedures BuildTx era
-      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
-    scriptWitnessesProposing TxProposalProceduresNone = []
-    scriptWitnessesProposing (TxProposalProcedures proposalProcedures (BuildTxWith mScriptWitnesses))
-      | Map.null mScriptWitnesses = []
-      | otherwise =
-          [ (ScriptWitnessIndexProposing ix, AnyScriptWitness witness)
-          | let proposalsList = toList proposalProcedures
-          , (ix, proposal) <- zip [0 ..] proposalsList
-          , witness <- maybeToList (Map.lookup proposal mScriptWitnesses)
-          ]
+scriptWitnessesProposing
+  :: TxProposalProcedures BuildTx era
+  -> [(ScriptWitnessIndex, AnyScriptWitness era)]
+scriptWitnessesProposing TxProposalProceduresNone = []
+scriptWitnessesProposing (TxProposalProcedures proposalProcedures (BuildTxWith mScriptWitnesses))
+  | Map.null mScriptWitnesses = []
+  | otherwise =
+      [ (ScriptWitnessIndexProposing ix, AnyScriptWitness witness)
+      | let proposalsList = toList proposalProcedures
+      , (ix, proposal) <- zip [0 ..] proposalsList
+      , witness <- maybeToList (Map.lookup proposal mScriptWitnesses)
+      ]
 
 -- This relies on the TxId Ord instance being consistent with the
 -- Ledger.TxId Ord instance via the toShelleyTxId conversion
