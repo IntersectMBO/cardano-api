@@ -1184,13 +1184,13 @@ genScriptWitnessForStake sbe = do
     SimpleScript simpleScript -> do
       simpleScriptOrReferenceInput <- Gen.choice
         [ pure $ SScript simpleScript
-        , SReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        , SReferenceScript <$> genTxIn
         ]
       pure $ Api.SimpleScriptWitness scriptLangInEra simpleScriptOrReferenceInput
     PlutusScript plutusScriptVersion' plutusScript -> do
       plutusScriptOrReferenceInput <- Gen.choice
         [ pure $ PScript plutusScript
-        , PReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        , PReferenceScript <$> genTxIn
         ]
       scriptRedeemer <- genHashableScriptData
       PlutusScriptWitness

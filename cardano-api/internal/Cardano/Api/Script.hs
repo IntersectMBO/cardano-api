@@ -681,17 +681,12 @@ data WitCtx witctx where
 -- or to mint tokens. This datatype encapsulates this concept.
 data PlutusScriptOrReferenceInput lang
   = PScript (PlutusScript lang)
-  | -- | Needed to construct the redeemer pointer map
-    -- in the case of minting reference scripts where we don't
-    -- have direct access to the script
-    PReferenceScript
-      TxIn
-      (Maybe ScriptHash)
+  | PReferenceScript TxIn 
   deriving (Eq, Show)
 
 data SimpleScriptOrReferenceInput lang
   = SScript SimpleScript
-  | SReferenceScript TxIn (Maybe ScriptHash)
+  | SReferenceScript TxIn
   deriving (Eq, Show)
 
 -- | A /use/ of a script within a transaction body to witness that something is
@@ -791,9 +786,9 @@ scriptWitnessScript (SimpleScriptWitness SimpleScriptInConway (SScript script)) 
   Just $ ScriptInEra SimpleScriptInConway (SimpleScript script)
 scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
   Just $ ScriptInEra langInEra (PlutusScript version script)
-scriptWitnessScript (SimpleScriptWitness _ (SReferenceScript _ _)) =
+scriptWitnessScript (SimpleScriptWitness _ (SReferenceScript _)) =
   Nothing
-scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
+scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _) _ _ _) =
   Nothing
 
 -- ----------------------------------------------------------------------------
