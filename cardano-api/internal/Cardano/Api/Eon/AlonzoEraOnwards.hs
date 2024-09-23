@@ -17,6 +17,7 @@ module Cardano.Api.Eon.AlonzoEraOnwards
   )
 where
 
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -119,7 +120,7 @@ alonzoEraOnwardsToShelleyBasedEra = \case
   AlonzoEraOnwardsBabbage -> ShelleyBasedEraBabbage
   AlonzoEraOnwardsConway -> ShelleyBasedEraConway
 
-class IsAlonzoBasedEra era where
+class IsMaryBasedEra era => IsAlonzoBasedEra era where
   alonzoBasedEra :: AlonzoEraOnwards era
 
 instance IsAlonzoBasedEra AlonzoEra where
