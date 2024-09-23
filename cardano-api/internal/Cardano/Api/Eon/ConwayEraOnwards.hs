@@ -74,6 +74,7 @@ type ConwayEraOnwardsConstraints era =
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
   , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
   , L.AlonzoEraTxOut (ShelleyLedgerEra era)
+  , L.AlonzoEraTxWits (ShelleyLedgerEra era)
   , L.BabbageEraTxBody (ShelleyLedgerEra era)
   , L.ConwayEraGov (ShelleyLedgerEra era)
   , L.ConwayEraPParams (ShelleyLedgerEra era)

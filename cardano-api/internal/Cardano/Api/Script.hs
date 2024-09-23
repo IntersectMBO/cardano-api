@@ -47,6 +47,7 @@ module Cardano.Api.Script
     -- * Reference scripts
   , ReferenceScript (..)
   , refScriptToShelleyScript
+  , getScriptWitnessReferenceInput
 
     -- * Use of a script in an era as a witness
   , WitCtxTxIn
@@ -693,6 +694,14 @@ data SimpleScriptOrReferenceInput lang
   = SScript SimpleScript
   | SReferenceScript TxIn (Maybe ScriptHash)
   deriving (Eq, Show)
+
+getScriptWitnessReferenceInput :: ScriptWitness witctx era -> Maybe TxIn
+getScriptWitnessReferenceInput (SimpleScriptWitness _ (SReferenceScript txIn _)) =
+  Just txIn
+getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PReferenceScript txIn _) _ _ _) =
+  Just txIn
+getScriptWitnessReferenceInput (SimpleScriptWitness _ (SScript _)) = Nothing
+getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PScript _) _ _ _) = Nothing
 
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
