@@ -681,7 +681,7 @@ data WitCtx witctx where
 -- or to mint tokens. This datatype encapsulates this concept.
 data PlutusScriptOrReferenceInput lang
   = PScript (PlutusScript lang)
-  | PReferenceScript TxIn 
+  | PReferenceScript TxIn
   deriving (Eq, Show)
 
 data SimpleScriptOrReferenceInput lang

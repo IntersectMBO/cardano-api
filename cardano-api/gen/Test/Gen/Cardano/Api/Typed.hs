@@ -160,7 +160,7 @@ import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word16, Word32, Word64)
-import           GHC.Exts (IsList(..))
+import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Numeric.Natural (Natural)
 
