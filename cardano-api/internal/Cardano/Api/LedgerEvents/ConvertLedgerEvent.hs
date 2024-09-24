@@ -165,6 +165,7 @@ toLedgerEventConway evt =
         case conwayLedgerEvent of
           Conway.UtxowEvent utxowEvent -> handleConwayUTxOWEvent utxowEvent
           Conway.CertsEvent{} -> Nothing
+          Conway.MempoolEvent{} -> Nothing
           Conway.GovEvent govEvent ->
             case govEvent of
               Conway.GovNewProposals txid props ->
