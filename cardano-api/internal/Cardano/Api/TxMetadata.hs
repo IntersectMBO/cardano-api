@@ -6,7 +6,7 @@
 -- | Metadata embedded in transactions
 module Cardano.Api.TxMetadata
   ( -- * Types
-    TxMetadata (TxMetadata)
+    TxMetadata (..)
 
     -- * Class
   , AsTxMetadata (..)
