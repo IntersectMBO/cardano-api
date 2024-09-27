@@ -105,6 +105,7 @@ module Cardano.Api.ReexposeLedger
   , Prices (..)
   , CostModels
   , AlonzoGenesis
+  , AsIxItem (..)
   , ppPricesL
   -- Base
   , boundRational
@@ -142,7 +143,8 @@ where
 
 import qualified Cardano.Chain.UTxO as Byron
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..), PParamsUpdate (..), ppPricesL)
+import           Cardano.Ledger.Alonzo.Core (AsIxItem (AsIxItem), CoinPerWord (..),
+                   PParamsUpdate (..), ppPricesL)
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Alonzo.Scripts (CostModels, Prices (..))
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
