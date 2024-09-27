@@ -86,16 +86,74 @@ module Cardano.Api.ReexposeLedger
   , drepDepositL
   , csCommitteeCredsL
   -- Byron
+  , AddrAttributes (..)
+  , Address
+  , addressDetailedF
+  , addressF
+  , addressHash
+  , ApplicationName (..)
   , Annotated (..)
-  , Byron.Tx (..)
+  , aTaAnnotation
+  , BlockCount (..)
+  , Byron.CompactTxIn
+  , Byron.CompactTxOut
+  , Byron.fromCompactTxIn
+  , Byron.fromCompactTxOut
   , byronProtVer
-  , serialize'
-  , toPlainDecoder
-  , toCBOR
-  , fromCBOR
+  , Byron.Tx (..)
+  , Byron.unUTxO
   , ByteSpan (..)
-  , slice
+  , Certificate
+  , checkApplicationName
+  , checkVerKeyAddress
+  , checkSystemTag
+  , Config (..)
+  , decCBORABlockOrBoundary
+  , decodeAddressBase58
   , Decoder
+  , defaultUTxOConfiguration
+  , EpochNumber (..)
+  , FakeAvvmOptions (..)
+  , fromCBOR
+  , GeneratedSecrets (..)
+  , generateGenesisData
+  , GenesisAvvmBalances (..)
+  , GenesisData (..)
+  , GenesisDataError (..)
+  , GenesisDataGenerationError (..)
+  , GenesisDelegation (..)
+  , GenesisDelegationError
+  , GenesisHash (..)
+  , GenesisInitializer (..)
+  , GenesisSpec (..)
+  , genesisUtxo
+  , InstallerHash (..)
+  , Lovelace
+  , LovelacePortion
+  , lovelacePortionToRational
+  , mkAttributes
+  , mkGenesisDelegation
+  , mkGenesisSpec
+  , mkKnownLovelace
+  , NetworkMagic (..)
+  , NumSoftwareVersion
+  , PoorSecret (..)
+  , Proposal
+  , ProtocolParameters (..)
+  , rationalToLovelacePortion
+  , readGenesisData
+  , serialize'
+  , slice
+  , SlotNumber (..)
+  , SoftforkRule (..)
+  , SoftwareVersion (..)
+  , SystemTag (..)
+  , TestnetBalanceOptions (..)
+  , TxFeePolicy (..)
+  , TxSizeLinear (..)
+  , toCBOR
+  , toPlainDecoder
+  , txOutAddress
   -- Shelley
   , secondsToNominalDiffTimeMicro
   -- Babbage
@@ -141,6 +199,25 @@ module Cardano.Api.ReexposeLedger
   )
 where
 
+import           Cardano.Chain.Block (decCBORABlockOrBoundary)
+import           Cardano.Chain.Common (AddrAttributes (..), Address, BlockCount (..), Lovelace,
+                   LovelacePortion, NetworkMagic (..), TxFeePolicy (..), TxSizeLinear (..),
+                   addressDetailedF, addressF, addressHash, checkVerKeyAddress, decodeAddressBase58,
+                   lovelacePortionToRational, mkAttributes, mkKnownLovelace,
+                   rationalToLovelacePortion)
+import           Cardano.Chain.Delegation (Certificate)
+import           Cardano.Chain.Genesis (Config (..), FakeAvvmOptions (..), GeneratedSecrets (..),
+                   GenesisAvvmBalances (..), GenesisData (..), GenesisDataError (..),
+                   GenesisDataGenerationError (..), GenesisDelegation (..), GenesisDelegationError,
+                   GenesisHash (..), GenesisInitializer (..), GenesisSpec (..), PoorSecret,
+                   TestnetBalanceOptions (..), generateGenesisData, mkGenesisDelegation,
+                   mkGenesisSpec, poorSecretToKey, readGenesisData)
+import           Cardano.Chain.Slotting (EpochNumber (..), SlotNumber (..))
+import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..), NumSoftwareVersion,
+                   Proposal, ProtocolParameters (..), SoftforkRule (..), SoftwareVersion (..),
+                   SystemTag (..), checkApplicationName, checkSystemTag)
+import           Cardano.Chain.UTxO (aTaAnnotation, defaultUTxOConfiguration, genesisUtxo,
+                   txOutAddress)
 import qualified Cardano.Chain.UTxO as Byron
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Alonzo.Core (AsIxItem (AsIxItem), CoinPerWord (..),

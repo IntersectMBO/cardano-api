@@ -80,6 +80,7 @@ module Cardano.Api.Tx.Body
   , TxIx (..)
   , genesisUTxOPseudoTxIn
   , getReferenceInputsSizeForTxIds
+  , ByronTxIn
 
     -- * Transaction outputs
   , CtxTx
@@ -95,6 +96,7 @@ module Cardano.Api.Tx.Body
   , parseHash
   , TxOutInAnyEra (..)
   , txOutInAnyEra
+  , ByronTxOut
 
     -- * Other transaction body types
   , TxInsCollateral (..)
