@@ -19,7 +19,7 @@ import           Cardano.Api.Fees
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as L
 import           Cardano.Api.Script
-import           Cardano.Api.Shelley (Address (..), LedgerProtocolParameters (..))
+import           Cardano.Api.Shelley (LedgerProtocolParameters (..))
 
 import qualified Cardano.Ledger.Alonzo.Core as L
 import qualified Cardano.Ledger.Coin as L

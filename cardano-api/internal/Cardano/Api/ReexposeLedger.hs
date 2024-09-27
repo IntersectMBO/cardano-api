@@ -87,15 +87,15 @@ module Cardano.Api.ReexposeLedger
   , csCommitteeCredsL
   -- Byron
   , Annotated (..)
-  , Byron.Tx (..)
   , byronProtVer
-  , serialize'
-  , toPlainDecoder
-  , toCBOR
-  , fromCBOR
+  , Byron.Tx (..)
   , ByteSpan (..)
-  , slice
   , Decoder
+  , fromCBOR
+  , serialize'
+  , slice
+  , toCBOR
+  , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
   -- Babbage
