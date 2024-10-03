@@ -41,5 +41,5 @@ handleShelleyLEDGEREvents
   => Shelley.ShelleyLedgerEvent ledgerera -> Maybe LedgerEvent
 handleShelleyLEDGEREvents ledgerEvent =
   case ledgerEvent of
-    Shelley.UtxowEvent e -> handleAlonzoOnwardsUTxOWEvent e
+    Shelley.UtxowEvent e -> handleAlonzoUTxOWEvent e
     Shelley.DelegsEvent e -> handleShelleyDELEGSEvent e

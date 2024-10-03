@@ -163,7 +163,7 @@ toLedgerEventConway evt =
     ShelleyLedgerEventBBODY
       (ShelleyInAlonzoEvent (LedgersEvent (Shelley.LedgerEvent conwayLedgerEvent))) ->
         case conwayLedgerEvent of
-          Conway.UtxowEvent{} -> Nothing
+          Conway.UtxowEvent utxowEvent -> handleConwayUTxOWEvent utxowEvent
           Conway.CertsEvent{} -> Nothing
           Conway.GovEvent govEvent ->
             case govEvent of
