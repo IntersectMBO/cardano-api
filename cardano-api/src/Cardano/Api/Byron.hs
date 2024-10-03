@@ -11,11 +11,6 @@ module Cardano.Api.Byron
   , SigningKey (..)
   , SomeByronSigningKey (..)
 
-    -- * Delegation
-  , Dlg.ACertificate (..)
-  , Dlg.isValid
-  , Dlg.signCertificate
-
     -- * Hashes
   , Hash (..)
 
@@ -76,13 +71,8 @@ module Cardano.Api.Byron
   , ByronVote (..)
   , makeByronVote
   , toByronLedgertoByronVote
-  , KeyHash
-  , ProtocolVersion (..)
-  , Vote
 
     -- ** Conversions
-  , ByronTxIn
-  , ByronTxOut
   , fromByronTxIn
   , toByronLovelace
   , toByronNetworkMagic
@@ -102,7 +92,6 @@ where
 
 import           Cardano.Api
 import           Cardano.Api.Address
-import           Cardano.Api.ByronDelegation as Dlg
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseLedgerCddl

@@ -15,9 +15,6 @@ module Cardano.Api.SpecialByron
   , applicationName
   , applicationVersion
   , softwareVersion
-  , KeyHash
-  , ProtocolVersion (..)
-  , Vote
   )
 where
 
@@ -27,11 +24,11 @@ import           Cardano.Api.NetworkId (NetworkId, toByronProtocolMagicId)
 import           Cardano.Api.SerialiseRaw
 
 import qualified Cardano.Binary as Binary
-import           Cardano.Chain.Common (KeyHash, LovelacePortion, TxFeePolicy)
+import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import           Cardano.Chain.Slotting
 import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerHash,
                    ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion (..),
-                   SoftforkRule, SoftwareVersion, SystemTag, UpId, Vote, mkVote, recoverUpId,
+                   SoftforkRule, SoftwareVersion, SystemTag, UpId, mkVote, recoverUpId,
                    recoverVoteId, signProposal)
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Vote as ByronVote

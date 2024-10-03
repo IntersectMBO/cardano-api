@@ -15,8 +15,6 @@ module Cardano.Api.TxIn
   ( -- * Transaction inputs
     TxIn (..)
   , TxIx (..)
-  , ByronTxIn
-  , ByronTxOut
 
     -- * Transaction Ids
   , TxId (..)
@@ -172,7 +170,3 @@ toShelleyTxIn (TxIn txid (TxIx txix)) =
 fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
 fromShelleyTxIn (Ledger.TxIn txid (Ledger.TxIx txix)) =
   TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
-
-type ByronTxIn = Byron.TxIn
-
-type ByronTxOut = Byron.TxOut
