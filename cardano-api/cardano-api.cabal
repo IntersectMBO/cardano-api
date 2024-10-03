@@ -144,6 +144,7 @@ library internal
     Cardano.Api.SpecialByron
     Cardano.Api.StakePoolMetadata
     Cardano.Api.Tx.Body
+    Cardano.Api.Tx.Compatible
     Cardano.Api.Tx.Sign
     Cardano.Api.TxIn
     Cardano.Api.TxMetadata
@@ -236,6 +237,7 @@ library
     Cardano.Api.Byron
     Cardano.Api.ChainSync.Client
     Cardano.Api.ChainSync.ClientPipelined
+    Cardano.Api.Compatible
     Cardano.Api.Crypto.Ed25519Bip32
     Cardano.Api.Experimental
     Cardano.Api.Ledger
