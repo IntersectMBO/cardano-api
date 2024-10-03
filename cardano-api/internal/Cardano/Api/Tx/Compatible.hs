@@ -43,6 +43,13 @@ data AnyProtocolUpdate era where
     :: ShelleyBasedEra era
     -> AnyProtocolUpdate era
 
+data AnyVote era where
+  VotingProcedures
+    :: ConwayEraOnwards era
+    -> TxVotingProcedures BuildTx era
+    -> AnyVote era
+  NoVotes :: AnyVote era
+
 createCompatibleSignedTx
   :: forall era
    . ShelleyBasedEra era
@@ -52,10 +59,11 @@ createCompatibleSignedTx
   -> Lovelace
   -- ^ Fee
   -> AnyProtocolUpdate era
+  -> AnyVote era
   -> Either ProtocolParametersConversionError (Tx era)
-createCompatibleSignedTx sbeF ins outs witnesses txFee' anyProtocolUpdate =
-  shelleyBasedEraConstraints sbeF $
-    case anyProtocolUpdate of
+createCompatibleSignedTx sbeF ins outs witnesses txFee' anyProtocolUpdate anyVote =
+  shelleyBasedEraConstraints sbeF $ do
+    tx <- case anyProtocolUpdate of
       ShelleyToBabbageProtocolUpdate shelleyToBabbageEra updateProposal -> do
         let sbe = shelleyToBabbageEraToShelleyBasedEra shelleyToBabbageEra
 
@@ -97,7 +105,24 @@ createCompatibleSignedTx sbeF ins outs witnesses txFee' anyProtocolUpdate =
                   .~ conwayEraOnwardsConstraints conwayOnwards (allConwayEraOnwardsWitnesses sData ledgerScripts)
 
         return $ ShelleyTx sbe finalTx
+
+    case anyVote of
+      NoVotes -> return tx
+      VotingProcedures conwayOnwards procedures -> do
+        let ledgerVotingProcedures = convVotingProcedures procedures
+            ShelleyTx sbe' fTx = tx
+            updatedTx =
+              conwayEraOnwardsConstraints conwayOnwards $
+                overwriteVotingProcedures fTx ledgerVotingProcedures
+        return $ ShelleyTx sbe' updatedTx
  where
+  overwriteVotingProcedures
+    :: L.ConwayEraTxBody ledgerera
+    => L.EraTx ledgerera
+    => L.Tx ledgerera -> L.VotingProcedures ledgerera -> L.Tx ledgerera
+  overwriteVotingProcedures lTx vProcedures =
+    lTx & (L.bodyTxL . L.votingProceduresTxBodyL) .~ vProcedures
+
   shelleyKeywitnesses =
     fromList [w | ShelleyKeyWitness _ w <- witnesses]
 
