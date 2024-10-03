@@ -18,7 +18,7 @@ where
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Script
-import           Cardano.Api.Shelley (Address (..), LedgerProtocolParameters (..), ShelleyLedgerEra)
+import           Cardano.Api.Shelley (LedgerProtocolParameters (..), ShelleyLedgerEra)
 
 import qualified Cardano.Ledger.Mary.Value as L
 import qualified Cardano.Ledger.Shelley.Scripts as L

@@ -179,7 +179,7 @@ module Cardano.Api
     -- * Payment addresses
 
     -- | Constructing and inspecting normal payment addresses
-  , Address
+  , Address (..)
   , ByronAddr
   , ShelleyAddr
   , NetworkId (..)

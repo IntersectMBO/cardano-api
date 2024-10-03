@@ -235,7 +235,6 @@ library
   exposed-modules:
     Cardano.Api
     Cardano.Api.Byron
-    Cardano.Api.Byron.Misc
     Cardano.Api.ChainSync.Client
     Cardano.Api.ChainSync.ClientPipelined
     Cardano.Api.Crypto.Ed25519Bip32
