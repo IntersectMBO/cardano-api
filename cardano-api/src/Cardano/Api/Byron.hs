@@ -14,9 +14,7 @@ module Cardano.Api.Byron
     -- * Hashes
   , Hash (..)
 
-    -- * Payment addresses
-
-    -- | Constructing and inspecting Byron payment addresses
+    -- * Network identifier
   , NetworkId (Mainnet, Testnet)
 
     -- * Signing transactions
@@ -73,18 +71,28 @@ module Cardano.Api.Byron
   , serializeByronTx
   , writeByronTxFileTextEnvelopeCddl
 
-    -- * Byron ledger
-  , ACertificate (..)
+    -- * Byron ledger re-exports
+
+    -- ** Address components
   , AddrAttributes (..)
   , Address
-  , ApplicationName (..)
-  , ATxAux (..)
-  , BlockCount (..)
-  , Certificate
-  , CompactTxIn
-  , CompactTxOut
+  , KeyHash
+  , addressDetailedF
+  , addressF
+  , addressHash
+  , checkVerKeyAddress
+  , decodeAddressBase58
+  , mkAttributes
+
+    -- ** Lovelace handling
+  , Lovelace
+  , LovelacePortion
+  , lovelacePortionToRational
+  , mkKnownLovelace
+  , rationalToLovelacePortion
+
+    -- ** Genesis configuration and AVVM
   , Config (..)
-  , EpochNumber (..)
   , FakeAvvmOptions (..)
   , GeneratedSecrets (..)
   , GenesisAvvmBalances (..)
@@ -96,48 +104,52 @@ module Cardano.Api.Byron
   , GenesisHash (..)
   , GenesisInitializer (..)
   , GenesisSpec (..)
-  , InstallerHash (..)
-  , KeyHash
-  , Lovelace
-  , LovelacePortion
   , NetworkMagic (..)
-  , NumSoftwareVersion
   , PoorSecret (..)
+  , TestnetBalanceOptions (..)
+  , TxFeePolicy (..)
+  , TxSizeLinear (..)
+  , generateGenesisData
+  , mkGenesisDelegation
+  , mkGenesisSpec
+  , readGenesisData
+
+    -- ** Updates
+  , ApplicationName (..)
+  , InstallerHash (..)
+  , NumSoftwareVersion
   , Proposal
   , ProtocolParameters (..)
   , ProtocolVersion (..)
-  , SlotNumber (..)
   , SoftforkRule (..)
   , SoftwareVersion (..)
   , SystemTag (..)
-  , TestnetBalanceOptions (..)
-  , TxFeePolicy (..)
-  , TxIn (..)
-  , TxOut (..)
-  , TxSizeLinear (..)
-  , UTxO (..)
   , Vote
-  , addressDetailedF
-  , addressF
-  , addressHash
   , checkApplicationName
   , checkSystemTag
-  , checkVerKeyAddress
+
+    -- ** Blocks, slots, and epochs
+  , BlockCount (..)
+  , EpochNumber (..)
+  , SlotNumber (..)
   , decCBORABlockOrBoundary
-  , decodeAddressBase58
+
+    -- ** UTxO components
+  , ATxAux (..)
+  , CompactTxIn
+  , CompactTxOut
+  , TxIn (..)
+  , TxOut (..)
+  , UTxO (..)
   , defaultUTxOConfiguration
   , fromCompactTxIn
   , fromCompactTxOut
-  , generateGenesisData
   , genesisUtxo
+
+    -- ** Delegation
+  , ACertificate (..)
+  , Certificate
   , isValid
-  , lovelacePortionToRational
-  , mkAttributes
-  , mkGenesisDelegation
-  , mkGenesisSpec
-  , mkKnownLovelace
-  , rationalToLovelacePortion
-  , readGenesisData
   , signCertificate
   )
 where
