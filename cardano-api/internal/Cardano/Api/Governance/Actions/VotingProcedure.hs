@@ -171,6 +171,7 @@ newtype VotesMergingConflict era
       ( L.Voter (L.EraCrypto (ShelleyLedgerEra era))
       , [L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))]
       )
+  deriving Show
 
 -- | @mergeVotingProcedures vote1 vote2@ merges @vote1@ and @vote2@ into a single vote,
 -- or fails if the votes are incompatible.
