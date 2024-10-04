@@ -27,7 +27,7 @@ import qualified Cardano.Binary as Binary
 import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
 import           Cardano.Chain.Slotting
 import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerHash,
-                   ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion,
+                   ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion (..),
                    SoftforkRule, SoftwareVersion, SystemTag, UpId, mkVote, recoverUpId,
                    recoverVoteId, signProposal)
 import qualified Cardano.Chain.Update as Update

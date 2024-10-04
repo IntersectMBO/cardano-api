@@ -251,6 +251,7 @@ library
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class ^>=2.1.2,
+    cardano-ledger-byron,
     cryptonite,
     deepseq,
     memory,

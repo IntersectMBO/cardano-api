@@ -14,24 +14,10 @@ module Cardano.Api.Byron
     -- * Hashes
   , Hash (..)
 
-    -- * Payment addresses
-
-    -- | Constructing and inspecting Byron payment addresses
-  , Address (ByronAddress)
+    -- * Network identifier
   , NetworkId (Mainnet, Testnet)
 
-    -- * Building transactions
-
-    -- | Constructing and inspecting transactions
-  , TxId (TxId)
-  , TxIn (TxIn)
-  , TxOut (TxOut)
-  , TxIx (TxIx)
-
     -- * Signing transactions
-
-    -- | Creating transaction witnesses one by one, or all in one go.
-  , ATxAux (..)
 
     -- ** Incremental signing and separate witnesses
   , KeyWitness (ByronKeyWitness)
@@ -56,9 +42,6 @@ module Cardano.Api.Byron
 
     -- *** Local state query
   , LocalStateQueryClient (..)
-
-    -- * Address
-  , NetworkMagic (..)
 
     -- * Update Proposal
   , ByronUpdateProposal (..)
@@ -87,15 +70,117 @@ module Cardano.Api.Byron
     -- * Serialization
   , serializeByronTx
   , writeByronTxFileTextEnvelopeCddl
+
+    -- * Byron ledger re-exports
+
+    -- ** Address components
+  , AddrAttributes (..)
+  , Address
+  , KeyHash
+  , addressDetailedF
+  , addressF
+  , addressHash
+  , checkVerKeyAddress
+  , decodeAddressBase58
+  , mkAttributes
+
+    -- ** Lovelace handling
+  , Lovelace
+  , LovelacePortion
+  , lovelacePortionToRational
+  , mkKnownLovelace
+  , rationalToLovelacePortion
+
+    -- ** Genesis configuration and AVVM
+  , Config (..)
+  , FakeAvvmOptions (..)
+  , GeneratedSecrets (..)
+  , GenesisAvvmBalances (..)
+  , GenesisData (..)
+  , GenesisDataError (..)
+  , GenesisDataGenerationError (..)
+  , GenesisDelegation (..)
+  , GenesisDelegationError
+  , GenesisHash (..)
+  , GenesisInitializer (..)
+  , GenesisSpec (..)
+  , NetworkMagic (..)
+  , PoorSecret (..)
+  , TestnetBalanceOptions (..)
+  , TxFeePolicy (..)
+  , TxSizeLinear (..)
+  , generateGenesisData
+  , mkGenesisDelegation
+  , mkGenesisSpec
+  , readGenesisData
+
+    -- ** Updates
+  , ApplicationName (..)
+  , InstallerHash (..)
+  , NumSoftwareVersion
+  , Proposal
+  , ProtocolParameters (..)
+  , ProtocolVersion (..)
+  , SoftforkRule (..)
+  , SoftwareVersion (..)
+  , SystemTag (..)
+  , Vote
+  , checkApplicationName
+  , checkSystemTag
+
+    -- ** Blocks, slots, and epochs
+  , BlockCount (..)
+  , EpochNumber (..)
+  , SlotNumber (..)
+  , decCBORABlockOrBoundary
+
+    -- ** UTxO components
+  , ATxAux (..)
+  , CompactTxIn
+  , CompactTxOut
+  , TxIn (..)
+  , TxOut (..)
+  , UTxO (..)
+  , defaultUTxOConfiguration
+  , fromCompactTxIn
+  , fromCompactTxOut
+  , genesisUtxo
+
+    -- ** Delegation
+  , ACertificate (..)
+  , Certificate
+  , isValid
+  , signCertificate
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Address
+import           Cardano.Api hiding (Address, Certificate, Lovelace, NetworkMagic, TxIn, TxOut,
+                   UTxO (..))
 import           Cardano.Api.Keys.Byron
-import           Cardano.Api.NetworkId
+import           Cardano.Api.NetworkId hiding (NetworkMagic)
 import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SpecialByron
-import           Cardano.Api.Tx.Body
-import           Cardano.Api.Tx.Sign
-import           Cardano.Api.Value
+import           Cardano.Api.Tx.Body hiding (TxIn, TxOut)
+import           Cardano.Api.Tx.Sign hiding (ATxAux (..))
+import           Cardano.Api.Value hiding (Lovelace)
+
+import           Cardano.Chain.Block (decCBORABlockOrBoundary)
+import           Cardano.Chain.Common (AddrAttributes (..), Address, BlockCount (..), KeyHash,
+                   Lovelace, LovelacePortion, NetworkMagic (..), TxFeePolicy (..),
+                   TxSizeLinear (..), addressDetailedF, addressF, addressHash, checkVerKeyAddress,
+                   decodeAddressBase58, lovelacePortionToRational, mkAttributes, mkKnownLovelace,
+                   rationalToLovelacePortion)
+import           Cardano.Chain.Delegation (ACertificate (..), Certificate, isValid, signCertificate)
+import           Cardano.Chain.Genesis (Config (..), FakeAvvmOptions (..), GeneratedSecrets (..),
+                   GenesisAvvmBalances (..), GenesisData (..), GenesisDataError (..),
+                   GenesisDataGenerationError (..), GenesisDelegation (..), GenesisDelegationError,
+                   GenesisHash (..), GenesisInitializer (..), GenesisSpec (..), PoorSecret (..),
+                   TestnetBalanceOptions (..), generateGenesisData, mkGenesisDelegation,
+                   mkGenesisSpec, readGenesisData)
+import           Cardano.Chain.Slotting (EpochNumber (..), SlotNumber (..))
+import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..), NumSoftwareVersion,
+                   Proposal, ProtocolParameters (..), ProtocolVersion (..), SoftforkRule (..),
+                   SoftwareVersion (..), SystemTag (..), Vote, checkApplicationName, checkSystemTag)
+import           Cardano.Chain.UTxO (ATxAux (..), CompactTxIn, CompactTxOut, TxIn (..), TxOut (..),
+                   UTxO (..), defaultUTxOConfiguration, fromCompactTxIn, fromCompactTxOut,
+                   genesisUtxo)
