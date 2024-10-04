@@ -8,6 +8,7 @@
 -- It is exposed for testing purposes only.
 module Cardano.Api.Tx.Compatible
   ( AnyProtocolUpdate (..)
+  , AnyVote (..)
   , createCompatibleSignedTx
   )
 where
