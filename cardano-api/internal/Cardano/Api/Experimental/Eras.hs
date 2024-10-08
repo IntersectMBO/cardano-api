@@ -71,7 +71,7 @@ type family LedgerEra era = (r :: Type) | r -> era where
 -- Some era <- pure anyEra
 -- obtainCommonConstraints era foo
 -- @
-data Some (f :: Type -> Type) where
+data Some (f :: k -> Type) where
   Some
     :: forall f a
      . (Typeable a, Typeable (f a))
