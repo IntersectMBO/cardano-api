@@ -26,6 +26,7 @@ module Cardano.Api.Query.Expr
   , queryStakeSnapshot
   , querySystemStart
   , queryUtxo
+  , queryLedgerPeerSnapshot
   , L.MemberStatus (..)
   , L.CommitteeMembersState (..)
   , queryCommitteeMembersState
@@ -64,6 +65,8 @@ import           Cardano.Ledger.SafeHash
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
+import           Ouroboros.Network.Block (Serialised)
+import           Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
 
 import           Data.Map (Map)
 import           Data.Set (Set)
@@ -131,6 +134,19 @@ queryDebugLedgerState
       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedDebugLedgerState era)))
 queryDebugLedgerState sbe =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryDebugLedgerState
+
+queryLedgerPeerSnapshot
+  :: ()
+  => ShelleyBasedEra era
+  -> LocalStateQueryExpr
+      block
+      point
+      QueryInMode
+      r
+      IO
+      (Either UnsupportedNtcVersionError (Either EraMismatch (Serialised LedgerPeerSnapshot)))
+queryLedgerPeerSnapshot sbe =
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryLedgerPeerSnapshot
 
 queryEraHistory
   :: ()
@@ -303,8 +319,7 @@ queryStakePoolParameters
       (Either UnsupportedNtcVersionError (Either EraMismatch (Map PoolId StakePoolParameters)))
 queryStakePoolParameters sbe poolIds
   | S.null poolIds = pure . pure $ pure mempty
-  | otherwise =
-      queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakePoolParameters poolIds
+  | otherwise = queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakePoolParameters poolIds
 
 queryStakePools
   :: ()
