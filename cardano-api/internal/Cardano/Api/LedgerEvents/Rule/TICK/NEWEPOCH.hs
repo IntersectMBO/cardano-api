@@ -100,4 +100,5 @@ handleConwayNEWEPOCHEvents conwayNewEpochEvent =
                   (convertRetiredPoolsMap unclaimedPools)
         Conway.SnapEvent _ -> Nothing
         Conway.GovInfoEvent{} -> Nothing
+        Conway.HardForkEvent{} -> Nothing
     Conway.TotalAdaPotsEvent _ -> Nothing

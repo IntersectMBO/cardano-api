@@ -1871,7 +1871,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
       )
       sbe
  where
-  globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo $ pp ^. Core.ppProtocolVersionL
+  globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo
 
   f :: Ledger.ActiveSlotCoeff
   f = activeSlotCoeff globals
@@ -1985,7 +1985,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
       )
       sbe
  where
-  globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo $ pp ^. Core.ppProtocolVersionL
+  globals = shelleyBasedEraConstraints sbe $ constructGlobals sGen eInfo
 
   f :: Ledger.ActiveSlotCoeff
   f = activeSlotCoeff globals
@@ -1993,10 +1993,8 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
 constructGlobals
   :: ShelleyGenesis Consensus.StandardCrypto
   -> EpochInfo (Either Text)
-  -> Ledger.ProtVer
   -> Globals
-constructGlobals sGen eInfo (Ledger.ProtVer majorPParamsVer _) =
-  Ledger.mkShelleyGlobals sGen eInfo majorPParamsVer
+constructGlobals sGen eInfo = Ledger.mkShelleyGlobals sGen eInfo
 
 --------------------------------------------------------------------------
 
