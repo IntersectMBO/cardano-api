@@ -98,6 +98,9 @@ module Cardano.Api.ReexposeLedger
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
+  , AccountState (..)
+  , NewEpochState (..)
+  , ShelleyGenesisStaking (..)
   -- Babbage
   , CoinPerByte (..)
   -- Alonzo
@@ -183,9 +186,10 @@ import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VK
                    hashWithSerialiser)
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import           Cardano.Ledger.SafeHash (SafeHash, extractHash, unsafeMakeSafeHash)
-import           Cardano.Ledger.Shelley.API (GenDelegPair (..), StakeReference (..), WitVKey (..),
-                   hashKey, hashVerKeyVRF)
-import           Cardano.Ledger.Shelley.Genesis (secondsToNominalDiffTimeMicro)
+import           Cardano.Ledger.Shelley.API (AccountState (..), GenDelegPair (..),
+                   NewEpochState (..), StakeReference (..), WitVKey (..), hashKey, hashVerKeyVRF)
+import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..),
+                   secondsToNominalDiffTimeMicro)
 import           Cardano.Ledger.Shelley.LedgerState (PState (..))
 import           Cardano.Ledger.Shelley.TxCert (EraTxCert (..), GenesisDelegCert (..), MIRCert (..),
                    MIRPot (..), MIRTarget (..), ShelleyDelegCert (..), ShelleyEraTxCert (..),
