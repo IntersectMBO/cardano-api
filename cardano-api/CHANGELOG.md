@@ -1,6 +1,69 @@
 # Changelog for cardano-api
 
+## 9.4.0.0
+
+- Expose AnyVote type
+  (feature, compatible)
+  [PR 649](https://github.com/IntersectMBO/cardano-api/pull/649)
+
+- Handle plutus related ledger events in Conway
+  (feature, compatible)
+  [PR 650](https://github.com/IntersectMBO/cardano-api/pull/650)
+
+- Exposed functions and types from cardano-ledger-alonzo, and cardano-ledger-byron required by cardano-cli.
+  Breaking changes:
+    * `Address` type and its constructor `ByronAddress` are no longer exported by `Cardano.Api.Byron`, but they are both exported by `Cardano.Api` now, together with `ShelleyAddress` constructor.
+    * The types `TxId`, `TxIn`, `TxOut`, and `TxIx`, with their constructors are no longer exported by `Cardano.Api.Byron`.
+  (breaking, refactoring)
+  [PR 647](https://github.com/IntersectMBO/cardano-api/pull/647)
+
+- Add voting to simple tx interface
+  (feature, breaking)
+  [PR 648](https://github.com/IntersectMBO/cardano-api/pull/648)
+
+- This module exposes `createCompatibleSignedTx` which is intended to be used in testing only. It allows the creation of simple unbalanced transactions that can submit protocol updates in any era.
+  (feature)
+  [PR 644](https://github.com/IntersectMBO/cardano-api/pull/644)
+
+- Add new field 'inlineDatumRaw' to TxOut ToJSON instance
+  
+  It contains the raw CBOR for any inline datum.
+  
+  When building applications that need to spend from a script UTxO which has a datum attached,
+  that off-chain code needs access to the raw Datum for evaluating the transaction and calculate fees.
+  (feature, compatible)
+  [PR 632](https://github.com/IntersectMBO/cardano-api/pull/632)
+
+- Make `IsXXXBasedEra` a class hierarchy
+  (compatible)
+  [PR 641](https://github.com/IntersectMBO/cardano-api/pull/641)
+
+- Allow next leadership-schedule at 4k/f
+  (bugfix)
+  [PR 639](https://github.com/IntersectMBO/cardano-api/pull/639)
+
+- Introduce supplementary datums
+  (feature)
+  [PR 640](https://github.com/IntersectMBO/cardano-api/pull/640)
+
+- Added new types to CDDL and added test for forward compatibility of `deserialiseTxLedgerCddl`
+  (bugfix, test)
+  [PR 634](https://github.com/IntersectMBO/cardano-api/pull/634)
+
+- Fix collateral balancing when building transaction
+  (compatible, bugfix)
+  [PR 631](https://github.com/IntersectMBO/cardano-api/pull/631)
+
+- Removes the dependency to `optparse-applicative-fork`, as it is unused internally and not useful for users.
+  (breaking, refactoring)
+  [PR 635](https://github.com/IntersectMBO/cardano-api/pull/635)
+
+- Add export `fromLedgerUTxO` to `Cardano.Api.
+  (feature, compatible)
+  [PR 627](https://github.com/IntersectMBO/cardano-api/pull/627)
+
 ## 9.3.0.0
+
 - Upgrade `cardano-ledger-*`, `ouroboros-consensus-cardano`, `ouroboros-network-api`, `plutus-core` and `plutus-ledger-api`.
   (feature, breaking)
   [PR 610](https://github.com/IntersectMBO/cardano-api/pull/610)
