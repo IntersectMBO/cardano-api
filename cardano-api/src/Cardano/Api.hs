@@ -727,6 +727,7 @@ module Cardano.Api
 
     -- **** Byron Genesis Config
   , readByronGenesisConfig
+  , GenesisHashByron (..)
 
     -- **** Shelley Genesis Config
   , ShelleyConfig (..)
