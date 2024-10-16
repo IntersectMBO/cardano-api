@@ -1990,11 +1990,12 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
   f :: Ledger.ActiveSlotCoeff
   f = activeSlotCoeff globals
 
+-- TODO remove me?
 constructGlobals
   :: ShelleyGenesis Consensus.StandardCrypto
   -> EpochInfo (Either Text)
   -> Globals
-constructGlobals sGen eInfo = Ledger.mkShelleyGlobals sGen eInfo
+constructGlobals = Ledger.mkShelleyGlobals
 
 --------------------------------------------------------------------------
 
