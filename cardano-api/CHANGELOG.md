@@ -1,5 +1,16 @@
 # Changelog for cardano-api
 
+## 10.0.0.0
+
+- Bump ouroboros-consensus to 0.21, ouroboros-consensus-cardano to 0.20, ouroboros-consensus-protocol to 0.9.0.2, ouroboros-consensus-diffusion to 0.18, ouroboros-network-api to 0.10, plutus-ledger-api to 1.36, plutus-core to 1.36, and cardano-ledger-binary to 1.3.
+    * Stop supplying protocol version to Globals
+  (breaking)
+  [PR 643](https://github.com/IntersectMBO/cardano-api/pull/643)
+
+- Export an additional symbol
+  (compatible)
+  [PR 652](https://github.com/IntersectMBO/cardano-api/pull/652)
+
 ## 9.4.0.0
 
 - Expose AnyVote type
@@ -26,9 +37,9 @@
   [PR 644](https://github.com/IntersectMBO/cardano-api/pull/644)
 
 - Add new field 'inlineDatumRaw' to TxOut ToJSON instance
-  
+
   It contains the raw CBOR for any inline datum.
-  
+
   When building applications that need to spend from a script UTxO which has a datum attached,
   that off-chain code needs access to the raw Datum for evaluating the transaction and calculate fees.
   (feature, compatible)
