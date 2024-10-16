@@ -46,16 +46,19 @@ module Cardano.Api.ReexposeLedger
   , Coin (..)
   , EraPParams (..)
   , Era (..)
+  , ExUnits (..)
   , Network (..)
   , PoolCert (..)
   , PParams (..)
   , PParamsUpdate
   , Value
   , addDeltaCoin
+  , castSafeHash
   , toDeltaCoin
   , toEraCBOR
   , fromEraCBOR
   , ppMinUTxOValueL
+  , unData
   -- Conway
   , Anchor (..)
   , Delegatee (..)
@@ -184,8 +187,10 @@ import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
 import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VKey (..),
                    hashWithSerialiser)
+import           Cardano.Ledger.Plutus (ExUnits (..))
+import           Cardano.Ledger.Plutus.Data (unData)
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
-import           Cardano.Ledger.SafeHash (SafeHash, extractHash, unsafeMakeSafeHash)
+import           Cardano.Ledger.SafeHash (SafeHash, castSafeHash, extractHash, unsafeMakeSafeHash)
 import           Cardano.Ledger.Shelley.API (AccountState (..), GenDelegPair (..),
                    NewEpochState (..), StakeReference (..), WitVKey (..), hashKey, hashVerKeyVRF)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..),
