@@ -764,7 +764,7 @@ genTxOutByron =
     <*> pure ReferenceScriptNone
 
 -- | Partial! It will throw if the generated transaction body is invalid.
-genTxBodyByron :: HasCallStack => Gen (L.Annotated L.Tx ByteString)
+genTxBodyByron :: HasCallStack => Gen (L.Annotated Byron.Tx ByteString)
 genTxBodyByron = do
   txIns <-
     map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn

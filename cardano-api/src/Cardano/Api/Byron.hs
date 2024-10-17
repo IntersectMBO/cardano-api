@@ -138,6 +138,7 @@ module Cardano.Api.Byron
   , ATxAux (..)
   , CompactTxIn
   , CompactTxOut
+  , Tx (..)
   , TxIn (..)
   , TxOut (..)
   , UTxO (..)
@@ -154,14 +155,14 @@ module Cardano.Api.Byron
   )
 where
 
-import           Cardano.Api hiding (Address, Certificate, Lovelace, NetworkMagic, TxIn, TxOut,
-                   UTxO (..))
+import           Cardano.Api hiding (Address, Certificate, Lovelace, NetworkMagic, Tx (..), TxIn,
+                   TxOut, UTxO (..))
 import           Cardano.Api.Keys.Byron
 import           Cardano.Api.NetworkId hiding (NetworkMagic)
 import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SpecialByron
 import           Cardano.Api.Tx.Body hiding (TxIn, TxOut)
-import           Cardano.Api.Tx.Sign hiding (ATxAux (..))
+import           Cardano.Api.Tx.Sign hiding (ATxAux (..), Tx (..))
 import           Cardano.Api.Value hiding (Lovelace)
 
 import           Cardano.Chain.Block (decCBORABlockOrBoundary)
@@ -181,6 +182,6 @@ import           Cardano.Chain.Slotting (EpochNumber (..), SlotNumber (..))
 import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..), NumSoftwareVersion,
                    Proposal, ProtocolParameters (..), ProtocolVersion (..), SoftforkRule (..),
                    SoftwareVersion (..), SystemTag (..), Vote, checkApplicationName, checkSystemTag)
-import           Cardano.Chain.UTxO (ATxAux (..), CompactTxIn, CompactTxOut, TxIn (..), TxOut (..),
-                   UTxO (..), defaultUTxOConfiguration, fromCompactTxIn, fromCompactTxOut,
-                   genesisUtxo)
+import           Cardano.Chain.UTxO (ATxAux (..), CompactTxIn, CompactTxOut, Tx (..), TxIn (..),
+                   TxOut (..), UTxO (..), defaultUTxOConfiguration, fromCompactTxIn,
+                   fromCompactTxOut, genesisUtxo)
