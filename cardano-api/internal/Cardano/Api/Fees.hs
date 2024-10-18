@@ -1177,16 +1177,21 @@ makeTransactionBodyAutoBalance
             , txReturnCollateral = retColl
             , txTotalCollateral = reqCol
             }
-      let balance =
-            TxOutValueShelleyBased sbe $
-              obtainCommonConstraints availableEra $
-                L.evalBalanceTxBody
-                  pp
-                  (lookupDelegDeposit stakeDelegDeposits)
-                  (lookupDRepDeposit drepDelegDeposits)
-                  (isRegPool poolids)
-                  (toLedgerUTxO sbe utxo)
-                  (txbody2 ^. L.bodyTxL)
+      let
+        -- Refunds automatically go to the change output
+        -- TODO: Get total refund amount from all refund certificates
+        refunds = Coin 400000
+        balance =
+          TxOutValueShelleyBased sbe $
+            obtainCommonConstraints availableEra $
+              L.evalBalanceTxBody
+                pp
+                (lookupDelegDeposit stakeDelegDeposits)
+                (lookupDRepDeposit drepDelegDeposits)
+                (isRegPool poolids)
+                (toLedgerUTxO sbe utxo)
+                (txbody2 ^. L.bodyTxL)
+                L.<+> L.inject refunds
 
       forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue sbe txout pp
 
