@@ -160,7 +160,7 @@ import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word16, Word32, Word64)
-import           GHC.Exts (IsList(..))
+import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Numeric.Natural (Natural)
 
@@ -1184,13 +1184,13 @@ genScriptWitnessForStake sbe = do
     SimpleScript simpleScript -> do
       simpleScriptOrReferenceInput <- Gen.choice
         [ pure $ SScript simpleScript
-        , SReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        , SReferenceScript <$> genTxIn
         ]
       pure $ Api.SimpleScriptWitness scriptLangInEra simpleScriptOrReferenceInput
     PlutusScript plutusScriptVersion' plutusScript -> do
       plutusScriptOrReferenceInput <- Gen.choice
         [ pure $ PScript plutusScript
-        , PReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        , PReferenceScript <$> genTxIn
         ]
       scriptRedeemer <- genHashableScriptData
       PlutusScriptWitness
