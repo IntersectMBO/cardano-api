@@ -1356,7 +1356,8 @@ calculateChangeValue sbe incoming txbodycontent =
       minted = case txMintValue txbodycontent of
         TxMintNone -> mempty
         TxMintValue _ v _ -> v
-   in mconcat [incoming, minted, negateValue outgoing]
+      refunds = lovelaceToValue 400000
+   in mconcat [incoming, minted, refunds, negateValue outgoing]
 
 -- | This is used in the balance calculation in the event where
 -- the user does not supply the UTxO(s) they intend to spend
