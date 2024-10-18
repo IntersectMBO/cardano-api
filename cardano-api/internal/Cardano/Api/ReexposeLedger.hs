@@ -46,21 +46,27 @@ module Cardano.Api.ReexposeLedger
   , Coin (..)
   , EraPParams (..)
   , Era (..)
+  , EraTxOut
   , Network (..)
   , PoolCert (..)
   , PParams (..)
   , PParamsUpdate
+  , TxId (..)
+  , TxIn (..)
   , Value
   , addDeltaCoin
+  , castSafeHash
   , toDeltaCoin
   , toEraCBOR
   , fromEraCBOR
+  , ppMinFeeAL
   , ppMinUTxOValueL
   -- Conway
   , Anchor (..)
   , Delegatee (..)
   , DRep (..)
   , DRepState (..)
+  , ConwayPlutusPurpose (..)
   , ConwayTxCert (..)
   , ConwayDelegCert (..)
   , ConwayEraTxCert (..)
@@ -88,7 +94,6 @@ module Cardano.Api.ReexposeLedger
   -- Byron
   , Annotated (..)
   , byronProtVer
-  , Byron.Tx (..)
   , ByteSpan (..)
   , Decoder
   , fromCBOR
@@ -98,15 +103,30 @@ module Cardano.Api.ReexposeLedger
   , toPlainDecoder
   -- Shelley
   , secondsToNominalDiffTimeMicro
+  , AccountState (..)
+  , NewEpochState (..)
+  , ShelleyGenesisStaking (..)
   -- Babbage
   , CoinPerByte (..)
   -- Alonzo
+  , AlonzoEraTxBody (..)
+  , AlonzoEraScript (..)
+  , AlonzoEraTxWits (..)
+  , AlonzoPlutusPurpose (..)
+  , AsIx (..)
   , CoinPerWord (..)
+  , Data (..)
+  , ExUnits (..)
   , Prices (..)
   , CostModels
   , AlonzoGenesis
   , AsIxItem (..)
+  , EraGov
+  , EraTx (witsTxL, bodyTxL)
+  , Tx
   , ppPricesL
+  , unData
+  , unRedeemers
   -- Base
   , boundRational
   , unboundRational
@@ -126,6 +146,7 @@ module Cardano.Api.ReexposeLedger
   , UnitInterval
   , mkVersion
   , NonNegativeInterval
+  , txIxToInt
   -- Crypto
   , hashToBytes
   , hashFromBytes
@@ -141,12 +162,14 @@ module Cardano.Api.ReexposeLedger
   )
 where
 
-import qualified Cardano.Chain.UTxO as Byron
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import           Cardano.Ledger.Alonzo.Core (AsIxItem (AsIxItem), CoinPerWord (..),
-                   PParamsUpdate (..), ppPricesL)
+import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBody (..),
+                   AlonzoEraTxWits (..), AsIx (..), AsIxItem (AsIxItem), CoinPerWord (..), EraGov,
+                   EraTx (bodyTxL, witsTxL), PParamsUpdate (..), Tx, ppPricesL)
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Alonzo.Scripts (CostModels, Prices (..))
+import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), CostModels, ExUnits (..),
+                   Prices (..))
+import           Cardano.Ledger.Api (unRedeemers)
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,
                    pattern MirTxCert, pattern RegDRepTxCert, pattern RegDepositDelegTxCert,
@@ -157,8 +180,8 @@ import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import           Cardano.Ledger.BaseTypes (AnchorData (..), DnsName, EpochInterval (..),
                    Network (..), NonNegativeInterval, ProtVer (..), StrictMaybe (..), UnitInterval,
                    Url, boundRational, dnsToText, hashAnchorData, maybeToStrictMaybe, mkVersion,
-                   portToWord16, strictMaybeToMaybe, textToDns, textToUrl, unboundRational,
-                   urlToText)
+                   portToWord16, strictMaybeToMaybe, textToDns, textToUrl, txIxToInt,
+                   unboundRational, urlToText)
 import           Cardano.Ledger.Binary (Annotated (..), ByteSpan (..), byronProtVer, fromCBOR,
                    serialize', slice, toCBOR, toPlainDecoder)
 import           Cardano.Ledger.Binary.Plain (Decoder)
@@ -172,22 +195,26 @@ import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..)
                    ProposalProcedure (..), Vote (..), Voter (..), VotingProcedure (..),
                    VotingProcedures (..))
 import           Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
+import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
                    ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
-import           Cardano.Ledger.Core (Era (..), EraPParams (..), PParams (..), PoolCert (..), Value,
-                   fromEraCBOR, ppMinUTxOValueL, toEraCBOR)
+import           Cardano.Ledger.Core (Era (..), EraPParams (..), EraTxOut, PParams (..),
+                   PoolCert (..), Value, fromEraCBOR, ppMinFeeAL, ppMinUTxOValueL, toEraCBOR)
 import           Cardano.Ledger.Credential (Credential (..), credToText)
 import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
 import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VKey (..),
                    hashWithSerialiser)
+import           Cardano.Ledger.Plutus.Data (Data (..), unData)
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
-import           Cardano.Ledger.SafeHash (SafeHash, extractHash, unsafeMakeSafeHash)
-import           Cardano.Ledger.Shelley.API (GenDelegPair (..), StakeReference (..), WitVKey (..),
-                   hashKey, hashVerKeyVRF)
-import           Cardano.Ledger.Shelley.Genesis (secondsToNominalDiffTimeMicro)
+import           Cardano.Ledger.SafeHash (SafeHash, castSafeHash, extractHash, unsafeMakeSafeHash)
+import           Cardano.Ledger.Shelley.API (AccountState (..), GenDelegPair (..),
+                   NewEpochState (..), StakeReference (..), WitVKey (..), hashKey, hashVerKeyVRF)
+import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..),
+                   secondsToNominalDiffTimeMicro)
 import           Cardano.Ledger.Shelley.LedgerState (PState (..))
 import           Cardano.Ledger.Shelley.TxCert (EraTxCert (..), GenesisDelegCert (..), MIRCert (..),
                    MIRPot (..), MIRTarget (..), ShelleyDelegCert (..), ShelleyEraTxCert (..),
                    ShelleyTxCert (..))
+import           Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import           Cardano.Slotting.Slot (EpochNo (..))
