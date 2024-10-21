@@ -1,5 +1,21 @@
 # Changelog for cardano-api
 
+## 10.1.0.0
+
+- Use correct stake deregistration certs in Conway
+  Require 400,000 deposit when registering keys in `defaultShelleyGenesis`.
+  (bugfix)
+  [PR 657](https://github.com/IntersectMBO/cardano-api/pull/657)
+
+- Expose transitive dependencies from `cardano-ledger` needed by `cardano-cli`
+  Breaking change: `Cardano.Api.Ledger` no longer exports Byron's `Tx` but it is now exported in `Cardano.Api.Byron`
+  (breaking)
+  [PR 656](https://github.com/IntersectMBO/cardano-api/pull/656)
+
+- Fix datum conversion in 'fromLedgerTxOuts' when using 'fromAlonzoTxOut'
+  (bugfix)
+  [PR 620](https://github.com/IntersectMBO/cardano-api/pull/620)
+
 ## 10.0.0.0
 
 - Bump ouroboros-consensus to 0.21, ouroboros-consensus-cardano to 0.20, ouroboros-consensus-protocol to 0.9.0.2, ouroboros-consensus-diffusion to 0.18, ouroboros-network-api to 0.10, plutus-ledger-api to 1.36, plutus-core to 1.36, and cardano-ledger-binary to 1.3.
