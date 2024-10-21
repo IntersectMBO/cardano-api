@@ -526,12 +526,10 @@ filterUnRegCreds =
         Ledger.GenesisDelegTxCert{} -> Nothing
     ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
       case conwayCert of
-        Ledger.RegTxCert _ -> Nothing
-        Ledger.UnRegTxCert cred -> Just cred
         Ledger.RegPoolTxCert _ -> Nothing
         Ledger.RetirePoolTxCert _ _ -> Nothing
         Ledger.RegDepositTxCert _ _ -> Nothing
-        Ledger.UnRegDepositTxCert _ _ -> Nothing
+        Ledger.UnRegDepositTxCert cred _ -> Just cred
         Ledger.DelegTxCert _ _ -> Nothing
         Ledger.RegDepositDelegTxCert{} -> Nothing
         Ledger.AuthCommitteeHotKeyTxCert{} -> Nothing
@@ -539,6 +537,10 @@ filterUnRegCreds =
         Ledger.RegDRepTxCert{} -> Nothing
         Ledger.UnRegDRepTxCert{} -> Nothing
         Ledger.UpdateDRepTxCert{} -> Nothing
+        -- those are old shelley patterns
+        Ledger.RegTxCert _ -> Nothing
+        -- stake cred deregistration w/o deposit
+        Ledger.UnRegTxCert cred -> Just cred
 
 filterUnRegDRepCreds
   :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto)
@@ -546,8 +548,6 @@ filterUnRegDRepCreds = \case
   ShelleyRelatedCertificate _ _ -> Nothing
   ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
     case conwayCert of
-      Ledger.RegTxCert _ -> Nothing
-      Ledger.UnRegTxCert _ -> Nothing
       Ledger.RegPoolTxCert _ -> Nothing
       Ledger.RetirePoolTxCert _ _ -> Nothing
       Ledger.RegDepositTxCert _ _ -> Nothing
@@ -559,6 +559,10 @@ filterUnRegDRepCreds = \case
       Ledger.RegDRepTxCert{} -> Nothing
       Ledger.UnRegDRepTxCert cred _ -> Just cred
       Ledger.UpdateDRepTxCert{} -> Nothing
+      -- those are old shelley patterns
+      Ledger.RegTxCert _ -> Nothing
+      -- stake cred deregistration w/o deposit
+      Ledger.UnRegTxCert _ -> Nothing
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions

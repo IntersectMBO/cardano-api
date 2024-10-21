@@ -171,6 +171,7 @@ shelleyGenesisDefaults =
           -- pot = tx_fees + ρ * remaining_reserves
           & ppRhoL .~ unsafeBR (1 % 10) -- How much of reserves goes into pot
           & ppTauL .~ unsafeBR (1 % 10) -- τ * remaining_reserves is sent to treasury every epoch
+          & ppKeyDepositL .~ 400000 -- require a non-zero deposit when registering keys
     , -- genesis keys and initial funds
       sgGenDelegs = M.empty
     , sgStaking = emptyGenesisStaking
