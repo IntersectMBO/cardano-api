@@ -252,7 +252,7 @@ library
     cardano-crypto,
     cardano-crypto-class ^>=2.1.2,
     cardano-ledger-byron,
-    cryptonite,
+    crypton,
     deepseq,
     memory,
     nothunks,
