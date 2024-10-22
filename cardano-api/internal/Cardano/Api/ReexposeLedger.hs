@@ -66,6 +66,7 @@ module Cardano.Api.ReexposeLedger
   , Delegatee (..)
   , DRep (..)
   , DRepState (..)
+  , Constitution (..)
   , ConwayPlutusPurpose (..)
   , ConwayTxCert (..)
   , ConwayDelegCert (..)
@@ -74,6 +75,7 @@ module Cardano.Api.ReexposeLedger
   , ConwayGenesis (..)
   , UpgradeConwayPParams (..)
   , GovState
+  , GovAction (..)
   , GovActionId (..)
   , Vote (..)
   , Voter (..)
@@ -169,7 +171,7 @@ import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBo
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), CostModels, ExUnits (..),
                    Prices (..))
-import           Cardano.Ledger.Api (unRedeemers)
+import           Cardano.Ledger.Api (Constitution (..), GovAction (..), unRedeemers)
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,
                    pattern MirTxCert, pattern RegDRepTxCert, pattern RegDepositDelegTxCert,
