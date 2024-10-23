@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-10-10T08:11:33Z
-  , cardano-haskell-packages 2024-10-14T23:19:53Z
+  , cardano-haskell-packages 2024-10-21T06:28:35Z
 
 packages:
     cardano-api
@@ -52,3 +52,13 @@ write-ghc-environment-files: always
 constraints:
     Cabal < 3.14,
     cardano-ledger-shelley ^>= 1.14.1
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 254aa51558cc71baa5d23faa4bdb5b3ae1e7ba70
+  --sha256: sha256-Drnc35CQFB5QrYgHFYaqwn7Tnc8p11KJq3vp9DvpKoE=
+  subdir: ouroboros-consensus
+          ouroboros-consensus-cardano
+          ouroboros-consensus-diffusion
