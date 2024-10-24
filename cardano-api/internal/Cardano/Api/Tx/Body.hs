@@ -215,7 +215,6 @@ import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
-import           Cardano.Api.ScriptData ()
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
@@ -349,7 +348,7 @@ toCtxUTxOTxOut (TxOut addr val d refS) =
   let dat = case d of
         TxOutDatumNone -> TxOutDatumNone
         TxOutDatumHash s h -> TxOutDatumHash s h
-        TxOutSupplementalDatum' s h _ -> TxOutDatumHash s h
+        TxOutSupplementalDatum s datum -> TxOutDatumHash s $ hashScriptDataBytes datum
         TxOutDatumInline s sd -> TxOutDatumInline s sd
    in TxOut addr val dat refS
 
@@ -398,8 +397,8 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
         "datumhash" .= Aeson.Null
       TxOutDatumHash _ h ->
         "datumhash" .= toJSON h
-      TxOutSupplementalDatum' _ h _ ->
-        "datumhash" .= toJSON h
+      TxOutSupplementalDatum _ datum ->
+        "datumhash" .= toJSON (hashScriptDataBytes datum)
       TxOutDatumInline _ datum ->
         "inlineDatumhash" .= toJSON (hashScriptDataBytes datum)
 
@@ -408,7 +407,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash _ _ -> Aeson.Null
-      TxOutSupplementalDatum' _ _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
+      TxOutSupplementalDatum _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
       TxOutDatumInline _ _ -> Aeson.Null
 
   inlineDatumJsonVal :: TxOutDatum ctx era -> Aeson.Value
@@ -416,7 +415,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash{} -> Aeson.Null
-      TxOutSupplementalDatum'{} -> Aeson.Null
+      TxOutSupplementalDatum{} -> Aeson.Null
       TxOutDatumInline _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
 
   inlineDatumRawJsonCbor :: TxOutDatum ctx era -> Aeson.Value
@@ -424,7 +423,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash{} -> Aeson.Null
-      TxOutSupplementalDatum'{} -> Aeson.Null
+      TxOutSupplementalDatum{} -> Aeson.Null
       TxOutDatumInline _ datum ->
         Aeson.String
           . Text.decodeUtf8
@@ -575,14 +574,14 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
             <*> o .: "value"
             <*> return TxOutDatumNone
             <*> return ReferenceScriptNone
-        (Just dVal, Just dHash) -> do
+        (Just dVal, Just{}) -> do
           case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
             Left e -> fail $ "Error parsing ScriptData: " <> show e
             Right hashableData ->
               TxOut
                 <$> o .: "address"
                 <*> o .: "value"
-                <*> return (TxOutSupplementalDatum' w dHash hashableData)
+                <*> return (TxOutSupplementalDatum w hashableData)
                 <*> return ReferenceScriptNone
         (Nothing, Just dHash) ->
           TxOut
@@ -841,7 +840,9 @@ toAlonzoTxOutDatumHash
 toAlonzoTxOutDatumHash TxOutDatumNone = SNothing
 toAlonzoTxOutDatumHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDatumHash (TxOutDatumInline{}) = SNothing
-toAlonzoTxOutDatumHash (TxOutSupplementalDatum' _ (ScriptDataHash dh) _) = SJust dh
+toAlonzoTxOutDatumHash (TxOutSupplementalDatum _ d) =
+  let ScriptDataHash dh = hashScriptDataBytes d
+   in SJust dh
 
 fromAlonzoTxOutDatumHash
   :: AlonzoEraOnwards era
@@ -857,7 +858,9 @@ toBabbageTxOutDatum
 toBabbageTxOutDatum TxOutDatumNone = Plutus.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Plutus.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
-toBabbageTxOutDatum (TxOutSupplementalDatum' _ (ScriptDataHash dh) _) = Plutus.DatumHash dh
+toBabbageTxOutDatum (TxOutSupplementalDatum _ d) =
+  let ScriptDataHash dh = hashScriptDataBytes d
+   in Plutus.DatumHash dh
 
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
@@ -1076,9 +1079,8 @@ data TxOutDatum ctx era where
   -- | A transaction output that specifies the whole datum value. This can
   -- only be used in the context of the transaction body (i.e this is a supplemental datum),
   -- and does not occur in the UTxO. The UTxO only contains the datum hash.
-  TxOutSupplementalDatum'
+  TxOutSupplementalDatum
     :: AlonzoEraOnwards era
-    -> Hash ScriptData
     -> HashableScriptData
     -> TxOutDatum CtxTx era
   -- | A transaction output that specifies the whole datum instead of the
@@ -1092,16 +1094,6 @@ data TxOutDatum ctx era where
 deriving instance Eq (TxOutDatum ctx era)
 
 deriving instance Show (TxOutDatum ctx era)
-
-pattern TxOutSupplementalDatum
-  :: AlonzoEraOnwards era
-  -> HashableScriptData
-  -> TxOutDatum CtxTx era
-pattern TxOutSupplementalDatum w d <- TxOutSupplementalDatum' w _ d
-  where
-    TxOutSupplementalDatum w d = TxOutSupplementalDatum' w (hashScriptDataBytes d) d
-
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum', TxOutDatumInline #-}
 
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline #-}
 
@@ -2110,7 +2102,7 @@ fromAlonzoTxOutDatum w txdatums = \case
   SNothing -> TxOutDatumNone
   SJust dh
     | Just d <- Map.lookup dh txdatums ->
-        TxOutSupplementalDatum' w (ScriptDataHash dh) (fromAlonzoData d)
+        TxOutSupplementalDatum w (fromAlonzoData d)
     | otherwise -> TxOutDatumHash w (ScriptDataHash dh)
 
 fromBabbageTxOut
@@ -2146,9 +2138,8 @@ fromBabbageTxOut w txdatums txout =
   resolveDatumInTx :: L.DataHash StandardCrypto -> TxOutDatum CtxTx era
   resolveDatumInTx dh
     | Just d <- Map.lookup dh txdatums =
-        TxOutSupplementalDatum'
+        TxOutSupplementalDatum
           (babbageEraOnwardsToAlonzoEraOnwards w)
-          (ScriptDataHash dh)
           (fromAlonzoData d)
     | otherwise = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh)
 
