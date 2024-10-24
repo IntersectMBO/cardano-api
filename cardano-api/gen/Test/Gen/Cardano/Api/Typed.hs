@@ -696,7 +696,6 @@ genTxBodyContent sbe = do
       , Api.txValidityUpperBound
       , Api.txMetadata
       , Api.txAuxScripts
-      , Api.txSupplementalData = Api.BuildTxWith Api.TxSupplementalDataNone
       , Api.txExtraKeyWits
       , Api.txProtocolParams
       , Api.txWithdrawals
