@@ -57,7 +57,6 @@ module Cardano.Api.Tx.Body
   , setTxVotingProcedures
   , setTxMintValue
   , setTxScriptValidity
-  , setTxSupplementalDatums
   , setTxCurrentTreasuryValue
   , setTxTreasuryDonation
   , TxBodyError (..)
@@ -87,7 +86,7 @@ module Cardano.Api.Tx.Body
   , CtxUTxO
   , TxOut (..)
   , TxOutValue (..)
-  , TxOutDatum (TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline)
+  , TxOutDatum (TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline)
   , toCtxUTxOTxOut
   , lovelaceToTxOutValue
   , prettyRenderTxOut
@@ -106,7 +105,6 @@ module Cardano.Api.Tx.Body
   , TxValidityLowerBound (..)
   , TxValidityUpperBound (..)
   , TxMetadataInEra (..)
-  , TxSupplementalDatums (..)
   , TxAuxScripts (..)
   , TxExtraKeyWitnesses (..)
   , TxWithdrawals (..)
@@ -145,7 +143,6 @@ module Cardano.Api.Tx.Body
   , convReturnCollateral
   , convScripts
   , convScriptData
-  , convSupplementalDatums
   , convTotalCollateral
   , convTransactionFee
   , convTxIns
@@ -215,7 +212,6 @@ import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
-import           Cardano.Api.ScriptData ()
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
@@ -349,7 +345,7 @@ toCtxUTxOTxOut (TxOut addr val d refS) =
   let dat = case d of
         TxOutDatumNone -> TxOutDatumNone
         TxOutDatumHash s h -> TxOutDatumHash s h
-        TxOutDatumInTx' s h _ -> TxOutDatumHash s h
+        TxOutSupplementalDatum s datum -> TxOutDatumHash s $ hashScriptDataBytes datum
         TxOutDatumInline s sd -> TxOutDatumInline s sd
    in TxOut addr val dat refS
 
@@ -398,8 +394,8 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
         "datumhash" .= Aeson.Null
       TxOutDatumHash _ h ->
         "datumhash" .= toJSON h
-      TxOutDatumInTx' _ h _ ->
-        "datumhash" .= toJSON h
+      TxOutSupplementalDatum _ datum ->
+        "datumhash" .= toJSON (hashScriptDataBytes datum)
       TxOutDatumInline _ datum ->
         "inlineDatumhash" .= toJSON (hashScriptDataBytes datum)
 
@@ -408,7 +404,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash _ _ -> Aeson.Null
-      TxOutDatumInTx' _ _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
+      TxOutSupplementalDatum _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
       TxOutDatumInline _ _ -> Aeson.Null
 
   inlineDatumJsonVal :: TxOutDatum ctx era -> Aeson.Value
@@ -416,7 +412,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash{} -> Aeson.Null
-      TxOutDatumInTx'{} -> Aeson.Null
+      TxOutSupplementalDatum{} -> Aeson.Null
       TxOutDatumInline _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
 
   inlineDatumRawJsonCbor :: TxOutDatum ctx era -> Aeson.Value
@@ -424,7 +420,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash{} -> Aeson.Null
-      TxOutDatumInTx'{} -> Aeson.Null
+      TxOutSupplementalDatum{} -> Aeson.Null
       TxOutDatumInline _ datum ->
         Aeson.String
           . Text.decodeUtf8
@@ -575,14 +571,14 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
             <*> o .: "value"
             <*> return TxOutDatumNone
             <*> return ReferenceScriptNone
-        (Just dVal, Just dHash) -> do
+        (Just dVal, Just{}) -> do
           case scriptDataJsonToHashable ScriptDataJsonDetailedSchema dVal of
             Left e -> fail $ "Error parsing ScriptData: " <> show e
             Right hashableData ->
               TxOut
                 <$> o .: "address"
                 <*> o .: "value"
-                <*> return (TxOutDatumInTx' w dHash hashableData)
+                <*> return (TxOutSupplementalDatum w hashableData)
                 <*> return ReferenceScriptNone
         (Nothing, Just dHash) ->
           TxOut
@@ -841,7 +837,9 @@ toAlonzoTxOutDatumHash
 toAlonzoTxOutDatumHash TxOutDatumNone = SNothing
 toAlonzoTxOutDatumHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDatumHash (TxOutDatumInline{}) = SNothing
-toAlonzoTxOutDatumHash (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
+toAlonzoTxOutDatumHash (TxOutSupplementalDatum _ d) =
+  let ScriptDataHash dh = hashScriptDataBytes d
+   in SJust dh
 
 fromAlonzoTxOutDatumHash
   :: AlonzoEraOnwards era
@@ -857,7 +855,9 @@ toBabbageTxOutDatum
 toBabbageTxOutDatum TxOutDatumNone = Plutus.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Plutus.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
-toBabbageTxOutDatum (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Plutus.DatumHash dh
+toBabbageTxOutDatum (TxOutSupplementalDatum _ d) =
+  let ScriptDataHash dh = hashScriptDataBytes d
+   in Plutus.DatumHash dh
 
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
@@ -1074,11 +1074,10 @@ data TxOutDatum ctx era where
     -> Hash ScriptData
     -> TxOutDatum ctx era
   -- | A transaction output that specifies the whole datum value. This can
-  -- only be used in the context of the transaction body, and does not occur
-  -- in the UTxO. The UTxO only contains the datum hash.
-  TxOutDatumInTx'
+  -- only be used in the context of the transaction body (i.e this is a supplemental datum),
+  -- and does not occur in the UTxO. The UTxO only contains the datum hash.
+  TxOutSupplementalDatum
     :: AlonzoEraOnwards era
-    -> Hash ScriptData
     -> HashableScriptData
     -> TxOutDatum CtxTx era
   -- | A transaction output that specifies the whole datum instead of the
@@ -1093,17 +1092,7 @@ deriving instance Eq (TxOutDatum ctx era)
 
 deriving instance Show (TxOutDatum ctx era)
 
-pattern TxOutDatumInTx
-  :: AlonzoEraOnwards era
-  -> HashableScriptData
-  -> TxOutDatum CtxTx era
-pattern TxOutDatumInTx w d <- TxOutDatumInTx' w _ d
-  where
-    TxOutDatumInTx w d = TxOutDatumInTx' w (hashScriptDataBytes d) d
-
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx', TxOutDatumInline #-}
-
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline #-}
 
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
 parseHash asType = do
@@ -1173,21 +1162,6 @@ data TxMetadataInEra era where
 deriving instance Eq (TxMetadataInEra era)
 
 deriving instance Show (TxMetadataInEra era)
-
--- ----------------------------------------------------------------------------
--- Transaction supplemental data (era-dependent)
---
--- Supplemental datums can be added to the transaction if the corresponding
--- datum hash exists at a input in that transaction.
-data TxSupplementalDatums era where
-  TxSupplementalDataNone :: TxSupplementalDatums era
-  TxSupplementalDatums
-    :: [HashableScriptData]
-    -> TxSupplementalDatums era
-
-deriving instance Eq (TxSupplementalDatums era)
-
-deriving instance Show (TxSupplementalDatums era)
 
 -- ----------------------------------------------------------------------------
 -- Auxiliary scripts (era-dependent)
@@ -1397,7 +1371,6 @@ data TxBodyContent build era
   , txValidityUpperBound :: TxValidityUpperBound era
   , txMetadata :: TxMetadataInEra era
   , txAuxScripts :: TxAuxScripts era
-  , txSupplementalData :: BuildTxWith build (TxSupplementalDatums era)
   , txExtraKeyWits :: TxExtraKeyWitnesses era
   , txProtocolParams :: BuildTxWith build (Maybe (LedgerProtocolParameters era))
   , txWithdrawals :: TxWithdrawals build era
@@ -1429,7 +1402,6 @@ defaultTxBodyContent era =
     , txFee = defaultTxFee era
     , txValidityLowerBound = TxValidityNoLowerBound
     , txValidityUpperBound = defaultTxValidityUpperBound era
-    , txSupplementalData = BuildTxWith TxSupplementalDataNone
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
@@ -1521,10 +1493,6 @@ setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
 
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
-
-setTxSupplementalDatums
-  :: TxSupplementalDatums era -> TxBodyContent BuildTx era -> TxBodyContent BuildTx era
-setTxSupplementalDatums v txBodyContent = txBodyContent{txSupplementalData = BuildTxWith v}
 
 setTxProposalProcedures
   :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
@@ -1655,7 +1623,6 @@ createTransactionBody sbe bc =
         apiExtraKeyWitnesses = txExtraKeyWits bc
         apiReturnCollateral = txReturnCollateral bc
         apiTotalCollateral = txTotalCollateral bc
-        apiSupplementalData = txSupplementalData bc
 
         -- Ledger types
         collTxIns = convCollateralTxIns apiCollateralTxIns
@@ -1666,7 +1633,7 @@ createTransactionBody sbe bc =
         txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
         scripts = convScripts apiScriptWitnesses
         languages = convLanguages apiScriptWitnesses
-        sData = convScriptData sbe apiTxOuts apiScriptWitnesses apiSupplementalData
+        sData = convScriptData sbe apiTxOuts apiScriptWitnesses
         proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
         votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
         currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
@@ -1942,7 +1909,6 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     , txMintValue = fromLedgerTxMintValue sbe body
     , txExtraKeyWits = fromLedgerTxExtraKeyWitnesses sbe body
     , txProtocolParams = ViewTx
-    , txSupplementalData = ViewTx
     , txMetadata
     , txAuxScripts
     , txScriptValidity = scriptValidity
@@ -2109,7 +2075,8 @@ fromAlonzoTxOutDatum
 fromAlonzoTxOutDatum w txdatums = \case
   SNothing -> TxOutDatumNone
   SJust dh
-    | Just d <- Map.lookup dh txdatums -> TxOutDatumInTx' w (ScriptDataHash dh) (fromAlonzoData d)
+    | Just d <- Map.lookup dh txdatums ->
+        TxOutSupplementalDatum w (fromAlonzoData d)
     | otherwise -> TxOutDatumHash w (ScriptDataHash dh)
 
 fromBabbageTxOut
@@ -2145,7 +2112,9 @@ fromBabbageTxOut w txdatums txout =
   resolveDatumInTx :: L.DataHash StandardCrypto -> TxOutDatum CtxTx era
   resolveDatumInTx dh
     | Just d <- Map.lookup dh txdatums =
-        TxOutDatumInTx' (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh) (fromAlonzoData d)
+        TxOutSupplementalDatum
+          (babbageEraOnwardsToAlonzoEraOnwards w)
+          (fromAlonzoData d)
     | otherwise = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh)
 
 fromLedgerTxTotalCollateral
@@ -2479,9 +2448,8 @@ convScriptData
   => ShelleyBasedEra era
   -> [TxOut CtxTx era]
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
-  -> BuildTxWith BuildTx (TxSupplementalDatums era)
   -> TxBodyScriptData era
-convScriptData sbe txOuts scriptWitnesses (BuildTxWith txSuppDatums) =
+convScriptData sbe txOuts scriptWitnesses =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const TxBodyNoScriptData)
     ( \w ->
@@ -2505,11 +2473,9 @@ convScriptData sbe txOuts scriptWitnesses (BuildTxWith txSuppDatums) =
                   , let d' = toAlonzoData d
                   ]
 
-            supplementalDatums = convSupplementalDatums sbe txSuppDatums
-
             scriptdata :: [HashableScriptData]
             scriptdata =
-              [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+              [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
                 ++ [ d
                    | ( _
                       , AnyScriptWitness
@@ -2524,7 +2490,7 @@ convScriptData sbe txOuts scriptWitnesses (BuildTxWith txSuppDatums) =
                       ) <-
                       scriptWitnesses
                    ]
-         in TxBodyScriptData w (datums <> supplementalDatums) redeemers
+         in TxBodyScriptData w datums redeemers
     )
     sbe
 
@@ -2812,7 +2778,7 @@ makeShelleyTransactionBody
 
     scriptdata :: [HashableScriptData]
     scriptdata =
-      [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+      [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
               , AnyScriptWitness
@@ -2935,7 +2901,7 @@ makeShelleyTransactionBody
 
     scriptdata :: [HashableScriptData]
     scriptdata =
-      [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+      [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
               , AnyScriptWitness
@@ -3073,7 +3039,7 @@ makeShelleyTransactionBody
 
     scriptdata :: [HashableScriptData]
     scriptdata =
-      [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+      [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
               , AnyScriptWitness
@@ -3424,20 +3390,6 @@ fromShelleyWithdrawal (L.Withdrawals withdrawals) =
   [ (fromShelleyStakeAddr stakeAddr, value, ViewTx)
   | (stakeAddr, value) <- Map.assocs withdrawals
   ]
-
-convSupplementalDatums
-  :: ShelleyBasedEra era
-  -> TxSupplementalDatums era
-  -> L.TxDats (ShelleyLedgerEra era)
-convSupplementalDatums sbe TxSupplementalDataNone =
-  shelleyBasedEraConstraints sbe mempty
-convSupplementalDatums sbe (TxSupplementalDatums datums) =
-  shelleyBasedEraConstraints sbe $
-    L.TxDats $
-      fromList
-        [ (L.hashData d, d)
-        | d <- map toAlonzoData datums
-        ]
 
 -- | In the Allegra and Mary eras the auxiliary data consists of the tx metadata
 -- and the axiliary scripts. In the Alonzo and later eras the auxiliary data consists of the tx metadata

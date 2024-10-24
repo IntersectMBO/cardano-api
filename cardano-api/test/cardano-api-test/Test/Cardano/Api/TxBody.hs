@@ -51,11 +51,11 @@ prop_roundtrip_txbodycontent_txouts era = H.property $ do
     matchDatum (aDatum, bDatum)
     matchRefScript (aRefScript, bRefScript)
 
-  -- NOTE: We accept TxOutDatumInTx instead of TxOutDatumHash as it may be
+  -- NOTE: We accept TxOutSupplementalDatum instead of TxOutDatumHash as it may be
   -- correctly resolved given a datum matching the hash was generated.
   matchDatum :: MonadTest m => (TxOutDatum CtxTx era, TxOutDatum CtxTx era) -> m ()
   matchDatum = \case
-    (TxOutDatumHash _ dh, TxOutDatumInTx _ d) ->
+    (TxOutDatumHash _ dh, TxOutSupplementalDatum _ d) ->
       dh === hashScriptDataBytes d
     (a, b) ->
       a === b
