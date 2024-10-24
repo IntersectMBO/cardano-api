@@ -87,7 +87,7 @@ module Cardano.Api.Tx.Body
   , CtxUTxO
   , TxOut (..)
   , TxOutValue (..)
-  , TxOutDatum (TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline)
+  , TxOutDatum (TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline)
   , toCtxUTxOTxOut
   , lovelaceToTxOutValue
   , prettyRenderTxOut
@@ -349,7 +349,7 @@ toCtxUTxOTxOut (TxOut addr val d refS) =
   let dat = case d of
         TxOutDatumNone -> TxOutDatumNone
         TxOutDatumHash s h -> TxOutDatumHash s h
-        TxOutDatumInTx' s h _ -> TxOutDatumHash s h
+        TxOutSupplementalDatum' s h _ -> TxOutDatumHash s h
         TxOutDatumInline s sd -> TxOutDatumInline s sd
    in TxOut addr val dat refS
 
@@ -398,7 +398,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
         "datumhash" .= Aeson.Null
       TxOutDatumHash _ h ->
         "datumhash" .= toJSON h
-      TxOutDatumInTx' _ h _ ->
+      TxOutSupplementalDatum' _ h _ ->
         "datumhash" .= toJSON h
       TxOutDatumInline _ datum ->
         "inlineDatumhash" .= toJSON (hashScriptDataBytes datum)
@@ -408,7 +408,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash _ _ -> Aeson.Null
-      TxOutDatumInTx' _ _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
+      TxOutSupplementalDatum' _ _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
       TxOutDatumInline _ _ -> Aeson.Null
 
   inlineDatumJsonVal :: TxOutDatum ctx era -> Aeson.Value
@@ -416,7 +416,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash{} -> Aeson.Null
-      TxOutDatumInTx'{} -> Aeson.Null
+      TxOutSupplementalDatum'{} -> Aeson.Null
       TxOutDatumInline _ datum -> scriptDataToJson ScriptDataJsonDetailedSchema datum
 
   inlineDatumRawJsonCbor :: TxOutDatum ctx era -> Aeson.Value
@@ -424,7 +424,7 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
     case d of
       TxOutDatumNone -> Aeson.Null
       TxOutDatumHash{} -> Aeson.Null
-      TxOutDatumInTx'{} -> Aeson.Null
+      TxOutSupplementalDatum'{} -> Aeson.Null
       TxOutDatumInline _ datum ->
         Aeson.String
           . Text.decodeUtf8
@@ -582,7 +582,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOut CtxTx era) where
               TxOut
                 <$> o .: "address"
                 <*> o .: "value"
-                <*> return (TxOutDatumInTx' w dHash hashableData)
+                <*> return (TxOutSupplementalDatum' w dHash hashableData)
                 <*> return ReferenceScriptNone
         (Nothing, Just dHash) ->
           TxOut
@@ -841,7 +841,7 @@ toAlonzoTxOutDatumHash
 toAlonzoTxOutDatumHash TxOutDatumNone = SNothing
 toAlonzoTxOutDatumHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDatumHash (TxOutDatumInline{}) = SNothing
-toAlonzoTxOutDatumHash (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
+toAlonzoTxOutDatumHash (TxOutSupplementalDatum' _ (ScriptDataHash dh) _) = SJust dh
 
 fromAlonzoTxOutDatumHash
   :: AlonzoEraOnwards era
@@ -857,7 +857,7 @@ toBabbageTxOutDatum
 toBabbageTxOutDatum TxOutDatumNone = Plutus.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Plutus.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
-toBabbageTxOutDatum (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Plutus.DatumHash dh
+toBabbageTxOutDatum (TxOutSupplementalDatum' _ (ScriptDataHash dh) _) = Plutus.DatumHash dh
 
 fromBabbageTxOutDatum
   :: (L.Era ledgerera, Ledger.EraCrypto ledgerera ~ StandardCrypto)
@@ -1074,9 +1074,9 @@ data TxOutDatum ctx era where
     -> Hash ScriptData
     -> TxOutDatum ctx era
   -- | A transaction output that specifies the whole datum value. This can
-  -- only be used in the context of the transaction body, and does not occur
-  -- in the UTxO. The UTxO only contains the datum hash.
-  TxOutDatumInTx'
+  -- only be used in the context of the transaction body (i.e this is a supplemental datum),
+  -- and does not occur in the UTxO. The UTxO only contains the datum hash.
+  TxOutSupplementalDatum'
     :: AlonzoEraOnwards era
     -> Hash ScriptData
     -> HashableScriptData
@@ -1093,17 +1093,17 @@ deriving instance Eq (TxOutDatum ctx era)
 
 deriving instance Show (TxOutDatum ctx era)
 
-pattern TxOutDatumInTx
+pattern TxOutSupplementalDatum
   :: AlonzoEraOnwards era
   -> HashableScriptData
   -> TxOutDatum CtxTx era
-pattern TxOutDatumInTx w d <- TxOutDatumInTx' w _ d
+pattern TxOutSupplementalDatum w d <- TxOutSupplementalDatum' w _ d
   where
-    TxOutDatumInTx w d = TxOutDatumInTx' w (hashScriptDataBytes d) d
+    TxOutSupplementalDatum w d = TxOutSupplementalDatum' w (hashScriptDataBytes d) d
 
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx', TxOutDatumInline #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum', TxOutDatumInline #-}
 
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline #-}
 
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
 parseHash asType = do
@@ -2109,7 +2109,8 @@ fromAlonzoTxOutDatum
 fromAlonzoTxOutDatum w txdatums = \case
   SNothing -> TxOutDatumNone
   SJust dh
-    | Just d <- Map.lookup dh txdatums -> TxOutDatumInTx' w (ScriptDataHash dh) (fromAlonzoData d)
+    | Just d <- Map.lookup dh txdatums ->
+        TxOutSupplementalDatum' w (ScriptDataHash dh) (fromAlonzoData d)
     | otherwise -> TxOutDatumHash w (ScriptDataHash dh)
 
 fromBabbageTxOut
@@ -2145,7 +2146,10 @@ fromBabbageTxOut w txdatums txout =
   resolveDatumInTx :: L.DataHash StandardCrypto -> TxOutDatum CtxTx era
   resolveDatumInTx dh
     | Just d <- Map.lookup dh txdatums =
-        TxOutDatumInTx' (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh) (fromAlonzoData d)
+        TxOutSupplementalDatum'
+          (babbageEraOnwardsToAlonzoEraOnwards w)
+          (ScriptDataHash dh)
+          (fromAlonzoData d)
     | otherwise = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh)
 
 fromLedgerTxTotalCollateral
@@ -2509,7 +2513,7 @@ convScriptData sbe txOuts scriptWitnesses (BuildTxWith txSuppDatums) =
 
             scriptdata :: [HashableScriptData]
             scriptdata =
-              [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+              [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
                 ++ [ d
                    | ( _
                       , AnyScriptWitness
@@ -2812,7 +2816,7 @@ makeShelleyTransactionBody
 
     scriptdata :: [HashableScriptData]
     scriptdata =
-      [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+      [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
               , AnyScriptWitness
@@ -2935,7 +2939,7 @@ makeShelleyTransactionBody
 
     scriptdata :: [HashableScriptData]
     scriptdata =
-      [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+      [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
               , AnyScriptWitness
@@ -3073,7 +3077,7 @@ makeShelleyTransactionBody
 
     scriptdata :: [HashableScriptData]
     scriptdata =
-      [d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts]
+      [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
               , AnyScriptWitness

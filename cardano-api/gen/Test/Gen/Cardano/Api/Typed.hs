@@ -1077,20 +1077,20 @@ genTxOutDatumHashTxContext era = case era of
     Gen.choice
       [ pure TxOutDatumNone
       , TxOutDatumHash AlonzoEraOnwardsAlonzo <$> genHashScriptData
-      , TxOutDatumInTx AlonzoEraOnwardsAlonzo <$> genHashableScriptData
+      , TxOutSupplementalDatum AlonzoEraOnwardsAlonzo <$> genHashableScriptData
       ]
   ShelleyBasedEraBabbage ->
     Gen.choice
       [ pure TxOutDatumNone
       , TxOutDatumHash AlonzoEraOnwardsBabbage <$> genHashScriptData
-      , TxOutDatumInTx AlonzoEraOnwardsBabbage <$> genHashableScriptData
+      , TxOutSupplementalDatum AlonzoEraOnwardsBabbage <$> genHashableScriptData
       , TxOutDatumInline BabbageEraOnwardsBabbage <$> genHashableScriptData
       ]
   ShelleyBasedEraConway ->
     Gen.choice
       [ pure TxOutDatumNone
       , TxOutDatumHash AlonzoEraOnwardsConway <$> genHashScriptData
-      , TxOutDatumInTx AlonzoEraOnwardsConway <$> genHashableScriptData
+      , TxOutSupplementalDatum AlonzoEraOnwardsConway <$> genHashableScriptData
       , TxOutDatumInline BabbageEraOnwardsConway <$> genHashableScriptData
       ]
 
