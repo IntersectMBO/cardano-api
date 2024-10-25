@@ -483,6 +483,10 @@ module Cardano.Api
   , StakePoolRelay
   , StakePoolMetadataReference
 
+    -- ** Anchor data
+  , AnchorDataFromCertificateException (..)
+  , getAnchorDataFromCertificate
+
     -- * Rewards
   , DelegationsAndRewards (..)
   , mergeDelegsAndRewards
