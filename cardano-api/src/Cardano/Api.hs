@@ -368,6 +368,8 @@ module Cardano.Api
   , TxCertificates (..)
   , TxUpdateProposal (..)
   , TxMintValue (..)
+  , txMintValueToValue
+  , txMintValueToIndexed
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
   , TxProposalProcedures (..)
@@ -535,6 +537,7 @@ module Cardano.Api
   , WitCtxMint
   , WitCtxStake
   , WitCtx (..)
+  , WitCtxMaybe (..)
   , ScriptWitness (..)
   , Witness (..)
   , KeyWitnessInCtx (..)

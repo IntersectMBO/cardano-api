@@ -54,6 +54,7 @@ module Cardano.Api.Script
   , WitCtxMint
   , WitCtxStake
   , WitCtx (..)
+  , WitCtxMaybe (..)
   , ScriptWitness (..)
   , Witness (..)
   , KeyWitnessInCtx (..)
@@ -165,7 +166,7 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Type.Equality (TestEquality (..), type (==), (:~:) (Refl))
 import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
 import           GHC.Exts (IsList (..))
@@ -688,20 +689,18 @@ data PlutusScriptOrReferenceInput lang
   | -- | Needed to construct the redeemer pointer map
     -- in the case of minting reference scripts where we don't
     -- have direct access to the script
-    PReferenceScript
-      TxIn
-      (Maybe ScriptHash)
+    PReferenceScript TxIn
   deriving (Eq, Show)
 
 data SimpleScriptOrReferenceInput lang
   = SScript SimpleScript
-  | SReferenceScript TxIn (Maybe ScriptHash)
+  | SReferenceScript TxIn
   deriving (Eq, Show)
 
 getScriptWitnessReferenceInput :: ScriptWitness witctx era -> Maybe TxIn
-getScriptWitnessReferenceInput (SimpleScriptWitness _ (SReferenceScript txIn _)) =
+getScriptWitnessReferenceInput (SimpleScriptWitness _ (SReferenceScript txIn)) =
   Just txIn
-getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PReferenceScript txIn _) _ _ _) =
+getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PReferenceScript txIn) _ _ _) =
   Just txIn
 getScriptWitnessReferenceInput (SimpleScriptWitness _ (SScript _)) = Nothing
 getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PScript _) _ _ _) = Nothing
@@ -804,9 +803,9 @@ scriptWitnessScript (SimpleScriptWitness SimpleScriptInConway (SScript script)) 
   Just $ ScriptInEra SimpleScriptInConway (SimpleScript script)
 scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
   Just $ ScriptInEra langInEra (PlutusScript version script)
-scriptWitnessScript (SimpleScriptWitness _ (SReferenceScript _ _)) =
+scriptWitnessScript (SimpleScriptWitness _ (SReferenceScript _)) =
   Nothing
-scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
+scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _) _ _ _) =
   Nothing
 
 -- ----------------------------------------------------------------------------

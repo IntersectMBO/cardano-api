@@ -111,6 +111,8 @@ module Cardano.Api.Tx.Body
   , TxCertificates (..)
   , TxUpdateProposal (..)
   , TxMintValue (..)
+  , txMintValueToValue
+  , txMintValueToIndexed
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
   , TxProposalProcedures (..)
@@ -1248,15 +1250,45 @@ data TxMintValue build era where
   TxMintNone :: TxMintValue build era
   TxMintValue
     :: MaryEraOnwards era
-    -> Value
-    -> BuildTxWith
-        build
-        (Map PolicyId (ScriptWitness WitCtxMint era))
+    -> Map
+        PolicyId
+        [ ( AssetName
+          , Quantity
+          , BuildTxWith build (ScriptWitness WitCtxMint era)
+          )
+        ]
     -> TxMintValue build era
 
 deriving instance Eq (TxMintValue build era)
 
 deriving instance Show (TxMintValue build era)
+
+-- | Convert 'TxMintValue' to a more handy 'Value'.
+txMintValueToValue :: TxMintValue build era -> Value
+txMintValueToValue TxMintNone = mempty
+txMintValueToValue (TxMintValue _ policiesWithAssets) =
+  fromList
+    [ (AssetId policyId' assetName', quantity)
+    | (policyId', assets) <- toList policiesWithAssets
+    , (assetName', quantity, _) <- assets
+    ]
+
+-- | Index the assets with witnesses in the order of policy ids.
+txMintValueToIndexed
+  :: TxMintValue build era
+  -> [ ( ScriptWitnessIndex
+       , PolicyId
+       , AssetName
+       , Quantity
+       , BuildTxWith build (ScriptWitness WitCtxMint era)
+       )
+     ]
+txMintValueToIndexed TxMintNone = []
+txMintValueToIndexed (TxMintValue _ policiesWithAssets) =
+  [ (ScriptWitnessIndexMint ix, policyId', assetName', quantity, witness)
+  | (ix, (policyId', assets)) <- zip [0 ..] $ toList policiesWithAssets
+  , (assetName', quantity, witness) <- assets
+  ]
 
 -- ----------------------------------------------------------------------------
 -- Votes within transactions (era-dependent)
@@ -1555,7 +1587,7 @@ data TxBodyError
   | TxBodyOutputNegative !Quantity !TxOutInAnyEra
   | TxBodyOutputOverflow !Quantity !TxOutInAnyEra
   | TxBodyMetadataError ![(Word64, TxMetadataRangeError)]
-  | TxBodyMintAdaError
+  | TxBodyMintAdaError -- TODO remove - case nonexistent
   | TxBodyInIxOverflow !TxIn
   | TxBodyMissingProtocolParams
   | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
@@ -1824,11 +1856,9 @@ validateTxOuts sbe txOuts = do
       | txout@(TxOut _ v _ _) <- txOuts
       ]
 
+-- TODO remove
 validateMintValue :: TxMintValue build era -> Either TxBodyError ()
-validateMintValue txMintValue =
-  case txMintValue of
-    TxMintNone -> return ()
-    TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+validateMintValue _txMintValue = pure ()
 
 inputIndexDoesNotExceedMax :: [(TxIn, a)] -> Either TxBodyError ()
 inputIndexDoesNotExceedMax txIns =
@@ -2285,20 +2315,20 @@ fromLedgerTxMintValue
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxMintValue ViewTx era
-fromLedgerTxMintValue sbe body =
-  case sbe of
-    ShelleyBasedEraShelley -> TxMintNone
-    ShelleyBasedEraAllegra -> TxMintNone
-    ShelleyBasedEraMary -> toMintValue body MaryEraOnwardsMary
-    ShelleyBasedEraAlonzo -> toMintValue body MaryEraOnwardsAlonzo
-    ShelleyBasedEraBabbage -> toMintValue body MaryEraOnwardsBabbage
-    ShelleyBasedEraConway -> toMintValue body MaryEraOnwardsConway
- where
-  toMintValue txBody maInEra
-    | L.isZero mint = TxMintNone
-    | otherwise = TxMintValue maInEra (fromMaryValue mint) ViewTx
-   where
-    mint = MaryValue (Ledger.Coin 0) (txBody ^. L.mintTxBodyL)
+fromLedgerTxMintValue sbe body = forEraInEon (toCardanoEra sbe) TxMintNone $ \w ->
+  maryEraOnwardsConstraints w $ do
+    let mint = MaryValue (Ledger.Coin 0) (body ^. L.mintTxBodyL)
+    if L.isZero mint
+      then TxMintNone
+      else do
+        let assetMap = toList $ fromMaryValue mint
+        TxMintValue w $
+          Map.fromListWith
+            (<>)
+            [ (policyId', [(assetName', quantity, ViewTx)])
+            | -- only non-ada can be here
+            (AssetId policyId' assetName', quantity) <- toList assetMap
+            ]
 
 makeByronTransactionBody
   :: ()
@@ -2412,12 +2442,9 @@ convTxUpdateProposal sbe = \case
   TxUpdateProposal _ p -> bimap TxBodyProtocolParamsConversionError pure $ toLedgerUpdate sbe p
 
 convMintValue :: TxMintValue build era -> MultiAsset StandardCrypto
-convMintValue txMintValue =
-  case txMintValue of
-    TxMintNone -> mempty
-    TxMintValue _ v _ ->
-      case toMaryValue v of
-        MaryValue _ ma -> ma
+convMintValue txMintValue = do
+  let L.MaryValue _coin multiAsset = toMaryValue $ txMintValueToValue txMintValue
+  multiAsset
 
 convExtraKeyWitnesses
   :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash Shelley.Witness StandardCrypto)
@@ -3328,12 +3355,9 @@ collectTxBodyScriptWitnesses
       :: TxMintValue BuildTx era
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesMinting TxMintNone = []
-    scriptWitnessesMinting (TxMintValue _ value (BuildTxWith witnesses)) =
-      [ (ScriptWitnessIndexMint ix, AnyScriptWitness witness)
-      | -- The minting policies are indexed in policy id order in the value
-      let ValueNestedRep bundle = valueToNestedRep value
-      , (ix, ValueNestedBundle policyid _) <- zip [0 ..] bundle
-      , witness <- maybeToList (Map.lookup policyid witnesses)
+    scriptWitnessesMinting txMintValue' =
+      [ (ix, AnyScriptWitness witness)
+      | (ix, _, _, _, BuildTxWith witness) <- txMintValueToIndexed txMintValue'
       ]
 
     scriptWitnessesVoting
