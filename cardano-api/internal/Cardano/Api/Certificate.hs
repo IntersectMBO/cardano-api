@@ -745,9 +745,8 @@ instance Exception AnchorDataFromCertificateException where
 
 -- | Get anchor data hash from a certificate
 getAnchorDataFromCertificate
-  :: MonadError AnchorDataFromCertificateException m
-  => Certificate era
-  -> m (Maybe (Ledger.Anchor StandardCrypto))
+  :: Certificate era
+  -> Either AnchorDataFromCertificateException (Maybe (Ledger.Anchor StandardCrypto))
 getAnchorDataFromCertificate =
   \case
     ShelleyRelatedCertificate _ shelleyCert ->
