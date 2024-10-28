@@ -92,7 +92,7 @@ createCompatibleSignedTx sbeF ins outs witnesses txFee' anyProtocolUpdate anyVot
             referenceInputs =
               map toShelleyTxIn $
                 catMaybes [getScriptWitnessReferenceInput sWit | (_, AnyScriptWitness sWit) <- apiScriptWitnesses]
-            sData = convScriptData sbe outs apiScriptWitnesses (BuildTxWith TxSupplementalDataNone)
+            sData = convScriptData sbe outs apiScriptWitnesses
             txbody =
               conwayEraOnwardsConstraints conwayOnwards $
                 createCommonTxBody sbe ins outs txFee'
