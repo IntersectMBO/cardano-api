@@ -10,6 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Certificates embedded in transactions
 module Cardano.Api.Certificate
@@ -95,6 +96,7 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
 
+import qualified Cardano.Ledger.Api as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybe)
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Keys as Ledger
@@ -743,41 +745,52 @@ instance Exception AnchorDataFromCertificateException where
   displayException (InvalidPoolMetadataHash url hash) =
     "Invalid pool metadata hash for URL " <> show url <> ": " <> show hash
 
--- | Get anchor data hash from a certificate
+-- | Get anchor data hash from a certificate. A return value of `Nothing`
+-- means that the certificate does not contain anchor data.
 getAnchorDataFromCertificate
   :: Certificate era
   -> Either AnchorDataFromCertificateException (Maybe (Ledger.Anchor StandardCrypto))
-getAnchorDataFromCertificate =
-  \case
-    ShelleyRelatedCertificate _ shelleyCert ->
-      case shelleyCert of
-        Ledger.ShelleyTxCertDelegCert shelleyDelegCert ->
-          case shelleyDelegCert of
-            Ledger.ShelleyRegCert _ -> return Nothing
-            Ledger.ShelleyUnRegCert _ -> return Nothing
-            Ledger.ShelleyDelegCert _ _ -> return Nothing
-        Ledger.ShelleyTxCertPool shelleyPoolCert ->
-          case shelleyPoolCert of
-            Ledger.RegPool poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
-            Ledger.RetirePool _ _ -> return Nothing
-        Ledger.ShelleyTxCertGenesisDeleg _ -> return Nothing
-        Ledger.ShelleyTxCertMir _ -> return Nothing
-    ConwayCertificate ceo conwayCert ->
-      conwayEraOnwardsConstraints ceo $
-        case conwayCert of
-          Ledger.ConwayTxCertDeleg _ -> return Nothing
-          Ledger.ConwayTxCertPool conwayPoolCert ->
-            case conwayPoolCert of
-              Ledger.RegPool poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
-              Ledger.RetirePool _ _ -> return Nothing
-          Ledger.ConwayTxCertGov govCert ->
-            case govCert of
-              Ledger.ConwayRegDRep _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
-              Ledger.ConwayUnRegDRep _ _ -> return Nothing
-              Ledger.ConwayUpdateDRep _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
-              Ledger.ConwayAuthCommitteeHotKey _ _ -> return Nothing
-              Ledger.ConwayResignCommitteeColdKey _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+getAnchorDataFromCertificate c =
+  case c of
+    ShelleyRelatedCertificate stbe scert ->
+      shelleyToBabbageEraConstraints stbe $ getAnchorDataFromShelleyCertificate scert
+    ConwayCertificate ceo ccert ->
+      conwayEraOnwardsConstraints ceo $ getAnchorDataFromConwayCertificate ccert
  where
+  getAnchorDataFromShelleyCertificate
+    :: (Ledger.ProtVerAtMost era 8, Ledger.ShelleyEraTxCert era)
+    => Ledger.TxCert era
+    -> Either AnchorDataFromCertificateException (Maybe (Ledger.Anchor StandardCrypto))
+  getAnchorDataFromShelleyCertificate cert =
+    case cert of
+      Ledger.RegTxCert _ -> return Nothing
+      Ledger.UnRegTxCert _ -> return Nothing
+      Ledger.DelegStakeTxCert _ _ -> return Nothing
+      Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+      Ledger.RetirePoolTxCert _ _ -> return Nothing
+      Ledger.GenesisDelegTxCert{} -> return Nothing
+      Ledger.MirTxCert _ -> return Nothing
+
+  getAnchorDataFromConwayCertificate
+    :: (EraCrypto era ~ StandardCrypto, Ledger.ConwayEraTxCert era)
+    => Ledger.TxCert era
+    -> Either AnchorDataFromCertificateException (Maybe (Ledger.Anchor StandardCrypto))
+  getAnchorDataFromConwayCertificate cert =
+    case cert of
+      Ledger.RegTxCert _ -> return Nothing
+      Ledger.UnRegTxCert _ -> return Nothing
+      Ledger.RegDepositTxCert _ _ -> return Nothing
+      Ledger.UnRegDepositTxCert _ _ -> return Nothing
+      Ledger.RegDepositDelegTxCert{} -> return Nothing
+      Ledger.DelegTxCert{} -> return Nothing
+      Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+      Ledger.RetirePoolTxCert _ _ -> return Nothing
+      Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+      Ledger.UnRegDRepTxCert _ _ -> return Nothing
+      Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+      Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
+      Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateException m
     => Ledger.PoolMetadata
