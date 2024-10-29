@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -98,6 +99,7 @@ module Test.Gen.Cardano.Api.Typed
   , genPositiveLovelace
   , genValue
   , genValueDefault
+  , genValueForRole
   , genVerificationKey
   , genVerificationKeyHash
   , genUpdateProposal
@@ -160,7 +162,7 @@ import           Data.Maybe
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import           Data.Word (Word16, Word32, Word64)
-import           GHC.Exts (IsList(..))
+import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Numeric.Natural (Natural)
 
@@ -375,25 +377,37 @@ genUnsignedQuantity = genQuantity (Range.constant 0 2)
 genPositiveQuantity :: Gen Quantity
 genPositiveQuantity = genQuantity (Range.constant 1 2)
 
-genValue
-  :: MaryEraOnwards era -> Gen AssetId -> Gen Quantity -> Gen (L.Value (ShelleyLedgerEra era))
-genValue w genAId genQuant =
-  toLedgerValue w . valueFromList
-    <$> Gen.list
+genValue :: Gen AssetId -> Gen Quantity -> Gen Value
+genValue genAId genQuant =
+  valueFromList <$> Gen.list
       (Range.constant 0 10)
       ((,) <$> genAId <*> genQuant)
 
+genLedgerValue
+  :: MaryEraOnwards era -> Gen AssetId -> Gen Quantity -> Gen (L.Value (ShelleyLedgerEra era))
+genLedgerValue w genAId genQuant =
+  toLedgerValue w <$> genValue genAId genQuant
+
 -- | Generate a 'Value' with any asset ID and a positive or negative quantity.
 genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
-genValueDefault w = genValue w genAssetId genSignedNonZeroQuantity
+genValueDefault w = genLedgerValue w genAssetId genSignedNonZeroQuantity
+
+genValueForRole :: MaryEraOnwards era -> ValueRole -> Gen Value
+genValueForRole w =
+  \case
+    RoleMint ->
+      genValueForMinting
+    RoleUTxO ->
+      fromLedgerValue sbe <$> genValueForTxOut sbe
+ where
+  sbe = maryEraOnwardsToShelleyBasedEra w
 
 -- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
 -- positive or negative quantity.
-genValueForMinting :: MaryEraOnwards era -> Gen Value
-genValueForMinting w =
-  fromLedgerValue sbe <$> genValue w genAssetIdNoAda genSignedNonZeroQuantity
+genValueForMinting :: Gen Value
+genValueForMinting =
+  genValue genAssetIdNoAda genSignedNonZeroQuantity
  where
-  sbe = maryEraOnwardsToShelleyBasedEra w
   genAssetIdNoAda :: Gen AssetId
   genAssetIdNoAda = AssetId <$> genPolicyId <*> genAssetName
 
@@ -409,7 +423,7 @@ genValueForTxOut sbe = do
   caseShelleyToAllegraOrMaryEraOnwards
     (const (pure ada))
     ( \w -> do
-        v <- Gen.list (Range.constant 0 5) $ genValue w genAssetId genPositiveQuantity
+        v <- Gen.list (Range.constant 0 5) $ genLedgerValue w genAssetId genPositiveQuantity
         pure $ ada <> mconcat v
     )
     sbe
@@ -653,7 +667,7 @@ genTxMintValue =
       Gen.choice
         [ pure TxMintNone
         -- TODO write a generator for the last parameter of 'TxMintValue' constructor
-        , TxMintValue supported <$> genValueForMinting supported <*> return (pure mempty)
+        , TxMintValue supported <$> genValueForMinting <*> return (pure mempty)
         ]
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)

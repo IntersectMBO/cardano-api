@@ -14,35 +14,37 @@ import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import qualified Text.Parsec as Parsec (parse)
 
-import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueForRole,
+                   genValueNestedRep)
 
 import           Hedgehog (Property, forAll, property, tripping, (===))
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Hedgehog.Gen as Gen
 
 {- HLINT ignore "Use let" -}
 
 hprop_roundtrip_Value_parse_render :: Property
 hprop_roundtrip_Value_parse_render =
   property $ do
-    ledgerValue <- forAll $ genValueDefault MaryEraOnwardsConway
-    let value = fromLedgerValue ShelleyBasedEraConway ledgerValue
+    valueRole <- forAll Gen.enumBounded
+    value <- forAll $ genValueForRole MaryEraOnwardsConway valueRole
     H.noteShow_ value
     tripping
       value
       renderValue
-      (Parsec.parse parseValue "" . Text.unpack)
+      (Parsec.parse (parseValue valueRole) "" . Text.unpack)
 
 hprop_roundtrip_Value_parse_renderPretty :: Property
 hprop_roundtrip_Value_parse_renderPretty =
   property $ do
-    ledgerValue <- forAll $ genValueDefault MaryEraOnwardsConway
-    let value = fromLedgerValue ShelleyBasedEraConway ledgerValue
+    valueRole <- forAll Gen.enumBounded
+    value <- forAll $ genValueForRole MaryEraOnwardsConway valueRole
     H.noteShow_ value
     tripping
       value
       renderValuePretty
-      (Parsec.parse parseValue "" . Text.unpack)
+      (Parsec.parse (parseValue valueRole) "" . Text.unpack)
 
 hprop_goldenValue_1_lovelace :: Property
 hprop_goldenValue_1_lovelace =

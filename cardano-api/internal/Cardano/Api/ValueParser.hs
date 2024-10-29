@@ -4,6 +4,7 @@ module Cardano.Api.ValueParser
   ( parseValue
   , assetName
   , policyId
+  , ValueRole (..)
   )
 where
 
@@ -13,6 +14,7 @@ import           Cardano.Api.Utils (failEitherWith)
 import           Cardano.Api.Value
 
 import           Control.Applicative (many, some, (<|>))
+import           Control.Monad (unless, when)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import           Data.Functor (void, ($>))
@@ -26,9 +28,36 @@ import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionPar
 import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
 
--- | Parse a 'Value' from its string representation.
-parseValue :: Parser Value
-parseValue = evalValueExpr <$> parseValueExpr
+-- | The role for which a 'Value' is being parsed.
+data ValueRole
+  = -- | The value is used as a UTxO or transaction output.
+    RoleUTxO
+  | -- | The value is used as a minting policy.
+    RoleMint
+  deriving (Eq, Show, Enum, Bounded)
+
+-- | Parse a 'Value' from its string representation. The @role@ argument for which purpose
+-- the value is being parsed. This is used to enforce additional constraints on the value.
+-- Why do we parse a general value and check for additional constraints you may ask?
+-- Because we can't rule out the negation operator
+-- for transaction outputs: some users have negative values in additions, with the addition's total
+-- summing up to a positive value. So forbidding negations altogether is too restrictive.
+parseValue :: ValueRole -> Parser Value
+parseValue role = do
+  valueExpr <- parseValueExpr
+  let value = evalValueExpr valueExpr
+  case role of
+    RoleUTxO -> do
+      unless (allPositive value) $
+        fail $
+          "Value must be positive in UTxO (or transaction output): " <> show value
+      return value
+    RoleMint -> do
+      let (Coin lovelace) = selectLovelace value
+      when (lovelace /= 0) $
+        fail $
+          "Lovelace must be zero in minting value: " <> show value
+      return value
 
 -- | Evaluate a 'ValueExpr' and construct a 'Value'.
 evalValueExpr :: ValueExpr -> Value
@@ -170,6 +199,6 @@ assetId =
   assetIdNoAssetName :: PolicyId -> Parser AssetId
   assetIdNoAssetName polId = pure (AssetId polId "")
 
--- | Quantity (word64) parser.
+-- | Quantity (word64) parser. Only accepts positive quantities.
 quantity :: Parser Quantity
 quantity = fmap Quantity word64
