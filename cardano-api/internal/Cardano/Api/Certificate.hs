@@ -743,7 +743,7 @@ instance Error AnchorDataFromCertificateError where
   prettyError (InvalidPoolMetadataHashError url hash) =
     "Invalid pool metadata hash for URL " <> fromString (show url) <> ": " <> fromString (show hash)
 
--- | Get anchor data hash from a certificate. A return value of `Nothing`
+-- | Get anchor data url and hash from a certificate. A return value of `Nothing`
 -- means that the certificate does not contain anchor data.
 getAnchorDataFromCertificate
   :: Certificate era

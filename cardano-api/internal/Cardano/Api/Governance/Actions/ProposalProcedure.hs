@@ -230,3 +230,19 @@ createAnchor url anchorData =
     { anchorUrl = url
     , anchorDataHash = hashAnchorData $ Ledger.AnchorData anchorData
     }
+
+-- | Get anchor data url and hash from a governance action. A return value of `Nothing`
+-- means that the governance action does not contain anchor data.
+getAnchorDataFromGovernanceAction
+  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => Gov.GovAction (ShelleyLedgerEra era)
+  -> Maybe (Ledger.Anchor StandardCrypto)
+getAnchorDataFromGovernanceAction govAction =
+  case govAction of
+    Gov.ParameterChange{} -> Nothing
+    Gov.HardForkInitiation _ _ -> Nothing
+    Gov.TreasuryWithdrawals _ _ -> Nothing
+    Gov.NoConfidence _ -> Nothing
+    Gov.UpdateCommittee{} -> Nothing
+    Gov.NewConstitution _ constitution -> Just $ Ledger.constitutionAnchor constitution
+    Gov.InfoAction -> Nothing
