@@ -21,8 +21,8 @@ Development documentation can be found in [Cardano Node Wiki](https://github.com
 
 Haddock documentation is available at: https://cardano-api.cardano.intersectmbo.org/
 
-[![x86\_64-linux](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/main/x86_64-linux.required/shield&style=flat-square&label=x86_64-linux)](https://ci.iog.io/job/IntersectMBO-cardano-api/main/x86_64-linux.required)
-[![x86\_64-darwin](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/main/x86_64-darwin.required/shield&style=flat-square&label=x86_64-darwin)](https://ci.iog.io/job/IntersectMBO-cardano-api/main/x86_64-darwin.required)
-[![GHA Build](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/haskell.yml?branch=main&label=GHA%20Build&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/haskell.yml?query=branch%3Amain)
-[![Haddock](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/github-page.yml?branch=main&label=Haddocks&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/github-page.yml?query=branch%3Amain)
+[![x86\_64-linux](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-linux.required/shield&style=flat-square&label=x86_64-linux)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-linux.required)
+[![x86\_64-darwin](https://img.shields.io/endpoint?url=https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-darwin.required/shield&style=flat-square&label=x86_64-darwin)](https://ci.iog.io/job/IntersectMBO-cardano-api/master/x86_64-darwin.required)
+[![GHA Build](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/haskell.yml?branch=master&label=GHA%20Build&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/haskell.yml?query=branch%3Amaster)
+[![Haddock](https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-api/github-page.yml?branch=master&label=Haddocks&style=flat-square)](https://github.com/IntersectMBO/cardano-api/actions/workflows/github-page.yml?query=branch%3Amaster)
 
