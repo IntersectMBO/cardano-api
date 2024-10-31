@@ -59,7 +59,7 @@ module Cardano.Api.Certificate
   , selectStakeCredentialWitness
 
     -- * Anchor data
-  , AnchorDataFromCertificateException (..)
+  , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
 
     -- * Internal conversion functions
@@ -83,10 +83,12 @@ import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras
+import           Cardano.Api.Error (Error (..))
 import           Cardano.Api.Governance.Actions.VotingProcedure
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Praos
 import           Cardano.Api.Keys.Shelley
+import           Cardano.Api.Pretty (Doc)
 import           Cardano.Api.ReexposeLedger (EraCrypto, StandardCrypto)
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
@@ -101,7 +103,6 @@ import           Cardano.Ledger.BaseTypes (strictMaybe)
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Keys as Ledger
 
-import           Control.Exception (Exception)
 import           Control.Monad.Except (MonadError (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -111,8 +112,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable
-import           GHC.Exception.Type (Exception (..))
-import           GHC.Exts (IsList (..))
+import           GHC.Exts (IsList (..), fromString)
 import           Network.Socket (PortNumber)
 
 -- ----------------------------------------------------------------------------
@@ -736,20 +736,20 @@ fromShelleyPoolParams
       Text.encodeUtf8
         . Ledger.dnsToText
 
-data AnchorDataFromCertificateException
-  = InvalidPoolMetadataHash Ledger.Url ByteString
+data AnchorDataFromCertificateError
+  = InvalidPoolMetadataHashError Ledger.Url ByteString
   deriving (Eq, Show)
 
-instance Exception AnchorDataFromCertificateException where
-  displayException :: AnchorDataFromCertificateException -> String
-  displayException (InvalidPoolMetadataHash url hash) =
-    "Invalid pool metadata hash for URL " <> show url <> ": " <> show hash
+instance Error AnchorDataFromCertificateError where
+  prettyError :: AnchorDataFromCertificateError -> Doc ann
+  prettyError (InvalidPoolMetadataHashError url hash) =
+    "Invalid pool metadata hash for URL " <> fromString (show url) <> ": " <> fromString (show hash)
 
 -- | Get anchor data hash from a certificate. A return value of `Nothing`
 -- means that the certificate does not contain anchor data.
 getAnchorDataFromCertificate
   :: Certificate era
-  -> Either AnchorDataFromCertificateException (Maybe (Ledger.Anchor StandardCrypto))
+  -> Either AnchorDataFromCertificateError (Maybe (Ledger.Anchor StandardCrypto))
 getAnchorDataFromCertificate c =
   case c of
     ShelleyRelatedCertificate stbe scert ->
@@ -760,7 +760,7 @@ getAnchorDataFromCertificate c =
   getAnchorDataFromShelleyCertificate
     :: (Ledger.ProtVerAtMost era 8, Ledger.ShelleyEraTxCert era)
     => Ledger.TxCert era
-    -> Either AnchorDataFromCertificateException (Maybe (Ledger.Anchor StandardCrypto))
+    -> Either AnchorDataFromCertificateError (Maybe (Ledger.Anchor StandardCrypto))
   getAnchorDataFromShelleyCertificate cert =
     case cert of
       Ledger.RegTxCert _ -> return Nothing
@@ -774,7 +774,7 @@ getAnchorDataFromCertificate c =
   getAnchorDataFromConwayCertificate
     :: (EraCrypto era ~ StandardCrypto, Ledger.ConwayEraTxCert era)
     => Ledger.TxCert era
-    -> Either AnchorDataFromCertificateException (Maybe (Ledger.Anchor StandardCrypto))
+    -> Either AnchorDataFromCertificateError (Maybe (Ledger.Anchor StandardCrypto))
   getAnchorDataFromConwayCertificate cert =
     case cert of
       Ledger.RegTxCert _ -> return Nothing
@@ -792,12 +792,13 @@ getAnchorDataFromCertificate c =
       Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
 
   anchorDataFromPoolMetadata
-    :: MonadError AnchorDataFromCertificateException m
+    :: MonadError AnchorDataFromCertificateError m
     => Ledger.PoolMetadata
     -> m (Maybe (Ledger.Anchor StandardCrypto))
   anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
     hash <-
-      maybe (throwError $ InvalidPoolMetadataHash url hashBytes) return $ Ledger.hashFromBytes hashBytes
+      maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $
+        Ledger.hashFromBytes hashBytes
     return $
       Just
         ( Ledger.Anchor

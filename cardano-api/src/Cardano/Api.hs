@@ -484,7 +484,7 @@ module Cardano.Api
   , StakePoolMetadataReference
 
     -- ** Anchor data
-  , AnchorDataFromCertificateException (..)
+  , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
 
     -- * Rewards
