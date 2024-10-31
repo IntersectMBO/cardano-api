@@ -999,6 +999,9 @@ module Cardano.Api
   , DRepMetadataReference
   , hashDRepMetadata
 
+    -- ** Governance actions
+  , getAnchorDataFromGovernanceAction
+
     -- ** Governance related certificates
   , AnchorDataHash (..)
   , AnchorUrl (..)
