@@ -10,7 +10,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 -- | Certificates embedded in transactions
 module Cardano.Api.Certificate
@@ -98,7 +97,6 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
 
-import qualified Cardano.Ledger.Api as Ledger
 import           Cardano.Ledger.BaseTypes (strictMaybe)
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Keys as Ledger
@@ -753,44 +751,32 @@ getAnchorDataFromCertificate
 getAnchorDataFromCertificate c =
   case c of
     ShelleyRelatedCertificate stbe scert ->
-      shelleyToBabbageEraConstraints stbe $ getAnchorDataFromShelleyCertificate scert
+      shelleyToBabbageEraConstraints stbe $
+        case scert of
+          Ledger.RegTxCert _ -> return Nothing
+          Ledger.UnRegTxCert _ -> return Nothing
+          Ledger.DelegStakeTxCert _ _ -> return Nothing
+          Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+          Ledger.RetirePoolTxCert _ _ -> return Nothing
+          Ledger.GenesisDelegTxCert{} -> return Nothing
+          Ledger.MirTxCert _ -> return Nothing
     ConwayCertificate ceo ccert ->
-      conwayEraOnwardsConstraints ceo $ getAnchorDataFromConwayCertificate ccert
+      conwayEraOnwardsConstraints ceo $
+        case ccert of
+          Ledger.RegTxCert _ -> return Nothing
+          Ledger.UnRegTxCert _ -> return Nothing
+          Ledger.RegDepositTxCert _ _ -> return Nothing
+          Ledger.UnRegDepositTxCert _ _ -> return Nothing
+          Ledger.RegDepositDelegTxCert{} -> return Nothing
+          Ledger.DelegTxCert{} -> return Nothing
+          Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
+          Ledger.RetirePoolTxCert _ _ -> return Nothing
+          Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+          Ledger.UnRegDRepTxCert _ _ -> return Nothing
+          Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+          Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
+          Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
  where
-  getAnchorDataFromShelleyCertificate
-    :: (Ledger.ProtVerAtMost era 8, Ledger.ShelleyEraTxCert era)
-    => Ledger.TxCert era
-    -> Either AnchorDataFromCertificateError (Maybe (Ledger.Anchor StandardCrypto))
-  getAnchorDataFromShelleyCertificate cert =
-    case cert of
-      Ledger.RegTxCert _ -> return Nothing
-      Ledger.UnRegTxCert _ -> return Nothing
-      Ledger.DelegStakeTxCert _ _ -> return Nothing
-      Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
-      Ledger.RetirePoolTxCert _ _ -> return Nothing
-      Ledger.GenesisDelegTxCert{} -> return Nothing
-      Ledger.MirTxCert _ -> return Nothing
-
-  getAnchorDataFromConwayCertificate
-    :: (EraCrypto era ~ StandardCrypto, Ledger.ConwayEraTxCert era)
-    => Ledger.TxCert era
-    -> Either AnchorDataFromCertificateError (Maybe (Ledger.Anchor StandardCrypto))
-  getAnchorDataFromConwayCertificate cert =
-    case cert of
-      Ledger.RegTxCert _ -> return Nothing
-      Ledger.UnRegTxCert _ -> return Nothing
-      Ledger.RegDepositTxCert _ _ -> return Nothing
-      Ledger.UnRegDepositTxCert _ _ -> return Nothing
-      Ledger.RegDepositDelegTxCert{} -> return Nothing
-      Ledger.DelegTxCert{} -> return Nothing
-      Ledger.RegPoolTxCert poolParams -> strictMaybe (return Nothing) anchorDataFromPoolMetadata $ Ledger.ppMetadata poolParams
-      Ledger.RetirePoolTxCert _ _ -> return Nothing
-      Ledger.RegDRepTxCert _ _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
-      Ledger.UnRegDRepTxCert _ _ -> return Nothing
-      Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
-      Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
-      Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
-
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateError m
     => Ledger.PoolMetadata
