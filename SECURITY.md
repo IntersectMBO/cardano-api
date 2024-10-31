@@ -15,4 +15,4 @@ Please provide a clear and concise description of the vulnerability, including:
 If you have developed any code or utilities that can help demonstrate the suspected
 vulnerability, please mention them in your email but ***DO NOT*** attempt to include them as
 attachments as this may cause your Email to be blocked by spam filters.
-See the security file in the [Cardano engineering handbook](https://github.com/input-output-hk/cardano-engineering-handbook/blob/main/SECURITY.md).
+See the security file in the [Cardano engineering handbook](https://github.com/input-output-hk/cardano-engineering-handbook/blob/master/SECURITY.md).

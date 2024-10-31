@@ -29,7 +29,7 @@ After deciding on the version number, set the correct `version` field in all cab
 
 ### Changelog preparation
 The changelog preparation workflow is using `cardano-updates` to gather all information and produce the changelog in markdown format.
-The full documentation for scripts is located in [`cardano-updates` repository](https://github.com/IntersectMBO/cardano-updates/blob/main/scripts/README.md).
+The full documentation for scripts is located in [`cardano-updates` repository](https://github.com/IntersectMBO/cardano-updates/blob/master/scripts/README.md).
 
 This part requires user to have the following tools installed on your local machine:
 * https://github.com/cli/cli
@@ -92,7 +92,7 @@ In order to generate changelog files in markdown format use the following steps:
     >You can sort all tags ascendingly using: `git show-ref --tags --dereference | sort -V -t '/' -k 3,3`
 
 1. Add generated changelog in the previous step to `CHANGELOG.md` file in respective cabal package in `cardano-api` repository, near the top of the file, adding a new section for the version being prepared, for example: `## 8.3.0.0`.
-    After doing that, create a PR from a new branch back to `main`.
+    After doing that, create a PR from a new branch back to `master`.
     Make sure that the release PR contains:
     * updated changelogs
     * bumped version fields in cabal files
@@ -100,7 +100,7 @@ In order to generate changelog files in markdown format use the following steps:
 >:high_brightness: **Note**
 >
 >Usually the release PR should only contain a changelog update and a version bump.
->If you are making a release which aims to contain everything from `main` branch, there should be no additional code changes in the release PR.
+>If you are making a release which aims to contain everything from `master` branch, there should be no additional code changes in the release PR.
 >An exception to that would be a release with a backported fix for example, where the release PR should contain required code changes too.
 
 >:bulb: **Tip**
@@ -140,7 +140,7 @@ Briefly speaking, it requires executing of the following steps:
 
     After package gets released, you can check the released version at: https://chap.intersectmbo.org/all-package-versions/ and update the version in the dependant packages, in their cabal files, for example: `cardano-api ^>= 8.3`
     Don't forget to bump the CHaP index in cabal.project and flake.lock too.
-    See [`CONTRIBUTING.md` section on updating dependencies](https://github.com/IntersectMBO/cardano-cli/blob/main/CONTRIBUTING.md#updating-dependencies) how to to do so.
+    See [`CONTRIBUTING.md` section on updating dependencies](https://github.com/IntersectMBO/cardano-cli/blob/master/CONTRIBUTING.md#updating-dependencies) how to to do so.
 
 >:bulb: **Tip**
 >
@@ -207,7 +207,7 @@ If it is already set to the current date, you can add a suffix to it - the impor
 This issue happens due to frequent cache collisions in the [`cabal-cache`](https://github.com/haskell-works/cabal-cache).
 
 ## References
-1. https://github.com/input-output-hk/cardano-updates/tree/main/scripts
+1. https://github.com/input-output-hk/cardano-updates/tree/master/scripts
 1. https://github.com/IntersectMBO/cardano-ledger/blob/master/RELEASING.md
 1. https://chap.intersectmbo.org/index.html
 1. https://input-output-hk.github.io/cardano-engineering-handbook/policy/haskell/packaging/versioning.html
