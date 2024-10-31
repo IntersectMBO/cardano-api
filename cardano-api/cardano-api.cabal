@@ -129,6 +129,7 @@ library internal
     Cardano.Api.Query
     Cardano.Api.Query.Expr
     Cardano.Api.Query.Types
+    Cardano.Api.ReexposeConsensus
     Cardano.Api.ReexposeLedger
     Cardano.Api.ReexposeNetwork
     Cardano.Api.Rewards
@@ -238,6 +239,7 @@ library
     Cardano.Api.ChainSync.Client
     Cardano.Api.ChainSync.ClientPipelined
     Cardano.Api.Compatible
+    Cardano.Api.Consensus
     Cardano.Api.Crypto.Ed25519Bip32
     Cardano.Api.Experimental
     Cardano.Api.Ledger
