@@ -40,7 +40,6 @@ import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
-import qualified PlutusLedgerApi.Common as Plutus hiding (PlutusV2)
 
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Error.Util (hush)
@@ -270,10 +269,6 @@ test_ScriptExecutionError =
     [ ("ScriptErrorMissingTxIn", ScriptErrorMissingTxIn txin1)
     , ("ScriptErrorTxInWithoutDatum", ScriptErrorTxInWithoutDatum txin1)
     , ("ScriptErrorWrongDatum", ScriptErrorWrongDatum hashScriptData1)
-    ,
-      ( "ScriptErrorEvaluationFailed"
-      , ScriptErrorEvaluationFailed Plutus.CostModelParameterMismatch (replicate 5 text)
-      )
     , ("ScriptErrorExecutionUnitsOverflow", ScriptErrorExecutionUnitsOverflow)
     ,
       ( "ScriptErrorNotPlutusWitnessedTxIn"
