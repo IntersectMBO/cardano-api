@@ -123,6 +123,7 @@ library internal
     Cardano.Api.NetworkId
     Cardano.Api.OperationalCertificate
     Cardano.Api.Orphans
+    Cardano.Api.Plutus
     Cardano.Api.Pretty
     Cardano.Api.Protocol
     Cardano.Api.ProtocolParameters
@@ -161,6 +162,7 @@ library internal
     attoparsec,
     base16-bytestring >=1.0,
     base58-bytestring,
+    base64-bytestring,
     bech32 >=1.1.0,
     bytestring,
     cardano-binary,
@@ -380,6 +382,7 @@ test-suite cardano-api-golden
   type: exitcode-stdio-1.0
   build-depends:
     aeson,
+    base64-bytestring,
     bech32 >=1.1.0,
     bytestring,
     cardano-api,
@@ -391,6 +394,7 @@ test-suite cardano-api-golden
     cardano-ledger-alonzo,
     cardano-ledger-api ^>=1.9,
     cardano-ledger-babbage >=1.9,
+    cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test >=1.2.0.1,
@@ -403,7 +407,7 @@ test-suite cardano-api-golden
     microlens,
     parsec,
     plutus-core ^>=1.36,
-    plutus-ledger-api ^>=1.36,
+    plutus-ledger-api,
     tasty,
     tasty-hedgehog,
     text,
