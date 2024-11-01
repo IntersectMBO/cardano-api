@@ -63,6 +63,7 @@ import qualified Cardano.Api.Experimental.Eras as Exp
 import           Cardano.Api.Experimental.Tx
 import           Cardano.Api.Feature
 import qualified Cardano.Api.Ledger.Lens as A
+import           Cardano.Api.Plutus
 import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -84,7 +85,6 @@ import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Val as L
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
-import qualified PlutusLedgerApi.V1 as Plutus
 
 import           Control.Monad
 import           Data.Bifunctor (bimap, first, second)
@@ -99,7 +99,6 @@ import           Data.Ratio
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
 import           Lens.Micro ((.~), (^.))
 
@@ -540,7 +539,7 @@ data ScriptExecutionError
     -- (which is not possible for 'evaluateTransactionExecutionUnits' since
     -- the whole point of it is to discover how many execution units are
     -- needed).
-    ScriptErrorEvaluationFailed Plutus.EvaluationError [Text.Text]
+    ScriptErrorEvaluationFailed DebugPlutusFailure
   | -- | The execution units overflowed a 64bit word. Congratulations if
     -- you encounter this error. With the current style of cost model this
     -- would need a script to run for over 7 months, which is somewhat more
@@ -581,11 +580,8 @@ instance Error ScriptExecutionError where
         [ "The Plutus script witness has the wrong datum (according to the UTxO). "
         , "The expected datum value has hash " <> pshow dh
         ]
-    ScriptErrorEvaluationFailed evalErr logs ->
-      mconcat
-        [ "The Plutus script evaluation failed: " <> pretty evalErr
-        , "\nScript debugging logs: " <> mconcat (map (\t -> pretty $ t `Text.append` "\n") logs)
-        ]
+    ScriptErrorEvaluationFailed plutusDebugFailure ->
+      pretty $ renderDebugPlutusFailure plutusDebugFailure
     ScriptErrorExecutionUnitsOverflow ->
       mconcat
         [ "The execution units required by this Plutus script overflows a 64bit "
@@ -740,9 +736,8 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
        where
         txin' = fromShelleyTxIn txin
       L.MissingDatum dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
-      L.ValidationFailure _ evalErr logs _ ->
-        -- TODO: Include additional information from ValidationFailure
-        ScriptErrorEvaluationFailed evalErr logs
+      L.ValidationFailure execUnits evalErr logs scriptWithContext ->
+        ScriptErrorEvaluationFailed $ DebugPlutusFailure evalErr scriptWithContext execUnits logs
       L.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
       L.RedeemerPointsToUnknownScriptHash rdmrPtr ->
         ScriptErrorRedeemerPointsToUnknownScriptHash $ toScriptIndex aOnwards rdmrPtr

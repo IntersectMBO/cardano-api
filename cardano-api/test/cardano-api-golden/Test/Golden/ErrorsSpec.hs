@@ -30,6 +30,7 @@ module Test.Golden.ErrorsSpec
 where
 
 import           Cardano.Api
+import           Cardano.Api.Plutus
 import           Cardano.Api.Shelley
 
 import           Cardano.Binary as CBOR
@@ -38,6 +39,7 @@ import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Ledger
 import qualified Cardano.Ledger.Api.Era as Ledger
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Plutus.ExUnits as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
 import qualified PlutusLedgerApi.Common as Plutus hiding (PlutusV2)
@@ -271,8 +273,13 @@ test_ScriptExecutionError =
     , ("ScriptErrorTxInWithoutDatum", ScriptErrorTxInWithoutDatum txin1)
     , ("ScriptErrorWrongDatum", ScriptErrorWrongDatum hashScriptData1)
     ,
-      ( "ScriptErrorEvaluationFailed"
-      , ScriptErrorEvaluationFailed Plutus.CostModelParameterMismatch (replicate 5 text)
+      ( "ScriptErrorEvaluationFailed" -- InvalidReturnValue
+      , ScriptErrorEvaluationFailed $
+          DebugPlutusFailure
+            Plutus.CostModelParameterMismatch
+            undefined
+            (Plutus.ExUnits 1 1)
+            (replicate 5 text)
       )
     , ("ScriptErrorExecutionUnitsOverflow", ScriptErrorExecutionUnitsOverflow)
     ,

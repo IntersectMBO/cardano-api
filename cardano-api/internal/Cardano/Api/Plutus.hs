@@ -1,3 +1,9 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Cardano.Api.Plutus
   ( DebugPlutusFailure (..)
   , renderDebugPlutusFailure
@@ -50,5 +56,6 @@ renderDebugPlutusFailure dpf =
         , "Protocol version: " <> Text.pack (show (Plutus.pwcProtocolVersion pwc))
         , "Script arguments: " <> docToText scriptArgs
         , "Script evaluation error: " <> docToText (pretty evalError)
+        , "Script execution logs: " <> Text.unlines (dpfExecutionLogs dpf)
         , "Script base64 encoded bytes: " <> binaryScript
         ]
