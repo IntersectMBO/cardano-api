@@ -123,6 +123,7 @@ library internal
     Cardano.Api.NetworkId
     Cardano.Api.OperationalCertificate
     Cardano.Api.Orphans
+    Cardano.Api.Plutus
     Cardano.Api.Pretty
     Cardano.Api.Protocol
     Cardano.Api.ProtocolParameters
@@ -161,6 +162,7 @@ library internal
     attoparsec,
     base16-bytestring >=1.0,
     base58-bytestring,
+    base64-bytestring,
     bech32 >=1.1.0,
     bytestring,
     cardano-binary,
