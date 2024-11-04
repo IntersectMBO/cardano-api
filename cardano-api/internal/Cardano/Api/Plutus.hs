@@ -13,6 +13,7 @@ where
 import           Cardano.Api.Pretty
 
 import qualified Cardano.Ledger.Api as L
+import           Cardano.Ledger.Binary.Encoding (serialize')
 import           Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import qualified Cardano.Ledger.Plutus.Evaluate as Plutus
 import qualified Cardano.Ledger.Plutus.ExUnits as Plutus
@@ -25,6 +26,7 @@ import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Prettyprinter
 
 import qualified PlutusTx.Builtins.HasOpaque as PlutusTx
 import           PlutusTx.ErrorCodes (plutusPreludeErrorCodes)
@@ -47,8 +49,11 @@ renderDebugPlutusFailure dpf =
 
       scriptArgs = case pwc of
         Plutus.PlutusWithContext{Plutus.pwcArgs = args} ->
-          pretty args
-
+          nest 3 (pretty args)
+      protocolVersion = Plutus.pwcProtocolVersion pwc
+      scriptArgsBase64 = case pwc of
+        Plutus.PlutusWithContext{Plutus.pwcArgs = args} ->
+          Text.decodeUtf8 $ B64.encode $ serialize' protocolVersion args
       evalError = dpfEvaluationError dpf
       binaryScript = case pwc of
         Plutus.PlutusWithContext{Plutus.pwcScript = scr} ->
@@ -57,10 +62,11 @@ renderDebugPlutusFailure dpf =
    in Text.unlines
         [ "Script hash: " <> serializeAsHexText (Plutus.pwcScriptHash pwc)
         , "Script language: " <> Text.pack (show lang)
-        , "Protocol version: " <> Text.pack (show (Plutus.pwcProtocolVersion pwc))
+        , "Protocol version: " <> Text.pack (show protocolVersion)
         , "Script arguments: " <> docToText scriptArgs
         , "Script evaluation error: " <> docToText (pretty evalError)
         , "Script execution logs: " <> Text.unlines (Prelude.map lookupPlutusErrorCode $ dpfExecutionLogs dpf)
+        , "Script base64 encoded arguments: " <> scriptArgsBase64
         , "Script base64 encoded bytes: " <> binaryScript
         ]
 
