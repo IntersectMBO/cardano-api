@@ -63,6 +63,7 @@ module Cardano.Api.ReexposeLedger
   , ppMinUTxOValueL
   -- Conway
   , Anchor (..)
+  , Committee (..)
   , Delegatee (..)
   , DRep (..)
   , DRepState (..)
@@ -193,8 +194,8 @@ import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVoti
                    dvtPPEconomicGroupL, dvtPPGovGroupL, dvtPPNetworkGroupL, dvtPPTechnicalGroupL,
                    dvtUpdateToConstitutionL)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..), GovState,
-                   ProposalProcedure (..), Vote (..), Voter (..), VotingProcedure (..),
+import           Cardano.Ledger.Conway.Governance (Anchor (..), Committee (..), GovActionId (..),
+                   GovState, ProposalProcedure (..), Vote (..), Voter (..), VotingProcedure (..),
                    VotingProcedures (..))
 import           Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
