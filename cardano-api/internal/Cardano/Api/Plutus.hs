@@ -49,7 +49,7 @@ renderDebugPlutusFailure dpf =
 
       scriptArgs = case pwc of
         Plutus.PlutusWithContext{Plutus.pwcArgs = args} ->
-          nest 3 (pretty args)
+          line <> indent 3 (pretty args)
       protocolVersion = Plutus.pwcProtocolVersion pwc
       scriptArgsBase64 = case pwc of
         Plutus.PlutusWithContext{Plutus.pwcArgs = args} ->
