@@ -481,6 +481,10 @@ module Cardano.Api
   , StakePoolRelay
   , StakePoolMetadataReference
 
+    -- ** Anchor data
+  , AnchorDataFromCertificateError (..)
+  , getAnchorDataFromCertificate
+
     -- * Rewards
   , DelegationsAndRewards (..)
   , mergeDelegsAndRewards
@@ -992,6 +996,9 @@ module Cardano.Api
   , DRepMetadata
   , DRepMetadataReference
   , hashDRepMetadata
+
+    -- ** Governance actions
+  , getAnchorDataFromGovernanceAction
 
     -- ** Governance related certificates
   , AnchorDataHash (..)
