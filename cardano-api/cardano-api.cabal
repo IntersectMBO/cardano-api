@@ -106,6 +106,7 @@ library internal
     Cardano.Api.Json
     Cardano.Api.Keys.Byron
     Cardano.Api.Keys.Class
+    Cardano.Api.Keys.Mnemonics
     Cardano.Api.Keys.Praos
     Cardano.Api.Keys.Read
     Cardano.Api.Keys.Shelley
@@ -163,6 +164,7 @@ library internal
     base58-bytestring,
     bech32 >=1.1.0,
     bytestring,
+    cardano-addresses,
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class ^>=2.1.2,
