@@ -110,8 +110,11 @@ library
     base16-bytestring >=1.0,
     base58-bytestring,
     base64-bytestring,
+    basement,
     bech32 >=1.1.0,
     bytestring,
+    bytestring-trie,
+    cardano-addresses,
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class ^>=2.1.2,
@@ -139,6 +142,7 @@ library
     directory,
     either,
     errors,
+    extra,
     filepath,
     formatting,
     groups,
@@ -220,6 +224,7 @@ library
     Cardano.Api.Internal.Json
     Cardano.Api.Internal.Keys.Byron
     Cardano.Api.Internal.Keys.Class
+    Cardano.Api.Internal.Keys.Mnemonics
     Cardano.Api.Internal.Keys.Praos
     Cardano.Api.Internal.Keys.Read
     Cardano.Api.Internal.Keys.Shelley
