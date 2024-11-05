@@ -2,6 +2,9 @@
 
 module Cardano.Api.ValueParser
   ( parseValue
+  , parseTxOutMultiAssetValue
+  , parseMintingMultiAssetValue
+  , parseUTxOValue
   , assetName
   , policyId
   , ValueRole (..)
@@ -58,6 +61,15 @@ parseValue role = do
         fail $
           "Lovelace must be zero in minting value: " <> show value
       return value
+
+parseTxOutMultiAssetValue :: Parser Value
+parseTxOutMultiAssetValue = parseValue RoleUTxO
+
+parseMintingMultiAssetValue :: Parser Value
+parseMintingMultiAssetValue = parseValue RoleMint
+
+parseUTxOValue :: Parser Value
+parseUTxOValue = parseValue RoleUTxO
 
 -- | Evaluate a 'ValueExpr' and construct a 'Value'.
 evalValueExpr :: ValueExpr -> Value
