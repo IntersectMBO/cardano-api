@@ -392,7 +392,7 @@ genLedgerValue w genAId genQuant =
 genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
 genValueDefault w = genLedgerValue w genAssetId genSignedNonZeroQuantity
 
-genValueForRole :: MaryEraOnwards era -> ValueRole -> Gen Value
+genValueForRole :: MaryEraOnwards era -> ParserValueRole -> Gen Value
 genValueForRole w =
   \case
     RoleMint ->

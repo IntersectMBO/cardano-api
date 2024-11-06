@@ -5,9 +5,9 @@ module Cardano.Api.ValueParser
   , parseTxOutMultiAssetValue
   , parseMintingMultiAssetValue
   , parseUTxOValue
-  , assetName
-  , policyId
-  , ValueRole (..)
+  , parseAssetName
+  , parsePolicyId
+  , ParserValueRole (..)
   )
 where
 
@@ -32,7 +32,7 @@ import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
 
 -- | The role for which a 'Value' is being parsed.
-data ValueRole
+data ParserValueRole
   = -- | The value is used as a UTxO or transaction output.
     RoleUTxO
   | -- | The value is used as a minting policy.
@@ -45,7 +45,7 @@ data ValueRole
 -- Because we can't rule out the negation operator
 -- for transaction outputs: some users have negative values in additions, with the addition's total
 -- summing up to a positive value. So forbidding negations altogether is too restrictive.
-parseValue :: ValueRole -> Parser Value
+parseValue :: ParserValueRole -> Parser Value
 parseValue role = do
   valueExpr <- parseValueExpr
   let value = evalValueExpr valueExpr
@@ -154,8 +154,8 @@ decimal = do
   return $! List.foldl' (\x d -> 10 * x + toInteger (Char.digitToInt d)) 0 digits
 
 -- | Asset name parser.
-assetName :: Parser AssetName
-assetName = do
+parseAssetName :: Parser AssetName
+parseAssetName = do
   hexText <- many hexDigit
   failEitherWith
     (\e -> "AssetName deserisalisation failed: " ++ displayError e)
@@ -163,8 +163,8 @@ assetName = do
     $ BSC.pack hexText
 
 -- | Policy ID parser.
-policyId :: Parser PolicyId
-policyId = do
+parsePolicyId :: Parser PolicyId
+parsePolicyId = do
   hexText <- many1 hexDigit
   failEitherWith
     ( \e ->
@@ -196,7 +196,7 @@ assetId =
   -- Parse a multi-asset ID.
   nonAdaAssetId :: Parser AssetId
   nonAdaAssetId = do
-    polId <- policyId
+    polId <- parsePolicyId
     fullAssetId polId <|> assetIdNoAssetName polId
 
   -- Parse a fully specified multi-asset ID with both a policy ID and asset
@@ -204,7 +204,7 @@ assetId =
   fullAssetId :: PolicyId -> Parser AssetId
   fullAssetId polId = do
     _ <- period
-    aName <- assetName <?> "hexadecimal asset name"
+    aName <- parseAssetName <?> "hexadecimal asset name"
     pure (AssetId polId aName)
 
   -- Parse a multi-asset ID that specifies a policy ID, but no asset name.
