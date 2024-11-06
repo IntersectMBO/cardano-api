@@ -94,19 +94,19 @@ data ValueExpr
 
 parseValueExpr :: Parser ValueExpr
 parseValueExpr =
-  buildExpressionParser operatorTable valueExprTerm
+  buildExpressionParser operatorTable parseValueExprTerm
     <?> "multi-asset value expression"
  where
   operatorTable =
-    [ [Prefix negateOp]
-    , [Infix plusOp AssocLeft]
+    [ [Prefix parseNegateOp]
+    , [Infix parsePlusOp AssocLeft]
     ]
 
 -- | Parse either a 'ValueExprLovelace' or 'ValueExprMultiAsset'.
-valueExprTerm :: Parser ValueExpr
-valueExprTerm = do
-  q <- try quantity <?> "quantity (word64)"
-  aId <- try assetIdUnspecified <|> assetIdSpecified <?> "asset id"
+parseValueExprTerm :: Parser ValueExpr
+parseValueExprTerm = do
+  q <- try parseQuantity <?> "quantity (word64)"
+  aId <- try parseAssetIdUnspecified <|> parseAssetIdSpecified <?> "asset id"
   _ <- spaces
   pure $ case aId of
     AdaAssetId -> ValueExprLovelace q
@@ -114,12 +114,12 @@ valueExprTerm = do
  where
   -- Parse an asset ID which must be lead by one or more whitespace
   -- characters and may be trailed by whitespace characters.
-  assetIdSpecified :: Parser AssetId
-  assetIdSpecified = some space *> assetId
+  parseAssetIdSpecified :: Parser AssetId
+  parseAssetIdSpecified = some space *> parseAssetId
 
   -- Default for if an asset ID is not specified.
-  assetIdUnspecified :: Parser AssetId
-  assetIdUnspecified =
+  parseAssetIdUnspecified :: Parser AssetId
+  parseAssetIdUnspecified =
     spaces
       *> notFollowedBy alphaNum
       $> AdaAssetId
@@ -128,28 +128,28 @@ valueExprTerm = do
 -- Primitive parsers
 ------------------------------------------------------------------------------
 
-plusOp :: Parser (ValueExpr -> ValueExpr -> ValueExpr)
-plusOp = (char '+' *> spaces) $> ValueExprAdd
+parsePlusOp :: Parser (ValueExpr -> ValueExpr -> ValueExpr)
+parsePlusOp = (char '+' *> spaces) $> ValueExprAdd
 
-negateOp :: Parser (ValueExpr -> ValueExpr)
-negateOp = (char '-' *> spaces) $> ValueExprNegate
+parseNegateOp :: Parser (ValueExpr -> ValueExpr)
+parseNegateOp = (char '-' *> spaces) $> ValueExprNegate
 
 -- | Period (\".\") parser.
-period :: Parser ()
-period = void $ char '.'
+parsePeriod :: Parser ()
+parsePeriod = void $ char '.'
 
 -- | Word64 parser.
-word64 :: Parser Integer
-word64 = do
-  i <- decimal
+parseWord64 :: Parser Integer
+parseWord64 = do
+  i <- parseDecimal
   if i > fromIntegral (maxBound :: Word64)
     then
       fail $
         "expecting word64, but the number exceeds the max bound: " <> show i
     else return i
 
-decimal :: Parser Integer
-decimal = do
+parseDecimal :: Parser Integer
+parseDecimal = do
   digits <- many1 digit
   return $! List.foldl' (\x d -> 10 * x + toInteger (Char.digitToInt d)) 0 digits
 
@@ -183,34 +183,34 @@ parsePolicyId = do
       . Text.pack
 
 -- | Asset ID parser.
-assetId :: Parser AssetId
-assetId =
-  try adaAssetId
-    <|> nonAdaAssetId
+parseAssetId :: Parser AssetId
+parseAssetId =
+  try parseAdaAssetId
+    <|> parseNonAdaAssetId
     <?> "asset ID"
  where
   -- Parse the ADA asset ID.
-  adaAssetId :: Parser AssetId
-  adaAssetId = string "lovelace" $> AdaAssetId
+  parseAdaAssetId :: Parser AssetId
+  parseAdaAssetId = string "lovelace" $> AdaAssetId
 
   -- Parse a multi-asset ID.
-  nonAdaAssetId :: Parser AssetId
-  nonAdaAssetId = do
+  parseNonAdaAssetId :: Parser AssetId
+  parseNonAdaAssetId = do
     polId <- parsePolicyId
-    fullAssetId polId <|> assetIdNoAssetName polId
+    parseFullAssetId polId <|> parseAssetIdNoAssetName polId
 
   -- Parse a fully specified multi-asset ID with both a policy ID and asset
   -- name.
-  fullAssetId :: PolicyId -> Parser AssetId
-  fullAssetId polId = do
-    _ <- period
+  parseFullAssetId :: PolicyId -> Parser AssetId
+  parseFullAssetId polId = do
+    _ <- parsePeriod
     aName <- parseAssetName <?> "hexadecimal asset name"
     pure (AssetId polId aName)
 
   -- Parse a multi-asset ID that specifies a policy ID, but no asset name.
-  assetIdNoAssetName :: PolicyId -> Parser AssetId
-  assetIdNoAssetName polId = pure (AssetId polId "")
+  parseAssetIdNoAssetName :: PolicyId -> Parser AssetId
+  parseAssetIdNoAssetName polId = pure (AssetId polId "")
 
 -- | Quantity (word64) parser. Only accepts positive quantities.
-quantity :: Parser Quantity
-quantity = fmap Quantity word64
+parseQuantity :: Parser Quantity
+parseQuantity = fmap Quantity parseWord64
