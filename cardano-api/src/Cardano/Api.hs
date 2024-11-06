@@ -232,6 +232,7 @@ module Cardano.Api
   , AssetName (..)
   , AssetId (..)
   , Value
+  , ValueRole (..)
   , parseValue
   , policyId
   , selectAsset

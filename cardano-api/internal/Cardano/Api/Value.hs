@@ -22,6 +22,7 @@ module Cardano.Api.Value
   , valueFromList
   , valueToList
   , filterValue
+  , allPositive
   , negateValue
   , negateLedgerValue
   , calcMinimumDeposit
@@ -238,6 +239,10 @@ valueFromList = fromList
 {-# DEPRECATED valueToList "Use 'toList' instead." #-}
 valueToList :: Value -> [(AssetId, Quantity)]
 valueToList = toList
+
+-- | Check if the 'Value' consists of /only/ positive quantities.
+allPositive :: Value -> Bool
+allPositive (Value m) = all (>= 0) (Map.elems m)
 
 -- | This lets you write @a - b@ as @a <> negateValue b@.
 negateValue :: Value -> Value
