@@ -232,9 +232,13 @@ module Cardano.Api
   , AssetName (..)
   , AssetId (..)
   , Value
-  , ValueRole (..)
+  , ParserValueRole (..)
   , parseValue
-  , policyId
+  , parsePolicyId
+  , parseAssetName
+  , parseTxOutMultiAssetValue
+  , parseMintingMultiAssetValue
+  , parseUTxOValue
   , selectAsset
   , valueFromList
   , valueToList

@@ -997,10 +997,10 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
     decodeAssets :: Aeson.Object -> Aeson.Parser [(AssetName, Quantity)]
     decodeAssets assetNameHm =
       let l = toList assetNameHm
-       in mapM (\(aName, q) -> (,) <$> parseAssetName aName <*> decodeQuantity q) l
+       in mapM (\(aName, q) -> (,) <$> parseKeyAsAssetName aName <*> decodeQuantity q) l
 
-    parseAssetName :: Aeson.Key -> Aeson.Parser AssetName
-    parseAssetName aName = runParsecParser assetName (Aeson.toText aName)
+    parseKeyAsAssetName :: Aeson.Key -> Aeson.Parser AssetName
+    parseKeyAsAssetName aName = runParsecParser parseAssetName (Aeson.toText aName)
 
     decodeQuantity :: Aeson.Value -> Aeson.Parser Quantity
     decodeQuantity (Aeson.Number sci) =
