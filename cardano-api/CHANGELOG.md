@@ -1,5 +1,37 @@
 # Changelog for cardano-api
 
+## 10.2.0.0
+
+- ValueParser: rename publicly exposed function names to indicate they are parsers
+
+  To adapt: prefix old function name by `parse` and everything should compile again.
+  (breaking)
+  [PR 674](https://github.com/IntersectMBO/cardano-api/pull/674)
+
+- Parameterize Value parser on role of the Value being parsed: transaction output or minting policy
+  (breaking)
+  [PR 666](https://github.com/IntersectMBO/cardano-api/pull/666)
+
+- Add function to extract anchor data from a certificate
+  (feature)
+  [PR 664](https://github.com/IntersectMBO/cardano-api/pull/664)
+
+- Export the Committee record from the ledger, for use in the CLI
+  (compatible)
+  [PR 669](https://github.com/IntersectMBO/cardano-api/pull/669)
+
+- Exposed functions and types from `ouroboros-*` required by `cardano-cli`.
+  (compatible)
+  [PR 667](https://github.com/IntersectMBO/cardano-api/pull/667)
+
+- Rename `TxOutDatumInTx` datum to `TxOutSupplementalDatum`
+  (breaking)
+  [PR 662](https://github.com/IntersectMBO/cardano-api/pull/662)
+
+- Exposed `GovAction` and `Constitution` types and constructors required by hash check in `transaction build` in `cardano-cli`
+  (feature)
+  [PR 661](https://github.com/IntersectMBO/cardano-api/pull/661)
+
 ## 10.1.0.0
 
 - Use correct stake deregistration certs in Conway
