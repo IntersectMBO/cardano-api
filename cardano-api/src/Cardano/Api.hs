@@ -537,15 +537,16 @@ module Cardano.Api
   , WitCtxMint
   , WitCtxStake
   , WitCtx (..)
-  , WitCtxMaybe (..)
   , ScriptWitness (..)
+  , getScriptWitnessScript
+  , getScriptWitnessReferenceInput
+  , getScriptWitnessReferenceInputOrScript
   , Witness (..)
   , KeyWitnessInCtx (..)
   , ScriptWitnessInCtx (..)
   , IsScriptWitnessInCtx (..)
   , ScriptDatum (..)
   , ScriptRedeemer
-  , scriptWitnessScript
 
     -- ** Inspecting 'ScriptWitness'es
   , AnyScriptWitness (..)

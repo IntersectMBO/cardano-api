@@ -183,7 +183,6 @@ module Cardano.Api.Tx.Body
   , guardShelleyTxInsOverflow
   , validateTxOuts
   , validateMetadata
-  , validateMintValue
   , validateTxInsCollateral
   , validateProtocolParameters
   )
@@ -1274,6 +1273,7 @@ txMintValueToValue (TxMintValue _ policiesWithAssets) =
     ]
 
 -- | Index the assets with witnesses in the order of policy ids.
+-- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 txMintValueToIndexed
   :: TxMintValue build era
   -> [ ( ScriptWitnessIndex
@@ -1587,7 +1587,6 @@ data TxBodyError
   | TxBodyOutputNegative !Quantity !TxOutInAnyEra
   | TxBodyOutputOverflow !Quantity !TxOutInAnyEra
   | TxBodyMetadataError ![(Word64, TxMetadataRangeError)]
-  | TxBodyMintAdaError -- TODO remove - case nonexistent
   | TxBodyInIxOverflow !TxIn
   | TxBodyMissingProtocolParams
   | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
@@ -1623,8 +1622,6 @@ instance Error TxBodyError where
               | (k, err) <- errs
               ]
         ]
-    TxBodyMintAdaError ->
-      "Transaction cannot mint ada, only non-ada assets"
     TxBodyMissingProtocolParams ->
       "Transaction uses Plutus scripts but does not provide the protocol "
         <> "parameters to hash"
@@ -1786,13 +1783,11 @@ validateTxBodyContent
             guardShelleyTxInsOverflow (map fst txIns)
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
           ShelleyBasedEraAlonzo -> do
             validateTxIns txIns
             guardShelleyTxInsOverflow (map fst txIns)
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
             validateTxInsCollateral txInsCollateral languages
             validateProtocolParameters txProtocolParams languages
           ShelleyBasedEraBabbage -> do
@@ -1800,14 +1795,12 @@ validateTxBodyContent
             guardShelleyTxInsOverflow (map fst txIns)
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
             validateTxInsCollateral txInsCollateral languages
             validateProtocolParameters txProtocolParams languages
           ShelleyBasedEraConway -> do
             validateTxIns txIns
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
             validateTxInsCollateral txInsCollateral languages
             validateProtocolParameters txProtocolParams languages
 
@@ -1855,10 +1848,6 @@ validateTxOuts sbe txOuts = do
           outputDoesNotExceedMax era (txOutValueToValue v) txout
       | txout@(TxOut _ v _ _) <- txOuts
       ]
-
--- TODO remove
-validateMintValue :: TxMintValue build era -> Either TxBodyError ()
-validateMintValue _txMintValue = pure ()
 
 inputIndexDoesNotExceedMax :: [(TxIn, a)] -> Either TxBodyError ()
 inputIndexDoesNotExceedMax txIns =
@@ -2463,7 +2452,7 @@ convScripts
   -> [Ledger.Script ledgerera]
 convScripts scriptWitnesses =
   catMaybes
-    [ toShelleyScript <$> scriptWitnessScript scriptwitness
+    [ toShelleyScript <$> getScriptWitnessScript scriptwitness
     | (_, AnyScriptWitness scriptwitness) <- scriptWitnesses
     ]
 
@@ -2630,7 +2619,7 @@ makeShelleyTransactionBody
     scripts_ :: [Ledger.Script StandardShelley]
     scripts_ =
       catMaybes
-        [ toShelleyScript <$> scriptWitnessScript scriptwitness
+        [ toShelleyScript <$> getScriptWitnessScript scriptwitness
         | (_, AnyScriptWitness scriptwitness) <-
             collectTxBodyScriptWitnesses sbe txbodycontent
         ]
@@ -2675,7 +2664,7 @@ makeShelleyTransactionBody
     scripts_ :: [Ledger.Script StandardAllegra]
     scripts_ =
       catMaybes
-        [ toShelleyScript <$> scriptWitnessScript scriptwitness
+        [ toShelleyScript <$> getScriptWitnessScript scriptwitness
         | (_, AnyScriptWitness scriptwitness) <-
             collectTxBodyScriptWitnesses sbe txbodycontent
         ]
@@ -2724,7 +2713,7 @@ makeShelleyTransactionBody
     scripts =
       List.nub $
         catMaybes
-          [ toShelleyScript <$> scriptWitnessScript scriptwitness
+          [ toShelleyScript <$> getScriptWitnessScript scriptwitness
           | (_, AnyScriptWitness scriptwitness) <-
               collectTxBodyScriptWitnesses sbe txbodycontent
           ]
@@ -2789,7 +2778,7 @@ makeShelleyTransactionBody
     scripts =
       List.nub $
         catMaybes
-          [ toShelleyScript <$> scriptWitnessScript scriptwitness
+          [ toShelleyScript <$> getScriptWitnessScript scriptwitness
           | (_, AnyScriptWitness scriptwitness) <- witnesses
           ]
 
@@ -2910,7 +2899,7 @@ makeShelleyTransactionBody
     scripts =
       List.nub $
         catMaybes
-          [ toShelleyScript <$> scriptWitnessScript scriptwitness
+          [ toShelleyScript <$> getScriptWitnessScript scriptwitness
           | (_, AnyScriptWitness scriptwitness) <- witnesses
           ]
 
@@ -3049,7 +3038,7 @@ makeShelleyTransactionBody
     scripts :: [Ledger.Script StandardConway]
     scripts =
       catMaybes
-        [ toShelleyScript <$> scriptWitnessScript scriptwitness
+        [ toShelleyScript <$> getScriptWitnessScript scriptwitness
         | (_, AnyScriptWitness scriptwitness) <- witnesses
         ]
 

@@ -415,7 +415,6 @@ test_TxBodyError =
     , ("TxBodyOutputNegative", TxBodyOutputNegative 1 txOutInAnyEra1)
     , ("TxBodyOutputOverflow", TxBodyOutputOverflow 1 txOutInAnyEra1)
     , ("TxBodyMetadataError", TxBodyMetadataError [(1, TxMetadataBytesTooLong 2)])
-    , ("TxBodyMintAdaError", TxBodyMintAdaError)
     , ("TxBodyMissingProtocolParams", TxBodyMissingProtocolParams)
     , ("TxBodyInIxOverflow", TxBodyInIxOverflow txin1)
     ]
