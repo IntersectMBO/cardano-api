@@ -17,7 +17,7 @@ import           Cardano.Api.SerialiseRaw (SerialiseAsRawBytesError)
 import           Cardano.Address.Derivation (Depth (..), DerivationType (..), HardDerivation (..),
                    Index, XPrv, genMasterKeyFromMnemonic, indexFromWord32, xprvPrivateKey)
 import           Cardano.Address.Style.Shelley (Role (..), Shelley (..))
-import           Cardano.Crypto.DSIGN.Ed25519 (SignKeyDSIGN (..))
+import           Cardano.Crypto.DSIGN.Ed25519 (SignKeyDSIGN (SignKeyEd25519DSIGN))
 import           Cardano.Crypto.PinnedSizedBytes (psbFromByteString)
 import           Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic), MkSomeMnemonicError (..),
                    SomeMnemonic, entropyToMnemonic, genEntropy, mnemonicToText, someMnemonicToBytes)
@@ -109,10 +109,17 @@ signingStakeKeyFromMnemonic mnemonicWords mSecondFactor accNo payKeyNo = do
       prvK = deriveAddressPrivateKey accK Stake payKeyIx
       -- Get SignKeyEd25519DSIGN from the private key
       signKeyDSIGN = SignKeyEd25519DSIGN $ psbFromByteString $ xprvPrivateKey $ getKey prvK
-  -- signKeyDSIGN = rawDeserialiseSignKeyDSIGN $ xprvPrivateKey $ getKey prvK
-  -- Convert the ByteString to a SigningKey
   return $ StakeSigningKey signKeyDSIGN
  where
+  --     extendedKey = StakeExtendedSigningKey (getKey prvK)
+  -- return $ castSigningKey extendedKey
+  -- _extendedStakeKey <- mapLeft InternalErrorConvertingToByteString $ deserialiseFromRawBytes (AsSigningKey AsStakeExtendedKey) $ xprvToBytes $ getKey prvK
+  -- Left (InvalidSecondFactorMnemonicError ("success! " ++ "addr: " ++ T.unpack addr))
+  -- return (castSigningKey extendedStakeKey :: SigningKey StakeKey)
+  -- signKeyDSIGN = SignKeyEd25519DSIGN $ psbFromByteString $ xprvPrivateKey $ getKey prvK
+  -- signKeyDSIGN = rawDeserialiseSignKeyDSIGN $ xprvPrivateKey $ getKey prvK
+  -- Convert the ByteString to a SigningKey
+
   -- Convert the mnemonic sentence to a SomeMnemonic value
   wordsToSomeMnemonic :: [Text] -> Either String SomeMnemonic
   wordsToSomeMnemonic = mapLeft getMkSomeMnemonicError . mkSomeMnemonic @[9, 12, 15, 18, 21, 24]

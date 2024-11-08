@@ -410,6 +410,19 @@ instance SerialiseAsRawBytes (Hash StakeKey) where
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash StakeKey") $
       StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
+instance CastSigningKeyRole StakeExtendedKey StakeKey where
+  castSigningKey :: SigningKey StakeExtendedKey -> SigningKey StakeKey
+  castSigningKey (StakeExtendedSigningKey sk) =
+    StakeSigningKey
+      . fromMaybe impossible
+      . Crypto.rawDeserialiseSignKeyDSIGN
+      . BS.take 32
+      . Crypto.HD.unXPrv
+      $ sk
+   where
+    impossible =
+      error "castSigningKey: could not convert extended stake key to stake key!"
+
 instance HasTextEnvelope (VerificationKey StakeKey) where
   textEnvelopeType _ =
     "StakeVerificationKeyShelley_"
