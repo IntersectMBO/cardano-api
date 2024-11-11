@@ -228,7 +228,8 @@ instance HasTypeProxy PlutusScriptV3 where
 --
 data ScriptLanguage lang where
   SimpleScriptLanguage :: ScriptLanguage SimpleScript'
-  PlutusScriptLanguage :: PlutusScriptVersion lang -> ScriptLanguage lang
+  PlutusScriptLanguage
+    :: IsPlutusScriptLanguage lang => PlutusScriptVersion lang -> ScriptLanguage lang
 
 deriving instance (Eq (ScriptLanguage lang))
 
@@ -285,7 +286,8 @@ instance Bounded AnyScriptLanguage where
 
 data AnyPlutusScriptVersion where
   AnyPlutusScriptVersion
-    :: PlutusScriptVersion lang
+    :: IsPlutusScriptLanguage lang
+    => PlutusScriptVersion lang
     -> AnyPlutusScriptVersion
 
 deriving instance (Show AnyPlutusScriptVersion)
@@ -407,7 +409,8 @@ data Script lang where
     :: !SimpleScript
     -> Script SimpleScript'
   PlutusScript
-    :: !(PlutusScriptVersion lang)
+    :: IsPlutusScriptLanguage lang
+    => !(PlutusScriptVersion lang)
     -> !(PlutusScript lang)
     -> Script lang
 
@@ -721,7 +724,8 @@ data ScriptWitness witctx era where
     -> SimpleScriptOrReferenceInput SimpleScript'
     -> ScriptWitness witctx era
   PlutusScriptWitness
-    :: ScriptLanguageInEra lang era
+    :: IsPlutusScriptLanguage lang
+    => ScriptLanguageInEra lang era
     -> PlutusScriptVersion lang
     -> PlutusScriptOrReferenceInput lang
     -> ScriptDatum witctx
