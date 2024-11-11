@@ -12,11 +12,11 @@ module Cardano.Api.Keys.Mnemonics
   )
 where
 
+import           Cardano.Api.Error (Error (..))
 import           Cardano.Api.Keys.Class (Key (..))
 import           Cardano.Api.Keys.Shelley (AsType, PaymentExtendedKey,
                    SigningKey (PaymentExtendedSigningKey, StakeExtendedSigningKey),
                    StakeExtendedKey)
-import           Cardano.Api.SerialiseRaw (SerialiseAsRawBytesError)
 
 import           Cardano.Address.Derivation (Depth (..), DerivationType (..), HardDerivation (..),
                    Index, XPrv, genMasterKeyFromMnemonic, indexFromWord32)
@@ -30,6 +30,7 @@ import           Data.ByteString (ByteString)
 import           Data.Either.Combinators (mapLeft, maybeToRight)
 import           Data.Text (Text)
 import           Data.Word (Word32)
+import           Prettyprinter (Doc, Pretty (..))
 
 -- | The size of a mnemonic sentence.
 -- The size is given in the number of words in the sentence.
@@ -64,8 +65,14 @@ data MnemonicToSigningStakeKeyError
   | InvalidSecondFactorMnemonicError String
   | InvalidAccountNumberError Word32
   | InvalidPaymentKeyNoError Word32
-  | InternalErrorConvertingToByteString SerialiseAsRawBytesError
   deriving (Eq, Show)
+
+instance Error MnemonicToSigningStakeKeyError where
+  prettyError :: MnemonicToSigningStakeKeyError -> Doc ann
+  prettyError (InvalidMnemonicError str) = "Invalid mnemonic sentence: " <> pretty str
+  prettyError (InvalidSecondFactorMnemonicError str) = "Invalid second factor mnemonic sentence: " <> pretty str
+  prettyError (InvalidAccountNumberError accNo) = "Invalid account number: " <> pretty accNo
+  prettyError (InvalidPaymentKeyNoError keyNo) = "Invalid payment key number: " <> pretty keyNo
 
 -- | The second factor for the key derivation.
 data SecondFactor
