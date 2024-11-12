@@ -53,13 +53,13 @@ constraints:
     Cabal < 3.14,
     cardano-ledger-shelley ^>= 1.14.1
 
--- coot/typed-protocols-new-api
 source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a94de8f4230c2012c850930d22185f011e0037a0
-  --sha256: sha256-kE17iKwCBNcRdEnCXjCSDHtvJtYji9wfx3zSEbe2/aQ=
-  subdir: ouroboros-consensus
-          ouroboros-consensus-cardano
-          ouroboros-consensus-diffusion
-          ouroboros-consensus-protocol
+    type: git
+    location: https://github.com/IntersectMBO/ouroboros-consensus
+    tag: f196bfccb0cddc4d86f6b45ff5bfa835d6549c9f
+    --sha256: sha256-TcRup8IZsqP46r/XmRzOSeMvVziqLtWZ+HMC6jLPjpw=
+    subdir:
+      ouroboros-consensus
+      ouroboros-consensus-diffusion
+      ouroboros-consensus-cardano
+      ouroboros-consensus-protocol
