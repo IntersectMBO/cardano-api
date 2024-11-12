@@ -185,7 +185,6 @@ module Cardano.Api
   , generateMnemonic
 
     -- ** Key derivation from mnemonics
-  , ExtendedSigningKeyRole
   , MnemonicToSigningStakeKeyError (..)
   , SecondFactor
   , signingKeyFromMnemonic
