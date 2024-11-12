@@ -11,6 +11,7 @@ import           Cardano.Api.Address (StakeCredential (StakeCredentialByKey))
 import           Control.Monad (void)
 import qualified Data.Aeson as Aeson
 import           Data.Text (Text)
+import           Data.Word (Word32)
 
 import           Test.Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
 
@@ -37,9 +38,9 @@ prop_roundtrip_byron_address =
 
 prop_derive_key_from_mnemonic :: Property
 prop_derive_key_from_mnemonic = H.property $ do
-  ms <- H.forAll $ H.element [MS_9, MS_12, MS_15, MS_18, MS_21, MS_24]
+  ms <- H.forAll $ H.element [MS_12, MS_15, MS_18, MS_21, MS_24]
   mnemonic <- liftIO $ generateMnemonic ms
-  void $ H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey mnemonic Nothing 0 0
+  void $ H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey mnemonic Nothing 0 (0 :: Word32)
   H.success
 
 exampleMnemonic :: [Text]
@@ -72,7 +73,8 @@ exampleMnemonic =
 
 prop_payment_derivation_is_accurate :: Property
 prop_payment_derivation_is_accurate = H.propertyOnce $ do
-  signingKey <- H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic Nothing 0 0
+  signingKey <-
+    H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
   let verificationKey =
         getVerificationKey (signingKey :: SigningKey PaymentExtendedKey)
           :: VerificationKey PaymentExtendedKey
@@ -89,7 +91,8 @@ prop_payment_derivation_is_accurate = H.propertyOnce $ do
 
 prop_stake_derivation_is_accurate :: Property
 prop_stake_derivation_is_accurate = H.propertyOnce $ do
-  signingKey <- H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic Nothing 0 0
+  signingKey <-
+    H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
   let verificationKey =
         getVerificationKey (signingKey :: SigningKey StakeExtendedKey) :: VerificationKey StakeExtendedKey
       addr =
@@ -103,9 +106,9 @@ prop_stake_derivation_is_accurate = H.propertyOnce $ do
 prop_payment_with_stake_derivation_is_accurate :: Property
 prop_payment_with_stake_derivation_is_accurate = H.propertyOnce $ do
   paymentSigningKey <-
-    H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic Nothing 0 0
+    H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
   stakeSigningKey <-
-    H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic Nothing 0 0
+    H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
   let paymentVerificationKey =
         getVerificationKey (paymentSigningKey :: SigningKey PaymentExtendedKey)
           :: VerificationKey PaymentExtendedKey

@@ -195,6 +195,7 @@ library internal
     dlist,
     either,
     errors,
+    extra,
     filepath,
     formatting,
     groups,
