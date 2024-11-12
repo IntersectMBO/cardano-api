@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Keys.Mnemonics
@@ -7,7 +8,6 @@ module Cardano.Api.Keys.Mnemonics
   , generateMnemonic
   , MnemonicToSigningStakeKeyError (..)
   , SecondFactor
-  , ExtendedSigningKeyRole (..)
   , signingKeyFromMnemonic
   )
 where
@@ -28,16 +28,16 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.ByteArray as BA
 import           Data.ByteString (ByteString)
 import           Data.Either.Combinators (mapLeft, maybeToRight)
+import           Data.Either.Extra (maybeToEither)
 import           Data.Text (Text)
 import           Data.Word (Word32)
 import           Prettyprinter (Doc, Pretty (..))
 
 -- | The size of a mnemonic sentence.
 -- The size is given in the number of words in the sentence.
--- The allowed sizes are 9, 12, 15, 18, 21, and 24.
+-- The allowed sizes are 12, 15, 18, 21, and 24.
 data MnemonicSize
-  = MS_9
-  | MS_12
+  = MS_12
   | MS_15
   | MS_18
   | MS_21
@@ -49,9 +49,8 @@ generateMnemonic
   :: MonadIO m
   => MnemonicSize
   -- ^ The size of the mnemonic sentence to generate.
-  -- Must be one of 9, 12, 15, 18, 21, or 24.
+  -- Must be one of 12, 15, 18, 21, or 24.
   -> m [Text]
-generateMnemonic MS_9 = liftIO (mnemonicToText @9 . entropyToMnemonic <$> genEntropy)
 generateMnemonic MS_12 = liftIO (mnemonicToText @12 . entropyToMnemonic <$> genEntropy)
 generateMnemonic MS_15 = liftIO (mnemonicToText @15 . entropyToMnemonic <$> genEntropy)
 generateMnemonic MS_18 = liftIO (mnemonicToText @18 . entropyToMnemonic <$> genEntropy)
@@ -82,28 +81,30 @@ data SecondFactor
     FromByteString ByteString
   deriving (Eq, Show)
 
-class ExtendedSigningKeyRole keyrole where
-  -- | Convert the key role to a derivation role.
-  asDerivationRole :: AsType keyrole -> Role
+class ExtendedSigningKeyRole keyrole indexType where
+  -- | Derive an extended private key of the keyrole from an account extended private key
+  deriveSigningKeyFromAccount
+    :: AsType keyrole -> Shelley 'AccountK XPrv -> indexType -> Either Word32 (SigningKey keyrole)
 
-  -- | Convert an extended private key to a SigningKey.
-  asSigningKeyRole :: XPrv -> SigningKey keyrole
+instance ExtendedSigningKeyRole PaymentExtendedKey Word32 where
+  deriveSigningKeyFromAccount
+    :: AsType PaymentExtendedKey
+    -> Shelley 'AccountK XPrv
+    -> Word32
+    -> Either Word32 (SigningKey PaymentExtendedKey)
+  deriveSigningKeyFromAccount _ accK idx = do
+    payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
+    return $ PaymentExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK UTxOExternal payKeyIx
 
--- | ExtendedSigningKeyRole instance for the PaymentExtendedKey key role.
-instance ExtendedSigningKeyRole PaymentExtendedKey where
-  asDerivationRole :: AsType PaymentExtendedKey -> Role
-  asDerivationRole _ = UTxOExternal
-
-  asSigningKeyRole :: XPrv -> SigningKey PaymentExtendedKey
-  asSigningKeyRole = PaymentExtendedSigningKey
-
--- | ExtendedSigningKeyRole instance for the StakeExtendedKey key role.
-instance ExtendedSigningKeyRole StakeExtendedKey where
-  asDerivationRole :: AsType StakeExtendedKey -> Role
-  asDerivationRole _ = Stake
-
-  asSigningKeyRole :: XPrv -> SigningKey StakeExtendedKey
-  asSigningKeyRole = StakeExtendedSigningKey
+instance ExtendedSigningKeyRole StakeExtendedKey Word32 where
+  deriveSigningKeyFromAccount
+    :: AsType StakeExtendedKey
+    -> Shelley 'AccountK XPrv
+    -> Word32
+    -> Either Word32 (SigningKey StakeExtendedKey)
+  deriveSigningKeyFromAccount _ accK idx = do
+    payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
+    return $ StakeExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK Stake payKeyIx
 
 -- | Generate a signing key from a mnemonic sentence.
 -- A derivation path is like a file path in a file system. It specifies the
@@ -112,19 +113,20 @@ instance ExtendedSigningKeyRole StakeExtendedKey where
 -- In this function we only ask for two indices: the account number and the
 -- payment key number. Each account can have multiple payment keys.
 signingKeyFromMnemonic
-  :: ExtendedSigningKeyRole keyrole
+  :: ExtendedSigningKeyRole keyrole indexType
   => AsType keyrole
   -- ^ Type of the extended signing key to generate.
   -> [Text]
-  -- ^ The mnemonic sentence. The length must be one of 9, 12, 15, 18, 21, or 24.
+  -- ^ The mnemonic sentence. The length must be one of 12, 15, 18, 21, or 24.
   -- Each element of the list must be a single word.
   -> Maybe SecondFactor
   -- ^ The second factor for the key derivation. If 'Nothing', the key is derived
   -- without a second factor.
   -> Word32
   -- ^ The account number in the derivation path. First account is 0.
-  -> Word32
-  -- ^ The payment key number in the derivation path. First key is 0.
+  -> indexType
+  -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
+  -- the given key role, otherwise '()'. First key is 0.
   -> Either MnemonicToSigningStakeKeyError (SigningKey keyrole)
 signingKeyFromMnemonic role mnemonicWords mSecondFactor accNo payKeyNo = do
   -- Convert raw types to the ones used in the cardano-addresses library
@@ -133,24 +135,20 @@ signingKeyFromMnemonic role mnemonicWords mSecondFactor accNo payKeyNo = do
   accIx <-
     maybeToRight (InvalidAccountNumberError accNo) $
       indexFromWord32 @(Index 'Hardened 'AccountK) (0x80000000 + accNo)
-  payKeyIx <-
-    maybeToRight (InvalidPaymentKeyNoError payKeyNo) $ indexFromWord32 @(Index 'Soft 'PaymentK) payKeyNo
 
   -- Derive the rootk key
   let rootK = genMasterKeyFromMnemonic someMnemonic secondFactorBytes :: Shelley 'RootK XPrv
       -- Derive the account key
       accK = deriveAccountPrivateKey rootK accIx
-      -- Derive the payment key
-      prvK = deriveAddressPrivateKey accK (asDerivationRole role) payKeyIx
 
-  -- Finally we wrap it in the API type
-  return $ asSigningKeyRole $ getKey prvK
+  -- Derive the extended private key
+  mapLeft InvalidPaymentKeyNoError $ deriveSigningKeyFromAccount role accK payKeyNo
  where
   -- Convert the ByteString to a SigningKey
 
   -- Convert the mnemonic sentence to a SomeMnemonic value
   wordsToSomeMnemonic :: [Text] -> Either String SomeMnemonic
-  wordsToSomeMnemonic = mapLeft getMkSomeMnemonicError . mkSomeMnemonic @[9, 12, 15, 18, 21, 24]
+  wordsToSomeMnemonic = mapLeft getMkSomeMnemonicError . mkSomeMnemonic @[12, 15, 18, 21, 24]
 
   -- Convert the second factor to a ScrubbedBytes value or mempty if none
   toSecondFactor :: Maybe SecondFactor -> Either MnemonicToSigningStakeKeyError BA.ScrubbedBytes
