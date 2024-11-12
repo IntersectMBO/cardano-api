@@ -22,8 +22,8 @@
     supportedSystems = [
       "x86_64-linux"
       "x86_64-darwin"
-      # "aarch64-linux" - disable these temporarily because the build is broken
-      # "aarch64-darwin" - disable these temporarily because the build is broken
+      "aarch64-linux"
+      "aarch64-darwin"
     ];
 
     # see flake `variants` below for alternative compilers
