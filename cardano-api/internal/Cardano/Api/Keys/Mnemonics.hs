@@ -7,7 +7,6 @@ module Cardano.Api.Keys.Mnemonics
   ( MnemonicSize (..)
   , generateMnemonic
   , MnemonicToSigningStakeKeyError (..)
-  , SecondFactor
   , signingKeyFromMnemonic
   )
 where
@@ -22,11 +21,9 @@ import           Cardano.Address.Derivation (Depth (..), DerivationType (..), Ha
                    Index, XPrv, genMasterKeyFromMnemonic, indexFromWord32)
 import           Cardano.Address.Style.Shelley (Role (..), Shelley (..))
 import           Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic), MkSomeMnemonicError (..),
-                   SomeMnemonic, entropyToMnemonic, genEntropy, mnemonicToText, someMnemonicToBytes)
+                   SomeMnemonic, entropyToMnemonic, genEntropy, mnemonicToText)
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import qualified Data.ByteArray as BA
-import           Data.ByteString (ByteString)
 import           Data.Either.Combinators (mapLeft, maybeToRight)
 import           Data.Either.Extra (maybeToEither)
 import           Data.Text (Text)
@@ -61,7 +58,6 @@ generateMnemonic MS_24 = liftIO (mnemonicToText @24 . entropyToMnemonic <$> genE
 -- using the 'signingStakeKeyFromMnemonic' function.
 data MnemonicToSigningStakeKeyError
   = InvalidMnemonicError String
-  | InvalidSecondFactorMnemonicError String
   | InvalidAccountNumberError Word32
   | InvalidPaymentKeyNoError Word32
   deriving (Eq, Show)
@@ -69,17 +65,8 @@ data MnemonicToSigningStakeKeyError
 instance Error MnemonicToSigningStakeKeyError where
   prettyError :: MnemonicToSigningStakeKeyError -> Doc ann
   prettyError (InvalidMnemonicError str) = "Invalid mnemonic sentence: " <> pretty str
-  prettyError (InvalidSecondFactorMnemonicError str) = "Invalid second factor mnemonic sentence: " <> pretty str
   prettyError (InvalidAccountNumberError accNo) = "Invalid account number: " <> pretty accNo
   prettyError (InvalidPaymentKeyNoError keyNo) = "Invalid payment key number: " <> pretty keyNo
-
--- | The second factor for the key derivation.
-data SecondFactor
-  = -- | Use a mnemonic sentence as the second factor.
-    FromMnemonic [Text]
-  | -- | Use a raw byte string as the second factor.
-    FromByteString ByteString
-  deriving (Eq, Show)
 
 class ExtendedSigningKeyRole keyrole indexType where
   -- | Derive an extended private key of the keyrole from an account extended private key
@@ -119,25 +106,21 @@ signingKeyFromMnemonic
   -> [Text]
   -- ^ The mnemonic sentence. The length must be one of 12, 15, 18, 21, or 24.
   -- Each element of the list must be a single word.
-  -> Maybe SecondFactor
-  -- ^ The second factor for the key derivation. If 'Nothing', the key is derived
-  -- without a second factor.
   -> Word32
   -- ^ The account number in the derivation path. First account is 0.
   -> indexType
   -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
   -- the given key role, otherwise '()'. First key is 0.
   -> Either MnemonicToSigningStakeKeyError (SigningKey keyrole)
-signingKeyFromMnemonic role mnemonicWords mSecondFactor accNo payKeyNo = do
+signingKeyFromMnemonic role mnemonicWords accNo payKeyNo = do
   -- Convert raw types to the ones used in the cardano-addresses library
   someMnemonic <- mapLeft InvalidMnemonicError $ wordsToSomeMnemonic mnemonicWords
-  secondFactorBytes <- toSecondFactor mSecondFactor
   accIx <-
     maybeToRight (InvalidAccountNumberError accNo) $
       indexFromWord32 @(Index 'Hardened 'AccountK) (0x80000000 + accNo)
 
   -- Derive the rootk key
-  let rootK = genMasterKeyFromMnemonic someMnemonic secondFactorBytes :: Shelley 'RootK XPrv
+  let rootK = genMasterKeyFromMnemonic someMnemonic mempty :: Shelley 'RootK XPrv
       -- Derive the account key
       accK = deriveAccountPrivateKey rootK accIx
 
@@ -149,12 +132,3 @@ signingKeyFromMnemonic role mnemonicWords mSecondFactor accNo payKeyNo = do
   -- Convert the mnemonic sentence to a SomeMnemonic value
   wordsToSomeMnemonic :: [Text] -> Either String SomeMnemonic
   wordsToSomeMnemonic = mapLeft getMkSomeMnemonicError . mkSomeMnemonic @[12, 15, 18, 21, 24]
-
-  -- Convert the second factor to a ScrubbedBytes value or mempty if none
-  toSecondFactor :: Maybe SecondFactor -> Either MnemonicToSigningStakeKeyError BA.ScrubbedBytes
-  toSecondFactor Nothing = return mempty
-  toSecondFactor (Just (FromMnemonic secondFactorWords)) =
-    someMnemonicToBytes
-      <$> mapLeft InvalidSecondFactorMnemonicError (wordsToSomeMnemonic secondFactorWords)
-  toSecondFactor (Just (FromByteString secondFactorBytes)) =
-    return $ BA.convert secondFactorBytes

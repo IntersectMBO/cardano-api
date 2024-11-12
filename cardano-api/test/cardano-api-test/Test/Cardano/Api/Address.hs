@@ -40,7 +40,7 @@ prop_derive_key_from_mnemonic :: Property
 prop_derive_key_from_mnemonic = H.property $ do
   ms <- H.forAll $ H.element [MS_12, MS_15, MS_18, MS_21, MS_24]
   mnemonic <- liftIO $ generateMnemonic ms
-  void $ H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey mnemonic Nothing 0 (0 :: Word32)
+  void $ H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey mnemonic 0 (0 :: Word32)
   H.success
 
 exampleMnemonic :: [Text]
@@ -74,7 +74,7 @@ exampleMnemonic =
 prop_payment_derivation_is_accurate :: Property
 prop_payment_derivation_is_accurate = H.propertyOnce $ do
   signingKey <-
-    H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
+    H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic 0 (0 :: Word32)
   let verificationKey =
         getVerificationKey (signingKey :: SigningKey PaymentExtendedKey)
           :: VerificationKey PaymentExtendedKey
@@ -92,7 +92,7 @@ prop_payment_derivation_is_accurate = H.propertyOnce $ do
 prop_stake_derivation_is_accurate :: Property
 prop_stake_derivation_is_accurate = H.propertyOnce $ do
   signingKey <-
-    H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
+    H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic 0 (0 :: Word32)
   let verificationKey =
         getVerificationKey (signingKey :: SigningKey StakeExtendedKey) :: VerificationKey StakeExtendedKey
       addr =
@@ -106,9 +106,9 @@ prop_stake_derivation_is_accurate = H.propertyOnce $ do
 prop_payment_with_stake_derivation_is_accurate :: Property
 prop_payment_with_stake_derivation_is_accurate = H.propertyOnce $ do
   paymentSigningKey <-
-    H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
+    H.evalEither $ signingKeyFromMnemonic AsPaymentExtendedKey exampleMnemonic 0 (0 :: Word32)
   stakeSigningKey <-
-    H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic Nothing 0 (0 :: Word32)
+    H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey exampleMnemonic 0 (0 :: Word32)
   let paymentVerificationKey =
         getVerificationKey (paymentSigningKey :: SigningKey PaymentExtendedKey)
           :: VerificationKey PaymentExtendedKey
