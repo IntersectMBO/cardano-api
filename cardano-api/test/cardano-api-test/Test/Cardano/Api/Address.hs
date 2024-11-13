@@ -38,7 +38,7 @@ prop_roundtrip_byron_address =
 
 prop_derive_key_from_mnemonic :: Property
 prop_derive_key_from_mnemonic = H.property $ do
-  ms <- H.forAll $ H.element [MS_12, MS_15, MS_18, MS_21, MS_24]
+  ms <- H.forAll $ H.element [MS12, MS15, MS18, MS21, MS24]
   mnemonic <- liftIO $ generateMnemonic ms
   void $ H.evalEither $ signingKeyFromMnemonic AsStakeExtendedKey mnemonic 0 (0 :: Word32)
   H.success
