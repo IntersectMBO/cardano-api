@@ -34,11 +34,11 @@ import           Prettyprinter (Doc, Pretty (..))
 -- The size is given in the number of words in the sentence.
 -- The allowed sizes are 12, 15, 18, 21, and 24.
 data MnemonicSize
-  = MS_12
-  | MS_15
-  | MS_18
-  | MS_21
-  | MS_24
+  = MS12
+  | MS15
+  | MS18
+  | MS21
+  | MS24
   deriving (Eq, Show)
 
 -- | Generate a mnemonic sentence of the given size.
@@ -48,11 +48,11 @@ generateMnemonic
   -- ^ The size of the mnemonic sentence to generate.
   -- Must be one of 12, 15, 18, 21, or 24.
   -> m [Text]
-generateMnemonic MS_12 = liftIO (mnemonicToText @12 . entropyToMnemonic <$> genEntropy)
-generateMnemonic MS_15 = liftIO (mnemonicToText @15 . entropyToMnemonic <$> genEntropy)
-generateMnemonic MS_18 = liftIO (mnemonicToText @18 . entropyToMnemonic <$> genEntropy)
-generateMnemonic MS_21 = liftIO (mnemonicToText @21 . entropyToMnemonic <$> genEntropy)
-generateMnemonic MS_24 = liftIO (mnemonicToText @24 . entropyToMnemonic <$> genEntropy)
+generateMnemonic MS12 = liftIO (mnemonicToText @12 . entropyToMnemonic <$> genEntropy)
+generateMnemonic MS15 = liftIO (mnemonicToText @15 . entropyToMnemonic <$> genEntropy)
+generateMnemonic MS18 = liftIO (mnemonicToText @18 . entropyToMnemonic <$> genEntropy)
+generateMnemonic MS21 = liftIO (mnemonicToText @21 . entropyToMnemonic <$> genEntropy)
+generateMnemonic MS24 = liftIO (mnemonicToText @24 . entropyToMnemonic <$> genEntropy)
 
 -- | Errors that can occur when converting a mnemonic sentence to a signing key
 -- using the 'signingStakeKeyFromMnemonic' function.
