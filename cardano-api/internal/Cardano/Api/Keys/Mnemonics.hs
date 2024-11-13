@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Api.Keys.Mnemonics
@@ -68,10 +68,18 @@ instance Error MnemonicToSigningStakeKeyError where
   prettyError (InvalidAccountNumberError accNo) = "Invalid account number: " <> pretty accNo
   prettyError (InvalidPaymentKeyNoError keyNo) = "Invalid payment key number: " <> pretty keyNo
 
-class ExtendedSigningKeyRole keyrole indexType where
+class ExtendedSigningKeyRole keyrole indexType | keyrole -> indexType where
   -- | Derive an extended private key of the keyrole from an account extended private key
   deriveSigningKeyFromAccount
-    :: AsType keyrole -> Shelley 'AccountK XPrv -> indexType -> Either Word32 (SigningKey keyrole)
+    :: AsType keyrole
+    -- ^ Type of the extended signing key to generate.
+    -> Shelley 'AccountK XPrv
+    -- ^ The account extended private key from which to derivate the private key for the keyrole.
+    -> indexType
+    -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
+    -- the given key role, otherwise '()'. First key is 0.
+    -> Either Word32 (SigningKey keyrole)
+    -- ^ The derived extended signing key or the 'indexType' if it is 'Word32' and it is invalid.
 
 instance ExtendedSigningKeyRole PaymentExtendedKey Word32 where
   deriveSigningKeyFromAccount
