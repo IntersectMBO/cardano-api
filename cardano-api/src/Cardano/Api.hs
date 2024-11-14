@@ -187,7 +187,7 @@ module Cardano.Api
   , generateMnemonic
 
     -- ** Key derivation from mnemonics
-  , MnemonicToSigningStakeKeyError (..)
+  , MnemonicToSigningKeyError (..)
   , signingKeyFromMnemonic
 
     -- * Payment addresses
