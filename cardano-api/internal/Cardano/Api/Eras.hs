@@ -30,6 +30,7 @@ module Cardano.Api.Eras
   , maybeEon
   , monoidForEraInEon
   , monoidForEraInEonA
+  , Inject (..)
 
     -- * Data family instances
   , AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -46,6 +47,9 @@ instance ToCardanoEra ByronToAlonzoEra where
     ByronToAlonzoEraAllegra -> AllegraEra
     ByronToAlonzoEraMary -> MaryEra
     ByronToAlonzoEraAlonzo -> AlonzoEra
+
+instance Inject (ByronToAlonzoEra era) (CardanoEra era) where
+  inject = toCardanoEra
 
 type ByronToAlonzoEraConstraints era =
   ( IsCardanoEra era

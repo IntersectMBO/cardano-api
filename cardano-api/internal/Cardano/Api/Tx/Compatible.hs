@@ -16,6 +16,7 @@ where
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Experimental.Eras
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Script
 import           Cardano.Api.Tx.Body
@@ -66,7 +67,7 @@ createCompatibleSignedTx sbeF ins outs witnesses txFee' anyProtocolUpdate anyVot
   shelleyBasedEraConstraints sbeF $ do
     tx <- case anyProtocolUpdate of
       ProtocolUpdate shelleyToBabbageEra updateProposal -> do
-        let sbe = shelleyToBabbageEraToShelleyBasedEra shelleyToBabbageEra
+        let sbe = inject shelleyToBabbageEra
 
         ledgerPParamsUpdate <- toLedgerUpdate sbe updateProposal
 
@@ -85,7 +86,7 @@ createCompatibleSignedTx sbeF ins outs witnesses txFee' anyProtocolUpdate anyVot
 
         return $ ShelleyTx sbe finalTx
       ProposalProcedures conwayOnwards proposalProcedures -> do
-        let sbe = conwayEraOnwardsToShelleyBasedEra conwayOnwards
+        let sbe = inject conwayOnwards
             proposals = convProposalProcedures proposalProcedures
             apiScriptWitnesses = scriptWitnessesProposing proposalProcedures
             ledgerScripts = convScripts apiScriptWitnesses

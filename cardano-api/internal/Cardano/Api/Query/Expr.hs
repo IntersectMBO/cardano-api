@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.Query.Expr
   ( queryAccountState
@@ -163,7 +164,7 @@ queryPoolDistribution
       IO
       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolDistribution era)))
 queryPoolDistribution era mPoolIds = do
-  let sbe = babbageEraOnwardsToShelleyBasedEra era
+  let sbe = inject era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryPoolDistribution mPoolIds
 
 queryPoolState
@@ -178,7 +179,7 @@ queryPoolState
       IO
       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedPoolState era)))
 queryPoolState era mPoolIds = do
-  let sbe = babbageEraOnwardsToShelleyBasedEra era
+  let sbe = inject era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryPoolState mPoolIds
 
 queryProtocolParameters
@@ -261,8 +262,8 @@ queryStakeAddresses sbe stakeCredentials networkId =
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeAddresses stakeCredentials networkId
 
 queryStakeDelegDeposits
-  :: ()
-  => BabbageEraOnwards era
+  :: forall era block point r
+   . BabbageEraOnwards era
   -> Set StakeCredential
   -> LocalStateQueryExpr
       block
@@ -274,7 +275,7 @@ queryStakeDelegDeposits
 queryStakeDelegDeposits era stakeCreds
   | S.null stakeCreds = pure . pure $ pure mempty
   | otherwise = do
-      let sbe = babbageEraOnwardsToShelleyBasedEra era
+      let sbe :: ShelleyBasedEra era = inject era
       queryExpr $ QueryInEra . QueryInShelleyBasedEra sbe $ QueryStakeDelegDeposits stakeCreds
 
 queryStakeDistribution
@@ -331,7 +332,7 @@ queryStakeSnapshot
       IO
       (Either UnsupportedNtcVersionError (Either EraMismatch (SerialisedStakeSnapshots era)))
 queryStakeSnapshot era mPoolIds = do
-  let sbe = babbageEraOnwardsToShelleyBasedEra era
+  let sbe = inject era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeSnapshot mPoolIds
 
 querySystemStart
@@ -365,7 +366,7 @@ queryConstitution
       IO
       (Either UnsupportedNtcVersionError (Either EraMismatch (L.Constitution (ShelleyLedgerEra era))))
 queryConstitution era = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  let sbe = inject era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryConstitution
 
 queryGovState
@@ -379,12 +380,12 @@ queryGovState
       IO
       (Either UnsupportedNtcVersionError (Either EraMismatch (L.GovState (ShelleyLedgerEra era))))
 queryGovState era = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  let sbe = inject era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryGovState
 
 queryDRepState
-  :: ()
-  => ConwayEraOnwards era
+  :: forall era block point r
+   . ConwayEraOnwards era
   -> Set (L.Credential L.DRepRole L.StandardCrypto)
   -- ^ An empty credentials set means that states for all DReps will be returned
   -> LocalStateQueryExpr
@@ -398,12 +399,12 @@ queryDRepState
           (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto)))
       )
 queryDRepState era drepCreds = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  let sbe :: ShelleyBasedEra era = inject era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepState drepCreds
 
 queryDRepStakeDistribution
-  :: ()
-  => ConwayEraOnwards era
+  :: forall era block point r
+   . ConwayEraOnwards era
   -> Set (L.DRep L.StandardCrypto)
   -- ^ An empty DRep set means that distributions for all DReps will be returned
   -> LocalStateQueryExpr
@@ -414,12 +415,12 @@ queryDRepStakeDistribution
       IO
       (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) L.Coin)))
 queryDRepStakeDistribution era dreps = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  let sbe = inject era :: ShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
 
 querySPOStakeDistribution
-  :: ()
-  => ConwayEraOnwards era
+  :: forall era block point r
+   . ConwayEraOnwards era
   -> Set (L.KeyHash 'L.StakePool L.StandardCrypto)
   -- ^ An empty SPO key hash set means that distributions for all SPOs will be returned
   -> LocalStateQueryExpr
@@ -433,14 +434,14 @@ querySPOStakeDistribution
           (Either EraMismatch (Map (L.KeyHash 'L.StakePool L.StandardCrypto) L.Coin))
       )
 querySPOStakeDistribution era spos = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  let sbe = inject era :: ShelleyBasedEra era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QuerySPOStakeDistr spos
 
 -- | Returns info about committee members filtered by: cold credentials, hot credentials and statuses.
 -- If empty sets are passed as filters, then no filtering is done.
 queryCommitteeMembersState
-  :: ()
-  => ConwayEraOnwards era
+  :: forall era block point r
+   . ConwayEraOnwards era
   -> Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
   -> Set (L.Credential L.HotCommitteeRole L.StandardCrypto)
   -> Set L.MemberStatus
@@ -452,14 +453,14 @@ queryCommitteeMembersState
       IO
       (Either UnsupportedNtcVersionError (Either EraMismatch (L.CommitteeMembersState L.StandardCrypto)))
 queryCommitteeMembersState era coldCreds hotCreds statuses = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  let sbe = inject era :: ShelleyBasedEra era
   queryExpr $
     QueryInEra $
       QueryInShelleyBasedEra sbe (QueryCommitteeMembersState coldCreds hotCreds statuses)
 
 queryStakeVoteDelegatees
-  :: ()
-  => ConwayEraOnwards era
+  :: forall era block point r
+   . ConwayEraOnwards era
   -> Set StakeCredential
   -> LocalStateQueryExpr
       block
@@ -472,12 +473,12 @@ queryStakeVoteDelegatees
           (Either EraMismatch (Map StakeCredential (L.DRep L.StandardCrypto)))
       )
 queryStakeVoteDelegatees era stakeCredentials = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra era
+  let sbe :: ShelleyBasedEra era = inject era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryStakeVoteDelegatees stakeCredentials
 
 queryAccountState
-  :: ()
-  => ConwayEraOnwards era
+  :: forall era block point r
+   . ConwayEraOnwards era
   -> LocalStateQueryExpr
       block
       point
@@ -487,5 +488,5 @@ queryAccountState
       (Either UnsupportedNtcVersionError (Either EraMismatch L.AccountState))
 queryAccountState cOnwards =
   queryExpr $
-    QueryInEra . QueryInShelleyBasedEra (conwayEraOnwardsToShelleyBasedEra cOnwards) $
+    QueryInEra . QueryInShelleyBasedEra (inject cOnwards :: ShelleyBasedEra era) $
       QueryAccountState

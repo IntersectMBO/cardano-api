@@ -40,6 +40,7 @@ module Cardano.Api.Eras.Core
   , maybeEon
   , monoidForEraInEon
   , monoidForEraInEonA
+  , Inject (..)
 
     -- * Data family instances
   , AsType (AsByronEra, AsShelleyEra, AsAllegraEra, AsMaryEra, AsAlonzoEra, AsBabbageEra, AsConwayEra)
@@ -52,6 +53,7 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Pretty
 
 import qualified Cardano.Ledger.Api as L
+import           Cardano.Ledger.BaseTypes (Inject (..))
 
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Kind

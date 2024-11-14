@@ -3,8 +3,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -18,6 +21,7 @@ module Cardano.Api.Eon.BabbageEraOnwards
 where
 
 import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -66,6 +70,17 @@ instance ToCardanoEra BabbageEraOnwards where
     BabbageEraOnwardsBabbage -> BabbageEra
     BabbageEraOnwardsConway -> ConwayEra
 
+instance Inject (BabbageEraOnwards era) (CardanoEra era) where
+  inject = toCardanoEra
+
+instance Inject (BabbageEraOnwards era) (ShelleyBasedEra era) where
+  inject = inject @(MaryEraOnwards era) . inject
+
+instance Inject (BabbageEraOnwards era) (MaryEraOnwards era) where
+  inject = \case
+    BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
+    BabbageEraOnwardsConway -> MaryEraOnwardsConway
+
 type BabbageEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
@@ -109,10 +124,9 @@ babbageEraOnwardsConstraints = \case
   BabbageEraOnwardsBabbage -> id
   BabbageEraOnwardsConway -> id
 
+{-# DEPRECATED babbageEraOnwardsToShelleyBasedEra "Use 'inject' instead." #-}
 babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra era
-babbageEraOnwardsToShelleyBasedEra = \case
-  BabbageEraOnwardsBabbage -> ShelleyBasedEraBabbage
-  BabbageEraOnwardsConway -> ShelleyBasedEraConway
+babbageEraOnwardsToShelleyBasedEra = inject
 
 class IsAlonzoBasedEra era => IsBabbageBasedEra era where
   babbageBasedEra :: BabbageEraOnwards era

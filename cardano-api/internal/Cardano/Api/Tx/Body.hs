@@ -195,7 +195,6 @@ import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyToAllegraEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
@@ -965,16 +964,16 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
       ( \shelleyToAlleg -> do
           ll <- o .: "lovelace"
           pure $
-            shelleyBasedEraConstraints (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg) $
-              TxOutValueShelleyBased (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg) $
-                A.mkAdaValue (shelleyToAllegraEraToShelleyBasedEra shelleyToAlleg) ll
+            shelleyBasedEraConstraints (inject shelleyToAlleg :: ShelleyBasedEra era) $
+              TxOutValueShelleyBased (inject shelleyToAlleg) $
+                A.mkAdaValue (inject shelleyToAlleg :: ShelleyBasedEra era) ll
       )
       ( \w -> do
           let l = toList o
           vals <- mapM decodeAssetId l
           pure $
-            shelleyBasedEraConstraints (maryEraOnwardsToShelleyBasedEra w) $
-              TxOutValueShelleyBased (maryEraOnwardsToShelleyBasedEra w) $
+            shelleyBasedEraConstraints (inject w :: ShelleyBasedEra era) $
+              TxOutValueShelleyBased (inject w) $
                 toLedgerValue w $
                   mconcat vals
       )
@@ -2051,8 +2050,8 @@ selectTxDatums TxBodyNoScriptData = Map.empty
 selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
 
 fromAlonzoTxOut
-  :: ()
-  => AlonzoEraOnwards era
+  :: forall era ledgerera
+   . AlonzoEraOnwards era
   -> Map (L.DataHash StandardCrypto) (L.Data ledgerera)
   -> L.TxOut (ShelleyLedgerEra era)
   -> TxOut CtxTx era
@@ -2064,7 +2063,7 @@ fromAlonzoTxOut w txdatums txOut =
       (fromAlonzoTxOutDatum w txdatums (txOut ^. L.dataHashTxOutL))
       ReferenceScriptNone
  where
-  sbe = alonzoEraOnwardsToShelleyBasedEra w
+  sbe :: ShelleyBasedEra era = inject w
 
 fromAlonzoTxOutDatum
   :: ()
@@ -2081,8 +2080,7 @@ fromAlonzoTxOutDatum w txdatums = \case
 
 fromBabbageTxOut
   :: forall era
-   . ()
-  => BabbageEraOnwards era
+   . BabbageEraOnwards era
   -> Map (L.DataHash StandardCrypto) (L.Data (ShelleyLedgerEra era))
   -> L.TxOut (ShelleyLedgerEra era)
   -> TxOut CtxTx era
@@ -2097,7 +2095,7 @@ fromBabbageTxOut w txdatums txout =
           SJust rScript -> fromShelleyScriptToReferenceScript shelleyBasedEra rScript
       )
  where
-  sbe = babbageEraOnwardsToShelleyBasedEra w
+  sbe :: ShelleyBasedEra era = inject w
 
   -- NOTE: This is different to 'fromBabbageTxOutDatum' as it may resolve
   -- 'DatumHash' values using the datums included in the transaction.

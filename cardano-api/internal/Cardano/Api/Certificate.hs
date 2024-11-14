@@ -515,10 +515,10 @@ selectStakeCredentialWitness
 selectStakeCredentialWitness = \case
   ShelleyRelatedCertificate stbEra shelleyCert ->
     shelleyToBabbageEraConstraints stbEra $
-      getTxCertWitness (shelleyToBabbageEraToShelleyBasedEra stbEra) shelleyCert
+      getTxCertWitness (inject stbEra) shelleyCert
   ConwayCertificate cEra conwayCert ->
     conwayEraOnwardsConstraints cEra $
-      getTxCertWitness (conwayEraOnwardsToShelleyBasedEra cEra) conwayCert
+      getTxCertWitness (inject cEra) conwayCert
 
 filterUnRegCreds
   :: Certificate era -> Maybe StakeCredential
