@@ -234,6 +234,12 @@ instance Eon Era where
     Api.BabbageEra -> f BabbageEra
     _ -> v
 
+-- | A temporary compatibility instance, for easier conversion between experimental and old API.
+instance Api.ToCardanoEra Era where
+  toCardanoEra = \case
+    BabbageEra -> Api.BabbageEra
+    ConwayEra -> Api.ConwayEra
+
 obtainCommonConstraints
   :: Era era
   -> (EraCommonConstraints era => a)
