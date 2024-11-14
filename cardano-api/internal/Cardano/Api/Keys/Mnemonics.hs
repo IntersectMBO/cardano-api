@@ -6,7 +6,7 @@
 module Cardano.Api.Keys.Mnemonics
   ( MnemonicSize (..)
   , generateMnemonic
-  , MnemonicToSigningStakeKeyError (..)
+  , MnemonicToSigningKeyError (..)
   , signingKeyFromMnemonic
   )
 where
@@ -57,14 +57,14 @@ generateMnemonic MS24 = liftIO (mnemonicToText @24 . entropyToMnemonic <$> genEn
 
 -- | Errors that can occur when converting a mnemonic sentence to a signing key
 -- using the 'signingStakeKeyFromMnemonic' function.
-data MnemonicToSigningStakeKeyError
+data MnemonicToSigningKeyError
   = InvalidMnemonicError String
   | InvalidAccountNumberError Word32
   | InvalidPaymentKeyNoError Word32
   deriving (Eq, Show)
 
-instance Error MnemonicToSigningStakeKeyError where
-  prettyError :: MnemonicToSigningStakeKeyError -> Doc ann
+instance Error MnemonicToSigningKeyError where
+  prettyError :: MnemonicToSigningKeyError -> Doc ann
   prettyError (InvalidMnemonicError str) = "Invalid mnemonic sentence: " <> pretty str
   prettyError (InvalidAccountNumberError accNo) = "Invalid account number: " <> pretty accNo
   prettyError (InvalidPaymentKeyNoError keyNo) = "Invalid payment key number: " <> pretty keyNo
@@ -147,7 +147,7 @@ signingKeyFromMnemonic
   -> indexType
   -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
   -- the given key role, otherwise '()'. First key is 0.
-  -> Either MnemonicToSigningStakeKeyError (SigningKey keyrole)
+  -> Either MnemonicToSigningKeyError (SigningKey keyrole)
 signingKeyFromMnemonic role mnemonicWords accNo payKeyNo = do
   -- Convert raw types to the ones used in the cardano-addresses library
   someMnemonic <- mapLeft InvalidMnemonicError $ wordsToSomeMnemonic mnemonicWords
