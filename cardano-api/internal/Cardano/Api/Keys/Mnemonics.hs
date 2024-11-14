@@ -13,13 +13,14 @@ where
 
 import           Cardano.Api.Error (Error (..))
 import           Cardano.Api.Keys.Class (Key (..))
-import           Cardano.Api.Keys.Shelley (AsType, PaymentExtendedKey,
-                   SigningKey (PaymentExtendedSigningKey, StakeExtendedSigningKey),
+import           Cardano.Api.Keys.Shelley (AsType, CommitteeColdExtendedKey,
+                   CommitteeHotExtendedKey, DRepExtendedKey, PaymentExtendedKey, SigningKey (..),
                    StakeExtendedKey)
 
 import           Cardano.Address.Derivation (Depth (..), DerivationType (..), HardDerivation (..),
                    Index, XPrv, genMasterKeyFromMnemonic, indexFromWord32)
-import           Cardano.Address.Style.Shelley (Role (..), Shelley (..))
+import           Cardano.Address.Style.Shelley (Role (..), Shelley (..), deriveCCColdPrivateKey,
+                   deriveCCHotPrivateKey, deriveDRepPrivateKey)
 import           Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic), MkSomeMnemonicError (..),
                    SomeMnemonic, entropyToMnemonic, genEntropy, mnemonicToText)
 
@@ -100,6 +101,33 @@ instance ExtendedSigningKeyRole StakeExtendedKey Word32 where
   deriveSigningKeyFromAccount _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
     return $ StakeExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK Stake payKeyIx
+
+instance ExtendedSigningKeyRole DRepExtendedKey () where
+  deriveSigningKeyFromAccount
+    :: AsType DRepExtendedKey
+    -> Shelley 'AccountK XPrv
+    -> ()
+    -> Either Word32 (SigningKey DRepExtendedKey)
+  deriveSigningKeyFromAccount _ accK _ =
+    return $ DRepExtendedSigningKey $ getKey $ deriveDRepPrivateKey accK
+
+instance ExtendedSigningKeyRole CommitteeColdExtendedKey () where
+  deriveSigningKeyFromAccount
+    :: AsType CommitteeColdExtendedKey
+    -> Shelley 'AccountK XPrv
+    -> ()
+    -> Either Word32 (SigningKey CommitteeColdExtendedKey)
+  deriveSigningKeyFromAccount _ accK _ =
+    return $ CommitteeColdExtendedSigningKey $ getKey $ deriveCCColdPrivateKey accK
+
+instance ExtendedSigningKeyRole CommitteeHotExtendedKey () where
+  deriveSigningKeyFromAccount
+    :: AsType CommitteeHotExtendedKey
+    -> Shelley 'AccountK XPrv
+    -> ()
+    -> Either Word32 (SigningKey CommitteeHotExtendedKey)
+  deriveSigningKeyFromAccount _ accK _ =
+    return $ CommitteeHotExtendedSigningKey $ getKey $ deriveCCHotPrivateKey accK
 
 -- | Generate a signing key from a mnemonic sentence.
 -- A derivation path is like a file path in a file system. It specifies the
