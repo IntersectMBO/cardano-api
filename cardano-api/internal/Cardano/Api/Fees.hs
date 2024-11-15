@@ -8,7 +8,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 -- | Fee calculation
 module Cardano.Api.Fees
@@ -58,9 +57,6 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Error
-import           Cardano.Api.Experimental.Eras (obtainCommonConstraints, sbeToEra)
-import qualified Cardano.Api.Experimental.Eras as Exp
-import           Cardano.Api.Experimental.Tx
 import           Cardano.Api.Feature
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Pretty
@@ -381,7 +377,7 @@ estimateBalancedTxBody
     return
       ( BalancedTxBody
           finalTxBodyContent
-          (convertTxBodyToUnsignedTx sbe txbody3)
+          txbody3
           (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
           fee
       )
@@ -806,26 +802,24 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
     TxOutValueShelleyBased sbe $
       L.evalBalanceTxBody
         pp
-        (lookupDelegDeposit stakeDelegDeposits)
-        (lookupDRepDeposit drepDelegDeposits)
-        (isRegPool poolids)
+        lookupDelegDeposit
+        lookupDRepDeposit
+        isRegPool
         (toLedgerUTxO sbe utxo)
         txbody
+ where
+  isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
+  isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
-isRegPool :: Set PoolId -> Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
-isRegPool poolids kh = StakePoolKeyHash kh `Set.member` poolids
+  lookupDelegDeposit
+    :: Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe L.Coin
+  lookupDelegDeposit stakeCred =
+    Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
-lookupDelegDeposit
-  :: Map StakeCredential L.Coin -> Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe L.Coin
-lookupDelegDeposit stakeDelegDeposits stakeCred =
-  Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
-
-lookupDRepDeposit
-  :: Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
-  -> Ledger.Credential 'Ledger.DRepRole L.StandardCrypto
-  -> Maybe L.Coin
-lookupDRepDeposit drepDelegDeposits drepCred =
-  Map.lookup drepCred drepDelegDeposits
+  lookupDRepDeposit
+    :: Ledger.Credential 'Ledger.DRepRole L.StandardCrypto -> Maybe L.Coin
+  lookupDRepDeposit drepCred =
+    Map.lookup drepCred drepDelegDeposits
 
 -- ----------------------------------------------------------------------------
 -- Automated transaction building
@@ -872,7 +866,6 @@ data TxBodyErrorAutoBalance era
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
       ScriptWitnessIndex
       (Map ScriptWitnessIndex ExecutionUnits)
-  | TxBodyErrorDeprecatedEra (Exp.DeprecatedEra era)
   deriving Show
 
 instance Error (TxBodyErrorAutoBalance era) where
@@ -926,8 +919,6 @@ instance Error (TxBodyErrorAutoBalance era) where
         [ "ScriptWitnessIndex (redeemer pointer): " <> pshow sIndex <> " is missing from the execution "
         , "units (redeemer pointer) map: " <> pshow eUnitsMap
         ]
-    TxBodyErrorDeprecatedEra deprecatedEra ->
-      "The era " <> pretty deprecatedEra <> " is deprecated and no longer supported."
 
 handleExUnitsErrors
   :: ScriptValidity
@@ -946,18 +937,15 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
   | null failuresMap = Left TxBodyScriptBadScriptValidity
   | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
 
-data BalancedTxBody era where
-  BalancedTxBody
-    :: (TxBodyContent BuildTx era)
-    -> (UnsignedTx era)
-    -> (TxOut CtxTx era)
-    -- ^ Transaction balance (change output)
-    -> L.Coin
-    -- ^ Estimated transaction fee
-    -> BalancedTxBody era
-
-deriving instance
-  (Exp.IsEra era, IsShelleyBasedEra era) => Show (BalancedTxBody era)
+data BalancedTxBody era
+  = BalancedTxBody
+      (TxBodyContent BuildTx era)
+      (TxBody era)
+      (TxOut CtxTx era)
+      -- ^ Transaction balance (change output)
+      L.Coin
+      -- ^ Estimated transaction fee
+  deriving Show
 
 newtype RequiredShelleyKeyWitnesses
   = RequiredShelleyKeyWitnesses {unRequiredShelleyKeyWitnesses :: Int}
@@ -1053,8 +1041,6 @@ makeTransactionBodyAutoBalance
   changeaddr
   mnkeys =
     shelleyBasedEraConstraints sbe $ do
-      availableEra <- first TxBodyErrorDeprecatedEra $ sbeToEra sbe
-
       -- Our strategy is to:
       -- 1. evaluate all the scripts to get the exec units, update with ex units
       -- 2. figure out the overall min fees
@@ -1066,23 +1052,22 @@ makeTransactionBodyAutoBalance
             monoidForEraInEon (toCardanoEra sbe) $ \w ->
               toLedgerValue w $ calculateChangeValue sbe totalValueAtSpendableUTxO txbodycontent
 
-      UnsignedTx unsignedTx0 <-
+      txbody0 <-
         first TxBodyError
-          $ makeUnsignedTx
-            availableEra
-          $ obtainCommonConstraints availableEra
+          $ createTransactionBody
+            sbe
           $ txbodycontent
             & modTxOuts
               (<> [TxOut changeaddr (TxOutValueShelleyBased sbe change) TxOutDatumNone ReferenceScriptNone])
       exUnitsMapWithLogs <-
-        first TxBodyErrorValidityInterval
-          $ evaluateTransactionExecutionUnitsShelley
-            sbe
+        first TxBodyErrorValidityInterval $
+          evaluateTransactionExecutionUnits
+            era
             systemstart
             history
             lpp
             utxo
-          $ obtainCommonConstraints availableEra unsignedTx0
+            txbody0
 
       let exUnitsMap = Map.map (fmap snd) exUnitsMapWithLogs
 
@@ -1108,7 +1093,6 @@ makeTransactionBodyAutoBalance
       -- we can use the true values for that.
       let maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
       let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
-
       let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
       let changeTxOut =
             forShelleyBasedEraInEon
@@ -1117,19 +1101,18 @@ makeTransactionBodyAutoBalance
               (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
 
       let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput sbe txbodycontent changeaddr
-      UnsignedTx txbody1 <-
-        first TxBodyError
-          $ makeUnsignedTx -- TODO: impossible to fail now
-            availableEra
-          $ obtainCommonConstraints availableEra
-          $ txbodycontent1
-            { txFee = TxFeeExplicit sbe maxLovelaceFee
-            , txOuts =
-                txOuts txbodycontent
-                  <> [TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone]
-            , txReturnCollateral = dummyCollRet
-            , txTotalCollateral = dummyTotColl
-            }
+      txbody1 <-
+        first TxBodyError $ -- TODO: impossible to fail now
+          createTransactionBody
+            sbe
+            txbodycontent1
+              { txFee = TxFeeExplicit sbe maxLovelaceFee
+              , txOuts =
+                  txOuts txbodycontent
+                    <> [TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone]
+              , txReturnCollateral = dummyCollRet
+              , txTotalCollateral = dummyTotColl
+              }
       -- NB: This has the potential to over estimate the fees because estimateTransactionKeyWitnessCount
       -- makes the conservative assumption that all inputs are from distinct
       -- addresses.
@@ -1137,9 +1120,7 @@ makeTransactionBodyAutoBalance
             fromMaybe
               (estimateTransactionKeyWitnessCount txbodycontent1)
               mnkeys
-          fee =
-            obtainCommonConstraints availableEra $
-              L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp txbody1 (fromIntegral nkeys)
+          fee = calculateMinTxFee sbe pp utxo txbody1 nkeys
           (retColl, reqCol) =
             caseShelleyToAlonzoOrBabbageEraOnwards
               (const (TxReturnCollateralNone, TxTotalCollateralNone))
@@ -1167,27 +1148,16 @@ makeTransactionBodyAutoBalance
       -- does not matter, instead it's just the values of the fee and outputs.
       -- Here we do not want to start with any change output, since that's what
       -- we need to calculate.
-      UnsignedTx txbody2 <-
-        first TxBodyError
-          $ makeUnsignedTx -- TODO: impossible to fail now
-            availableEra
-          $ obtainCommonConstraints availableEra
-          $ txbodycontent1
-            { txFee = TxFeeExplicit sbe fee
-            , txReturnCollateral = retColl
-            , txTotalCollateral = reqCol
-            }
-      let balance =
-            TxOutValueShelleyBased sbe $
-              obtainCommonConstraints availableEra $
-                L.evalBalanceTxBody
-                  pp
-                  (lookupDelegDeposit stakeDelegDeposits)
-                  (lookupDRepDeposit drepDelegDeposits)
-                  (isRegPool poolids)
-                  (toLedgerUTxO sbe utxo)
-                  (txbody2 ^. L.bodyTxL)
-
+      txbody2 <-
+        first TxBodyError $ -- TODO: impossible to fail now
+          createTransactionBody
+            sbe
+            txbodycontent1
+              { txFee = TxFeeExplicit sbe fee
+              , txReturnCollateral = retColl
+              , txTotalCollateral = reqCol
+              }
+      let balance = evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo txbody2
       forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue sbe txout pp
 
       -- check if the balance is positive or negative
@@ -1196,7 +1166,6 @@ makeTransactionBodyAutoBalance
 
       -- TODO: we could add the extra fee for the CBOR encoding of the change,
       -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
-
       -- The txbody with the final fee and change output. This should work
       -- provided that the fee and change are less than 2^32-1, and so will
       -- fit within the encoding size we picked above when calculating the fee.
@@ -1216,8 +1185,7 @@ makeTransactionBodyAutoBalance
         first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
         -- that simply creates a transaction body because we have already
         -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-          makeUnsignedTx availableEra $
-            obtainCommonConstraints availableEra finalTxBodyContent
+          createTransactionBody sbe finalTxBodyContent
       return
         ( BalancedTxBody
             finalTxBodyContent
@@ -1225,6 +1193,9 @@ makeTransactionBodyAutoBalance
             (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
             fee
         )
+   where
+    era :: CardanoEra era
+    era = toCardanoEra sbe
 
 -- | In the event of spending the exact amount of lovelace in
 -- the specified input(s), this function excludes the change
@@ -1276,7 +1247,8 @@ onlyAda = null . toList . filterValue isNotAda
 
 calculateIncomingUTxOValue
   :: Monoid (Ledger.Value (ShelleyLedgerEra era))
-  => [TxOut ctx era] -> Ledger.Value (ShelleyLedgerEra era)
+  => [TxOut ctx era]
+  -> Ledger.Value (ShelleyLedgerEra era)
 calculateIncomingUTxOValue providedUtxoOuts =
   mconcat [v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- providedUtxoOuts]
 
