@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -8,6 +9,8 @@ module Cardano.Api.Keys.Mnemonics
   , generateMnemonic
   , MnemonicToSigningKeyError (..)
   , signingKeyFromMnemonic
+  , findMnemonicWordsWithPrefix
+  , autocompleteMnemonicPrefix
   )
 where
 
@@ -21,15 +24,28 @@ import           Cardano.Address.Derivation (Depth (..), DerivationType (..), Ha
                    Index, XPrv, genMasterKeyFromMnemonic, indexFromWord32)
 import           Cardano.Address.Style.Shelley (Role (..), Shelley (..), deriveCCColdPrivateKey,
                    deriveCCHotPrivateKey, deriveDRepPrivateKey)
+import           Cardano.Crypto.Encoding.BIP39 (Dictionary (dictionaryIndexToWord))
 import           Cardano.Mnemonic (MkSomeMnemonic (mkSomeMnemonic), MkSomeMnemonicError (..),
                    SomeMnemonic, entropyToMnemonic, genEntropy, mnemonicToText)
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Data.Bifunctor (first)
+import qualified Data.ByteString as BS
 import           Data.Either.Combinators (mapLeft, maybeToRight)
 import           Data.Either.Extra (maybeToEither)
+import           Data.Foldable (toList)
 import           Data.Text (Text)
+import qualified Data.Text as Text
+import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Data.Trie (submap)
+import qualified Data.Trie as Trie
+import qualified Data.Trie.Convenience as Trie
 import           Data.Word (Word32)
 import           Prettyprinter (Doc, Pretty (..))
+
+import qualified Basement.Compat.IsList as Basement
+import qualified Basement.String as Basement
+import           Crypto.Encoding.BIP39.English (english)
 
 -- | The size of a mnemonic sentence.
 -- The size is given in the number of words in the sentence.
@@ -211,3 +227,68 @@ signingKeyFromMnemonic role mnemonicWords accNo payKeyNo = do
   -- Convert the mnemonic sentence to a SomeMnemonic value
   wordsToSomeMnemonic :: [Text] -> Either String SomeMnemonic
   wordsToSomeMnemonic = mapLeft getMkSomeMnemonicError . mkSomeMnemonic @[12, 15, 18, 21, 24]
+
+-- | Obtain the list of all mnemonic words that start with the given prefix and their index in the dictionary.
+-- For example:
+-- >>> findMnemonicWordsWithPrefix "cha"
+-- [("chair",302),("chalk",303),("champion",304),("change",305),("chaos",306),("chapter",307),("charge",308),("chase",309),("chat",310)]
+findMnemonicWordsWithPrefix :: Text -> [(Text, Int)]
+findMnemonicWordsWithPrefix word = toList $ map (first decodeUtf8) $ Trie.toList matchingSubTrie
+ where
+  matchingSubTrie :: Trie.Trie Int
+  matchingSubTrie = submap (encodeUtf8 word) englishMnemonicTrie
+
+-- | Autocomplete the prefix of the mnemonic word as much as possible.
+-- In other words, find the longest common prefix for all the words
+-- that start with the given prefix.
+-- For example:
+-- >>> autocompleteMnemonicPrefix "ty"
+-- Just "typ"
+--
+-- Because "type" and "typical" are the only words that start with "ty".
+--
+-- >>> autocompleteMnemonicPrefix "vani"
+-- Just "vanish"
+--
+-- Because "vanish" is the only word that starts with "vani".
+--
+-- >>> autocompleteMnemonicPrefix "medo"
+-- Nothing
+--
+-- Because there are no words that start with "medo".
+autocompleteMnemonicPrefix :: Text -> Maybe Text
+autocompleteMnemonicPrefix word =
+  let subtrie = matchingSubTrie word englishMnemonicTrie
+      matches = toList $ map (first decodeUtf8) $ Trie.toList subtrie
+      numMatches = Trie.size subtrie
+   in case matches of
+        [] -> Nothing
+        (firstMatch, _) : _ -> expandWhileSameNumberOfMatches numMatches word (Text.drop (Text.length word) firstMatch) subtrie
+ where
+  matchingSubTrie :: Text -> Trie.Trie Int -> Trie.Trie Int
+  matchingSubTrie w = submap (encodeUtf8 w)
+
+  expandWhileSameNumberOfMatches :: Int -> Text -> Text -> Trie.Trie Int -> Maybe Text
+  expandWhileSameNumberOfMatches numMatches curPrefix potentialExtensions subTrie =
+    case Text.uncons potentialExtensions of
+      Nothing -> Just curPrefix
+      Just (newChar, remainingPotentialExtensions) ->
+        let potentialNewPrefix = Text.snoc curPrefix newChar
+            newSubTrie = matchingSubTrie potentialNewPrefix subTrie
+         in if Trie.size newSubTrie == numMatches
+              then
+                expandWhileSameNumberOfMatches numMatches potentialNewPrefix remainingPotentialExtensions newSubTrie
+              else Just curPrefix
+
+-- | Trie of English mnemonic words with their index.
+englishMnemonicTrie :: Trie.Trie Int
+englishMnemonicTrie =
+  Trie.fromListL
+    ( map
+        ( \i ->
+            (,fromEnum i) $
+              BS.pack . Basement.toList . Basement.toBytes Basement.UTF8 $
+                dictionaryIndexToWord english i
+        )
+        [minBound .. maxBound]
+    )
