@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Keys.Mnemonics
   ( MnemonicSize (..)
@@ -69,20 +69,23 @@ instance Error MnemonicToSigningKeyError where
   prettyError (InvalidAccountNumberError accNo) = "Invalid account number: " <> pretty accNo
   prettyError (InvalidPaymentKeyNoError keyNo) = "Invalid payment key number: " <> pretty keyNo
 
-class ExtendedSigningKeyRole keyrole indexType | keyrole -> indexType where
+class ExtendedSigningKeyRole keyrole where
+  type EskrPaymentAddrIndex keyrole
+
   -- | Derive an extended private key of the keyrole from an account extended private key
   deriveSigningKeyFromAccount
     :: AsType keyrole
     -- ^ Type of the extended signing key to generate.
     -> Shelley 'AccountK XPrv
     -- ^ The account extended private key from which to derivate the private key for the keyrole.
-    -> indexType
+    -> EskrPaymentAddrIndex keyrole
     -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
     -- the given key role, otherwise '()'. First key is 0.
     -> Either Word32 (SigningKey keyrole)
     -- ^ The derived extended signing key or the 'indexType' if it is 'Word32' and it is invalid.
 
-instance ExtendedSigningKeyRole PaymentExtendedKey Word32 where
+instance ExtendedSigningKeyRole PaymentExtendedKey where
+  type EskrPaymentAddrIndex PaymentExtendedKey = Word32
   deriveSigningKeyFromAccount
     :: AsType PaymentExtendedKey
     -> Shelley 'AccountK XPrv
@@ -92,7 +95,8 @@ instance ExtendedSigningKeyRole PaymentExtendedKey Word32 where
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
     return $ PaymentExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK UTxOExternal payKeyIx
 
-instance ExtendedSigningKeyRole StakeExtendedKey Word32 where
+instance ExtendedSigningKeyRole StakeExtendedKey where
+  type EskrPaymentAddrIndex StakeExtendedKey = Word32
   deriveSigningKeyFromAccount
     :: AsType StakeExtendedKey
     -> Shelley 'AccountK XPrv
@@ -102,7 +106,8 @@ instance ExtendedSigningKeyRole StakeExtendedKey Word32 where
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
     return $ StakeExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK Stake payKeyIx
 
-instance ExtendedSigningKeyRole DRepExtendedKey () where
+instance ExtendedSigningKeyRole DRepExtendedKey where
+  type EskrPaymentAddrIndex DRepExtendedKey = ()
   deriveSigningKeyFromAccount
     :: AsType DRepExtendedKey
     -> Shelley 'AccountK XPrv
@@ -111,7 +116,8 @@ instance ExtendedSigningKeyRole DRepExtendedKey () where
   deriveSigningKeyFromAccount _ accK _ =
     return $ DRepExtendedSigningKey $ getKey $ deriveDRepPrivateKey accK
 
-instance ExtendedSigningKeyRole CommitteeColdExtendedKey () where
+instance ExtendedSigningKeyRole CommitteeColdExtendedKey where
+  type EskrPaymentAddrIndex CommitteeColdExtendedKey = ()
   deriveSigningKeyFromAccount
     :: AsType CommitteeColdExtendedKey
     -> Shelley 'AccountK XPrv
@@ -120,7 +126,8 @@ instance ExtendedSigningKeyRole CommitteeColdExtendedKey () where
   deriveSigningKeyFromAccount _ accK _ =
     return $ CommitteeColdExtendedSigningKey $ getKey $ deriveCCColdPrivateKey accK
 
-instance ExtendedSigningKeyRole CommitteeHotExtendedKey () where
+instance ExtendedSigningKeyRole CommitteeHotExtendedKey where
+  type EskrPaymentAddrIndex CommitteeHotExtendedKey = ()
   deriveSigningKeyFromAccount
     :: AsType CommitteeHotExtendedKey
     -> Shelley 'AccountK XPrv
@@ -136,7 +143,7 @@ instance ExtendedSigningKeyRole CommitteeHotExtendedKey () where
 -- In this function we only ask for two indices: the account number and the
 -- payment key number. Each account can have multiple payment keys.
 signingKeyFromMnemonic
-  :: ExtendedSigningKeyRole keyrole indexType
+  :: ExtendedSigningKeyRole keyrole
   => AsType keyrole
   -- ^ Type of the extended signing key to generate.
   -> [Text]
@@ -144,7 +151,7 @@ signingKeyFromMnemonic
   -- Each element of the list must be a single word.
   -> Word32
   -- ^ The account number in the derivation path. First account is 0.
-  -> indexType
+  -> EskrPaymentAddrIndex keyrole
   -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
   -- the given key role, otherwise '()'. First key is 0.
   -> Either MnemonicToSigningKeyError (SigningKey keyrole)
