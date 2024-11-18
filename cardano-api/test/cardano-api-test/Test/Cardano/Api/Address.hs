@@ -71,6 +71,30 @@ exampleMnemonic =
   , "suspect"
   ]
 
+prop_mnemonic_word_query :: Property
+prop_mnemonic_word_query =
+  H.propertyOnce $
+    map fst (findMnemonicWordsWithPrefix "cha")
+      H.=== [ "chair"
+            , "chalk"
+            , "champion"
+            , "change"
+            , "chaos"
+            , "chapter"
+            , "charge"
+            , "chase"
+            , "chat"
+            ]
+
+prop_mnemonic_autocomplete_query :: Property
+prop_mnemonic_autocomplete_query = H.propertyOnce $ do
+  autocompleteMnemonicPrefix "ty" H.=== Just "typ"
+  autocompleteMnemonicPrefix "vani" H.=== Just "vanish"
+  autocompleteMnemonicPrefix "medo" H.=== Nothing
+  autocompleteMnemonicPrefix "enroll" H.=== Just "enroll"
+  autocompleteMnemonicPrefix "january" H.=== Nothing
+  autocompleteMnemonicPrefix "" H.=== Just ""
+
 prop_payment_derivation_is_accurate :: Property
 prop_payment_derivation_is_accurate = H.propertyOnce $ do
   signingKey <-
@@ -167,6 +191,8 @@ tests =
     , testProperty "roundtrip byron address JSON" prop_roundtrip_byron_address_JSON
     , testProperty "roundtrip shelley address JSON" prop_roundtrip_shelley_address_JSON
     , testProperty "key derivation from random mnemonic" prop_derive_key_from_mnemonic
+    , testProperty "mnemonic word prefix query" prop_mnemonic_word_query
+    , testProperty "mnemonic word autocomplete query" prop_mnemonic_autocomplete_query
     , testProperty "payment address from key derivation is accurate" prop_payment_derivation_is_accurate
     , testProperty "stake address from key derivation is accurate" prop_stake_derivation_is_accurate
     , testProperty
