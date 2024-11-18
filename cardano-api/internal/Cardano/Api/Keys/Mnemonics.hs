@@ -90,6 +90,8 @@ instance Error MnemonicToSigningKeyError where
   prettyError (InvalidPaymentKeyNoError keyNo) = "Invalid payment key number: " <> pretty keyNo
 
 class ExtendedSigningKeyRole keyrole where
+  -- | The type for the payment key number in the derivation path (i.e: 'Word32' if applicable or
+  -- '()' if not). See 'deriveSigningKeyFromAccount' for more information.
   type EskrPaymentAddrIndex keyrole
 
   -- | Derive an extended private key of the keyrole from an account extended private key
