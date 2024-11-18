@@ -190,6 +190,10 @@ module Cardano.Api
   , MnemonicToSigningKeyError (..)
   , signingKeyFromMnemonic
 
+    -- ** Mnemonic word queries
+  , findMnemonicWordsWithPrefix
+  , autocompleteMnemonicPrefix
+
     -- * Payment addresses
 
     -- | Constructing and inspecting normal payment addresses
