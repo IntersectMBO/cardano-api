@@ -133,6 +133,7 @@ import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
+import           Data.Sequence (Seq)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -296,6 +297,9 @@ data QueryInShelleyBasedEra era result where
   QueryStakeVoteDelegatees
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
+  QueryProposals
+    :: Set (L.GovActionId StandardCrypto)
+    -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)){-StandardCrypto-})
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
@@ -328,6 +332,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QuerySPOStakeDistr{} = NodeToClientV_16
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
   nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
+  nodeToClientVersionOf QueryProposals{} = NodeToClientV_17
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -703,6 +708,16 @@ toConsensusQueryShelleyBased sbe = \case
    where
     creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
     creds' = Set.map toShelleyStakeCredential creds
+  QueryProposals govActs ->
+    caseShelleyToBabbageOrConwayEraOnwards
+      ( const $
+          error "toConsensusQueryShelleyBased: QueryProposals is only available in the Conway era"
+      )
+      ( const $
+          Some
+            (consensusQueryInEraInMode era (Consensus.GetProposals govActs))
+      )
+      sbe
  where
   era = toCardanoEra sbe
 
@@ -984,6 +999,16 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetFilteredVoteDelegatees{} ->
           Map.mapKeys fromShelleyStakeCredential r'
         _ -> fromConsensusQueryResultMismatch
+    QueryProposals{} ->
+      case q' of
+        Consensus.GetProposals{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+
+-- QueryProposals :: forall era.
+-- Set (GovActionId StandardCrypto)
+-- -> QueryInShelleyBasedEra era (Seq (GovActionState era))
+
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.
