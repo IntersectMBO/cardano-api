@@ -66,8 +66,8 @@ type family LedgerEra era = (r :: Type) | r -> era where
   LedgerEra BabbageEra = Ledger.Babbage
   LedgerEra ConwayEra = Ledger.Conway
 
--- | An existential type for singleton types. Use to hold any era e.g. @Some Era@. One can then bring the
--- era witness back into scope for example using this pattern:
+-- | An existential wrapper for types of kind @k -> Types@. Use it to hold any era e.g. @Some Era@. One can
+-- then bring the era witness back into scope for example using this pattern:
 -- @
 -- anyEra = Some ConwayEra
 -- -- then later in the code
@@ -80,15 +80,6 @@ data Some (f :: k -> Type) where
      . (Typeable a, Typeable (f a))
     => f a
     -> Some f
-
--- | Assumes that @f@ is a singleton
-instance Show (Some f) where
-  showsPrec _ (Some v) = showsTypeRep (typeOf v)
-
--- | Assumes that @f@ is a singleton
-instance TestEquality f => Eq (Some f) where
-  Some era1 == Some era2 =
-    isJust $ testEquality era1 era2
 
 -- | Represents the eras in Cardano's blockchain.
 -- This type represents eras currently on mainnet and new eras which are
@@ -118,6 +109,12 @@ instance TestEquality Era where
 
 instance ToJSON (Era era) where
   toJSON = eraToStringLike
+
+instance Show (Some Era) where
+  showsPrec _ (Some era) = shows era
+
+instance Eq (Some Era) where
+  Some era1 == Some era2 = isJust $ testEquality era1 era2
 
 instance Bounded (Some Era) where
   minBound = Some BabbageEra
