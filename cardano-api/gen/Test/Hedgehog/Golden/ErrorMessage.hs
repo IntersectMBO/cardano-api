@@ -14,8 +14,6 @@ import           Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
 import           Data.Algorithm.DiffOutput (ppDiff)
 import           Data.Data
 import qualified Data.List as List
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import qualified GHC.Stack as GHC
 import qualified System.Directory as IO
@@ -168,7 +166,9 @@ createGoldenFiles = IO.unsafePerformIO $ do
 writeFile' :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> String -> m ()
 writeFile' filePath contents = GHC.withFrozenCallStack $ do
   void . H.annotate $ "Writing file: " <> filePath
-  H.evalIO $ Text.writeFile filePath $ Text.pack contents
+  H.evalIO $ IO.withFile filePath IO.WriteMode $ \handle -> do
+    IO.hSetEncoding handle IO.utf8
+    IO.hPutStr handle contents
 
 checkAgainstGoldenFile
   :: ()
@@ -179,7 +179,9 @@ checkAgainstGoldenFile
   -> [String]
   -> m ()
 checkAgainstGoldenFile goldenFile actualLines = GHC.withFrozenCallStack $ do
-  referenceLines <- List.lines . Text.unpack <$> liftIO (Text.readFile goldenFile)
+  referenceLines <- liftIO $ IO.withFile goldenFile IO.ReadMode $ \handle -> do
+    IO.hSetEncoding handle IO.utf8
+    List.lines <$> IO.hGetContents' handle
   let difference = getGroupedDiff actualLines referenceLines
   case difference of
     [] -> pure ()
