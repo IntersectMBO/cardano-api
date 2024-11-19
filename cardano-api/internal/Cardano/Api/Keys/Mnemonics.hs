@@ -9,6 +9,7 @@ module Cardano.Api.Keys.Mnemonics
   , generateMnemonic
   , MnemonicToSigningKeyError (..)
   , signingKeyFromMnemonic
+  , signingKeyFromMnemonicWithPaymentKeyIndex
   , findMnemonicWordsWithPrefix
   , autocompleteMnemonicPrefix
   )
@@ -72,7 +73,6 @@ generateMnemonic MS21 = liftIO (mnemonicToText @21 . entropyToMnemonic <$> genEn
 generateMnemonic MS24 = liftIO (mnemonicToText @24 . entropyToMnemonic <$> genEntropy)
 
 -- | Errors that can occur when converting a mnemonic sentence to a signing key
--- using the 'signingStakeKeyFromMnemonic' function.
 data MnemonicToSigningKeyError
   = InvalidMnemonicError String
   | InvalidAccountNumberError Word32
@@ -89,127 +89,95 @@ instance Error MnemonicToSigningKeyError where
   prettyError (InvalidAccountNumberError accNo) = "Invalid account number: " <> pretty accNo
   prettyError (InvalidPaymentKeyNoError keyNo) = "Invalid payment key number: " <> pretty keyNo
 
-class ExtendedSigningKeyRole keyrole where
-  -- | The type for the payment key number in the derivation path (i.e: 'Word32' if applicable or
-  -- '()' if not). See 'deriveSigningKeyFromAccount' for more information.
-  type EskrPaymentAddrIndex keyrole
-
+-- | Key roles that can be derived from a mnemonic sentence and only accept
+-- one key per account number.
+--
+-- We derive one key per account following the advice in https://cips.cardano.org/cip/CIP-0105:
+-- "Since it is best practice to use a single cryptographic key for a single purpose,
+-- we opt to keep DRep and committee keys separate from other keys in Cardano."
+--
+-- We still need to specify a payment key number for payment and stake keys,
+-- see 'IndexedSigningKeyFromRootKey' class for those roles (payment and stake keys).
+class SigningKeyFromRootKey keyrole where
   -- | Derive an extended private key of the keyrole from an account extended private key
   deriveSigningKeyFromAccount
     :: AsType keyrole
     -- ^ Type of the extended signing key to generate.
     -> Shelley 'AccountK XPrv
     -- ^ The account extended private key from which to derivate the private key for the keyrole.
-    -> EskrPaymentAddrIndex keyrole
-    -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
-    -- the given key role, otherwise '()'. First key is 0.
-    --
-    -- As specified by https://cips.cardano.org/cip/CIP-0105:
-    -- Since it is best practice to use a single cryptographic key for a single purpose,
-    -- we opt to keep DRep and committee keys separate from other keys in Cardano.
-    -- But we still need to specify a payment key number for payment and stake keys.
-    -> Either Word32 (SigningKey keyrole)
+    -> SigningKey keyrole
     -- ^ The derived extended signing key or the 'indexType' if it is 'Word32' and it is invalid.
 
-instance ExtendedSigningKeyRole PaymentExtendedKey where
-  type EskrPaymentAddrIndex PaymentExtendedKey = Word32
-  deriveSigningKeyFromAccount
+-- | Key roles that can be derived from a mnemonic sentence and accept multiple keys
+-- per account number. For other key roles (DRep, and committee keys), see 'SigningKeyFromRootKey'.
+class IndexedSigningKeyFromRootKey keyrole where
+  -- | Derive an extended private key of the keyrole from an account extended private key
+  deriveSigningKeyFromAccountWithPaymentKeyIndex
+    :: AsType keyrole
+    -- ^ Type of the extended signing key to generate.
+    -> Shelley 'AccountK XPrv
+    -- ^ The account extended private key from which to derivate the private key for the keyrole.
+    -> Word32
+    -- ^ The payment key number in the derivation path.
+    -> Either Word32 (SigningKey keyrole)
+    -- ^ The derived extended signing key or the 'indexType' if it is invalid.
+
+instance IndexedSigningKeyFromRootKey PaymentExtendedKey where
+  deriveSigningKeyFromAccountWithPaymentKeyIndex
     :: AsType PaymentExtendedKey
     -> Shelley 'AccountK XPrv
     -> Word32
     -> Either Word32 (SigningKey PaymentExtendedKey)
-  deriveSigningKeyFromAccount _ accK idx = do
+  deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
     return $ PaymentExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK UTxOExternal payKeyIx
 
-instance ExtendedSigningKeyRole StakeExtendedKey where
-  type EskrPaymentAddrIndex StakeExtendedKey = Word32
-  deriveSigningKeyFromAccount
+instance IndexedSigningKeyFromRootKey StakeExtendedKey where
+  deriveSigningKeyFromAccountWithPaymentKeyIndex
     :: AsType StakeExtendedKey
     -> Shelley 'AccountK XPrv
     -> Word32
     -> Either Word32 (SigningKey StakeExtendedKey)
-  deriveSigningKeyFromAccount _ accK idx = do
+  deriveSigningKeyFromAccountWithPaymentKeyIndex _ accK idx = do
     payKeyIx <- maybeToEither idx $ indexFromWord32 @(Index 'Soft 'PaymentK) idx
     return $ StakeExtendedSigningKey $ getKey $ deriveAddressPrivateKey accK Stake payKeyIx
 
-instance ExtendedSigningKeyRole DRepExtendedKey where
-  type EskrPaymentAddrIndex DRepExtendedKey = ()
+instance SigningKeyFromRootKey DRepExtendedKey where
   deriveSigningKeyFromAccount
     :: AsType DRepExtendedKey
     -> Shelley 'AccountK XPrv
-    -> ()
-    -- As specified by https://cips.cardano.org/cip/CIP-0105:
-    -- Since it is best practice to use a single cryptographic key for a single purpose,
-    -- we opt to keep DRep and committee keys separate from other keys in Cardano.
-    -- Therefore, we do not need to specify a payment key number for DRep keys.
-    -> Either Word32 (SigningKey DRepExtendedKey)
-  deriveSigningKeyFromAccount _ accK _ =
-    return $ DRepExtendedSigningKey $ getKey $ deriveDRepPrivateKey accK
+    -> SigningKey DRepExtendedKey
+  deriveSigningKeyFromAccount _ accK =
+    DRepExtendedSigningKey $ getKey $ deriveDRepPrivateKey accK
 
-instance ExtendedSigningKeyRole CommitteeColdExtendedKey where
-  type EskrPaymentAddrIndex CommitteeColdExtendedKey = ()
+instance SigningKeyFromRootKey CommitteeColdExtendedKey where
   deriveSigningKeyFromAccount
     :: AsType CommitteeColdExtendedKey
     -> Shelley 'AccountK XPrv
-    -> ()
-    -- As specified by https://cips.cardano.org/cip/CIP-0105:
-    -- Since it is best practice to use a single cryptographic key for a single purpose,
-    -- we opt to keep DRep and committee keys separate from other keys in Cardano.
-    -- Therefore, we do not need to specify a payment key number for cold committee keys.
-    -> Either Word32 (SigningKey CommitteeColdExtendedKey)
-  deriveSigningKeyFromAccount _ accK _ =
-    return $ CommitteeColdExtendedSigningKey $ getKey $ deriveCCColdPrivateKey accK
+    -> SigningKey CommitteeColdExtendedKey
+  deriveSigningKeyFromAccount _ accK =
+    CommitteeColdExtendedSigningKey $ getKey $ deriveCCColdPrivateKey accK
 
-instance ExtendedSigningKeyRole CommitteeHotExtendedKey where
-  type EskrPaymentAddrIndex CommitteeHotExtendedKey = ()
+instance SigningKeyFromRootKey CommitteeHotExtendedKey where
   deriveSigningKeyFromAccount
     :: AsType CommitteeHotExtendedKey
     -> Shelley 'AccountK XPrv
-    -> ()
-    -- As specified by https://cips.cardano.org/cip/CIP-0105:
-    -- Since it is best practice to use a single cryptographic key for a single purpose,
-    -- we opt to keep DRep and committee keys separate from other keys in Cardano.
-    -- Therefore, we do not need to specify a payment key number for hot committee keys.
-    -> Either Word32 (SigningKey CommitteeHotExtendedKey)
-  deriveSigningKeyFromAccount _ accK _ =
-    return $ CommitteeHotExtendedSigningKey $ getKey $ deriveCCHotPrivateKey accK
+    -> SigningKey CommitteeHotExtendedKey
+  deriveSigningKeyFromAccount _ accK =
+    CommitteeHotExtendedSigningKey $ getKey $ deriveCCHotPrivateKey accK
 
--- | Generate a signing key from a mnemonic sentence.
--- A derivation path is like a file path in a file system. It specifies the
--- location of a key in the key tree. The path is a list of indices, one for each
--- level of the tree. The indices are separated by a forward slash (/).
--- In this function we only ask for two indices: the account number and the
--- payment key number. Each account can have multiple payment keys.
---
--- For more information about address derivation check:
---  * https://cips.cardano.org/cip/CIP-1852
---  * https://github.com/uniVocity/cardano-tutorials/blob/master/cardano-addresses.md#understanding-the-hd-wallet-address-format-bip-44
---  * https://cips.cardano.org/cip/CIP-0105
-signingKeyFromMnemonic
-  :: ExtendedSigningKeyRole keyrole
-  => AsType keyrole
-  -- ^ Type of the extended signing key to generate.
+-- | Generate a signing key from a mnemonic sentence given a function that
+-- derives a key from an account extended key.
+signingKeyFromMnemonicWithDerivationFunction
+  :: (Shelley AccountK XPrv -> Either Word32 (SigningKey keyrole))
+  -- ^ Function to derive the signing key from the account key.
   -> [Text]
   -- ^ The mnemonic sentence. The length must be one of 12, 15, 18, 21, or 24.
   -- Each element of the list must be a single word.
   -> Word32
   -- ^ The account number in the derivation path. First account is 0.
-  -> EskrPaymentAddrIndex keyrole
-  -- ^ The payment key number in the derivation path (as 'Word32') if applicable for
-  -- the given key role, otherwise '()'. First key is 0.
-  --
-  -- Consider that wallets following the BIP-44 standard only check 20 addresses
-  -- without transactions before giving up. For example, if you have a fresh wallet
-  -- and receive a payment on the address generated with address_index = 6, your
-  -- wallet may only display the money received on addresses from 0 to 26.
-  -- If you receive payment on an address with address_index = 30, the funds may not
-  -- be displayed to you even though it's on the blockchain. It will only appear
-  -- once there is a transaction in some address where address_index is between 10
-  -- and 29. The gap limit can be customized on some wallets, but increasing it
-  -- reduces synchronization performance.
   -> Either MnemonicToSigningKeyError (SigningKey keyrole)
-signingKeyFromMnemonic role mnemonicWords accNo payKeyNo = do
+signingKeyFromMnemonicWithDerivationFunction derivationFunction mnemonicWords accNo = do
   -- Convert raw types to the ones used in the cardano-addresses library
   someMnemonic <- mapLeft InvalidMnemonicError $ wordsToSomeMnemonic mnemonicWords
   accIx <-
@@ -222,13 +190,85 @@ signingKeyFromMnemonic role mnemonicWords accNo payKeyNo = do
       accK = deriveAccountPrivateKey rootK accIx
 
   -- Derive the extended private key
-  mapLeft InvalidPaymentKeyNoError $ deriveSigningKeyFromAccount role accK payKeyNo
+  mapLeft InvalidPaymentKeyNoError $ derivationFunction accK
  where
-  -- Convert the ByteString to a SigningKey
-
-  -- Convert the mnemonic sentence to a SomeMnemonic value
   wordsToSomeMnemonic :: [Text] -> Either String SomeMnemonic
   wordsToSomeMnemonic = mapLeft getMkSomeMnemonicError . mkSomeMnemonic @[12, 15, 18, 21, 24]
+
+-- | Generate a signing key from a mnemonic sentence for a key role that
+-- accepts several payment keys from an account number (extended payment and stake keys).
+-- For other key roles (DRep and committee keys), see 'signingKeyFromMnemonic'.
+--
+-- A derivation path is like a file path in a file system. It specifies the
+-- location of a key in the key tree. The path is a list of indices, one for each
+-- level of the tree. The indices are separated by a forward slash (/).
+-- In this function, we only ask for two indices: the account number and the
+-- payment key number. Each account can have multiple payment keys.
+--
+-- For more information about address derivation, check:
+--  * https://cips.cardano.org/cip/CIP-1852
+--  * https://github.com/uniVocity/cardano-tutorials/blob/master/cardano-addresses.md#understanding-the-hd-wallet-address-format-bip-44
+--  * https://cips.cardano.org/cip/CIP-0105
+signingKeyFromMnemonicWithPaymentKeyIndex
+  :: IndexedSigningKeyFromRootKey keyrole
+  => AsType keyrole
+  -- ^ Type of the extended signing key to generate.
+  -> [Text]
+  -- ^ The mnemonic sentence. The length must be one of 12, 15, 18, 21, or 24.
+  -- Each element of the list must be a single word.
+  -> Word32
+  -- ^ The account number in the derivation path. The first account is 0.
+  -> Word32
+  -- ^ The payment key number in the derivation path.
+  --
+  -- Consider that wallets following the BIP-44 standard only check 20 addresses
+  -- without transactions before giving up. For example, if you have a fresh wallet
+  -- and receive a payment on the address generated with address_index = 6, your
+  -- wallet may only display the money received on addresses from 0 to 26.
+  -- If you receive payment on an address with address_index = 30, the funds may not
+  -- be displayed to you even though it's on the blockchain. It will only appear
+  -- once there is a transaction in some address where address_index is between 10
+  -- and 29. The gap limit can be customized on some wallets, but increasing it
+  -- reduces synchronization performance.
+  -> Either MnemonicToSigningKeyError (SigningKey keyrole)
+signingKeyFromMnemonicWithPaymentKeyIndex keyRole mnemonicWords accNo payKeyNo = do
+  signingKeyFromMnemonicWithDerivationFunction
+    (\accK -> deriveSigningKeyFromAccountWithPaymentKeyIndex keyRole accK payKeyNo)
+    mnemonicWords
+    accNo
+
+-- | Generate a signing key from a mnemonic sentence for a key role that
+-- accepts only one payment key from an account number (DRep and committee keys).
+-- For other key roles (extended payment and stake keys), see 'signingKeyFromMnemonicWithPaymentKeyIndex'.
+--
+-- We derive one key per account following the advice in https://cips.cardano.org/cip/CIP-0105:
+-- "Since it is best practice to use a single cryptographic key for a single purpose,
+-- we opt to keep DRep and committee keys separate from other keys in Cardano."
+--
+-- A derivation path is like a file path in a file system. It specifies the
+-- location of a key in the key tree. The path is a list of indices, one for each
+-- level of the tree. The indices are separated by a forward slash (/).
+-- In this function we only ask for one index: the account number.
+--
+-- For more information about address derivation check:
+--  * https://cips.cardano.org/cip/CIP-1852
+--  * https://github.com/uniVocity/cardano-tutorials/blob/master/cardano-addresses.md#understanding-the-hd-wallet-address-format-bip-44
+--  * https://cips.cardano.org/cip/CIP-0105
+signingKeyFromMnemonic
+  :: SigningKeyFromRootKey keyrole
+  => AsType keyrole
+  -- ^ Type of the extended signing key to generate.
+  -> [Text]
+  -- ^ The mnemonic sentence. The length must be one of 12, 15, 18, 21, or 24.
+  -- Each element of the list must be a single word.
+  -> Word32
+  -- ^ The account number in the derivation path. First account is 0.
+  -> Either MnemonicToSigningKeyError (SigningKey keyrole)
+signingKeyFromMnemonic keyRole mnemonicWords accNo = do
+  signingKeyFromMnemonicWithDerivationFunction
+    (return . deriveSigningKeyFromAccount keyRole)
+    mnemonicWords
+    accNo
 
 -- | Obtain the list of all mnemonic words that start with the given prefix and their index in the dictionary.
 -- For example:
