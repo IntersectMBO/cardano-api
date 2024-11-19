@@ -16,7 +16,7 @@ where
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Experimental.Eras
+import           Cardano.Api.Eras
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Script
 import           Cardano.Api.Tx.Body

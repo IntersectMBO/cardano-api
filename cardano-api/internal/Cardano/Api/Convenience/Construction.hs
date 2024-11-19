@@ -17,8 +17,6 @@ where
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Experimental.Eras
-import           Cardano.Api.Experimental.Tx
 import           Cardano.Api.Fees
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
@@ -31,7 +29,6 @@ import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Credential as L
 import qualified Cardano.Ledger.Keys as L
 
-import           Data.Bifunctor
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -75,9 +72,7 @@ constructBalancedTx
   stakeDelegDeposits
   drepDelegDeposits
   shelleyWitSigningKeys = do
-    availableEra <- first TxBodyErrorDeprecatedEra $ sbeToEra sbe
-
-    BalancedTxBody _ unsignedTx _txBalanceOutput _fee <-
+    BalancedTxBody _ txbody _txBalanceOutput _fee <-
       makeTransactionBodyAutoBalance
         sbe
         systemStart
@@ -91,10 +86,8 @@ constructBalancedTx
         changeAddr
         mOverrideWits
 
-    let alternateKeyWits = map (makeKeyWitness availableEra unsignedTx) shelleyWitSigningKeys
-        signedTx = signTx availableEra [] alternateKeyWits unsignedTx
-
-    return $ ShelleyTx sbe $ obtainCommonConstraints availableEra signedTx
+    let keyWits = map (makeShelleyKeyWitness sbe txbody) shelleyWitSigningKeys
+    return $ makeSignedTransaction keyWits txbody
 
 data TxInsExistError
   = TxInsDoNotExist [TxIn]
