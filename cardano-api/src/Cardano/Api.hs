@@ -189,6 +189,7 @@ module Cardano.Api
     -- ** Key derivation from mnemonics
   , MnemonicToSigningKeyError (..)
   , signingKeyFromMnemonic
+  , signingKeyFromMnemonicWithPaymentKeyIndex
 
     -- ** Mnemonic word queries
   , findMnemonicWordsWithPrefix
