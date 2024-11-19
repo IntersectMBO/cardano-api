@@ -179,7 +179,7 @@ checkAgainstGoldenFile
   -> [String]
   -> m ()
 checkAgainstGoldenFile goldenFile actualLines = GHC.withFrozenCallStack $ do
-  referenceLines <- List.lines <$> H.readFile goldenFile
+  referenceLines <- List.lines . Text.unpack <$> liftIO (Text.readFile goldenFile)
   let difference = getGroupedDiff actualLines referenceLines
   case difference of
     [] -> pure ()
