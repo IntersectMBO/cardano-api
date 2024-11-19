@@ -112,8 +112,11 @@ testErrorMessage_ goldenFilesLocation moduleName typeName constructorName err = 
   let fqtn = moduleName <> "." <> typeName
   testProperty constructorName . withTests 1 . property $ do
     H.note_ "Incorrect error message in golden file"
+    H.note_ "What the value looks like in memory"
+    let pErr = docToString (prettyError err)
+    H.note_ $ show pErr
     diffVsGoldenFile
-      (docToString (prettyError err))
+      pErr
       (goldenFilesLocation </> fqtn </> constructorName <> ".txt")
 
 -- Upstream to hedgehog-extras
