@@ -68,6 +68,7 @@ module Cardano.Api.Script
     -- ** Languages supported in each era
   , ScriptLanguageInEra (..)
   , scriptLanguageSupportedInEra
+  , sbeToSimpleScriptLanguageInEra
   , languageOfScriptLanguageInEra
   , eraOfScriptLanguageInEra
 
@@ -167,7 +168,7 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Type.Equality (TestEquality (..), type (==), (:~:) (Refl))
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
 import           GHC.Exts (IsList (..))
@@ -581,18 +582,8 @@ scriptLanguageSupportedInEra
   -> Maybe (ScriptLanguageInEra lang era)
 scriptLanguageSupportedInEra era lang =
   case (era, lang) of
-    (ShelleyBasedEraShelley, SimpleScriptLanguage) ->
-      Just SimpleScriptInShelley
-    (ShelleyBasedEraAllegra, SimpleScriptLanguage) ->
-      Just SimpleScriptInAllegra
-    (ShelleyBasedEraMary, SimpleScriptLanguage) ->
-      Just SimpleScriptInMary
-    (ShelleyBasedEraAlonzo, SimpleScriptLanguage) ->
-      Just SimpleScriptInAlonzo
-    (ShelleyBasedEraBabbage, SimpleScriptLanguage) ->
-      Just SimpleScriptInBabbage
-    (ShelleyBasedEraConway, SimpleScriptLanguage) ->
-      Just SimpleScriptInConway
+    (sbe, SimpleScriptLanguage) ->
+      Just $ sbeToSimpleScriptLanguageInEra sbe
     (ShelleyBasedEraAlonzo, PlutusScriptLanguage PlutusScriptV1) ->
       Just PlutusScriptV1InAlonzo
     (ShelleyBasedEraBabbage, PlutusScriptLanguage PlutusScriptV1) ->
@@ -625,23 +616,33 @@ languageOfScriptLanguageInEra langInEra =
     PlutusScriptV2InConway -> PlutusScriptLanguage PlutusScriptV2
     PlutusScriptV3InConway -> PlutusScriptLanguage PlutusScriptV3
 
+sbeToSimpleScriptLanguageInEra
+  :: ShelleyBasedEra era
+  -> ScriptLanguageInEra SimpleScript' era
+sbeToSimpleScriptLanguageInEra = \case
+  ShelleyBasedEraShelley -> SimpleScriptInShelley
+  ShelleyBasedEraAllegra -> SimpleScriptInAllegra
+  ShelleyBasedEraMary -> SimpleScriptInMary
+  ShelleyBasedEraAlonzo -> SimpleScriptInAlonzo
+  ShelleyBasedEraBabbage -> SimpleScriptInBabbage
+  ShelleyBasedEraConway -> SimpleScriptInConway
+
 eraOfScriptLanguageInEra
   :: ScriptLanguageInEra lang era
   -> ShelleyBasedEra era
-eraOfScriptLanguageInEra langInEra =
-  case langInEra of
-    SimpleScriptInShelley -> ShelleyBasedEraShelley
-    SimpleScriptInAllegra -> ShelleyBasedEraAllegra
-    SimpleScriptInMary -> ShelleyBasedEraMary
-    SimpleScriptInAlonzo -> ShelleyBasedEraAlonzo
-    SimpleScriptInBabbage -> ShelleyBasedEraBabbage
-    SimpleScriptInConway -> ShelleyBasedEraConway
-    PlutusScriptV1InAlonzo -> ShelleyBasedEraAlonzo
-    PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
-    PlutusScriptV1InConway -> ShelleyBasedEraConway
-    PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
-    PlutusScriptV2InConway -> ShelleyBasedEraConway
-    PlutusScriptV3InConway -> ShelleyBasedEraConway
+eraOfScriptLanguageInEra = \case
+  SimpleScriptInShelley -> ShelleyBasedEraShelley
+  SimpleScriptInAllegra -> ShelleyBasedEraAllegra
+  SimpleScriptInMary -> ShelleyBasedEraMary
+  SimpleScriptInAlonzo -> ShelleyBasedEraAlonzo
+  SimpleScriptInBabbage -> ShelleyBasedEraBabbage
+  SimpleScriptInConway -> ShelleyBasedEraConway
+  PlutusScriptV1InAlonzo -> ShelleyBasedEraAlonzo
+  PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
+  PlutusScriptV1InConway -> ShelleyBasedEraConway
+  PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
+  PlutusScriptV2InConway -> ShelleyBasedEraConway
+  PlutusScriptV3InConway -> ShelleyBasedEraConway
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.

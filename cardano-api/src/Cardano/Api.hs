@@ -557,6 +557,7 @@ module Cardano.Api
     -- ** Languages supported in each era
   , ScriptLanguageInEra (..)
   , scriptLanguageSupportedInEra
+  , sbeToSimpleScriptLanguageInEra
   , languageOfScriptLanguageInEra
   , eraOfScriptLanguageInEra
 

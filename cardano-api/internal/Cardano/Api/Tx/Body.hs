@@ -1757,7 +1757,6 @@ validateTxBodyContent
     , txInsCollateral
     , txOuts
     , txProtocolParams
-    , txMintValue
     , txMetadata
     } =
     let witnesses = collectTxBodyScriptWitnesses sbe txBodContent

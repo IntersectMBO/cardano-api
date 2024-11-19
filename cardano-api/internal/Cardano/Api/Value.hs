@@ -328,7 +328,6 @@ calcMinimumDeposit v =
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation
 --
--- TODO remove ? - it is now unused
 
 -- | An alternative nested representation for 'Value' that groups assets that
 -- share a 'PolicyId'.
