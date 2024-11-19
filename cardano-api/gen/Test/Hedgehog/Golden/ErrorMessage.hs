@@ -14,6 +14,8 @@ import           Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
 import           Data.Algorithm.DiffOutput (ppDiff)
 import           Data.Data
 import qualified Data.List as List
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import qualified GHC.Stack as GHC
 import qualified System.Directory as IO
@@ -181,7 +183,7 @@ checkAgainstGoldenFile
 checkAgainstGoldenFile goldenFile actualLines = GHC.withFrozenCallStack $ do
   referenceLines <- liftIO $ IO.withFile goldenFile IO.ReadMode $ \handle -> do
     IO.hSetEncoding handle IO.utf8
-    List.lines <$> IO.hGetContents' handle
+    List.lines . Text.unpack <$> Text.hGetContents handle
   let difference = getGroupedDiff actualLines referenceLines
   case difference of
     [] -> pure ()
