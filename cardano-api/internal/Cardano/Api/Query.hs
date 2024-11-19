@@ -125,6 +125,7 @@ import           Data.Either.Combinators (rightToMaybe)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
+import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.SOP.Constraint (SListI)
@@ -296,6 +297,9 @@ data QueryInShelleyBasedEra era result where
   QueryStakeVoteDelegatees
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
+  QueryProposals
+    :: Set (L.GovActionId StandardCrypto)
+    -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
@@ -328,6 +332,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QuerySPOStakeDistr{} = NodeToClientV_16
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
   nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
+  nodeToClientVersionOf QueryProposals{} = NodeToClientV_17
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -703,6 +708,16 @@ toConsensusQueryShelleyBased sbe = \case
    where
     creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
     creds' = Set.map toShelleyStakeCredential creds
+  QueryProposals govActs ->
+    caseShelleyToBabbageOrConwayEraOnwards
+      ( const $
+          error "toConsensusQueryShelleyBased: QueryProposals is only available in the Conway era"
+      )
+      ( const $
+          Some
+            (consensusQueryInEraInMode era (Consensus.GetProposals govActs))
+      )
+      sbe
  where
   era = toCardanoEra sbe
 
@@ -983,6 +998,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
       case q' of
         Consensus.GetFilteredVoteDelegatees{} ->
           Map.mapKeys fromShelleyStakeCredential r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryProposals{} ->
+      case q' of
+        Consensus.GetProposals{} ->
+          r'
         _ -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
