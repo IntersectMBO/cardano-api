@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Hedgehog.Golden.ErrorMessage where
@@ -5,13 +6,23 @@ module Test.Hedgehog.Golden.ErrorMessage where
 import           Cardano.Api (Error (..))
 import           Cardano.Api.Pretty
 
+import           Control.Monad
+import           Control.Monad.IO.Class
 import           Data.Data
+import qualified Data.List as List
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import           System.FilePath ((</>))
+import qualified GHC.Stack as GHC
+import qualified System.Directory as IO
+import qualified System.Environment as IO
+import           System.FilePath (takeDirectory, (</>))
+import qualified System.IO as IO
+import qualified System.IO.Unsafe as IO
 
 import           Hedgehog
+import qualified Hedgehog.Extras.Test as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Hedgehog.Internal.Property as H
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
 
@@ -100,3 +111,54 @@ testErrorMessage_ goldenFilesLocation moduleName typeName constructorName err = 
     H.diffVsGoldenFile
       (docToString (prettyError err))
       (goldenFilesLocation </> fqtn </> constructorName <> ".txt")
+
+-- Upstream to hedgehog-extras
+diffVsGoldenFile
+  :: HasCallStack
+  => (MonadIO m, MonadTest m)
+  => String
+  -- ^ Actual content
+  -> FilePath
+  -- ^ Reference file
+  -> m ()
+diffVsGoldenFile actualContent goldenFile = GHC.withFrozenCallStack $ do
+  forM_ mGoldenFileLogFile $ \logFile ->
+    liftIO $ semBracket $ IO.appendFile logFile $ goldenFile <> "\n"
+
+  fileExists <- liftIO $ IO.doesFileExist goldenFile
+
+  if
+    | recreateGoldenFiles -> writeGoldenFile goldenFile actualContent
+    | fileExists          -> checkAgainstGoldenFile goldenFile actualLines
+    | createGoldenFiles   -> writeGoldenFile goldenFile actualContent
+    | otherwise           -> reportGoldenFileMissing goldenFile
+ where
+  actualLines = List.lines actualContent
+
+writeGoldenFile
+  :: ()
+  => HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => FilePath
+  -> String
+  -> m ()
+writeGoldenFile goldenFile actualContent = GHC.withFrozenCallStack $ do
+  H.note_ $ "Creating golden file " <> goldenFile
+  H.createDirectoryIfMissing_ (takeDirectory goldenFile)
+  writeFile goldenFile actualContent
+
+recreateGoldenFiles :: Bool
+recreateGoldenFiles = IO.unsafePerformIO $ do
+  value <- IO.lookupEnv "RECREATE_GOLDEN_FILES"
+  return $ value == Just "1"
+
+createGoldenFiles :: Bool
+createGoldenFiles = IO.unsafePerformIO $ do
+  value <- IO.lookupEnv "CREATE_GOLDEN_FILES"
+  return $ value == Just "1"
+
+writeFile :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> String -> m ()
+writeFile filePath contents = GHC.withFrozenCallStack $ do
+  void . H.annotate $ "Writing file: " <> filePath
+  H.evalIO $ IO.writeFile filePath contents

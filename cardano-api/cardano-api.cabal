@@ -295,6 +295,7 @@ library gen
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
     cardano-ledger-shelley >=1.13,
     containers,
+    directory,
     filepath,
     hedgehog >=1.1,
     hedgehog-extras,
