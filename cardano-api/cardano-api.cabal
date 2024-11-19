@@ -280,6 +280,7 @@ library gen
     Test.Hedgehog.Roundtrip.CBOR
 
   build-depends:
+    Diff,
     QuickCheck,
     aeson >=1.5.6.0,
     base16-bytestring,
