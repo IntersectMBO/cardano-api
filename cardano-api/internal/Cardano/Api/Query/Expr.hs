@@ -518,7 +518,7 @@ queryProposals
       QueryInMode
       r
       IO
-      (Either UnsupportedNtcVersionError (Either EraMismatch (Seq (L.GovActionState L.StandardCrypto))))
+      (Either UnsupportedNtcVersionError (Either EraMismatch (Seq (L.GovActionState (ShelleyLedgerEra era)))))
 queryProposals cOnwards govActionIds = do
   let sbe :: ShelleyBasedEra era = inject cOnwards
   queryExpr $
