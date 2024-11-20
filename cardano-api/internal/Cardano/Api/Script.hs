@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -47,7 +48,6 @@ module Cardano.Api.Script
     -- * Reference scripts
   , ReferenceScript (..)
   , refScriptToShelleyScript
-  , getScriptWitnessReferenceInput
 
     -- * Use of a script in an era as a witness
   , WitCtxTxIn
@@ -55,17 +55,20 @@ module Cardano.Api.Script
   , WitCtxStake
   , WitCtx (..)
   , ScriptWitness (..)
+  , getScriptWitnessReferenceInput
+  , getScriptWitnessScript
+  , getScriptWitnessReferenceInputOrScript
   , Witness (..)
   , KeyWitnessInCtx (..)
   , ScriptWitnessInCtx (..)
   , IsScriptWitnessInCtx (..)
   , ScriptDatum (..)
   , ScriptRedeemer
-  , scriptWitnessScript
 
     -- ** Languages supported in each era
   , ScriptLanguageInEra (..)
   , scriptLanguageSupportedInEra
+  , sbeToSimpleScriptLanguageInEra
   , languageOfScriptLanguageInEra
   , eraOfScriptLanguageInEra
 
@@ -228,7 +231,8 @@ instance HasTypeProxy PlutusScriptV3 where
 --
 data ScriptLanguage lang where
   SimpleScriptLanguage :: ScriptLanguage SimpleScript'
-  PlutusScriptLanguage :: PlutusScriptVersion lang -> ScriptLanguage lang
+  PlutusScriptLanguage
+    :: IsPlutusScriptLanguage lang => PlutusScriptVersion lang -> ScriptLanguage lang
 
 deriving instance (Eq (ScriptLanguage lang))
 
@@ -285,7 +289,8 @@ instance Bounded AnyScriptLanguage where
 
 data AnyPlutusScriptVersion where
   AnyPlutusScriptVersion
-    :: PlutusScriptVersion lang
+    :: IsPlutusScriptLanguage lang
+    => PlutusScriptVersion lang
     -> AnyPlutusScriptVersion
 
 deriving instance (Show AnyPlutusScriptVersion)
@@ -407,7 +412,8 @@ data Script lang where
     :: !SimpleScript
     -> Script SimpleScript'
   PlutusScript
-    :: !(PlutusScriptVersion lang)
+    :: IsPlutusScriptLanguage lang
+    => !(PlutusScriptVersion lang)
     -> !(PlutusScript lang)
     -> Script lang
 
@@ -576,18 +582,8 @@ scriptLanguageSupportedInEra
   -> Maybe (ScriptLanguageInEra lang era)
 scriptLanguageSupportedInEra era lang =
   case (era, lang) of
-    (ShelleyBasedEraShelley, SimpleScriptLanguage) ->
-      Just SimpleScriptInShelley
-    (ShelleyBasedEraAllegra, SimpleScriptLanguage) ->
-      Just SimpleScriptInAllegra
-    (ShelleyBasedEraMary, SimpleScriptLanguage) ->
-      Just SimpleScriptInMary
-    (ShelleyBasedEraAlonzo, SimpleScriptLanguage) ->
-      Just SimpleScriptInAlonzo
-    (ShelleyBasedEraBabbage, SimpleScriptLanguage) ->
-      Just SimpleScriptInBabbage
-    (ShelleyBasedEraConway, SimpleScriptLanguage) ->
-      Just SimpleScriptInConway
+    (sbe, SimpleScriptLanguage) ->
+      Just $ sbeToSimpleScriptLanguageInEra sbe
     (ShelleyBasedEraAlonzo, PlutusScriptLanguage PlutusScriptV1) ->
       Just PlutusScriptV1InAlonzo
     (ShelleyBasedEraBabbage, PlutusScriptLanguage PlutusScriptV1) ->
@@ -620,23 +616,33 @@ languageOfScriptLanguageInEra langInEra =
     PlutusScriptV2InConway -> PlutusScriptLanguage PlutusScriptV2
     PlutusScriptV3InConway -> PlutusScriptLanguage PlutusScriptV3
 
+sbeToSimpleScriptLanguageInEra
+  :: ShelleyBasedEra era
+  -> ScriptLanguageInEra SimpleScript' era
+sbeToSimpleScriptLanguageInEra = \case
+  ShelleyBasedEraShelley -> SimpleScriptInShelley
+  ShelleyBasedEraAllegra -> SimpleScriptInAllegra
+  ShelleyBasedEraMary -> SimpleScriptInMary
+  ShelleyBasedEraAlonzo -> SimpleScriptInAlonzo
+  ShelleyBasedEraBabbage -> SimpleScriptInBabbage
+  ShelleyBasedEraConway -> SimpleScriptInConway
+
 eraOfScriptLanguageInEra
   :: ScriptLanguageInEra lang era
   -> ShelleyBasedEra era
-eraOfScriptLanguageInEra langInEra =
-  case langInEra of
-    SimpleScriptInShelley -> ShelleyBasedEraShelley
-    SimpleScriptInAllegra -> ShelleyBasedEraAllegra
-    SimpleScriptInMary -> ShelleyBasedEraMary
-    SimpleScriptInAlonzo -> ShelleyBasedEraAlonzo
-    SimpleScriptInBabbage -> ShelleyBasedEraBabbage
-    SimpleScriptInConway -> ShelleyBasedEraConway
-    PlutusScriptV1InAlonzo -> ShelleyBasedEraAlonzo
-    PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
-    PlutusScriptV1InConway -> ShelleyBasedEraConway
-    PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
-    PlutusScriptV2InConway -> ShelleyBasedEraConway
-    PlutusScriptV3InConway -> ShelleyBasedEraConway
+eraOfScriptLanguageInEra = \case
+  SimpleScriptInShelley -> ShelleyBasedEraShelley
+  SimpleScriptInAllegra -> ShelleyBasedEraAllegra
+  SimpleScriptInMary -> ShelleyBasedEraMary
+  SimpleScriptInAlonzo -> ShelleyBasedEraAlonzo
+  SimpleScriptInBabbage -> ShelleyBasedEraBabbage
+  SimpleScriptInConway -> ShelleyBasedEraConway
+  PlutusScriptV1InAlonzo -> ShelleyBasedEraAlonzo
+  PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
+  PlutusScriptV1InConway -> ShelleyBasedEraConway
+  PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
+  PlutusScriptV2InConway -> ShelleyBasedEraConway
+  PlutusScriptV3InConway -> ShelleyBasedEraConway
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
@@ -682,26 +688,13 @@ data WitCtx witctx where
 -- or to mint tokens. This datatype encapsulates this concept.
 data PlutusScriptOrReferenceInput lang
   = PScript (PlutusScript lang)
-  | -- | Needed to construct the redeemer pointer map
-    -- in the case of minting reference scripts where we don't
-    -- have direct access to the script
-    PReferenceScript
-      TxIn
-      (Maybe ScriptHash)
+  | PReferenceScript TxIn
   deriving (Eq, Show)
 
 data SimpleScriptOrReferenceInput lang
   = SScript SimpleScript
-  | SReferenceScript TxIn (Maybe ScriptHash)
+  | SReferenceScript TxIn
   deriving (Eq, Show)
-
-getScriptWitnessReferenceInput :: ScriptWitness witctx era -> Maybe TxIn
-getScriptWitnessReferenceInput (SimpleScriptWitness _ (SReferenceScript txIn _)) =
-  Just txIn
-getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PReferenceScript txIn _) _ _ _) =
-  Just txIn
-getScriptWitnessReferenceInput (SimpleScriptWitness _ (SScript _)) = Nothing
-getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PScript _) _ _ _) = Nothing
 
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
@@ -721,7 +714,8 @@ data ScriptWitness witctx era where
     -> SimpleScriptOrReferenceInput SimpleScript'
     -> ScriptWitness witctx era
   PlutusScriptWitness
-    :: ScriptLanguageInEra lang era
+    :: IsPlutusScriptLanguage lang
+    => ScriptLanguageInEra lang era
     -> PlutusScriptVersion lang
     -> PlutusScriptOrReferenceInput lang
     -> ScriptDatum witctx
@@ -782,28 +776,26 @@ deriving instance Eq (ScriptDatum witctx)
 
 deriving instance Show (ScriptDatum witctx)
 
--- We cannot always extract a script from a script witness due to reference scripts.
+getScriptWitnessReferenceInput :: ScriptWitness witctx era -> Maybe TxIn
+getScriptWitnessReferenceInput = either (const Nothing) Just . getScriptWitnessReferenceInputOrScript
+
+getScriptWitnessScript :: ScriptWitness witctx era -> Maybe (ScriptInEra era)
+getScriptWitnessScript = either Just (const Nothing) . getScriptWitnessReferenceInputOrScript
+
+-- | We cannot always extract a script from a script witness due to reference scripts.
 -- Reference scripts exist in the UTxO, so without access to the UTxO we cannot
 -- retrieve the script.
-scriptWitnessScript :: ScriptWitness witctx era -> Maybe (ScriptInEra era)
-scriptWitnessScript (SimpleScriptWitness SimpleScriptInShelley (SScript script)) =
-  Just $ ScriptInEra SimpleScriptInShelley (SimpleScript script)
-scriptWitnessScript (SimpleScriptWitness SimpleScriptInAllegra (SScript script)) =
-  Just $ ScriptInEra SimpleScriptInAllegra (SimpleScript script)
-scriptWitnessScript (SimpleScriptWitness SimpleScriptInMary (SScript script)) =
-  Just $ ScriptInEra SimpleScriptInMary (SimpleScript script)
-scriptWitnessScript (SimpleScriptWitness SimpleScriptInAlonzo (SScript script)) =
-  Just $ ScriptInEra SimpleScriptInAlonzo (SimpleScript script)
-scriptWitnessScript (SimpleScriptWitness SimpleScriptInBabbage (SScript script)) =
-  Just $ ScriptInEra SimpleScriptInBabbage (SimpleScript script)
-scriptWitnessScript (SimpleScriptWitness SimpleScriptInConway (SScript script)) =
-  Just $ ScriptInEra SimpleScriptInConway (SimpleScript script)
-scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
-  Just $ ScriptInEra langInEra (PlutusScript version script)
-scriptWitnessScript (SimpleScriptWitness _ (SReferenceScript _ _)) =
-  Nothing
-scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
-  Nothing
+-- So in the cases for script reference, the result contains @Right TxIn@.
+getScriptWitnessReferenceInputOrScript :: ScriptWitness witctx era -> Either (ScriptInEra era) TxIn
+getScriptWitnessReferenceInputOrScript = \case
+  SimpleScriptWitness (s :: (ScriptLanguageInEra SimpleScript' era)) (SScript script) ->
+    Left $ ScriptInEra s (SimpleScript script)
+  PlutusScriptWitness langInEra version (PScript script) _ _ _ ->
+    Left $ ScriptInEra langInEra (PlutusScript version script)
+  SimpleScriptWitness _ (SReferenceScript txIn) ->
+    Right txIn
+  PlutusScriptWitness _ _ (PReferenceScript txIn) _ _ _ ->
+    Right txIn
 
 -- ----------------------------------------------------------------------------
 -- The kind of witness to use, key (signature) or script

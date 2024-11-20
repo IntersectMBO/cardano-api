@@ -662,11 +662,18 @@ genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
 genTxMintValue =
   inEonForEra
     (pure TxMintNone)
-    $ \supported ->
+    $ \w -> do
+      policies <- Gen.list (Range.constant 1 3) genPolicyId
+      assets <- forM policies $ \policy ->
+        (,) policy <$>
+          Gen.list
+            (Range.constant 1 3)
+            ((,,) <$> genAssetName
+                  <*> genPositiveQuantity
+                  <*> fmap (fmap pure) genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w))
       Gen.choice
         [ pure TxMintNone
-        -- TODO write a generator for the last parameter of 'TxMintValue' constructor
-        , TxMintValue supported <$> genValueForMinting <*> return (pure mempty)
+        , pure $ TxMintValue w (fromList assets)
         ]
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
@@ -1196,13 +1203,13 @@ genScriptWitnessForStake sbe = do
     SimpleScript simpleScript -> do
       simpleScriptOrReferenceInput <- Gen.choice
         [ pure $ SScript simpleScript
-        , SReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        , SReferenceScript <$> genTxIn
         ]
       pure $ Api.SimpleScriptWitness scriptLangInEra simpleScriptOrReferenceInput
     PlutusScript plutusScriptVersion' plutusScript -> do
       plutusScriptOrReferenceInput <- Gen.choice
         [ pure $ PScript plutusScript
-        , PReferenceScript <$> genTxIn <*> Gen.maybe genScriptHash
+        , PReferenceScript <$> genTxIn
         ]
       scriptRedeemer <- genHashableScriptData
       PlutusScriptWitness
@@ -1213,6 +1220,27 @@ genScriptWitnessForStake sbe = do
         scriptRedeemer
         <$> genExecutionUnits
 
-
-
+genScriptWitnessForMint :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxMint era)
+genScriptWitnessForMint sbe = do
+  ScriptInEra scriptLangInEra script' <- genScriptInEra sbe
+  case script' of
+    SimpleScript simpleScript -> do
+      simpleScriptOrReferenceInput <- Gen.choice
+        [ pure $ SScript simpleScript
+        , SReferenceScript <$> genTxIn
+        ]
+      pure $ Api.SimpleScriptWitness scriptLangInEra simpleScriptOrReferenceInput
+    PlutusScript plutusScriptVersion' plutusScript -> do
+      plutusScriptOrReferenceInput <- Gen.choice
+        [ pure $ PScript plutusScript
+        , PReferenceScript <$> genTxIn
+        ]
+      scriptRedeemer <- genHashableScriptData
+      PlutusScriptWitness
+        scriptLangInEra
+        plutusScriptVersion'
+        plutusScriptOrReferenceInput
+        NoScriptDatumForMint
+        scriptRedeemer
+        <$> genExecutionUnits
 

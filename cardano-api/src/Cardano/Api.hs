@@ -368,6 +368,8 @@ module Cardano.Api
   , TxCertificates (..)
   , TxUpdateProposal (..)
   , TxMintValue (..)
+  , txMintValueToValue
+  , txMintValueToIndexed
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
   , TxProposalProcedures (..)
@@ -536,13 +538,15 @@ module Cardano.Api
   , WitCtxStake
   , WitCtx (..)
   , ScriptWitness (..)
+  , getScriptWitnessScript
+  , getScriptWitnessReferenceInput
+  , getScriptWitnessReferenceInputOrScript
   , Witness (..)
   , KeyWitnessInCtx (..)
   , ScriptWitnessInCtx (..)
   , IsScriptWitnessInCtx (..)
   , ScriptDatum (..)
   , ScriptRedeemer
-  , scriptWitnessScript
 
     -- ** Inspecting 'ScriptWitness'es
   , AnyScriptWitness (..)
@@ -553,6 +557,7 @@ module Cardano.Api
     -- ** Languages supported in each era
   , ScriptLanguageInEra (..)
   , scriptLanguageSupportedInEra
+  , sbeToSimpleScriptLanguageInEra
   , languageOfScriptLanguageInEra
   , eraOfScriptLanguageInEra
 

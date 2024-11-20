@@ -83,8 +83,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   let txMint =
         TxMintValue
           meo
-          [(AssetId policyId' "eeee", 1)]
-          (BuildTxWith [(policyId', plutusWitness)])
+          [(policyId', [("eeee", 1, BuildTxWith plutusWitness)])]
 
   -- tx body content without an asset in TxOut
   let content =
@@ -167,8 +166,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   let txMint =
         TxMintValue
           meo
-          [(AssetId policyId' "eeee", 1)]
-          (BuildTxWith [(policyId', plutusWitness)])
+          [(policyId', [("eeee", 1, BuildTxWith plutusWitness)])]
 
   let content =
         defaultTxBodyContent sbe

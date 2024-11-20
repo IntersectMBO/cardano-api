@@ -358,7 +358,7 @@ valueToNestedRep v =
 
 valueFromNestedRep :: ValueNestedRep -> Value
 valueFromNestedRep (ValueNestedRep bundles) =
-  valueFromList
+  fromList
     [ (aId, q)
     | bundle <- bundles
     , (aId, q) <- case bundle of

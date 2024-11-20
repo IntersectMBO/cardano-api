@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 
 -- | Fee calculation
 module Cardano.Api.Fees
@@ -1320,10 +1321,8 @@ calculateChangeValue
   :: ShelleyBasedEra era -> Value -> TxBodyContent build era -> Value
 calculateChangeValue sbe incoming txbodycontent =
   let outgoing = calculateCreatedUTOValue sbe txbodycontent
-      minted = case txMintValue txbodycontent of
-        TxMintNone -> mempty
-        TxMintValue _ v _ -> v
-   in mconcat [incoming, minted, negateValue outgoing]
+      mintedValue = txMintValueToValue $ txMintValue txbodycontent
+   in mconcat [incoming, mintedValue, negateValue outgoing]
 
 -- | This is used in the balance calculation in the event where
 -- the user does not supply the UTxO(s) they intend to spend
@@ -1593,33 +1592,20 @@ substituteExecutionUnits
       :: TxMintValue BuildTx era
       -> Either (TxBodyErrorAutoBalance era) (TxMintValue BuildTx era)
     mapScriptWitnessesMinting TxMintNone = Right TxMintNone
-    mapScriptWitnessesMinting
-      ( TxMintValue
-          supported
-          value
-          (BuildTxWith witnesses)
-        ) =
-        -- TxMintValue supported value $ BuildTxWith $ fromList
-        let mappedScriptWitnesses
-              :: [(PolicyId, Either (TxBodyErrorAutoBalance era) (ScriptWitness WitCtxMint era))]
-            mappedScriptWitnesses =
-              [ (policyid, witness')
-              | -- The minting policies are indexed in policy id order in the value
-              let ValueNestedRep bundle = valueToNestedRep value
-              , (ix, ValueNestedBundle policyid _) <- zip [0 ..] bundle
-              , witness <- maybeToList (Map.lookup policyid witnesses)
-              , let witness' = substituteExecUnits (ScriptWitnessIndexMint ix) witness
-              ]
-         in do
-              final <- traverseScriptWitnesses mappedScriptWitnesses
-              Right . TxMintValue supported value . BuildTxWith $
-                fromList final
+    mapScriptWitnessesMinting txMintValue'@(TxMintValue w _) = do
+      let mappedScriptWitnesses =
+            [ (policyId, pure . (assetName',quantity,) <$> substitutedWitness)
+            | (ix, policyId, assetName', quantity, BuildTxWith witness) <- txMintValueToIndexed txMintValue'
+            , let substitutedWitness = BuildTxWith <$> substituteExecUnits ix witness
+            ]
+      final <- Map.fromListWith (<>) <$> traverseScriptWitnesses mappedScriptWitnesses
+      pure $ TxMintValue w final
 
 traverseScriptWitnesses
-  :: [(a, Either (TxBodyErrorAutoBalance era) (ScriptWitness ctx era))]
-  -> Either (TxBodyErrorAutoBalance era) [(a, ScriptWitness ctx era)]
+  :: [(a, Either (TxBodyErrorAutoBalance era) b)]
+  -> Either (TxBodyErrorAutoBalance era) [(a, b)]
 traverseScriptWitnesses =
-  traverse (\(item, eScriptWitness) -> eScriptWitness >>= (\sWit -> Right (item, sWit)))
+  traverse (\(item, eRes) -> eRes >>= (\res -> Right (item, res)))
 
 calculateMinimumUTxO
   :: ShelleyBasedEra era

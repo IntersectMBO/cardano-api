@@ -111,6 +111,8 @@ module Cardano.Api.Tx.Body
   , TxCertificates (..)
   , TxUpdateProposal (..)
   , TxMintValue (..)
+  , txMintValueToValue
+  , txMintValueToIndexed
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
   , TxProposalProcedures (..)
@@ -181,7 +183,6 @@ module Cardano.Api.Tx.Body
   , guardShelleyTxInsOverflow
   , validateTxOuts
   , validateMetadata
-  , validateMintValue
   , validateTxInsCollateral
   , validateProtocolParameters
   )
@@ -1248,15 +1249,46 @@ data TxMintValue build era where
   TxMintNone :: TxMintValue build era
   TxMintValue
     :: MaryEraOnwards era
-    -> Value
-    -> BuildTxWith
-        build
-        (Map PolicyId (ScriptWitness WitCtxMint era))
+    -> Map
+        PolicyId
+        [ ( AssetName
+          , Quantity
+          , BuildTxWith build (ScriptWitness WitCtxMint era)
+          )
+        ]
     -> TxMintValue build era
 
 deriving instance Eq (TxMintValue build era)
 
 deriving instance Show (TxMintValue build era)
+
+-- | Convert 'TxMintValue' to a more handy 'Value'.
+txMintValueToValue :: TxMintValue build era -> Value
+txMintValueToValue TxMintNone = mempty
+txMintValueToValue (TxMintValue _ policiesWithAssets) =
+  fromList
+    [ (AssetId policyId' assetName', quantity)
+    | (policyId', assets) <- toList policiesWithAssets
+    , (assetName', quantity, _) <- assets
+    ]
+
+-- | Index the assets with witnesses in the order of policy ids.
+-- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
+txMintValueToIndexed
+  :: TxMintValue build era
+  -> [ ( ScriptWitnessIndex
+       , PolicyId
+       , AssetName
+       , Quantity
+       , BuildTxWith build (ScriptWitness WitCtxMint era)
+       )
+     ]
+txMintValueToIndexed TxMintNone = []
+txMintValueToIndexed (TxMintValue _ policiesWithAssets) =
+  [ (ScriptWitnessIndexMint ix, policyId', assetName', quantity, witness)
+  | (ix, (policyId', assets)) <- zip [0 ..] $ toList policiesWithAssets
+  , (assetName', quantity, witness) <- assets
+  ]
 
 -- ----------------------------------------------------------------------------
 -- Votes within transactions (era-dependent)
@@ -1555,7 +1587,6 @@ data TxBodyError
   | TxBodyOutputNegative !Quantity !TxOutInAnyEra
   | TxBodyOutputOverflow !Quantity !TxOutInAnyEra
   | TxBodyMetadataError ![(Word64, TxMetadataRangeError)]
-  | TxBodyMintAdaError
   | TxBodyInIxOverflow !TxIn
   | TxBodyMissingProtocolParams
   | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
@@ -1591,8 +1622,6 @@ instance Error TxBodyError where
               | (k, err) <- errs
               ]
         ]
-    TxBodyMintAdaError ->
-      "Transaction cannot mint ada, only non-ada assets"
     TxBodyMissingProtocolParams ->
       "Transaction uses Plutus scripts but does not provide the protocol "
         <> "parameters to hash"
@@ -1728,7 +1757,6 @@ validateTxBodyContent
     , txInsCollateral
     , txOuts
     , txProtocolParams
-    , txMintValue
     , txMetadata
     } =
     let witnesses = collectTxBodyScriptWitnesses sbe txBodContent
@@ -1754,13 +1782,11 @@ validateTxBodyContent
             guardShelleyTxInsOverflow (map fst txIns)
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
           ShelleyBasedEraAlonzo -> do
             validateTxIns txIns
             guardShelleyTxInsOverflow (map fst txIns)
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
             validateTxInsCollateral txInsCollateral languages
             validateProtocolParameters txProtocolParams languages
           ShelleyBasedEraBabbage -> do
@@ -1768,14 +1794,12 @@ validateTxBodyContent
             guardShelleyTxInsOverflow (map fst txIns)
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
             validateTxInsCollateral txInsCollateral languages
             validateProtocolParameters txProtocolParams languages
           ShelleyBasedEraConway -> do
             validateTxIns txIns
             validateTxOuts sbe txOuts
             validateMetadata txMetadata
-            validateMintValue txMintValue
             validateTxInsCollateral txInsCollateral languages
             validateProtocolParameters txProtocolParams languages
 
@@ -1823,12 +1847,6 @@ validateTxOuts sbe txOuts = do
           outputDoesNotExceedMax era (txOutValueToValue v) txout
       | txout@(TxOut _ v _ _) <- txOuts
       ]
-
-validateMintValue :: TxMintValue build era -> Either TxBodyError ()
-validateMintValue txMintValue =
-  case txMintValue of
-    TxMintNone -> return ()
-    TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
 
 inputIndexDoesNotExceedMax :: [(TxIn, a)] -> Either TxBodyError ()
 inputIndexDoesNotExceedMax txIns =
@@ -2285,20 +2303,20 @@ fromLedgerTxMintValue
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxMintValue ViewTx era
-fromLedgerTxMintValue sbe body =
-  case sbe of
-    ShelleyBasedEraShelley -> TxMintNone
-    ShelleyBasedEraAllegra -> TxMintNone
-    ShelleyBasedEraMary -> toMintValue body MaryEraOnwardsMary
-    ShelleyBasedEraAlonzo -> toMintValue body MaryEraOnwardsAlonzo
-    ShelleyBasedEraBabbage -> toMintValue body MaryEraOnwardsBabbage
-    ShelleyBasedEraConway -> toMintValue body MaryEraOnwardsConway
- where
-  toMintValue txBody maInEra
-    | L.isZero mint = TxMintNone
-    | otherwise = TxMintValue maInEra (fromMaryValue mint) ViewTx
-   where
-    mint = MaryValue (Ledger.Coin 0) (txBody ^. L.mintTxBodyL)
+fromLedgerTxMintValue sbe body = forEraInEon (toCardanoEra sbe) TxMintNone $ \w ->
+  maryEraOnwardsConstraints w $ do
+    let mint = MaryValue (Ledger.Coin 0) (body ^. L.mintTxBodyL)
+    if L.isZero mint
+      then TxMintNone
+      else do
+        let assetMap = toList $ fromMaryValue mint
+        TxMintValue w $
+          Map.fromListWith
+            (<>)
+            [ (policyId', [(assetName', quantity, ViewTx)])
+            | -- only non-ada can be here
+            (AssetId policyId' assetName', quantity) <- toList assetMap
+            ]
 
 makeByronTransactionBody
   :: ()
@@ -2412,12 +2430,9 @@ convTxUpdateProposal sbe = \case
   TxUpdateProposal _ p -> bimap TxBodyProtocolParamsConversionError pure $ toLedgerUpdate sbe p
 
 convMintValue :: TxMintValue build era -> MultiAsset StandardCrypto
-convMintValue txMintValue =
-  case txMintValue of
-    TxMintNone -> mempty
-    TxMintValue _ v _ ->
-      case toMaryValue v of
-        MaryValue _ ma -> ma
+convMintValue txMintValue = do
+  let L.MaryValue _coin multiAsset = toMaryValue $ txMintValueToValue txMintValue
+  multiAsset
 
 convExtraKeyWitnesses
   :: TxExtraKeyWitnesses era -> Set (Shelley.KeyHash Shelley.Witness StandardCrypto)
@@ -2436,7 +2451,7 @@ convScripts
   -> [Ledger.Script ledgerera]
 convScripts scriptWitnesses =
   catMaybes
-    [ toShelleyScript <$> scriptWitnessScript scriptwitness
+    [ toShelleyScript <$> getScriptWitnessScript scriptwitness
     | (_, AnyScriptWitness scriptwitness) <- scriptWitnesses
     ]
 
@@ -2603,7 +2618,7 @@ makeShelleyTransactionBody
     scripts_ :: [Ledger.Script StandardShelley]
     scripts_ =
       catMaybes
-        [ toShelleyScript <$> scriptWitnessScript scriptwitness
+        [ toShelleyScript <$> getScriptWitnessScript scriptwitness
         | (_, AnyScriptWitness scriptwitness) <-
             collectTxBodyScriptWitnesses sbe txbodycontent
         ]
@@ -2648,7 +2663,7 @@ makeShelleyTransactionBody
     scripts_ :: [Ledger.Script StandardAllegra]
     scripts_ =
       catMaybes
-        [ toShelleyScript <$> scriptWitnessScript scriptwitness
+        [ toShelleyScript <$> getScriptWitnessScript scriptwitness
         | (_, AnyScriptWitness scriptwitness) <-
             collectTxBodyScriptWitnesses sbe txbodycontent
         ]
@@ -2697,7 +2712,7 @@ makeShelleyTransactionBody
     scripts =
       List.nub $
         catMaybes
-          [ toShelleyScript <$> scriptWitnessScript scriptwitness
+          [ toShelleyScript <$> getScriptWitnessScript scriptwitness
           | (_, AnyScriptWitness scriptwitness) <-
               collectTxBodyScriptWitnesses sbe txbodycontent
           ]
@@ -2762,7 +2777,7 @@ makeShelleyTransactionBody
     scripts =
       List.nub $
         catMaybes
-          [ toShelleyScript <$> scriptWitnessScript scriptwitness
+          [ toShelleyScript <$> getScriptWitnessScript scriptwitness
           | (_, AnyScriptWitness scriptwitness) <- witnesses
           ]
 
@@ -2883,7 +2898,7 @@ makeShelleyTransactionBody
     scripts =
       List.nub $
         catMaybes
-          [ toShelleyScript <$> scriptWitnessScript scriptwitness
+          [ toShelleyScript <$> getScriptWitnessScript scriptwitness
           | (_, AnyScriptWitness scriptwitness) <- witnesses
           ]
 
@@ -3022,7 +3037,7 @@ makeShelleyTransactionBody
     scripts :: [Ledger.Script StandardConway]
     scripts =
       catMaybes
-        [ toShelleyScript <$> scriptWitnessScript scriptwitness
+        [ toShelleyScript <$> getScriptWitnessScript scriptwitness
         | (_, AnyScriptWitness scriptwitness) <- witnesses
         ]
 
@@ -3328,12 +3343,9 @@ collectTxBodyScriptWitnesses
       :: TxMintValue BuildTx era
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesMinting TxMintNone = []
-    scriptWitnessesMinting (TxMintValue _ value (BuildTxWith witnesses)) =
-      [ (ScriptWitnessIndexMint ix, AnyScriptWitness witness)
-      | -- The minting policies are indexed in policy id order in the value
-      let ValueNestedRep bundle = valueToNestedRep value
-      , (ix, ValueNestedBundle policyid _) <- zip [0 ..] bundle
-      , witness <- maybeToList (Map.lookup policyid witnesses)
+    scriptWitnessesMinting txMintValue' =
+      [ (ix, AnyScriptWitness witness)
+      | (ix, _, _, _, BuildTxWith witness) <- txMintValueToIndexed txMintValue'
       ]
 
     scriptWitnessesVoting
