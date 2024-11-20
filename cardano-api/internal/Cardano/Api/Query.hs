@@ -125,6 +125,7 @@ import           Data.Either.Combinators (rightToMaybe)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
+import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.SOP.Constraint (SListI)
@@ -133,7 +134,6 @@ import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
-import           Data.Sequence (Seq)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -299,7 +299,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
   QueryProposals
     :: Set (L.GovActionId StandardCrypto)
-    -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)){-StandardCrypto-})
+    -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era {-StandardCrypto-})))
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
@@ -1004,11 +1004,6 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetProposals{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
-
--- QueryProposals :: forall era.
--- Set (GovActionId StandardCrypto)
--- -> QueryInShelleyBasedEra era (Seq (GovActionState era))
-
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.
