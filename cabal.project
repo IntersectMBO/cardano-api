@@ -51,4 +51,3 @@ write-ghc-environment-files: always
 
 constraints:
     Cabal < 3.14,
-    cardano-ledger-shelley ^>= 1.14.1
