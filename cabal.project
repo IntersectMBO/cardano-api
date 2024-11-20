@@ -55,9 +55,28 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e47f737f1447a33f6c2bbbd35cc47272cdf03526
-  --sha256: sha256-8FHWs//Thm14o+COMoyY7eq4fe53JNywDdE+N3UKQmA=
+  tag: 038f9d6c5e4d6de7d2cfb2ac9e23d3b66c495418
+  --sha256: sha256-jzfJNLl8GfCTEP5ABpHZl6qps7U6NZi36UxYxooKH+A=
   subdir: ouroboros-consensus
           ouroboros-consensus-cardano
           ouroboros-consensus-diffusion
           ouroboros-consensus-protocol
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network.git
+  tag: 4920b7a8e1a639e6b6a85611bef6d541e21d012a
+  --sha256: sha256-mrGXtC/mStln5KqoXlruKYl2vHYZhgw3biRlZm82h7A=
+  subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    quickcheck-monoids
