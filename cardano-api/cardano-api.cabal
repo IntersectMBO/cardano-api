@@ -227,7 +227,7 @@ library internal
     time,
     transformers,
     transformers-except ^>=0.1.3,
-    typed-protocols ^>=0.1.1,
+    typed-protocols ^>=0.3,
     vector,
     yaml,
 
@@ -264,7 +264,7 @@ library
     nothunks,
     ouroboros-network,
     ouroboros-network-protocols,
-    typed-protocols ^>=0.1.1,
+    typed-protocols,
 
 library gen
   import: project-config
