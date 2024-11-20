@@ -67,9 +67,9 @@ import           Cardano.Slotting.Slot
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 
 import           Data.Map (Map)
+import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as S
-import           Data.Sequence (Seq)
 
 queryChainBlockNo
   :: ()
@@ -492,22 +492,6 @@ queryAccountState cOnwards =
     QueryInEra . QueryInShelleyBasedEra (conwayEraOnwardsToShelleyBasedEra cOnwards) $
       QueryAccountState
 
--- queryDRepState
---   :: forall era block point r
---    . ConwayEraOnwards era
---   -> Set (L.Credential L.DRepRole L.StandardCrypto)
---   -- ^ An empty credentials set means that states for all DReps will be returned
---   -> LocalStateQueryExpr
---       block
---       point
---       QueryInMode
---       r
---       IO
---       ( Either
---           UnsupportedNtcVersionError
---           (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto)))
---       )
-
 queryProposals
   :: forall era block point r
    . ConwayEraOnwards era
@@ -518,11 +502,12 @@ queryProposals
       QueryInMode
       r
       IO
-      (Either UnsupportedNtcVersionError (Either EraMismatch (Seq (L.GovActionState (ShelleyLedgerEra era)))))
+      ( Either
+          UnsupportedNtcVersionError
+          (Either EraMismatch (Seq (L.GovActionState (ShelleyLedgerEra era))))
+      )
 queryProposals cOnwards govActionIds = do
   let sbe :: ShelleyBasedEra era = inject cOnwards
   queryExpr $
     QueryInEra . QueryInShelleyBasedEra sbe $
       QueryProposals govActionIds
-
-  
