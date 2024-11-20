@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Hedgehog.Golden.ErrorMessage where
@@ -5,13 +6,27 @@ module Test.Hedgehog.Golden.ErrorMessage where
 import           Cardano.Api (Error (..))
 import           Cardano.Api.Pretty
 
+import qualified Control.Concurrent.QSem as IO
+import           Control.Exception (bracket_)
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
+import           Data.Algorithm.DiffOutput (ppDiff)
 import           Data.Data
+import qualified Data.List as List
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import           System.FilePath ((</>))
+import qualified GHC.Stack as GHC
+import qualified System.Directory as IO
+import qualified System.Environment as IO
+import           System.FilePath (takeDirectory, (</>))
+import qualified System.IO as IO
+import qualified System.IO.Unsafe as IO
 
 import           Hedgehog
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Hedgehog.Extras.Test as H
+import qualified Hedgehog.Internal.Property as H
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
 
@@ -97,6 +112,114 @@ testErrorMessage_ goldenFilesLocation moduleName typeName constructorName err = 
   let fqtn = moduleName <> "." <> typeName
   testProperty constructorName . withTests 1 . property $ do
     H.note_ "Incorrect error message in golden file"
-    H.diffVsGoldenFile
-      (docToString (prettyError err))
+    H.note_ "What the value looks like in memory"
+    let pErr = docToString (prettyError err)
+    H.note_ $ show pErr
+    diffVsGoldenFile
+      pErr
       (goldenFilesLocation </> fqtn </> constructorName <> ".txt")
+
+-- TODO: Upstream all to hedgehog-extras
+diffVsGoldenFile
+  :: HasCallStack
+  => (MonadIO m, MonadTest m)
+  => String
+  -- ^ Actual content
+  -> FilePath
+  -- ^ Reference file
+  -> m ()
+diffVsGoldenFile actualContent goldenFile = GHC.withFrozenCallStack $ do
+  forM_ mGoldenFileLogFile $ \logFile ->
+    liftIO $ semBracket $ IO.appendFile logFile $ goldenFile <> "\n"
+
+  fileExists <- liftIO $ IO.doesFileExist goldenFile
+
+  if
+    | recreateGoldenFiles -> writeGoldenFile goldenFile actualContent
+    | fileExists          -> checkAgainstGoldenFile goldenFile actualLines
+    | createGoldenFiles   -> writeGoldenFile goldenFile actualContent
+    | otherwise           -> reportGoldenFileMissing goldenFile
+ where
+  actualLines = List.lines actualContent
+
+writeGoldenFile
+  :: ()
+  => HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => FilePath
+  -> String
+  -> m ()
+writeGoldenFile goldenFile actualContent = GHC.withFrozenCallStack $ do
+  H.note_ $ "Creating golden file " <> goldenFile
+  H.createDirectoryIfMissing_ (takeDirectory goldenFile)
+  writeFile' goldenFile actualContent
+
+recreateGoldenFiles :: Bool
+recreateGoldenFiles = IO.unsafePerformIO $ do
+  value <- IO.lookupEnv "RECREATE_GOLDEN_FILES"
+  return $ value == Just "1"
+
+createGoldenFiles :: Bool
+createGoldenFiles = IO.unsafePerformIO $ do
+  value <- IO.lookupEnv "CREATE_GOLDEN_FILES"
+  return $ value == Just "1"
+
+writeFile' :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> String -> m ()
+writeFile' filePath contents = GHC.withFrozenCallStack $ do
+  void . H.annotate $ "Writing file: " <> filePath
+  H.evalIO $ IO.withFile filePath IO.WriteMode $ \handle -> do
+    IO.hSetEncoding handle IO.utf8
+    IO.hPutStr handle contents
+
+checkAgainstGoldenFile
+  :: ()
+  => HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => FilePath
+  -> [String]
+  -> m ()
+checkAgainstGoldenFile goldenFile actualLines = GHC.withFrozenCallStack $ do
+  referenceLines <- liftIO $ IO.withFile goldenFile IO.ReadMode $ \handle -> do
+    IO.hSetEncoding handle IO.utf8
+    List.lines . Text.unpack <$> Text.hGetContents handle
+  let difference = getGroupedDiff actualLines referenceLines
+  case difference of
+    [] -> pure ()
+    [Both{}] -> pure ()
+    _ -> do
+      H.note_ $
+        unlines
+          [ "Golden test failed against the golden file."
+          , "To recreate golden file, run with RECREATE_GOLDEN_FILES=1."
+          ]
+      H.failMessage GHC.callStack $ ppDiff difference
+
+sem :: IO.QSem
+sem = IO.unsafePerformIO $ IO.newQSem 1
+{-# NOINLINE sem #-}
+
+semBracket :: IO a -> IO a
+semBracket = bracket_ (IO.waitQSem sem) (IO.signalQSem sem)
+
+mGoldenFileLogFile :: Maybe FilePath
+mGoldenFileLogFile =
+  IO.unsafePerformIO $
+    IO.lookupEnv "GOLDEN_FILE_LOG_FILE"
+
+reportGoldenFileMissing
+  :: ()
+  => HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => FilePath
+  -> m ()
+reportGoldenFileMissing goldenFile = GHC.withFrozenCallStack $ do
+  H.note_ $
+    unlines
+      [ "Golden file " <> goldenFile <> " does not exist."
+      , "To create it, run with CREATE_GOLDEN_FILES=1."
+      , "To recreate it, run with RECREATE_GOLDEN_FILES=1."
+      ]
+  H.failure
