@@ -55,8 +55,8 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 592e11c8ce941d10aaf185ca58796f25e6f403f0
-  --sha256: sha256-0NU/Z9Xmewk0kbVSZdTBoieFwYdaO5qgxJmlOZ7dVmM=
+  tag: e47f737f1447a33f6c2bbbd35cc47272cdf03526
+  --sha256: sha256-8FHWs//Thm14o+COMoyY7eq4fe53JNywDdE+N3UKQmA=
   subdir: ouroboros-consensus
           ouroboros-consensus-cardano
           ouroboros-consensus-diffusion
