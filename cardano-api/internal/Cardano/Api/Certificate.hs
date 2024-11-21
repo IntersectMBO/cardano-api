@@ -381,7 +381,7 @@ makeGenesisKeyDelegationCertificate
     ShelleyRelatedCertificate atMostEra $
       shelleyToBabbageEraConstraints atMostEra $
         Ledger.ShelleyTxCertGenesisDeleg $
-          Ledger.GenesisDelegCert hGenKey hGenDelegKey hVrfKey
+          Ledger.GenesisDelegCert hGenKey hGenDelegKey (Ledger.toVRFVerKeyHash hVrfKey)
 
 data MirCertificateRequirements era where
   MirCertificateRequirements
@@ -613,7 +613,7 @@ toShelleyPoolParams
     -- do simple client-side sanity checks, e.g. on the pool metadata url
     Ledger.PoolParams
       { Ledger.ppId = poolkh
-      , Ledger.ppVrf = vrfkh
+      , Ledger.ppVrf = Ledger.toVRFVerKeyHash vrfkh
       , Ledger.ppPledge = stakePoolPledge
       , Ledger.ppCost = stakePoolCost
       , Ledger.ppMargin =
@@ -685,7 +685,7 @@ fromShelleyPoolParams
     } =
     StakePoolParameters
       { stakePoolId = StakePoolKeyHash ppId
-      , stakePoolVRF = VrfKeyHash ppVrf
+      , stakePoolVRF = VrfKeyHash (Ledger.fromVRFVerKeyHash ppVrf)
       , stakePoolCost = ppCost
       , stakePoolMargin = Ledger.unboundRational ppMargin
       , stakePoolRewardAccount = fromShelleyStakeAddr ppRewardAccount

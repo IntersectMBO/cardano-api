@@ -2291,6 +2291,6 @@ toLedgerIndividualPoolStake :: Consensus.IndividualPoolStake c -> SL.IndividualP
 toLedgerIndividualPoolStake ips =
   SL.IndividualPoolStake
     { SL.individualPoolStake = Consensus.individualPoolStake ips
-    , SL.individualPoolStakeVrf = Consensus.individualPoolStakeVrf ips
+    , SL.individualPoolStakeVrf = SL.toVRFVerKeyHash $ Consensus.individualPoolStakeVrf ips
     , SL.individualTotalPoolStake = SL.CompactCoin 0
     }
