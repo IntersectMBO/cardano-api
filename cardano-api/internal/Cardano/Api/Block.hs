@@ -62,7 +62,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Block as Ledger
-import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
 import qualified Ouroboros.Consensus.Block as Consensus
