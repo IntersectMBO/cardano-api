@@ -362,7 +362,7 @@ makeStakePoolRetirementCertificate req =
         ConwayCertificate atMostBab $
           Ledger.mkRetirePoolTxCert (unStakePoolKeyHash poolId) retirementEpoch
 
-data GenesisKeyDelegationRequirements ere where
+data GenesisKeyDelegationRequirements era where
   GenesisKeyDelegationRequirements
     :: ShelleyToBabbageEra era
     -> Hash GenesisKey
