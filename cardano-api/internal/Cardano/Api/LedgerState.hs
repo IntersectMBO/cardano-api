@@ -176,7 +176,6 @@ import           Ouroboros.Consensus.Storage.Serialisation
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import           Ouroboros.Network.Block (blockNo)
 import qualified Ouroboros.Network.Block
-import           Ouroboros.Network.Mux (MuxError)
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
@@ -221,6 +220,7 @@ import           Formatting.Buildable (build)
 import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           Network.TypedProtocol.Pipelined (Nat (..))
+import qualified Network.Mux as Mux
 import           System.FilePath
 
 data InitialLedgerStateError
@@ -374,7 +374,7 @@ data FoldBlocksError
   = FoldBlocksInitialLedgerStateError !InitialLedgerStateError
   | FoldBlocksApplyBlockError !LedgerStateError
   | FoldBlocksIOException !IOException
-  | FoldBlocksMuxError !MuxError
+  | FoldBlocksMuxError !Mux.Error
   deriving Show
 
 instance Error FoldBlocksError where
