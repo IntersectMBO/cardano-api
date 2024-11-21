@@ -67,6 +67,13 @@ data LedgerEvent
 
     -- | Newly submittted governance proposals in a single transaction.
     NewGovernanceProposals (Ledger.TxId StandardCrypto) AnyProposals
+  | -- | Governance votes that were invalidated.
+    RemovedGovernanceVotes
+      (Ledger.TxId StandardCrypto)
+      (Set (Ledger.Voter StandardCrypto, Ledger.GovActionId StandardCrypto))
+      -- ^ Votes that were replaced in this tx.
+      (Set (Ledger.Credential 'Ledger.DRepRole StandardCrypto))
+      -- ^ Any votes from these DReps in this or in previous txs are removed
   | -- | The current state of governance matters at the epoch boundary.
     -- I.E the current constitution, committee, protocol parameters, etc.
     EpochBoundaryRatificationState AnyRatificationState
