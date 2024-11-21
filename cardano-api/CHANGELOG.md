@@ -1,5 +1,26 @@
 # Changelog for cardano-api
 
+## 10.3.0.0
+
+- Add `sbeToSimpleScriptLanguageInEra`, `getScriptWitnessScript`, `getScriptWitnessReferenceInput`, `getScriptWitnessReferenceInputOrScript` function
+  Refactor `TxMintValue` to better represent minting state
+  Propagate `IsPlutusLanguage` constraint to `ScriptLanguage lang`, `AnyPlutusScriptVersion`, `Script lang` and `ScriptWitness witctx era` types.
+  Remove `Maybe ScriptHash` from `PReferenceScript` and `SReferenceScript`.
+  (breaking, refactoring)
+  [PR 663](https://github.com/IntersectMBO/cardano-api/pull/663)
+
+- Improve plutus script failure error
+  (feature)
+  [PR 683](https://github.com/IntersectMBO/cardano-api/pull/683)
+
+- Remove experimental code exposure in `Cardano.Api` non-experimental modules
+  (breaking)
+  [PR 681](https://github.com/IntersectMBO/cardano-api/pull/681)
+
+- Deprecate eons conversion functions like `conwayEraOnwardsToBabbageEraOnwards`. Add [`Inject`](https://cardano-ledger.cardano.intersectmbo.org/cardano-ledger-core/Cardano-Ledger-BaseTypes.html#t:Inject) instances for eon conversions. See the PR description for migration aid.
+  (compatible, refactoring)
+  [PR 636](https://github.com/IntersectMBO/cardano-api/pull/636)
+
 ## 10.2.0.0
 
 - ValueParser: rename publicly exposed function names to indicate they are parsers
