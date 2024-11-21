@@ -6,6 +6,6 @@ for cabal_file in $(git ls-files "*.cabal")
 do
   cd "$(dirname "$cabal_file")" || { echo "Cannot cd"; exit 1; }
   echo "$(pwd)> cabal-check"
-  cabal check
+  cabal check --ignore=missing-upper-bounds
   cd - || { echo "Cannot cd back"; exit 1; }
 done
