@@ -495,6 +495,8 @@ queryAccountState cOnwards =
 queryProposals
   :: forall era block point r
    . ConwayEraOnwards era
+  -- Specify a set of Governance Action IDs to filter the proposals. When this set is
+  -- empty, all the proposals considered for ratification will be returned.
   -> Set (L.GovActionId L.StandardCrypto)
   -> LocalStateQueryExpr
       block
