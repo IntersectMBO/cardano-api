@@ -202,6 +202,7 @@ library internal
     microlens-aeson,
     mtl,
     network,
+    network-mux,
     ouroboros-consensus ^>=0.21,
     ouroboros-consensus-cardano ^>=0.20,
     ouroboros-consensus-diffusion ^>=0.18,

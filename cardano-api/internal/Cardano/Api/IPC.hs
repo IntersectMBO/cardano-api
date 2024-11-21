@@ -130,6 +130,7 @@ import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 import           GHC.Exts (IsList (..))
+import qualified Network.Mux as Net
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
