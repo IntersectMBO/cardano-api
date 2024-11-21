@@ -15,6 +15,7 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import           Cardano.Api
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Fees
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as L
@@ -56,9 +57,9 @@ import           Test.Tasty.Hedgehog (testProperty)
 prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset :: Property
 prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.propertyOnce $ do
   let ceo = ConwayEraOnwardsConway
-      beo = inject ceo
-      meo = inject beo
-      sbe = inject ceo
+      beo = convert ceo
+      meo = convert beo
+      sbe = convert ceo
       era = toCardanoEra sbe
   aeo <- H.nothingFail $ forEraMaybeEon @AlonzoEraOnwards era
 
@@ -140,9 +141,9 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
 prop_make_transaction_body_autobalance_multi_asset_collateral :: Property
 prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $ do
   let ceo = ConwayEraOnwardsConway
-      beo = inject ceo
-      sbe = inject beo
-      meo = inject beo
+      beo = convert ceo
+      sbe = convert beo
+      meo = convert beo
       era = toCardanoEra sbe
   aeo <- H.nothingFail $ forEraMaybeEon @AlonzoEraOnwards era
 
@@ -205,8 +206,8 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
 prop_calcReturnAndTotalCollateral :: Property
 prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
   let beo = BabbageEraOnwardsConway
-      sbe = inject beo
-      era = inject beo
+      sbe = convert beo
+      era = convert beo
   feeCoin@(L.Coin fee) <- forAll genLovelace
   totalCollateral <- forAll $ genValueForTxOut sbe
   let totalCollateralAda = totalCollateral ^. L.adaAssetL sbe
@@ -308,7 +309,7 @@ textEnvTypes =
 
 mkUtxos :: BabbageEraOnwards era -> L.ScriptHash L.StandardCrypto -> UTxO era
 mkUtxos beo scriptHash = babbageEraOnwardsConstraints beo $ do
-  let sbe = inject beo
+  let sbe = convert beo
   UTxO
     [
       ( TxIn
@@ -356,7 +357,7 @@ mkTxOutput
   -- ^ there will be an asset in the txout if provided
   -> [TxOut CtxTx era]
 mkTxOutput beo address mScriptHash = babbageEraOnwardsConstraints beo $ do
-  let sbe = inject beo
+  let sbe = convert beo
   [ TxOut
       address
       ( TxOutValueShelleyBased

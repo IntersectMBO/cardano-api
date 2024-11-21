@@ -36,6 +36,7 @@ module Cardano.Api.Eon.ShelleyBasedEra
   )
 where
 
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()
@@ -179,8 +180,8 @@ instance ToCardanoEra ShelleyBasedEra where
     ShelleyBasedEraBabbage -> BabbageEra
     ShelleyBasedEraConway -> ConwayEra
 
-instance Inject (ShelleyBasedEra era) (CardanoEra era) where
-  inject = toCardanoEra
+instance Convert ShelleyBasedEra CardanoEra where
+  convert = toCardanoEra
 
 -- | The class of eras that are based on Shelley. This allows uniform handling
 -- of Shelley-based eras, but also non-uniform by making case distinctions on

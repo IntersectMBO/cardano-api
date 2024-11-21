@@ -193,6 +193,7 @@ import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -964,17 +965,19 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
     caseShelleyToAllegraOrMaryEraOnwards
       ( \shelleyToAlleg -> do
           ll <- o .: "lovelace"
+          let sbe = convert shelleyToAlleg
           pure $
-            shelleyBasedEraConstraints (inject shelleyToAlleg :: ShelleyBasedEra era) $
-              TxOutValueShelleyBased (inject shelleyToAlleg) $
-                A.mkAdaValue (inject shelleyToAlleg :: ShelleyBasedEra era) ll
+            shelleyBasedEraConstraints sbe $
+              TxOutValueShelleyBased sbe $
+                A.mkAdaValue sbe ll
       )
       ( \w -> do
           let l = toList o
+              sbe = convert w
           vals <- mapM decodeAssetId l
           pure $
-            shelleyBasedEraConstraints (inject w :: ShelleyBasedEra era) $
-              TxOutValueShelleyBased (inject w) $
+            shelleyBasedEraConstraints sbe $
+              TxOutValueShelleyBased sbe $
                 toLedgerValue w $
                   mconcat vals
       )
@@ -2081,7 +2084,7 @@ fromAlonzoTxOut w txdatums txOut =
       (fromAlonzoTxOutDatum w txdatums (txOut ^. L.dataHashTxOutL))
       ReferenceScriptNone
  where
-  sbe :: ShelleyBasedEra era = inject w
+  sbe :: ShelleyBasedEra era = convert w
 
 fromAlonzoTxOutDatum
   :: ()
@@ -2113,7 +2116,7 @@ fromBabbageTxOut w txdatums txout =
           SJust rScript -> fromShelleyScriptToReferenceScript shelleyBasedEra rScript
       )
  where
-  sbe :: ShelleyBasedEra era = inject w
+  sbe :: ShelleyBasedEra era = convert w
 
   -- NOTE: This is different to 'fromBabbageTxOutDatum' as it may resolve
   -- 'DatumHash' values using the datums included in the transaction.

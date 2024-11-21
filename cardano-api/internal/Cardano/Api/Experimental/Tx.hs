@@ -20,6 +20,7 @@ module Cardano.Api.Experimental.Tx
   )
 where
 
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core (ToCardanoEra (toCardanoEra), forEraInEon)
 import           Cardano.Api.Experimental.Eras
@@ -63,7 +64,7 @@ makeUnsignedTx
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (UnsignedTx era)
 makeUnsignedTx era bc = obtainCommonConstraints era $ do
-  let sbe = inject era
+  let sbe = convert era
 
   -- cardano-api types
   let apiTxOuts = txOuts bc
@@ -139,7 +140,7 @@ eraSpecificLedgerTxBody
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (Ledger.TxBody (LedgerEra era))
 eraSpecificLedgerTxBody BabbageEra ledgerbody bc = do
-  let sbe = inject BabbageEra
+  let sbe = convert BabbageEra
 
   setUpdateProposal <- convTxUpdateProposal sbe (txUpdateProposal bc)
 

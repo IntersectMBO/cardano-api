@@ -7,7 +7,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -21,6 +20,7 @@ module Cardano.Api.Eon.BabbageEraOnwards
 where
 
 import           Cardano.Api.Eon.AlonzoEraOnwards
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
@@ -70,14 +70,16 @@ instance ToCardanoEra BabbageEraOnwards where
     BabbageEraOnwardsBabbage -> BabbageEra
     BabbageEraOnwardsConway -> ConwayEra
 
-instance Inject (BabbageEraOnwards era) (CardanoEra era) where
-  inject = toCardanoEra
+instance Convert BabbageEraOnwards CardanoEra where
+  convert = toCardanoEra
 
-instance Inject (BabbageEraOnwards era) (ShelleyBasedEra era) where
-  inject = inject @(MaryEraOnwards era) . inject
+instance Convert BabbageEraOnwards ShelleyBasedEra where
+  convert = \case
+    BabbageEraOnwardsBabbage -> ShelleyBasedEraBabbage
+    BabbageEraOnwardsConway -> ShelleyBasedEraConway
 
-instance Inject (BabbageEraOnwards era) (MaryEraOnwards era) where
-  inject = \case
+instance Convert BabbageEraOnwards MaryEraOnwards where
+  convert = \case
     BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
     BabbageEraOnwardsConway -> MaryEraOnwardsConway
 
@@ -124,9 +126,9 @@ babbageEraOnwardsConstraints = \case
   BabbageEraOnwardsBabbage -> id
   BabbageEraOnwardsConway -> id
 
-{-# DEPRECATED babbageEraOnwardsToShelleyBasedEra "Use 'inject' instead." #-}
+{-# DEPRECATED babbageEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra era
-babbageEraOnwardsToShelleyBasedEra = inject
+babbageEraOnwardsToShelleyBasedEra = convert
 
 class IsAlonzoBasedEra era => IsBabbageBasedEra era where
   babbageBasedEra :: BabbageEraOnwards era
