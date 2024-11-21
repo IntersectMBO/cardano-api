@@ -299,7 +299,7 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
   QueryProposals
     :: Set (L.GovActionId StandardCrypto)
-    -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era {-StandardCrypto-})))
+    -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
