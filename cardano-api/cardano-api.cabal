@@ -262,6 +262,7 @@ library
     deepseq,
     memory,
     nothunks,
+    ouroboros-network,
     ouroboros-network-protocols,
     typed-protocols,
 
