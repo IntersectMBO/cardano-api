@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -15,6 +16,7 @@ module Cardano.Api.ScriptData
   , getScriptData
   , unsafeHashableScriptData
   , ScriptData (..)
+  , friendlyScript
 
     -- * Validating metadata
   , validateScriptData
@@ -44,6 +46,8 @@ module Cardano.Api.ScriptData
   )
 where
 
+import           Cardano.Api.Eon.AlonzoEraOnwards (AlonzoEraOnwardsConstraints)
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Hash
@@ -58,8 +62,14 @@ import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Core (Era)
+import           Cardano.Ledger.Allegra.Scripts (showTimelock)
+import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..))
+import           Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
+import           Cardano.Ledger.Binary.Plain (serializeAsHexText)
+import           Cardano.Ledger.Core (Era, EraScript (..), Script)
+import           Cardano.Ledger.Plutus (Language)
 import qualified Cardano.Ledger.Plutus.Data as Plutus
+import           Cardano.Ledger.Plutus.Language (Plutus (plutusBinary), languageToText)
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
 import qualified PlutusLedgerApi.V1 as PlutusAPI
@@ -85,6 +95,7 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Scientific as Scientific
 import           Data.String (IsString)
 import           Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
@@ -245,6 +256,28 @@ fromPlutusData (PlutusAPI.List xs) =
     [fromPlutusData x | x <- xs]
 fromPlutusData (PlutusAPI.I n) = ScriptDataNumber n
 fromPlutusData (PlutusAPI.B bs) = ScriptDataBytes bs
+
+-- | Friendly script JSON
+friendlyScript :: AlonzoEraOnwardsConstraints era => Script (ShelleyLedgerEra era) -> Aeson.Value
+friendlyScript script = Aeson.Object $
+  KeyMap.fromList $
+    case getNativeScript script of
+      Just nativeScript ->
+        [ ("type", "native")
+        , ("script", Aeson.String $ T.pack $ showTimelock nativeScript)
+        ]
+      Nothing ->
+        ( case toPlutusScript script of
+            Just plutusScript -> withPlutusScript plutusScript $ friendlyPlutusScript $ plutusScriptLanguage plutusScript
+            Nothing -> [("error", Aeson.String "Unsupported script type")]
+        )
+ where
+  friendlyPlutusScript :: Language -> Plutus l -> [(KeyMap.Key, Aeson.Value)]
+  friendlyPlutusScript language plutusScript =
+    [ ("type", "plutus")
+    , ("plutus version", Aeson.String $ languageToText language)
+    , ("script", Aeson.String $ serializeAsHexText $ plutusBinary plutusScript)
+    ]
 
 -- ----------------------------------------------------------------------------
 -- Validate script data
