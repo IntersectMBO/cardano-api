@@ -119,6 +119,7 @@ module Cardano.Api.ReexposeLedger
   , AsIx (..)
   , CoinPerWord (..)
   , Data (..)
+  , EraTxWits (..)
   , ExUnits (..)
   , Prices (..)
   , CostModels
@@ -168,7 +169,7 @@ where
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
 import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBody (..),
                    AlonzoEraTxWits (..), AsIx (..), AsIxItem (AsIxItem), CoinPerWord (..), EraGov,
-                   EraTx (bodyTxL, witsTxL), PParamsUpdate (..), Tx, ppPricesL)
+                   EraTx (bodyTxL, witsTxL), EraTxWits (..), PParamsUpdate (..), Tx, ppPricesL)
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), CostModels, ExUnits (..),
                    Prices (..))
