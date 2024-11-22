@@ -75,6 +75,7 @@ module Cardano.Api.ReexposeLedger
   , UpgradeConwayPParams (..)
   , GovState
   , GovActionId (..)
+  , GovActionIx (..)
   , Vote (..)
   , Voter (..)
   , VotingProcedure (..)
@@ -191,7 +192,7 @@ import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVoti
                    dvtPPEconomicGroupL, dvtPPGovGroupL, dvtPPNetworkGroupL, dvtPPTechnicalGroupL,
                    dvtUpdateToConstitutionL)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..), GovState,
+import           Cardano.Ledger.Conway.Governance (Anchor (..), GovActionId (..), GovActionIx(..), GovState,
                    ProposalProcedure (..), Vote (..), Voter (..), VotingProcedure (..),
                    VotingProcedures (..))
 import           Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
