@@ -83,6 +83,11 @@ instance Convert BabbageEraOnwards MaryEraOnwards where
     BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
     BabbageEraOnwardsConway -> MaryEraOnwardsConway
 
+instance Convert BabbageEraOnwards AlonzoEraOnwards where
+  convert = \case
+    BabbageEraOnwardsBabbage -> AlonzoEraOnwardsBabbage
+    BabbageEraOnwardsConway -> AlonzoEraOnwardsConway
+
 type BabbageEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
