@@ -259,7 +259,7 @@ fromPlutusData (PlutusAPI.List xs) =
 fromPlutusData (PlutusAPI.I n) = ScriptDataNumber n
 fromPlutusData (PlutusAPI.B bs) = ScriptDataBytes bs
 
--- | Friendly script JSON
+-- | Create a friendly JSON out of a script
 friendlyScript :: AlonzoEraOnwardsConstraints era => Script (ShelleyLedgerEra era) -> Aeson.Value
 friendlyScript script = Aeson.Object $
   KeyMap.fromList $
@@ -281,7 +281,7 @@ friendlyScript script = Aeson.Object $
     , ("script", Aeson.String $ serializeAsHexText $ plutusBinary plutusScript)
     ]
 
--- | Friendly dats JSON
+-- | Create a friendly JSON out of a datum
 friendlyDatum
   :: AlonzoEraOnwardsConstraints era => Alonzo.Data (ShelleyLedgerEra era) -> Aeson.Value
 friendlyDatum (Alonzo.Data datum) = Aeson.String (T.pack $ show datum)
