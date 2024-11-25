@@ -15,7 +15,6 @@ module Cardano.Api.Governance.Actions.ProposalProcedure where
 import           Cardano.Api.Address
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.SerialiseCBOR
@@ -196,15 +195,12 @@ createProposalProcedure sbe nw dep cred govAct anchor =
 fromProposalProcedure
   :: ShelleyBasedEra era
   -> Proposal era
-  -> (L.Coin, Hash StakeKey, GovernanceAction era)
+  -> (L.Coin, StakeCredential, GovernanceAction era)
 fromProposalProcedure sbe (Proposal pp) =
   shelleyBasedEraConstraints
     sbe
     ( Gov.pProcDeposit pp
-    , case fromShelleyStakeCredential (L.raCredential (Gov.pProcReturnAddr pp)) of
-        StakeCredentialByKey keyhash -> keyhash
-        StakeCredentialByScript _scripthash ->
-          error "fromProposalProcedure TODO: Conway era script reward addresses not yet supported"
+    , fromShelleyStakeCredential (L.raCredential (Gov.pProcReturnAddr pp))
     , fromGovernanceAction (Gov.pProcGovAction pp)
     )
 
