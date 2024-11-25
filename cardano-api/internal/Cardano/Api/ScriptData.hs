@@ -17,6 +17,7 @@ module Cardano.Api.ScriptData
   , unsafeHashableScriptData
   , ScriptData (..)
   , friendlyScript
+  , friendlyDatum
 
     -- * Validating metadata
   , validateScriptData
@@ -65,6 +66,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Allegra.Scripts (showTimelock)
 import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..))
 import           Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
+import qualified Cardano.Ledger.Api as Alonzo
 import           Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import           Cardano.Ledger.Core (Era, EraScript (..), Script)
 import           Cardano.Ledger.Plutus (Language)
@@ -278,6 +280,11 @@ friendlyScript script = Aeson.Object $
     , ("plutus version", Aeson.String $ languageToText language)
     , ("script", Aeson.String $ serializeAsHexText $ plutusBinary plutusScript)
     ]
+
+-- | Friendly dats JSON
+friendlyDatum
+  :: AlonzoEraOnwardsConstraints era => Alonzo.Data (ShelleyLedgerEra era) -> Aeson.Value
+friendlyDatum (Alonzo.Data datum) = Aeson.String (T.pack $ show datum)
 
 -- ----------------------------------------------------------------------------
 -- Validate script data

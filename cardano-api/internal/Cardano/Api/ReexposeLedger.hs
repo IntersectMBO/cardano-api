@@ -128,6 +128,7 @@ module Cardano.Api.ReexposeLedger
   , EraGov
   , EraTx (witsTxL, bodyTxL)
   , Tx
+  , TxDats (..)
   , ppPricesL
   , unData
   , unRedeemers
@@ -173,6 +174,7 @@ import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBo
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), CostModels, ExUnits (..),
                    Prices (..))
+import           Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import           Cardano.Ledger.Api (Constitution (..), GovAction (..), unRedeemers)
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,
