@@ -13,6 +13,7 @@ module Cardano.Api.Tx.Compatible
   )
 where
 
+import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
@@ -62,61 +63,60 @@ createCompatibleSignedTx
   -- ^ Fee
   -> AnyProtocolUpdate era
   -> AnyVote era
+  -> TxCertificates BuildTx era
   -> Either ProtocolParametersConversionError (Tx era)
-createCompatibleSignedTx sbeF ins outs witnesses txFee' anyProtocolUpdate anyVote =
-  shelleyBasedEraConstraints sbeF $ do
-    tx <- case anyProtocolUpdate of
-      ProtocolUpdate shelleyToBabbageEra updateProposal -> do
-        let sbe = inject shelleyToBabbageEra
+createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote txCertificates' =
+  shelleyBasedEraConstraints sbe $ do
+    let setCerts =
+          caseShelleyToMaryOrAlonzoEraOnwards
+            (const id)
+            (\w -> alonzoEraOnwardsConstraints w $ L.certsTxBodyL .~ convCertificates sbe txCertificates')
+            sbe
+        txbody =
+          createCommonTxBody sbe ins outs txFee'
+            & setCerts
 
+    fTx <- case anyProtocolUpdate of
+      ProtocolUpdate shelleyToBabbageEra updateProposal -> do
         ledgerPParamsUpdate <- toLedgerUpdate sbe updateProposal
 
-        let txbody = createCommonTxBody sbe ins outs txFee'
-            bodyWithProtocolUpdate =
+        let bodyWithProtocolUpdate =
               shelleyToBabbageEraConstraints shelleyToBabbageEra $
                 txbody & L.updateTxBodyL .~ SJust ledgerPParamsUpdate
-            finalTx =
-              L.mkBasicTx bodyWithProtocolUpdate
-                & L.witsTxL .~ shelleyToBabbageEraConstraints shelleyToBabbageEra allShelleyToBabbageWitnesses
-
-        return $ ShelleyTx sbe finalTx
-      NoPParamsUpdate sbe -> do
-        let txbody = createCommonTxBody sbe ins outs txFee'
-            finalTx = L.mkBasicTx txbody & L.witsTxL .~ shelleyBasedEraConstraints sbe allShelleyToBabbageWitnesses
-
-        return $ ShelleyTx sbe finalTx
+        pure $
+          L.mkBasicTx bodyWithProtocolUpdate
+            & L.witsTxL .~ shelleyToBabbageEraConstraints shelleyToBabbageEra allShelleyToBabbageWitnesses
+      NoPParamsUpdate _ -> do
+        pure $
+          L.mkBasicTx txbody
+            & L.witsTxL .~ shelleyBasedEraConstraints sbe allShelleyToBabbageWitnesses
       ProposalProcedures conwayOnwards proposalProcedures -> do
-        let sbe = inject conwayOnwards
-            proposals = convProposalProcedures proposalProcedures
+        let proposals = convProposalProcedures proposalProcedures
             apiScriptWitnesses = scriptWitnessesProposing proposalProcedures
             ledgerScripts = convScripts apiScriptWitnesses
             referenceInputs =
               map toShelleyTxIn $
                 catMaybes [getScriptWitnessReferenceInput sWit | (_, AnyScriptWitness sWit) <- apiScriptWitnesses]
             sData = convScriptData sbe outs apiScriptWitnesses
-            txbody =
+            updatedTxBody =
               conwayEraOnwardsConstraints conwayOnwards $
-                createCommonTxBody sbe ins outs txFee'
-                  & L.referenceInputsTxBodyL .~ fromList referenceInputs
-                  & L.proposalProceduresTxBodyL
-                    .~ proposals
+                txbody
+                  & L.referenceInputsTxBodyL .~ fromList referenceInputs -- TODO add refinputs from certs here
+                  & L.proposalProceduresTxBodyL .~ proposals
 
-            finalTx =
-              L.mkBasicTx txbody
-                & L.witsTxL
-                  .~ conwayEraOnwardsConstraints conwayOnwards (allConwayEraOnwardsWitnesses sData ledgerScripts)
-
-        return $ ShelleyTx sbe finalTx
+        pure $
+          L.mkBasicTx updatedTxBody
+            & L.witsTxL
+              .~ conwayEraOnwardsConstraints conwayOnwards (allConwayEraOnwardsWitnesses sData ledgerScripts)
 
     case anyVote of
-      NoVotes -> return tx
+      NoVotes -> return $ ShelleyTx sbe fTx
       VotingProcedures conwayOnwards procedures -> do
         let ledgerVotingProcedures = convVotingProcedures procedures
-            ShelleyTx sbe' fTx = tx
             updatedTx =
               conwayEraOnwardsConstraints conwayOnwards $
                 overwriteVotingProcedures fTx ledgerVotingProcedures
-        return $ ShelleyTx sbe' updatedTx
+        return $ ShelleyTx sbe updatedTx
  where
   overwriteVotingProcedures
     :: L.ConwayEraTxBody ledgerera
