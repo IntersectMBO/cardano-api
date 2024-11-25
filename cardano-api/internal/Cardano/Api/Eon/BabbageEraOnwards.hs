@@ -81,6 +81,11 @@ instance Inject (BabbageEraOnwards era) (MaryEraOnwards era) where
     BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
     BabbageEraOnwardsConway -> MaryEraOnwardsConway
 
+instance Inject (BabbageEraOnwards era) (AlonzoEraOnwards era) where
+  inject = \case
+    BabbageEraOnwardsBabbage -> AlonzoEraOnwardsBabbage
+    BabbageEraOnwardsConway -> AlonzoEraOnwardsConway
+
 type BabbageEraOnwardsConstraints era =
   ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
   , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed

@@ -19,6 +19,7 @@ module Cardano.Api.Eon.ConwayEraOnwards
   )
 where
 
+import           Cardano.Api.Eon.AllegraEraOnwards (AllegraEraOnwards (..))
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
@@ -73,6 +74,10 @@ instance Inject (ConwayEraOnwards era) (CardanoEra era) where
 instance Inject (ConwayEraOnwards era) (ShelleyBasedEra era) where
   inject = \case
     ConwayEraOnwardsConway -> ShelleyBasedEraConway
+
+instance Inject (ConwayEraOnwards era) (AllegraEraOnwards era) where
+  inject = \case
+    ConwayEraOnwardsConway -> AllegraEraOnwardsConway
 
 instance Inject (ConwayEraOnwards era) (BabbageEraOnwards era) where
   inject = \case

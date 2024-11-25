@@ -87,7 +87,6 @@ import           Control.Monad
 import           Data.Bifunctor (bimap, first, second)
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Function ((&))
-import           Data.Functor
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

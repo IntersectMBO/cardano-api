@@ -161,7 +161,6 @@ module Cardano.Api.Tx.Body
   , convWithdrawals
   , getScriptIntegrityHash
   , mkCommonTxBody
-  , scriptWitnessesProposing
   , toAuxiliaryData
   , toByronTxId
   , toShelleyTxId
@@ -3427,14 +3426,14 @@ collectTxBodyScriptWitnesses
       | (ix, _, witness) <- txVotingProceduresToIndexed txv
       ]
 
-scriptWitnessesProposing
-  :: TxProposalProcedures BuildTx era
-  -> [(ScriptWitnessIndex, AnyScriptWitness era)]
-scriptWitnessesProposing TxProposalProceduresNone = []
-scriptWitnessesProposing txp =
-  [ (ix, AnyScriptWitness witness)
-  | (ix, _, witness) <- txProposalProceduresToIndexed txp
-  ]
+    scriptWitnessesProposing
+      :: TxProposalProcedures BuildTx era
+      -> [(ScriptWitnessIndex, AnyScriptWitness era)]
+    scriptWitnessesProposing TxProposalProceduresNone = []
+    scriptWitnessesProposing txp =
+      [ (ix, AnyScriptWitness witness)
+      | (ix, _, witness) <- txProposalProceduresToIndexed txp
+      ]
 
 -- TODO: Investigate if we need
 toShelleyWithdrawal :: [(StakeAddress, L.Coin, a)] -> L.Withdrawals StandardCrypto
