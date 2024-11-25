@@ -25,14 +25,14 @@ jobs:
         sys:
           - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
           - { os: ubuntu-latest, shell: bash }
-        include:
+        # include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
-          - cabal: "3.12"
-            ghc: "9.6"
-            sys:
-              os: macos-latest
-              shell: bash
+          # - cabal: "3.12"
+          #   ghc: "9.6"
+          #   sys:
+          #     os: macos-latest
+          #     shell: bash
 
     defaults:
         run:
