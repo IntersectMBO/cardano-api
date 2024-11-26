@@ -52,6 +52,7 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -232,7 +233,7 @@ estimateBalancedTxBody
   totalUTxOValue = do
     -- Step 1. Substitute those execution units into the tx
 
-    let sbe = inject w
+    let sbe = convert w
     txbodycontent1 <-
       maryEraOnwardsConstraints w $
         first TxFeeEstimationScriptExecutionError $
@@ -1270,7 +1271,7 @@ calcReturnAndTotalCollateral
   -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
 calcReturnAndTotalCollateral _ _ _ TxInsCollateralNone _ _ _ _ = (TxReturnCollateralNone, TxTotalCollateralNone)
 calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTotalCollateral cAddr totalAvailableCollateral = babbageEraOnwardsConstraints w $ do
-  let sbe = inject w
+  let sbe = convert w
       colPerc = pp' ^. Ledger.ppCollateralPercentageL
       -- We must first figure out how much lovelace we have committed
       -- as collateral and we must determine if we have enough lovelace at our

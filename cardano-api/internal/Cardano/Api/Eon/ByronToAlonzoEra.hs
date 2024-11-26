@@ -15,6 +15,7 @@ module Cardano.Api.Eon.ByronToAlonzoEra
   )
 where
 
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eras.Core
 
 import           Data.Typeable (Typeable)
@@ -48,8 +49,8 @@ instance ToCardanoEra ByronToAlonzoEra where
     ByronToAlonzoEraMary -> MaryEra
     ByronToAlonzoEraAlonzo -> AlonzoEra
 
-instance Inject (ByronToAlonzoEra era) (CardanoEra era) where
-  inject = toCardanoEra
+instance Convert ByronToAlonzoEra CardanoEra where
+  convert = toCardanoEra
 
 type ByronToAlonzoEraConstraints era =
   ( IsCardanoEra era

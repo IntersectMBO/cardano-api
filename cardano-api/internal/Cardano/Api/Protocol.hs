@@ -98,7 +98,8 @@ instance
         (ProtocolParamsShelleyBased StandardCrypto)
         ProtVer
   protocolInfo (ProtocolInfoArgsShelley genesis paramsShelleyBased_ paramsShelley_) =
-    bimap inject (fmap $ map inject) $ protocolInfoShelley genesis paramsShelleyBased_ paramsShelley_
+    bimap inject (fmap $ map inject) $
+      protocolInfoShelley genesis paramsShelleyBased_ paramsShelley_
 
 instance
   Consensus.LedgerSupportsProtocol

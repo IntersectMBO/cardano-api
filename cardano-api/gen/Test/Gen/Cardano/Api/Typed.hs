@@ -145,6 +145,7 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import qualified Cardano.Crypto.Seed as Crypto
+import           Cardano.Api.Eon.Convert
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
@@ -391,15 +392,13 @@ genLedgerValue w genAId genQuant =
 genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
 genValueDefault w = genLedgerValue w genAssetId genSignedNonZeroQuantity
 
-genValueForRole :: forall era. MaryEraOnwards era -> ParserValueRole -> Gen Value
+genValueForRole :: MaryEraOnwards era -> ParserValueRole -> Gen Value
 genValueForRole w =
   \case
     RoleMint ->
       genValueForMinting
     RoleUTxO ->
-      fromLedgerValue sbe <$> genValueForTxOut sbe
- where
-  sbe = inject w :: ShelleyBasedEra era
+      fromLedgerValue (convert w) <$> genValueForTxOut (convert w)
 
 -- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
 -- positive or negative quantity.
@@ -468,7 +467,7 @@ genOperationalCertificateWithCounter = do
     Gen.either (genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
   kesP <- genKESPeriod
   c <- Gen.integral $ Range.linear 0 1000
-  let stakePoolVer = either getVerificationKey (convert . getVerificationKey) stkPoolOrGenDelExtSign
+  let stakePoolVer = either getVerificationKey (convert' . getVerificationKey) stkPoolOrGenDelExtSign
       iCounter = OperationalCertificateIssueCounter c stakePoolVer
 
   case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
@@ -477,10 +476,10 @@ genOperationalCertificateWithCounter = do
     Left err -> error $ docToString $ prettyError err
     Right pair -> return pair
  where
-  convert
+  convert'
     :: VerificationKey GenesisDelegateExtendedKey
     -> VerificationKey StakePoolKey
-  convert =
+  convert' =
     ( castVerificationKey
         :: VerificationKey GenesisDelegateKey
         -> VerificationKey StakePoolKey
@@ -599,7 +598,7 @@ genTxAuxScripts era =
         TxAuxScripts w
           <$> Gen.list
             (Range.linear 0 3)
-            (genScriptInEra (inject w))
+            (genScriptInEra $ convert w)
     )
 
 genTxWithdrawals :: CardanoEra era -> Gen (TxWithdrawals build era)
@@ -1169,7 +1168,7 @@ genProposals w = conwayEraOnwardsConstraints w $ do
   -- We're doing it for the complete representation of possible values space of TxProposalProcedures.
   -- Proposal procedures code in cardano-api should handle such invalid values just fine.
   extraProposals <- Gen.list (Range.constant 0 10) (genProposal w)
-  let sbe = inject w
+  let sbe = convert w
   proposalsWithWitnesses <-
     forM (extraProposals <> proposalsToBeWitnessed) $ \proposal ->
       (proposal,) <$> genScriptWitnessForStake sbe
@@ -1184,7 +1183,7 @@ genVotingProcedures :: Applicative (BuildTxWith build)
                     -> Gen (Api.TxVotingProcedures build era)
 genVotingProcedures w = conwayEraOnwardsConstraints w $ do
   voters <- Gen.list (Range.constant 0 10) Q.arbitrary
-  let sbe = inject w
+  let sbe = convert w
   votersWithWitnesses <- fmap fromList . forM voters $ \voter ->
     (voter,) <$> genScriptWitnessForStake sbe
   Api.TxVotingProcedures <$> Q.arbitrary <*> pure (pure votersWithWitnesses)

@@ -20,6 +20,7 @@ module Cardano.Api.Eon.ConwayEraOnwards
 where
 
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -67,15 +68,15 @@ instance ToCardanoEra ConwayEraOnwards where
   toCardanoEra = \case
     ConwayEraOnwardsConway -> ConwayEra
 
-instance Inject (ConwayEraOnwards era) (CardanoEra era) where
-  inject = toCardanoEra
+instance Convert ConwayEraOnwards CardanoEra where
+  convert = toCardanoEra
 
-instance Inject (ConwayEraOnwards era) (ShelleyBasedEra era) where
-  inject = \case
+instance Convert ConwayEraOnwards ShelleyBasedEra where
+  convert = \case
     ConwayEraOnwardsConway -> ShelleyBasedEraConway
 
-instance Inject (ConwayEraOnwards era) (BabbageEraOnwards era) where
-  inject = \case
+instance Convert ConwayEraOnwards BabbageEraOnwards where
+  convert = \case
     ConwayEraOnwardsConway -> BabbageEraOnwardsConway
 
 type ConwayEraOnwardsConstraints era =
@@ -125,13 +126,13 @@ conwayEraOnwardsConstraints
 conwayEraOnwardsConstraints = \case
   ConwayEraOnwardsConway -> id
 
-{-# DEPRECATED conwayEraOnwardsToShelleyBasedEra "Use 'inject' instead." #-}
+{-# DEPRECATED conwayEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 conwayEraOnwardsToShelleyBasedEra :: ConwayEraOnwards era -> ShelleyBasedEra era
-conwayEraOnwardsToShelleyBasedEra = inject
+conwayEraOnwardsToShelleyBasedEra = convert
 
-{-# DEPRECATED conwayEraOnwardsToBabbageEraOnwards "Use 'inject' instead." #-}
+{-# DEPRECATED conwayEraOnwardsToBabbageEraOnwards "Use 'convert' instead." #-}
 conwayEraOnwardsToBabbageEraOnwards :: ConwayEraOnwards era -> BabbageEraOnwards era
-conwayEraOnwardsToBabbageEraOnwards = inject
+conwayEraOnwardsToBabbageEraOnwards = convert
 
 class IsBabbageBasedEra era => IsConwayBasedEra era where
   conwayBasedEra :: ConwayEraOnwards era

@@ -18,6 +18,7 @@ module Cardano.Api.Eon.AllegraEraOnwards
   )
 where
 
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras.Core
 import           Cardano.Api.Modes
@@ -67,11 +68,11 @@ instance ToCardanoEra AllegraEraOnwards where
     AllegraEraOnwardsBabbage -> BabbageEra
     AllegraEraOnwardsConway -> ConwayEra
 
-instance Inject (AllegraEraOnwards era) (CardanoEra era) where
-  inject = toCardanoEra
+instance Convert AllegraEraOnwards CardanoEra where
+  convert = toCardanoEra
 
-instance Inject (AllegraEraOnwards era) (ShelleyBasedEra era) where
-  inject = \case
+instance Convert AllegraEraOnwards ShelleyBasedEra where
+  convert = \case
     AllegraEraOnwardsAllegra -> ShelleyBasedEraAllegra
     AllegraEraOnwardsMary -> ShelleyBasedEraMary
     AllegraEraOnwardsAlonzo -> ShelleyBasedEraAlonzo
@@ -115,9 +116,9 @@ allegraEraOnwardsConstraints = \case
   AllegraEraOnwardsBabbage -> id
   AllegraEraOnwardsConway -> id
 
-{-# DEPRECATED allegraEraOnwardsToShelleyBasedEra "Use 'inject' instead." #-}
+{-# DEPRECATED allegraEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 allegraEraOnwardsToShelleyBasedEra :: AllegraEraOnwards era -> ShelleyBasedEra era
-allegraEraOnwardsToShelleyBasedEra = inject
+allegraEraOnwardsToShelleyBasedEra = convert
 
 class IsShelleyBasedEra era => IsAllegraBasedEra era where
   allegraBasedEra :: AllegraEraOnwards era

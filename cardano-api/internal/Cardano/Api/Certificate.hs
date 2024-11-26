@@ -78,6 +78,7 @@ where
 
 import           Cardano.Api.Address
 import           Cardano.Api.DRepMetadata
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eon.ShelleyToBabbageEra
@@ -515,10 +516,10 @@ selectStakeCredentialWitness
 selectStakeCredentialWitness = \case
   ShelleyRelatedCertificate stbEra shelleyCert ->
     shelleyToBabbageEraConstraints stbEra $
-      getTxCertWitness (inject stbEra) shelleyCert
+      getTxCertWitness (convert stbEra) shelleyCert
   ConwayCertificate cEra conwayCert ->
     conwayEraOnwardsConstraints cEra $
-      getTxCertWitness (inject cEra) conwayCert
+      getTxCertWitness (convert cEra) conwayCert
 
 filterUnRegCreds
   :: Certificate era -> Maybe StakeCredential

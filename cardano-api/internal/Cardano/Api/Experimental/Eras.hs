@@ -33,6 +33,7 @@ module Cardano.Api.Experimental.Eras
 where
 
 import           Cardano.Api.Eon.BabbageEraOnwards
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
 import qualified Cardano.Api.Eras as Api
 import           Cardano.Api.Eras.Core (BabbageEra, ConwayEra, Eon (..))
@@ -184,29 +185,29 @@ eraFromStringLike = \case
 -- instance IsEra ConwayEra where
 --   useEra = ConwayEra
 -- @
-{-# DEPRECATED eraToSbe "Use 'inject' instead." #-}
+{-# DEPRECATED eraToSbe "Use 'convert' instead." #-}
 eraToSbe
   :: Era era
   -> ShelleyBasedEra era
-eraToSbe = inject
+eraToSbe = convert
 
-instance Inject (Era era) (Api.CardanoEra era) where
-  inject = \case
+instance Convert Era Api.CardanoEra where
+  convert = \case
     BabbageEra -> Api.BabbageEra
     ConwayEra -> Api.ConwayEra
 
-instance Inject (Era era) (ShelleyBasedEra era) where
-  inject = \case
+instance Convert Era ShelleyBasedEra where
+  convert = \case
     BabbageEra -> ShelleyBasedEraBabbage
     ConwayEra -> ShelleyBasedEraConway
 
-instance Inject (Era era) (BabbageEraOnwards era) where
-  inject = \case
+instance Convert Era BabbageEraOnwards where
+  convert = \case
     BabbageEra -> BabbageEraOnwardsBabbage
     ConwayEra -> BabbageEraOnwardsConway
 
-instance Inject (BabbageEraOnwards era) (Era era) where
-  inject = \case
+instance Convert BabbageEraOnwards Era where
+  convert = \case
     BabbageEraOnwardsBabbage -> BabbageEra
     BabbageEraOnwardsConway -> ConwayEra
 
@@ -227,13 +228,13 @@ sbeToEra e@ShelleyBasedEraMary = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraAllegra = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraShelley = throwError $ DeprecatedEra e
 
-{-# DEPRECATED babbageEraOnwardsToEra "Use 'inject' instead." #-}
+{-# DEPRECATED babbageEraOnwardsToEra "Use 'convert' instead." #-}
 babbageEraOnwardsToEra :: BabbageEraOnwards era -> Era era
-babbageEraOnwardsToEra = inject
+babbageEraOnwardsToEra = convert
 
-{-# DEPRECATED eraToBabbageEraOnwards "Use 'inject' instead." #-}
+{-# DEPRECATED eraToBabbageEraOnwards "Use 'convert' instead." #-}
 eraToBabbageEraOnwards :: Era era -> BabbageEraOnwards era
-eraToBabbageEraOnwards = inject
+eraToBabbageEraOnwards = convert
 
 -------------------------------------------------------------------------
 
