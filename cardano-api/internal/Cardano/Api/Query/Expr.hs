@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Api.Query.Expr
   ( queryAccountState
@@ -509,7 +511,7 @@ queryProposals
           (Either EraMismatch (Seq (L.GovActionState (ShelleyLedgerEra era))))
       )
 queryProposals cOnwards govActionIds = do
-  let sbe :: ShelleyBasedEra era = inject cOnwards
+  let sbe :: ShelleyBasedEra era = conwayEraOnwardsToShelleyBasedEra cOnwards
   queryExpr $
     QueryInEra . QueryInShelleyBasedEra sbe $
       QueryProposals govActionIds
