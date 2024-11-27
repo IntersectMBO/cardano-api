@@ -48,6 +48,7 @@ module Cardano.Api
   , unFeatured
   , asFeaturedInEra
   , asFeaturedInShelleyBasedEra
+  , Convert (..)
   , Inject (..)
 
     -- * Eons
@@ -1045,6 +1046,7 @@ import           Cardano.Api.Eon.AllegraEraOnwards
 import           Cardano.Api.Eon.AlonzoEraOnwards
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.ByronToAlonzoEra
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ConwayEraOnwards
 import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra

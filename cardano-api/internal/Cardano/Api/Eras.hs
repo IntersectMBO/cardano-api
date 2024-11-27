@@ -30,6 +30,7 @@ module Cardano.Api.Eras
   , maybeEon
   , monoidForEraInEon
   , monoidForEraInEonA
+  , Convert (..)
   , Inject (..)
 
     -- * Data family instances
@@ -49,5 +50,6 @@ module Cardano.Api.Eras
   )
 where
 
+import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eras.Case
 import           Cardano.Api.Eras.Core
