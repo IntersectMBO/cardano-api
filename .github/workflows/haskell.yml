@@ -76,8 +76,7 @@ jobs:
         cabal-version: ${{ matrix.cabal }}
 
     - name: Install system dependencies
-      # TODO: switch to input-output-hk/actions/base@latest after https://github.com/input-output-hk/actions/pull/29 gets merged
-      uses: carbolymer/actions/base@latest
+      uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: true # default is true
 
