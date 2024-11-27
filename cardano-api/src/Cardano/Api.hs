@@ -528,6 +528,7 @@ module Cardano.Api
   , eraOfScriptInEra
   , HasScriptLanguageInEra (..)
   , ToAlonzoScript (..)
+  , AlonzoEraOnwardsConstraints
 
     -- ** Use of a script in an era as a witness
   , WitCtxTxIn
@@ -548,8 +549,6 @@ module Cardano.Api
   , ScriptWitnessIndex (..)
   , renderScriptWitnessIndex
   , collectTxBodyScriptWitnesses
-  , friendlyDatum
-  , friendlyScript
 
     -- ** Languages supported in each era
   , ScriptLanguageInEra (..)
