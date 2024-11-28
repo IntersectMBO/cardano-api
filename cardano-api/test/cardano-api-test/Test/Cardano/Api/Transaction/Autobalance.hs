@@ -15,7 +15,6 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import           Cardano.Api
-import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Fees
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as L
