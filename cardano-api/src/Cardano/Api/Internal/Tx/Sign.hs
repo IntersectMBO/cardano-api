@@ -18,7 +18,36 @@
 
 -- | Complete, signed transactions
 module Cardano.Api.Internal.Tx.Sign
-  ( -- * Signing transactions
+  ( -- * Example: Creating a 'ShelleyWitnessSigningKey'
+
+    -- |
+    -- To sign a transaction, we need a witness. For example, a 'ShelleyWitnessSigningKey'.
+    --
+    -- In this example, we are using the following qualified module:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
+    -- @
+    --
+    -- There are several ways of doing this, and several ways of representing a signing key. But let us assume
+    -- we have the bech32 representation of the signing key. In that case we can use the 'deserialiseFromBech32' function
+    -- as follows:
+    --
+    -- @
+    -- let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
+    -- @
+    --
+    -- Then we simply wrap the signing key in a 'ShelleyWitnessSigningKey' value:
+    --
+    -- @
+    -- let witness = Api.WitnessPaymentKey signingKey
+    -- @
+    --
+    -- We could do it analogously if we wanted to use an extended key, for example, using 'AsPaymentExtendedKey' and 'WitnessPaymentExtendedKey'.
+
+    -- * Contents
+
+    -- ** Signing transactions
 
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx (.., Tx)
@@ -29,13 +58,13 @@ module Cardano.Api.Internal.Tx.Sign
   , getTxWitnessesByron
   , ScriptValidity (..)
 
-    -- ** Signing in one go
+    -- *** Signing in one go
   , ShelleySigningKey (..)
   , toShelleySigningKey
   , signByronTransaction
   , signShelleyTransaction
 
-    -- ** Incremental signing and separate witnesses
+    -- *** Incremental signing and separate witnesses
   , makeSignedByronTransaction
   , makeSignedTransaction
   , makeSignedTransaction'
@@ -49,7 +78,7 @@ module Cardano.Api.Internal.Tx.Sign
   , getShelleyKeyWitnessVerificationKey
   , getTxBodyAndWitnesses
 
-    -- * Data family instances
+    -- ** Data family instances
   , AsType
     ( AsTx
     , AsMaryTx
