@@ -10,23 +10,316 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 
--- | Fee calculation
+-- | Calculating fees.
 module Cardano.Api.Internal.Fees
-  ( -- * Transaction fees
+  ( -- * Introduction
+
+    -- |
+    -- The "Cardano.Api.Internal.Tx.Body" documentation demonstrates how to create a 'TxBodyContent' for a
+    -- transaction that takes 12 ada and sends 10 ada to an address, and spends 2 ada for fees. If a
+    -- UTXO with exactly 12 ada is available, this would be a valid transaction, because it is balanced, and has
+    -- sufficient fees, as 2 ada is more than enough to cover the fees for such a simple transaction on mainnet
+    -- at the time of writing.
+    --
+    -- A simple transaction that spends UTXOs is considered balanced if the value consumed equals
+    -- the value produced. Simply put, a transaction that spends only lovelace must account for
+    -- the total lovelace at the inputs, output(s), and transaction fee.
+    --
+    -- In other words:
+    --
+    -- @
+    -- inputs = outputs + fee
+    -- @
+    --
+    -- In this equation, the inputs would include the minted tokens, and the outputs would include the
+    -- burned tokens.
+    --
+    -- However, we don't always want to spend all the ada from a UTXO. Balancing a transaction ensures
+    -- that we send the desired amount, pay only the necessary fees, and calculate any extra currency
+    -- to be sent back to a change address.
+    --
+    -- Since changes to the transaction body can affect the required, finding this balance can be
+    -- challenging. Fortunately, there are functions available to help achieve this.
+    --
+    -- This module offers several methods for calculating transaction fees or fully balancing a draft
+    -- transaction. Each method requires varying amounts of information and provides different levels
+    -- of accuracy and automation.
+    --
+    -- Next, this module explores three examples of fee calculation methods. Other methods exist
+    -- but they have similar requirements.
+    --
+    -- Examples below use the following qualified modules:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports
+    -- @
+
+    -- ** Example 1: Simple fee calculation and manual balancing
+
+    -- |
+    -- This method requires minimal information and some manual work.
+    --
+    -- It calculates the transaction fees, but we need to balance the transaction manually.
+    --
+    -- We need to know:
+    --
+    -- 1. The Shelley-based era witness for the current era, which can be obtained by using 'shelleyBasedEra'.
+    --
+    -- @
+    -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
+    -- @
+    --
+    -- 2. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'
+    -- query defined in "Cardano.Api.Internal.Query". Let's assume they are stored in the @exampleProtocolParams@ variable.
+    --
+    -- 3. The draft transaction body, which can be created using 'createTransactionBody' defined in "Cardano.Api.Internal.Tx.Body":
+    --
+    -- @
+    -- let (Right txBody) = Api.createTransactionBody sbe txBodyContent
+    -- @
+    --
+    -- 4. The number of Byron and Shelley key witnesses, which corresponds to the number of keys required
+    -- to sign the transaction. We can estimate this by using 'estimateTransactionKeyWitnessCount'.
+    -- For a simple transaction with a single UTXO locked by a single modern Shelley key,
+    -- there would be @0@ Byron witnesses and @1@ Shelley witness.
+    --
+    -- 5. The size of any reference scripts in bytes (if any). For simple transactions,
+    -- this would be @0@.
+    --
+    -- With this in mind, it is possible to estimate the fees required by the transaction by calling
+    -- 'evaluateTransactionFee' as follows:
+    --
+    -- @
+    -- let fees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0
+    -- @
+    --
+    -- Once we know the required fees, we can balance the transaction by
+    -- subtracting fees from the total value of the UTXO being spent.
+    --
+    -- For example, if we have a UTXO with 12 ada, the fees are 0.2 ada, and we want
+    -- to send 10 ada to an address, the transaction could look like this:
+    --
+    -- * 1 input of 12 ada (from the UTXO)
+    -- * 1 output of 10 ada (to the recipient address)
+    -- * 1 output of 1.8 ada (to the change address)
+    -- * 0.2 ada in fees (calculated fees, in this case, an overestimation).
+    --
+    -- We would then have to update the 'TxBodyContent' accordingly and continue building
+    -- the transaction as demonstrated in "Cardano.Api.Internal.Experimental.Tx".
+
+    -- ** Example 2: Automated balancing without chain information (no UTXO, no ledger state)
+
+    -- |
+    -- This method requires more information, but better automates the process, reducing
+    -- the need for estimation. It also works with a 'TxBodyContent', rather than a
+    -- full 'TxBody'.
+    --
+    -- The following information is required:
+    --
+    -- 1. The MaryEraOnwards witness for the current era. In this case, we use the
+    -- one for the 'Conway' era:
+    --
+    -- @
+    -- let meo = Api.MaryEraOnwardsConway
+    -- @
+    --
+    -- 2. The draft 'TxBodyContent' for the transaction we want to balance. See how to create one
+    -- in "Cardano.Api.Internal.Tx.Body". It is assumed to be stored in the @txBodyContent@ variable.
+    --
+    -- 3. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'
+    -- query defined in "Cardano.Api.Internal.Query". Let's assume they are stored in the @exampleProtocolParams@ variable.
+    --
+    -- 4. For stake pool and governance actions, we will also need:
+    --
+    --     * The set of registered stake pools being unregistered in this transaction
+    --     * The map of all deposits for stake credentials being unregistered in this transaction
+    --     * The map of all deposits for DRep credentials that are unregistered in this transaction
+    --     * Plutus script execution units for all script witnesses used in the transaction.
+    --
+    --    This example assumes we are only spending key-locked UTXOs. Therefore, we can ignore the above
+    --    and use 'mempty'.
+    --
+    -- 5. The following amounts:
+    --
+    --     * Collateral amount: required only for transactions involving Plutus scripts. Since
+    --       this transaction does not include any, the collateral is @0@.
+    --     * Amount of Shelley key witnesses to be added: estimated using 'estimateTransactionKeyWitnessCount'.
+    --       For a simple transaction spending a single UTXO locked by a modern Shelley key, there is @1@
+    --       Shelley witness.
+    --     * Amount of Byron key witnesses to be added: assumed to be @0@ for this transaction.
+    --     * Size of all reference scripts (in bytes): since no reference scripts are used, this value is @0@.
+    --
+    -- 6. The address for sending the change. We can deserialize it from its bech32 representation
+    -- using the 'deserialiseAddress' function defined in "Cardano.Api.Internal.Address":
+    --
+    -- @
+    -- let Just exampleChangeAddress =
+    --            Api.deserialiseAddress
+    --              (Api.AsAddressInEra eraAsType)
+    --              "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+    -- @
+    --
+    -- Alternatively, we can get it from our signing key:
+    --
+    -- @
+    -- let exampleChangeAddress =
+    --       Api.shelleyAddressInEra sbe $
+    --         Api.makeShelleyAddress
+    --           (Api.Testnet $ Api.NetworkMagic 2)    -- The magic for the network we are using
+    --           (Api.PaymentCredentialByKey
+    --              $ Api.verificationKeyHash
+    --                  $ Api.getVerificationKey
+    --                      signingKey)
+    --           Api.NoStakeAddress                    -- Potentially, the stake credential if we want to use one
+    -- @
+    --
+    -- 7. Finally, we need the total amount of ada (and other tokens) in the UTXOs being spent. In this example,
+    -- the transaction spends 12 ada:
+    --
+    -- @
+    -- let totalUTxOValue = Api.lovelaceToValue 12_000_000
+    -- @
+    --
+    -- With all this information, a balanced transaction can be obtained by calling 'estimateBalancedTxBody'
+    -- as follows:
+    --
+    -- @
+    -- let (Right (Api.BalancedTxBody
+    --               updatedTxBodyContent
+    --               updatedTxBody
+    --               changeOutput
+    --               fees)) =
+    --       Api.estimateBalancedTxBody
+    --         meo
+    --         txBodyContent
+    --         exampleProtocolParams
+    --         mempty
+    --         mempty
+    --         mempty
+    --         mempty
+    --         0
+    --         1
+    --         0
+    --         0
+    --         exampleChangeAddress
+    -- @
+    --
+    -- This will produce a balanced transaction body with calculated fees and a change output, but
+    -- it still needs to be signed and submitted.
+
+    -- ** Example 3: Fully automated balancing with chain information (requires UTXO and ledger state data)
+
+    -- |
+    -- The previous example required manually providing various details, which was feasible for a simple
+    -- transaction. However, for more complex transactions involving scripts or advanced functionalities
+    -- such as governance actions, a more automated approach is available. This method performs most
+    -- calculations in exchange for general ledger information.
+    --
+    -- The following details are required:
+    --
+    -- 1. Shelley-based era witness for the current era, retrievable using 'shelleyBasedEra'.
+    --
+    -- @
+    -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
+    -- @
+    --
+    -- 2. Network start time, obtainable using the 'QuerySystemStart' query defined in
+    -- "Cardano.Api.Internal.Query". Assume we have it in the @exampleSystemStart@ variable.
+    --
+    -- 3. Ledger epoch information, derivable by applying 'toLedgerEpochInfo' to the
+    -- 'EraHistory', which can be retrieved using the 'QueryEraHistory' query defined in
+    -- "Cardano.Api.Internal.Query". Assume this is stored in the @exampleLedgerEpochInfo@ variable.
+    --
+    -- 4. Protocol parameters for the current era, accessible through the 'QueryProtocolParameters'
+    -- query defined in "Cardano.Api.Internal.Query". Assume this is stored in the @exampleProtocolParams@ variable.
+    --
+    -- 5. For stake pool and gov actions, additional data is requried:
+    --
+    --      * The set of registered stake pools being unregistered in this transaction
+    --      * The map of all deposits associated with stake credentials being unregistered in this transaction
+    --      * The map of all deposits associated with DRep credentials being unregistered in this transaction.
+    --
+    --    For this example, no stake pool deregistration or governance actions are considered, so 'mempty' is used
+    --    for the corresponding parameters.
+    --
+    -- 6. UTXO set being spent -- the full UTXO set can be obtained using the 'QueryUTxO' query
+    -- from "Cardano.Api.Internal.Query". Assume this is stored in the @utxoToUse@ variable.
+    --
+    -- 7. Draft transaction body content -- the 'TxBodyContent' for the transaction that requires balancing.
+    -- The process for creating this structure is demonstrated in "Cardano.Api.Internal.Tx.Body".
+    --
+    -- 8. Change address -- the address where any remaining balance should be returned. This can be
+    -- deserialized from its Bech32 representation using the 'deserialiseAddress' function from
+    -- "Cardano.Api.Internal.Address":
+    --
+    -- @
+    -- let (Just exampleChangeAddress) =
+    --             Api.deserialiseAddress
+    --               (Api.AsAddressInEra eraAsType)
+    --               "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+    -- @
+    --
+    -- Alternatively, it is possible to get it from the signing key:
+    --
+    -- @
+    -- let exampleChangeAddress =
+    --       Api.shelleyAddressInEra sbe $
+    --         Api.makeShelleyAddress
+    --           (Api.Testnet $ Api.NetworkMagic 2)    -- The magic for the network we are using
+    --           (Api.PaymentCredentialByKey
+    --              $ Api.verificationKeyHash
+    --                  $ Api.getVerificationKey
+    --                      signingKey)
+    --           Api.NoStakeAddress                    -- Potentially, the stake credential if we want to use one
+    -- @
+    --
+    --
+    -- 9. Finally, the number of key witnesses required for the transaction can be manually specified.
+    -- However, if set to 'Nothing', the function will automatically estimate the required number.
+    --
+    -- With all the necessary information available, a balanced transaction can be obtained
+    -- by calling 'makeTransactionBodyAutoBalance' as follows:
+    --
+    -- @
+    -- let Right (Api.BalancedTxBody
+    --              updatedTxBodyContent
+    --              updatedTxBody
+    --              changeOutput
+    --              fees) =
+    --    Api.makeTransactionBodyAutoBalance
+    --      sbe
+    --      exampleSystemStart
+    --      exampleLedgerEpochInfo
+    --      (Api.LedgerProtocolParameters exampleProtocolParams)
+    --      mempty
+    --      mempty
+    --      mempty
+    --      utxoToUse
+    --      txBodyContent
+    --      exampleChangeAddress
+    --      Nothing
+    -- @
+    --
+    -- This will give us a balanced transaction with the fees calculated and the change output
+    -- included. The transaction can now be signed and submitted.
+
+    -- * Contents
+
+    -- ** Transaction fees
     evaluateTransactionFee
   , calculateMinTxFee
   , estimateTransactionKeyWitnessCount
 
-    -- * Script execution units
+    -- ** Script execution units
   , evaluateTransactionExecutionUnits
   , evaluateTransactionExecutionUnitsShelley
   , ScriptExecutionError (..)
   , TransactionValidityError (..)
 
-    -- * Transaction balance
+    -- ** Transaction balance
   , evaluateTransactionBalance
 
-    -- * Automated transaction building
+    -- ** Automated transaction building
   , estimateBalancedTxBody
   , estimateOrCalculateBalancedTxBody
   , makeTransactionBodyAutoBalance
@@ -40,10 +333,10 @@ module Cardano.Api.Internal.Fees
   , TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
 
-    -- * Minimum UTxO calculation
+    -- ** Minimum UTxO calculation
   , calculateMinimumUTxO
 
-    -- * Internal helpers
+    -- ** Internal helpers
   , ResolvablePointers (..)
   )
 where
@@ -203,28 +496,28 @@ estimateBalancedTxBody
   -> TxBodyContent BuildTx era
   -> L.PParams (ShelleyLedgerEra era)
   -> Set PoolId
-  -- ^ The set of registered stake pools, that are being
+  -- ^ The set of registered stake pools, being
   --   unregistered in this transaction.
   -> Map StakeCredential L.Coin
-  -- ^ Map of all deposits for stake credentials that are being
-  --   unregistered in this transaction
+  -- ^ A map of all deposits for stake credentials that are being
+  --   unregistered in this transaction.
   -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
-  -- ^ Map of all deposits for drep credentials that are being
-  --   unregistered in this transaction
+  -- ^ A map of all deposits for DRep credentials that are being
+  --   unregistered in this transaction.
   -> Map ScriptWitnessIndex ExecutionUnits
-  -- ^ Plutus script execution units
+  -- ^ Plutus script execution units.
   -> Coin
-  -- ^ Total potential collateral amount
+  -- ^ Total potential collateral amount.
   -> Int
-  -- ^ The number of key witnesses still to be added to the transaction.
+  -- ^ The number of key witnesses to be added to the transaction.
   -> Int
-  -- ^ The number of Byron key witnesses still to be added to the transaction.
+  -- ^ The number of Byron key witnesses to be added to the transaction.
   -> Int
-  -- ^ Size of all reference scripts in bytes
+  -- ^ The size of all reference scripts in bytes.
   -> AddressInEra era
-  -- ^ Change address
+  -- ^ Change address.
   -> Value
-  -- ^ Total value of UTxOs being spent
+  -- ^ Total value of UTXOs being spent.
   -> Either (TxFeeEstimationError era) (BalancedTxBody era)
 estimateBalancedTxBody
   w
@@ -393,11 +686,11 @@ estimateBalancedTxBody
 --- Transaction fees
 ---
 
--- | Compute the transaction fee for a proposed transaction, with the
--- assumption that there will be the given number of key witnesses (i.e.
--- signatures).
+-- | Transaction fees can be computed for a proposed transaction based on the
+-- expected number of key witnesses (i.e. signatures).
 --
--- Use 'calculateMinTxFee' if possible as that function is more accurate.
+-- When possible, use 'calculateMinTxFee', as it provides a more accurate
+-- estimate:
 evaluateTransactionFee
   :: forall era
    . ()
@@ -417,18 +710,15 @@ evaluateTransactionFee sbe pp txbody keywitcount byronwitcount refScriptsSize =
       ShelleyTx _ tx ->
         L.estimateMinFeeTx pp tx (fromIntegral keywitcount) (fromIntegral byronwitcount) refScriptsSize
 
--- | Estimate minimum transaction fee for a proposed transaction by looking
--- into the transaction and figuring out how many and what kind of key
--- witnesses this transaction needs.
+-- | Estimate the minimum transaction fee by analyzing the transaction structure
+-- and determining the required number and type of key witnesses.
 --
--- It requires access to the portion of the `UTxO` that is relevant for this
--- transaction in order to lookup any txins included in the transaction.
+-- It requires access to the relevant portion of the UTXO set to look up any
+-- transaction inputs (txins) included in the transaction. However, it cannot
+-- reliably determine the number of witnesses required for native scripts.
 --
--- The only type of witnesses that it cannot figure out reliably is the
--- witnesses needed for satisfying native scripts included in the transaction.
---
--- For this reason number of witnesses needed for native scripts must be
--- supplied as an extra argument.
+-- Therefore, the number of witnesses needed for native scripts must be provided
+-- as an additional argument.
 calculateMinTxFee
   :: forall era
    . ()
@@ -445,20 +735,20 @@ calculateMinTxFee sbe pp utxo txbody keywitcount =
       ShelleyTx _ tx ->
         L.calcMinFeeTx (toLedgerUTxO sbe utxo) pp tx (fromIntegral keywitcount)
 
--- | Give an approximate count of the number of key witnesses (i.e. signatures)
--- a transaction will need.
+-- | Provide and approximate count of the key witnesses (i.e. signatures)
+-- required for a transaction.
 --
--- This is an estimate not a precise count in that it can over-estimate: it
--- makes conservative assumptions such as all inputs are from distinct
--- addresses, but in principle multiple inputs can use the same address and we
--- only need a witness per address.
+-- This estimate is not exact and may overestimate the required number of witnesses.
+-- The function makes conservative assumptions, including:
 --
--- Similarly there can be overlap between the regular and collateral inputs,
--- but we conservatively assume they are distinct.
+-- * Treating all inputs as originating from distinct addresses. In reality,
+--   multiple inputs may share the same address, requiring only one witness per address.
 --
--- TODO: it is worth us considering a more precise count that relies on the
--- UTxO to resolve which inputs are for distinct addresses, and also to count
--- the number of Shelley vs Byron style witnesses.
+-- * Assuming regular and collateral inputs are distinct, even though they may overlap.
+--
+-- TODO: Consider implementing a more precise calculation that leverages the UTXO set
+-- to determine which inputs correspond to distinct addresses. Additionally, the
+-- estimate can be refined by distinguishing between Shelley and Byron-style witnesses.
 estimateTransactionKeyWitnessCount :: TxBodyContent BuildTx era -> Word
 estimateTransactionKeyWitnessCount
   TxBodyContent
@@ -539,15 +829,15 @@ data ResolvablePointers where
 
 deriving instance Show ResolvablePointers
 
--- | The different possible reasons that executing a script can fail,
--- as reported by 'evaluateTransactionExecutionUnits'.
+-- | This data type represents the possible reasons for a script’s execution
+-- failure, as reported by the  'evaluateTransactionExecutionUnits' function.
 --
--- The first three of these are about failures before we even get to execute
--- the script, and two are the result of execution.
+-- The first three errors relate to issues before executing the script,
+-- while the last two arise during script execution.
 --
--- TODO: We should replace ScriptWitnessIndex with ledger's
--- PlutusPurpose AsIx ledgerera. This would necessitate the
--- parameterization of ScriptExecutionError.
+-- TODO: Consider replacing @ScriptWitnessIndex@ with the ledger’s @PlutusPurpose
+-- AsIx ledgerera@. This change would require parameterizing the
+-- @ScriptExecutionError@.
 data ScriptExecutionError
   = -- | The script depends on a 'TxIn' that has not been provided in the
     -- given 'UTxO' subset. The given 'UTxO' must cover all the inputs
@@ -640,20 +930,23 @@ instance Error ScriptExecutionError where
 data TransactionValidityError era where
   -- | The transaction validity interval is too far into the future.
   --
-  -- Transactions with Plutus scripts need to have a validity interval that is
-  -- not so far in the future that we cannot reliably determine the UTC time
-  -- corresponding to the validity interval expressed in slot numbers.
+  -- Transactions containing Plutus scripts must have a validity interval that is
+  -- not excessively far in the future. This ensures that the UTC
+  -- corresponding to the validity interval expressed in slot numbers,
+  -- can be reliably determined.
   --
-  -- This is because the Plutus scripts get given the transaction validity
-  -- interval in UTC time, so that they are not sensitive to slot lengths.
+  -- Plutus scripts are given the transaction validity interval in UTC to
+  -- prevent sensitivity to variations in slot lengths.
   --
-  -- If either end of the validity interval is beyond the so called \"time
-  -- horizon\" then the consensus algorithm is not able to reliably determine
-  -- the relationship between slots and time. This is this situation in which
-  -- this error is reported. For the Cardano mainnet the time horizon is 36
-  -- hours beyond the current time. This effectively means we cannot submit
-  -- check or submit transactions that use Plutus scripts that have the end
-  -- of their validity interval more than 36 hours into the future.
+  -- If either end of the validity interval exceeds the \"time horizon\", the
+  -- consensus algorithm cannot reliably establish the relationship between
+  -- slots and time.
+  --
+  -- This error occurs when thevalidity interval exceeds the time horizon.
+  -- For the Cardano mainnet, the time horizon is set to 36 hours beyond the
+  -- current time. This effectively restricts the submission and validation
+  -- of transactions that include Plutus scripts if the end of their validity
+  -- interval extends more than 36 hours into the future.
   TransactionValidityIntervalError
     :: Consensus.PastHorizonException -> TransactionValidityError era
   TransactionValidityCostModelError
@@ -689,10 +982,10 @@ instance Error (TransactionValidityError era) where
         , " Cost models: " <> pshow cModels
         ]
 
--- | Compute the 'ExecutionUnits' needed for each script in the transaction.
+-- | Compute the 'ExecutionUnits' required for each script in the transaction.
 --
--- This works by running all the scripts and counting how many execution units
--- are actually used.
+-- This process involves executing all scripts and counting the actual execution units
+-- consumed.
 evaluateTransactionExecutionUnits
   :: forall era
    . ()
@@ -806,10 +1099,11 @@ extractPlutusScriptAndLanguage p =
 -- Transaction balance
 --
 
--- | Compute the total balance of the proposed transaction. Ultimately a valid
--- transaction must be fully balanced: that is have a total value of zero.
+-- | Compute the total balance of the proposed transaction. Ultimately, a valid
+-- transaction must be fully balanced, which means that it has a total value
+-- of zero.
 --
--- Finding the (non-zero) balance of partially constructed transaction is
+-- Finding the (non-zero) balance of a partially constructed transaction is
 -- useful for adjusting a transaction to be fully balanced.
 evaluateTransactionBalance
   :: forall era
@@ -854,9 +1148,9 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
 data TxBodyErrorAutoBalance era
   = -- | The same errors that can arise from 'makeTransactionBody'.
     TxBodyError TxBodyError
-  | -- | One or more of the scripts fails to execute correctly.
+  | -- | One or more scripts failed to execute correctly.
     TxBodyScriptExecutionError [(ScriptWitnessIndex, ScriptExecutionError)]
-  | -- | One or more of the scripts were expected to fail validation, but none did.
+  | -- | One or more scripts were expected to fail validation, but none did.
     TxBodyScriptBadScriptValidity
   | -- | There is not enough ada to cover both the outputs and the fees.
     -- The transaction should be changed to provide more input ada, or
@@ -864,7 +1158,7 @@ data TxBodyErrorAutoBalance era
     TxBodyErrorAdaBalanceNegative L.Coin
   | -- | There is enough ada to cover both the outputs and the fees, but the
     -- resulting change is too small: it is under the minimum value for
-    -- new UTxO entries. The transaction should be changed to provide more
+    -- new UTXO entries. The transaction should be changed to provide more
     -- input ada.
     TxBodyErrorAdaBalanceTooSmall
       -- \^ Offending TxOut
@@ -887,7 +1181,7 @@ data TxBodyErrorAutoBalance era
       -- \^ Offending TxOut
 
       TxOutInAnyEra
-      -- ^ Minimum UTxO
+      -- ^ Minimum UTXO
       L.Coin
   | TxBodyErrorNonAdaAssetsUnbalanced Value
   | TxBodyErrorScriptWitnessIndexMissingFromExecUnitsMap
@@ -1004,13 +1298,13 @@ data FeeEstimationMode era
       (Map ScriptWitnessIndex ExecutionUnits)
       -- ^ Plutus script execution units
       RequiredShelleyKeyWitnesses
-      -- ^ The number of key witnesses still to be added to the transaction.
+      -- ^ The number of key witnesses to be added to the transaction.
       RequiredByronKeyWitnesses
-      -- ^ The number of Byron key witnesses still to be added to the transaction.
+      -- ^ The number of Byron key witnesses to be added to the transaction.
       TotalReferenceScriptsSize
       -- ^ The total size in bytes of reference scripts
 
--- | This is much like 'makeTransactionBody' but with greater automation to
+-- | This is similar to 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
 --
 -- In particular:
@@ -1018,7 +1312,7 @@ data FeeEstimationMode era
 -- * It calculates the correct script 'ExecutionUnits' (ignoring the provided
 --   values, which can thus be zero).
 --
--- * It calculates the transaction fees, based on the script 'ExecutionUnits',
+-- * It calculates the transaction fees based on the script 'ExecutionUnits',
 --   the current 'ProtocolParameters', and an estimate of the number of
 --   key witnesses (i.e. signatures). There is an override for the number of
 --   key witnesses.
@@ -1029,7 +1323,7 @@ data FeeEstimationMode era
 -- * It also checks that the balance is positive and the change is above the
 --   minimum threshold.
 --
--- To do this it needs more information than 'makeTransactionBody', all of
+-- To do this, it requires more information than 'makeTransactionBody', all of
 -- which can be queried from a local node.
 makeTransactionBodyAutoBalance
   :: forall era
@@ -1040,16 +1334,16 @@ makeTransactionBodyAutoBalance
   -> LedgerEpochInfo
   -> LedgerProtocolParameters era
   -> Set PoolId
-  -- ^ The set of registered stake pools, that are being
+  -- ^ The set of registered stake pools, being
   --   unregistered in this transaction.
   -> Map StakeCredential L.Coin
-  -- ^ Map of all deposits for stake credentials that are being
+  -- ^ The map of all deposits for stake credentials that are being
   --   unregistered in this transaction
   -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
-  -- ^ Map of all deposits for drep credentials that are being
+  -- ^ The map of all deposits for DRep credentials that are being
   --   unregistered in this transaction
   -> UTxO era
-  -- ^ Just the transaction inputs (including reference and collateral ones), not the entire 'UTxO'.
+  -- ^ The transaction inputs (including reference and collateral ones), not the entire 'UTxO'.
   -> TxBodyContent BuildTx era
   -> AddressInEra era
   -- ^ Change address
