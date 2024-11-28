@@ -1484,6 +1484,13 @@ substituteExecutionUnits
               redeemer
               exunits
 
+    adjustWitness
+      :: (ScriptWitness witctx era -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era))
+      -> Witness witctx era
+      -> Either (TxBodyErrorAutoBalance era) (Witness witctx era)
+    adjustWitness _ (KeyWitness ctx) = Right $ KeyWitness ctx
+    adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
+
     mapScriptWitnessesTxIns
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
       -> Either (TxBodyErrorAutoBalance era) [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
@@ -1495,27 +1502,18 @@ substituteExecutionUnits
                ]
           mappedScriptWitnesses =
             [ (txin, BuildTxWith <$> wit')
-            | -- The tx ins are indexed in the map order by txid
-            (ix, (txin, BuildTxWith wit)) <- zip [0 ..] (orderTxIns txins)
-            , let wit' = case wit of
-                    KeyWitness{} -> Right wit
-                    ScriptWitness ctx witness -> ScriptWitness ctx <$> witness'
-                     where
-                      witness' = substituteExecUnits (ScriptWitnessIndexTxIn ix) witness
+            | (ix, txin, wit) <- txInsToIndexed txins
+            , let wit' = adjustWitness (substituteExecUnits ix) wit
             ]
        in traverse
-            ( \(txIn, eWitness) ->
-                case eWitness of
-                  Left e -> Left e
-                  Right wit -> Right (txIn, wit)
-            )
+            (\(txIn, eWitness) -> (txIn,) <$> eWitness)
             mappedScriptWitnesses
 
     mapScriptWitnessesWithdrawals
       :: TxWithdrawals BuildTx era
       -> Either (TxBodyErrorAutoBalance era) (TxWithdrawals BuildTx era)
     mapScriptWitnessesWithdrawals TxWithdrawalsNone = Right TxWithdrawalsNone
-    mapScriptWitnessesWithdrawals (TxWithdrawals supported withdrawals) =
+    mapScriptWitnessesWithdrawals txWithdrawals'@(TxWithdrawals supported _) =
       let mappedWithdrawals
             :: [ ( StakeAddress
                  , L.Coin
@@ -1524,55 +1522,30 @@ substituteExecutionUnits
                ]
           mappedWithdrawals =
             [ (addr, withdrawal, BuildTxWith <$> mappedWitness)
-            | -- The withdrawals are indexed in the map order by stake credential
-            (ix, (addr, withdrawal, BuildTxWith wit)) <- zip [0 ..] (orderStakeAddrs withdrawals)
-            , let mappedWitness = adjustWitness (substituteExecUnits (ScriptWitnessIndexWithdrawal ix)) wit
+            | (ix, addr, withdrawal, wit) <- txWithdrawalsToIndexed txWithdrawals'
+            , let mappedWitness = adjustWitness (substituteExecUnits ix) wit
             ]
        in TxWithdrawals supported
             <$> traverse
-              ( \(sAddr, ll, eWitness) ->
-                  case eWitness of
-                    Left e -> Left e
-                    Right wit -> Right (sAddr, ll, wit)
-              )
+              (\(sAddr, ll, eWitness) -> (sAddr,ll,) <$> eWitness)
               mappedWithdrawals
-     where
-      adjustWitness
-        :: (ScriptWitness witctx era -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era))
-        -> Witness witctx era
-        -> Either (TxBodyErrorAutoBalance era) (Witness witctx era)
-      adjustWitness _ (KeyWitness ctx) = Right $ KeyWitness ctx
-      adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
 
     mapScriptWitnessesCertificates
       :: TxCertificates BuildTx era
       -> Either (TxBodyErrorAutoBalance era) (TxCertificates BuildTx era)
     mapScriptWitnessesCertificates TxCertificatesNone = Right TxCertificatesNone
-    mapScriptWitnessesCertificates
-      ( TxCertificates
-          supported
-          certs
-          (BuildTxWith witnesses)
-        ) =
-        let mappedScriptWitnesses
-              :: [(StakeCredential, Either (TxBodyErrorAutoBalance era) (Witness WitCtxStake era))]
-            mappedScriptWitnesses =
-              [ (stakecred, ScriptWitness ctx <$> witness')
-              | -- The certs are indexed in list order
-              (ix, cert) <- zip [0 ..] certs
-              , stakecred <- maybeToList (selectStakeCredentialWitness cert)
-              , ScriptWitness ctx witness <-
-                  maybeToList (List.lookup stakecred witnesses)
-              , let witness' = substituteExecUnits (ScriptWitnessIndexCertificate ix) witness
-              ]
-         in TxCertificates supported certs . BuildTxWith
-              <$> traverse
-                ( \(sCred, eScriptWitness) ->
-                    case eScriptWitness of
-                      Left e -> Left e
-                      Right wit -> Right (sCred, wit)
-                )
-                mappedScriptWitnesses
+    mapScriptWitnessesCertificates txCertificates'@(TxCertificates supported certs _) =
+      let mappedScriptWitnesses
+            :: [(StakeCredential, Either (TxBodyErrorAutoBalance era) (Witness WitCtxStake era))]
+          mappedScriptWitnesses =
+            [ (stakeCred, witness')
+            | (ix, _, stakeCred, witness) <- txCertificatesToIndexed txCertificates'
+            , let witness' = adjustWitness (substituteExecUnits ix) witness
+            ]
+       in TxCertificates supported certs . BuildTxWith
+            <$> traverse
+              (\(sCred, eScriptWitness) -> (sCred,) <$> eScriptWitness)
+              mappedScriptWitnesses
 
     mapScriptWitnessesVotes
       :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))
@@ -1582,13 +1555,11 @@ substituteExecutionUnits
     mapScriptWitnessesVotes Nothing = return Nothing
     mapScriptWitnessesVotes (Just (Featured _ TxVotingProceduresNone)) = return Nothing
     mapScriptWitnessesVotes (Just (Featured _ (TxVotingProcedures _ ViewTx))) = return Nothing
-    mapScriptWitnessesVotes (Just (Featured era (TxVotingProcedures vProcedures (BuildTxWith sWitMap)))) = do
+    mapScriptWitnessesVotes (Just (Featured era txVotingProcedures'@(TxVotingProcedures vProcedures (BuildTxWith _)))) = do
       let eSubstitutedExecutionUnits =
             [ (vote, updatedWitness)
-            | let allVoteMap = L.unVotingProcedures vProcedures
-            , (vote, scriptWitness) <- toList sWitMap
-            , index <- maybeToList $ Map.lookupIndex vote allVoteMap
-            , let updatedWitness = substituteExecUnits (ScriptWitnessIndexVoting $ fromIntegral index) scriptWitness
+            | (ix, vote, witness) <- txVotingProceduresToIndexed txVotingProcedures'
+            , let updatedWitness = substituteExecUnits ix witness
             ]
 
       substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
@@ -1605,13 +1576,11 @@ substituteExecutionUnits
     mapScriptWitnessesProposals Nothing = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures _ ViewTx))) = return Nothing
-    mapScriptWitnessesProposals (Just (Featured era txpp@(TxProposalProcedures osetProposalProcedures (BuildTxWith sWitMap)))) = do
-      let allProposalsList = toList $ convProposalProcedures txpp
-          eSubstitutedExecutionUnits =
+    mapScriptWitnessesProposals (Just (Featured era txpp@(TxProposalProcedures osetProposalProcedures (BuildTxWith _)))) = do
+      let eSubstitutedExecutionUnits =
             [ (proposal, updatedWitness)
-            | (proposal, scriptWitness) <- toList sWitMap
-            , index <- maybeToList $ List.elemIndex proposal allProposalsList
-            , let updatedWitness = substituteExecUnits (ScriptWitnessIndexProposing $ fromIntegral index) scriptWitness
+            | (ix, proposal, scriptWitness) <- txProposalProceduresToIndexed txpp
+            , let updatedWitness = substituteExecUnits ix scriptWitness
             ]
 
       substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits

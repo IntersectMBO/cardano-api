@@ -703,6 +703,23 @@ getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PReferenceScript txIn _
 getScriptWitnessReferenceInput (SimpleScriptWitness _ (SScript _)) = Nothing
 getScriptWitnessReferenceInput (PlutusScriptWitness _ _ (PScript _) _ _ _) = Nothing
 
+-- ----------------------------------------------------------------------------
+-- The kind of witness to use, key (signature) or script
+--
+
+data Witness witctx era where
+  KeyWitness
+    :: KeyWitnessInCtx witctx
+    -> Witness witctx era
+  ScriptWitness
+    :: ScriptWitnessInCtx witctx
+    -> ScriptWitness witctx era
+    -> Witness witctx era
+
+deriving instance Eq (Witness witctx era)
+
+deriving instance Show (Witness witctx era)
+
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
 --
@@ -804,23 +821,6 @@ scriptWitnessScript (SimpleScriptWitness _ (SReferenceScript _ _)) =
   Nothing
 scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
   Nothing
-
--- ----------------------------------------------------------------------------
--- The kind of witness to use, key (signature) or script
---
-
-data Witness witctx era where
-  KeyWitness
-    :: KeyWitnessInCtx witctx
-    -> Witness witctx era
-  ScriptWitness
-    :: ScriptWitnessInCtx witctx
-    -> ScriptWitness witctx era
-    -> Witness witctx era
-
-deriving instance Eq (Witness witctx era)
-
-deriving instance Show (Witness witctx era)
 
 data KeyWitnessInCtx witctx where
   KeyWitnessForSpending :: KeyWitnessInCtx WitCtxTxIn
