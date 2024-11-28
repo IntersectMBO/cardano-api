@@ -120,17 +120,28 @@ module Cardano.Api.ReexposeLedger
   , AsIx (..)
   , CoinPerWord (..)
   , Data (..)
+  , EraTxWits (..)
   , ExUnits (..)
+  , Language
+  , Plutus
   , Prices (..)
+  , Script
   , CostModels
   , AlonzoGenesis
   , AsIxItem (..)
   , EraGov
   , EraTx (witsTxL, bodyTxL)
   , Tx
+  , TxDats (..)
+  , getNativeScript
+  , languageToText
+  , plutusBinary
+  , plutusScriptLanguage
   , ppPricesL
   , unData
   , unRedeemers
+  , serializeAsHexText
+  , showTimelock
   -- Base
   , boundRational
   , unboundRational
@@ -167,12 +178,14 @@ module Cardano.Api.ReexposeLedger
 where
 
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
+import           Cardano.Ledger.Allegra.Scripts (showTimelock)
 import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBody (..),
                    AlonzoEraTxWits (..), AsIx (..), AsIxItem (AsIxItem), CoinPerWord (..), EraGov,
-                   EraTx (bodyTxL, witsTxL), PParamsUpdate (..), Tx, ppPricesL)
+                   EraTx (bodyTxL, witsTxL), EraTxWits (..), PParamsUpdate (..), Tx, ppPricesL)
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), CostModels, ExUnits (..),
-                   Prices (..))
+                   Prices (..), Script, plutusScriptLanguage)
+import           Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import           Cardano.Ledger.Api (Constitution (..), GovAction (..), unRedeemers)
 import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,
@@ -180,7 +193,7 @@ import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
                    pattern RegDepositTxCert, pattern RegPoolTxCert, pattern RegTxCert,
                    pattern ResignCommitteeColdTxCert, pattern RetirePoolTxCert,
                    pattern UnRegDRepTxCert, pattern UnRegDepositTxCert, pattern UnRegTxCert)
-import           Cardano.Ledger.Babbage.Core (CoinPerByte (..))
+import           Cardano.Ledger.Babbage.Core (CoinPerByte (..), getNativeScript)
 import           Cardano.Ledger.BaseTypes (AnchorData (..), DnsName, EpochInterval (..),
                    Network (..), NonNegativeInterval, ProtVer (..), StrictMaybe (..), UnitInterval,
                    Url, boundRational, dnsToText, hashAnchorData, maybeToStrictMaybe, mkVersion,
@@ -188,7 +201,7 @@ import           Cardano.Ledger.BaseTypes (AnchorData (..), DnsName, EpochInterv
                    unboundRational, urlToText)
 import           Cardano.Ledger.Binary (Annotated (..), ByteSpan (..), byronProtVer, fromCBOR,
                    serialize', slice, toCBOR, toPlainDecoder)
-import           Cardano.Ledger.Binary.Plain (Decoder)
+import           Cardano.Ledger.Binary.Plain (Decoder, serializeAsHexText)
 import           Cardano.Ledger.CertState (DRepState (..), csCommitteeCredsL)
 import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
 import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVotingThresholds (..),
@@ -210,6 +223,7 @@ import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drep
 import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VKey (..),
                    hashWithSerialiser)
 import           Cardano.Ledger.Plutus.Data (Data (..), unData)
+import           Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import           Cardano.Ledger.SafeHash (SafeHash, castSafeHash, extractHash, unsafeMakeSafeHash)
 import           Cardano.Ledger.Shelley.API (AccountState (..), GenDelegPair (..),

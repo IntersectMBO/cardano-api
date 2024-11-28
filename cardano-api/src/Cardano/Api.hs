@@ -532,6 +532,7 @@ module Cardano.Api
   , eraOfScriptInEra
   , HasScriptLanguageInEra (..)
   , ToAlonzoScript (..)
+  , AlonzoEraOnwardsConstraints
 
     -- ** Use of a script in an era as a witness
   , WitCtxTxIn
