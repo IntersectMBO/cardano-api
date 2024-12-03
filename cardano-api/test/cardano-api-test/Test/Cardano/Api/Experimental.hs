@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Api.Experimental
   ( tests
@@ -29,7 +30,6 @@ import           Test.Tasty.Hedgehog (testProperty)
 --
 -- IMPORTANT NOTE: If this file requires changes, please update the examples in the
 -- documentation in 'cardano-api/src/Cardano/Api/Experimental.hs' too.
---
 tests :: TestTree
 tests =
   testGroup
