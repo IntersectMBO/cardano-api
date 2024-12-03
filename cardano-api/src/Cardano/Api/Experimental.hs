@@ -25,6 +25,8 @@ module Cardano.Api.Experimental
 -- import qualified Cardano.Api.Ledger as Ledger      -- cardano-ledger re-exports
 -- import qualified Cardano.Api.Experimental as Exp   -- the experimental API
 -- @
+--
+-- You can find a compilable version of these examples in 'Test.Cardano.Api.Experimental'.
 
 -- ** Creating a 'TxBodyContent'
 -- |
@@ -186,7 +188,18 @@ module Cardano.Api.Experimental
 -- @
 -- let oldStyleTx :: Api.Tx Api.ConwayEra = ShelleyTx sbe newApiSignedTx
 -- @
+
+-- ** Inspecting transactions
+-- |
+-- For deconstructing an old style 'TxBody' into a 'TxBodyContent', we can also use the
+-- 'TxBody' pattern, but this cannot be used for constructing. For that we use 'ShelleyTxBody'
+-- or 'createTransactionBody', like in the example.
 --
+-- For extracting the 'TxBody' and the 'KeyWitness'es from an old style 'Tx', we can use
+-- the lenses 'getTxBody' and 'getTxWitnesses' respectively, from 'Cardano.Api'.
+--
+-- When using a 'Tx' created using the experimental API, you can extract the 'TxBody' and
+-- 'TxWits' using the lenses 'txBody' and 'txWits' respectively, from 'Cardano.Api.Ledger'.
 
 -- * Contents
 

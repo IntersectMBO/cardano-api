@@ -26,6 +26,10 @@ import           Test.Tasty.Hedgehog (testProperty)
 -- ```bash
 -- cabal test cardano-api-test --test-options="--pattern=Test.Cardano.Api.Experimental"
 -- ```
+--
+-- IMPORTANT NOTE: If this file requires changes, please update the examples in the
+-- documentation in 'cardano-api/src/Cardano/Api/Experimental.hs' too.
+--
 tests :: TestTree
 tests =
   testGroup
