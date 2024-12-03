@@ -91,7 +91,6 @@ import           Cardano.Api.Utils (noInlineMaybeToStrictMaybe)
 import           Cardano.Api.Value
 
 import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Keys as Ledger
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
