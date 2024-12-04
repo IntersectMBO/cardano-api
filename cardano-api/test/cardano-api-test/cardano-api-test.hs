@@ -10,6 +10,7 @@ import qualified Test.Cardano.Api.Address
 import qualified Test.Cardano.Api.Bech32
 import qualified Test.Cardano.Api.CBOR
 import qualified Test.Cardano.Api.Crypto
+import qualified Test.Cardano.Api.GovAnchorValidation
 import qualified Test.Cardano.Api.Envelope
 import qualified Test.Cardano.Api.EpochLeadership
 import qualified Test.Cardano.Api.Eras
@@ -45,6 +46,7 @@ tests =
     , Test.Cardano.Api.Bech32.tests
     , Test.Cardano.Api.CBOR.tests
     , Test.Cardano.Api.Crypto.tests
+    , Test.Cardano.Api.GovAnchorValidation.tests
     , Test.Cardano.Api.Envelope.tests
     , Test.Cardano.Api.EpochLeadership.tests
     , Test.Cardano.Api.Eras.tests
