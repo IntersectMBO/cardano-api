@@ -14,6 +14,7 @@ import qualified Test.Cardano.Api.Envelope
 import qualified Test.Cardano.Api.EpochLeadership
 import qualified Test.Cardano.Api.Eras
 import qualified Test.Cardano.Api.Genesis
+import qualified Test.Cardano.Api.GovAnchorValidation
 import qualified Test.Cardano.Api.IO
 import qualified Test.Cardano.Api.Json
 import qualified Test.Cardano.Api.KeysByron
@@ -45,6 +46,7 @@ tests =
     , Test.Cardano.Api.Bech32.tests
     , Test.Cardano.Api.CBOR.tests
     , Test.Cardano.Api.Crypto.tests
+    , Test.Cardano.Api.GovAnchorValidation.tests
     , Test.Cardano.Api.Envelope.tests
     , Test.Cardano.Api.EpochLeadership.tests
     , Test.Cardano.Api.Eras.tests
