@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | DRep off-chain metadata
@@ -43,11 +44,15 @@ newtype instance Hash DRepMetadata = DRepMetadataHash (Shelley.Hash StandardCryp
 
 instance HasTypeProxy DRepMetadata where
   data AsType DRepMetadata = AsDRepMetadata
+  proxyToAsType :: Proxy DRepMetadata -> AsType DRepMetadata
   proxyToAsType _ = AsDRepMetadata
 
 instance SerialiseAsRawBytes (Hash DRepMetadata) where
+  serialiseToRawBytes :: Hash DRepMetadata -> ByteString
   serialiseToRawBytes (DRepMetadataHash h) = Crypto.hashToBytes h
 
+  deserialiseFromRawBytes
+    :: AsType (Hash DRepMetadata) -> ByteString -> Either SerialiseAsRawBytesError (Hash DRepMetadata)
   deserialiseFromRawBytes (AsHash AsDRepMetadata) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash DRepMetadata") $
       DRepMetadataHash <$> Crypto.hashFromBytes bs

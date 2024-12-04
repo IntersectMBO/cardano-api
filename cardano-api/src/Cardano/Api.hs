@@ -487,6 +487,15 @@ module Cardano.Api
   , TxMetadataJsonError (..)
   , TxMetadataJsonSchemaError (..)
 
+    -- * Governance action metadata
+  , CIP108 (..)
+
+    -- ** DRep Metadata
+  , DRepMetadata
+  , DRepMetadataReference
+  , hashDRepMetadata
+  , CIP119 (..)
+
     -- * Certificates
   , Certificate (..)
 
@@ -517,6 +526,7 @@ module Cardano.Api
     -- ** Anchor data
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
+  , isDRepRegOrUpdateCert
 
     -- * Rewards
   , DelegationsAndRewards (..)
@@ -1032,12 +1042,10 @@ module Cardano.Api
     -- ** DReps
   , DRepKey
   , DRepExtendedKey
-  , DRepMetadata
-  , DRepMetadataReference
-  , hashDRepMetadata
 
     -- ** Governance actions
   , getAnchorDataFromGovernanceAction
+  , validateGovActionAnchorData
 
     -- ** Governance related certificates
   , AnchorDataHash (..)
@@ -1090,6 +1098,9 @@ import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Governance.Actions.ProposalProcedure
+import           Cardano.Api.Governance.Metadata.DrepRegistration (CIP119 (..))
+import           Cardano.Api.Governance.Metadata.GovAction (CIP108 (..))
+import           Cardano.Api.Governance.Metadata.Validation
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
