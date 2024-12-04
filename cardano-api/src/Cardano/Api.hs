@@ -1034,6 +1034,7 @@ module Cardano.Api
   , DRepMetadata
   , DRepMetadataReference
   , hashDRepMetadata
+  , validateDRepAnchorData
 
     -- ** Governance actions
   , getAnchorDataFromGovernanceAction
