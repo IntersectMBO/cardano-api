@@ -73,6 +73,7 @@ module Cardano.Api.Certificate
     -- * Internal functions
   , filterUnRegCreds
   , filterUnRegDRepCreds
+  , isDRepRegOrUpdateCert
   )
 where
 
@@ -793,3 +794,16 @@ getAnchorDataFromCertificate c =
             , Ledger.anchorDataHash = Ledger.unsafeMakeSafeHash hash
             }
         )
+
+-- | Returns `True` if the certificate is a DRep registration or update certificate,
+-- otherwise `False`. This is to see if the certificate needs to be compliant with
+-- CIP-0119.
+isDRepRegOrUpdateCert :: Certificate era -> Bool
+isDRepRegOrUpdateCert = \case
+  ShelleyRelatedCertificate _ _ -> False
+  ConwayCertificate ceo ccert ->
+    conwayEraOnwardsConstraints ceo $
+      case ccert of
+        Ledger.RegDRepTxCert{} -> True
+        Ledger.UpdateDRepTxCert{} -> True
+        _ -> False
