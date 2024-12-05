@@ -9,6 +9,7 @@ where
 import           Cardano.Api (File (File), FileDirection (In), FileError, readByteStringFile,
                    validateDRepAnchorData)
 import           Cardano.Api.DRepMetadata (DRepMetadata (..))
+import           Cardano.Api.Governance.Actions.MetadataValidation (validateGovActionAnchorData)
 
 import           Data.ByteString (ByteString)
 import           Data.Monoid (Any)
@@ -33,6 +34,9 @@ tests =
     , testProperty
         "Negative smoke test for DRep registration anchor data JSON schema"
         prop_negative_smoke_test_drep_registration_anchor_data_json_schema
+    , testProperty
+        "Positive smoke test for gov action anchor data JSON schema"
+        prop_positive_smoke_test_gov_action_anchor_data_json_schema
     ]
 
 prop_positive_smoke_test_drep_registration_anchor_data_json_schema :: Property
@@ -54,3 +58,13 @@ prop_negative_smoke_test_drep_registration_anchor_data_json_schema = propertyOnc
       )
   value <- H.evalEither eitherValue
   validateDRepAnchorData (DRepMetadata value) === Left "Error in $.body: key \"givenName\" not found"
+
+prop_positive_smoke_test_gov_action_anchor_data_json_schema :: Property
+prop_positive_smoke_test_gov_action_anchor_data_json_schema = propertyOnce $ do
+  (eitherValue :: Either (FileError Any) ByteString) <-
+    readByteStringFile
+      ( File "test/cardano-api-test/files/input/gov-anchor-data/valid-gov-action-metadata.jsonld"
+          :: File DRepMetadata In
+      )
+  value <- H.evalEither eitherValue
+  validateGovActionAnchorData value === Right ()
