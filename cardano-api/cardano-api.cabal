@@ -90,6 +90,7 @@ library internal
     Cardano.Api.Fees
     Cardano.Api.Genesis
     Cardano.Api.GenesisParameters
+    Cardano.Api.Governance.Actions.MetadataValidation
     Cardano.Api.Governance.Actions.ProposalProcedure
     Cardano.Api.Governance.Actions.VotingProcedure
     Cardano.Api.Governance.Poll
