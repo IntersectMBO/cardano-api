@@ -244,6 +244,7 @@ module Cardano.Api.Shelley
   , StakeSnapshot (..)
   , SerialisedStakeSnapshots (..)
   , decodeStakeSnapshot
+  , decodeBigLedgerPeerSnapshot
   , UTxO (..)
   , AcquiringFailure (..)
   , SystemStart (..)

@@ -974,6 +974,7 @@ module Cardano.Api
   , queryCurrentEpochState
   , queryCurrentEra
   , queryDebugLedgerState
+  , queryLedgerPeerSnapshot
   , queryEpoch
   , queryConstitutionHash
   , queryEraHistory
