@@ -1,5 +1,37 @@
 # Changelog for cardano-api
 
+## 10.4.0.0
+
+- Integrate queryProposals (GetProposals)
+  (feature)
+  [PR 684](https://github.com/IntersectMBO/cardano-api/pull/684)
+
+- Export HasKeyRole's coerceKeyRole function
+  (compatible)
+  [PR 699](https://github.com/IntersectMBO/cardano-api/pull/699)
+
+- Exposed `Language`, `Plutus`, `Script`, `getNativeScript`, `languageToText`, `plutusBinary`, `plutusScriptLanguage`, `serializeAsHexText`, `showTimelock` in `Cardano.Api.Ledger`, and `AlonzoEraOnwardsConstraints` in `Cardano.Api`
+  (feature)
+  [PR 689](https://github.com/IntersectMBO/cardano-api/pull/689)
+
+- Export the Convert class
+  (compatible)
+  [PR 696](https://github.com/IntersectMBO/cardano-api/pull/696)
+
+- fromProposalProcedure: return StakeCredential
+  (breaking)
+  [PR 692](https://github.com/IntersectMBO/cardano-api/pull/692)
+
+- Export GovActionIx from the ledger
+  (compatible)
+  [PR 688](https://github.com/IntersectMBO/cardano-api/pull/688)
+
+- We introduce the `Convert` type class as an alternative to cardano-ledger's `Inject` typeclass.
+  While `Inject` is more general, `Convert` is specifically designed for transformations between era-indexed types, 
+  making the intent clearer at call sites where we're converting between eons.
+  (feature)
+  [PR 690](https://github.com/IntersectMBO/cardano-api/pull/690)
+
 ## 10.3.0.0
 
 - Add `sbeToSimpleScriptLanguageInEra`, `getScriptWitnessScript`, `getScriptWitnessReferenceInput`, `getScriptWitnessReferenceInputOrScript` function
