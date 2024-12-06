@@ -120,7 +120,7 @@ jobs:
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
     # cache it for the next step.
     - name: Install dependencies
-      run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
+      run: cabal build all --enable-tests --only-dependencies
 
     # Always store the cabal cache.
     - name: Cache Cabal store
@@ -141,7 +141,7 @@ jobs:
         TMPDIR: ${{ runner.temp }}
         TMP: ${{ runner.temp }}
         KEEP_WORKSPACE: 1
-      run: cabal test all --enable-tests --test-show-details=direct -j1
+      run: cabal test all --enable-tests --test-show-details=direct
 
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
     # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
