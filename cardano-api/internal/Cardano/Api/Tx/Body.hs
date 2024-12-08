@@ -36,11 +36,19 @@ module Cardano.Api.Tx.Body
   , setTxIns
   , modTxIns
   , addTxIn
+  , addTxIns
   , setTxInsCollateral
+  , modTxInsCollateral
+  , addTxInsCollateral
+  , addTxInCollateral
   , setTxInsReference
+  , modTxInsReference
+  , addTxInsReference
+  , addTxInReference
   , setTxOuts
   , modTxOuts
   , addTxOut
+  , addTxOuts
   , setTxTotalCollateral
   , setTxReturnCollateral
   , setTxFee
@@ -49,6 +57,8 @@ module Cardano.Api.Tx.Body
   , setTxMetadata
   , setTxAuxScripts
   , setTxExtraKeyWits
+  , modTxExtraKeyWits
+  , addTxExtraKeyWits
   , setTxProtocolParams
   , setTxWithdrawals
   , setTxCertificates
@@ -1464,11 +1474,48 @@ addTxIn
   -> TxBodyContent build era
 addTxIn txIn = modTxIns (txIn :)
 
+addTxIns :: TxIns build era -> TxBodyContent build era -> TxBodyContent build era
+addTxIns txIns = modTxIns (<> txIns)
+
 setTxInsCollateral :: TxInsCollateral era -> TxBodyContent build era -> TxBodyContent build era
 setTxInsCollateral v txBodyContent = txBodyContent{txInsCollateral = v}
 
+modTxInsCollateral
+  :: (TxInsCollateral era -> TxInsCollateral era) -> TxBodyContent build era -> TxBodyContent build era
+modTxInsCollateral f txBodyContent = txBodyContent{txInsCollateral = f (txInsCollateral txBodyContent)}
+
+addTxInsCollateral
+  :: IsAlonzoBasedEra era => [TxIn] -> TxBodyContent build era -> TxBodyContent build era
+addTxInsCollateral txInsCollateral =
+  modTxInsCollateral
+    ( \case
+        TxInsCollateralNone -> TxInsCollateral alonzoBasedEra txInsCollateral
+        TxInsCollateral era xs -> TxInsCollateral era (xs <> txInsCollateral)
+    )
+
+addTxInCollateral
+  :: IsAlonzoBasedEra era => TxIn -> TxBodyContent build era -> TxBodyContent build era
+addTxInCollateral txInCollateral = addTxInsCollateral [txInCollateral]
+
 setTxInsReference :: TxInsReference era -> TxBodyContent build era -> TxBodyContent build era
 setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
+
+modTxInsReference
+  :: (TxInsReference era -> TxInsReference era) -> TxBodyContent build era -> TxBodyContent build era
+modTxInsReference f txBodyContent = txBodyContent{txInsReference = f (txInsReference txBodyContent)}
+
+addTxInsReference
+  :: IsBabbageBasedEra era => [TxIn] -> TxBodyContent build era -> TxBodyContent build era
+addTxInsReference txInsReference =
+  modTxInsReference
+    ( \case
+        TxInsReferenceNone -> TxInsReference babbageBasedEra txInsReference
+        TxInsReference era xs -> TxInsReference era (xs <> txInsReference)
+    )
+
+addTxInReference
+  :: IsBabbageBasedEra era => TxIn -> TxBodyContent build era -> TxBodyContent build era
+addTxInReference txInReference = addTxInsReference [txInReference]
 
 setTxOuts :: [TxOut CtxTx era] -> TxBodyContent build era -> TxBodyContent build era
 setTxOuts v txBodyContent = txBodyContent{txOuts = v}
@@ -1479,6 +1526,9 @@ modTxOuts f txBodyContent = txBodyContent{txOuts = f (txOuts txBodyContent)}
 
 addTxOut :: TxOut CtxTx era -> TxBodyContent build era -> TxBodyContent build era
 addTxOut txOut = modTxOuts (txOut :)
+
+addTxOuts :: [TxOut CtxTx era] -> TxBodyContent build era -> TxBodyContent build era
+addTxOuts txOuts = modTxOuts (<> txOuts)
 
 setTxTotalCollateral :: TxTotalCollateral era -> TxBodyContent build era -> TxBodyContent build era
 setTxTotalCollateral v txBodyContent = txBodyContent{txTotalCollateral = v}
@@ -1506,6 +1556,23 @@ setTxAuxScripts v txBodyContent = txBodyContent{txAuxScripts = v}
 
 setTxExtraKeyWits :: TxExtraKeyWitnesses era -> TxBodyContent build era -> TxBodyContent build era
 setTxExtraKeyWits v txBodyContent = txBodyContent{txExtraKeyWits = v}
+
+modTxExtraKeyWits
+  :: (TxExtraKeyWitnesses era -> TxExtraKeyWitnesses era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxExtraKeyWits f txBodyContent = txBodyContent{txExtraKeyWits = f (txExtraKeyWits txBodyContent)}
+
+addTxExtraKeyWits
+  :: IsAlonzoBasedEra era => [Hash PaymentKey] -> TxBodyContent build era -> TxBodyContent build era
+addTxExtraKeyWits vks =
+  modTxExtraKeyWits
+    ( \case
+        TxExtraKeyWitnessesNone ->
+          TxExtraKeyWitnesses alonzoBasedEra vks
+        TxExtraKeyWitnesses era vks' ->
+          TxExtraKeyWitnesses era (vks' <> vks)
+    )
 
 setTxProtocolParams
   :: BuildTxWith build (Maybe (LedgerProtocolParameters era))
