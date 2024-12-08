@@ -300,11 +300,19 @@ module Cardano.Api
   , defaultTxValidityUpperBound
   , setTxIns
   , modTxIns
+  , addTxIns
   , addTxIn
   , setTxInsCollateral
+  , modTxInsCollateral
+  , addTxInsCollateral
+  , addTxInCollateral
   , setTxInsReference
+  , modTxInsReference
+  , addTxInsReference
+  , addTxInReference
   , setTxOuts
   , modTxOuts
+  , addTxOuts
   , addTxOut
   , setTxTotalCollateral
   , setTxReturnCollateral
@@ -314,6 +322,8 @@ module Cardano.Api
   , setTxMetadata
   , setTxAuxScripts
   , setTxExtraKeyWits
+  , modTxExtraKeyWits
+  , addTxExtraKeyWits
   , setTxProtocolParams
   , setTxWithdrawals
   , setTxCertificates
