@@ -20,6 +20,7 @@ module Test.Gen.Cardano.Api.Typed
   , genAddressByron
   , genTxBodyByron
   , genTxByron
+  , genTxOutByron
   , genWitnessesByron
   , genAddressInEra
   , genAddressShelley
