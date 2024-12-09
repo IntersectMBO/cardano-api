@@ -175,10 +175,13 @@ module Cardano.Api.ReexposeLedger
   , SafeHash
   , unsafeMakeSafeHash
   , extractHash
+  -- Reward
+  , RewardAccount (..)
   )
 where
 
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
+import           Cardano.Ledger.Address (RewardAccount (..))
 import           Cardano.Ledger.Allegra.Scripts (showTimelock)
 import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBody (..),
                    AlonzoEraTxWits (..), AsIx (..), AsIxItem (AsIxItem), CoinPerWord (..), EraGov,
