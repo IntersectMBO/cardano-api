@@ -329,6 +329,9 @@ module Cardano.Api
   , setTxCertificates
   , setTxUpdateProposal
   , setTxMintValue
+  , modTxMintValue
+  , addTxMintValue
+  , subtractTxMintValue
   , setTxScriptValidity
   , setTxProposalProcedures
   , setTxVotingProcedures

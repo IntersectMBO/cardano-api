@@ -66,6 +66,9 @@ module Cardano.Api.Tx.Body
   , setTxProposalProcedures
   , setTxVotingProcedures
   , setTxMintValue
+  , modTxMintValue
+  , addTxMintValue
+  , subtractTxMintValue
   , setTxScriptValidity
   , setTxCurrentTreasuryValue
   , setTxTreasuryDonation
@@ -1591,6 +1594,32 @@ setTxUpdateProposal v txBodyContent = txBodyContent{txUpdateProposal = v}
 
 setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
 setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
+
+modTxMintValue
+  :: (TxMintValue build era -> TxMintValue build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxMintValue f tx = tx{txMintValue = f (txMintValue tx)}
+
+addTxMintValue
+  :: IsMaryBasedEra era
+  => Map PolicyId [(AssetName, Quantity, BuildTxWith build (ScriptWitness WitCtxMint era))]
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+addTxMintValue assets =
+  modTxMintValue
+    ( \case
+        TxMintNone -> TxMintValue maryBasedEra assets
+        TxMintValue era t -> TxMintValue era (t <> assets)
+    )
+
+-- | Adds the negation of the provided assets and quantities to the txMintValue field of the `TxBodyContent`.
+subtractTxMintValue
+  :: IsMaryBasedEra era
+  => Map PolicyId [(AssetName, Quantity, BuildTxWith build (ScriptWitness WitCtxMint era))]
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+subtractTxMintValue assets = addTxMintValue (fmap (fmap (\(x, y, z) -> (x, negate y, z))) assets)
 
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
