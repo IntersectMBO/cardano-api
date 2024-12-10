@@ -315,24 +315,35 @@ module Cardano.Api
   , addTxOuts
   , addTxOut
   , setTxTotalCollateral
+  , modTxTotalCollateral
   , setTxReturnCollateral
+  , modTxReturnCollateral
   , setTxFee
+  , modTxFee
   , setTxValidityLowerBound
+  , modTxValidityLowerBound
   , setTxValidityUpperBound
+  , modTxValidityUpperBound
   , setTxMetadata
+  , modTxMetadata
   , setTxAuxScripts
+  , modTxAuxScripts
   , setTxExtraKeyWits
   , modTxExtraKeyWits
   , addTxExtraKeyWits
   , setTxProtocolParams
   , setTxWithdrawals
+  , modTxWithdrawals
   , setTxCertificates
+  , modTxCertificates
   , setTxUpdateProposal
+  , modTxUpdateProposal
   , setTxMintValue
   , modTxMintValue
   , addTxMintValue
   , subtractTxMintValue
   , setTxScriptValidity
+  , modTxScriptValidity
   , setTxProposalProcedures
   , setTxVotingProcedures
   , setTxCurrentTreasuryValue

@@ -50,19 +50,29 @@ module Cardano.Api.Tx.Body
   , addTxOut
   , addTxOuts
   , setTxTotalCollateral
+  , modTxTotalCollateral
   , setTxReturnCollateral
+  , modTxReturnCollateral
   , setTxFee
+  , modTxFee
   , setTxValidityLowerBound
+  , modTxValidityLowerBound
   , setTxValidityUpperBound
+  , modTxValidityUpperBound
   , setTxMetadata
+  , modTxMetadata
   , setTxAuxScripts
+  , modTxAuxScripts
   , setTxExtraKeyWits
   , modTxExtraKeyWits
   , addTxExtraKeyWits
   , setTxProtocolParams
   , setTxWithdrawals
+  , modTxWithdrawals
   , setTxCertificates
+  , modTxCertificates
   , setTxUpdateProposal
+  , modTxUpdateProposal
   , setTxProposalProcedures
   , setTxVotingProcedures
   , setTxMintValue
@@ -70,6 +80,7 @@ module Cardano.Api.Tx.Body
   , addTxMintValue
   , subtractTxMintValue
   , setTxScriptValidity
+  , modTxScriptValidity
   , setTxCurrentTreasuryValue
   , setTxTreasuryDonation
   , TxBodyError (..)
@@ -1536,26 +1547,68 @@ addTxOuts txOuts = modTxOuts (<> txOuts)
 setTxTotalCollateral :: TxTotalCollateral era -> TxBodyContent build era -> TxBodyContent build era
 setTxTotalCollateral v txBodyContent = txBodyContent{txTotalCollateral = v}
 
+modTxTotalCollateral
+  :: (TxTotalCollateral era -> TxTotalCollateral era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxTotalCollateral f txBodyContent = txBodyContent{txTotalCollateral = f (txTotalCollateral txBodyContent)}
+
 setTxReturnCollateral
   :: TxReturnCollateral CtxTx era -> TxBodyContent build era -> TxBodyContent build era
 setTxReturnCollateral v txBodyContent = txBodyContent{txReturnCollateral = v}
 
+modTxReturnCollateral
+  :: (TxReturnCollateral CtxTx era -> TxReturnCollateral CtxTx era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxReturnCollateral f txBodyContent = txBodyContent{txReturnCollateral = f (txReturnCollateral txBodyContent)}
+
 setTxFee :: TxFee era -> TxBodyContent build era -> TxBodyContent build era
 setTxFee v txBodyContent = txBodyContent{txFee = v}
+
+modTxFee
+  :: (TxFee era -> TxFee era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxFee f txBodyContent = txBodyContent{txFee = f (txFee txBodyContent)}
 
 setTxValidityLowerBound
   :: TxValidityLowerBound era -> TxBodyContent build era -> TxBodyContent build era
 setTxValidityLowerBound v txBodyContent = txBodyContent{txValidityLowerBound = v}
 
+modTxValidityLowerBound
+  :: (TxValidityLowerBound era -> TxValidityLowerBound era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxValidityLowerBound f txBodyContent = txBodyContent{txValidityLowerBound = f (txValidityLowerBound txBodyContent)}
+
 setTxValidityUpperBound
   :: TxValidityUpperBound era -> TxBodyContent build era -> TxBodyContent build era
 setTxValidityUpperBound v txBodyContent = txBodyContent{txValidityUpperBound = v}
 
+modTxValidityUpperBound
+  :: (TxValidityUpperBound era -> TxValidityUpperBound era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxValidityUpperBound f txBodyContent = txBodyContent{txValidityUpperBound = f (txValidityUpperBound txBodyContent)}
+
 setTxMetadata :: TxMetadataInEra era -> TxBodyContent build era -> TxBodyContent build era
 setTxMetadata v txBodyContent = txBodyContent{txMetadata = v}
 
+modTxMetadata
+  :: (TxMetadataInEra era -> TxMetadataInEra era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxMetadata f txBodyContent = txBodyContent{txMetadata = f (txMetadata txBodyContent)}
+
 setTxAuxScripts :: TxAuxScripts era -> TxBodyContent build era -> TxBodyContent build era
 setTxAuxScripts v txBodyContent = txBodyContent{txAuxScripts = v}
+
+modTxAuxScripts
+  :: (TxAuxScripts era -> TxAuxScripts era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxAuxScripts f txBodyContent = txBodyContent{txAuxScripts = f (txAuxScripts txBodyContent)}
 
 setTxExtraKeyWits :: TxExtraKeyWitnesses era -> TxBodyContent build era -> TxBodyContent build era
 setTxExtraKeyWits v txBodyContent = txBodyContent{txExtraKeyWits = v}
@@ -1586,11 +1639,29 @@ setTxProtocolParams v txBodyContent = txBodyContent{txProtocolParams = v}
 setTxWithdrawals :: TxWithdrawals build era -> TxBodyContent build era -> TxBodyContent build era
 setTxWithdrawals v txBodyContent = txBodyContent{txWithdrawals = v}
 
+modTxWithdrawals
+  :: (TxWithdrawals build era -> TxWithdrawals build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxWithdrawals f txBodyContent = txBodyContent{txWithdrawals = f (txWithdrawals txBodyContent)}
+
 setTxCertificates :: TxCertificates build era -> TxBodyContent build era -> TxBodyContent build era
 setTxCertificates v txBodyContent = txBodyContent{txCertificates = v}
 
+modTxCertificates
+  :: (TxCertificates build era -> TxCertificates build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxCertificates f txBodyContent = txBodyContent{txCertificates = f (txCertificates txBodyContent)}
+
 setTxUpdateProposal :: TxUpdateProposal era -> TxBodyContent build era -> TxBodyContent build era
 setTxUpdateProposal v txBodyContent = txBodyContent{txUpdateProposal = v}
+
+modTxUpdateProposal
+  :: (TxUpdateProposal era -> TxUpdateProposal era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+modTxUpdateProposal f txBodyContent = txBodyContent{txUpdateProposal = f (txUpdateProposal txBodyContent)}
 
 setTxMintValue :: TxMintValue build era -> TxBodyContent build era -> TxBodyContent build era
 setTxMintValue v txBodyContent = txBodyContent{txMintValue = v}
@@ -1623,6 +1694,10 @@ subtractTxMintValue assets = addTxMintValue (fmap (fmap (\(x, y, z) -> (x, negat
 
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
+
+modTxScriptValidity
+  :: (TxScriptValidity era -> TxScriptValidity era) -> TxBodyContent build era -> TxBodyContent build era
+modTxScriptValidity f txBodyContent = txBodyContent{txScriptValidity = f (txScriptValidity txBodyContent)}
 
 setTxProposalProcedures
   :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
