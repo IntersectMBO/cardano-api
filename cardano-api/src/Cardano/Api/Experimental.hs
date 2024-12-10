@@ -92,7 +92,7 @@ module Cardano.Api.Experimental
     -- @
     -- let txOut = Api.TxOut
     --               destAddress
-    --               (Api.TxOutValueShelleyBased sbe (Api.inject (Ledger.Coin 10_000_000)))
+    --               (Api.lovelaceToTxOutValue sbe 10_000_000)
     --               Api.TxOutDatumNone
     --               Script.ReferenceScriptNone
     -- @
@@ -100,7 +100,7 @@ module Cardano.Api.Experimental
     -- We must also set the fee for the transaction. For example, let's set it to 2 ADA:
     --
     -- @
-    -- let txFee = Api.TxFeeExplicit sbe (Ledger.Coin 2_000_000)
+    -- let txFee = Api.TxFeeExplicit sbe 2_000_000
     -- @
     --
     -- Finally, we can create the 'TxBodyContent' by using the 'defaultTxBodyContent' function and

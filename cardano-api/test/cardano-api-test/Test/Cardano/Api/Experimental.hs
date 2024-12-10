@@ -80,11 +80,11 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
             & Api.setTxOuts
               [ Api.TxOut
                   destAddress
-                  (Api.TxOutValueShelleyBased sbe (Api.inject (Ledger.Coin 10_000_000)))
+                  (Api.lovelaceToTxOutValue sbe 10_000_000)
                   Api.TxOutDatumNone
                   Script.ReferenceScriptNone
               ]
-            & Api.setTxFee (Api.TxFeeExplicit sbe (Ledger.Coin 2_000_000))
+            & Api.setTxFee (Api.TxFeeExplicit sbe 2_000_000)
 
     return txBodyContent
 
