@@ -8,7 +8,7 @@ module Cardano.Api.Experimental
     -- Both the old and the new API can be used to create transactions, and
     -- it is possible to transform a transaction created in one format to the other
     -- since they have the same representation underneath. But we will be moving
-    -- towards using the new API and deprecating the old way, since the later is
+    -- towards using the new API and deprecating the old way, since the latter is
     -- simpler, closer to the ledger, and easier to maintain.
     --
     -- In both the new and the old API, in order to construct a transaction,
