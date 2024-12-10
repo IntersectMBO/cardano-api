@@ -32,7 +32,7 @@ module Cardano.Api.Experimental
     -- |
     -- 'TxBodyContent' datatype provides lots of fields, because transactions can serve multiple
     -- purposes, but the function 'defaultTxBodyContent' exported from 'Cardano.Api' already provides
-    -- a base 'TxBodyContent' with all fields set to their default values that we can use as a starting
+    -- a base 'TxBodyContent' with all fields set to their default values that we can use as a starting point
     -- in order not to have to set all fields manually.
     --
     -- The 'defaultTxBodyContent' takes, as the only parameter, the 'ShelleyBasedEra' witness for the era
@@ -40,7 +40,7 @@ module Cardano.Api.Experimental
     -- available in 'Cardano.Api', as follows:
     --
     -- @
-    -- let sbe = Api.shelleyBasedEra :: Api.ShelleyBasedEra Api.ConwayEra
+    -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
     -- @
     --
     -- We can also derive it from 'ConwayEra' from 'Cardano.Api.Experimental' by using the 'convert' function:
@@ -128,7 +128,7 @@ module Cardano.Api.Experimental
     -- let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
     -- @
     --
-    -- Then we simply wrap the signing key in a 'ShelleyWitnessSigningKey' constructor:
+    -- Then we simply wrap the signing key in a 'ShelleyWitnessSigningKey' value:
     --
     -- @
     -- let witness = Api.WitnessPaymentKey signingKey
