@@ -102,6 +102,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
+import qualified Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
                    NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as Net
@@ -129,6 +130,7 @@ import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 import           GHC.Exts (IsList (..))
+import Control.Exception (throwIO)
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
@@ -202,15 +204,19 @@ connectToLocalNodeWithVersion
     , localConsensusModeParams
     }
   clients =
-    liftIO $ Net.withIOManager $ \iomgr ->
-      Net.connectTo
-        (Net.localSnocket iomgr)
-        Net.NetworkConnectTracers
-          { Net.nctMuxTracer = nullTracer
-          , Net.nctHandshakeTracer = nullTracer
-          }
-        versionedProtocls
-        (unFile localNodeSocketPath)
+    liftIO $ Net.withIOManager $ \iomgr -> do
+      r <-
+        Net.connectTo
+          (Net.localSnocket iomgr)
+          Net.NetworkConnectTracers
+            { Net.nctMuxTracer = nullTracer
+            , Net.nctHandshakeTracer = nullTracer
+            }
+          versionedProtocls
+          (unFile localNodeSocketPath)
+      case r of
+        Left e -> throwIO e
+        Right _ -> pure ()
    where
     versionedProtocls =
       -- First convert from the mode-parametrised view of things to the
@@ -302,10 +308,11 @@ mkVersionedProtocols networkid ptcl unversionedClients =
                   )
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
-              Net.mkMiniProtocolCbFromPeer $
+              Net.mkMiniProtocolCbFromPeerSt $
                 const
                   ( nullTracer
                   , cStateQueryCodec
+                  , Net.Query.StateIdle
                   , maybe
                       Net.localStateQueryPeerNull
                       Net.Query.localStateQueryClientPeer

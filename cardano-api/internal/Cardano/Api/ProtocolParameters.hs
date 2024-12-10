@@ -326,7 +326,7 @@ data CommonProtocolParametersUpdate
   , cppKeyDeposit :: StrictMaybe Ledger.Coin
   , cppPoolDeposit :: StrictMaybe Ledger.Coin
   , cppPoolRetireMaxEpoch :: StrictMaybe Ledger.EpochInterval
-  , cppStakePoolTargetNum :: StrictMaybe Natural
+  , cppStakePoolTargetNum :: StrictMaybe Word16
   , cppPoolPledgeInfluence :: StrictMaybe Ledger.NonNegativeInterval
   , cppTreasuryExpansion :: StrictMaybe Ledger.UnitInterval
   , cppMonetaryExpansion :: StrictMaybe Ledger.UnitInterval
@@ -526,7 +526,7 @@ data ProtocolParameters
   , protocolParamPoolRetireMaxEpoch :: Ledger.EpochInterval
   -- ^ The maximum number of epochs into the future that stake pools
   -- are permitted to schedule a retirement.
-  , protocolParamStakePoolTargetNum :: Natural
+  , protocolParamStakePoolTargetNum :: Word16
   -- ^ The equilibrium target number of stake pools.
   --
   -- This is the \"k\" incentives parameter from the design document.
@@ -710,7 +710,7 @@ data ProtocolParametersUpdate
   , protocolUpdatePoolRetireMaxEpoch :: Maybe Ledger.EpochInterval
   -- ^ The maximum number of epochs into the future that stake pools
   -- are permitted to schedule a retirement.
-  , protocolUpdateStakePoolTargetNum :: Maybe Natural
+  , protocolUpdateStakePoolTargetNum :: Maybe Word16
   -- ^ The equilibrium target number of stake pools.
   --
   -- This is the \"k\" incentives parameter from the design document.

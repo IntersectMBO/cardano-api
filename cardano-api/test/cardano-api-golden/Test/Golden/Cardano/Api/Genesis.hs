@@ -17,7 +17,7 @@ import           Cardano.Ledger.Credential (Credential (..), PaymentCredential, 
                    StakeReference (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
-                   VerKeyVRF)
+                   VerKeyVRF, toVRFVerKeyHash)
 import           Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
 import           Cardano.Slotting.Slot (EpochSize (..))
 
@@ -51,7 +51,7 @@ exampleShelleyGenesis =
         fromList
           [
             ( genesisVerKeyHash
-            , GenDelegPair delegVerKeyHash delegVrfKeyHash
+            , GenDelegPair delegVerKeyHash (toVRFVerKeyHash delegVrfKeyHash)
             )
           ]
     , sgInitialFunds = ListMap [(initialFundedAddress, initialFunds)]

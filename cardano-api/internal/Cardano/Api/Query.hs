@@ -156,12 +156,12 @@ data QueryInMode result where
 
 instance NodeToClientVersionOf (QueryInMode result) where
   nodeToClientVersionOf = \case
-    QueryCurrentEra -> NodeToClientV_9
+    QueryCurrentEra -> NodeToClientV_16
     QueryInEra q -> nodeToClientVersionOf q
-    QueryEraHistory -> NodeToClientV_9
-    QuerySystemStart -> NodeToClientV_9
-    QueryChainBlockNo -> NodeToClientV_10
-    QueryChainPoint -> NodeToClientV_10
+    QueryEraHistory -> NodeToClientV_16
+    QuerySystemStart -> NodeToClientV_16
+    QueryChainBlockNo -> NodeToClientV_16
+    QueryChainPoint -> NodeToClientV_16
 
 data EraHistory where
   EraHistory
@@ -220,7 +220,7 @@ data QueryInEra era result where
     -> QueryInEra era result
 
 instance NodeToClientVersionOf (QueryInEra era result) where
-  nodeToClientVersionOf QueryByronUpdateState = NodeToClientV_9
+  nodeToClientVersionOf QueryByronUpdateState = NodeToClientV_16
   nodeToClientVersionOf (QueryInShelleyBasedEra _ q) = nodeToClientVersionOf q
 
 deriving instance Show (QueryInEra era result)
@@ -306,23 +306,23 @@ data QueryInShelleyBasedEra era result where
 --   * https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-NodeToClient.html#t:NodeToClientVersion
 --   * https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/QueryVersioning/#implementation
 instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
-  nodeToClientVersionOf QueryEpoch = NodeToClientV_9
-  nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_9
-  nodeToClientVersionOf QueryProtocolParameters = NodeToClientV_9
-  nodeToClientVersionOf QueryProtocolParametersUpdate = NodeToClientV_9
-  nodeToClientVersionOf QueryStakeDistribution = NodeToClientV_9
+  nodeToClientVersionOf QueryEpoch = NodeToClientV_16
+  nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_16
+  nodeToClientVersionOf QueryProtocolParameters = NodeToClientV_16
+  nodeToClientVersionOf QueryProtocolParametersUpdate = NodeToClientV_16
+  nodeToClientVersionOf QueryStakeDistribution = NodeToClientV_16
   nodeToClientVersionOf (QueryUTxO f) = nodeToClientVersionOf f
-  nodeToClientVersionOf (QueryStakeAddresses _ _) = NodeToClientV_9
-  nodeToClientVersionOf QueryStakePools = NodeToClientV_9
-  nodeToClientVersionOf (QueryStakePoolParameters _) = NodeToClientV_9
-  nodeToClientVersionOf QueryDebugLedgerState = NodeToClientV_9
-  nodeToClientVersionOf QueryProtocolState = NodeToClientV_9
-  nodeToClientVersionOf QueryCurrentEpochState = NodeToClientV_9
+  nodeToClientVersionOf (QueryStakeAddresses _ _) = NodeToClientV_16
+  nodeToClientVersionOf QueryStakePools = NodeToClientV_16
+  nodeToClientVersionOf (QueryStakePoolParameters _) = NodeToClientV_16
+  nodeToClientVersionOf QueryDebugLedgerState = NodeToClientV_16
+  nodeToClientVersionOf QueryProtocolState = NodeToClientV_16
+  nodeToClientVersionOf QueryCurrentEpochState = NodeToClientV_16
   -- Babbage >= v13
-  nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_14
-  nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_14
-  nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_14
-  nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_15
+  nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_16
+  nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_16
+  nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_16
+  nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_16
   -- Conway >= v16
   nodeToClientVersionOf QueryAccountState = NodeToClientV_16
   nodeToClientVersionOf QueryConstitution = NodeToClientV_16
@@ -332,7 +332,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QuerySPOStakeDistr{} = NodeToClientV_16
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
   nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
-  nodeToClientVersionOf QueryProposals{} = NodeToClientV_17
+  nodeToClientVersionOf QueryProposals{} = NodeToClientV_16
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -356,9 +356,9 @@ data QueryUTxOFilter
   deriving (Eq, Show)
 
 instance NodeToClientVersionOf QueryUTxOFilter where
-  nodeToClientVersionOf QueryUTxOWhole = NodeToClientV_9
-  nodeToClientVersionOf (QueryUTxOByAddress _) = NodeToClientV_9
-  nodeToClientVersionOf (QueryUTxOByTxIn _) = NodeToClientV_9
+  nodeToClientVersionOf QueryUTxOWhole = NodeToClientV_16
+  nodeToClientVersionOf (QueryUTxOByAddress _) = NodeToClientV_16
+  nodeToClientVersionOf (QueryUTxOByTxIn _) = NodeToClientV_16
 
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
