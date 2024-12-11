@@ -11,10 +11,17 @@ where
 import qualified Cardano.Api as Api
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
 import qualified Cardano.Api.Experimental as Exp
+import qualified Cardano.Api.Genesis as Genesis
 import qualified Cardano.Api.Ledger as Ledger
 import qualified Cardano.Api.Script as Script
 import           Cardano.Api.Tx.Sign (Tx (ShelleyTx))
 
+import qualified Cardano.Ledger.Alonzo.Scripts as UnexportedLedger
+import qualified Cardano.Ledger.Api as UnexportedLedger
+
+import           Control.Monad.Identity (Identity)
+import           Data.Maybe (fromMaybe)
+import           Data.Ratio ((%))
 import           Lens.Micro ((&))
 
 import           Hedgehog (Property)
@@ -37,6 +44,9 @@ tests =
     [ testProperty
         "Created transaction with traditional and experimental APIs are equivalent"
         prop_created_transaction_with_both_apis_are_the_same
+    , testProperty
+        "Check two methods of balancing transaction are equivalent"
+        prop_balance_transaction_two_ways
     ]
 
 prop_created_transaction_with_both_apis_are_the_same :: Property
@@ -51,43 +61,6 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
 
   oldStyleTx H.=== signedTxTraditional
  where
-  exampleTxBodyContent
-    :: (ShelleyBasedEraConstraints era, H.MonadTest m)
-    => Api.AsType era
-    -> Api.ShelleyBasedEra era
-    -> m (Api.TxBodyContent Api.BuildTx era)
-  exampleTxBodyContent eraAsType sbe = do
-    srcTxId <-
-      H.evalEither $
-        Api.deserialiseFromRawBytesHex
-          Api.AsTxId
-          "be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978"
-    let srcTxIx = Api.TxIx 0
-    destAddress <-
-      H.evalMaybe $
-        Api.deserialiseAddress
-          (Api.AsAddressInEra eraAsType)
-          "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
-
-    let txBodyContent =
-          Api.defaultTxBodyContent sbe
-            & Api.setTxIns
-              [
-                ( Api.TxIn srcTxId srcTxIx
-                , Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending)
-                )
-              ]
-            & Api.setTxOuts
-              [ Api.TxOut
-                  destAddress
-                  (Api.lovelaceToTxOutValue sbe 10_000_000)
-                  Api.TxOutDatumNone
-                  Script.ReferenceScriptNone
-              ]
-            & Api.setTxFee (Api.TxFeeExplicit sbe 2_000_000)
-
-    return txBodyContent
-
   exampleSigningKey :: H.MonadTest m => m (Api.SigningKey Api.PaymentKey)
   exampleSigningKey =
     H.evalEither $
@@ -124,3 +97,99 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
 
     let signedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
     return signedTx
+
+prop_balance_transaction_two_ways :: Property
+prop_balance_transaction_two_ways = H.propertyOnce $ do
+  let era = Exp.ConwayEra
+  let sbe = Api.convert era
+
+  txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
+  txBody <- H.evalEither $ Api.createTransactionBody sbe txBodyContent
+
+  let fees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0
+
+  H.note_ $ "Fees: " <> show fees
+
+  H.failure
+
+exampleProtocolParams :: Ledger.PParams (UnexportedLedger.ConwayEra Ledger.StandardCrypto)
+exampleProtocolParams =
+  UnexportedLedger.upgradePParams conwayUpgrade $
+    UnexportedLedger.upgradePParams () $
+      UnexportedLedger.upgradePParams alonzoUpgrade $
+        UnexportedLedger.upgradePParams () $
+          UnexportedLedger.upgradePParams () $
+            Genesis.sgProtocolParams Genesis.shelleyGenesisDefaults
+ where
+  conwayUpgrade :: Ledger.UpgradeConwayPParams Identity
+  conwayUpgrade = Ledger.cgUpgradePParams Genesis.conwayGenesisDefaults
+
+  alonzoUpgrade :: UnexportedLedger.UpgradeAlonzoPParams Identity
+  alonzoUpgrade =
+    UnexportedLedger.UpgradeAlonzoPParams
+      { UnexportedLedger.uappCoinsPerUTxOWord = Ledger.CoinPerWord $ Ledger.Coin 34_482
+      , UnexportedLedger.uappCostModels = UnexportedLedger.emptyCostModels -- We are not using scripts for this tests, so this is fine for now
+      , UnexportedLedger.uappPrices =
+          Ledger.Prices
+            { Ledger.prSteps = fromMaybe maxBound $ Ledger.boundRational $ 721 % 10_000_000
+            , Ledger.prMem = fromMaybe maxBound $ Ledger.boundRational $ 577 % 10_000
+            }
+      , UnexportedLedger.uappMaxTxExUnits =
+          Ledger.ExUnits
+            { Ledger.exUnitsMem = 140_000_000
+            , Ledger.exUnitsSteps = 10_000_000_000
+            }
+      , UnexportedLedger.uappMaxBlockExUnits =
+          Ledger.ExUnits
+            { Ledger.exUnitsMem = 62_000_000
+            , Ledger.exUnitsSteps = 20_000_000_000
+            }
+      , UnexportedLedger.uappMaxValSize = 5000
+      , UnexportedLedger.uappCollateralPercentage = 150
+      , UnexportedLedger.uappMaxCollateralInputs = 3
+      }
+
+getExampleSrcTxId :: H.MonadTest m => m Api.TxIn
+getExampleSrcTxId = do
+  srcTxId <-
+    H.evalEither $
+      Api.deserialiseFromRawBytesHex
+        Api.AsTxId
+        "be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978"
+  let srcTxIx = Api.TxIx 0
+  return $ Api.TxIn srcTxId srcTxIx
+
+getExampleDestAddress
+  :: (H.MonadTest m, Api.IsCardanoEra era) => Script.AsType era -> m (Api.AddressInEra era)
+getExampleDestAddress eraAsType = do
+  H.evalMaybe $
+    Api.deserialiseAddress
+      (Api.AsAddressInEra eraAsType)
+      "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+
+exampleTxBodyContent
+  :: (ShelleyBasedEraConstraints era, H.MonadTest m)
+  => Api.AsType era
+  -> Api.ShelleyBasedEra era
+  -> m (Api.TxBodyContent Api.BuildTx era)
+exampleTxBodyContent eraAsType sbe = do
+  srcTxIn <- getExampleSrcTxId
+  destAddress <- getExampleDestAddress eraAsType
+  let txBodyContent =
+        Api.defaultTxBodyContent sbe
+          & Api.setTxIns
+            [
+              ( srcTxIn
+              , Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending)
+              )
+            ]
+          & Api.setTxOuts
+            [ Api.TxOut
+                destAddress
+                (Api.lovelaceToTxOutValue sbe 10_000_000)
+                Api.TxOutDatumNone
+                Script.ReferenceScriptNone
+            ]
+          & Api.setTxFee (Api.TxFeeExplicit sbe 2_000_000)
+
+  return txBodyContent
