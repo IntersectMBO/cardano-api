@@ -100,6 +100,7 @@ import           Cardano.Api.Value
 
 import           Cardano.Ledger.BaseTypes (strictMaybe)
 import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Keys as Ledger
 
 import           Control.Monad.Except (MonadError (..))
 import           Data.ByteString (ByteString)
