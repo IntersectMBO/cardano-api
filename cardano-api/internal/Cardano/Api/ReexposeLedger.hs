@@ -18,7 +18,7 @@ module Cardano.Api.ReexposeLedger
   , hashVerKeyVRF
   , hashWithSerialiser
   , PoolParams (..)
-  , HasKeyRole (..)
+  , HasKeyRole
   , MIRPot (..)
   , MIRTarget (..)
   , MIRCert (..)
@@ -175,10 +175,13 @@ module Cardano.Api.ReexposeLedger
   , SafeHash
   , unsafeMakeSafeHash
   , extractHash
+  -- Reward
+  , RewardAccount (..)
   )
 where
 
 import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
+import           Cardano.Ledger.Address (RewardAccount (..))
 import           Cardano.Ledger.Allegra.Scripts (showTimelock)
 import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBody (..),
                    AlonzoEraTxWits (..), AsIx (..), AsIxItem (AsIxItem), CoinPerWord (..), EraGov,
@@ -221,7 +224,7 @@ import           Cardano.Ledger.Core (Era (..), EraPParams (..), EraTxOut, PPara
 import           Cardano.Ledger.Credential (Credential (..), credToText)
 import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
-import           Cardano.Ledger.Keys (HasKeyRole (..), KeyHash (..), KeyRole (..), VKey (..),
+import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VKey (..),
                    hashWithSerialiser)
 import           Cardano.Ledger.Plutus.Data (Data (..), unData)
 import           Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
