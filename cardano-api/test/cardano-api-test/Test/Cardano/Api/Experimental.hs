@@ -61,13 +61,6 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
 
   oldStyleTx H.=== signedTxTraditional
  where
-  exampleSigningKey :: H.MonadTest m => m (Api.SigningKey Api.PaymentKey)
-  exampleSigningKey =
-    H.evalEither $
-      Api.deserialiseFromBech32
-        (Api.AsSigningKey Api.AsPaymentKey)
-        "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
-
   exampleTransacitonTraditionalWay
     :: H.MonadTest m => Api.ShelleyBasedEra Exp.ConwayEra -> m (Tx Exp.ConwayEra)
   exampleTransacitonTraditionalWay sbe = do
@@ -102,13 +95,43 @@ prop_balance_transaction_two_ways :: Property
 prop_balance_transaction_two_ways = H.propertyOnce $ do
   let era = Exp.ConwayEra
   let sbe = Api.convert era
+  let meo = Api.MaryEraOnwardsConway
+
+  collateralAddress <- getExampleCollateralAddress sbe
 
   txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
   txBody <- H.evalEither $ Api.createTransactionBody sbe txBodyContent
 
+  -- Simple way (fee calculation)
   let fees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0
-
   H.note_ $ "Fees: " <> show fees
+
+  -- Balance without ledger context (other that protocol parameters)
+  Api.BalancedTxBody
+    newTxBodyContent
+    newTxBody
+    changeOutput
+    fees2 <-
+    H.evalEither
+      $ Api.estimateBalancedTxBody
+        meo
+        txBodyContent
+        exampleProtocolParams
+        mempty
+        mempty
+        mempty
+        mempty
+        0
+        1
+        0
+        0
+        collateralAddress
+      $ Api.lovelaceToValue 12_000_000
+
+  H.note_ $ "Fees2: " <> show fees2
+  H.note_ $ "New TxBody: " <> show newTxBody
+  H.note_ $ "New TxBodyContent: " <> show newTxBodyContent
+  H.note_ $ "Change output: " <> show changeOutput
 
   H.failure
 
@@ -167,6 +190,16 @@ getExampleDestAddress eraAsType = do
       (Api.AsAddressInEra eraAsType)
       "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
 
+getExampleCollateralAddress :: H.MonadTest m => Api.ShelleyBasedEra era -> m (Api.AddressInEra era)
+getExampleCollateralAddress sbe = do
+  signingKey <- exampleSigningKey
+  return $
+    Api.shelleyAddressInEra sbe $
+      Api.makeShelleyAddress
+        (Api.Testnet $ Api.NetworkMagic 2)
+        (Api.PaymentCredentialByKey $ Api.verificationKeyHash $ Api.getVerificationKey signingKey)
+        Api.NoStakeAddress
+
 exampleTxBodyContent
   :: (ShelleyBasedEraConstraints era, H.MonadTest m)
   => Api.AsType era
@@ -193,3 +226,10 @@ exampleTxBodyContent eraAsType sbe = do
           & Api.setTxFee (Api.TxFeeExplicit sbe 2_000_000)
 
   return txBodyContent
+
+exampleSigningKey :: H.MonadTest m => m (Api.SigningKey Api.PaymentKey)
+exampleSigningKey =
+  H.evalEither $
+    Api.deserialiseFromBech32
+      (Api.AsSigningKey Api.AsPaymentKey)
+      "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
