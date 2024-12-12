@@ -10,7 +10,131 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Experimental.Tx
-  ( UnsignedTx (..)
+  ( -- * Creating transactions using the new and the old API
+
+    -- |
+    -- Both the old and the new API can be used to create transactions, and
+    -- it is possible to transform a transaction created in one format to the other
+    -- since they have the same representation underneath. But we will be moving
+    -- towards using the new API and deprecating the old way, since the latter is
+    -- simpler, closer to the ledger, and easier to maintain.
+    --
+    -- In both the new and the old API, in order to construct a transaction,
+    -- we need to construct a 'TxBodyContent', and we will need at least a
+    -- witness (for example, a 'ShelleyWitnessSigningKey'), to sign the transaction.
+    -- This hasn't changed.
+    --
+    -- In the following examples, we are using the following qualified modules:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
+    -- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)
+    -- import qualified Cardano.Api.Ledger as Ledger      -- cardano-ledger re-exports
+    -- import qualified Cardano.Api.Experimental as Exp   -- the experimental API
+    -- @
+    --
+    -- You can find a compilable version of these examples in "Test.Cardano.Api.Experimental".
+
+    -- ** Creating a 'TxBodyContent'
+
+    -- |
+    -- Independently of whether we use the Experimental or the traditoinal API, we need to create a 'TxBodyContent'.
+    --
+    -- You can see how to do this in the documentation of the "Cardano.Api.Tx.Body" module.
+
+    -- ** Creating a 'ShelleyWitnessSigningKey'
+
+    -- |
+    -- To sign the transaction, we need a witness. For example, a 'ShelleyWitnessSigningKey'.
+    --
+    -- There are several ways of doing this, and several ways of representing a signing key. But let us assume
+    -- we have the bech32 representation of the signing key. In that case we can use the 'deserialiseFromBech32' function
+    -- as follows:
+    --
+    -- @
+    -- let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
+    -- @
+    --
+    -- Then we simply wrap the signing key in a 'ShelleyWitnessSigningKey' value:
+    --
+    -- @
+    -- let witness = Api.WitnessPaymentKey signingKey
+    -- @
+    --
+    -- We could do it analogously if we wanted to use an extended key, for example, using 'AsPaymentExtendedKey' and 'WitnessPaymentExtendedKey'.
+
+    -- ** Creating a transaction using the old API
+
+    -- |
+    -- Now that we have a 'TxBodyContent' and a 'ShelleyWitnessSigningKey', we can create a transaction using the old API
+    -- easily. First, we create a transaction body using the 'createTransactionBody' function and the 'ShelleyBasedEra' witness
+    -- that we defined earlier.
+    --
+    -- We create the transaction body using the 'TransactionBodyContent' that we created earlier:
+    --
+    -- @
+    -- let (Right txBody) = Api.createTransactionBody sbe txBodyContent
+    -- @
+    --
+    -- Then, we sign the transaction using the 'signShelleyTransaction' function and the witness:
+    --
+    -- @
+    -- let oldApiSignedTx :: Api.Tx Api.ConwayEra = Api.signShelleyTransaction sbe txBody [witness]
+    -- @
+    --
+    -- And that is it. We have a signed transaction.
+
+    -- ** Creating a transaction using the new API
+
+    -- |
+    -- Now, let's see how we can create a transaction using the new API. First, we create an 'UnsignedTx' using the 'makeUnsignedTx'
+    -- function and the 'Era' and 'TxBodyContent' that we defined earlier:
+    --
+    -- @
+    -- let (Right unsignedTx) = Exp.makeUnsignedTx era txBodyContent
+    -- @
+    --
+    -- Then we use the key witness to witness the current unsigned transaction using the 'makeKeyWitness' function:
+    --
+    -- @
+    -- let transactionWitness = Exp.makeKeyWitness era unsignedTx (Api.WitnessPaymentKey signingKey)
+    -- @
+    --
+    -- Finally, we sign the transaction using the 'signTx' function:
+    --
+    -- @
+    -- let newApiSignedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra) = Exp.signTx era [] [transactionWitness] unsignedTx
+    -- @
+    --
+    -- Where the empty list is for the bootstrap witnesses, which, in this case, we don't have any.
+    --
+    -- And that is it. We have a signed transaction.
+
+    -- ** Converting a transaction from the new API to the old API
+
+    -- |
+    -- If we have a transaction created using the new API, we can convert it to the old API very easily by
+    -- just wrapping it using the 'ShelleyTx' constructor:
+    --
+    -- @
+    -- let oldStyleTx :: Api.Tx Api.ConwayEra = ShelleyTx sbe newApiSignedTx
+    -- @
+
+    -- ** Inspecting transactions
+
+    -- |
+    -- For deconstructing an old style 'TxBody' into a 'TxBodyContent', we can also use the
+    -- 'TxBody' pattern, but this cannot be used for constructing. For that we use 'ShelleyTxBody'
+    -- or 'createTransactionBody', like in the example.
+    --
+    -- For extracting the 'TxBody' and the 'KeyWitness'es from an old style 'Tx', we can use
+    -- the lenses 'getTxBody' and 'getTxWitnesses' respectively, from "Cardano.Api".
+    --
+    -- When using a 'Tx' created using the experimental API, you can extract the 'TxBody' and
+    -- 'TxWits' using the lenses 'txBody' and 'txWits' respectively, from "Cardano.Api.Ledger".
+
+    -- * Contents
+    UnsignedTx (..)
   , UnsignedTxError (..)
   , makeUnsignedTx
   , makeKeyWitness
