@@ -13,15 +13,22 @@ import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
 import qualified Cardano.Api.Experimental as Exp
 import qualified Cardano.Api.Genesis as Genesis
 import qualified Cardano.Api.Ledger as Ledger
+import qualified Cardano.Api.ProtocolParameters as Api
 import qualified Cardano.Api.Script as Script
 import           Cardano.Api.Tx.Sign (Tx (ShelleyTx))
 
 import qualified Cardano.Ledger.Alonzo.Scripts as UnexportedLedger
 import qualified Cardano.Ledger.Api as UnexportedLedger
+import qualified Cardano.Slotting.EpochInfo as Slotting
+import qualified Cardano.Slotting.Slot as Slotting
+import qualified Cardano.Slotting.Time as Slotting
 
 import           Control.Monad.Identity (Identity)
+import           Data.Map (fromList)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
+import qualified Data.Time as Time
+import qualified Data.Time.Clock.POSIX as Time
 import           Lens.Micro ((&))
 
 import           Hedgehog (Property)
@@ -97,20 +104,20 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
   let sbe = Api.convert era
   let meo = Api.MaryEraOnwardsConway
 
-  collateralAddress <- getExampleCollateralAddress sbe
+  changeAddress <- getExampleChangeAddress sbe
 
   txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
   txBody <- H.evalEither $ Api.createTransactionBody sbe txBodyContent
 
   -- Simple way (fee calculation)
   let fees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0
-  H.note_ $ "Fees: " <> show fees
+  H.note_ $ "Fees 1: " <> show fees
 
   -- Balance without ledger context (other that protocol parameters)
   Api.BalancedTxBody
-    newTxBodyContent
-    newTxBody
-    changeOutput
+    _txBodyContent2
+    _txBody2
+    _changeOutput2
     fees2 <-
     H.evalEither
       $ Api.estimateBalancedTxBody
@@ -125,13 +132,56 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
         1
         0
         0
-        collateralAddress
+        changeAddress
       $ Api.lovelaceToValue 12_000_000
 
-  H.note_ $ "Fees2: " <> show fees2
-  H.note_ $ "New TxBody: " <> show newTxBody
-  H.note_ $ "New TxBodyContent: " <> show newTxBodyContent
-  H.note_ $ "Change output: " <> show changeOutput
+  H.note_ $ "Fees 2: " <> show fees2
+  -- H.note_ $ "New TxBody 2: " <> show txBody2
+  -- H.note_ $ "New TxBodyContent 2: " <> show txBodyContent2
+  -- H.note_ $ "Change output 2: " <> show changeOutput2
+
+  -- Automatically balance the transaction (with ledger context)
+  currTime <- Api.liftIO Time.getCurrentTime
+  srcTxId <- getExampleSrcTxId
+  let startTime = Time.posixSecondsToUTCTime (Time.utcTimeToPOSIXSeconds currTime - Time.nominalDay)
+  let epochInfo =
+        Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
+  let utxoToUse =
+        Api.UTxO
+          ( fromList
+              [
+                ( srcTxId
+                , Api.TxOut
+                    changeAddress
+                    (Api.lovelaceToTxOutValue sbe 12_000_000)
+                    Api.TxOutDatumNone
+                    Script.ReferenceScriptNone
+                )
+              ]
+          )
+  Api.BalancedTxBody
+    _txBodyContent3
+    _txBody3
+    _changeOutput3
+    fees3 <-
+    H.evalEither $
+      Api.makeTransactionBodyAutoBalance
+        sbe
+        (Api.SystemStart startTime)
+        epochInfo
+        (Api.LedgerProtocolParameters exampleProtocolParams)
+        mempty
+        mempty
+        mempty
+        utxoToUse
+        txBodyContent
+        changeAddress
+        Nothing
+
+  H.note_ $ "Fees 3: " <> show fees3
+  -- H.note_ $ "TxBody 3: " <> show txBody3
+  -- H.note_ $ "TxBodyContent 3: " <> show txBodyContent3
+  -- H.note_ $ "Change output 3: " <> show changeOutput3
 
   H.failure
 
@@ -190,8 +240,8 @@ getExampleDestAddress eraAsType = do
       (Api.AsAddressInEra eraAsType)
       "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
 
-getExampleCollateralAddress :: H.MonadTest m => Api.ShelleyBasedEra era -> m (Api.AddressInEra era)
-getExampleCollateralAddress sbe = do
+getExampleChangeAddress :: H.MonadTest m => Api.ShelleyBasedEra era -> m (Api.AddressInEra era)
+getExampleChangeAddress sbe = do
   signingKey <- exampleSigningKey
   return $
     Api.shelleyAddressInEra sbe $
