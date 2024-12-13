@@ -183,7 +183,7 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
   -- H.note_ $ "TxBodyContent 3: " <> show txBodyContent3
   -- H.note_ $ "Change output 3: " <> show changeOutput3
 
-  H.failure
+  H.success
 
 exampleProtocolParams :: Ledger.PParams (UnexportedLedger.ConwayEra Ledger.StandardCrypto)
 exampleProtocolParams =

@@ -42,6 +42,17 @@ module Cardano.Api.Experimental.Tx
     --
     -- You can see how to do this in the documentation of the "Cardano.Api.Tx.Body" module.
 
+    -- ** Balancing a transaction
+
+    -- |
+    -- If we have a UTxO with exactly 12 ADA, and 2 ADA is enough for the fees, we could just construct
+    -- the transaction like in the previous section directly, and it could be a valid transaction. But still,
+    -- even if we have exactly 12 ADA, it is unlikely the fees required are exactly 2 ADA, so either we made
+    -- an invalid transaction, or we are wasting ADA on fees. Also, we may not always want to send all the ADA
+    -- in the UTxO. So that is were transaction balancing comes in.
+    --
+    -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Fees" module.
+
     -- ** Creating a 'ShelleyWitnessSigningKey'
 
     -- |

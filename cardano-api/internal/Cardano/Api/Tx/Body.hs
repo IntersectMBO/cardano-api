@@ -27,7 +27,7 @@ module Cardano.Api.Tx.Body
     -- In this example, we are using the following qualified modules:
     --
     -- @
-    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports
     -- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)
     -- import qualified Cardano.Api.Experimental as Exp   -- the experimental API
     -- @
