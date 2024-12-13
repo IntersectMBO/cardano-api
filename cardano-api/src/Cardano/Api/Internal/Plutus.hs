@@ -14,12 +14,13 @@ import           Cardano.Api.Internal.Eon.AlonzoEraOnwards (AlonzoEraOnwards (..
 import           Cardano.Api.Internal.Eon.Convert (convert)
 import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyLedgerEra)
 import           Cardano.Api.Internal.Pretty (Pretty (pretty), docToText)
-import           Cardano.Api.Internal.Query (UTxO, toLedgerUTxO)
+import           Cardano.Api.Internal.Query (toLedgerUTxO)
 import qualified Cardano.Api.Internal.ReexposeLedger as L
 import           Cardano.Api.Internal.Script (ScriptHash, fromShelleyScriptHash)
 import qualified Cardano.Api.Internal.Script as Api
 import           Cardano.Api.Internal.Tx.Body (ScriptWitnessIndex (..), toScriptIndex)
 import           Cardano.Api.Internal.Tx.Sign (Tx (..))
+import           Cardano.Api.Internal.Tx.UTxO (UTxO)
 
 import qualified Cardano.Ledger.Alonzo.Scripts as L
 import qualified Cardano.Ledger.Alonzo.UTxO as Alonzo

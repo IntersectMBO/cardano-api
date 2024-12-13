@@ -58,6 +58,7 @@ import           Cardano.Api.Internal.NetworkId
 import           Cardano.Api.Internal.ProtocolParameters
 import           Cardano.Api.Internal.Query
 import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
+import           Cardano.Api.Internal.Tx.UTxO
 
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as L
