@@ -13,6 +13,7 @@ import qualified Test.Cardano.Api.Crypto
 import qualified Test.Cardano.Api.Envelope
 import qualified Test.Cardano.Api.EpochLeadership
 import qualified Test.Cardano.Api.Eras
+import qualified Test.Cardano.Api.Experimental
 import qualified Test.Cardano.Api.Genesis
 import qualified Test.Cardano.Api.IO
 import qualified Test.Cardano.Api.Json
@@ -48,6 +49,7 @@ tests =
     , Test.Cardano.Api.Envelope.tests
     , Test.Cardano.Api.EpochLeadership.tests
     , Test.Cardano.Api.Eras.tests
+    , Test.Cardano.Api.Experimental.tests
     , Test.Cardano.Api.Genesis.tests
     , Test.Cardano.Api.IO.tests
     , Test.Cardano.Api.Json.tests

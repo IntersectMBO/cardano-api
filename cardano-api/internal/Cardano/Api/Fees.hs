@@ -12,21 +12,306 @@
 
 -- | Fee calculation
 module Cardano.Api.Fees
-  ( -- * Transaction fees
+  ( -- * Introduction
+
+  --
+
+    -- |
+    -- The documentation of the "Cardano.Api.Tx.Body" module shows how to create a 'TxBodyContent' for a
+    -- transaction that takes 12 ADA and sends 10 ADA to an address, and spends 2 ADA on fees. If we have a
+    -- UTxO with exactly 12 ADA, and 2 ADA is enough for the fees, this could be a valid transaction. But still,
+    -- even if we have exactly 12 ADA, it is unlikely that the fees required are exactly 2 ADA, so either we
+    -- made an invalid transaction, or we are wasting ADA on fees.
+    --
+    -- On the other hand, we don't always want to spend all the ADA from a UTxO. Balancing a transaction allows
+    -- us to send the amount we want to send, pay only the necessary fees (or little more), and it
+    -- allows us to calculate the amount of extra currency that we can send back to a change address.
+    --
+    -- Because changes to the transaction body will potentially change the amount of fees needed by a transaction,
+    -- finding this balance can be quite tricky. But fortunately, we have functions that help achieve this.
+    --
+    -- This module provides several different ways of calculating the fees for a transaction or altogether
+    -- balancing a draft transaciton, which require different amounts of information, and provide different levels
+    -- of accuracy and automation.
+    --
+    -- Next, we explore three examples of different and representative ways of calculating the fees for a transaction.
+    -- There are some other ways, but they have similar requirements.
+    --
+    -- In these examples, we are using the following qualified modules:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports
+    -- @
+
+    -- ** Example 1: Simple fee calculation and manual balancing
+
+    -- |
+    -- This method requires very little information, and it requires a little manual
+    -- work.
+    --
+    -- It simply calculates the fees for a transaction, and then we need to do the
+    -- balancing ourselves.
+    --
+    -- We just need to know:
+    --
+    -- 1. The shelley based era witness for the current era. We can get it by using 'shelleyBasedEra'.
+    --
+    -- @
+    -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
+    -- @
+    --
+    -- 2. The protocol parameters for the current era. We can get them by using the 'QueryProtocolParameters'
+    -- query defined in "Cardano.Api.Query". Let's assume we have them in the @exampleProtocolParams@ variable.
+    --
+    -- 3. The draft transaction body. We can get it by using 'createTransactionBody' defined in "Cardano.Api.Tx.Body":
+    --
+    -- @
+    -- let (Right txBody) = Api.createTransactionBody sbe txBodyContent
+    -- @
+    --
+    -- 4. The number of Byron and Shelley key witnesses. This is just the number of keys that need
+    -- to sign the transaction. We can get an estimate by using 'estimateTransactionKeyWitnessCount'
+    -- but for a simple transaction that is using a single UTxO locked by a single modern Shelley key,
+    -- we would have @0@ Byron witnesses and @1@ Shelley witness.
+    --
+    -- 5. Lastly, the size of the reference scripts in bytes, if any. For simple transactions,
+    -- this would be @0@.
+    --
+    -- With this in mind we could estimate the fees required by our transaction by calling
+    -- 'evaluateTransactionFee' as follows:
+    --
+    -- @
+    -- let fees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0
+    -- @
+    --
+    -- Once we know the amount of fees required, we could balance the transaction by
+    -- substracting it from the total value of the UTxO we are spending.
+    --
+    -- For example, if we have a UTxO with 12 ADA, the fees are 0.2 ADA, and we want
+    -- to send 10 ADA to an address. We could have a transaction with:
+    --
+    -- * 1 input of 12 ADA (from the UTxO)
+    -- * 1 output of 10 ADA (to the address we want to pay)
+    -- * 1 output of 1.8 ADA (to the change address)
+    -- * 0.2 ADA in fees
+    --
+    -- So, we would have to update our 'TxBodyContent' accordingly, and continue with the
+    -- transaction building as we demonstrate in the 'Cardano.Api.Experimental.Tx' module
+
+    -- ** Example 2: Automated balancing without chain info (no UTxO, no ledger state)
+
+    -- |
+    -- This method requires a bit more of information, but it does more work for us
+    -- automatically and we have to guess less. It also works with a 'TxBodyContent',
+    -- instead of a full 'TxBody'.
+    --
+    -- We need the following info:
+    --
+    -- 1. The MaryEraOnwards witness for the current era. In this case we are using the
+    -- one for 'Conway' era:
+    --
+    -- @
+    -- let meo = Api.MaryEraOnwardsConway
+    -- @
+    --
+    -- 2. The draft 'TxBodyContent' for the transaction we want to balance. In "Cardano.Api.Tx.Body" we show
+    -- how to create one. We assume we have it in the @txBodyContent@ variable.
+    --
+    -- 3. The protocol parameters for the current era. We can get them by using the 'QueryProtocolParameters'
+    -- query defined in "Cardano.Api.Query". Let's assume we have them in the @exampleProtocolParams@ variable.
+    --
+    -- 4. For stake pool and gov actions, we will also need:
+    --
+    --     * The set of registered stake pools, that are being unregistered in this transaction.
+    --     * The map of all deposits for stake credentials that are being unregistered in this transaction.
+    --     * The map of all deposits for drep credentials that are being unregistered in this transaction.
+    --     * Plutus script execution units for all script witness we are used in the transaction.
+    --
+    --    For this example, we are assuming we are doing nothing like that and using not scripts,
+    --    so we will use 'mempty' for the four.
+    --
+    -- 5. Counts for:
+    --
+    --     * The collateral amount we are depositing. This is only required for transactions that
+    --       have scripts in them. So we are assuming this will be @0@.
+    --     * The number of Shelley key witnesses still to be added to the transaction. We can get an
+    --       estimate by using 'estimateTransactionKeyWitnessCount' but for a simple transaction that is using
+    --       a single UTxO locked by a single modern Shelley key, we would have @1@ Shelley witness.
+    --     * The number of Byron key witnesses still to be added to the transaction. We are assuming
+    --       this will be @0@ for our transaction.
+    --     * Size of all reference scripts in bytes. Again, we are not using any reference scripts, so
+    --       this would be @0@.
+    --
+    -- 6. The address where we want to send the change. We can deserialise it from its bech32 representation
+    -- by using the 'deserialiseAddress' function defined in "Cardano.Api.Address":
+    --
+    -- @
+    -- let Just exampleChangeAddress =
+    --            Api.deserialiseAddress
+    --              (Api.AsAddressInEra eraAsType)
+    --              "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+    -- @
+    --
+    -- Or we can get it from our signing key
+    --
+    -- @
+    -- let exampleChangeAddress =
+    --       Api.shelleyAddressInEra sbe $
+    --         Api.makeShelleyAddress
+    --           (Api.Testnet $ Api.NetworkMagic 2)    -- The magic for the network we are using
+    --           (Api.PaymentCredentialByKey
+    --              $ Api.verificationKeyHash
+    --                  $ Api.getVerificationKey
+    --                      signingKey)
+    --           Api.NoStakeAddress                    -- Potentially, the stake credential if we want to use one
+    -- @
+    --
+    -- 7. Finally, we need to know the total amount in the UTxOs we are spending. In our example,
+    -- we are spending 12 ADA, so we would have:
+    --
+    -- @
+    -- let totalUTxOValue = Api.lovelaceToValue 12_000_000
+    -- @
+    --
+    -- With all this information, we could get a balanced transaction by calling 'estimateBalancedTxBody'
+    -- as follows:
+    --
+    -- @
+    -- let (Right (Api.BalancedTxBody
+    --               updatedTxBodyContent
+    --               updatedTxBody
+    --               changeOutput
+    --               fees)) =
+    --       Api.estimateBalancedTxBody
+    --         meo
+    --         txBodyContent
+    --         exampleProtocolParams
+    --         mempty
+    --         mempty
+    --         mempty
+    --         mempty
+    --         0
+    --         1
+    --         0
+    --         0
+    --         exampleChangeAddress
+    -- @
+    --
+    -- This will give us a balanced transaction, with the fees calculated, and the change output.
+    -- Now we can just proceed with transaction singing and submission.
+
+    -- ** Example 3: Full automated balancing with chain info (requires UTxO and ledger state info)
+
+    -- |
+    -- In the previous example, we had to provide a lot of information manually, which was
+    -- easy because our transaction was simple. But, for more complex transactions, that may have
+    -- scripts or other advanced functions (like governance actions), there is an approach that
+    -- will do many of the calculations for us in exchange for some general information about
+    -- the ledger.
+    --
+    -- We need the following info:
+    --
+    -- 1. The shelley based era witness for the current era. We can get it by using 'shelleyBasedEra'.
+    --
+    -- @
+    -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
+    -- @
+    --
+    -- 2. The time the network started. We can obtain it using the 'QuerySystemStart' query
+    -- defined in "Cardano.Api.Query". Let's assume we have it in the @exampleSystemStart@ variable.
+    --
+    -- 3. The ledger epoch info. We can obtain it by applying the 'toLedgerEpochInfo' function
+    -- to the 'EraHistory' that we can obtain using the 'QueryEraHistory' query defined in
+    -- "Cardano.Api.Query". Let's assume we have it in the @exampleLedgerEpochInfo@ variable.
+    --
+    -- 4. The protocol parameters for the current era. We can get them by using the 'QueryProtocolParameters'
+    -- query defined in "Cardano.Api.Query". Let's assume we have them in the @exampleProtocolParams@ variable.
+    --
+    -- 5. For stake pool and gov actions, we will also need:
+    --
+    --      * The set of registered stake pools, that are being unregistered in this transaction.
+    --      * The map of all deposits for stake credentials that are being unregistered in this transaction.
+    --      * The map of all deposits for drep credentials that are being unregistered in this transaction.
+    --
+    --    For this example, I am assuming we are doing nothing like that, so we will use 'mempty' for the three.
+    --
+    -- 6. The part of the UTxO that we are spending. We can obtain the whole UTxO using the 'QueryUTxO' query
+    -- defined in "Cardano.Api.Query". Let's assume we have it in the @utxoToUse@ variable.
+    --
+    -- 7. The draft 'TxBodyContent' for the transaction we want to balance. In "Cardano.Api.Tx.Body" we show
+    -- how to create one.
+    --
+    -- 8. The address where we want to send the change. We can deserialise it from its bech32 representation
+    -- by using the 'deserialiseAddress' function defined in "Cardano.Api.Address":
+    --
+    -- @
+    -- let (Just exampleChangeAddress) =
+    --             Api.deserialiseAddress
+    --               (Api.AsAddressInEra eraAsType)
+    --               "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+    -- @
+    --
+    -- Or we can get it from our signing key
+    --
+    -- @
+    -- let exampleChangeAddress =
+    --       Api.shelleyAddressInEra sbe $
+    --         Api.makeShelleyAddress
+    --           (Api.Testnet $ Api.NetworkMagic 2)    -- The magic for the network we are using
+    --           (Api.PaymentCredentialByKey
+    --              $ Api.verificationKeyHash
+    --                  $ Api.getVerificationKey
+    --                      signingKey)
+    --           Api.NoStakeAddress                    -- Potentially, the stake credential if we want to use one
+    -- @
+    --
+    --
+    -- 9. Finally, we have the opportunity to override the number of key witnesses that the transaction
+    -- will require. But the function will calculate them automatically if we set this to 'Nothing'.
+    --
+    -- With all this information, we could get a balanced transaction by calling 'makeTransactionBodyAutoBalance'
+    -- as follows:
+    --
+    -- @
+    -- let Right (Api.BalancedTxBody
+    --              updatedTxBodyContent
+    --              updatedTxBody
+    --              changeOutput
+    --              fees) =
+    --    Api.makeTransactionBodyAutoBalance
+    --      sbe
+    --      exampleSystemStart
+    --      exampleLedgerEpochInfo
+    --      (Api.LedgerProtocolParameters exampleProtocolParams)
+    --      mempty
+    --      mempty
+    --      mempty
+    --      utxoToUse
+    --      txBodyContent
+    --      exampleChangeAddress
+    --      Nothing
+    -- @
+    --
+    -- This will give us a balanced transaction, with the fees calculated, and the change output.
+    -- Now we can just proceed with transaction singing and submission.
+
+    -- * Contents
+
+    -- ** Transaction fees
     evaluateTransactionFee
   , calculateMinTxFee
   , estimateTransactionKeyWitnessCount
 
-    -- * Script execution units
+    -- ** Script execution units
   , evaluateTransactionExecutionUnits
   , evaluateTransactionExecutionUnitsShelley
   , ScriptExecutionError (..)
   , TransactionValidityError (..)
 
-    -- * Transaction balance
+    -- ** Transaction balance
   , evaluateTransactionBalance
 
-    -- * Automated transaction building
+    -- ** Automated transaction building
   , estimateBalancedTxBody
   , estimateOrCalculateBalancedTxBody
   , makeTransactionBodyAutoBalance
@@ -40,10 +325,10 @@ module Cardano.Api.Fees
   , TxBodyErrorAutoBalance (..)
   , TxFeeEstimationError (..)
 
-    -- * Minimum UTxO calculation
+    -- ** Minimum UTxO calculation
   , calculateMinimumUTxO
 
-    -- * Internal helpers
+    -- ** Internal helpers
   , ResolvablePointers (..)
   )
 where
