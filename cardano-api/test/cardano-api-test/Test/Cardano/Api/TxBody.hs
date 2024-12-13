@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -33,7 +34,7 @@ import           Test.Tasty.Hedgehog (testProperty)
 prop_roundtrip_txbodycontent_txouts :: forall era. ShelleyBasedEra era -> Property
 prop_roundtrip_txbodycontent_txouts era = H.property $ do
   (body, content :: TxBodyContent BuildTx era) <-
-    shelleyBasedEraConstraints era $ H.forAll $ genValidTxBody era
+    shelleyBasedEraConstraints era $ H.forAll $ genValidTxBody
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
   let (TxBody content') = body
   matchTxOuts (txOuts content) (txOuts content')
@@ -81,8 +82,7 @@ prop_roundtrip_txbodycontent_txouts era = H.property $ do
 
 prop_roundtrip_txbodycontent_conway_fields :: Property
 prop_roundtrip_txbodycontent_conway_fields = H.property $ do
-  let sbe = ShelleyBasedEraConway
-  (body, content) <- H.forAll $ genValidTxBody sbe
+  (body, content) <- H.forAll $ genValidTxBody @ConwayEra
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
   let (TxBody content') = body
 

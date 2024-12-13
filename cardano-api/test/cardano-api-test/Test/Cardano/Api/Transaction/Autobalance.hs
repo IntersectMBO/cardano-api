@@ -218,7 +218,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
   txInsColl <- forAll $ genTxInsCollateral era
   txRetColl <-
     forAll $ Gen.frequency [(4, pure TxReturnCollateralNone), (1, genTxReturnCollateral sbe)]
-  txTotColl <- forAll $ Gen.frequency [(4, pure TxTotalCollateralNone), (1, genTxTotalCollateral era)]
+  txTotColl <- forAll $ Gen.frequency [(4, pure TxTotalCollateralNone), (1, genTxTotalCollateral)]
   let address = AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress L.Testnet def L.StakeRefNull)
 
   let (resRetColl, resTotColl) =
