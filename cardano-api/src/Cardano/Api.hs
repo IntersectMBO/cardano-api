@@ -1110,6 +1110,7 @@ import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
 import           Cardano.Api.Query.Expr
+import           Cardano.Api.Query.UTxO (UTxO (..))
 import           Cardano.Api.Rewards
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData

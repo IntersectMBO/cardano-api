@@ -20,6 +20,7 @@ import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Fees
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import           Cardano.Api.Query.UTxO (UTxO (..))
 import           Cardano.Api.Tx.Body
 import           Cardano.Api.Tx.Sign
 import           Cardano.Api.Utils
