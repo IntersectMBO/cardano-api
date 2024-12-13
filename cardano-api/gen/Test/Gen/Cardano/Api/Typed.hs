@@ -566,16 +566,17 @@ genTtl :: Gen SlotNo
 genTtl = genSlotNo
 
 -- TODO: Accept a range for generating ttl.
-genTxValidityLowerBound :: CardanoEra era -> Gen (TxValidityLowerBound era)
+genTxValidityLowerBound :: IsCardanoEra era => Gen (TxValidityLowerBound era)
 genTxValidityLowerBound =
   inEonForEra
     (pure TxValidityNoLowerBound)
     (\w -> TxValidityLowerBound w <$> genTtl)
+    cardanoEra
 
 -- TODO: Accept a range for generating ttl.
-genTxValidityUpperBound :: ShelleyBasedEra era -> Gen (TxValidityUpperBound era)
-genTxValidityUpperBound sbe =
-  TxValidityUpperBound sbe <$> Gen.maybe genTtl
+genTxValidityUpperBound :: IsShelleyBasedEra era => Gen (TxValidityUpperBound era)
+genTxValidityUpperBound =
+  TxValidityUpperBound shelleyBasedEra <$> Gen.maybe genTtl
 
 genTxMetadataInEra :: CardanoEra era -> Gen (TxMetadataInEra era)
 genTxMetadataInEra =
@@ -612,29 +613,29 @@ genTxWithdrawals =
           ]
     )
 
-genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
+genTxCertificates :: IsShelleyBasedEra era => Gen (TxCertificates BuildTx era)
 genTxCertificates =
   inEonForEra
     (pure TxCertificatesNone)
     ( \w -> do
-        certs <- Gen.list (Range.constant 0 3) $ genCertificate w
+        certs <- Gen.list (Range.constant 0 3) genCertificate
         Gen.choice
           [ pure TxCertificatesNone
           , pure (TxCertificates w certs $ BuildTxWith mempty)
           -- TODO: Generate certificates
           ]
-    )
+    ) cardanoEra
 
 -- TODO: Add remaining certificates
 -- TODO: This should be parameterised on ShelleyBasedEra
-genCertificate :: ShelleyBasedEra era -> Gen (Certificate era)
-genCertificate sbe =
+genCertificate :: IsShelleyBasedEra era => Gen (Certificate era)
+genCertificate =
   Gen.choice
-    [ makeStakeAddressRegistrationCertificate <$> genStakeAddressRequirements sbe
-    , makeStakeAddressUnregistrationCertificate <$> genStakeAddressRequirements sbe
+    [ makeStakeAddressRegistrationCertificate <$> genStakeAddressRequirements
+    , makeStakeAddressUnregistrationCertificate <$> genStakeAddressRequirements
     ]
 
-genStakeAddressRequirements :: ShelleyBasedEra era -> Gen (StakeAddressRequirements era)
+genStakeAddressRequirements :: forall era. IsShelleyBasedEra era => Gen (StakeAddressRequirements era)
 genStakeAddressRequirements =
   caseShelleyToBabbageOrConwayEraOnwards
     ( \w ->
@@ -645,22 +646,26 @@ genStakeAddressRequirements =
         StakeAddrRegistrationConway w
           <$> genLovelace
           <*> genStakeCredential
-    )
+    ) (shelleyBasedEra @era)
 
-genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
-genTxUpdateProposal sbe =
+genTxUpdateProposal
+  :: IsCardanoEra era
+  => Gen (TxUpdateProposal era)
+genTxUpdateProposal =
   Gen.choice $
     catMaybes
       [ Just $ pure TxUpdateProposalNone
-      , forEraInEon sbe Nothing $ \w ->
+      , forEraInEon cardanoEra Nothing $ \w ->
           Just $ TxUpdateProposal w <$> genUpdateProposal (toCardanoEra w)
       ]
 
-genTxMintValue :: CardanoEra era -> Gen (TxMintValue BuildTx era)
+genTxMintValue
+  :: IsCardanoEra era
+  => Gen (TxMintValue BuildTx era)
 genTxMintValue =
   inEonForEra
     (pure TxMintNone)
-    $ \w -> do
+    (\w -> do
       policies <- Gen.list (Range.constant 1 3) genPolicyId
       assets <- forM policies $ \policy ->
         (,) policy <$>
@@ -673,29 +678,33 @@ genTxMintValue =
         [ pure TxMintNone
         , pure $ TxMintValue w (fromList assets)
         ]
+     ) cardanoEra
 
-genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
-genTxBodyContent sbe = do
-  let era = toCardanoEra sbe
+genTxBodyContent
+  :: IsShelleyBasedEra era
+  => Gen (TxBodyContent BuildTx era)
+genTxBodyContent = do
+  let sbe = shelleyBasedEra
+  let era = cardanoEra
   txIns <-
     map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
   txInsReference <- genTxInsReference era
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext sbe)
-  txTotalCollateral <- genTxTotalCollateral era
+  txTotalCollateral <- genTxTotalCollateral
   txReturnCollateral <- genTxReturnCollateral sbe
-  txFee <- genTxFee sbe
-  txValidityLowerBound <- genTxValidityLowerBound era
-  txValidityUpperBound <- genTxValidityUpperBound sbe
+  txFee <- genTxFee
+  txValidityLowerBound <- genTxValidityLowerBound
+  txValidityUpperBound <- genTxValidityUpperBound
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts sbe
   let txExtraKeyWits = TxExtraKeyWitnessesNone -- TODO: Alonzo era: Generate witness key hashes
   txProtocolParams <-
     BuildTxWith <$> forEraInEon era (pure Nothing) (Gen.maybe . genValidProtocolParameters)
   txWithdrawals <- genTxWithdrawals era
-  txCertificates <- genTxCertificates era
-  txUpdateProposal <- genTxUpdateProposal era
-  txMintValue <- genTxMintValue era
+  txCertificates <- genTxCertificates
+  txUpdateProposal <- genTxUpdateProposal
+  txMintValue <- genTxMintValue
   txScriptValidity <- genTxScriptValidity era
   txProposalProcedures <- genMaybeFeaturedInEra genProposals era
   txVotingProcedures <- genMaybeFeaturedInEra genVotingProcedures era
@@ -751,14 +760,15 @@ genTxReturnCollateral era =
     (pure TxReturnCollateralNone)
     (\w -> TxReturnCollateral w <$> genTxOutTxContext era)
 
-genTxTotalCollateral :: CardanoEra era -> Gen (TxTotalCollateral era)
+genTxTotalCollateral :: IsCardanoEra era => Gen (TxTotalCollateral era)
 genTxTotalCollateral =
   inEonForEra
     (pure TxTotalCollateralNone)
     (\w -> TxTotalCollateral w <$> genPositiveLovelace)
+    cardanoEra
 
-genTxFee :: ShelleyBasedEra era -> Gen (TxFee era)
-genTxFee w = TxFeeExplicit w <$> genLovelace
+genTxFee :: IsShelleyBasedEra era => Gen (TxFee era)
+genTxFee = TxFeeExplicit shelleyBasedEra <$> genLovelace
 
 genAddressInEraByron :: Gen (AddressInEra ByronEra)
 genAddressInEraByron = byronAddressInEra <$> genAddressByron
@@ -795,20 +805,24 @@ genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
 
 -- | This generator validates generated 'TxBodyContent' and backtracks when the generated body
 -- fails the validation. That also means that it is quite slow.
-genValidTxBody :: ShelleyBasedEra era
-               -> Gen (TxBody era, TxBodyContent BuildTx era) -- ^ validated 'TxBody' and 'TxBodyContent'
-genValidTxBody sbe =
+genValidTxBody
+  :: IsShelleyBasedEra era
+  => Gen (TxBody era, TxBodyContent BuildTx era) -- ^ validated 'TxBody' and 'TxBodyContent'
+genValidTxBody =
   Gen.mapMaybe
     (\content ->
         either (const Nothing) (Just . (, content)) $
-          createAndValidateTransactionBody sbe content
+          createAndValidateTransactionBody shelleyBasedEra content
     )
-    (genTxBodyContent sbe)
+    (genTxBodyContent)
 
 -- | Partial! This function will throw an error when the generated transaction is invalid.
-genTxBody :: HasCallStack => ShelleyBasedEra era -> Gen (TxBody era)
-genTxBody era = do
-  res <- Api.createTransactionBody era <$> genTxBodyContent era
+genTxBody
+  :: HasCallStack
+  => IsShelleyBasedEra era
+  => Gen (TxBody era)
+genTxBody = do
+  res <- Api.createTransactionBody shelleyBasedEra <$> genTxBodyContent
   case res of
     Left err -> error (docToString (prettyError err))
     Right txBody -> pure txBody
@@ -845,18 +859,19 @@ genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 
 genTx
-  :: ()
-  => ShelleyBasedEra era
-  -> Gen (Tx era)
-genTx era =
+  :: IsShelleyBasedEra era
+  => Gen (Tx era)
+genTx =
   makeSignedTransaction
-    <$> genWitnesses era
-    <*> (fst <$> genValidTxBody era)
+    <$> genWitnesses
+    <*> (fst <$> genValidTxBody)
 
-genWitnesses :: ShelleyBasedEra era -> Gen [KeyWitness era]
-genWitnesses sbe = do
-  bsWits <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
-  keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
+genWitnesses
+  :: IsShelleyBasedEra era
+  => Gen [KeyWitness era]
+genWitnesses = do
+  bsWits <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness)
+  keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness)
   return $ bsWits ++ keyWits
 
 genVerificationKey
@@ -898,32 +913,29 @@ genWitnessNetworkIdOrByronAddress =
     ]
 
 genShelleyBootstrapWitness
-  :: ()
-  => ShelleyBasedEra era
-  -> Gen (KeyWitness era)
-genShelleyBootstrapWitness sbe =
-  makeShelleyBootstrapWitness sbe
+  :: IsShelleyBasedEra era
+  => Gen (KeyWitness era)
+genShelleyBootstrapWitness =
+  makeShelleyBootstrapWitness shelleyBasedEra
     <$> genWitnessNetworkIdOrByronAddress
-    <*> (fst <$> genValidTxBody sbe)
+    <*> (fst <$> genValidTxBody)
     <*> genSigningKey AsByronKey
 
 genShelleyKeyWitness
-  :: ()
-  => ShelleyBasedEra era
-  -> Gen (KeyWitness era)
-genShelleyKeyWitness sbe =
-  makeShelleyKeyWitness sbe . fst
-    <$> genValidTxBody sbe
+  :: IsShelleyBasedEra era
+  => Gen (KeyWitness era)
+genShelleyKeyWitness =
+  makeShelleyKeyWitness shelleyBasedEra . fst
+    <$> genValidTxBody
     <*> genShelleyWitnessSigningKey
 
 genShelleyWitness
-  :: ()
-  => ShelleyBasedEra era
-  -> Gen (KeyWitness era)
-genShelleyWitness sbe =
+  :: IsShelleyBasedEra era
+  => Gen (KeyWitness era)
+genShelleyWitness =
   Gen.choice
-    [ genShelleyKeyWitness sbe
-    , genShelleyBootstrapWitness sbe
+    [ genShelleyKeyWitness
+    , genShelleyBootstrapWitness
     ]
 
 genShelleyWitnessSigningKey :: Gen ShelleyWitnessSigningKey
@@ -938,9 +950,8 @@ genShelleyWitnessSigningKey =
     ]
 
 genCardanoKeyWitness
-  :: ()
-  => ShelleyBasedEra era
-  -> Gen (KeyWitness era)
+  :: IsShelleyBasedEra era
+  => Gen (KeyWitness era)
 genCardanoKeyWitness = genShelleyWitness
 
 genSeed :: Int -> Gen Crypto.Seed
