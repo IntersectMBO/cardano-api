@@ -35,8 +35,11 @@ tests =
         "Negative smoke test for DRep registration anchor data JSON schema"
         prop_negative_smoke_test_drep_registration_anchor_data_json_schema
     , testProperty
-        "Positive smoke test for gov action anchor data JSON schema"
-        prop_positive_smoke_test_gov_action_anchor_data_json_schema
+        "Positive smoke test for no confidence anchor data JSON schema"
+        prop_positive_smoke_test_no_confidence_anchor_data_json_schema
+    , testProperty
+        "Positive smoke test for treasury withdrawal anchor data JSON schema"
+        prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema
     ]
 
 prop_positive_smoke_test_drep_registration_anchor_data_json_schema :: Property
@@ -59,11 +62,21 @@ prop_negative_smoke_test_drep_registration_anchor_data_json_schema = propertyOnc
   value <- H.evalEither eitherValue
   validateDRepAnchorData (DRepMetadata value) === Left "Error in $.body: key \"givenName\" not found"
 
-prop_positive_smoke_test_gov_action_anchor_data_json_schema :: Property
-prop_positive_smoke_test_gov_action_anchor_data_json_schema = propertyOnce $ do
+prop_positive_smoke_test_no_confidence_anchor_data_json_schema :: Property
+prop_positive_smoke_test_no_confidence_anchor_data_json_schema = propertyOnce $ do
   (eitherValue :: Either (FileError Any) ByteString) <-
     readByteStringFile
-      ( File "test/cardano-api-test/files/input/gov-anchor-data/valid-gov-action-metadata.jsonld"
+      ( File "test/cardano-api-test/files/input/gov-anchor-data/no-confidence.jsonld"
+          :: File DRepMetadata In
+      )
+  value <- H.evalEither eitherValue
+  validateGovActionAnchorData value === Right ()
+
+prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema :: Property
+prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema = propertyOnce $ do
+  (eitherValue :: Either (FileError Any) ByteString) <-
+    readByteStringFile
+      ( File "test/cardano-api-test/files/input/gov-anchor-data/threasury-withdrawal.jsonld"
           :: File DRepMetadata In
       )
   value <- H.evalEither eitherValue

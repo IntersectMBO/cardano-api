@@ -13,20 +13,20 @@ import           Data.Text (Text)
 import           GHC.Generics (Generic)
 
 validateGovActionAnchorData :: ByteString -> Either String ()
-validateGovActionAnchorData bytes = mapRight (const ()) (eitherDecodeStrict bytes :: Either String CIP100Common)
+validateGovActionAnchorData bytes = mapRight (const ()) (eitherDecodeStrict bytes :: Either String CIP108Common)
 
--- Root object: CIP-100 Common
-data CIP100Common = CIP100Common
+-- Root object: CIP-108 Common
+data CIP108Common = CIP108Common
   { hashAlgorithm :: HashAlgorithm
   , authors :: [Author]
   , body :: Body
   }
   deriving (Show, Generic)
 
-instance FromJSON CIP100Common where
-  parseJSON :: Value -> Parser CIP100Common
-  parseJSON = withObject "CIP100Common" $ \v ->
-    CIP100Common
+instance FromJSON CIP108Common where
+  parseJSON :: Value -> Parser CIP108Common
+  parseJSON = withObject "CIP108Common" $ \v ->
+    CIP108Common
       <$> v .: "hashAlgorithm"
       <*> v .: "authors"
       <*> v .: "body"
@@ -73,7 +73,7 @@ instance FromJSON Witness where
       <*> v .:? "signature"
 
 -- Enum for WitnessAlgorithm
-data WitnessAlgorithm = Ed25519
+data WitnessAlgorithm = Ed25519 | CIP0008
   deriving (Show, Generic)
 
 instance FromJSON WitnessAlgorithm where
@@ -81,13 +81,16 @@ instance FromJSON WitnessAlgorithm where
   parseJSON = withText "WitnessAlgorithm" $
     \case
       "ed25519" -> return Ed25519
-      _ -> fail "Invalid witnessAlgorithm value, must be: ed25519"
+      "CIP-0008" -> return CIP0008
+      _ -> fail "Invalid witnessAlgorithm value, must be: ed25519 or CIP-0008"
 
 -- Body of the metadata document
 data Body = Body
-  { references :: Maybe [Reference]
-  , comment :: Maybe Text
-  , externalUpdates :: Maybe [ExternalUpdate]
+  { title :: Text
+  , abstract :: Text
+  , motivation :: Text
+  , rationale :: Text
+  , references :: Maybe [Reference]
   }
   deriving (Show, Generic)
 
@@ -95,15 +98,18 @@ instance FromJSON Body where
   parseJSON :: Value -> Parser Body
   parseJSON = withObject "Body" $ \v ->
     Body
-      <$> v .:? "references"
-      <*> v .:? "comment"
-      <*> v .:? "externalUpdatess"
+      <$> v .: "title"
+      <*> v .: "abstract"
+      <*> v .: "motivation"
+      <*> v .: "rationale"
+      <*> v .:? "references"
 
 -- Reference object
 data Reference = Reference
-  { referenceType :: ReferenceType
+  { refType :: ReferenceType
   , label :: Text
-  , refUri :: Text
+  , uri :: Text
+  , referenceHash :: Maybe ReferenceHash
   }
   deriving (Show, Generic)
 
@@ -114,6 +120,7 @@ instance FromJSON Reference where
       <$> v .: "@type"
       <*> v .: "label"
       <*> v .: "uri"
+      <*> v .:? "referenceHash"
 
 -- Enum for ReferenceType
 data ReferenceType = GovernanceMetadata | Other
@@ -127,16 +134,16 @@ instance FromJSON ReferenceType where
       "Other" -> return Other
       _ -> fail "Invalid reference type, must be one of: GovernanceMetadata, Other"
 
--- ExternalUpdate object
-data ExternalUpdate = ExternalUpdate
-  { title :: Text
-  , updateUri :: Text
+-- ReferenceHash object
+data ReferenceHash = ReferenceHash
+  { referenceHashDigest :: Text
+  , referenceHashAlgorithm :: HashAlgorithm
   }
   deriving (Show, Generic)
 
-instance FromJSON ExternalUpdate where
-  parseJSON :: Value -> Parser ExternalUpdate
-  parseJSON = withObject "ExternalUpdate" $ \v ->
-    ExternalUpdate
-      <$> v .: "title"
-      <*> v .: "uri"
+instance FromJSON ReferenceHash where
+  parseJSON :: Value -> Parser ReferenceHash
+  parseJSON = withObject "ReferenceHash" $ \v ->
+    ReferenceHash
+      <$> v .: "hashDigest"
+      <*> v .: "hashAlgorithm"
