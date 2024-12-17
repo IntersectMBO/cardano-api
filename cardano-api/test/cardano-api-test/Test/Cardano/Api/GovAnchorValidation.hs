@@ -35,6 +35,9 @@ tests =
         "Negative smoke test for DRep registration anchor data JSON schema"
         prop_negative_smoke_test_drep_registration_anchor_data_json_schema
     , testProperty
+        "Given name too long smoke test for DRep registration anchor data JSON schema"
+        prop_given_name_too_long_smoke_test_drep_registration_anchor_data_json_schema
+    , testProperty
         "Positive smoke test for no confidence anchor data JSON schema"
         prop_positive_smoke_test_no_confidence_anchor_data_json_schema
     , testProperty
@@ -61,6 +64,17 @@ prop_negative_smoke_test_drep_registration_anchor_data_json_schema = propertyOnc
       )
   value <- H.evalEither eitherValue
   validateDRepAnchorData (DRepMetadata value) === Left "Error in $.body: key \"givenName\" not found"
+
+prop_given_name_too_long_smoke_test_drep_registration_anchor_data_json_schema :: Property
+prop_given_name_too_long_smoke_test_drep_registration_anchor_data_json_schema = propertyOnce $ do
+  (eitherValue :: Either (FileError Any) ByteString) <-
+    readByteStringFile
+      ( File "test/cardano-api-test/files/input/gov-anchor-data/too-long-given-name-drep-metadata.jsonld"
+          :: File DRepMetadata In
+      )
+  value <- H.evalEither eitherValue
+  validateDRepAnchorData (DRepMetadata value)
+    === Left "Error in $.body: key \"givenName\" exceeds maximum length of 80 characters. Got length: 90"
 
 prop_positive_smoke_test_no_confidence_anchor_data_json_schema :: Property
 prop_positive_smoke_test_no_confidence_anchor_data_json_schema = propertyOnce $ do
