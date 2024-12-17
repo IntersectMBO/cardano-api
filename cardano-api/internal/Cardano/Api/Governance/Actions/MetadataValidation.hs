@@ -11,6 +11,7 @@ import           Data.ByteString (ByteString)
 import           Data.Either.Combinators (mapRight)
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
+import Cardano.Api.GeneralParsers (textWithMaxLength)
 
 validateGovActionAnchorData :: ByteString -> Either String ()
 validateGovActionAnchorData bytes = mapRight (const ()) (eitherDecodeStrict bytes :: Either String CIP108Common)
@@ -98,8 +99,8 @@ instance FromJSON Body where
   parseJSON :: Value -> Parser Body
   parseJSON = withObject "Body" $ \v ->
     Body
-      <$> v .: "title"
-      <*> v .: "abstract"
+      <$> (v .: "title" >>= textWithMaxLength "title" 80)
+      <*> (v .: "abstract" >>= textWithMaxLength "abstract" 2500)
       <*> v .: "motivation"
       <*> v .: "rationale"
       <*> v .:? "references"

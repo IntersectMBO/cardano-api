@@ -43,6 +43,9 @@ tests =
     , testProperty
         "Positive smoke test for treasury withdrawal anchor data JSON schema"
         prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema
+    , testProperty
+        "Title name too long smoke test for treasury withdrawal anchor data JSON schema"
+        prop_title_name_too_long_smoke_test_threasury_withdrawal_anchor_data_json_schema
     ]
 
 prop_positive_smoke_test_drep_registration_anchor_data_json_schema :: Property
@@ -95,3 +98,14 @@ prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema = property
       )
   value <- H.evalEither eitherValue
   validateGovActionAnchorData value === Right ()
+
+prop_title_name_too_long_smoke_test_threasury_withdrawal_anchor_data_json_schema :: Property
+prop_title_name_too_long_smoke_test_threasury_withdrawal_anchor_data_json_schema = propertyOnce $ do
+  (eitherValue :: Either (FileError Any) ByteString) <-
+    readByteStringFile
+      ( File "test/cardano-api-test/files/input/gov-anchor-data/too-long-title-treasury-withdraw.jsonld"
+          :: File DRepMetadata In
+      )
+  value <- H.evalEither eitherValue
+  validateGovActionAnchorData value
+    === Left "Error in $.body: key \"title\" exceeds maximum length of 80 characters. Got length: 112"
