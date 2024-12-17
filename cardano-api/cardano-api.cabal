@@ -88,6 +88,7 @@ library internal
     Cardano.Api.Experimental.Tx
     Cardano.Api.Feature
     Cardano.Api.Fees
+    Cardano.Api.GeneralParsers
     Cardano.Api.Genesis
     Cardano.Api.GenesisParameters
     Cardano.Api.Governance.Actions.MetadataValidation

@@ -36,6 +36,7 @@ import           Data.ByteString (ByteString)
 import           Data.Either.Combinators (mapRight, maybeToRight)
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
+import Cardano.Api.GeneralParsers (textWithMaxLength)
 
 -- ----------------------------------------------------------------------------
 -- DRep metadata
@@ -119,11 +120,11 @@ instance FromJSON Body where
   parseJSON = withObject "Body" $ \v ->
     Body
       <$> v .:? "paymentAddress"
-      <*> v .: "givenName"
+      <*> (v .: "givenName" >>= textWithMaxLength "givenName" 80)
       <*> v .:? "image"
-      <*> v .:? "objectives"
-      <*> v .:? "motivations"
-      <*> v .:? "qualifications"
+      <*> (v .:? "objectives" >>= traverse (textWithMaxLength "objectives" 1000))
+      <*> (v .:? "motivations" >>= traverse (textWithMaxLength "motivations" 1000))
+      <*> (v .:? "qualifications" >>= traverse (textWithMaxLength "qualifications" 1000))
       <*> v .:? "doNotList"
       <*> v .:? "references"
 
