@@ -29,27 +29,27 @@ tests =
   testGroup
     "Test.Cardano.Api.GovAnchorValidation"
     [ testProperty
-        "Positive smoke test for DRep registration anchor data JSON schema"
-        prop_positive_smoke_test_drep_registration_anchor_data_json_schema
+        "Positive test for DRep registration JSON schema"
+        prop_positive_drep_registration_json
     , testProperty
-        "Negative smoke test for DRep registration anchor data JSON schema"
-        prop_negative_smoke_test_drep_registration_anchor_data_json_schema
+        "Missing 'givenName' test for DRep registration JSON schema"
+        prop_missing_given_name_drep_registration_json
     , testProperty
-        "Given name too long smoke test for DRep registration anchor data JSON schema"
-        prop_given_name_too_long_smoke_test_drep_registration_anchor_data_json_schema
+        "Given name too long test for DRep registration JSON schema"
+        prop_given_name_too_long_drep_registration_json
     , testProperty
-        "Positive smoke test for no confidence anchor data JSON schema"
-        prop_positive_smoke_test_no_confidence_anchor_data_json_schema
+        "Positive test for no confidence JSON schema"
+        prop_positive_no_confidence_json
     , testProperty
-        "Positive smoke test for treasury withdrawal anchor data JSON schema"
-        prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema
+        "Positive test for treasury withdrawal JSON schema"
+        prop_positive_treasury_withdrawal_json
     , testProperty
-        "Title name too long smoke test for treasury withdrawal anchor data JSON schema"
-        prop_title_name_too_long_smoke_test_threasury_withdrawal_anchor_data_json_schema
+        "Title name too long test for treasury withdrawal JSON schema"
+        prop_title_name_too_long_treasury_withdrawal_json
     ]
 
-prop_positive_smoke_test_drep_registration_anchor_data_json_schema :: Property
-prop_positive_smoke_test_drep_registration_anchor_data_json_schema = propertyOnce $ do
+prop_positive_drep_registration_json :: Property
+prop_positive_drep_registration_json = propertyOnce $ do
   (eitherValue :: Either (FileError Any) ByteString) <-
     readByteStringFile
       ( File "test/cardano-api-test/files/input/gov-anchor-data/valid-drep-metadata.jsonld"
@@ -58,8 +58,8 @@ prop_positive_smoke_test_drep_registration_anchor_data_json_schema = propertyOnc
   value <- H.evalEither eitherValue
   validateDRepAnchorData (DRepMetadata value) === Right ()
 
-prop_negative_smoke_test_drep_registration_anchor_data_json_schema :: Property
-prop_negative_smoke_test_drep_registration_anchor_data_json_schema = propertyOnce $ do
+prop_missing_given_name_drep_registration_json :: Property
+prop_missing_given_name_drep_registration_json = propertyOnce $ do
   (eitherValue :: Either (FileError Any) ByteString) <-
     readByteStringFile
       ( File "test/cardano-api-test/files/input/gov-anchor-data/invalid-drep-metadata.jsonld"
@@ -68,8 +68,8 @@ prop_negative_smoke_test_drep_registration_anchor_data_json_schema = propertyOnc
   value <- H.evalEither eitherValue
   validateDRepAnchorData (DRepMetadata value) === Left "Error in $.body: key \"givenName\" not found"
 
-prop_given_name_too_long_smoke_test_drep_registration_anchor_data_json_schema :: Property
-prop_given_name_too_long_smoke_test_drep_registration_anchor_data_json_schema = propertyOnce $ do
+prop_given_name_too_long_drep_registration_json :: Property
+prop_given_name_too_long_drep_registration_json = propertyOnce $ do
   (eitherValue :: Either (FileError Any) ByteString) <-
     readByteStringFile
       ( File "test/cardano-api-test/files/input/gov-anchor-data/too-long-given-name-drep-metadata.jsonld"
@@ -79,8 +79,8 @@ prop_given_name_too_long_smoke_test_drep_registration_anchor_data_json_schema = 
   validateDRepAnchorData (DRepMetadata value)
     === Left "Error in $.body: key \"givenName\" exceeds maximum length of 80 characters. Got length: 90"
 
-prop_positive_smoke_test_no_confidence_anchor_data_json_schema :: Property
-prop_positive_smoke_test_no_confidence_anchor_data_json_schema = propertyOnce $ do
+prop_positive_no_confidence_json :: Property
+prop_positive_no_confidence_json = propertyOnce $ do
   (eitherValue :: Either (FileError Any) ByteString) <-
     readByteStringFile
       ( File "test/cardano-api-test/files/input/gov-anchor-data/no-confidence.jsonld"
@@ -89,8 +89,8 @@ prop_positive_smoke_test_no_confidence_anchor_data_json_schema = propertyOnce $ 
   value <- H.evalEither eitherValue
   validateGovActionAnchorData value === Right ()
 
-prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema :: Property
-prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema = propertyOnce $ do
+prop_positive_treasury_withdrawal_json :: Property
+prop_positive_treasury_withdrawal_json = propertyOnce $ do
   (eitherValue :: Either (FileError Any) ByteString) <-
     readByteStringFile
       ( File "test/cardano-api-test/files/input/gov-anchor-data/threasury-withdrawal.jsonld"
@@ -99,8 +99,8 @@ prop_positive_smoke_test_threasury_withdrawal_anchor_data_json_schema = property
   value <- H.evalEither eitherValue
   validateGovActionAnchorData value === Right ()
 
-prop_title_name_too_long_smoke_test_threasury_withdrawal_anchor_data_json_schema :: Property
-prop_title_name_too_long_smoke_test_threasury_withdrawal_anchor_data_json_schema = propertyOnce $ do
+prop_title_name_too_long_treasury_withdrawal_json :: Property
+prop_title_name_too_long_treasury_withdrawal_json = propertyOnce $ do
   (eitherValue :: Either (FileError Any) ByteString) <-
     readByteStringFile
       ( File "test/cardano-api-test/files/input/gov-anchor-data/too-long-title-treasury-withdraw.jsonld"
