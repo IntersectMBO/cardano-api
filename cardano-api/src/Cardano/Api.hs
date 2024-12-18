@@ -517,6 +517,7 @@ module Cardano.Api
     -- ** Anchor data
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
+  , isDRepRegOrUpdateCert
 
     -- * Rewards
   , DelegationsAndRewards (..)
