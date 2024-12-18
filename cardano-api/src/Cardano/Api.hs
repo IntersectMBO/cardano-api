@@ -1038,6 +1038,7 @@ module Cardano.Api
 
     -- ** Governance actions
   , getAnchorDataFromGovernanceAction
+  , validateGovActionAnchorData
 
     -- ** Governance related certificates
   , AnchorDataHash (..)
@@ -1089,6 +1090,7 @@ import           Cardano.Api.Feature
 import           Cardano.Api.Fees
 import           Cardano.Api.Genesis
 import           Cardano.Api.GenesisParameters
+import           Cardano.Api.Governance.Actions.MetadataValidation
 import           Cardano.Api.Governance.Actions.ProposalProcedure
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
