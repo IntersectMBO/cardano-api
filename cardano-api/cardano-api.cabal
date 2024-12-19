@@ -408,7 +408,7 @@ test-suite cardano-api-golden
     errors,
     filepath,
     hedgehog >=1.1,
-    hedgehog-extras ^>=0.6.1.0,
+    hedgehog-extras >=0.6.1 && <0.6.5.1,
     microlens,
     parsec,
     plutus-core ^>=1.37,
