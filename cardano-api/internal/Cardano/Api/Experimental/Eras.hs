@@ -34,6 +34,7 @@ where
 
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.Convert
+import           Cardano.Api.Eon.MaryEraOnwards
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
 import qualified Cardano.Api.Eras as Api
 import           Cardano.Api.Eras.Core (BabbageEra, ConwayEra, Eon (..))
@@ -200,6 +201,11 @@ instance Convert Era ShelleyBasedEra where
   convert = \case
     BabbageEra -> ShelleyBasedEraBabbage
     ConwayEra -> ShelleyBasedEraConway
+
+instance Convert Era MaryEraOnwards where
+  convert = \case
+    BabbageEra -> MaryEraOnwardsBabbage
+    ConwayEra -> MaryEraOnwardsConway
 
 instance Convert Era BabbageEraOnwards where
   convert = \case
