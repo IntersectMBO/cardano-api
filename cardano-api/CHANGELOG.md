@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 10.5.0.0
+
+- Don't export the ledger's `coerceKeyRole` function anymore, export RewardAccount
+  (breaking)
+  [PR 708](https://github.com/IntersectMBO/cardano-api/pull/708)
+
+- Adds `modTxTotalCollateral`, `modTxReturnCollateral`, `modTxFee`, `modTxValidityLowerBound`, `modTxValidityUpperBound`, `modTxMetadata`, `modTxAuxScripts`, `modTxWithdrawals`, `modTxCertificates`, `modTxUpdateProposal`, `modTxScriptValidity`, `modTxMintValue` functions for modifying `TxBodyContent`. Adds `addTxMintValue` and `subtractTxMintValue`.
+  (compatible)
+  [PR 706](https://github.com/IntersectMBO/cardano-api/pull/706)
+
+- Add TxBodyModifier functions: `addTxIns`, `modTxInsCollateral`, `addTxInsCollateral`, `addTxInCollateral`, `modTxInsReference`, `addTxInsReference`, `addTxInReference`, `addTxOuts`, `modTxExtraKeyWits`, `addTxExtraKeyWits`.
+  (compatible)
+  [PR 704](https://github.com/IntersectMBO/cardano-api/pull/704)
+
 ## 10.4.0.0
 
 - Integrate queryProposals (GetProposals)
