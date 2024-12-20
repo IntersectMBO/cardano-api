@@ -22,7 +22,6 @@ module Cardano.Api.Query
   , QueryInEra (..)
   , QueryInShelleyBasedEra (..)
   , QueryUTxOFilter (..)
-  , UTxO (..)
   , UTxOInAnyEra (..)
 
     -- * Internal conversion functions
@@ -77,6 +76,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query.Types
+import           Cardano.Api.Query.UTxO
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Tx.Body
 
@@ -115,10 +115,6 @@ import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
 import           Control.Monad.Trans.Except
-import           Data.Aeson (FromJSON (..), ToJSON (..), withObject)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
-import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either.Combinators (rightToMaybe)
@@ -363,9 +359,6 @@ instance NodeToClientVersionOf QueryUTxOFilter where
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
 
-newtype UTxO era = UTxO {unUTxO :: Map TxIn (TxOut CtxUTxO era)}
-  deriving (Eq, Show)
-
 data UTxOInAnyEra where
   UTxOInAnyEra
     :: CardanoEra era
@@ -373,25 +366,6 @@ data UTxOInAnyEra where
     -> UTxOInAnyEra
 
 deriving instance Show UTxOInAnyEra
-
-instance IsCardanoEra era => ToJSON (UTxO era) where
-  toJSON (UTxO m) = toJSON m
-  toEncoding (UTxO m) = toEncoding m
-
-instance
-  (IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
-  => FromJSON (UTxO era)
-  where
-  parseJSON = withObject "UTxO" $ \hm -> do
-    let l = toList $ KeyMap.toHashMapText hm
-    res <- mapM toTxIn l
-    pure . UTxO $ fromList res
-   where
-    toTxIn :: (Text, Aeson.Value) -> Parser (TxIn, TxOut CtxUTxO era)
-    toTxIn (txinText, txOutVal) = do
-      (,)
-        <$> parseJSON (Aeson.String txinText)
-        <*> parseJSON txOutVal
 
 newtype SerialisedDebugLedgerState era
   = SerialisedDebugLedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))

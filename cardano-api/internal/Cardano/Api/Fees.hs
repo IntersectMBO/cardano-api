@@ -65,6 +65,7 @@ import           Cardano.Api.Plutus
 import           Cardano.Api.Pretty
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import           Cardano.Api.Query.UTxO (UTxO (..))
 import           Cardano.Api.Script
 import           Cardano.Api.Tx.Body
 import           Cardano.Api.Tx.Sign
