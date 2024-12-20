@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 -- TODO remove when serialiseTxLedgerCddl is removed
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
@@ -42,32 +44,42 @@ import           Test.Tasty.Hedgehog (testProperty)
 prop_forward_compatibility_txbody_CBOR :: Property
 prop_forward_compatibility_txbody_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
-  shelleyBasedEraConstraints
-    era
-    ( H.tripping
-        x
-        (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
-        (deserialiseTxLedgerCddl era)
-    )
+  shelleyBasedEraConstraints era $ do
+    x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody
+    H.tripping
+          x
+          (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
+          (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_txbody_CBOR :: Property
 prop_roundtrip_txbody_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
-  H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
+  shelleyBasedEraConstraints era $ go era
+  where
+   go :: forall era. IsShelleyBasedEra era => ShelleyBasedEra era -> H.PropertyT IO ()
+   go era = shelleyBasedEraConstraints era $ do
+     x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody
+     H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ genTx era
-  shelleyBasedEraConstraints era $ H.trippingCbor (proxyToAsType Proxy) x
+  shelleyBasedEraConstraints era $ go era
+  where
+   go :: forall era. IsShelleyBasedEra era => ShelleyBasedEra era -> H.PropertyT IO ()
+   go era = shelleyBasedEraConstraints era $ do
+     x <- forAll $ genTx @era
+     H.trippingCbor (proxyToAsType @(Tx era) Proxy) x
 
 prop_roundtrip_witness_CBOR :: Property
 prop_roundtrip_witness_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ genCardanoKeyWitness era
-  shelleyBasedEraConstraints era $ H.trippingCbor (AsKeyWitness (proxyToAsType Proxy)) x
+  shelleyBasedEraConstraints era $ go era
+  where
+   go :: forall era. IsShelleyBasedEra era => ShelleyBasedEra era -> H.PropertyT IO ()
+   go era = shelleyBasedEraConstraints era $ do
+     x <- forAll $ genCardanoKeyWitness @era
+     H.trippingCbor (AsKeyWitness (proxyToAsType @era Proxy)) x
 
 prop_roundtrip_operational_certificate_CBOR :: Property
 prop_roundtrip_operational_certificate_CBOR = H.property $ do
@@ -193,37 +205,42 @@ prop_roundtrip_UpdateProposal_CBOR = H.property $ do
 prop_Tx_cddlTypeToEra :: Property
 prop_Tx_cddlTypeToEra = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- forAll $ genTx era
-  shelleyBasedEraConstraints era $ do
-    let TextEnvelopeType d = textEnvelopeType (proxyToAsType (getProxy x))
+  shelleyBasedEraConstraints era $ go era
+ where
+  go :: forall era. IsShelleyBasedEra era => ShelleyBasedEra era -> H.PropertyT IO ()
+  go era = shelleyBasedEraConstraints era $ do
+    x <- forAll $ genCardanoKeyWitness @era
+    let TextEnvelopeType d = textEnvelopeType (proxyToAsType @(KeyWitness era) (getProxy @(KeyWitness era) x))
     H.note_ $ "Envelope type: " <> show d
     cddlTypeToEra (T.pack d) H.=== Right (AnyShelleyBasedEra era)
- where
   getProxy :: forall a. a -> Proxy a
   getProxy _ = Proxy
 
 prop_TxWitness_cddlTypeToEra :: Property
 prop_TxWitness_cddlTypeToEra = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- forAll $ genCardanoKeyWitness era
-  shelleyBasedEraConstraints era $ do
-    let TextEnvelopeType d = textEnvelopeType (proxyToAsType (getProxy x))
+  go era
+ where
+  go :: forall era. ShelleyBasedEra era -> H.PropertyT IO ()
+  go era = shelleyBasedEraConstraints era $ do
+    x <- forAll $ genCardanoKeyWitness @era
+    let TextEnvelopeType d = textEnvelopeType (proxyToAsType @(KeyWitness era) (getProxy @(KeyWitness era) x))
     H.note_ $ "Envelope type: " <> show d
     cddlTypeToEra (T.pack d) H.=== Right (AnyShelleyBasedEra era)
- where
+
   getProxy :: forall a. a -> Proxy a
   getProxy _ = Proxy
 
 prop_roundtrip_Tx_Cddl :: Property
 prop_roundtrip_Tx_Cddl = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- forAll $ genTx era
+  x <- shelleyBasedEraConstraints era $ forAll genTx
   H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
 
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do
   AnyShelleyBasedEra sbe <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- forAll $ genShelleyKeyWitness sbe
+  x <- shelleyBasedEraConstraints sbe $ forAll genShelleyKeyWitness
   tripping x (serialiseWitnessLedgerCddl sbe) (deserialiseWitnessLedgerCddl sbe)
 
 prop_roundtrip_GovernancePoll_CBOR :: Property
