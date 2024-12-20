@@ -170,6 +170,8 @@ toLedgerEventConway evt =
             case govEvent of
               Conway.GovNewProposals txid props ->
                 Just $ NewGovernanceProposals txid (AnyProposals props)
+              Conway.GovRemovedVotes txid replacedVotes unregisteredDReps ->
+                Just $ RemovedGovernanceVotes txid replacedVotes unregisteredDReps
 
 instance ConvertLedgerEvent (HardForkBlock (Consensus.CardanoEras StandardCrypto)) where
   toLedgerEvent wrappedLedgerEvent =

@@ -122,6 +122,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
 import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
                    tryPutTMVar)
+import           Control.Exception (throwIO)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class
 import           Control.Tracer (nullTracer)
@@ -202,15 +203,19 @@ connectToLocalNodeWithVersion
     , localConsensusModeParams
     }
   clients =
-    liftIO $ Net.withIOManager $ \iomgr ->
-      Net.connectTo
-        (Net.localSnocket iomgr)
-        Net.NetworkConnectTracers
-          { Net.nctMuxTracer = nullTracer
-          , Net.nctHandshakeTracer = nullTracer
-          }
-        versionedProtocls
-        (unFile localNodeSocketPath)
+    liftIO $ Net.withIOManager $ \iomgr -> do
+      r <-
+        Net.connectTo
+          (Net.localSnocket iomgr)
+          Net.NetworkConnectTracers
+            { Net.nctMuxTracer = nullTracer
+            , Net.nctHandshakeTracer = nullTracer
+            }
+          versionedProtocls
+          (unFile localNodeSocketPath)
+      case r of
+        Left e -> throwIO e
+        Right _ -> pure ()
    where
     versionedProtocls =
       -- First convert from the mode-parametrised view of things to the
@@ -302,10 +307,11 @@ mkVersionedProtocols networkid ptcl unversionedClients =
                   )
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
-              Net.mkMiniProtocolCbFromPeer $
+              Net.mkMiniProtocolCbFromPeerSt $
                 const
                   ( nullTracer
                   , cStateQueryCodec
+                  , Net.Query.StateIdle
                   , maybe
                       Net.localStateQueryPeerNull
                       Net.Query.localStateQueryClientPeer
