@@ -1484,12 +1484,12 @@ substituteExecutionUnits
               redeemer
               exunits
 
-    adjustWitness
+    adjustScriptWitness
       :: (ScriptWitness witctx era -> Either (TxBodyErrorAutoBalance era) (ScriptWitness witctx era))
       -> Witness witctx era
       -> Either (TxBodyErrorAutoBalance era) (Witness witctx era)
-    adjustWitness _ (KeyWitness ctx) = Right $ KeyWitness ctx
-    adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
+    adjustScriptWitness _ (KeyWitness ctx) = Right $ KeyWitness ctx
+    adjustScriptWitness g (ScriptWitness ctx witness') = ScriptWitness ctx <$> g witness'
 
     mapScriptWitnessesTxIns
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
@@ -1502,8 +1502,8 @@ substituteExecutionUnits
                ]
           mappedScriptWitnesses =
             [ (txin, BuildTxWith <$> wit')
-            | (ix, txin, wit) <- txInsToIndexed txins
-            , let wit' = adjustWitness (substituteExecUnits ix) wit
+            | (ix, txin, wit) <- indexTxIns txins
+            , let wit' = adjustScriptWitness (substituteExecUnits ix) wit
             ]
        in traverse
             (\(txIn, eWitness) -> (txIn,) <$> eWitness)
@@ -1522,8 +1522,8 @@ substituteExecutionUnits
                ]
           mappedWithdrawals =
             [ (addr, withdrawal, BuildTxWith <$> mappedWitness)
-            | (ix, addr, withdrawal, wit) <- txWithdrawalsToIndexed txWithdrawals'
-            , let mappedWitness = adjustWitness (substituteExecUnits ix) wit
+            | (ix, addr, withdrawal, wit) <- indexTxWithdrawals txWithdrawals'
+            , let mappedWitness = adjustScriptWitness (substituteExecUnits ix) wit
             ]
        in TxWithdrawals supported
             <$> traverse
@@ -1539,8 +1539,8 @@ substituteExecutionUnits
             :: [(StakeCredential, Either (TxBodyErrorAutoBalance era) (Witness WitCtxStake era))]
           mappedScriptWitnesses =
             [ (stakeCred, witness')
-            | (ix, _, stakeCred, witness) <- txCertificatesToIndexed txCertificates'
-            , let witness' = adjustWitness (substituteExecUnits ix) witness
+            | (ix, _, stakeCred, witness) <- indexTxCertificates txCertificates'
+            , let witness' = adjustScriptWitness (substituteExecUnits ix) witness
             ]
        in TxCertificates supported certs . BuildTxWith
             <$> traverse
@@ -1558,7 +1558,7 @@ substituteExecutionUnits
     mapScriptWitnessesVotes (Just (Featured era txVotingProcedures'@(TxVotingProcedures vProcedures (BuildTxWith _)))) = do
       let eSubstitutedExecutionUnits =
             [ (vote, updatedWitness)
-            | (ix, vote, witness) <- txVotingProceduresToIndexed txVotingProcedures'
+            | (ix, vote, witness) <- indexTxVotingProcedures txVotingProcedures'
             , let updatedWitness = substituteExecUnits ix witness
             ]
 
@@ -1579,7 +1579,7 @@ substituteExecutionUnits
     mapScriptWitnessesProposals (Just (Featured era txpp@(TxProposalProcedures osetProposalProcedures (BuildTxWith _)))) = do
       let eSubstitutedExecutionUnits =
             [ (proposal, updatedWitness)
-            | (ix, proposal, scriptWitness) <- txProposalProceduresToIndexed txpp
+            | (ix, proposal, scriptWitness) <- indexTxProposalProcedures txpp
             , let updatedWitness = substituteExecUnits ix scriptWitness
             ]
 
@@ -1596,27 +1596,14 @@ substituteExecutionUnits
       :: TxMintValue BuildTx era
       -> Either (TxBodyErrorAutoBalance era) (TxMintValue BuildTx era)
     mapScriptWitnessesMinting TxMintNone = Right TxMintNone
-    mapScriptWitnessesMinting
-      ( TxMintValue
-          supported
-          value
-          (BuildTxWith witnesses)
-        ) =
-        -- TxMintValue supported value $ BuildTxWith $ fromList
-        let mappedScriptWitnesses
-              :: [(PolicyId, Either (TxBodyErrorAutoBalance era) (ScriptWitness WitCtxMint era))]
-            mappedScriptWitnesses =
-              [ (policyid, witness')
-              | -- The minting policies are indexed in policy id order in the value
-              let ValueNestedRep bundle = valueToNestedRep value
-              , (ix, ValueNestedBundle policyid _) <- zip [0 ..] bundle
-              , witness <- maybeToList (Map.lookup policyid witnesses)
-              , let witness' = substituteExecUnits (ScriptWitnessIndexMint ix) witness
-              ]
-         in do
-              final <- traverseScriptWitnesses mappedScriptWitnesses
-              Right . TxMintValue supported value . BuildTxWith $
-                fromList final
+    mapScriptWitnessesMinting txMintValue'@(TxMintValue w _) = do
+      let mappedScriptWitnesses =
+            [ (policyId, pure . (assetName',quantity,) <$> substitutedWitness)
+            | (ix, policyId, assetName', quantity, BuildTxWith witness) <- indexTxMintValue txMintValue'
+            , let substitutedWitness = BuildTxWith <$> substituteExecUnits ix witness
+            ]
+      final <- Map.fromListWith (<>) <$> traverseScriptWitnesses mappedScriptWitnesses
+      pure $ TxMintValue w final
 
 traverseScriptWitnesses
   :: [(a, Either (TxBodyErrorAutoBalance era) (ScriptWitness ctx era))]
