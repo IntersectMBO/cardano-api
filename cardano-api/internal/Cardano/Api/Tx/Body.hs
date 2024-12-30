@@ -101,7 +101,7 @@ module Cardano.Api.Tx.Body
     -- * Transaction inputs
   , TxIn (..)
   , TxIns
-  , txInsToIndexed
+  , indexTxIns
   , TxIx (..)
   , genesisUTxOPseudoTxIn
   , getReferenceInputsSizeForTxIds
@@ -133,19 +133,19 @@ module Cardano.Api.Tx.Body
   , TxAuxScripts (..)
   , TxExtraKeyWitnesses (..)
   , TxWithdrawals (..)
-  , txWithdrawalsToIndexed
+  , indexTxWithdrawals
   , TxCertificates (..)
-  , txCertificatesToIndexed
+  , indexTxCertificates
   , TxUpdateProposal (..)
   , TxMintValue (..)
   , txMintValueToValue
-  , txMintValueToIndexed
+  , indexTxMintValue
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
-  , txVotingProceduresToIndexed
+  , indexTxVotingProcedures
   , TxProposalProcedures (..)
   , mkTxProposalProcedures
-  , txProposalProceduresToIndexed
+  , indexTxProposalProcedures
   , convProposalProcedures
 
     -- ** Building vs viewing transactions
@@ -317,7 +317,8 @@ import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import           Data.Type.Equality
+import           Data.Typeable
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
@@ -938,11 +939,12 @@ deriving instance Show a => Show (BuildTxWith build a)
 type TxIns build era = [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))]
 
 -- | Index transaction inputs ordered by TxIn
+-- Please note that the result can contain also 'KeyWitness'es.
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
-txInsToIndexed
+indexTxIns
   :: TxIns BuildTx era
   -> [(ScriptWitnessIndex, TxIn, Witness WitCtxTxIn era)]
-txInsToIndexed txins =
+indexTxIns txins =
   [ (ScriptWitnessIndexTxIn ix, txIn, witness)
   | (ix, (txIn, BuildTxWith witness)) <- zip [0 ..] $ orderTxIns txins
   ]
@@ -1259,11 +1261,11 @@ deriving instance Show (TxWithdrawals build era)
 
 -- | Index the withdrawals with witnesses in the order of stake addresses.
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
-txWithdrawalsToIndexed
+indexTxWithdrawals
   :: TxWithdrawals BuildTx era
   -> [(ScriptWitnessIndex, StakeAddress, L.Coin, Witness WitCtxStake era)]
-txWithdrawalsToIndexed TxWithdrawalsNone = []
-txWithdrawalsToIndexed (TxWithdrawals _ withdrawals) =
+indexTxWithdrawals TxWithdrawalsNone = []
+indexTxWithdrawals (TxWithdrawals _ withdrawals) =
   [ (ScriptWitnessIndexWithdrawal ix, addr, coin, witness)
   | (ix, (addr, coin, BuildTxWith witness)) <- zip [0 ..] (orderStakeAddrs withdrawals)
   ]
@@ -1292,19 +1294,21 @@ deriving instance Eq (TxCertificates build era)
 
 deriving instance Show (TxCertificates build era)
 
--- | Index certificates with witnesses by the order they appear in the list (in the transaction). If there
--- are multiple witnesses for the credential, the last one is returned.
+-- | Index certificates with witnesses by the order they appear in the list (in the transaction). If there are multiple witnesses for the same stake credential, they will be present multiple times with the same index.
+-- are multiple witnesses for the credential, there will be multiple entries for
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
-txCertificatesToIndexed
+indexTxCertificates
   :: TxCertificates BuildTx era
   -> [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
-txCertificatesToIndexed TxCertificatesNone = []
-txCertificatesToIndexed (TxCertificates _ certs (BuildTxWith witnesses)) =
+indexTxCertificates TxCertificatesNone = []
+indexTxCertificates (TxCertificates _ certs (BuildTxWith witnesses)) =
   [ (ScriptWitnessIndexCertificate ix, cert, stakeCred, wit)
   | (ix, cert) <- zip [0 ..] certs
   , stakeCred <- maybeToList (selectStakeCredentialWitness cert)
-  , wit <- maybeToList $ List.lookup stakeCred witnesses
+  , wit <- findAll stakeCred witnesses
   ]
+ where
+  findAll needle = map snd . filter ((==) needle . fst)
 
 -- ----------------------------------------------------------------------------
 -- Transaction update proposal (era-dependent)
@@ -1351,7 +1355,7 @@ txMintValueToValue (TxMintValue _ policiesWithAssets) =
 
 -- | Index the assets with witnesses in the order of policy ids.
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
-txMintValueToIndexed
+indexTxMintValue
   :: TxMintValue build era
   -> [ ( ScriptWitnessIndex
        , PolicyId
@@ -1360,8 +1364,8 @@ txMintValueToIndexed
        , BuildTxWith build (ScriptWitness WitCtxMint era)
        )
      ]
-txMintValueToIndexed TxMintNone = []
-txMintValueToIndexed (TxMintValue _ policiesWithAssets) =
+indexTxMintValue TxMintNone = []
+indexTxMintValue (TxMintValue _ policiesWithAssets) =
   [ (ScriptWitnessIndexMint ix, policyId', assetName', quantity, witness)
   | (ix, (policyId', assets)) <- zip [0 ..] $ toList policiesWithAssets
   , (assetName', quantity, witness) <- assets
@@ -1419,15 +1423,15 @@ mkTxVotingProcedures votingProcedures = do
     listToMaybe $ Map.keys m
 
 -- | Index voting procedures by the order of the votes ('Ord').
-txVotingProceduresToIndexed
+indexTxVotingProcedures
   :: TxVotingProcedures BuildTx era
   -> [ ( ScriptWitnessIndex
        , L.Voter (Ledger.EraCrypto (ShelleyLedgerEra era))
        , ScriptWitness WitCtxStake era
        )
      ]
-txVotingProceduresToIndexed TxVotingProceduresNone = []
-txVotingProceduresToIndexed (TxVotingProcedures vProcedures (BuildTxWith sWitMap)) =
+indexTxVotingProcedures TxVotingProceduresNone = []
+indexTxVotingProcedures (TxVotingProcedures vProcedures (BuildTxWith sWitMap)) =
   [ (ScriptWitnessIndexVoting $ fromIntegral index, vote, scriptWitness)
   | let allVoteMap = L.unVotingProcedures vProcedures
   , (vote, scriptWitness) <- toList sWitMap
@@ -1476,11 +1480,11 @@ mkTxProposalProcedures proposalsWithWitnessesList = do
     (DList.snoc ps p, DList.snoc pws (p, w)) -- add a proposal both to the list and to the witnessed list
 
 -- | Index proposal procedures by their order ('Ord').
-txProposalProceduresToIndexed
+indexTxProposalProcedures
   :: TxProposalProcedures BuildTx era
   -> [(ScriptWitnessIndex, L.ProposalProcedure (ShelleyLedgerEra era), ScriptWitness WitCtxStake era)]
-txProposalProceduresToIndexed TxProposalProceduresNone = []
-txProposalProceduresToIndexed txpp@(TxProposalProcedures _ (BuildTxWith witnesses)) = do
+indexTxProposalProcedures TxProposalProceduresNone = []
+indexTxProposalProcedures txpp@(TxProposalProcedures _ (BuildTxWith witnesses)) = do
   let allProposalsList = toList $ convProposalProcedures txpp
   [ (ScriptWitnessIndexProposing $ fromIntegral ix, proposal, scriptWitness)
     | (proposal, scriptWitness) <- toList witnesses
@@ -3389,9 +3393,25 @@ toShelleyTxOutAny _ = \case
 -- | A 'ScriptWitness' in any 'WitCtx'. This lets us handle heterogeneous
 -- collections of script witnesses from multiple contexts.
 data AnyScriptWitness era where
-  AnyScriptWitness :: ScriptWitness witctx era -> AnyScriptWitness era
+  AnyScriptWitness
+    :: Typeable witctx
+    => ScriptWitness witctx era
+    -> AnyScriptWitness era
 
 deriving instance Show (AnyScriptWitness era)
+
+instance Eq (AnyScriptWitness era) where
+  AnyScriptWitness sw1 == AnyScriptWitness sw2 =
+    case eqsw sw1 sw2 of
+      Just Refl -> sw1 == sw2
+      Nothing -> False
+   where
+    eqsw
+      :: (Typeable w1, Typeable w2)
+      => ScriptWitness w1 era
+      -> ScriptWitness w2 era
+      -> Maybe (w1 :~: w2)
+    eqsw _ _ = eqT
 
 -- | Identify the location of a 'ScriptWitness' within the context of a
 -- 'TxBody'. These are indexes of the objects within the transaction that
@@ -3561,54 +3581,60 @@ collectTxBodyScriptWitnesses
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesTxIns txIns' =
-      [ (ix, AnyScriptWitness witness)
-      | (ix, _, ScriptWitness _ witness) <- txInsToIndexed txIns'
-      ]
+      List.nub
+        [ (ix, AnyScriptWitness witness)
+        | (ix, _, ScriptWitness _ witness) <- indexTxIns txIns'
+        ]
 
     scriptWitnessesWithdrawals
       :: TxWithdrawals BuildTx era
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesWithdrawals TxWithdrawalsNone = []
     scriptWitnessesWithdrawals txw =
-      [ (ix, AnyScriptWitness witness)
-      | (ix, _, _, ScriptWitness _ witness) <- txWithdrawalsToIndexed txw
-      ]
+      List.nub
+        [ (ix, AnyScriptWitness witness)
+        | (ix, _, _, ScriptWitness _ witness) <- indexTxWithdrawals txw
+        ]
 
     scriptWitnessesCertificates
       :: TxCertificates BuildTx era
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesCertificates TxCertificatesNone = []
     scriptWitnessesCertificates txc =
-      [ (ix, AnyScriptWitness witness)
-      | (ix, _, _, ScriptWitness _ witness) <- txCertificatesToIndexed txc
-      ]
+      List.nub
+        [ (ix, AnyScriptWitness witness)
+        | (ix, _, _, ScriptWitness _ witness) <- indexTxCertificates txc
+        ]
 
     scriptWitnessesMinting
       :: TxMintValue BuildTx era
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesMinting TxMintNone = []
     scriptWitnessesMinting txMintValue' =
-      [ (ix, AnyScriptWitness witness)
-      | (ix, _, _, _, BuildTxWith witness) <- txMintValueToIndexed txMintValue'
-      ]
+      List.nub
+        [ (ix, AnyScriptWitness witness)
+        | (ix, _, _, _, BuildTxWith witness) <- indexTxMintValue txMintValue'
+        ]
 
     scriptWitnessesVoting
       :: TxVotingProcedures BuildTx era
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesVoting TxVotingProceduresNone = []
     scriptWitnessesVoting txv =
-      [ (ix, AnyScriptWitness witness)
-      | (ix, _, witness) <- txVotingProceduresToIndexed txv
-      ]
+      List.nub
+        [ (ix, AnyScriptWitness witness)
+        | (ix, _, witness) <- indexTxVotingProcedures txv
+        ]
 
 scriptWitnessesProposing
   :: TxProposalProcedures BuildTx era
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
 scriptWitnessesProposing TxProposalProceduresNone = []
 scriptWitnessesProposing txp =
-  [ (ix, AnyScriptWitness witness)
-  | (ix, _, witness) <- txProposalProceduresToIndexed txp
-  ]
+  List.nub
+    [ (ix, AnyScriptWitness witness)
+    | (ix, _, witness) <- indexTxProposalProcedures txp
+    ]
 
 -- TODO: Investigate if we need
 toShelleyWithdrawal :: [(StakeAddress, L.Coin, a)] -> L.Withdrawals StandardCrypto

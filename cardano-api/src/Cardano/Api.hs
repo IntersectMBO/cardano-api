@@ -394,7 +394,7 @@ module Cardano.Api
   , TxUpdateProposal (..)
   , TxMintValue (..)
   , txMintValueToValue
-  , txMintValueToIndexed
+  , indexTxMintValue
   , TxVotingProcedures (..)
   , mkTxVotingProcedures
   , TxProposalProcedures (..)
