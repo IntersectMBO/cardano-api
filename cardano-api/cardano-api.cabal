@@ -208,7 +208,7 @@ library internal
     ouroboros-consensus-diffusion ^>=0.18,
     ouroboros-consensus-protocol ^>=0.9.0.2,
     ouroboros-network,
-    ouroboros-network-api ^>=0.11,
+    ouroboros-network-api ^>=0.12,
     ouroboros-network-framework,
     ouroboros-network-protocols,
     parsec,
