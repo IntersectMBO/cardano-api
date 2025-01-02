@@ -31,7 +31,6 @@ module Test.Golden.ErrorsSpec
 where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.Plutus
 import           Cardano.Api.Shelley
 
 import           Cardano.Binary as CBOR

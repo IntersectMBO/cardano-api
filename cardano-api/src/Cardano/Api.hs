@@ -1067,6 +1067,10 @@ module Cardano.Api
   , ResolvablePointers (..)
   , unsafeBoundedRational
 
+    -- ** Debug
+  , DebugPlutusFailure (..)
+  , renderDebugPlutusFailure
+
     -- ** Supporting modules
   , module Cardano.Api.Internal.Monad.Error
   , module Cardano.Api.Internal.Pretty
@@ -1121,7 +1125,7 @@ import           Cardano.Api.Internal.Monad.Error
 import           Cardano.Api.Internal.NetworkId
 import           Cardano.Api.Internal.OperationalCertificate
 import           Cardano.Api.Internal.Orphans ()
-import           Cardano.Api.Internal.Plutus (collectPlutusScriptHashes)
+import           Cardano.Api.Internal.Plutus
 import           Cardano.Api.Internal.Pretty
 import           Cardano.Api.Internal.Protocol
 import           Cardano.Api.Internal.ProtocolParameters
