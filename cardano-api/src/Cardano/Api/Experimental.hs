@@ -1,7 +1,16 @@
--- | This module provides an experimental library interface that is intended
--- to replace the existing api. It is subject to dramatic changes so use with caution.
+-- |
+-- This module provides an experimental library interface that is intended
+-- to replace the existing API. It is subject to dramatic changes, so use with caution.
 module Cardano.Api.Experimental
-  ( -- * Tx related
+  ( -- * Creating transactions
+
+    -- |
+    -- For information and an example on how to create a transaction using the new experimental API,
+    -- check the documentation of the module "Cardano.Api.Experimental.Tx".
+
+    -- * Contents
+
+    -- ** Tx related
     UnsignedTx (..)
   , UnsignedTxError (..)
   , makeUnsignedTx
@@ -12,7 +21,8 @@ module Cardano.Api.Experimental
   , obtainCommonConstraints
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley
-  -- Era related
+
+    -- ** Era related
   , BabbageEra
   , ConwayEra
   , Era (..)

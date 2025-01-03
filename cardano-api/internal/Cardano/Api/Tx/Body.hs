@@ -16,20 +16,120 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
--- | Transaction bodies
 module Cardano.Api.Tx.Body
-  ( parseTxId
+  ( -- * Creating a 'TxBodyContent'
 
-    -- * Transaction bodies
+    -- |
+    --
+    -- In order to create a transaction, we first need to define the contents of its body. In this section,
+    -- we will see how to create a 'TxBodyContent' for a simple transaction using the API.
+    --
+    -- In this example, we are using the following qualified modules:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports
+    -- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)
+    -- import qualified Cardano.Api.Experimental as Exp   -- the experimental API
+    -- @
+    --
+    -- 'TxBodyContent' datatype provides lots of fields, because transactions can serve multiple
+    -- purposes, but the function 'defaultTxBodyContent' exported from 'Cardano.Api' already provides
+    -- a base 'TxBodyContent' with all fields set to their default values that we can use as a starting point
+    -- in order not to have to set all fields manually.
+    --
+    -- The 'defaultTxBodyContent' takes, as the only parameter, the 'ShelleyBasedEra' witness for the era
+    -- we are working with. For example, if we are working with the 'ConwayEra', we can use 'shelleyBasedEra'
+    -- available in 'Cardano.Api', as follows:
+    --
+    -- @
+    -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
+    -- @
+    --
+    -- We can also derive it from 'ConwayEra' from 'Cardano.Api.Experimental' by using the 'convert' function:
+    --
+    -- @
+    -- let era = Exp.ConwayEra
+    -- let sbe = Api.convert era
+    -- @
+    --
+    -- Let's see what creating a simple 'TxBodyContent' would look like.
+    --
+    -- First, we choose a transaction output to spend (a UTxO). We specify which UTxO to spend by
+    -- providing the transaction id and the index of the output in that transaction that we want
+    -- to spend.
+    --
+    -- To specify the transaction id, we can use the 'deserialiseFromRawBytesHex' function on the
+    -- hexadecimal representation of the hash of the transaction. For example:
+    --
+    -- @
+    -- let (Right srcTxId) = Api.deserialiseFromRawBytesHex Api.AsTxId "be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978"
+    -- @
+    --
+    -- Of course, in real code, the failure case should be handled properly.
+    --
+    -- To specify the transaction index, we can use the 'TxIx' constructor. For example:
+    --
+    -- @
+    -- let srcTxIx = Api.TxIx 0
+    -- @
+    --
+    -- Now we combine both to create a 'TxIn' value and we pair it with a witness requirement using 'BuildTxWith' :
+    --
+    -- @
+    -- let txIn = ( Api.TxIn srcTxId srcTxIx
+    --            , Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending)
+    --            )
+    -- @
+    --
+    -- Next, let's specify the address of the recipient of the transaction. If we have the Bech32 representation,
+    -- we can use the 'deserialiseAddress' function to get the 'AddressInEra' type. For example:
+    --
+    -- @
+    -- let (Just destAddress) = Api.deserialiseAddress (Api.AsAddressInEra eraAsType) "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
+    -- @
+    --
+    -- Now we can create a 'TxOut' value. For simplicity, we will assume the output is a simple payment output
+    -- of 10 ADA, with no datum or reference script attached to it:
+    --
+    -- @
+    -- let txOut = Api.TxOut
+    --               destAddress
+    --               (Api.lovelaceToTxOutValue sbe 10_000_000)
+    --               Api.TxOutDatumNone
+    --               Script.ReferenceScriptNone
+    -- @
+    --
+    -- We must also set the fee for the transaction. For example, let's set it to 2 ADA:
+    --
+    -- @
+    -- let txFee = Api.TxFeeExplicit sbe 2_000_000
+    -- @
+    --
+    -- Finally, we can create the 'TxBodyContent' by using the 'defaultTxBodyContent' function and
+    -- putting everything together:
+    --
+    -- @
+    -- let txBodyContent = Api.defaultTxBodyContent sbe
+    --                      & Api.setTxIns [txIn]
+    --                      & Api.setTxOuts [txOut]
+    --                      & Api.setTxFee txFee
+    -- @
+    --
+    -- The 'txBodyContent' can now be used to create a transaction either using the old or the new API.
+
+    -- * Contents
+    parseTxId
+
+    -- ** Transaction bodies
   , TxBody (.., TxBody)
   , createTransactionBody
   , createAndValidateTransactionBody
   , TxBodyContent (..)
 
-    -- * Byron only
+    -- ** Byron only
   , makeByronTransactionBody
 
-    -- ** Transaction body builders
+    -- *** Transaction body builders
   , defaultTxBodyContent
   , defaultTxFee
   , defaultTxValidityUpperBound
@@ -92,13 +192,13 @@ module Cardano.Api.Tx.Body
   , txScriptValidityToIsValid
   , txScriptValidityToScriptValidity
 
-    -- * Transaction Ids
+    -- ** Transaction Ids
   , TxId (..)
   , getTxId
   , getTxIdByron
   , getTxIdShelley
 
-    -- * Transaction inputs
+    -- ** Transaction inputs
   , TxIn (..)
   , TxIns
   , indexTxIns
@@ -106,7 +206,7 @@ module Cardano.Api.Tx.Body
   , genesisUTxOPseudoTxIn
   , getReferenceInputsSizeForTxIds
 
-    -- * Transaction outputs
+    -- ** Transaction outputs
   , CtxTx
   , CtxUTxO
   , TxOut (..)
@@ -121,7 +221,7 @@ module Cardano.Api.Tx.Body
   , TxOutInAnyEra (..)
   , txOutInAnyEra
 
-    -- * Other transaction body types
+    -- ** Other transaction body types
   , TxInsCollateral (..)
   , TxInsReference (..)
   , TxReturnCollateral (..)
@@ -148,23 +248,23 @@ module Cardano.Api.Tx.Body
   , indexTxProposalProcedures
   , convProposalProcedures
 
-    -- ** Building vs viewing transactions
+    -- *** Building vs viewing transactions
   , BuildTxWith (..)
   , BuildTx
   , ViewTx
   , buildTxWithToMaybe
 
-    -- * Inspecting 'ScriptWitness'es
+    -- ** Inspecting 'ScriptWitness'es
   , AnyScriptWitness (..)
   , ScriptWitnessIndex (..)
   , renderScriptWitnessIndex
   , collectTxBodyScriptWitnesses
   , toScriptIndex
 
-    -- * Conversion to inline data
+    -- ** Conversion to inline data
   , scriptDataToInlineDatum
 
-    -- * Internal conversion functions & types
+    -- ** Internal conversion functions & types
   , convCertificates
   , convCollateralTxIns
   , convExtraKeyWitnesses
@@ -199,10 +299,10 @@ module Cardano.Api.Tx.Body
   , fromLedgerTxOuts
   , renderTxIn
 
-    -- * Misc helpers
+    -- ** Misc helpers
   , calculateExecutionUnitsLovelace
 
-    -- * Data family instances
+    -- ** Data family instances
   , AsType (AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody)
   , getTxBodyContent
   -- Temp
