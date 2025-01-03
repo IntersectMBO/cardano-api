@@ -111,8 +111,10 @@ import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
+import qualified Ouroboros.Network.NodeToNode as Net (RemoteAddress)
 import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
+import qualified Ouroboros.Network.PublicState as Net
 
 import           Control.Monad.Trans.Except
 import           Data.Aeson (FromJSON (..), ToJSON (..), withObject)
@@ -153,6 +155,8 @@ data QueryInMode result where
     :: QueryInMode (WithOrigin BlockNo)
   QueryChainPoint
     :: QueryInMode ChainPoint
+  QueryNetworkState
+    :: QueryInMode (Net.NetworkState Net.RemoteAddress)
 
 instance NodeToClientVersionOf (QueryInMode result) where
   nodeToClientVersionOf = \case
@@ -162,6 +166,7 @@ instance NodeToClientVersionOf (QueryInMode result) where
     QuerySystemStart -> NodeToClientV_16
     QueryChainBlockNo -> NodeToClientV_16
     QueryChainPoint -> NodeToClientV_16
+    QueryNetworkState -> NodeToClientV_20
 
 data EraHistory where
   EraHistory
@@ -556,7 +561,7 @@ toConsensusQuery
    . ()
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => QueryInMode result
-  -> Some (Consensus.Query block)
+  -> Some (Consensus.Query block Net.RemoteAddress)
 toConsensusQuery QueryCurrentEra =
   Some $
     Consensus.BlockQuery $
@@ -577,6 +582,7 @@ toConsensusQuery (QueryInEra QueryByronUpdateState) =
         Consensus.GetUpdateInterfaceState
 toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
   shelleyBasedEraConstraints sbe $ toConsensusQueryShelleyBased sbe q
+toConsensusQuery QueryNetworkState = Some Consensus.GetNetworkState
 
 toConsensusQueryShelleyBased
   :: forall era protocol block result
@@ -586,7 +592,7 @@ toConsensusQueryShelleyBased
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
-  -> Some (Consensus.Query block)
+  -> Some (Consensus.Query block Net.RemoteAddress)
 toConsensusQueryShelleyBased sbe = \case
   QueryEpoch ->
     Some (consensusQueryInEraInMode era Consensus.GetEpochNo)
@@ -729,7 +735,7 @@ consensusQueryInEraInMode
   => Consensus.HardForkQueryResult xs result ~ result'
   => CardanoEra era
   -> Consensus.BlockQuery erablock result
-  -> Consensus.Query modeblock result'
+  -> Consensus.Query modeblock Net.RemoteAddress result'
 consensusQueryInEraInMode era =
   Consensus.BlockQuery
     . case era of
@@ -751,7 +757,7 @@ fromConsensusQueryResult
   => HasCallStack
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => QueryInMode result
-  -> Consensus.Query block result'
+  -> Consensus.Query block Net.RemoteAddress result'
   -> result'
   -> result
 fromConsensusQueryResult QueryEraHistory q' r' =
@@ -856,6 +862,10 @@ fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraConw
             q''
         )
         r'
+    _ -> fromConsensusQueryResultMismatch
+fromConsensusQueryResult QueryNetworkState q' r' =
+  case q' of
+    Consensus.GetNetworkState -> r'
     _ -> fromConsensusQueryResultMismatch
 
 -- This function is written like this so that we have exhaustive pattern checking

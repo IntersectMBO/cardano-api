@@ -54,3 +54,32 @@ semaphore: True
 
 constraints:
     Cabal < 3.14,
+
+source-repository-package
+  type: git
+  location: /home/coot/clients/iog/ouroboros-network/.git
+  tag: 5e914196457f36ed6ea07d361a95f58486d5537c
+  --sha256: sha256-fS1L+twjeLIaisY3DAdzyMnsyuTEP+67JjWbm1O8yAI=
+  subdir:
+    cardano-client
+    cardano-ping
+    monoidal-synchronisation
+    network-mux
+    ntp-client
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-framework
+    ouroboros-network-mock
+    ouroboros-network-protocols
+    ouroboros-network-testing
+    quickcheck-monoids
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: bbc8f4ee91bf87dd2e0cc7e5d6b55c3eb99437c4
+  --sha256: sha256-POciHh7P7n6BgdcroMm6h8CvtkRMRqMok3PoCoPOYhI=
+  subdir: ouroboros-consensus
+          ouroboros-consensus-cardano
+          ouroboros-consensus-diffusion
+          ouroboros-consensus-protocol

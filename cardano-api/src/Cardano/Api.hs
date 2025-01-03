@@ -1023,6 +1023,7 @@ module Cardano.Api
   , queryProposals
   , queryCommitteeMembersState
   , queryStakeVoteDelegatees
+  , queryNetworkState
 
     -- ** Committee State Query
   , MemberStatus (..)

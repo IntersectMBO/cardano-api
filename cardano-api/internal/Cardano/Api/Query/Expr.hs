@@ -36,6 +36,7 @@ module Cardano.Api.Query.Expr
   , queryGovState
   , queryStakeVoteDelegatees
   , queryProposals
+  , queryNetworkState
   )
 where
 
@@ -55,6 +56,7 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import qualified Cardano.Api.ReexposeLedger as Ledger
+import qualified Cardano.Api.ReexposeNetwork as Net
 
 import qualified Cardano.Ledger.Api as L
 import qualified Cardano.Ledger.Api.State.Query as L
@@ -508,3 +510,17 @@ queryProposals cOnwards govActionIds = do
   queryExpr $
     QueryInEra . QueryInShelleyBasedEra sbe $
       QueryProposals govActionIds
+
+queryNetworkState
+  :: forall block point r.
+     LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Net.NetworkState Net.RemoteAddress)
+       )
+queryNetworkState = queryExpr QueryNetworkState
