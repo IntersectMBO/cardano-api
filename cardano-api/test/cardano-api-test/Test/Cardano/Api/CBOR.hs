@@ -179,6 +179,26 @@ prop_roundtrip_script_PlutusScriptV2_CBOR = H.property $ do
   x <- H.forAll $ genScript (PlutusScriptLanguage PlutusScriptV2)
   H.trippingCbor (AsScript AsPlutusScriptV2) x
 
+prop_roundtrip_script_PlutusScriptV3_CBOR :: Property
+prop_roundtrip_script_PlutusScriptV3_CBOR = H.property $ do
+  x <- H.forAll genPlutusV3Script
+  H.trippingCbor (AsScript AsPlutusScriptV3) x
+
+prop_roundtrip_plutus_script_PlutusScriptV1_CBOR :: Property
+prop_roundtrip_plutus_script_PlutusScriptV1_CBOR = H.property $ do
+  PlutusScript _ x <- H.forAll genPlutusV1Script
+  H.trippingCbor (AsPlutusScript AsPlutusScriptV1) x
+
+prop_roundtrip_plutus_script_PlutusScriptV2_CBOR :: Property
+prop_roundtrip_plutus_script_PlutusScriptV2_CBOR = H.property $ do
+  PlutusScript _ x <- H.forAll genPlutusV2Script
+  H.trippingCbor (AsPlutusScript AsPlutusScriptV2) x
+
+prop_roundtrip_plutus_script_PlutusScriptV3_CBOR :: Property
+prop_roundtrip_plutus_script_PlutusScriptV3_CBOR = H.property $ do
+  PlutusScript _ x <- H.forAll genPlutusV3Script
+  H.trippingCbor (AsPlutusScript AsPlutusScriptV3) x
+
 prop_roundtrip_ScriptData_CBOR :: Property
 prop_roundtrip_ScriptData_CBOR = H.property $ do
   x <- H.forAll genHashableScriptData
@@ -307,6 +327,18 @@ tests =
     , testProperty
         "roundtrip script PlutusScriptV2 CBOR"
         prop_roundtrip_script_PlutusScriptV2_CBOR
+    , testProperty
+        "roundtrip script PlutusScriptV3 CBOR"
+        prop_roundtrip_script_PlutusScriptV3_CBOR
+    , testProperty
+        "roundtrip plutus script PlutusScriptV1 CBOR"
+        prop_roundtrip_plutus_script_PlutusScriptV1_CBOR
+    , testProperty
+        "roundtrip plutus script PlutusScriptV2 CBOR"
+        prop_roundtrip_plutus_script_PlutusScriptV2_CBOR
+    , testProperty
+        "roundtrip plutus script PlutusScriptV3 CBOR"
+        prop_roundtrip_plutus_script_PlutusScriptV3_CBOR
     , testProperty
         "cddlTypeToEra for Tx types"
         prop_Tx_cddlTypeToEra
