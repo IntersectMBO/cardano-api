@@ -102,6 +102,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
+import qualified Ouroboros.Network.NodeToNode as Net (RemoteAddress)
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
                    NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as Net
@@ -119,6 +120,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as Consensus
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
                    SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
+import qualified Ouroboros.Network.PublicState as Net.Public
 
 import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
                    tryPutTMVar)
@@ -230,7 +232,7 @@ connectToLocalNodeWithVersion
 
 mkVersionedProtocols
   :: forall block
-   . ( Consensus.ShowQuery (Consensus.Query block)
+   . ( Consensus.ShowQuery (Consensus.Query block Net.RemoteAddress)
      , ProtocolClient block
      )
   => NetworkId
@@ -241,6 +243,7 @@ mkVersionedProtocols
       Net.NodeToClientVersionData
       ( Net.OuroborosApplicationWithMinimalCtx
           Net.InitiatorMode
+          (Net.Public.NetworkState Net.RemoteAddress)
           Net.LocalAddress
           LBS.ByteString
           IO
@@ -270,7 +273,7 @@ mkVersionedProtocols networkid ptcl unversionedClients =
     :: LocalNodeClientProtocolsForBlock block
     -> Consensus.BlockNodeToClientVersion block
     -> NodeToClientVersion
-    -> NodeToClientProtocols Net.InitiatorMode Net.LocalAddress LBS.ByteString IO () Void
+    -> NodeToClientProtocols Net.InitiatorMode Net.RemoteAddress Net.LocalAddress LBS.ByteString IO () Void
   protocols
     LocalNodeClientProtocolsForBlock
       { localChainSyncClientForBlock
@@ -384,7 +387,7 @@ data LocalNodeClientProtocolsForBlock block
           ( LocalStateQueryClient
               block
               (Consensus.Point block)
-              (Consensus.Query block)
+              (Consensus.Query block Net.RemoteAddress)
               IO
               ()
           )
@@ -508,7 +511,7 @@ convLocalStateQueryClient
   => Consensus.CardanoBlock L.StandardCrypto ~ block
   => Functor m
   => LocalStateQueryClient BlockInMode ChainPoint QueryInMode m a
-  -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block) m a
+  -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block Net.RemoteAddress) m a
 convLocalStateQueryClient =
   Net.Query.mapLocalStateQueryClient
     toConsensusPointHF
