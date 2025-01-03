@@ -31,7 +31,7 @@ Script arguments:
                   with referenceScript
                    ]
      Fee: 0
-     Value minted: Value {getValue = Map {unMap = [(c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50,Map {unMap = [("MillarCoin",5)]})]}}
+     Value minted: UnsafeMintValue (Map {unMap = [(c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50,Map {unMap = [("MillarCoin",5)]})]})
      TxCerts: [ TxCertRegStaking (ScriptCredential c61bfa1c138524b69f378bc69504322f39289ce554d549db4d1e2b50) (Just 400000) ]
      Wdrl: []
      Valid range: (-∞ , +∞)

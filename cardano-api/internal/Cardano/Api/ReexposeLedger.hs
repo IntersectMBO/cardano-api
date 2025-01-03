@@ -17,6 +17,8 @@ module Cardano.Api.ReexposeLedger
   , hashKey
   , hashVerKeyVRF
   , hashWithSerialiser
+  , fromVRFVerKeyHash
+  , toVRFVerKeyHash
   , PoolParams (..)
   , HasKeyRole
   , MIRPot (..)
@@ -225,7 +227,7 @@ import           Cardano.Ledger.Credential (Credential (..), credToText)
 import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
 import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VKey (..),
-                   hashWithSerialiser)
+                   fromVRFVerKeyHash, hashWithSerialiser, toVRFVerKeyHash)
 import           Cardano.Ledger.Plutus.Data (Data (..), unData)
 import           Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
