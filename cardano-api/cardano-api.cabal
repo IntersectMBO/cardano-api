@@ -88,8 +88,10 @@ library internal
     Cardano.Api.Experimental.Tx
     Cardano.Api.Feature
     Cardano.Api.Fees
+    Cardano.Api.GeneralParsers
     Cardano.Api.Genesis
     Cardano.Api.GenesisParameters
+    Cardano.Api.Governance.Actions.MetadataValidation
     Cardano.Api.Governance.Actions.ProposalProcedure
     Cardano.Api.Governance.Actions.VotingProcedure
     Cardano.Api.Governance.Poll
@@ -359,7 +361,9 @@ test-suite cardano-api-test
     Test.Cardano.Api.Envelope
     Test.Cardano.Api.EpochLeadership
     Test.Cardano.Api.Eras
+    Test.Cardano.Api.Experimental
     Test.Cardano.Api.Genesis
+    Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO
     Test.Cardano.Api.Json
     Test.Cardano.Api.KeysByron
