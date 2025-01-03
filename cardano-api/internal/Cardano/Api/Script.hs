@@ -1,6 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -13,6 +14,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
 {- HLINT ignore "Use section" -}
@@ -138,16 +140,15 @@ import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Timelock
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Babbage.Scripts as Babbage
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Binary as Binary (decCBOR, decodeFullAnnotator)
 import qualified Cardano.Ledger.Conway.Scripts as Conway
 import           Cardano.Ledger.Core (Era (EraCrypto))
 import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Crypto
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
-import           Cardano.Slotting.Slot (SlotNo)
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified PlutusLedgerApi.Test.Examples as Plutus
 
 import           Control.Applicative
@@ -169,7 +170,7 @@ import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
 import           GHC.Exts (IsList (..))
-import           Numeric.Natural (Natural)
+import           GHC.TypeLits
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -422,12 +423,12 @@ instance HasTypeProxy lang => HasTypeProxy (Script lang) where
 instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
   serialiseToCBOR (SimpleScript s) =
     CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock (ShelleyLedgerEra AllegraEra))
-  serialiseToCBOR (PlutusScript PlutusScriptV1 s) =
-    CBOR.serialize' s
-  serialiseToCBOR (PlutusScript PlutusScriptV2 s) =
-    CBOR.serialize' s
-  serialiseToCBOR (PlutusScript PlutusScriptV3 s) =
-    CBOR.serialize' s
+  serialiseToCBOR (PlutusScript PlutusScriptV1 (PlutusScriptSerialised s)) =
+    SBS.fromShort s
+  serialiseToCBOR (PlutusScript PlutusScriptV2 (PlutusScriptSerialised s)) =
+    SBS.fromShort s
+  serialiseToCBOR (PlutusScript PlutusScriptV3 (PlutusScriptSerialised s)) =
+    SBS.fromShort s
 
   deserialiseFromCBOR _ bs =
     case scriptLanguage :: ScriptLanguage lang of
@@ -436,14 +437,36 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
          in SimpleScript . fromAllegraTimelock @(ShelleyLedgerEra AllegraEra)
               <$> Binary.decodeFullAnnotator version "Script" Binary.decCBOR (LBS.fromStrict bs)
       PlutusScriptLanguage PlutusScriptV1 ->
-        PlutusScript PlutusScriptV1
-          <$> CBOR.decodeFull' bs
+        returnShortByteString
+          bs
+          ( PlutusScript PlutusScriptV1
+              <$> CBOR.decodeFull' bs
+          )
       PlutusScriptLanguage PlutusScriptV2 ->
-        PlutusScript PlutusScriptV2
-          <$> CBOR.decodeFull' bs
+        returnShortByteString
+          bs
+          ( PlutusScript PlutusScriptV2
+              <$> CBOR.decodeFull' bs
+          )
       PlutusScriptLanguage PlutusScriptV3 ->
-        PlutusScript PlutusScriptV3
-          <$> CBOR.decodeFull' bs
+        returnShortByteString
+          bs
+          ( PlutusScript PlutusScriptV3
+              <$> CBOR.decodeFull' bs
+          )
+
+-- Because we have fixed the double CBOR serialization of
+-- Script lang we need to return the original short bytestring
+-- if we are decoding a PlutusScript that has not been incorrectly
+-- double encoded.
+returnShortByteString
+  :: IsPlutusScriptLanguage lang
+  => Crypto.ByteString
+  -> Either CBOR.DecoderError (Script lang)
+  -> Either CBOR.DecoderError (Script lang)
+returnShortByteString _ (Right s) = Right s
+returnShortByteString originalScriptBytes (Left _) = do
+  return $ PlutusScript plutusScriptVersion (PlutusScriptSerialised $ SBS.toShort originalScriptBytes)
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
   textEnvelopeType _ =
@@ -1007,11 +1030,24 @@ data SimpleScript
 data PlutusScript lang where
   PlutusScriptSerialised :: ShortByteString -> PlutusScript lang
   deriving stock (Eq, Ord)
-  deriving stock Show -- TODO: would be nice to use via UsingRawBytesHex
-  -- however that adds an awkward HasTypeProxy lang =>
-  -- constraint to other Show instances elsewhere
-  deriving (ToCBOR, FromCBOR) via (UsingRawBytes (PlutusScript lang))
-  deriving anyclass SerialiseAsCBOR
+  deriving stock Show
+
+-- TODO: would be nice to use via UsingRawBytesHex
+-- however that adds an awkward HasTypeProxy lang =>
+-- constraint to other Show instances elsewhere
+
+instance IsPlutusScriptLanguage lang => SerialiseAsCBOR (PlutusScript lang) where
+  serialiseToCBOR (PlutusScriptSerialised bs) =
+    SBS.fromShort bs
+  deserialiseFromCBOR _ bs =
+    return $ PlutusScriptSerialised (SBS.toShort bs)
+
+-- This instance is only necessary to support the prior incorrect
+-- double CBOR serialization of plutus scripts. We must still support
+-- the decoding of these scripts forever for convenience. Users may not have
+-- the plutus validator source code to re-serialize the script.
+instance Typeable lang => FromCBOR (PlutusScript lang) where
+  fromCBOR = PlutusScriptSerialised <$> fromCBOR
 
 instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
   data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
