@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Fee calculation
@@ -1596,14 +1597,14 @@ substituteExecutionUnits
       :: TxMintValue BuildTx era
       -> Either (TxBodyErrorAutoBalance era) (TxMintValue BuildTx era)
     mapScriptWitnessesMinting TxMintNone = Right TxMintNone
-    mapScriptWitnessesMinting txMintValue'@(TxMintValue w _) = do
+    mapScriptWitnessesMinting txMintValue'@(TxMintValue w v _) = do
       let mappedScriptWitnesses =
-            [ (policyId, pure . (assetName',quantity,) <$> substitutedWitness)
-            | (ix, policyId, assetName', quantity, BuildTxWith witness) <- indexTxMintValue txMintValue'
-            , let substitutedWitness = BuildTxWith <$> substituteExecUnits ix witness
+            [ (policyId, substitutedWitness)
+            | (ix, policyId, _, _, BuildTxWith witness) <- indexTxMintValue txMintValue'
+            , let substitutedWitness = substituteExecUnits ix witness
             ]
-      final <- Map.fromListWith (<>) <$> traverseScriptWitnesses mappedScriptWitnesses
-      pure $ TxMintValue w final
+      final <- fromList <$> traverseScriptWitnesses mappedScriptWitnesses
+      pure $ TxMintValue w v (BuildTxWith final)
 
 traverseScriptWitnesses
   :: [(a, Either (TxBodyErrorAutoBalance era) (ScriptWitness ctx era))]

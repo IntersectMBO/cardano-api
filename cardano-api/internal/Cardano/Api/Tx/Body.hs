@@ -220,7 +220,6 @@ import           Cardano.Api.ProtocolParameters
 import qualified Cardano.Api.ReexposeLedger as Ledger
 import           Cardano.Api.Script
 import           Cardano.Api.ScriptData
-import           Cardano.Api.ScriptData ()
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
@@ -1344,29 +1343,28 @@ deriving instance Show (TxMintValue build era)
 -- | Convert 'TxMintValue' to a more handy 'Value'.
 txMintValueToValue :: TxMintValue build era -> Value
 txMintValueToValue TxMintNone = mempty
-txMintValueToValue (TxMintValue _ policiesWithAssets) =
-  fromList
-    [ (AssetId policyId' assetName', quantity)
-    | (policyId', assets) <- toList policiesWithAssets
-    , (assetName', quantity, _) <- assets
-    ]
+txMintValueToValue (TxMintValue _ v _) = v
 
 -- | Index the assets with witnesses in the order of policy ids.
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 indexTxMintValue
-  :: TxMintValue build era
+  :: TxMintValue BuildTx era
   -> [ ( ScriptWitnessIndex
        , PolicyId
        , AssetName
        , Quantity
-       , BuildTxWith build (ScriptWitness WitCtxMint era)
+       , BuildTxWith BuildTx (ScriptWitness WitCtxMint era)
        )
      ]
 indexTxMintValue TxMintNone = []
-indexTxMintValue (TxMintValue _ policiesWithAssets) =
-  [ (ScriptWitnessIndexMint ix, policyId', assetName', quantity, witness)
-  | (ix, (policyId', assets)) <- zip [0 ..] $ toList policiesWithAssets
-  , (assetName', quantity, witness) <- assets
+indexTxMintValue (TxMintValue _ v (BuildTxWith witnesses)) =
+  [ (ScriptWitnessIndexMint ix, policyId', assetName', quantity, BuildTxWith witness)
+  | let ValueNestedRep bundle = valueToNestedRep v
+  , (ix, ValueNestedBundle policyId' assetWithQ) <- zip [0 ..] bundle
+  , (assetName', quantity) <- toList assetWithQ
+  , witness <- maybeToList (Map.lookup policyId' witnesses)
+  -- (ix, (policyId', assets)) <- zip [0 ..] $ toList policiesWithAssets
+  -- , (assetName', quantity, BuildTxWith witness) <- assets
   ]
 
 -- ----------------------------------------------------------------------------
