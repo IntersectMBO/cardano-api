@@ -73,7 +73,6 @@ import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
-import           Ouroboros.Network.Mux (MuxError)
 import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V2 as V2
 
@@ -98,6 +97,7 @@ import           GHC.Generics
 import           GHC.Stack (HasCallStack)
 import           GHC.TypeLits
 import           Lens.Micro
+import qualified Network.Mux as Mux
 
 deriving instance Generic (L.ApplyTxError era)
 
@@ -558,7 +558,7 @@ instance Semigroup (Ledger.ConwayPParams StrictMaybe era) where
 lastMappendWithTHKD :: (a -> Ledger.THKD g StrictMaybe b) -> a -> a -> Ledger.THKD g StrictMaybe b
 lastMappendWithTHKD f a b = Ledger.THKD $ lastMappendWith (Ledger.unTHKD . f) a b
 
-instance Pretty MuxError where
+instance Pretty Mux.Error where
   pretty err = "Mux layer error:" <+> prettyException err
 
 instance A.FromJSON V2.ParamName where
