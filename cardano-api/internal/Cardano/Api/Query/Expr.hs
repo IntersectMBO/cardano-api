@@ -54,6 +54,7 @@ import           Cardano.Api.Keys.Shelley
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
+import           Cardano.Api.Query.UTxO (UTxO)
 import qualified Cardano.Api.ReexposeLedger as Ledger
 
 import qualified Cardano.Ledger.Api as L

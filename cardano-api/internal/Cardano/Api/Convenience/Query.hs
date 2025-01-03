@@ -34,6 +34,7 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Query.Expr
+import           Cardano.Api.Query.UTxO (UTxO)
 import           Cardano.Api.Tx.Body
 import           Cardano.Api.Utils
 
