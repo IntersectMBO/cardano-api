@@ -174,6 +174,7 @@ import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
 import           GHC.Exts (IsList (..))
 import           GHC.TypeLits
+import qualified Cardano.Api as valid
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -1147,6 +1148,13 @@ scriptArityForWitCtx :: WitCtx witctx -> Natural
 scriptArityForWitCtx WitCtxTxIn = 3
 scriptArityForWitCtx WitCtxMint = 2
 scriptArityForWitCtx WitCtxStake = 2
+
+-- Left off  here: You need to use deserialiseScript to check the script bytes are valid.
+-- In order to not break the api we will construct a PlutusScriptInEra first using `PlutusScript`'s serialization
+-- instances then use deserialiseScript to confirm we indeed have valid bytes for a given era!
+
+data PlutusScriptInEra era lang where
+  PlutusScriptInEra :: PlutusScript lang -> PlutusScriptInEra era lang
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions
