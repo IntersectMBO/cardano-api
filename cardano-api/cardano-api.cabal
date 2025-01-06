@@ -136,7 +136,6 @@ library internal
     Cardano.Api.ReexposeNetwork
     Cardano.Api.Rewards
     Cardano.Api.Script
-    Cardano.Api.Scripts.Plutus
     Cardano.Api.ScriptData
     Cardano.Api.SerialiseBech32
     Cardano.Api.SerialiseCBOR

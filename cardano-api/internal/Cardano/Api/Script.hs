@@ -35,6 +35,7 @@ module Cardano.Api.Script
 
     -- * Scripts in a specific language
   , Script (..)
+  , PlutusScriptInEra (..)
 
     -- * Scripts in any language
   , ScriptInAnyLang (..)
@@ -174,7 +175,7 @@ import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
 import           GHC.Exts (IsList (..))
 import           GHC.TypeLits
-import qualified Cardano.Api as valid
+import           Prettyprinter
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -1153,8 +1154,43 @@ scriptArityForWitCtx WitCtxStake = 2
 -- In order to not break the api we will construct a PlutusScriptInEra first using `PlutusScript`'s serialization
 -- instances then use deserialiseScript to confirm we indeed have valid bytes for a given era!
 
+type family ToLedgerPlutusLanguage lang where
+  ToLedgerPlutusLanguage PlutusScriptV1 = Plutus.PlutusV1
+  ToLedgerPlutusLanguage PlutusScriptV2 = Plutus.PlutusV2
+  ToLedgerPlutusLanguage PlutusScriptV3 = Plutus.PlutusV3
+
 data PlutusScriptInEra era lang where
   PlutusScriptInEra :: PlutusScript lang -> PlutusScriptInEra era lang
+
+deriving instance Show (PlutusScriptInEra era lang)
+
+instance (HasTypeProxy era, HasTypeProxy lang) => HasTypeProxy (PlutusScriptInEra era lang) where
+  data AsType (PlutusScriptInEra era lang) = AsPlutusScriptInEra (AsType lang)
+  proxyToAsType _ = AsPlutusScriptInEra (proxyToAsType (Proxy :: Proxy lang))
+
+instance
+  ( Ledger.Era (ShelleyLedgerEra era)
+  , IsPlutusScriptLanguage lang
+  , HasTypeProxy (PlutusScriptInEra era lang)
+  , Plutus.PlutusLanguage (ToLedgerPlutusLanguage lang)
+  )
+  => SerialiseAsCBOR (PlutusScriptInEra era lang)
+  where
+  serialiseToCBOR (PlutusScriptInEra s) = serialiseToCBOR s
+  deserialiseFromCBOR _ bs = do
+    -- Does the PV version change with the era? Should we use low or high?
+    let v = Ledger.eraProtVerHigh @(ShelleyLedgerEra era)
+    f@(PlutusScriptSerialised s) <-
+      deserialiseFromCBOR (AsPlutusScript (proxyToAsType (Proxy :: Proxy lang))) bs
+    let plutusScript :: Plutus.Plutus (ToLedgerPlutusLanguage lang)
+        plutusScript = Plutus.Plutus $ Plutus.PlutusBinary s
+    -- Document whatt this checks. I think it checks if its valid (rrunnable)
+    -- and if its the expected language version
+    case Plutus.decodePlutusRunnable v plutusScript of
+      Left e ->
+        Left $
+          CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
+      Right{} -> Right $ PlutusScriptInEra f
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions
