@@ -197,8 +197,8 @@ module Cardano.Api.Fees
     --         exampleChangeAddress
     -- @
     --
-    -- This will give us a balanced transaction, with the fees calculated, and the change output.
-    -- Now we can just proceed with transaction singing and submission.
+    -- This will give us a balanced transaction body, with the fees calculated, and the change output,
+    -- but it still needs to be signed and submitted.
 
     -- ** Example 3: Full automated balancing with chain info (requires UTxO and ledger state info)
 
