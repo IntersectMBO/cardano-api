@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -24,7 +25,6 @@ import qualified Cardano.Slotting.Slot as Slotting
 import qualified Cardano.Slotting.Time as Slotting
 
 import           Control.Monad.Identity (Identity)
-import           Data.Map (fromList)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
 import qualified Data.Time as Time
@@ -148,17 +148,16 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
         Api.LedgerEpochInfo $ Slotting.fixedEpochInfo (Slotting.EpochSize 100) (Slotting.mkSlotLength 1000)
   let utxoToUse =
         Api.UTxO
-          ( fromList
-              [
-                ( srcTxId
-                , Api.TxOut
-                    changeAddress
-                    (Api.lovelaceToTxOutValue sbe 12_000_000)
-                    Api.TxOutDatumNone
-                    Script.ReferenceScriptNone
-                )
-              ]
-          )
+          [
+            ( srcTxId
+            , Api.TxOut
+                changeAddress
+                (Api.lovelaceToTxOutValue sbe 12_000_000)
+                Api.TxOutDatumNone
+                Script.ReferenceScriptNone
+            )
+          ]
+
   Api.BalancedTxBody
     _txBodyContent3
     _txBody3
