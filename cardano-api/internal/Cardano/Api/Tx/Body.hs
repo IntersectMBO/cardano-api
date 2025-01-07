@@ -17,20 +17,37 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Api.Tx.Body
-  ( -- * Creating a 'TxBodyContent'
+  ( -- * Creating transactions using the old API
+
+    -- |
+    -- Both the old and the new API can be used to create transactions, and
+    -- it is possible to transform a transaction created in one format to the other
+    -- since they have the same representation underneath. But we will be moving
+    -- towards using the new API and deprecating the old way, since the latter is
+    -- simpler, closer to the ledger, and easier to maintain.
+    --
+    -- In both the new and the old API, in order to construct a transaction,
+    -- we need to construct a 'TxBodyContent', and we will need at least a
+    -- witness (for example, a 'ShelleyWitnessSigningKey'), to sign the transaction.
+    -- This hasn't changed.
+    --
+    -- To see how to create a transaction using the new API, see the documentation
+    -- of the "Cardano.Api.Experimental.Tx" module.
+    --
+    -- In the following examples, we are using the following qualified modules:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
+    -- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)
+    -- import qualified Cardano.Api.Ledger as Ledger      -- cardano-ledger re-exports
+    -- @
+
+    -- ** Creating a 'TxBodyContent'
 
     -- |
     --
     -- In order to create a transaction, we first need to define the contents of its body. In this section,
     -- we will see how to create a 'TxBodyContent' for a simple transaction using the API.
-    --
-    -- In this example, we are using the following qualified modules:
-    --
-    -- @
-    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports
-    -- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)
-    -- import qualified Cardano.Api.Experimental as Exp   -- the experimental API
-    -- @
     --
     -- 'TxBodyContent' datatype provides lots of fields, because transactions can serve multiple
     -- purposes, but the function 'defaultTxBodyContent' exported from 'Cardano.Api' already provides
@@ -43,13 +60,6 @@ module Cardano.Api.Tx.Body
     --
     -- @
     -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
-    -- @
-    --
-    -- We can also derive it from 'ConwayEra' from 'Cardano.Api.Experimental' by using the 'convert' function:
-    --
-    -- @
-    -- let era = Exp.ConwayEra
-    -- let sbe = Api.convert era
     -- @
     --
     -- Let's see what creating a simple 'TxBodyContent' would look like.
@@ -116,6 +126,70 @@ module Cardano.Api.Tx.Body
     -- @
     --
     -- The 'txBodyContent' can now be used to create a transaction either using the old or the new API.
+
+    -- ** Balancing a transaction
+
+    -- |
+    -- If we have a UTxO with exactly 12 ADA, we could just construct the transaction like in the
+    -- previous section directly, and it would be a valid transaction.
+    --
+    -- That is because the requirement is that the sum of inputs of the transactions is equal to
+    -- the sum of the outputs, and that the fees specified are enough, and 2 ADA is more than enough
+    -- for fees of such a simple transaction on mainnet at the time of writing. But still, even if we
+    -- have exactly 12 ADA, it is unlikely that the fees required are exactly 2 ADA, so we are likely
+    -- wasting ADA on fees. Also, we may not always want to send all the ADA in the UTxO. So that is
+    -- were transaction balancing comes in.
+    --
+    -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Fees" module.
+
+    -- ** Creating a 'ShelleyWitnessSigningKey'
+
+    -- |
+    -- To sign the transaction, we need a witness. For example, a 'ShelleyWitnessSigningKey'.
+    --
+    -- You can see how to create a 'ShelleyWitnessSigningKey' in the documentation of the "Cardano.Api.Tx.Sign" module.
+
+    -- ** Creating a transaction using the old API
+
+    -- |
+    -- Now that we have a 'TxBodyContent' and a 'ShelleyWitnessSigningKey', we can create a transaction using the old API
+    -- easily. First, we create a transaction body using the 'createTransactionBody' function and the 'ShelleyBasedEra' witness
+    -- that we defined earlier.
+    --
+    -- We create the transaction body using the 'TransactionBodyContent' that we created earlier:
+    --
+    -- @
+    -- let (Right txBody) = Api.createTransactionBody sbe txBodyContent
+    -- @
+    --
+    -- Then, we sign the transaction using the 'signShelleyTransaction' function and the witness:
+    --
+    -- @
+    -- let oldApiSignedTx :: Api.Tx Api.ConwayEra = Api.signShelleyTransaction sbe txBody [witness]
+    -- @
+    --
+    -- And that is it. We have a signed transaction.
+
+    -- ** Inspecting transactions
+
+    -- |
+    -- For deconstructing an old style 'TxBody' into a 'TxBodyContent', we can also use the
+    -- 'TxBody' pattern, but this cannot be used for constructing. For that we use 'ShelleyTxBody'
+    -- or 'createTransactionBody', like in the example.
+    --
+    -- For extracting the 'TxBody' and the 'KeyWitness'es from an old style 'Tx', we can use
+    -- the lenses 'getTxBody' and 'getTxWitnesses' respectively, from "Cardano.Api".
+
+    -- ** Appendix: Getting Shelley Based Era witness from the new API
+
+    -- |
+    -- If you are using the new API, you can also derive the 'ShelleyBasedEra' it from 'ConwayEra'
+    -- from 'Cardano.Api.Experimental' by using the 'convert' function:
+    --
+    -- @
+    -- let era = Exp.ConwayEra
+    -- let sbe = Api.convert era
+    -- @
 
     -- * Contents
     parseTxId
