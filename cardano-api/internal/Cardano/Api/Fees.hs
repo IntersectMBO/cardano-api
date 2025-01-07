@@ -31,7 +31,7 @@ module Cardano.Api.Fees
     -- finding this balance can be quite tricky. But fortunately, we have functions that help achieve this.
     --
     -- This module provides several different ways of calculating the fees for a transaction or altogether
-    -- balancing a draft transaciton, which require different amounts of information, and provide different levels
+    -- balancing a draft transaction, which require different amounts of information, and provide different levels
     -- of accuracy and automation.
     --
     -- Next, we explore three examples of different and representative ways of calculating the fees for a transaction.
