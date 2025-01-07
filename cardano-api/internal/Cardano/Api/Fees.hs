@@ -127,8 +127,8 @@ module Cardano.Api.Fees
     --     * The map of all deposits for drep credentials that are being unregistered in this transaction.
     --     * Plutus script execution units for all script witness we are used in the transaction.
     --
-    --    For this example, we are assuming we are doing nothing like that and using not scripts,
-    --    so we will use 'mempty' for the four.
+    --    For this example, we are assuming we are only spending key locked UTxOs and so we can ignore
+    --    the above, and we can just use 'mempty'.
     --
     -- 5. Counts for:
     --
