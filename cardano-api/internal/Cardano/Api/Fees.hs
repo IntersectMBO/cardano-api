@@ -133,7 +133,7 @@ module Cardano.Api.Fees
     -- 5. Counts for:
     --
     --     * The collateral amount we are depositing. This is only required for transactions that
-    --       have scripts in them. So we are assuming this will be @0@.
+    --       have plutus scripts in them. So we are assuming this will be @0@.
     --     * The number of Shelley key witnesses still to be added to the transaction. We can get an
     --       estimate by using 'estimateTransactionKeyWitnessCount' but for a simple transaction that is using
     --       a single UTxO locked by a single modern Shelley key, we would have @1@ Shelley witness.
