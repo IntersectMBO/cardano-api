@@ -14,17 +14,25 @@
 module Cardano.Api.Fees
   ( -- * Introduction
 
-  --
-
     -- |
     -- The documentation of the "Cardano.Api.Tx.Body" module shows how to create a 'TxBodyContent' for a
     -- transaction that takes 12 ADA and sends 10 ADA to an address, and spends 2 ADA on fees. If we have a
-    -- UTxO with exactly 12 ADA, this would be a valid transaction.
+    -- UTxO with exactly 12 ADA, this would be a valid transaction, because it is balanced, and it has
+    -- enough fees, since 2 ADA is more than enough for fees of such a simple transaction on mainnet
+    -- at the time of writing.
     --
-    -- The requirement is that the sum of inputs of the transactions is equal to the sum of the outputs,
-    -- and that the fees specified are enough, and 2 ADA is more than enough for fees of such a simple
-    -- transaction on mainnet at the time of writing. But still, even if we have exactly 12 ADA, it is
-    -- unlikely that the fees required are exactly 2 ADA, so we are likely wasting ADA on fees.
+    -- A transaction is considered balanced if the value consumed is equivalent to the value produced.
+    -- In the simplest terms, a transaction that simply spends lovelace needs to be concerned with the
+    -- total lovelace that exists at the inputs, the output(s) and the transaction fee.
+    --
+    -- In other words:
+    --
+    -- @
+    -- inputs = outputs + fee
+    -- @
+    --
+    -- In this equation, the inputs would include the minted tokens, and the outputs would include the
+    -- destroyed tokens.
     --
     -- On the other hand, we don't always want to spend all the ADA from a UTxO. Balancing a transaction allows
     -- us to send the amount we want to send, pay only the necessary fees (or little more), and it

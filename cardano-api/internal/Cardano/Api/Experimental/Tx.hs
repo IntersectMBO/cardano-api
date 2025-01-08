@@ -49,14 +49,14 @@ module Cardano.Api.Experimental.Tx
 
     -- |
     -- If we have a UTxO with exactly 12 ADA, we could just construct the transaction like in the
-    -- previous section directly, and it would be a valid transaction.
+    -- previous section directly, and it would be a valid transaction, but:
     --
-    -- That is because the requirement is that the sum of inputs of the transactions is equal to
-    -- the sum of the outputs, and that the fees specified are enough, and 2 ADA is more than enough
-    -- for fees of such a simple transaction on mainnet at the time of writing. But still, even if we
-    -- have exactly 12 ADA, it is unlikely that the fees required are exactly 2 ADA, so we are likely
-    -- wasting ADA on fees. Also, we may not always want to send all the ADA in the UTxO. So that is
-    -- were transaction balancing comes in.
+    --   * We are likely wasting ADA
+    --   * We may not have exactly one UTxO of 12 ADA
+    --   * Our transaciton may not be this simple
+    --
+    -- For these reasons, it is recommended that we balance the transaction before proceeding with
+    -- signing and submitting.
     --
     -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Fees" module.
 
