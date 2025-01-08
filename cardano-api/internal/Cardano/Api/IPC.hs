@@ -174,6 +174,7 @@ data LocalNodeConnectInfo
   , localNodeNetworkId :: NetworkId
   , localNodeSocketPath :: SocketPath
   }
+  deriving Show
 
 -- ----------------------------------------------------------------------------
 -- Actually connect to the node

@@ -1916,6 +1916,7 @@ instance Error TxBodyError where
 
 createTransactionBody
   :: ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
@@ -2661,7 +2662,8 @@ convTotalCollateral txTotalCollateral =
 
 convTxOuts
   :: forall ctx era ledgerera
-   . ShelleyLedgerEra era ~ ledgerera
+   . HasCallStack
+  => ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> [TxOut ctx era]
   -> Seq.StrictSeq (Ledger.TxOut ledgerera)
@@ -2844,6 +2846,7 @@ guardShelleyTxInsOverflow txIns = do
 -- all eras
 mkCommonTxBody
   :: ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> TxIns BuildTx era
   -> [TxOut ctx era]
