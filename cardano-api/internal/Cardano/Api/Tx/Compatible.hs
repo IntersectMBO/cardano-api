@@ -37,6 +37,7 @@ import           Data.Maybe.Strict
 import           Data.Monoid
 import qualified Data.Sequence.Strict as Seq
 import           GHC.Exts (IsList (..))
+import           GHC.Stack
 import           Lens.Micro hiding (ix)
 
 data AnyProtocolUpdate era where
@@ -205,7 +206,8 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
         .~ shelleyBootstrapWitnesses
 
 createCommonTxBody
-  :: ShelleyBasedEra era
+  :: HasCallStack
+  => ShelleyBasedEra era
   -> [TxIn]
   -> [TxOut ctx era]
   -> Lovelace

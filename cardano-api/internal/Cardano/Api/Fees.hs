@@ -98,6 +98,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import           GHC.Exts (IsList (..))
+import           GHC.Stack
 import           Lens.Micro ((.~), (^.))
 
 -- | Type synonym for logs returned by the ledger's @evalTxExUnitsWithLogs@ function.
@@ -190,7 +191,8 @@ instance Error (TxFeeEstimationError era) where
 -- | Use when you do not have access to the UTxOs you intend to spend
 estimateBalancedTxBody
   :: forall era
-   . MaryEraOnwards era
+   . HasCallStack
+  => MaryEraOnwards era
   -> TxBodyContent BuildTx era
   -> L.PParams (ShelleyLedgerEra era)
   -> Set PoolId
@@ -276,9 +278,9 @@ estimateBalancedTxBody
             , negateValue (lovelaceToValue totalDeposits)
             ]
 
-    let change = toLedgerValue w $ calculateChangeValue sbe availableUTxOValue txbodycontent1
+    let partialChange = toLedgerValue w $ calculatePartialChangeValue sbe availableUTxOValue txbodycontent1
         maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
-        changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
+        changeWithMaxLovelace = partialChange & A.adaAssetL sbe .~ maxLovelaceChange
         changeTxOut =
           forShelleyBasedEraInEon
             sbe
@@ -1004,6 +1006,7 @@ data FeeEstimationMode era
 makeTransactionBodyAutoBalance
   :: forall era
    . ()
+  => HasCallStack
   => ShelleyBasedEra era
   -> SystemStart
   -> LedgerEpochInfo
@@ -1018,7 +1021,7 @@ makeTransactionBodyAutoBalance
   -- ^ Map of all deposits for drep credentials that are being
   --   unregistered in this transaction
   -> UTxO era
-  -- ^ Just the transaction inputs, not the entire 'UTxO'.
+  -- ^ Just the transaction inputs (including reference and collateral ones), not the entire 'UTxO'.
   -> TxBodyContent BuildTx era
   -> AddressInEra era
   -- ^ Change address
@@ -1044,18 +1047,41 @@ makeTransactionBodyAutoBalance
       -- 3. update tx with fees
       -- 4. balance the transaction and update tx change output
 
-      let totalValueAtSpendableUTxO = fromLedgerValue sbe . calculateIncomingUTxOValue . Map.elems $ unUTxO utxo
-          change =
+      -- UTXO inputs, which inclue also non-ada assets
+      let totalValueAtUTxO =
+            fromLedgerValue sbe . calculateIncomingUTxOValue . Map.elems $ unUTxO utxo
+          -- this is a partial change: it does not include deposits, but we need to have non-ada assets in it
+          -- from utxo and inputs
+          partialChange =
             monoidForEraInEon (toCardanoEra sbe) $ \w ->
-              toLedgerValue w $ calculateChangeValue sbe totalValueAtSpendableUTxO txbodycontent
+              toLedgerValue w $ calculatePartialChangeValue sbe totalValueAtUTxO txbodycontent
 
+      -- For the purpose of fees and execution units calculation we just need to make a txbody larger than
+      -- strictly necessary. We do not need the right values for the fee or change output. We use
+      -- "big enough" values for the change output and set so that the CBOR encoding size of the tx will
+      -- be big enough to cover the size of the final output and fee. Yes this means this current code will
+      -- only work for final fee of less than around 4000 ada (2^32-1 lovelace) and change output of less
+      -- than around 18 trillion ada  (2^64-1 lovelace). However, since at this point we know how much
+      -- non-Ada change to give we can use the true values for that.
+      let maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
+      let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
+      let changeWithMaxLovelace = partialChange & A.adaAssetL sbe .~ maxLovelaceChange
+      let changeTxOut =
+            forShelleyBasedEraInEon
+              sbe
+              (lovelaceToTxOutValue sbe maxLovelaceChange)
+              (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
+
+      -- Tx body used only for evaluating execution units, txout exact values do not matter much here. We also
+      -- use 'maxLovelaceChange' in txout to avoid ending up with negative change accidentally (this could
+      -- happen if there's a big certificate deposit being returned for example).
       txbody0 <-
         first TxBodyError
           $ createTransactionBody
             sbe
           $ txbodycontent
             & modTxOuts
-              (<> [TxOut changeaddr (TxOutValueShelleyBased sbe change) TxOutDatumNone ReferenceScriptNone])
+              (<> [TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone])
       exUnitsMapWithLogs <-
         first TxBodyErrorValidityInterval $
           evaluateTransactionExecutionUnits
@@ -1078,25 +1104,7 @@ makeTransactionBodyAutoBalance
 
       txbodycontent1 <- substituteExecutionUnits exUnitsMap' txbodycontent
 
-      -- Make a txbody that we will use for calculating the fees. For the purpose
-      -- of fees we just need to make a txbody of the right size in bytes. We do
-      -- not need the right values for the fee or change output. We use
-      -- "big enough" values for the change output and set so that the CBOR
-      -- encoding size of the tx will be big enough to cover the size of the final
-      -- output and fee. Yes this means this current code will only work for
-      -- final fee of less than around 4000 ada (2^32-1 lovelace) and change output
-      -- of less than around 18 trillion ada  (2^64-1 lovelace).
-      -- However, since at this point we know how much non-Ada change to give
-      -- we can use the true values for that.
-      let maxLovelaceChange = L.Coin (2 ^ (64 :: Integer)) - 1
-      let maxLovelaceFee = L.Coin (2 ^ (32 :: Integer) - 1)
-      let changeWithMaxLovelace = change & A.adaAssetL sbe .~ maxLovelaceChange
-      let changeTxOut =
-            forShelleyBasedEraInEon
-              sbe
-              (lovelaceToTxOutValue sbe maxLovelaceChange)
-              (\w -> maryEraOnwardsConstraints w $ TxOutValueShelleyBased sbe changeWithMaxLovelace)
-
+      -- Make a txbody that we will use for calculating the fees.
       let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput sbe txbodycontent changeaddr
       txbody1 <-
         first TxBodyError $ -- TODO: impossible to fail now
@@ -1313,17 +1321,19 @@ calcReturnAndTotalCollateral w fee pp' TxInsCollateral{} txReturnCollateral txTo
           , totalCollateral
           )
 
-calculateCreatedUTOValue
-  :: ShelleyBasedEra era -> TxBodyContent build era -> Value
-calculateCreatedUTOValue sbe txbodycontent =
-  mconcat [fromLedgerValue sbe v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
-
-calculateChangeValue
-  :: ShelleyBasedEra era -> Value -> TxBodyContent build era -> Value
-calculateChangeValue sbe incoming txbodycontent =
-  let outgoing = calculateCreatedUTOValue sbe txbodycontent
+-- | Calculate the partial change - this does not include certificates' deposits
+calculatePartialChangeValue
+  :: ShelleyBasedEra era
+  -> Value
+  -> TxBodyContent build era
+  -> Value
+calculatePartialChangeValue sbe incoming txbodycontent =
+  let outgoing = newUtxoValue
       mintedValue = txMintValueToValue $ txMintValue txbodycontent
    in mconcat [incoming, mintedValue, negateValue outgoing]
+ where
+  newUtxoValue =
+    mconcat [fromLedgerValue sbe v | (TxOut _ (TxOutValueShelleyBased _ v) _ _) <- txOuts txbodycontent]
 
 -- | This is used in the balance calculation in the event where
 -- the user does not supply the UTxO(s) they intend to spend
@@ -1578,7 +1588,8 @@ traverseScriptWitnesses =
   traverse (\(item, eRes) -> eRes >>= (\res -> Right (item, res)))
 
 calculateMinimumUTxO
-  :: ShelleyBasedEra era
+  :: HasCallStack
+  => ShelleyBasedEra era
   -> TxOut CtxTx era
   -> Ledger.PParams (ShelleyLedgerEra era)
   -> L.Coin
