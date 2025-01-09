@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -14,6 +14,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
 {- HLINT ignore "Use section" -}
@@ -428,12 +429,12 @@ instance HasTypeProxy lang => HasTypeProxy (Script lang) where
 instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
   serialiseToCBOR (SimpleScript s) =
     CBOR.serialize' (toAllegraTimelock s :: Timelock.Timelock (ShelleyLedgerEra AllegraEra))
-  serialiseToCBOR (PlutusScript PlutusScriptV1 s) =
-    CBOR.serialize' s
-  serialiseToCBOR (PlutusScript PlutusScriptV2 s) =
-    CBOR.serialize' s
-  serialiseToCBOR (PlutusScript PlutusScriptV3 s) =
-    CBOR.serialize' s
+  serialiseToCBOR (PlutusScript PlutusScriptV1 (PlutusScriptSerialised s)) =
+    SBS.fromShort s
+  serialiseToCBOR (PlutusScript PlutusScriptV2 (PlutusScriptSerialised s)) =
+    SBS.fromShort s
+  serialiseToCBOR (PlutusScript PlutusScriptV3 (PlutusScriptSerialised s)) =
+    SBS.fromShort s
 
   deserialiseFromCBOR _ bs =
     case scriptLanguage :: ScriptLanguage lang of
@@ -443,13 +444,41 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
               <$> Binary.decodeFullAnnotator version "Script" Binary.decCBOR (LBS.fromStrict bs)
       PlutusScriptLanguage PlutusScriptV1 ->
         PlutusScript PlutusScriptV1
-          <$> CBOR.decodeFull' bs
+          <$> deserialiseFromCBOR (AsPlutusScript AsPlutusScriptV1) bs
       PlutusScriptLanguage PlutusScriptV2 ->
         PlutusScript PlutusScriptV2
-          <$> CBOR.decodeFull' bs
+          <$> deserialiseFromCBOR (AsPlutusScript AsPlutusScriptV2) bs
       PlutusScriptLanguage PlutusScriptV3 ->
         PlutusScript PlutusScriptV3
-          <$> CBOR.decodeFull' bs
+          <$> deserialiseFromCBOR (AsPlutusScript AsPlutusScriptV3) bs
+
+-- | Previously we were double encoding the plutus script
+-- bytes. This decoder is used to check if the plutus
+-- script bytes are double encoded. If it is, it removes
+-- a layer of encoding to return the original plutus script bytes.
+data IsDoubleEncoded
+  = -- | Original plutus script bytes
+    IsDoubleEncoded
+      Crypto.ByteString
+  | NotDoubleEncoded
+
+isPlutusScriptDoubleEncoded :: LBS.ByteString -> IsDoubleEncoded
+isPlutusScriptDoubleEncoded plutusScriptBytes =
+  case CBOR.deserialiseFromBytes CBOR.decodeBytes plutusScriptBytes of
+    Left _ -> NotDoubleEncoded
+    Right (_, needToEncode) ->
+      case CBOR.deserialiseFromBytes CBOR.decodeBytes $ LBS.fromStrict needToEncode of
+        Left _ -> NotDoubleEncoded
+        Right (_, final) -> IsDoubleEncoded $ CBOR.toStrictByteString $ CBOR.encodeBytes final
+
+exampleDoubleEncodedBytes :: LBS.ByteString
+exampleDoubleEncodedBytes = LBS.fromStrict $ CBOR.toStrictByteString exampleDoubleEncodedBytesEncoding
+
+exampleDoubleEncodedBytesEncoding :: CBOR.Encoding
+exampleDoubleEncodedBytesEncoding = do
+  CBOR.encodeBytes $
+    CBOR.toStrictByteString $
+      CBOR.encodeBytes "testBytes"
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
   textEnvelopeType _ =
@@ -1002,19 +1031,26 @@ data PlutusScript lang where
   deriving stock Show -- TODO: would be nice to use via UsingRawBytesHex
   -- however that adds an awkward HasTypeProxy lang =>
   -- constraint to other Show instances elsewhere
-  deriving (ToCBOR, FromCBOR) via (UsingRawBytes (PlutusScript lang))
-  deriving anyclass SerialiseAsCBOR
+
+instance HasTypeProxy lang => SerialiseAsCBOR (PlutusScript lang) where
+  serialiseToCBOR (PlutusScriptSerialised sbs) = SBS.fromShort sbs
+  deserialiseFromCBOR _ bs =
+    case isPlutusScriptDoubleEncoded $ LBS.fromStrict bs of
+      NotDoubleEncoded -> Right $ PlutusScriptSerialised $ SBS.toShort bs
+      IsDoubleEncoded normalised -> Right $ PlutusScriptSerialised $ SBS.toShort normalised
 
 instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
   data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
   proxyToAsType _ = AsPlutusScript (proxyToAsType (Proxy :: Proxy lang))
 
+-- We re-use the 'SerialiseAsCBOR' instance for the raw bytes serialisation
+-- because the CBOR serialisation is just the raw bytes. I.e we don't
+-- do any additional transformation on Plutus script bytes.
 instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
-  serialiseToRawBytes (PlutusScriptSerialised sbs) = SBS.fromShort sbs
-
-  deserialiseFromRawBytes (AsPlutusScript _) bs =
-    -- TODO alonzo: validate the script syntax and fail decoding if invalid
-    Right (PlutusScriptSerialised (SBS.toShort bs))
+  serialiseToRawBytes = serialiseToCBOR
+  deserialiseFromRawBytes asType bs =
+    first (SerialiseAsRawBytesError . show . B.sformat B.build) $
+      deserialiseFromCBOR asType bs
 
 instance IsPlutusScriptLanguage lang => HasTextEnvelope (PlutusScript lang) where
   textEnvelopeType _ =
