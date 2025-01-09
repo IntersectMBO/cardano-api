@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -31,13 +30,19 @@ module Cardano.Api.Script
   , AnyPlutusScriptVersion (..)
   , IsPlutusScriptLanguage (..)
   , IsScriptLanguage (..)
+  , ToLedgerPlutusLanguage
 
     -- * Scripts in a specific language
   , Script (..)
+  , PlutusScriptInEra (..)
 
     -- * Scripts in any language
   , ScriptInAnyLang (..)
   , toScriptInAnyLang
+  , exampleDoubleEncodedBytes
+  , isPlutusScriptDoubleEncoded
+  , exampleDoubleEncodedBytesEncoding
+  , IsDoubleEncoded (..)
 
     -- * Scripts in an era
   , ScriptInEra (..)
@@ -154,11 +159,13 @@ import           Cardano.Slotting.Slot (SlotNo)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified PlutusLedgerApi.Test.Examples as Plutus
 
+import qualified Codec.CBOR.Read as CBOR
 import           Control.Applicative
 import           Control.Monad
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
@@ -172,8 +179,10 @@ import qualified Data.Text.Encoding as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Typeable (Typeable)
 import           Data.Vector (Vector)
+import qualified Formatting as B
 import           GHC.Exts (IsList (..))
 import           Numeric.Natural (Natural)
+import           Prettyprinter
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -1327,6 +1336,46 @@ fromAllegraTimelock = go
   go (Shelley.RequireAllOf s) = RequireAllOf (map go (toList s))
   go (Shelley.RequireAnyOf s) = RequireAnyOf (map go (toList s))
   go (Shelley.RequireMOf i s) = RequireMOf i (map go (toList s))
+
+type family ToLedgerPlutusLanguage lang where
+  ToLedgerPlutusLanguage PlutusScriptV1 = Plutus.PlutusV1
+  ToLedgerPlutusLanguage PlutusScriptV2 = Plutus.PlutusV2
+  ToLedgerPlutusLanguage PlutusScriptV3 = Plutus.PlutusV3
+
+data PlutusScriptInEra era lang where
+  PlutusScriptInEra :: PlutusScript lang -> PlutusScriptInEra era lang
+
+deriving instance Eq (PlutusScriptInEra era lang)
+
+deriving instance Show (PlutusScriptInEra era lang)
+
+instance (HasTypeProxy era, HasTypeProxy lang) => HasTypeProxy (PlutusScriptInEra era lang) where
+  data AsType (PlutusScriptInEra era lang) = AsPlutusScriptInEra (AsType lang)
+  proxyToAsType _ = AsPlutusScriptInEra (proxyToAsType (Proxy :: Proxy lang))
+
+instance
+  ( Ledger.Era (ShelleyLedgerEra era)
+  , HasTypeProxy (PlutusScriptInEra era lang)
+  , Plutus.PlutusLanguage (ToLedgerPlutusLanguage lang)
+  )
+  => SerialiseAsCBOR (PlutusScriptInEra era lang)
+  where
+  serialiseToCBOR (PlutusScriptInEra (PlutusScriptSerialised s)) =
+    SBS.fromShort s
+  deserialiseFromCBOR _ bs = do
+    let v = Ledger.eraProtVerLow @(ShelleyLedgerEra era)
+        shortBsPlutusScript = PlutusScriptSerialised scriptShortBs
+        scriptShortBs = case isPlutusScriptDoubleEncoded $ LBS.fromStrict bs of
+          IsDoubleEncoded normalized -> SBS.toShort normalized
+          NotDoubleEncoded -> SBS.toShort bs
+    let plutusScript :: Plutus.Plutus (ToLedgerPlutusLanguage lang)
+        plutusScript = Plutus.Plutus $ Plutus.PlutusBinary scriptShortBs
+
+    case Plutus.decodePlutusRunnable v plutusScript of
+      Left e ->
+        Left $
+          CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
+      Right{} -> Right $ PlutusScriptInEra shortBsPlutusScript
 
 -- ----------------------------------------------------------------------------
 -- JSON serialisation
