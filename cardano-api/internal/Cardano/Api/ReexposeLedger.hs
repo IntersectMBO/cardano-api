@@ -123,17 +123,20 @@ module Cardano.Api.ReexposeLedger
   , Data (..)
   , EraTxWits (..)
   , ExUnits (..)
-  , Language
+  , Language (..)
   , Plutus
   , Prices (..)
   , Script
   , CostModels
+  , CostModel
   , AlonzoGenesis
   , AsIxItem (..)
   , EraGov
   , EraTx (witsTxL, bodyTxL)
   , Tx
   , TxDats (..)
+  , costModelToMap
+  , costModelsValid
   , getNativeScript
   , languageToText
   , plutusBinary
@@ -226,8 +229,10 @@ import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
 import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VKey (..),
                    hashWithSerialiser)
+import           Cardano.Ledger.Plutus.CostModels (CostModel, costModelToMap, costModelsValid)
 import           Cardano.Ledger.Plutus.Data (Data (..), unData)
-import           Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
+import           Cardano.Ledger.Plutus.Language (Language (..), Plutus, languageToText,
+                   plutusBinary)
 import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
 import           Cardano.Ledger.SafeHash (SafeHash, castSafeHash, extractHash, unsafeMakeSafeHash)
 import           Cardano.Ledger.Shelley.API (AccountState (..), GenDelegPair (..),
