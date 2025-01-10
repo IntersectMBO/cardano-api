@@ -1005,7 +1005,7 @@ genProtocolParameters era = do
   protocolParamStakePoolDeposit <- genLovelace
   protocolParamMinPoolCost <- genLovelace
   protocolParamPoolRetireMaxEpoch <- genEpochInterval
-  protocolParamStakePoolTargetNum <- genNat
+  protocolParamStakePoolTargetNum <- genWord16
   protocolParamPoolPledgeInfluence <- genRationalInt64
   protocolParamMonetaryExpansion <- genRational
   protocolParamTreasuryCut <- genRational
@@ -1042,7 +1042,7 @@ genProtocolParametersUpdate era = do
   protocolUpdateStakePoolDeposit <- Gen.maybe genLovelace
   protocolUpdateMinPoolCost <- Gen.maybe genLovelace
   protocolUpdatePoolRetireMaxEpoch <- Gen.maybe genEpochInterval
-  protocolUpdateStakePoolTargetNum <- Gen.maybe genNat
+  protocolUpdateStakePoolTargetNum <- Gen.maybe genWord16
   protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
   protocolUpdateMonetaryExpansion <- Gen.maybe genRational
   protocolUpdateTreasuryCut <- Gen.maybe genRational

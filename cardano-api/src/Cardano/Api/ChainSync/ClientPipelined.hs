@@ -34,4 +34,4 @@ where
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
-import           Network.TypedProtocol.Pipelined (N (..), Nat (..), natToInt)
+import           Network.TypedProtocol.Core (N (..), Nat (..), natToInt)

@@ -8,11 +8,12 @@ module Cardano.Api.ChainSync.Client
   , ClientStIntersect (..)
 
     -- * Null chain sync client
-  , chainSyncClientNull
+  , chainSyncPeerNull
 
     -- * Utilities
   , mapChainSyncClient
   )
 where
 
+import           Ouroboros.Network.NodeToClient
 import           Ouroboros.Network.Protocol.ChainSync.Client
