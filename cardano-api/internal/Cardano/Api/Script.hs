@@ -39,10 +39,7 @@ module Cardano.Api.Script
     -- * Scripts in any language
   , ScriptInAnyLang (..)
   , toScriptInAnyLang
-  , exampleDoubleEncodedBytes
-  , isPlutusScriptDoubleEncoded
-  , exampleDoubleEncodedBytesEncoding
-  , IsDoubleEncoded (..)
+  , removePlutusScriptDoubleEncoding
 
     -- * Scripts in an era
   , ScriptInEra (..)
@@ -479,15 +476,6 @@ isPlutusScriptDoubleEncoded plutusScriptBytes =
       case CBOR.deserialiseFromBytes CBOR.decodeBytes $ LBS.fromStrict needToEncode of
         Left _ -> NotDoubleEncoded
         Right (_, final) -> IsDoubleEncoded $ CBOR.toStrictByteString $ CBOR.encodeBytes final
-
-exampleDoubleEncodedBytes :: LBS.ByteString
-exampleDoubleEncodedBytes = LBS.fromStrict $ CBOR.toStrictByteString exampleDoubleEncodedBytesEncoding
-
-exampleDoubleEncodedBytesEncoding :: CBOR.Encoding
-exampleDoubleEncodedBytesEncoding = do
-  CBOR.encodeBytes $
-    CBOR.toStrictByteString $
-      CBOR.encodeBytes "testBytes"
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
   textEnvelopeType _ =

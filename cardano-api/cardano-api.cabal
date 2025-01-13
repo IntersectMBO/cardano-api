@@ -274,6 +274,7 @@ library gen
     Test.Gen.Cardano.Api
     Test.Gen.Cardano.Api.Byron
     Test.Gen.Cardano.Api.Era
+    Test.Gen.Cardano.Api.Hardcoded
     Test.Gen.Cardano.Api.Metadata
     Test.Gen.Cardano.Api.ProtocolParameters
     Test.Gen.Cardano.Api.Typed
