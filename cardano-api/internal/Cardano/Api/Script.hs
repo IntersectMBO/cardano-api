@@ -39,8 +39,7 @@ module Cardano.Api.Script
     -- * Scripts in any language
   , ScriptInAnyLang (..)
   , toScriptInAnyLang
-  , exampleDoubleEncodedBytes
-  , exampleDoubleEncodedBytesEncoding
+  , removePlutusScriptDoubleEncoding
 
     -- * Scripts in an era
   , ScriptInEra (..)
@@ -473,15 +472,6 @@ removePlutusScriptDoubleEncoding plutusScriptBytes =
         -- We were able to decode a cbor in cbor bytes value. Therefore the original bytes
         -- were likely a double encoded plutus script so we can now return the unwrapped bytes.
         Right{} -> unwrapped
-
-exampleDoubleEncodedBytes :: LBS.ByteString
-exampleDoubleEncodedBytes = LBS.fromStrict $ CBOR.toStrictByteString exampleDoubleEncodedBytesEncoding
-
-exampleDoubleEncodedBytesEncoding :: CBOR.Encoding
-exampleDoubleEncodedBytesEncoding = do
-  CBOR.encodeBytes $
-    CBOR.toStrictByteString $
-      CBOR.encodeBytes "testBytes"
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
   textEnvelopeType _ =

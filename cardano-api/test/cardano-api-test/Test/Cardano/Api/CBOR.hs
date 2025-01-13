@@ -22,6 +22,7 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Proxy (Proxy (..))
 import qualified Data.Text as T
 
+import           Test.Gen.Cardano.Api.Hardcoded
 import           Test.Gen.Cardano.Api.Typed
 
 import           Test.Cardano.Api.Orphans ()

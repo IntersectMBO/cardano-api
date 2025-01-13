@@ -555,6 +555,7 @@ module Cardano.Api
 
     -- ** Scripts in a specific language
   , Script (..)
+  , PlutusScriptInEra (..)
 
     -- ** Scripts in any language
   , ScriptInAnyLang (..)
