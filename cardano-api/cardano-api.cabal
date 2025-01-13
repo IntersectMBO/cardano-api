@@ -317,8 +317,8 @@ test-suite cardano-api-test
   build-depends:
     QuickCheck,
     aeson >=1.5.6.0,
-    bytestring,
     base16-bytestring,
+    bytestring,
     cardano-api,
     cardano-api:gen,
     cardano-api:internal,

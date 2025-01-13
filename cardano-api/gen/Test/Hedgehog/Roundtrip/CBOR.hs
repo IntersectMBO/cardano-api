@@ -60,7 +60,8 @@ trippingCbor typeProxy v =
 -- will deserialize correctly and newly created scripts will also deserialize correctly.
 decodeOnlyPlutusScriptBytes
   :: forall era lang m
-   . Ledger.Era (ShelleyLedgerEra era)
+   . HasCallStack
+  => Ledger.Era (ShelleyLedgerEra era)
   => H.MonadTest m
   => Plutus.PlutusLanguage (ToLedgerPlutusLanguage lang)
   => IsPlutusScriptLanguage lang

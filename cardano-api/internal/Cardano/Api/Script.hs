@@ -459,23 +459,19 @@ instance IsScriptLanguage lang => SerialiseAsCBOR (Script lang) where
           <$> deserialiseFromCBOR (AsPlutusScript AsPlutusScriptV3) bs
 
 -- | Previously we were double encoding the plutus script
--- bytes. This decoder is used to check if the plutus
--- script bytes are double encoded. If it is, it removes
--- a layer of encoding to return the original plutus script bytes.
-data IsDoubleEncoded
-  = -- | Original plutus script bytes
-    IsDoubleEncoded
-      Crypto.ByteString
-  | NotDoubleEncoded
-
-isPlutusScriptDoubleEncoded :: LBS.ByteString -> IsDoubleEncoded
-isPlutusScriptDoubleEncoded plutusScriptBytes =
+-- bytes. This function removes a layer of encoding to return
+-- the original plutus script bytes if it exists.
+removePlutusScriptDoubleEncoding :: LBS.ByteString -> Crypto.ByteString
+removePlutusScriptDoubleEncoding plutusScriptBytes =
   case CBOR.deserialiseFromBytes CBOR.decodeBytes plutusScriptBytes of
-    Left _ -> NotDoubleEncoded
-    Right (_, needToEncode) ->
-      case CBOR.deserialiseFromBytes CBOR.decodeBytes $ LBS.fromStrict needToEncode of
-        Left _ -> NotDoubleEncoded
-        Right (_, final) -> IsDoubleEncoded $ CBOR.toStrictByteString $ CBOR.encodeBytes final
+    Left _ -> LBS.toStrict plutusScriptBytes
+    Right (_, unwrapped) ->
+      -- 'unwrapped' is potentially valid plutus bytes i.e it is no longer double encoded
+      case CBOR.deserialiseFromBytes CBOR.decodeBytes $ LBS.fromStrict unwrapped of
+        Left _ -> LBS.toStrict plutusScriptBytes
+        -- We were able to decode a cbor in cbor bytes value. Therefore the original bytes
+        -- were likely a double encoded plutus script so we can now return the unwrapped bytes.
+        Right{} -> unwrapped
 
 instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
   textEnvelopeType _ =
@@ -1032,9 +1028,7 @@ data PlutusScript lang where
 instance HasTypeProxy lang => SerialiseAsCBOR (PlutusScript lang) where
   serialiseToCBOR (PlutusScriptSerialised sbs) = SBS.fromShort sbs
   deserialiseFromCBOR _ bs =
-    case isPlutusScriptDoubleEncoded $ LBS.fromStrict bs of
-      NotDoubleEncoded -> Right $ PlutusScriptSerialised $ SBS.toShort bs
-      IsDoubleEncoded normalised -> Right $ PlutusScriptSerialised $ SBS.toShort normalised
+    Right $ PlutusScriptSerialised $ SBS.toShort $ removePlutusScriptDoubleEncoding $ LBS.fromStrict bs
 
 instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
   data AsType (PlutusScript lang) = AsPlutusScript (AsType lang)
@@ -1352,18 +1346,16 @@ instance
     SBS.fromShort s
   deserialiseFromCBOR _ bs = do
     let v = Ledger.eraProtVerLow @(ShelleyLedgerEra era)
-        shortBsPlutusScript = PlutusScriptSerialised scriptShortBs
-        scriptShortBs = case isPlutusScriptDoubleEncoded $ LBS.fromStrict bs of
-          IsDoubleEncoded normalized -> SBS.toShort normalized
-          NotDoubleEncoded -> SBS.toShort bs
+        scriptShortBs = SBS.toShort $ removePlutusScriptDoubleEncoding $ LBS.fromStrict bs
     let plutusScript :: Plutus.Plutus (ToLedgerPlutusLanguage lang)
-        plutusScript = Plutus.Plutus $ Plutus.PlutusBinary scriptShortBs
+        plutusScript = PlutusScriptBinary scriptShortBs
+        plutusScriptInEra = PlutusScriptInEra $ PlutusScriptSerialised scriptShortBs
 
     case Plutus.decodePlutusRunnable v plutusScript of
       Left e ->
         Left $
           CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
-      Right{} -> Right $ PlutusScriptInEra shortBsPlutusScript
+      Right{} -> Right plutusScriptInEra
 
 -- ----------------------------------------------------------------------------
 -- JSON serialisation

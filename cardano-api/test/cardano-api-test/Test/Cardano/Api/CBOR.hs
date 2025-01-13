@@ -17,6 +17,7 @@ import           Cardano.Api.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvel
 import           Cardano.Api.Shelley (AsType (..))
 
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import           Data.Proxy (Proxy (..))
 import qualified Data.Text as T
@@ -30,7 +31,6 @@ import           Hedgehog (Property, forAll, property, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Internal.Property (failWith)
 import qualified Test.Hedgehog.Roundtrip.CBOR as H
 import           Test.Hedgehog.Roundtrip.CBOR
 import           Test.Tasty (TestTree, testGroup)
@@ -249,14 +249,10 @@ prop_decode_only_wrapped_plutus_script_V3_CBOR = H.property $ do
     (AsScript AsPlutusScriptV3)
 
 prop_double_encoded_sanity_check :: Property
-prop_double_encoded_sanity_check = H.property $ do
-  case isPlutusScriptDoubleEncoded exampleDoubleEncodedBytes of
-    NotDoubleEncoded ->
-      failWith Nothing $
-        unlines
-          [ "Input expected to be double encoded"
-          ]
-    IsDoubleEncoded{} -> H.success
+prop_double_encoded_sanity_check = H.propertyOnce $ do
+  let fixed = removePlutusScriptDoubleEncoding exampleDoubleEncodedBytes
+
+  LBS.fromStrict fixed H./== exampleDoubleEncodedBytes
 
 prop_roundtrip_ScriptData_CBOR :: Property
 prop_roundtrip_ScriptData_CBOR = H.property $ do
