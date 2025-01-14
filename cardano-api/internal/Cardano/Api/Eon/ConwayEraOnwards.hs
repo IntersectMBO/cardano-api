@@ -19,6 +19,7 @@ module Cardano.Api.Eon.ConwayEraOnwards
   )
 where
 
+import           Cardano.Api.Eon.AllegraEraOnwards (AllegraEraOnwards (..))
 import           Cardano.Api.Eon.BabbageEraOnwards
 import           Cardano.Api.Eon.Convert
 import           Cardano.Api.Eon.ShelleyBasedEra
@@ -74,6 +75,10 @@ instance Convert ConwayEraOnwards CardanoEra where
 instance Convert ConwayEraOnwards ShelleyBasedEra where
   convert = \case
     ConwayEraOnwardsConway -> ShelleyBasedEraConway
+
+instance Convert ConwayEraOnwards AllegraEraOnwards where
+  convert = \case
+    ConwayEraOnwardsConway -> AllegraEraOnwardsConway
 
 instance Convert ConwayEraOnwards BabbageEraOnwards where
   convert = \case
