@@ -1,5 +1,31 @@
 # Changelog for cardano-api
 
+## 10.6.0.0
+
+- Downgrade plutus version to 1.37
+  (bugfix)
+  [PR 727](https://github.com/IntersectMBO/cardano-api/pull/727)
+
+- Added schema checking functionality for DRep registration, DRep update, and GovAction metadata, based on CIP-0100, CIP-0108, and CIP-0119. Also add functionality to check whether a certificate is for DRep registration or updating.
+  (feature, compatible, test)
+  [PR 713](https://github.com/IntersectMBO/cardano-api/pull/713)
+
+- Added `GetBigLedgerPeerSnapshot` block query
+  (breaking)
+  [PR 521](https://github.com/IntersectMBO/cardano-api/pull/521)
+
+- Add certificates support in `createCompatibleSignedTx`.
+  (feature, breaking)
+  [PR 691](https://github.com/IntersectMBO/cardano-api/pull/691)
+
+- Integrate `typed-protocols`, `ouroboros-network`, `cardano-ledger` and `ouroboros-consensus`
+  (breaking, feature)
+  [PR 687](https://github.com/IntersectMBO/cardano-api/pull/687)
+
+- Export genTxOutByron
+  (compatible)
+  [PR 703](https://github.com/IntersectMBO/cardano-api/pull/703)
+
 ## 10.5.0.0
 
 - Don't export the ledger's `coerceKeyRole` function anymore, export RewardAccount
