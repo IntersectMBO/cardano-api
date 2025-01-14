@@ -8,6 +8,7 @@ module Test.Cardano.Api.Genesis
   )
 where
 
+import qualified Cardano.Api as Api (CostModels (..))
 import           Cardano.Api.Eon.ShelleyBasedEra
 import           Cardano.Api.Eras
 import           Cardano.Api.Genesis
@@ -23,6 +24,7 @@ import qualified PlutusLedgerApi.V2 as V2
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Write as CBOR
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
 import           Data.Int (Int64)
@@ -177,8 +179,61 @@ encodeCborInEraCostModels aeo = CBOR.toLazyByteString . toEraCbor'
   toEraCbor' :: L.CostModels -> CBOR.Encoding
   toEraCbor' = alonzoEraOnwardsConstraints aeo $ L.toEraCBOR @(ShelleyLedgerEra era)
 
+prop_plutus_costmodel_sizes :: Property
+prop_plutus_costmodel_sizes = H.propertyOnce $ do
+  -- PV1 tests
+  -- Exact expected number of parameters
+  testWorks "./test/cardano-api-test/files/input/genesis/pv1-array-166.json" PlutusScriptV1 166
+  testWorks "./test/cardano-api-test/files/input/genesis/pv1-map-166.json" PlutusScriptV1 166
+  -- TODO This file loads fine, whereas it shouldn't
+  -- _testFails "./test/cardano-api-test/files/input/genesis/pv1-array-165.json"
+  _testFails "./test/cardano-api-test/files/input/genesis/pv1-map-165.json"
+
+  -- PV2 tests
+  -- Babbage has 175 PV2 parameters:
+  testWorks "./test/cardano-api-test/files/input/genesis/pv2-array-175.json" PlutusScriptV2 175
+  -- Conway has 185 PV2 parameters:
+  testWorks "./test/cardano-api-test/files/input/genesis/pv2-array-185.json" PlutusScriptV2 185
+  -- TODO This file loads fine, whereas it shouldn't
+  -- _testFails "./test/cardano-api-test/files/input/genesis/pv2-array-174.json"
+  _testFails "./test/cardano-api-test/files/input/genesis/pv2-map-174.json"
+
+  -- PV3 tests
+  testWorks "./test/cardano-api-test/files/input/genesis/pv3-array-297.json" PlutusScriptV3 297
+  -- TODO This file loads fine, whereas it shouldn't
+  -- _testFails "./test/cardano-api-test/files/input/genesis/pv3-array-296.json"
+  testWorks "./test/cardano-api-test/files/input/genesis/pv3-map-297.json" PlutusScriptV3 297
+  _testFails "./test/cardano-api-test/files/input/genesis/pv3-map-296.json"
+ where
+  testWorks filepath whichPlutusVersion expectedSize = do
+    genesisBs <- H.lbsReadFile filepath
+    let decoded :: Either String Api.CostModels = Aeson.eitherDecode genesisBs
+    case decoded of
+      Left err -> do
+        H.annotateShow err
+        H.assert False
+      Right (Api.CostModels cms) -> do
+        case M.lookup (AnyPlutusScriptVersion whichPlutusVersion) cms of
+          Nothing -> do
+            H.note_ $ show whichPlutusVersion <> " cost model not found in " <> filepath
+            H.assert False
+          Just (CostModel model) -> do
+            length model H.=== expectedSize
+            pure ()
+  _testFails filepath = do
+    genesisBs <- H.lbsReadFile filepath
+    let decoded :: Either String Api.CostModels = Aeson.eitherDecode genesisBs
+    case decoded of
+      Left _err -> do
+        pure ()
+      Right _ -> do
+        H.note_ $ "Decoding of " <> filepath <> " succeeded, whereas it was expected to fail!"
+        H.assert False
+
 -- * List all test cases
 
+-- Execute me with:
+-- @cabal test cardano-api-test --test-options '-p "/Test.Cardano.Api.Genesis/"'@
 tests :: TestTree
 tests =
   testGroup
@@ -210,4 +265,7 @@ tests =
     , testProperty
         "Make sure that last 10 PlutusV2 cost model parameters are the ones we expect"
         prop_verify_plutus_v2_costmodel
+    , testProperty
+        "Make sure that Plutus cost model sizes are validated correctly"
+        prop_plutus_costmodel_sizes
     ]

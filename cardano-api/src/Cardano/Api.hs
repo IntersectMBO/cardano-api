@@ -622,6 +622,7 @@ module Cardano.Api
   , ExecutionUnits (..)
   , ExecutionUnitPrices (..)
   , CostModel (..)
+  , CostModels (..)
   , toAlonzoCostModel
   , fromAlonzoCostModel
   , toAlonzoCostModels
