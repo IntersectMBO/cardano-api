@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -105,7 +106,7 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
     :: TxProposalProcedures build era
     -> Maybe [L.ProposalProcedure (ShelleyLedgerEra era)]
   getProposalProcedures TxProposalProceduresNone = Nothing
-  getProposalProcedures txpp@(TxProposalProcedures _ _) = Just . toList $ convProposalProcedures txpp
+  getProposalProcedures (TxProposalProcedures pp) = Just $ fst <$> toList pp
 
 tests :: TestTree
 tests =

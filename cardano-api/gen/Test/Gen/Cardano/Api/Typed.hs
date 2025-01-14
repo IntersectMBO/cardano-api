@@ -260,38 +260,38 @@ genSimpleScript =
 -- plutus scripts as well as valid plutus scripts.
 genPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
 genPlutusScript l =
-  case l of 
-    PlutusScriptV1 -> do 
+  case l of
+    PlutusScriptV1 -> do
       PlutusScript _ s <- genPlutusV1Script
       return s
-    PlutusScriptV2 -> do 
+    PlutusScriptV2 -> do
       PlutusScript _ s <- genPlutusV2Script
       return s
-    PlutusScriptV3 -> do 
+    PlutusScriptV3 -> do
       PlutusScript _ s <- genPlutusV3Script
       return s
 
 genValidPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
 genValidPlutusScript l =
-  case l of 
-    PlutusScriptV1 -> do 
+  case l of
+    PlutusScriptV1 -> do
       PlutusScript _ s <- genValidPlutusV1Script
       return s
-    PlutusScriptV2 -> do 
+    PlutusScriptV2 -> do
       PlutusScript _ s <- genValidPlutusV2Script
       return s
-    PlutusScriptV3 -> do 
+    PlutusScriptV3 -> do
       PlutusScript _ s <- genValidPlutusV3Script
       return s
 
 genPlutusV1Script :: Gen (Script PlutusScriptV1)
-genPlutusV1Script = do 
+genPlutusV1Script = do
   v1Script <- Gen.element [v1Loop2024PlutusScriptHexDoubleEncoded,v1Loop2024PlutusScriptHex]
   let v1ScriptBytes = Base16.decodeLenient v1Script
   return . PlutusScript PlutusScriptV1 . PlutusScriptSerialised $ SBS.toShort v1ScriptBytes
 
 genValidPlutusV1Script :: Gen (Script PlutusScriptV1)
-genValidPlutusV1Script = do 
+genValidPlutusV1Script = do
   v1Script <- Gen.element [v1Loop2024PlutusScriptHex]
   let v1ScriptBytes = Base16.decodeLenient v1Script
   return . PlutusScript PlutusScriptV1 . PlutusScriptSerialised $ SBS.toShort v1ScriptBytes
@@ -310,14 +310,14 @@ genValidPlutusV2Script = do
 
 genPlutusV3Script :: Gen (Script PlutusScriptV3)
 genPlutusV3Script = do
-  v3AlwaysSucceedsPlutusScriptHex 
+  v3AlwaysSucceedsPlutusScriptHex
    <- Gen.element [v3AlwaysSucceedsPlutusScriptDoubleEncoded, v3AlwaysSucceedsPlutusScript]
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
   return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
 
 genValidPlutusV3Script :: Gen (Script PlutusScriptV3)
 genValidPlutusV3Script = do
-  v3AlwaysSucceedsPlutusScriptHex 
+  v3AlwaysSucceedsPlutusScriptHex
    <- Gen.element [v3AlwaysSucceedsPlutusScript]
   let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
   return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
@@ -1341,18 +1341,12 @@ genProposals :: Applicative (BuildTxWith build)
              => ConwayEraOnwards era
              -> Gen (TxProposalProcedures build era)
 genProposals w = conwayEraOnwardsConstraints w $ do
-  proposals <- Gen.list (Range.constant 0 10) (genProposal w)
-  proposalsToBeWitnessed <- Gen.subsequence proposals
-  -- We're generating also some extra proposals, purposely not included in the proposals list, which results
-  -- in an invalid state of 'TxProposalProcedures'.
-  -- We're doing it for the complete representation of possible values space of TxProposalProcedures.
-  -- Proposal procedures code in cardano-api should handle such invalid values just fine.
-  extraProposals <- Gen.list (Range.constant 0 10) (genProposal w)
+  proposals <- Gen.list (Range.constant 0 15) (genProposal w)
   let sbe = convert w
-  proposalsWithWitnesses <-
-    forM (extraProposals <> proposalsToBeWitnessed) $ \proposal ->
-      (proposal,) <$> genScriptWitnessForStake sbe
-  pure $ TxProposalProcedures (fromList proposals) (pure $ fromList proposalsWithWitnesses)
+  proposalsWithMaybeWitnesses <-
+    forM proposals $ \proposal ->
+      (proposal,) <$> Gen.maybe (genScriptWitnessForStake sbe)
+  pure $ mkTxProposalProcedures proposalsWithMaybeWitnesses
 
 genProposal :: ConwayEraOnwards era -> Gen (L.ProposalProcedure (ShelleyLedgerEra era))
 genProposal w =
