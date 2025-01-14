@@ -1,5 +1,11 @@
 # Changelog for cardano-api-gen
 
+## 10.1.0.0
+
+- Export genTxOutByron
+  (compatible)
+  [PR 703](https://github.com/IntersectMBO/cardano-api/pull/703)
+
 ## 9.0.0.0
 
 - Deprecate `valueFromList` and valueToList. Add `IsList Value` instance.
