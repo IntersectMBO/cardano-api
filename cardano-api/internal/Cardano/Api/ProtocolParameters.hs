@@ -136,6 +136,9 @@ import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           PlutusLedgerApi.Common (CostModelApplyError)
+import qualified PlutusLedgerApi.V1.ParamName as PlutusV1
+import qualified PlutusLedgerApi.V2.ParamName as PlutusV2
+import qualified PlutusLedgerApi.V3.ParamName as PlutusV3
 
 import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
@@ -1051,6 +1054,40 @@ toAlonzoCostModel (CostModel m) l = first (PpceInvalidCostModel (CostModel m)) $
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
 fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
 
+validateCostModelSize
+  :: Maybe (ShelleyBasedEra era)
+  -> Plutus.Language
+  -> [Int64]
+  -> Either CostModelNotEnoughParametersError CostModel
+validateCostModelSize mSbe lang model
+  | actual < expected = Left $ CostModelNotEnoughParametersError lang expected actual
+  | actual == expected = Right $ CostModel model
+  | otherwise =
+      -- Since the number of parameters can increase in future versions of the Plutus language,
+      -- we are fine having too many parameters. This allows for easier testing.
+      Right $ CostModel model
+ where
+  actual = length model
+  expected = languageToMinimumParameterCount lang
+  allValues :: forall a. (Bounded a, Enum a) => [a]
+  allValues = [minBound :: a .. maxBound]
+  languageToMinimumParameterCount :: Plutus.Language -> Int
+  languageToMinimumParameterCount = \case
+    Plutus.PlutusV1 -> length $ allValues @PlutusV1.ParamName -- 166
+    Plutus.PlutusV2 ->
+      let nParamNames = length $ allValues @PlutusV2.ParamName -- 185
+       in case mSbe of
+            Nothing ->
+              -- We don't know the era, so we can't know the exact number of parameters that is expected,
+              -- so we need to be lenient
+              nParamNames - 10
+            Just sbe ->
+              caseShelleyToBabbageOrConwayEraOnwards
+                (const $ nParamNames - 10) -- Ten parameters were added to V2 in Conway, need to remove them here
+                (const nParamNames)
+                sbe
+    Plutus.PlutusV3 -> length $ allValues @PlutusV3.ParamName -- 297
+
 -- ----------------------------------------------------------------------------
 -- Proposals embedded in transactions to update protocol parameters
 --
@@ -1853,6 +1890,11 @@ data ProtocolParametersConversionError
   | PpceMissingParameter !ProtocolParameterName
   deriving (Eq, Show, Data)
 
+-- | @CostModelNotEnoughParametersError lang minimum actual@ is returned when the observed number of
+-- protocol parameters for @lang@ is @actual@ and that number is below the @minimum@ expected number of parameters.
+data CostModelNotEnoughParametersError
+  = CostModelNotEnoughParametersError Plutus.Language Int Int
+
 type ProtocolParameterName = String
 
 type ProtocolParameterVersion = Natural
@@ -1867,3 +1909,12 @@ instance Error ProtocolParametersConversionError where
       "Invalid cost model: " <> pretty @Text (display err) <> " Cost model: " <> pshow cm
     PpceMissingParameter name ->
       "Missing parameter: " <> pretty name
+
+instance Error CostModelNotEnoughParametersError where
+  prettyError (CostModelNotEnoughParametersError lang minimum' actual) =
+    "Not enough parameters for language "
+      <> pretty (Plutus.languageToText lang)
+      <> ". Expected at least "
+      <> pretty minimum'
+      <> " parameters but got "
+      <> pretty actual
