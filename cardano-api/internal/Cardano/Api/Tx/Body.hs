@@ -14,14 +14,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Transaction bodies
 module Cardano.Api.Tx.Body
   ( parseTxId
 
     -- * Transaction bodies
-  , TxBody (.., TxBody)
   , createTransactionBody
   , createAndValidateTransactionBody
   , TxBodyContent (..)
@@ -2147,12 +2145,8 @@ createAndValidateTransactionBody
   -> Either TxBodyError (TxBody era)
 createAndValidateTransactionBody = makeShelleyTransactionBody
 
-pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
-pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
-
-{-# COMPLETE TxBody #-}
-
-getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
+getTxBodyContent
+  :: TxBody era -> Either CostModelNotEnoughParametersError (TxBodyContent ViewTx era)
 getTxBodyContent = \case
   ShelleyTxBody sbe body _scripts scriptdata mAux scriptValidity ->
     fromLedgerTxBody sbe scriptValidity body scriptdata mAux
@@ -2163,34 +2157,36 @@ fromLedgerTxBody
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> TxBodyScriptData era
   -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
-  -> TxBodyContent ViewTx era
+  -> Either CostModelNotEnoughParametersError (TxBodyContent ViewTx era)
 fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
-  TxBodyContent
-    { txIns = fromLedgerTxIns sbe body
-    , txInsCollateral = fromLedgerTxInsCollateral sbe body
-    , txInsReference = fromLedgerTxInsReference sbe body
-    , txOuts = fromLedgerTxOuts sbe body scriptdata
-    , txTotalCollateral = fromLedgerTxTotalCollateral sbe body
-    , txReturnCollateral = fromLedgerTxReturnCollateral sbe body
-    , txFee = fromLedgerTxFee sbe body
-    , txValidityLowerBound = fromLedgerTxValidityLowerBound sbe (A.TxBody body)
-    , txValidityUpperBound = fromLedgerTxValidityUpperBound sbe (A.TxBody body)
-    , txWithdrawals = fromLedgerTxWithdrawals sbe body
-    , txCertificates = fromLedgerTxCertificates sbe body
-    , txUpdateProposal = maybeFromLedgerTxUpdateProposal sbe body
-    , txMintValue = fromLedgerTxMintValue sbe body
-    , txExtraKeyWits = fromLedgerTxExtraKeyWitnesses sbe body
-    , txProtocolParams = ViewTx
-    , txMetadata
-    , txAuxScripts
-    , txScriptValidity = scriptValidity
-    , txProposalProcedures = fromLedgerProposalProcedures sbe body
-    , txVotingProcedures = fromLedgerVotingProcedures sbe body
-    , txCurrentTreasuryValue = fromLedgerCurrentTreasuryValue sbe body
-    , txTreasuryDonation = fromLedgerTreasuryDonation sbe body
-    }
+  txUpdateProposal <&> \txup ->
+    TxBodyContent
+      { txIns = fromLedgerTxIns sbe body
+      , txInsCollateral = fromLedgerTxInsCollateral sbe body
+      , txInsReference = fromLedgerTxInsReference sbe body
+      , txOuts = fromLedgerTxOuts sbe body scriptdata
+      , txTotalCollateral = fromLedgerTxTotalCollateral sbe body
+      , txReturnCollateral = fromLedgerTxReturnCollateral sbe body
+      , txFee = fromLedgerTxFee sbe body
+      , txValidityLowerBound = fromLedgerTxValidityLowerBound sbe (A.TxBody body)
+      , txValidityUpperBound = fromLedgerTxValidityUpperBound sbe (A.TxBody body)
+      , txWithdrawals = fromLedgerTxWithdrawals sbe body
+      , txCertificates = fromLedgerTxCertificates sbe body
+      , txUpdateProposal = txup
+      , txMintValue = fromLedgerTxMintValue sbe body
+      , txExtraKeyWits = fromLedgerTxExtraKeyWitnesses sbe body
+      , txProtocolParams = ViewTx
+      , txMetadata
+      , txAuxScripts
+      , txScriptValidity = scriptValidity
+      , txProposalProcedures = fromLedgerProposalProcedures sbe body
+      , txVotingProcedures = fromLedgerVotingProcedures sbe body
+      , txCurrentTreasuryValue = fromLedgerCurrentTreasuryValue sbe body
+      , txTreasuryDonation = fromLedgerTreasuryDonation sbe body
+      }
  where
   (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData sbe mAux
+  txUpdateProposal = maybeFromLedgerTxUpdateProposal sbe body
 
 fromLedgerProposalProcedures
   :: ShelleyBasedEra era
@@ -2543,15 +2539,15 @@ maybeFromLedgerTxUpdateProposal
   :: ()
   => ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
-  -> TxUpdateProposal era
+  -> Either CostModelNotEnoughParametersError (TxUpdateProposal era)
 maybeFromLedgerTxUpdateProposal sbe body =
   caseShelleyToBabbageOrConwayEraOnwards
     ( \w ->
         case body ^. L.updateTxBodyL of
-          SNothing -> TxUpdateProposalNone
-          SJust p -> TxUpdateProposal w (fromLedgerUpdate sbe p)
+          SNothing -> pure TxUpdateProposalNone
+          SJust p -> TxUpdateProposal w <$> (fromLedgerUpdate sbe p)
     )
-    (const TxUpdateProposalNone)
+    (const $ pure TxUpdateProposalNone)
     sbe
 
 fromLedgerTxMintValue

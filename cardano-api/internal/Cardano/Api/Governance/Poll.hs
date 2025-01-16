@@ -7,7 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | An API for driving on-chain poll for SPOs.
 --
@@ -37,8 +36,10 @@ module Cardano.Api.Governance.Poll
   )
 where
 
+import           Cardano.Api.Pretty
+import           Cardano.Api.Error
+import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Keys.Shelley
@@ -58,6 +59,7 @@ import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
 
 import           Control.Arrow (left)
 import           Control.Monad (foldM, when)
+import           Data.Bifunctor (first)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
@@ -279,6 +281,7 @@ data GovernancePollError
   | ErrGovernancePollUnauthenticated
   | ErrGovernancePollMalformedAnswer DecoderError
   | ErrGovernancePollInvalidAnswer GovernancePollInvalidAnswerError
+  | ErrGovernancePollCostModelNotEnoughParameters CostModelNotEnoughParametersError
   deriving Show
 
 data GovernancePollInvalidAnswerError = GovernancePollInvalidAnswerError
@@ -331,6 +334,9 @@ renderGovernancePollError err =
             | (ix, answer) <- invalidAnswerAcceptableAnswers invalidAnswer
             ]
         ]
+    ErrGovernancePollCostModelNotEnoughParameters err' ->
+      -- TODO can be simplified?
+      Text.pack $ docToString $ prettyError err'
 
 -- | Verify a poll against a given transaction and returns the signatories
 -- (verification key only) when valid.
@@ -341,12 +347,14 @@ verifyPollAnswer
   :: GovernancePoll
   -> InAnyShelleyBasedEra Tx
   -> Either GovernancePollError [Hash PaymentKey]
-verifyPollAnswer poll (InAnyShelleyBasedEra _era (getTxBody -> TxBody body)) = do
-  answer <- extractPollAnswer (txMetadata body)
+verifyPollAnswer poll (InAnyShelleyBasedEra _era tx) = do
+  content <- first ErrGovernancePollCostModelNotEnoughParameters $ getTxBodyContent body
+  answer <- extractPollAnswer (txMetadata content)
   answer `hasMatchingHash` hashGovernancePoll poll
   answer `isAmongAcceptableChoices` govPollAnswers poll
-  extraKeyWitnesses (txExtraKeyWits body)
+  extraKeyWitnesses (txExtraKeyWits content)
  where
+  body = getTxBody tx
   extractPollAnswer = \case
     TxMetadataNone ->
       Left ErrGovernancePollNoAnswer

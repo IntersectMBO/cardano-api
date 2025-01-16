@@ -54,6 +54,7 @@ module Cardano.Api.ProtocolParameters
     -- * Errors
   , ProtocolParametersError (..)
   , ProtocolParametersConversionError (..)
+  , CostModelNotEnoughParametersError (..)
 
     -- * PraosNonce
   , PraosNonce
@@ -136,18 +137,21 @@ import qualified Cardano.Ledger.Plutus.Language as Plutus
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Cardano.Slotting.Slot (EpochNo (..))
 import           PlutusLedgerApi.Common (CostModelApplyError)
+import qualified PlutusLedgerApi.V1.ParamName as PlutusV1
+import qualified PlutusLedgerApi.V2.ParamName as PlutusV2
+import qualified PlutusLedgerApi.V3.ParamName as PlutusV3
 
 import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
                    (.=))
-import           Data.Bifunctor (bimap, first)
+import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
 import           Data.Data (Data)
 import           Data.Either.Combinators (maybeToRight)
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (isJust)
+import           Data.Maybe (fromMaybe, isJust)
 import           Data.Maybe.Strict (StrictMaybe (..))
 import           Data.String (IsString)
 import           Data.Text (Text)
@@ -1003,7 +1007,11 @@ newtype CostModels = CostModels {unCostModels :: Map AnyPlutusScriptVersion Cost
   deriving (Eq, Show)
 
 instance FromJSON CostModels where
-  parseJSON v = CostModels . fromAlonzoCostModels <$> parseJSON v
+  parseJSON v = do
+    pModels <- parseJSON v
+    case fromAlonzoCostModels pModels of
+      Left err -> fail $ displayError err
+      Right costModels -> return $ CostModels costModels
 
 instance ToJSON CostModels where
   toJSON (CostModels costModels) =
@@ -1027,12 +1035,15 @@ toAlonzoCostModels m = do
 
 fromAlonzoCostModels
   :: Plutus.CostModels
-  -> Map AnyPlutusScriptVersion CostModel
+  -> Either CostModelNotEnoughParametersError (Map AnyPlutusScriptVersion CostModel)
 fromAlonzoCostModels cModels =
-  fromList
-    . map (bimap fromAlonzoScriptLanguage fromAlonzoCostModel)
-    $ toList
-    $ Plutus.costModelsValid cModels
+  case Map.toList errs of
+    [] -> Right $ Map.mapKeys fromAlonzoScriptLanguage models -- All models are valid
+    ((_, err) : _) -> Left err -- Take first error
+ where
+  (errs, models) = Map.mapEither id entries
+  entries :: Map Plutus.Language (Either CostModelNotEnoughParametersError CostModel)
+  entries = Map.map fromAlonzoCostModel $ Plutus.costModelsValid cModels
 
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Plutus.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Plutus.PlutusV1
@@ -1048,8 +1059,46 @@ toAlonzoCostModel
   :: CostModel -> Plutus.Language -> Either ProtocolParametersConversionError Alonzo.CostModel
 toAlonzoCostModel (CostModel m) l = first (PpceInvalidCostModel (CostModel m)) $ Alonzo.mkCostModel l m
 
-fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
-fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
+fromAlonzoCostModel :: Alonzo.CostModel -> Either CostModelNotEnoughParametersError CostModel
+fromAlonzoCostModel m = validateCostModelSize Nothing lang params
+ where
+  params = Alonzo.getCostModelParams m
+  lang = Alonzo.getCostModelLanguage m
+
+validateCostModelSize
+  :: Maybe (ShelleyBasedEra era)
+  -> Plutus.Language
+  -> [Int64]
+  -> Either CostModelNotEnoughParametersError CostModel
+validateCostModelSize mSbe lang model
+  | actual < expected = Left $ CostModelNotEnoughParametersError lang expected actual
+  | actual == expected = Right $ CostModel model
+  | otherwise =
+      -- Since the number of parameters can increase in future versions of the Plutus language,
+      -- we are fine having too many parameters. This allows for easier testing.
+      Right $ CostModel model
+ where
+  actual = length model
+  expected = languageToMinimumParameterCount lang
+  allValues :: forall a. (Bounded a, Enum a) => [a]
+  allValues = [minBound :: a .. maxBound]
+  languageToMinimumParameterCount :: Plutus.Language -> Int
+  languageToMinimumParameterCount = \case
+    Plutus.PlutusV1 -> length $ allValues @PlutusV1.ParamName -- 166
+    Plutus.PlutusV2 ->
+      let nParamNames = length $ allValues @PlutusV2.ParamName -- 185
+          lessTen = nParamNames - 10
+       in case mSbe of
+            Nothing ->
+              -- We don't know the era, so we can't know the exact number of parameters that is expected,
+              -- so we need to be lenient
+              lessTen
+            Just sbe ->
+              caseShelleyToBabbageOrConwayEraOnwards
+                (const lessTen) -- Ten parameters were added to V2 in Conway, need to remove them here
+                (const nParamNames)
+                sbe
+    Plutus.PlutusV3 -> length $ allValues @PlutusV3.ParamName -- 297
 
 -- ----------------------------------------------------------------------------
 -- Proposals embedded in transactions to update protocol parameters
@@ -1309,9 +1358,9 @@ fromLedgerUpdate
   => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => ShelleyBasedEra era
   -> Ledger.Update ledgerera
-  -> UpdateProposal
+  -> Either CostModelNotEnoughParametersError UpdateProposal
 fromLedgerUpdate sbe (Ledger.Update ppup epochno) =
-  UpdateProposal (fromLedgerProposedPPUpdates sbe ppup) epochno
+  UpdateProposal <$> fromLedgerProposedPPUpdates sbe ppup <*> pure epochno
 
 fromLedgerProposedPPUpdates
   :: forall era ledgerera
@@ -1319,22 +1368,31 @@ fromLedgerProposedPPUpdates
   => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => ShelleyBasedEra era
   -> Ledger.ProposedPPUpdates ledgerera
-  -> Map (Hash GenesisKey) ProtocolParametersUpdate
-fromLedgerProposedPPUpdates sbe =
-  Map.map (fromLedgerPParamsUpdate sbe)
-    . Map.mapKeysMonotonic GenesisKeyHash
-    . (\(Ledger.ProposedPPUpdates ppup) -> ppup)
+  -> Either
+      CostModelNotEnoughParametersError
+      (Map (Hash GenesisKey) ProtocolParametersUpdate)
+fromLedgerProposedPPUpdates sbe (Ledger.ProposedPPUpdates ppus) =
+  case Map.toList errs of
+    [] -> Right maps
+    ((_, err) : _) -> Left err
+ where
+  (errs, maps) =
+    Map.map (fromLedgerPParamsUpdate sbe) ppus
+      & Map.mapKeysMonotonic GenesisKeyHash
+      & Map.mapEither id
 
 fromLedgerPParamsUpdate
   :: ShelleyBasedEra era
   -> Ledger.PParamsUpdate (ShelleyLedgerEra era)
-  -> ProtocolParametersUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraShelley = fromShelleyPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraAllegra = fromShelleyPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraMary = fromShelleyPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraAlonzo = fromAlonzoPParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraBabbage = fromBabbagePParamsUpdate
-fromLedgerPParamsUpdate ShelleyBasedEraConway = fromConwayPParamsUpdate
+  -> Either CostModelNotEnoughParametersError ProtocolParametersUpdate
+fromLedgerPParamsUpdate era ppu =
+  case era of
+    ShelleyBasedEraShelley -> pure $ fromShelleyPParamsUpdate ppu
+    ShelleyBasedEraAllegra -> pure $ fromShelleyPParamsUpdate ppu
+    ShelleyBasedEraMary -> pure $ fromShelleyPParamsUpdate ppu
+    ShelleyBasedEraAlonzo -> fromAlonzoPParamsUpdate ppu
+    ShelleyBasedEraBabbage -> fromBabbagePParamsUpdate ppu
+    ShelleyBasedEraConway -> fromConwayPParamsUpdate ppu
 
 fromShelleyCommonPParamsUpdate
   :: EraPParams ledgerera
@@ -1394,64 +1452,75 @@ fromShelleyPParamsUpdate ppu =
 fromAlonzoCommonPParamsUpdate
   :: AlonzoEraPParams ledgerera
   => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
+  -> Either CostModelNotEnoughParametersError ProtocolParametersUpdate
 fromAlonzoCommonPParamsUpdate ppu =
-  (fromShelleyCommonPParamsUpdate ppu)
-    { protocolUpdateCostModels =
-        maybe
-          mempty
-          fromAlonzoCostModels
-          (strictMaybeToMaybe (ppu ^. ppuCostModelsL))
-    , protocolUpdatePrices =
-        fromAlonzoPrices
-          <$> strictMaybeToMaybe (ppu ^. ppuPricesL)
-    , protocolUpdateMaxTxExUnits =
-        fromAlonzoExUnits
-          <$> strictMaybeToMaybe (ppu ^. ppuMaxTxExUnitsL)
-    , protocolUpdateMaxBlockExUnits =
-        fromAlonzoExUnits
-          <$> strictMaybeToMaybe (ppu ^. ppuMaxBlockExUnitsL)
-    , protocolUpdateMaxValueSize = strictMaybeToMaybe (ppu ^. ppuMaxValSizeL)
-    , protocolUpdateCollateralPercent = strictMaybeToMaybe (ppu ^. ppuCollateralPercentageL)
-    , protocolUpdateMaxCollateralInputs = strictMaybeToMaybe (ppu ^. ppuMaxCollateralInputsL)
-    , protocolUpdateUTxOCostPerByte = Nothing
-    }
+  case costModels of
+    Left err -> Left err
+    Right mCostModelMap ->
+      Right $
+        (fromShelleyCommonPParamsUpdate ppu)
+          { protocolUpdateCostModels = fromMaybe mempty mCostModelMap
+          , protocolUpdatePrices =
+              fromAlonzoPrices
+                <$> strictMaybeToMaybe (ppu ^. ppuPricesL)
+          , protocolUpdateMaxTxExUnits =
+              fromAlonzoExUnits
+                <$> strictMaybeToMaybe (ppu ^. ppuMaxTxExUnitsL)
+          , protocolUpdateMaxBlockExUnits =
+              fromAlonzoExUnits
+                <$> strictMaybeToMaybe (ppu ^. ppuMaxBlockExUnitsL)
+          , protocolUpdateMaxValueSize = strictMaybeToMaybe (ppu ^. ppuMaxValSizeL)
+          , protocolUpdateCollateralPercent = strictMaybeToMaybe (ppu ^. ppuCollateralPercentageL)
+          , protocolUpdateMaxCollateralInputs = strictMaybeToMaybe (ppu ^. ppuMaxCollateralInputsL)
+          , protocolUpdateUTxOCostPerByte = Nothing
+          }
+ where
+  mCostModels :: Maybe (Plutus.CostModels)
+  mCostModels = strictMaybeToMaybe (ppu ^. ppuCostModelsL)
+  costModels
+    :: Either
+        CostModelNotEnoughParametersError
+        (Maybe (Map AnyPlutusScriptVersion CostModel))
+  costModels = sequence $ fromAlonzoCostModels <$> mCostModels
 
 fromAlonzoPParamsUpdate
   :: Ledger.Crypto crypto
   => PParamsUpdate (Ledger.AlonzoEra crypto)
-  -> ProtocolParametersUpdate
+  -> Either CostModelNotEnoughParametersError ProtocolParametersUpdate
 fromAlonzoPParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu)
-    { protocolUpdateProtocolVersion =
-        (\(Ledger.ProtVer a b) -> (Ledger.getVersion a, b))
-          <$> strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
-    }
+  (fromAlonzoCommonPParamsUpdate ppu) <&> \ppu' ->
+    ppu'
+      { protocolUpdateProtocolVersion =
+          (\(Ledger.ProtVer a b) -> (Ledger.getVersion a, b))
+            <$> strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
+      }
 
 fromBabbageCommonPParamsUpdate
   :: BabbageEraPParams ledgerera
   => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
+  -> Either CostModelNotEnoughParametersError ProtocolParametersUpdate
 fromBabbageCommonPParamsUpdate ppu =
-  (fromAlonzoCommonPParamsUpdate ppu)
-    { protocolUpdateUTxOCostPerByte = unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
-    }
+  (fromAlonzoCommonPParamsUpdate ppu) <&> \ppu' ->
+    ppu'
+      { protocolUpdateUTxOCostPerByte = unCoinPerByte <$> strictMaybeToMaybe (ppu ^. ppuCoinsPerUTxOByteL)
+      }
 
 fromBabbagePParamsUpdate
   :: Ledger.Crypto crypto
   => PParamsUpdate (Ledger.BabbageEra crypto)
-  -> ProtocolParametersUpdate
+  -> Either CostModelNotEnoughParametersError ProtocolParametersUpdate
 fromBabbagePParamsUpdate ppu =
-  (fromBabbageCommonPParamsUpdate ppu)
-    { protocolUpdateProtocolVersion =
-        (\(Ledger.ProtVer a b) -> (Ledger.getVersion a, b))
-          <$> strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
-    }
+  (fromBabbageCommonPParamsUpdate ppu) <&> \ppu' ->
+    ppu'
+      { protocolUpdateProtocolVersion =
+          (\(Ledger.ProtVer a b) -> (Ledger.getVersion a, b))
+            <$> strictMaybeToMaybe (ppu ^. ppuProtocolVersionL)
+      }
 
 fromConwayPParamsUpdate
   :: BabbageEraPParams ledgerera
   => PParamsUpdate ledgerera
-  -> ProtocolParametersUpdate
+  -> Either CostModelNotEnoughParametersError ProtocolParametersUpdate
 fromConwayPParamsUpdate = fromBabbageCommonPParamsUpdate
 
 -- ----------------------------------------------------------------------------
@@ -1629,13 +1698,15 @@ toConwayPParams = toBabbagePParams
 fromLedgerPParams
   :: ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
-  -> ProtocolParameters
-fromLedgerPParams ShelleyBasedEraShelley = fromShelleyPParams
-fromLedgerPParams ShelleyBasedEraAllegra = fromShelleyPParams
-fromLedgerPParams ShelleyBasedEraMary = fromShelleyPParams
-fromLedgerPParams ShelleyBasedEraAlonzo = fromExactlyAlonzoPParams
-fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
-fromLedgerPParams ShelleyBasedEraConway = fromConwayPParams
+  -> Either CostModelNotEnoughParametersError ProtocolParameters
+fromLedgerPParams sbe pp =
+  case sbe of
+    ShelleyBasedEraShelley -> pure $ fromShelleyPParams pp
+    ShelleyBasedEraAllegra -> pure $ fromShelleyPParams pp
+    ShelleyBasedEraMary -> pure $ fromShelleyPParams pp
+    ShelleyBasedEraAlonzo -> fromExactlyAlonzoPParams pp
+    ShelleyBasedEraBabbage -> fromBabbagePParams pp
+    ShelleyBasedEraConway -> fromConwayPParams pp
 
 {-# DEPRECATED
   fromShelleyCommonPParams
@@ -1700,18 +1771,23 @@ fromShelleyPParams pp =
 fromAlonzoPParams
   :: AlonzoEraPParams ledgerera
   => PParams ledgerera
-  -> ProtocolParameters
+  -> Either CostModelNotEnoughParametersError ProtocolParameters
 fromAlonzoPParams pp =
-  (fromShelleyCommonPParams pp)
-    { protocolParamCostModels = fromAlonzoCostModels $ pp ^. ppCostModelsL
-    , protocolParamDecentralization = Just . Ledger.unboundRational $ pp ^. ppDG
-    , protocolParamPrices = Just . fromAlonzoPrices $ pp ^. ppPricesL
-    , protocolParamMaxTxExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxTxExUnitsL
-    , protocolParamMaxBlockExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxBlockExUnitsL
-    , protocolParamMaxValueSize = Just $ pp ^. ppMaxValSizeL
-    , protocolParamCollateralPercent = Just $ pp ^. ppCollateralPercentageL
-    , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
-    }
+  ppCostModels <&> \costModels ->
+    base
+      { protocolParamCostModels = costModels
+      , protocolParamDecentralization = Just . Ledger.unboundRational $ pp ^. ppDG
+      , protocolParamPrices = Just . fromAlonzoPrices $ pp ^. ppPricesL
+      , protocolParamMaxTxExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxTxExUnitsL
+      , protocolParamMaxBlockExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxBlockExUnitsL
+      , protocolParamMaxValueSize = Just $ pp ^. ppMaxValSizeL
+      , protocolParamCollateralPercent = Just $ pp ^. ppCollateralPercentageL
+      , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
+      }
+ where
+  base = fromShelleyCommonPParams pp
+  ppCostModels :: Either CostModelNotEnoughParametersError (Map AnyPlutusScriptVersion CostModel)
+  ppCostModels = fromAlonzoCostModels $ pp ^. ppCostModelsL
 
 {-# DEPRECATED
   fromExactlyAlonzoPParams
@@ -1720,11 +1796,12 @@ fromAlonzoPParams pp =
 fromExactlyAlonzoPParams
   :: (AlonzoEraPParams ledgerera, Ledger.ExactEra Ledger.AlonzoEra ledgerera)
   => PParams ledgerera
-  -> ProtocolParameters
+  -> Either CostModelNotEnoughParametersError ProtocolParameters
 fromExactlyAlonzoPParams pp =
-  (fromAlonzoPParams pp)
-    { protocolParamUTxOCostPerByte = Just . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
-    }
+  (fromAlonzoPParams pp) <&> \pp' ->
+    pp'
+      { protocolParamUTxOCostPerByte = Just . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
+      }
 
 {-# DEPRECATED
   fromBabbagePParams
@@ -1733,12 +1810,13 @@ fromExactlyAlonzoPParams pp =
 fromBabbagePParams
   :: BabbageEraPParams ledgerera
   => PParams ledgerera
-  -> ProtocolParameters
+  -> Either CostModelNotEnoughParametersError ProtocolParameters
 fromBabbagePParams pp =
-  (fromAlonzoPParams pp)
-    { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
-    , protocolParamDecentralization = Nothing
-    }
+  (fromAlonzoPParams pp) <&> \pp' ->
+    pp'
+      { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
+      , protocolParamDecentralization = Nothing
+      }
 
 {-# DEPRECATED
   fromConwayPParams
@@ -1747,7 +1825,7 @@ fromBabbagePParams pp =
 fromConwayPParams
   :: BabbageEraPParams ledgerera
   => PParams ledgerera
-  -> ProtocolParameters
+  -> Either CostModelNotEnoughParametersError ProtocolParameters
 fromConwayPParams = fromBabbagePParams
 
 {-# DEPRECATED
@@ -1853,6 +1931,12 @@ data ProtocolParametersConversionError
   | PpceMissingParameter !ProtocolParameterName
   deriving (Eq, Show, Data)
 
+-- | @CostModelNotEnoughParametersError lang minimum actual@ is returned when the observed number of
+-- protocol parameters for @lang@ is @actual@ and that number is below the @minimum@ expected number of parameters.
+data CostModelNotEnoughParametersError
+  = CostModelNotEnoughParametersError Plutus.Language Int Int
+  deriving Show
+
 type ProtocolParameterName = String
 
 type ProtocolParameterVersion = Natural
@@ -1867,3 +1951,12 @@ instance Error ProtocolParametersConversionError where
       "Invalid cost model: " <> pretty @Text (display err) <> " Cost model: " <> pshow cm
     PpceMissingParameter name ->
       "Missing parameter: " <> pretty name
+
+instance Error CostModelNotEnoughParametersError where
+  prettyError (CostModelNotEnoughParametersError lang minimum' actual) =
+    "Not enough parameters for language "
+      <> pretty (Plutus.languageToText lang)
+      <> ". Expected at least "
+      <> pretty minimum'
+      <> " parameters but got "
+      <> pretty actual
