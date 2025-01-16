@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Metadata embedded in transactions
 module Cardano.Api.TxMetadata
@@ -461,12 +460,14 @@ metadataFromJson schema =
     return (k', v')
 
   convTopLevelKey :: Aeson.Key -> Either TxMetadataJsonError Word64
-  convTopLevelKey (Aeson.toText -> k) =
+  convTopLevelKey key =
     case parseAll (pUnsigned <* Atto.endOfInput) k of
       Just n
         | n <= fromIntegral (maxBound :: Word64) ->
             Right (fromIntegral n)
       _ -> Left (TxMetadataJsonToplevelBadKey k)
+   where
+    k = Aeson.toText key
 
   validateMetadataValue :: TxMetadataValue -> Either TxMetadataRangeError ()
   validateMetadataValue v =
