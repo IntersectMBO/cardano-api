@@ -1329,6 +1329,44 @@ fromAllegraTimelock = go
   go (Shelley.RequireAnyOf s) = RequireAnyOf (map go (toList s))
   go (Shelley.RequireMOf i s) = RequireMOf i (map go (toList s))
 
+type family ToLedgerPlutusLanguage lang where
+  ToLedgerPlutusLanguage PlutusScriptV1 = Plutus.PlutusV1
+  ToLedgerPlutusLanguage PlutusScriptV2 = Plutus.PlutusV2
+  ToLedgerPlutusLanguage PlutusScriptV3 = Plutus.PlutusV3
+
+data PlutusScriptInEra era lang where
+  PlutusScriptInEra :: PlutusScript lang -> PlutusScriptInEra era lang
+
+deriving instance Eq (PlutusScriptInEra era lang)
+
+deriving instance Show (PlutusScriptInEra era lang)
+
+instance (HasTypeProxy era, HasTypeProxy lang) => HasTypeProxy (PlutusScriptInEra era lang) where
+  data AsType (PlutusScriptInEra era lang) = AsPlutusScriptInEra (AsType lang)
+  proxyToAsType _ = AsPlutusScriptInEra (proxyToAsType (Proxy :: Proxy lang))
+
+instance
+  ( Ledger.Era (ShelleyLedgerEra era)
+  , HasTypeProxy (PlutusScriptInEra era lang)
+  , Plutus.PlutusLanguage (ToLedgerPlutusLanguage lang)
+  )
+  => SerialiseAsCBOR (PlutusScriptInEra era lang)
+  where
+  serialiseToCBOR (PlutusScriptInEra (PlutusScriptSerialised s)) =
+    SBS.fromShort s
+  deserialiseFromCBOR _ bs = do
+    let v = Ledger.eraProtVerLow @(ShelleyLedgerEra era)
+        scriptShortBs = SBS.toShort $ removePlutusScriptDoubleEncoding $ LBS.fromStrict bs
+    let plutusScript :: Plutus.Plutus (ToLedgerPlutusLanguage lang)
+        plutusScript = PlutusScriptBinary scriptShortBs
+        plutusScriptInEra = PlutusScriptInEra $ PlutusScriptSerialised scriptShortBs
+
+    case Plutus.decodePlutusRunnable v plutusScript of
+      Left e ->
+        Left $
+          CBOR.DecoderErrorCustom "PlutusLedgerApi.Common.ScriptDecodeError" (Text.pack . show $ pretty e)
+      Right{} -> Right plutusScriptInEra
+
 -- ----------------------------------------------------------------------------
 -- JSON serialisation
 --
