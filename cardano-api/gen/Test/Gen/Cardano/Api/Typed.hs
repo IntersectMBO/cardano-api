@@ -30,7 +30,6 @@ module Test.Gen.Cardano.Api.Typed
   , genMaybePraosNonce
   , genPraosNonce
   , genValidProtocolParameters
-  , genProtocolParameters
   , genValueNestedRep
   , genValueNestedBundle
   , genByronKeyWitness
@@ -989,39 +988,6 @@ genPraosNonce = makePraosNonce <$> Gen.bytes (Range.linear 0 32)
 
 genMaybePraosNonce :: Gen (Maybe PraosNonce)
 genMaybePraosNonce = Gen.maybe genPraosNonce
-
-genProtocolParameters :: CardanoEra era -> Gen ProtocolParameters
-genProtocolParameters era = do
-  protocolParamProtocolVersion <- (,) <$> genNat <*> genNat
-  protocolParamDecentralization <- Gen.maybe genRational
-  protocolParamExtraPraosEntropy <- genMaybePraosNonce
-  protocolParamMaxBlockHeaderSize <- genNat
-  protocolParamMaxBlockBodySize <- genNat
-  protocolParamMaxTxSize <- genNat
-  protocolParamTxFeeFixed <- genLovelace
-  protocolParamTxFeePerByte <- genLovelace
-  protocolParamMinUTxOValue <- Gen.maybe genLovelace
-  protocolParamStakeAddressDeposit <- genLovelace
-  protocolParamStakePoolDeposit <- genLovelace
-  protocolParamMinPoolCost <- genLovelace
-  protocolParamPoolRetireMaxEpoch <- genEpochInterval
-  protocolParamStakePoolTargetNum <- genWord16
-  protocolParamPoolPledgeInfluence <- genRationalInt64
-  protocolParamMonetaryExpansion <- genRational
-  protocolParamTreasuryCut <- genRational
-  let protocolParamCostModels = mempty
-  -- TODO: Babbage figure out how to deal with
-  -- asymmetric cost model JSON instances
-  protocolParamPrices <- Gen.maybe genExecutionUnitPrices
-  protocolParamMaxTxExUnits <- Gen.maybe genExecutionUnits
-  protocolParamMaxBlockExUnits <- Gen.maybe genExecutionUnits
-  protocolParamMaxValueSize <- Gen.maybe genNat
-  protocolParamCollateralPercent <- Gen.maybe genNat
-  protocolParamMaxCollateralInputs <- Gen.maybe genNat
-  protocolParamUTxOCostPerByte <-
-    inEonForEra @BabbageEraOnwards (pure Nothing) (const (Just <$> genLovelace)) era
-
-  pure ProtocolParameters{..}
 
 -- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
 genValidProtocolParameters :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)

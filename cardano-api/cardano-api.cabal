@@ -371,7 +371,6 @@ test-suite cardano-api-test
     Test.Cardano.Api.Metadata
     Test.Cardano.Api.Ord
     Test.Cardano.Api.Orphans
-    Test.Cardano.Api.ProtocolParameters
     Test.Cardano.Api.RawBytes
     Test.Cardano.Api.Transaction.Autobalance
     Test.Cardano.Api.TxBody
@@ -400,7 +399,6 @@ test-suite cardano-api-golden
     cardano-data >=1.0,
     cardano-ledger-alonzo,
     cardano-ledger-api >=1.9,
-    cardano-ledger-babbage >=1.9,
     cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
     cardano-ledger-shelley,
@@ -429,7 +427,6 @@ test-suite cardano-api-golden
   other-modules:
     Test.Golden.Cardano.Api.Genesis
     Test.Golden.Cardano.Api.Ledger
-    Test.Golden.Cardano.Api.ProtocolParameters
     Test.Golden.Cardano.Api.Script
     Test.Golden.Cardano.Api.Value
     Test.Golden.ErrorsSpec
