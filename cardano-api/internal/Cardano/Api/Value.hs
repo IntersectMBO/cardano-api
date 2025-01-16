@@ -5,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Currency values
 module Cardano.Api.Value
@@ -387,13 +386,15 @@ instance FromJSON ValueNestedRep where
    where
     parsePid :: (Aeson.Key, Aeson.Value) -> Parser ValueNestedBundle
     parsePid ("lovelace", q) = ValueNestedBundleAda <$> parseJSON q
-    parsePid (Aeson.toText -> pid, quantityBundleJson) = do
+    parsePid (key, quantityBundleJson) = do
       sHash <-
         failEitherWith
           (\e -> "Failure when deserialising PolicyId: " ++ displayError e)
           $ deserialiseFromRawBytesHex AsScriptHash
           $ Text.encodeUtf8 pid
       ValueNestedBundle (PolicyId sHash) <$> parseJSON quantityBundleJson
+     where
+      pid = Aeson.toText key
 
 -- ----------------------------------------------------------------------------
 -- Printing and pretty-printing
