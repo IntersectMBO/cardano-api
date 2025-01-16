@@ -7,7 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | An API for driving on-chain poll for SPOs.
 --
@@ -341,12 +340,13 @@ verifyPollAnswer
   :: GovernancePoll
   -> InAnyShelleyBasedEra Tx
   -> Either GovernancePollError [Hash PaymentKey]
-verifyPollAnswer poll (InAnyShelleyBasedEra _era (getTxBody -> TxBody body)) = do
+verifyPollAnswer poll (InAnyShelleyBasedEra _era tx) = do
   answer <- extractPollAnswer (txMetadata body)
   answer `hasMatchingHash` hashGovernancePoll poll
   answer `isAmongAcceptableChoices` govPollAnswers poll
   extraKeyWitnesses (txExtraKeyWits body)
  where
+  body = getTxBodyContent $ getTxBody tx
   extractPollAnswer = \case
     TxMetadataNone ->
       Left ErrGovernancePollNoAnswer
