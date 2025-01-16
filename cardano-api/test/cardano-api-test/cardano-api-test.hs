@@ -20,7 +20,6 @@ import qualified Test.Cardano.Api.KeysByron
 import qualified Test.Cardano.Api.Ledger
 import qualified Test.Cardano.Api.Metadata
 import qualified Test.Cardano.Api.Ord
-import qualified Test.Cardano.Api.ProtocolParameters
 import qualified Test.Cardano.Api.RawBytes
 import qualified Test.Cardano.Api.Transaction.Autobalance
 import qualified Test.Cardano.Api.TxBody
@@ -55,7 +54,6 @@ tests =
     , Test.Cardano.Api.Ledger.tests
     , Test.Cardano.Api.Metadata.tests
     , Test.Cardano.Api.Ord.tests
-    , Test.Cardano.Api.ProtocolParameters.tests
     , Test.Cardano.Api.RawBytes.tests
     , Test.Cardano.Api.Transaction.Autobalance.tests
     , Test.Cardano.Api.TxBody.tests

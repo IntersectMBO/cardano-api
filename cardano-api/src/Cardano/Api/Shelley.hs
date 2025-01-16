@@ -120,9 +120,6 @@ module Cardano.Api.Shelley
   , IntroducedInBabbagePParams (..)
   , IntroducedInConwayPParams (..)
   , createEraBasedProtocolParamUpdate
-  , convertToLedgerProtocolParameters
-  , ProtocolParameters (..)
-  , checkProtocolParameters
   , ProtocolParametersError (..)
 
     -- * Scripts
