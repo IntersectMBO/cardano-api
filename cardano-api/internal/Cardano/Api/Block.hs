@@ -19,6 +19,7 @@ module Cardano.Api.Block
   , pattern Block
   , BlockHeader (..)
   , getBlockHeader
+  , getBlockTxs
 
     -- ** Blocks in the context of a consensus mode
   , BlockInMode (..)
@@ -99,6 +100,7 @@ data Block era where
     -> Block era
 
 -- | A block consists of a header and a body containing transactions.
+{-# DEPRECATED Block "Use getBlockHeader instead " #-}
 pattern Block :: BlockHeader -> [Tx era] -> Block era
 pattern Block header txs <- (getBlockHeaderAndTxs -> (header, txs))
 

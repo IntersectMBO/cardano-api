@@ -540,7 +540,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
       -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
     clientNextN n knownLedgerStates =
       CSP.ClientStNext
-        { CSP.recvMsgRollForward = \blockInMode@(BlockInMode _ (Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
+        { CSP.recvMsgRollForward = \blockInMode@(BlockInMode _ block) serverChainTip -> do
             let newLedgerStateE =
                   applyBlock
                     env
@@ -554,7 +554,8 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
             case newLedgerStateE of
               Left err -> clientIdle_DoneNwithMaybeError n (Just err)
               Right newLedgerState -> do
-                let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
+                let BlockHeader slotNo _ currBlockNo = getBlockHeader block
+                    (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
                     newClientTip = At currBlockNo
                     newServerTip = fromChainTip serverChainTip
 
@@ -729,9 +730,10 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
       )
   goClientStNext (Right history) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) =
     CS.ClientStNext
-      ( \blkInMode@(BlockInMode _ (Block (BlockHeader slotNo _ _) _)) tip ->
+      ( \blkInMode@(BlockInMode _ block) tip ->
           CS.ChainSyncClient $
             let
+              BlockHeader slotNo _ _ = getBlockHeader block
               newLedgerStateE = case Seq.lookup 0 history of
                 Nothing -> error "Impossible! History should always be non-empty"
                 Just (_, Left err, _) -> Left err
@@ -875,8 +877,9 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
       )
   goClientStNext (Right history) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) =
     CSP.ClientStNext
-      ( \blkInMode@(BlockInMode _ (Block (BlockHeader slotNo _ _) _)) tip ->
+      ( \blkInMode@(BlockInMode _ block) tip ->
           let
+            BlockHeader slotNo _ _ = getBlockHeader block
             newLedgerStateE = case Seq.lookup 0 history of
               Nothing -> error "Impossible! History should always be non-empty"
               Just (_, Left err, _) -> Left err
@@ -2173,8 +2176,9 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
       -> CSP.ClientStNext n BlockInMode ChainPoint ChainTip IO ()
     clientNextN n knownLedgerStates =
       CSP.ClientStNext
-        { CSP.recvMsgRollForward = \blockInMode@(BlockInMode era (Block (BlockHeader slotNo _ currBlockNo) _)) serverChainTip -> do
-            let newLedgerStateE =
+        { CSP.recvMsgRollForward = \blockInMode@(BlockInMode era block) serverChainTip -> do
+            let BlockHeader slotNo _ currBlockNo = getBlockHeader block
+                newLedgerStateE =
                   applyBlock
                     env
                     ( maybe
