@@ -101,6 +101,8 @@ import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro ((.~), (^.))
 
+import           Debug.Trace
+
 -- | Type synonym for logs returned by the ledger's @evalTxExUnitsWithLogs@ function.
 -- for scripts in transactions.
 type EvalTxExecutionUnitsLog = [Text]
@@ -1081,7 +1083,7 @@ makeTransactionBodyAutoBalance
             sbe
           $ txbodycontent
             & modTxOuts
-              (<> [TxOut changeaddr changeTxOut TxOutDatumNone ReferenceScriptNone])
+              (<> [TxOut changeaddr (TxOutValueShelleyBased sbe partialChange) TxOutDatumNone ReferenceScriptNone])
       exUnitsMapWithLogs <-
         first TxBodyErrorValidityInterval $
           evaluateTransactionExecutionUnits
@@ -1101,6 +1103,8 @@ makeTransactionBodyAutoBalance
               (txScriptValidityToScriptValidity (txScriptValidity txbodycontent))
               failures
               exUnitsMap'
+
+      traceM $ "\nExecution units: " <> show exUnitsMap' <> "\n"
 
       txbodycontent1 <- substituteExecutionUnits exUnitsMap' txbodycontent
 

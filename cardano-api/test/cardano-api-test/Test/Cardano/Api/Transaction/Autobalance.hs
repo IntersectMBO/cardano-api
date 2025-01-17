@@ -15,7 +15,7 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import           Cardano.Api
-import           Cardano.Api.Address (toShelleyStakeCredential)
+import           Cardano.Api.Address (AddressInEra (..), toShelleyStakeCredential)
 import           Cardano.Api.Fees
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as L
@@ -72,10 +72,10 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
   let policyId' = PolicyId sh
   -- one UTXO with an asset - the same we're minting in the transaction
-  let utxos = mkUtxos beo (Just scriptHash)
+  let utxos = mkUtxos beo (Just scriptHash) address
       txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
       txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
-  let address = mkAddress sbe scriptHash
+      address = mkAddress sbe scriptHash
 
   let txMint =
         TxMintValue
@@ -147,19 +147,26 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce
     LedgerProtocolParameters
       <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
 
-  (ScriptHash scriptHash, _) <- loadPlutusWitness ceo
+  (ScriptHash scriptHash, pmint) <- loadPlutusWitness ceo
+  PlutusScriptWitness sle psv psori _sd rdmr exu <- pure pmint
+  let pstake = PlutusScriptWitness sle psv psori NoScriptDatumForStake rdmr exu
+  let ptxin = PlutusScriptWitness sle psv psori InlineScriptDatum rdmr exu
+      scriptWitTxIn = ScriptWitness ScriptWitnessForSpending ptxin
+      scriptWitStake = ScriptWitness ScriptWitnessForStakeAddr pstake
 
-  let utxos = mkUtxos beo Nothing
-      txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
+  let utxos = mkUtxos beo Nothing address
+      txInputs = map (,BuildTxWith (scriptWitTxIn)) . toList . M.keys . unUTxO $ utxos
       txInputsTotalCoin = mconcat $ getTxOutCoin =<< M.elems (unUTxO utxos)
       address = mkAddress sbe scriptHash
-      deregDeposit = L.Coin 20_000_000
-      txOutCoin = L.Coin 20_800_000
+      deregDeposit = L.Coin 1_000_000
+      txOutCoin = L.Coin 2_000_000
 
   stakeCred <- forAll genStakeCredential
   let certs =
         [ ConwayCertificate ceo $
-            L.ConwayTxCertDeleg (L.ConwayUnRegCert (toShelleyStakeCredential stakeCred) (L.SJust deregDeposit))
+            L.ConwayTxCertDeleg (L.ConwayRegCert (toShelleyStakeCredential stakeCred) (L.SJust deregDeposit))
+        , ConwayCertificate ceo $
+            L.ConwayTxCertDeleg (L.ConwayRegCert (toShelleyStakeCredential stakeCred) (L.SJust deregDeposit))
         ]
 
       content =
@@ -167,10 +174,10 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce
           & setTxIns txInputs
           & setTxOuts (mkTxOutput beo address txOutCoin Nothing)
           & setTxProtocolParams (pure $ pure pparams)
-          & setTxCertificates (TxCertificates sbe certs (BuildTxWith []))
+          & setTxCertificates (TxCertificates sbe certs (BuildTxWith [(stakeCred, scriptWitStake)]))
 
   -- autobalanced body has assets and ADA in the change txout
-  (BalancedTxBody _ _ changeOut fee) <-
+  (BalancedTxBody balancedContent balancedBody changeOut fee) <-
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
@@ -184,6 +191,9 @@ prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce
         content
         address
         Nothing
+
+  H.noteShowPretty_ balancedContent
+  H.noteShowPretty_ balancedBody
 
   changeCoin <- getTxOutCoin changeOut
 
@@ -210,10 +220,10 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
   let policyId' = PolicyId sh
   -- one UTXO with an asset - the same we're minting in the transaction
-  let utxos = mkUtxos beo (Just scriptHash)
+  let utxos = mkUtxos beo (Just scriptHash) address
       txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
       txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
-  let address = mkAddress sbe scriptHash
+      address = mkAddress sbe scriptHash
   let txMint =
         TxMintValue
           meo
@@ -361,8 +371,9 @@ mkUtxos
   :: BabbageEraOnwards era
   -> Maybe (L.ScriptHash L.StandardCrypto)
   -- ^ add an asset to the utxo if the script hash is provided
+  -> AddressInEra era
   -> UTxO era
-mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
+mkUtxos beo mScriptHash address = babbageEraOnwardsConstraints beo $ do
   let sbe = convert beo
   UTxO
     [
@@ -370,16 +381,7 @@ mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
           "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
           (TxIx 0)
       , TxOut
-          ( AddressInEra
-              (ShelleyAddressInEra sbe)
-              ( ShelleyAddress
-                  L.Testnet
-                  ( L.KeyHashObj $
-                      L.KeyHash "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
-                  )
-                  L.StakeRefNull
-              )
-          )
+          (address)
           ( TxOutValueShelleyBased
               sbe
               ( L.MaryValue
