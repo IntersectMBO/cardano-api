@@ -137,6 +137,8 @@ module Cardano.Api.Shelley
   , PlutusScript (..)
   , PlutusScriptOrReferenceInput (..)
   , SimpleScriptOrReferenceInput (..)
+  , toAlonzoLanguage
+  , fromAlonzoLanguage
   , toPlutusData
   , fromPlutusData
   , toAlonzoData
