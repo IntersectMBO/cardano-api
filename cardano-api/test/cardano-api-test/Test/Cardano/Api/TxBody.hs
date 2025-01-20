@@ -35,7 +35,7 @@ prop_roundtrip_txbodycontent_txouts era = H.property $ do
   (body, content :: TxBodyContent BuildTx era) <-
     shelleyBasedEraConstraints era $ H.forAll $ genValidTxBody era
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
-  let (TxBody content') = body
+  let content' = getTxBodyContent body
   matchTxOuts (txOuts content) (txOuts content')
  where
   matchTxOuts :: MonadTest m => [TxOut CtxTx era] -> [TxOut CtxTx era] -> m ()
@@ -84,9 +84,8 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
   let sbe = ShelleyBasedEraConway
   (body, content) <- H.forAll $ genValidTxBody sbe
   -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
-  let (TxBody content') = body
-
-  let proposals = getProposalProcedures . unFeatured <$> txProposalProcedures content
+  let content' = getTxBodyContent body
+      proposals = getProposalProcedures . unFeatured <$> txProposalProcedures content
       proposals' = getProposalProcedures . unFeatured <$> txProposalProcedures content'
       votes = getVotingProcedures . unFeatured <$> txVotingProcedures content
       votes' = getVotingProcedures . unFeatured <$> txVotingProcedures content'

@@ -2147,6 +2147,7 @@ createAndValidateTransactionBody
   -> Either TxBodyError (TxBody era)
 createAndValidateTransactionBody = makeShelleyTransactionBody
 
+{-# DEPRECATED TxBody "Use getTxBodyContent $ getTxBody instead" #-}
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
 pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
 
