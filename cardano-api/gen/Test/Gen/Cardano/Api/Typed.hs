@@ -46,8 +46,12 @@ module Test.Gen.Cardano.Api.Typed
   , genHashableScriptData
   , genReferenceScript
   , genScript
+  , genValidScript
   , genSimpleScript
   , genPlutusScript
+  , genPlutusV1Script
+  , genPlutusV2Script
+  , genPlutusV3Script
   , genScriptInAnyLang
   , genScriptInEra
   , genScriptHash
@@ -159,8 +163,10 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.Int (Int64)
 import           Data.Maybe
+import qualified Data.ByteString.Base16 as Base16
 import           Data.Ratio (Ratio, (%))
 import           Data.String
+import Test.Gen.Cardano.Api.Hardcoded
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
@@ -211,6 +217,14 @@ genPositiveLovelace = L.Coin <$> Gen.integral (Range.linear 1 5000)
 -- SimpleScript generators
 --
 
+-- This generator does not generate the deprecated double encoded plutus scripts
+genValidScript :: ScriptLanguage lang -> Gen (Script lang)
+genValidScript SimpleScriptLanguage =
+  SimpleScript <$> genSimpleScript
+genValidScript (PlutusScriptLanguage lang) =
+  PlutusScript lang <$> genValidPlutusScript lang
+
+-- This generator will also generate the deprecated double encoded plutus scripts
 genScript :: ScriptLanguage lang -> Gen (Script lang)
 genScript SimpleScriptLanguage =
   SimpleScript <$> genSimpleScript
@@ -240,10 +254,72 @@ genSimpleScript =
         return (RequireMOf m ts)
     ]
 
+-- | 'genPlutusScript' will generate the deprecated double encoded
+-- plutus scripts as well as valid plutus scripts.
 genPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
-genPlutusScript _ =
-  -- We make no attempt to create a valid script
-  PlutusScriptSerialised . SBS.toShort <$> Gen.bytes (Range.linear 0 32)
+genPlutusScript l =
+  case l of 
+    PlutusScriptV1 -> do 
+      PlutusScript _ s <- genPlutusV1Script
+      return s
+    PlutusScriptV2 -> do 
+      PlutusScript _ s <- genPlutusV2Script
+      return s
+    PlutusScriptV3 -> do 
+      PlutusScript _ s <- genPlutusV3Script
+      return s
+
+genValidPlutusScript :: PlutusScriptVersion lang -> Gen (PlutusScript lang)
+genValidPlutusScript l =
+  case l of 
+    PlutusScriptV1 -> do 
+      PlutusScript _ s <- genValidPlutusV1Script
+      return s
+    PlutusScriptV2 -> do 
+      PlutusScript _ s <- genValidPlutusV2Script
+      return s
+    PlutusScriptV3 -> do 
+      PlutusScript _ s <- genValidPlutusV3Script
+      return s
+
+genPlutusV1Script :: Gen (Script PlutusScriptV1)
+genPlutusV1Script = do 
+  v1Script <- Gen.element [v1Loop2024PlutusScriptHexDoubleEncoded,v1Loop2024PlutusScriptHex]
+  let v1ScriptBytes = Base16.decodeLenient v1Script
+  return . PlutusScript PlutusScriptV1 . PlutusScriptSerialised $ SBS.toShort v1ScriptBytes
+
+genValidPlutusV1Script :: Gen (Script PlutusScriptV1)
+genValidPlutusV1Script = do 
+  v1Script <- Gen.element [v1Loop2024PlutusScriptHex]
+  let v1ScriptBytes = Base16.decodeLenient v1Script
+  return . PlutusScript PlutusScriptV1 . PlutusScriptSerialised $ SBS.toShort v1ScriptBytes
+
+genPlutusV2Script :: Gen (Script PlutusScriptV2)
+genPlutusV2Script = do
+  v2Script <- Gen.element [v2EcdsaLoopPlutusScriptHexDoubleEncoded, v2EcdsaLoopPlutusScriptHex]
+  let v2ScriptBytes = Base16.decodeLenient v2Script
+  return . PlutusScript PlutusScriptV2 . PlutusScriptSerialised $ SBS.toShort v2ScriptBytes
+
+genValidPlutusV2Script :: Gen (Script PlutusScriptV2)
+genValidPlutusV2Script = do
+  v2Script <- Gen.element [v2EcdsaLoopPlutusScriptHex]
+  let v2ScriptBytes = Base16.decodeLenient v2Script
+  return . PlutusScript PlutusScriptV2 . PlutusScriptSerialised $ SBS.toShort v2ScriptBytes
+
+genPlutusV3Script :: Gen (Script PlutusScriptV3)
+genPlutusV3Script = do
+  v3AlwaysSucceedsPlutusScriptHex 
+   <- Gen.element [v3AlwaysSucceedsPlutusScriptDoubleEncoded, v3AlwaysSucceedsPlutusScript]
+  let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
+  return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
+
+genValidPlutusV3Script :: Gen (Script PlutusScriptV3)
+genValidPlutusV3Script = do
+  v3AlwaysSucceedsPlutusScriptHex 
+   <- Gen.element [v3AlwaysSucceedsPlutusScript]
+  let v3ScriptBytes = Base16.decodeLenient v3AlwaysSucceedsPlutusScriptHex
+  return . PlutusScript PlutusScriptV3 . PlutusScriptSerialised $ SBS.toShort v3ScriptBytes
+
 
 genScriptDataSchema :: Gen ScriptDataJsonSchema
 genScriptDataSchema = Gen.element [ScriptDataJsonNoSchema, ScriptDataJsonDetailedSchema]
@@ -320,7 +396,7 @@ genScriptInAnyLang =
 genScriptInEra :: ShelleyBasedEra era -> Gen (ScriptInEra era)
 genScriptInEra era =
   Gen.choice
-    [ ScriptInEra langInEra <$> genScript lang
+    [ ScriptInEra langInEra <$> genValidScript lang
     | AnyScriptLanguage lang <- [minBound .. maxBound]
     , Just langInEra <- [scriptLanguageSupportedInEra era lang]
     ]
