@@ -391,6 +391,7 @@ module Cardano.Api
   , TxExtraKeyWitnesses (..)
   , TxWithdrawals (..)
   , TxCertificates (..)
+  , mkTxCertificates
   , TxUpdateProposal (..)
   , TxMintValue (..)
   , txMintValueToValue

@@ -245,10 +245,7 @@ estimateBalancedTxBody
     --  1. Subtract certificate and proposal deposits
     -- from the total available Ada value!
     -- Page 24 Shelley ledger spec
-    let certificates =
-          case txCertificates txbodycontent1 of
-            TxCertificatesNone -> []
-            TxCertificates _ certs _ -> map toShelleyCertificate certs
+    let certificates = convCertificates sbe $ txCertificates txbodycontent1
 
         proposalProcedures :: OSet.OSet (L.ProposalProcedure (ShelleyLedgerEra era))
         proposalProcedures =
@@ -478,8 +475,9 @@ estimateTransactionKeyWitnessCount
             length [() | (_, _, BuildTxWith KeyWitness{}) <- withdrawals]
           _ -> 0
         + case txCertificates of
-          TxCertificates _ _ (BuildTxWith witnesses) ->
-            length [() | (_, KeyWitness{}) <- witnesses]
+          TxCertificates _ credWits ->
+            length
+              [() | (_, BuildTxWith (Just (_, KeyWitness{}))) <- toList credWits]
           _ -> 0
         + case txUpdateProposal of
           TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _) ->
@@ -1500,18 +1498,27 @@ substituteExecutionUnits
       :: TxCertificates BuildTx era
       -> Either (TxBodyErrorAutoBalance era) (TxCertificates BuildTx era)
     mapScriptWitnessesCertificates TxCertificatesNone = Right TxCertificatesNone
-    mapScriptWitnessesCertificates txCertificates'@(TxCertificates supported certs _) =
+    mapScriptWitnessesCertificates txCertificates'@(TxCertificates supported _) = do
       let mappedScriptWitnesses
-            :: [(StakeCredential, Either (TxBodyErrorAutoBalance era) (Witness WitCtxStake era))]
+            :: [ ( Certificate era
+                 , Either
+                    (TxBodyErrorAutoBalance era)
+                    ( BuildTxWith
+                        BuildTx
+                        ( Maybe
+                            ( StakeCredential
+                            , Witness WitCtxStake era
+                            )
+                        )
+                    )
+                 )
+               ]
           mappedScriptWitnesses =
-            [ (stakeCred, witness')
-            | (ix, _, stakeCred, witness) <- indexTxCertificates txCertificates'
-            , let witness' = adjustScriptWitness (substituteExecUnits ix) witness
+            [ (cert, BuildTxWith . Just . (stakeCred,) <$> eWitness')
+            | (ix, cert, stakeCred, witness) <- indexTxCertificates txCertificates'
+            , let eWitness' = adjustScriptWitness (substituteExecUnits ix) witness
             ]
-       in TxCertificates supported certs . BuildTxWith
-            <$> traverse
-              (\(sCred, eScriptWitness) -> (sCred,) <$> eScriptWitness)
-              mappedScriptWitnesses
+      TxCertificates supported . fromList <$> traverseScriptWitnesses mappedScriptWitnesses
 
     mapScriptWitnessesVotes
       :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))

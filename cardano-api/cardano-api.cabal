@@ -207,6 +207,7 @@ library internal
     mtl,
     network,
     network-mux,
+    ordered-containers,
     ouroboros-consensus ^>=0.22,
     ouroboros-consensus-cardano ^>=0.21,
     ouroboros-consensus-diffusion ^>=0.19,

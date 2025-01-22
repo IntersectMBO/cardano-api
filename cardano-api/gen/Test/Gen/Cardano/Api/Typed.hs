@@ -621,7 +621,7 @@ genTxCertificates =
         certs <- Gen.list (Range.constant 0 3) $ genCertificate w
         Gen.choice
           [ pure TxCertificatesNone
-          , pure (TxCertificates w certs $ BuildTxWith mempty)
+          , pure (TxCertificates w $ fromList ((,BuildTxWith Nothing) <$> certs))
           -- TODO: Generate certificates
           ]
     )
