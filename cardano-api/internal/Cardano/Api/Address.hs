@@ -211,11 +211,13 @@ instance HasTypeProxy addrtype => HasTypeProxy (Address addrtype) where
   data AsType (Address addrtype) = AsAddress (AsType addrtype)
   proxyToAsType _ = AsAddress (proxyToAsType (Proxy :: Proxy addrtype))
 
+{-# DEPRECATED AsByronAddress "Use AsAddress AsByronAddr instead" #-}
 pattern AsByronAddress :: AsType (Address ByronAddr)
 pattern AsByronAddress = AsAddress AsByronAddr
 
 {-# COMPLETE AsByronAddress #-}
 
+{-# DEPRECATED AsShelleyAddress "Use AsAddress AsShelleyAddr instead" #-}
 pattern AsShelleyAddress :: AsType (Address ShelleyAddr)
 pattern AsShelleyAddress = AsAddress AsShelleyAddr
 

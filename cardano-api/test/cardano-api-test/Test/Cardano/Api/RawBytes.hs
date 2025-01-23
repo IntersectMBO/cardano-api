@@ -23,11 +23,11 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 prop_roundtrip_shelley_address_raw :: Property
 prop_roundtrip_shelley_address_raw =
-  roundtrip_raw_bytes AsShelleyAddress genAddressShelley
+  roundtrip_raw_bytes (AsAddress AsShelleyAddr) genAddressShelley
 
 prop_roundtrip_byron_address_raw :: Property
 prop_roundtrip_byron_address_raw =
-  roundtrip_raw_bytes AsByronAddress genAddressByron
+  roundtrip_raw_bytes (AsAddress AsByronAddr) genAddressByron
 
 prop_roundtrip_stake_address_raw :: Property
 prop_roundtrip_stake_address_raw =

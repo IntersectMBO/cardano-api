@@ -929,6 +929,7 @@ fromAlonzoExUnits Alonzo.ExUnits{Alonzo.exUnitsSteps, Alonzo.exUnitsMem} =
 -- Alonzo mediator pattern
 --
 
+{-# DEPRECATED PlutusScriptBinary "Use Plutus.Plutus (Plutus.PlutusBinary script) instead" #-}
 pattern PlutusScriptBinary :: Plutus.PlutusLanguage l => ShortByteString -> Plutus.Plutus l
 pattern PlutusScriptBinary script = Plutus.Plutus (Plutus.PlutusBinary script)
 

@@ -325,36 +325,43 @@ applyBlock
 applyBlock env oldState validationMode =
   applyBlock' env oldState validationMode . toConsensusBlock
 
+{-# DEPRECATED LedgerStateByron "Use 'LedgerState $ Consensus.LedgerStateByron' instead" #-}
 pattern LedgerStateByron
   :: Ledger.LedgerState Byron.ByronBlock
   -> LedgerState
 pattern LedgerStateByron st <- LedgerState (Consensus.LedgerStateByron st)
 
+{-# DEPRECATED LedgerStateShelley "Use 'LedgerState $ Consensus.LedgerStateShelley' instead" #-}
 pattern LedgerStateShelley
   :: Ledger.LedgerState Shelley.StandardShelleyBlock
   -> LedgerState
 pattern LedgerStateShelley st <- LedgerState (Consensus.LedgerStateShelley st)
 
+{-# DEPRECATED LedgerStateAllegra "Use 'LedgerState $ Consensus.LedgerStateAllegra' instead" #-}
 pattern LedgerStateAllegra
   :: Ledger.LedgerState Shelley.StandardAllegraBlock
   -> LedgerState
 pattern LedgerStateAllegra st <- LedgerState (Consensus.LedgerStateAllegra st)
 
+{-# DEPRECATED LedgerStateMary "Use 'LedgerState $ Consensus.LedgerStateMary' instead" #-}
 pattern LedgerStateMary
   :: Ledger.LedgerState Shelley.StandardMaryBlock
   -> LedgerState
 pattern LedgerStateMary st <- LedgerState (Consensus.LedgerStateMary st)
 
+{-# DEPRECATED LedgerStateAlonzo "Use 'LedgerState $ Consensus.LedgerAlonzo' instead" #-}
 pattern LedgerStateAlonzo
   :: Ledger.LedgerState Shelley.StandardAlonzoBlock
   -> LedgerState
 pattern LedgerStateAlonzo st <- LedgerState (Consensus.LedgerStateAlonzo st)
 
+{-# DEPRECATED LedgerStateBabbage "Use 'LedgerState $ Consensus.LedgerBabbage' instead" #-}
 pattern LedgerStateBabbage
   :: Ledger.LedgerState Shelley.StandardBabbageBlock
   -> LedgerState
 pattern LedgerStateBabbage st <- LedgerState (Consensus.LedgerStateBabbage st)
 
+{-# DEPRECATED LedgerStateConway "Use 'LedgerState $ Consensus.LedgerConway' instead" #-}
 pattern LedgerStateConway
   :: Ledger.LedgerState Shelley.StandardConwayBlock
   -> LedgerState

@@ -11,6 +11,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
+-- TODO Delete me when the patterns of this file are removed (they are the ones using deprecated - other - patterns)
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 -- | Blocks in the blockchain
 module Cardano.Api.Block

@@ -183,16 +183,19 @@ instance HasTypeProxy era => HasTypeProxy (Tx era) where
   data AsType (Tx era) = AsTx (AsType era)
   proxyToAsType _ = AsTx (proxyToAsType (Proxy :: Proxy era))
 
+{-# DEPRECATED AsMaryTx "Use 'AsTx AsMaryEra' instead." #-}
 pattern AsMaryTx :: AsType (Tx MaryEra)
 pattern AsMaryTx = AsTx AsMaryEra
 
 {-# COMPLETE AsMaryTx #-}
 
+{-# DEPRECATED AsAllegraTx "Use 'AsTx AsAllegraEra' instead." #-}
 pattern AsAllegraTx :: AsType (Tx AllegraEra)
 pattern AsAllegraTx = AsTx AsAllegraEra
 
 {-# COMPLETE AsAllegraTx #-}
 
+{-# DEPRECATED AsAlonzoTx "Use 'AsTx AsAlonzoEra' instead." #-}
 pattern AsAlonzoTx :: AsType (Tx AlonzoEra)
 pattern AsAlonzoTx = AsTx AsAlonzoEra
 
@@ -473,16 +476,19 @@ instance HasTypeProxy era => HasTypeProxy (TxBody era) where
   data AsType (TxBody era) = AsTxBody (AsType era)
   proxyToAsType _ = AsTxBody (proxyToAsType (Proxy :: Proxy era))
 
+{-# DEPRECATED AsByronTxBody "Use 'AsTxBody AsByronEra' instead." #-}
 pattern AsByronTxBody :: AsType (TxBody ByronEra)
 pattern AsByronTxBody = AsTxBody AsByronEra
 
 {-# COMPLETE AsByronTxBody #-}
 
+{-# DEPRECATED AsShelleyTxBody "Use 'AsTxBody AsShelleyEra' instead." #-}
 pattern AsShelleyTxBody :: AsType (TxBody ShelleyEra)
 pattern AsShelleyTxBody = AsTxBody AsShelleyEra
 
 {-# COMPLETE AsShelleyTxBody #-}
 
+{-# DEPRECATED AsMaryTxBody "Use 'AsTxBody AsMaryEra' instead." #-}
 pattern AsMaryTxBody :: AsType (TxBody MaryEra)
 pattern AsMaryTxBody = AsTxBody AsMaryEra
 
@@ -658,11 +664,13 @@ instance HasTypeProxy era => HasTypeProxy (KeyWitness era) where
   data AsType (KeyWitness era) = AsKeyWitness (AsType era)
   proxyToAsType _ = AsKeyWitness (proxyToAsType (Proxy :: Proxy era))
 
+{-# DEPRECATED AsByronWitness "Use AsKeyWitness AsByronEra instead" #-}
 pattern AsByronWitness :: AsType (KeyWitness ByronEra)
 pattern AsByronWitness = AsKeyWitness AsByronEra
 
 {-# COMPLETE AsByronWitness #-}
 
+{-# DEPRECATED AsShelleyWitness "Use AsKeyWitness AsShelleyEra instead" #-}
 pattern AsShelleyWitness :: AsType (KeyWitness ShelleyEra)
 pattern AsShelleyWitness = AsKeyWitness AsShelleyEra
 
@@ -741,6 +749,7 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
 getTxBodyAndWitnesses :: Tx era -> (TxBody era, [KeyWitness era])
 getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)
 
+-- | This pattern will be deprecated in the future. We advise against introducing new usage of it.
 pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
   where
