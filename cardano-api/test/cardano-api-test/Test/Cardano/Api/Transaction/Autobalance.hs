@@ -142,7 +142,6 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   let ceo = ConwayEraOnwardsConway
       beo = convert ceo
       sbe = convert beo
-      meo = convert beo
       era = toCardanoEra sbe
   aeo <- H.nothingFail $ forEraMaybeEon @AlonzoEraOnwards era
 
@@ -156,28 +155,30 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
     LedgerProtocolParameters
       <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
 
-  (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
-  let policyId' = PolicyId sh
-  -- one UTXO with an asset - the same we're minting in the transaction
+  (_sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
+
+  PlutusScriptWitness slang psv psori NoScriptDatumForMint rdmr exunits <- pure plutusWitness
+  -- plutus minting script rewritten for spending
+  let pw2 = PlutusScriptWitness slang psv psori InlineScriptDatum rdmr exunits
+
   let utxos = mkUtxos beo scriptHash
-      txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
-      txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
+      txInputs =
+        map (,BuildTxWith (ScriptWitness ScriptWitnessForSpending pw2)) . toList . M.keys . unUTxO $ utxos
   let address = mkAddress sbe scriptHash
-  let txMint =
-        TxMintValue
-          meo
-          [(policyId', [("eeee", 1, BuildTxWith plutusWitness)])]
+  -- txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
 
   let content =
         defaultTxBodyContent sbe
           & setTxIns txInputs
-          & setTxInsCollateral txInputsCollateral
+          -- & setTxInsCollateral txInputsCollateral
+          -- & setTxInsReference (TxInsReference beo (map fst txInputs))
           & setTxOuts (mkTxOutput beo address Nothing)
-          & setTxMintValue txMint
-          & setTxProtocolParams (pure $ pure pparams)
+
+  txb <- H.leftFail $ createTransactionBody sbe content
+  H.annotateShow txb
 
   -- autobalanced body has assets and ADA in the change txout
-  (BalancedTxBody balancedContent _ _ fee) <-
+  (BalancedTxBody _balancedContent _ _ _fee) <-
     H.leftFail $
       makeTransactionBodyAutoBalance
         sbe
@@ -192,11 +193,12 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
         address
         Nothing
 
-  335_475 === fee
-  TxReturnCollateral _ (TxOut _ txOutValue _ _) <- H.noteShow $ txReturnCollateral balancedContent
-  let assets = [a | a@(AssetId _ _, _) <- toList $ txOutValueToValue txOutValue]
-  H.note_ "Check that all assets from UTXO, from the collateral txin, are in the return collateral."
-  [(AssetId policyId' "eeee", 1)] === assets
+  -- 335_475 === fee
+  -- TxReturnCollateral _ (TxOut _ txOutValue _ _) <- H.noteShow $ txReturnCollateral balancedContent
+  -- let assets = [a | a@(AssetId _ _, _) <- toList $ txOutValueToValue txOutValue]
+  -- H.note_ "Check that all assets from UTXO, from the collateral txin, are in the return collateral."
+  -- [(AssetId policyId' "eeee", 1)] === assets
+  H.failure
 
 -- | Implements collateral validation from Babbage spec, from
 -- https://github.com/IntersectMBO/cardano-ledger/releases, babbage-ledger.pdf, Figure 2.
@@ -319,9 +321,10 @@ mkUtxos beo scriptHash = babbageEraOnwardsConstraints beo $ do
               (ShelleyAddressInEra sbe)
               ( ShelleyAddress
                   L.Testnet
-                  ( L.KeyHashObj $
-                      L.KeyHash "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
-                  )
+                  (L.ScriptHashObj scriptHash)
+                  -- ( L.KeyHashObj $
+                  --     L.KeyHash "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
+                  -- )
                   L.StakeRefNull
               )
           )
