@@ -1,26 +1,46 @@
--- | This module provides an error to conveniently render plutus related failures.
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
+
+-- | This module provides utilities to render the result of plutus execution.
 module Cardano.Api.Plutus
   ( DebugPlutusFailure (..)
   , renderDebugPlutusFailure
+  , collectScriptHashes
   )
 where
 
-import           Cardano.Api.Pretty
+import           Cardano.Api.Eon.AlonzoEraOnwards (AlonzoEraOnwards (..),
+                   alonzoEraOnwardsConstraints)
+import           Cardano.Api.Eon.Convert (convert)
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
+import           Cardano.Api.Pretty (Pretty (pretty), docToText)
+import           Cardano.Api.Query (UTxO, toLedgerUTxO)
+import qualified Cardano.Api.ReexposeLedger as L
+import           Cardano.Api.Script (ScriptHash, fromShelleyScriptHash)
+import qualified Cardano.Api.Script as Api
+import           Cardano.Api.Tx.Body (ScriptWitnessIndex (..), TxBody, toScriptIndex)
+import           Cardano.Api.Tx.Sign (Tx (..), makeSignedTransaction)
 
-import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Alonzo.Scripts as L
+import qualified Cardano.Ledger.Alonzo.UTxO as Alonzo
 import           Cardano.Ledger.Binary.Encoding (serialize')
 import           Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import qualified Cardano.Ledger.Plutus.Evaluate as Plutus
 import qualified Cardano.Ledger.Plutus.ExUnits as Plutus
 import qualified Cardano.Ledger.Plutus.Language as Plutus
+import qualified Cardano.Ledger.UTxO as L
 import qualified PlutusLedgerApi.V1 as Plutus
 
+import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Base64 as B64
-import           Data.ByteString.Short as BSS
+import qualified Data.ByteString.Short as BSS
+import           Data.Map (Map)
+import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Prettyprinter
+import           Lens.Micro ((^.))
+import           Prettyprinter (indent, line)
 
 -- | A structured representation of Plutus script validation failures,
 -- providing detailed information about the failed execution for debugging purposes.
@@ -80,3 +100,36 @@ lookupPlutusErrorCode code =
         Just err -> Text.pack err
         Nothing -> "Unknown error code: " <> code
 -}
+
+-- | Collect all script hashes that are needed to validate the given transaction
+-- and return them in a map with their corresponding 'ScriptWitnessIndex' as key.
+collectScriptHashes
+  :: AlonzoEraOnwards era
+  -> TxBody era
+  -> UTxO era
+  -> Map ScriptWitnessIndex ScriptHash
+collectScriptHashes aeo tb utxo =
+  alonzoEraOnwardsConstraints aeo $
+    let ShelleyTx _ ledgerTx' = makeSignedTransaction [] tb
+        ledgerUTxO = toLedgerUTxO (convert aeo) utxo
+     in getPurpouses aeo $ L.getScriptsNeeded ledgerUTxO (ledgerTx' ^. L.bodyTxL)
+ where
+  getPurpouses
+    :: L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+    => AlonzoEraOnwards era
+    -> Alonzo.AlonzoScriptsNeeded (ShelleyLedgerEra era)
+    -> Map ScriptWitnessIndex Api.ScriptHash
+  getPurpouses aeo' (Alonzo.AlonzoScriptsNeeded purpouses) =
+    alonzoEraOnwardsConstraints aeo $
+      Map.fromList $
+        Prelude.map
+          (bimap (toScriptIndex aeo' . purpouseAsIxItemToAsIx aeo') fromShelleyScriptHash)
+          purpouses
+
+  purpouseAsIxItemToAsIx
+    :: AlonzoEraOnwards era
+    -> L.PlutusPurpose L.AsIxItem (ShelleyLedgerEra era)
+    -> L.PlutusPurpose L.AsIx (ShelleyLedgerEra era)
+  purpouseAsIxItemToAsIx onwards purpose =
+    alonzoEraOnwardsConstraints onwards $
+      L.hoistPlutusPurpose L.toAsIx purpose
