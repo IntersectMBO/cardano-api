@@ -112,24 +112,24 @@ collectScriptHashes aeo tb utxo =
   alonzoEraOnwardsConstraints aeo $
     let ShelleyTx _ ledgerTx' = makeSignedTransaction [] tb
         ledgerUTxO = toLedgerUTxO (convert aeo) utxo
-     in getPurpouses aeo $ L.getScriptsNeeded ledgerUTxO (ledgerTx' ^. L.bodyTxL)
+     in getPurposes aeo $ L.getScriptsNeeded ledgerUTxO (ledgerTx' ^. L.bodyTxL)
  where
-  getPurpouses
+  getPurposes
     :: L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
     => AlonzoEraOnwards era
     -> Alonzo.AlonzoScriptsNeeded (ShelleyLedgerEra era)
     -> Map ScriptWitnessIndex Api.ScriptHash
-  getPurpouses aeo' (Alonzo.AlonzoScriptsNeeded purpouses) =
+  getPurposes aeo' (Alonzo.AlonzoScriptsNeeded purposes) =
     alonzoEraOnwardsConstraints aeo $
       Map.fromList $
         Prelude.map
-          (bimap (toScriptIndex aeo' . purpouseAsIxItemToAsIx aeo') fromShelleyScriptHash)
-          purpouses
+          (bimap (toScriptIndex aeo' . purposeAsIxItemToAsIx aeo') fromShelleyScriptHash)
+          purposes
 
-  purpouseAsIxItemToAsIx
+  purposeAsIxItemToAsIx
     :: AlonzoEraOnwards era
     -> L.PlutusPurpose L.AsIxItem (ShelleyLedgerEra era)
     -> L.PlutusPurpose L.AsIx (ShelleyLedgerEra era)
-  purpouseAsIxItemToAsIx onwards purpose =
+  purposeAsIxItemToAsIx onwards purpose =
     alonzoEraOnwardsConstraints onwards $
       L.hoistPlutusPurpose L.toAsIx purpose
