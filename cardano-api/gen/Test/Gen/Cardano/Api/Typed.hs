@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -178,6 +179,7 @@ import           Hedgehog (Gen, MonadGen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
+
 
 genAddressByron :: Gen (Address ByronAddr)
 genAddressByron =
@@ -626,27 +628,129 @@ genTxCertificates =
           ]
     )
 
--- TODO: Add remaining certificates
--- TODO: This should be parameterised on ShelleyBasedEra
-genCertificate :: ShelleyBasedEra era -> Gen (Certificate era)
+genCertificate :: forall era. ShelleyBasedEra era -> Gen (Certificate era)
 genCertificate sbe =
   Gen.choice
-    [ makeStakeAddressRegistrationCertificate <$> genStakeAddressRequirements sbe
-    , makeStakeAddressUnregistrationCertificate <$> genStakeAddressRequirements sbe
+    $ catMaybes
+    [ Just $ makeStakeAddressDelegationCertificate <$> genStakeDelegationRequirements sbe
+    , Just $ makeStakeAddressRegistrationCertificate <$> genStakeAddressRequirements sbe
+    , Just $ makeStakeAddressUnregistrationCertificate <$> genStakeAddressRequirements sbe
+    , Just $ makeStakePoolRegistrationCertificate <$> genStakePoolRegistrationRequirements sbe
+    , Just $ makeStakePoolRetirementCertificate <$> genStakePoolRetirementRequirements sbe
+    , fmap makeCommitteeColdkeyResignationCertificate <$> forEonMaybe genCommitteeColdkeyResignationRequirements
+    , fmap makeCommitteeHotKeyAuthorizationCertificate <$> forEonMaybe genCommitteeHotKeyAuthorizationRequirements
+    , forEonMaybe $ \w ->
+        makeDrepRegistrationCertificate
+          <$> genDRepRegistrationRequirements w
+          <*> conwayEraOnwardsConstraints w (Gen.maybe Q.arbitrary)
+    , fmap makeDrepUnregistrationCertificate <$> forEonMaybe genDRepUnregistrationRequirements
+    , forEonMaybe $ \w ->
+        makeDrepUpdateCertificate
+          <$> genDRepUpdateRequirements w
+          <*> conwayEraOnwardsConstraints w (Gen.maybe Q.arbitrary)
+    , forEonMaybe $ \w ->
+      conwayEraOnwardsConstraints w $
+        makeStakeAddressAndDRepDelegationCertificate w
+          <$> genStakeCredential
+          <*> Q.arbitrary
+          <*> genLovelace
+    , fmap makeMIRCertificate <$> forEonMaybe genMirCertificateRequirements
+    , fmap makeGenesisKeyDelegationCertificate <$> forEonMaybe genGenesisKeyDelegationRequirements
     ]
+  where
+    forEonMaybe :: forall eon a. Eon eon => (eon era -> a) -> Maybe a
+    forEonMaybe f = inEonForShelleyBasedEraMaybe f sbe
+
+genStakeDelegationRequirements :: ShelleyBasedEra era -> Gen (StakeDelegationRequirements era)
+genStakeDelegationRequirements =
+  caseShelleyToBabbageOrConwayEraOnwards
+    ( \w ->
+      StakeDelegationRequirementsPreConway w
+          <$> genStakeCredential
+          <*> genVerificationKeyHash AsStakePoolKey
+    )
+    ( \w ->
+      StakeDelegationRequirementsConwayOnwards w
+          <$> genStakeCredential
+          <*> Q.arbitrary
+    )
 
 genStakeAddressRequirements :: ShelleyBasedEra era -> Gen (StakeAddressRequirements era)
 genStakeAddressRequirements =
   caseShelleyToBabbageOrConwayEraOnwards
     ( \w ->
-        StakeAddrRegistrationPreConway w
+      StakeAddrRegistrationPreConway w
           <$> genStakeCredential
     )
     ( \w ->
-        StakeAddrRegistrationConway w
+      StakeAddrRegistrationConway w
           <$> genLovelace
           <*> genStakeCredential
     )
+
+genStakePoolRegistrationRequirements :: ShelleyBasedEra era -> Gen (StakePoolRegistrationRequirements era)
+genStakePoolRegistrationRequirements =
+  caseShelleyToBabbageOrConwayEraOnwards
+    ( \w ->
+      StakePoolRegistrationRequirementsPreConway w
+          <$> Q.arbitrary
+    )
+    ( \w ->
+      StakePoolRegistrationRequirementsConwayOnwards w
+          <$> Q.arbitrary
+    )
+
+genStakePoolRetirementRequirements :: ShelleyBasedEra era -> Gen (StakePoolRetirementRequirements era)
+genStakePoolRetirementRequirements =
+  caseShelleyToBabbageOrConwayEraOnwards
+    ( \w ->
+      StakePoolRetirementRequirementsPreConway w
+          <$> genVerificationKeyHash AsStakePoolKey
+          <*> Q.arbitrary
+    )
+    ( \w ->
+      StakePoolRetirementRequirementsConwayOnwards w
+          <$> genVerificationKeyHash AsStakePoolKey
+          <*> Q.arbitrary
+    )
+
+genCommitteeColdkeyResignationRequirements :: ConwayEraOnwards era -> Gen (CommitteeColdkeyResignationRequirements era)
+genCommitteeColdkeyResignationRequirements w =
+  conwayEraOnwardsConstraints w $
+    CommitteeColdkeyResignationRequirements w <$> Q.arbitrary <*> Gen.maybe Q.arbitrary
+
+genCommitteeHotKeyAuthorizationRequirements :: ConwayEraOnwards era -> Gen (CommitteeHotKeyAuthorizationRequirements era)
+genCommitteeHotKeyAuthorizationRequirements w =
+  conwayEraOnwardsConstraints w $
+    CommitteeHotKeyAuthorizationRequirements w <$> Q.arbitrary <*> Q.arbitrary
+
+genDRepRegistrationRequirements :: ConwayEraOnwards era -> Gen (DRepRegistrationRequirements era)
+genDRepRegistrationRequirements w =
+  conwayEraOnwardsConstraints w $
+    DRepRegistrationRequirements w <$> Q.arbitrary <*> genLovelace
+
+genDRepUnregistrationRequirements :: ConwayEraOnwards era -> Gen (DRepUnregistrationRequirements era)
+genDRepUnregistrationRequirements w =
+  conwayEraOnwardsConstraints w $
+    DRepUnregistrationRequirements w <$> Q.arbitrary  <*> genLovelace
+
+genDRepUpdateRequirements :: ConwayEraOnwards era -> Gen (DRepUpdateRequirements era)
+genDRepUpdateRequirements w =
+  conwayEraOnwardsConstraints w $
+    DRepUpdateRequirements w <$> Q.arbitrary
+
+genGenesisKeyDelegationRequirements :: ShelleyToBabbageEra era -> Gen (GenesisKeyDelegationRequirements era)
+genGenesisKeyDelegationRequirements w =
+  shelleyToBabbageEraConstraints w $
+    GenesisKeyDelegationRequirements w
+     <$> genVerificationKeyHash AsGenesisKey
+     <*> genVerificationKeyHash AsGenesisDelegateKey
+     <*> genVerificationKeyHash AsVrfKey
+
+genMirCertificateRequirements :: ShelleyToBabbageEra era -> Gen (MirCertificateRequirements era)
+genMirCertificateRequirements w =
+  shelleyToBabbageEraConstraints w $
+    MirCertificateRequirements w <$> Q.arbitrary <*> Q.arbitrary
 
 genTxUpdateProposal :: CardanoEra era -> Gen (TxUpdateProposal era)
 genTxUpdateProposal sbe =
