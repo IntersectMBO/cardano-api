@@ -35,6 +35,7 @@ module Cardano.Api.Query.Expr
   , querySPOStakeDistribution
   , queryDRepState
   , queryGovState
+  , queryRatifyState
   , queryStakeVoteDelegatees
   , queryProposals
   )
@@ -400,6 +401,20 @@ queryGovState
 queryGovState era = do
   let sbe = convert era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryGovState
+
+queryRatifyState
+  :: ()
+  => ConwayEraOnwards era
+  -> LocalStateQueryExpr
+      block
+      point
+      QueryInMode
+      r
+      IO
+      (Either UnsupportedNtcVersionError (Either EraMismatch (L.RatifyState (ShelleyLedgerEra era))))
+queryRatifyState era = do
+  let sbe = convert era
+  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryRatifyState
 
 queryDRepState
   :: ConwayEraOnwards era
