@@ -1,5 +1,28 @@
 # Changelog for cardano-api
 
+## 10.7.0.0
+
+- Deprecate patterns, to lower entry bar knowledge to this codebase
+  (breaking, refactoring)
+  [PR 733](https://github.com/IntersectMBO/cardano-api/pull/733)
+
+- Introduce new type `PlutusScriptInEra` and fix the double cbor encoding plutus script bug
+  Resolves: https://github.com/IntersectMBO/cardano-api/issues/685
+  (bugfix)
+  [PR 720](https://github.com/IntersectMBO/cardano-api/pull/720)
+
+- Shelley: export {to,from}AlonzoLanguage (Plutus script language conversions)
+  (compatible)
+  [PR 731](https://github.com/IntersectMBO/cardano-api/pull/731)
+
+- Expose GovActionState from Ledger
+  (feature, compatible)
+  [PR 730](https://github.com/IntersectMBO/cardano-api/pull/730)
+
+- Deprecate some patterns, remove deprecated ones. See the deprecation stanzas for migration guidance.
+  (compatible, refactoring)
+  [PR 728](https://github.com/IntersectMBO/cardano-api/pull/728)
+
 ## 10.6.0.0
 
 - Downgrade plutus version to 1.37
