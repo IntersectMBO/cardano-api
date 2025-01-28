@@ -270,6 +270,7 @@ module Cardano.Api
   , pattern Block
   , BlockHeader (..)
   , getBlockHeader
+  , getBlockTxs
 
     -- ** Points on the chain
   , ChainPoint (..)
