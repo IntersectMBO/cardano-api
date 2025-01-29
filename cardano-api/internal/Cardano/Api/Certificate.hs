@@ -142,6 +142,8 @@ data Certificate era where
 
 deriving instance Eq (Certificate era)
 
+deriving instance Ord (Certificate era)
+
 deriving instance Show (Certificate era)
 
 instance Typeable era => HasTypeProxy (Certificate era) where

@@ -50,6 +50,8 @@ deriving instance Show (ShelleyToBabbageEra era)
 
 deriving instance Eq (ShelleyToBabbageEra era)
 
+deriving instance Ord (ShelleyToBabbageEra era)
+
 instance Eon ShelleyToBabbageEra where
   inEonForEra no yes = \case
     ByronEra -> no

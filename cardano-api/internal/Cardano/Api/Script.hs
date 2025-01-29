@@ -587,6 +587,8 @@ data ScriptLanguageInEra lang era where
 
 deriving instance Eq (ScriptLanguageInEra lang era)
 
+deriving instance Ord (ScriptLanguageInEra lang era)
+
 deriving instance Show (ScriptLanguageInEra lang era)
 
 instance ToJSON (ScriptLanguageInEra lang era) where
@@ -764,7 +766,7 @@ data ScriptWitness witctx era where
 
 deriving instance Show (ScriptWitness witctx era)
 
--- The GADT in the SimpleScriptWitness constructor requires a custom instance
+-- The existential in the SimpleScriptWitness constructor requires a custom instance
 instance Eq (ScriptWitness witctx era) where
   (==)
     (SimpleScriptWitness langInEra script)

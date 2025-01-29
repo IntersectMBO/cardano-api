@@ -159,7 +159,8 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
     conwayEraOnwardsConstraints conwayOnwards $
       (L.bodyTxL . L.votingProceduresTxBodyL) .~ votingProcedures
 
-  indexedTxCerts :: [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
+  indexedTxCerts
+    :: [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
   indexedTxCerts = indexTxCertificates txCertificates'
 
   allWitnesses

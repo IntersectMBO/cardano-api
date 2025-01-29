@@ -55,6 +55,8 @@ deriving instance Show (ConwayEraOnwards era)
 
 deriving instance Eq (ConwayEraOnwards era)
 
+deriving instance Ord (ConwayEraOnwards era)
+
 instance Eon ConwayEraOnwards where
   inEonForEra no yes = \case
     ByronEra -> no

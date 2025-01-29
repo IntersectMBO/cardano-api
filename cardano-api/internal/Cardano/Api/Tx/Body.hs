@@ -11,6 +11,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -135,6 +136,7 @@ module Cardano.Api.Tx.Body
   , TxWithdrawals (..)
   , indexTxWithdrawals
   , TxCertificates (..)
+  , mkTxCertificates
   , indexTxCertificates
   , TxUpdateProposal (..)
   , TxMintValue (..)
@@ -302,6 +304,7 @@ import           Data.Functor (($>))
 import           Data.List (sortBy)
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
+import           Data.Map.Ordered.Strict (OMap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
@@ -1280,38 +1283,61 @@ indexTxWithdrawals (TxWithdrawals _ withdrawals) =
 --
 
 data TxCertificates build era where
+  -- | No certificates
   TxCertificatesNone
     :: TxCertificates build era
+  -- | Represents certificates present in transaction. Prefer using 'mkTxCertificates' to constructing
+  -- this type with a constructor
   TxCertificates
     :: ShelleyBasedEra era
-    -> [Certificate era]
-    -> BuildTxWith build [(StakeCredential, Witness WitCtxStake era)]
-    -- ^ There can be more than one script witness per stake credential
+    -> OMap
+        (Certificate era)
+        ( BuildTxWith
+            build
+            (Maybe (StakeCredential, Witness WitCtxStake era))
+        )
     -> TxCertificates build era
 
 deriving instance Eq (TxCertificates build era)
 
 deriving instance Show (TxCertificates build era)
 
--- | Index certificates with witnesses by the order they appear in the list (in the transaction). If there are multiple witnesses for the same stake credential, they will be present multiple times with the same index.
--- are multiple witnesses for the credential, there will be multiple entries for
+-- | Create 'TxCertificates'. Note that 'Certificate era' will be deduplicated. Only Certificates with a
+-- stake credential will be in the result.
+--
+-- Note that, when building a transaction in Conway era, a witness is not required for staking credential
+-- registration, but this is only the case during the transitional period of Conway era and only for staking
+-- credential registration certificates without a deposit. Future eras will require a witness for
+-- registration certificates, because the one without a deposit will be removed.
+mkTxCertificates
+  :: Applicative (BuildTxWith build)
+  => ShelleyBasedEra era
+  -> [(Certificate era, Maybe (ScriptWitness WitCtxStake era))]
+  -> TxCertificates build era
+mkTxCertificates _ [] = TxCertificatesNone
+mkTxCertificates sbe certs = TxCertificates sbe . fromList $ map getStakeCred certs
+ where
+  getStakeCred (cert, mWit) = do
+    let wit =
+          maybe
+            (KeyWitness KeyWitnessForStakeAddr)
+            (ScriptWitness ScriptWitnessForStakeAddr)
+            mWit
+    ( cert
+      , pure $
+          (,wit) <$> selectStakeCredentialWitness cert
+      )
+
+-- | Index certificates with witnesses by the order they appear in the list (in the transaction).
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 indexTxCertificates
   :: TxCertificates BuildTx era
   -> [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
 indexTxCertificates TxCertificatesNone = []
-indexTxCertificates (TxCertificates _ certs (BuildTxWith witnesses)) =
-  [ (ScriptWitnessIndexCertificate ix, cert, stakeCred, wit)
-  | (ix, cert) <- zip [0 ..] certs
-  , stakeCred <- maybeToList (selectStakeCredentialWitness cert)
-  , wit <- findAll stakeCred witnesses
+indexTxCertificates (TxCertificates _ certsWits) =
+  [ (ScriptWitnessIndexCertificate ix, cert, stakeCred, witness)
+  | (ix, (cert, BuildTxWith (Just (stakeCred, witness)))) <- zip [0 ..] $ toList certsWits
   ]
- where
-  findAll needle = map snd . filter ((==) needle . fst)
-
--- ----------------------------------------------------------------------------
--- Transaction update proposal (era-dependent)
---
 
 data TxUpdateProposal era where
   TxUpdateProposalNone :: TxUpdateProposal era
@@ -2538,7 +2564,8 @@ fromLedgerTxCertificates sbe body =
     let certificates = body ^. L.certsTxBodyL
      in if null certificates
           then TxCertificatesNone
-          else TxCertificates sbe (map (fromShelleyCertificate sbe) $ toList certificates) ViewTx
+          else
+            TxCertificates sbe . fromList $ map ((,ViewTx) . fromShelleyCertificate sbe) $ toList certificates
 
 maybeFromLedgerTxUpdateProposal
   :: ()
@@ -2646,7 +2673,7 @@ convCertificates
   -> Seq.StrictSeq (Shelley.TxCert (ShelleyLedgerEra era))
 convCertificates _ = \case
   TxCertificatesNone -> Seq.empty
-  TxCertificates _ cs _ -> fromList (map toShelleyCertificate cs)
+  TxCertificates _ cs -> fromList . map (toShelleyCertificate . fst) $ toList cs
 
 convWithdrawals :: TxWithdrawals build era -> L.Withdrawals StandardCrypto
 convWithdrawals txWithdrawals =
