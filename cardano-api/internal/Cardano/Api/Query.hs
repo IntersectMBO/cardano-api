@@ -280,6 +280,8 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (L.Constitution (ShelleyLedgerEra era))
   QueryGovState
     :: QueryInShelleyBasedEra era (L.GovState (ShelleyLedgerEra era))
+  QueryRatifyState
+    :: QueryInShelleyBasedEra era (L.RatifyState (ShelleyLedgerEra era))
   QueryDRepState
     :: Set (Shelley.Credential Shelley.DRepRole StandardCrypto)
     -> QueryInShelleyBasedEra
@@ -337,6 +339,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
   nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
   nodeToClientVersionOf QueryProposals{} = NodeToClientV_17
+  nodeToClientVersionOf QueryRatifyState{} = NodeToClientV_17
   nodeToClientVersionOf QueryLedgerPeerSnapshot = NodeToClientV_19
 
 deriving instance Show (QueryInShelleyBasedEra era result)
@@ -673,6 +676,11 @@ toConsensusQueryShelleyBased sbe = \case
     Some (consensusQueryInEraInMode era Consensus.GetAccountState)
   QueryGovState ->
     Some (consensusQueryInEraInMode era Consensus.GetGovState)
+  QueryRatifyState ->
+    caseShelleyToBabbageOrConwayEraOnwards
+      (const $ error "toConsensusQueryShelleyBased: QueryRatifyState is only available in the Conway era")
+      (const $ Some (consensusQueryInEraInMode era Consensus.GetRatifyState))
+      sbe
   QueryDRepState creds ->
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
@@ -984,6 +992,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryGovState{} ->
       case q' of
         Consensus.GetGovState{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryRatifyState{} ->
+      case q' of
+        Consensus.GetRatifyState{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryDRepState{} ->
