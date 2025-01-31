@@ -5,7 +5,7 @@
 module Cardano.Api.Plutus
   ( DebugPlutusFailure (..)
   , renderDebugPlutusFailure
-  , collectScriptHashes
+  , collectPlutusScriptHashes
   )
 where
 
@@ -101,14 +101,14 @@ lookupPlutusErrorCode code =
         Nothing -> "Unknown error code: " <> code
 -}
 
--- | Collect all script hashes that are needed to validate the given transaction
+-- | Collect all plutus script hashes that are needed to validate the given transaction
 -- and return them in a map with their corresponding 'ScriptWitnessIndex' as key.
-collectScriptHashes
+collectPlutusScriptHashes
   :: AlonzoEraOnwards era
   -> TxBody era
   -> UTxO era
   -> Map ScriptWitnessIndex ScriptHash
-collectScriptHashes aeo tb utxo =
+collectPlutusScriptHashes aeo tb utxo =
   alonzoEraOnwardsConstraints aeo $
     let ShelleyTx _ ledgerTx' = makeSignedTransaction [] tb
         ledgerUTxO = toLedgerUTxO (convert aeo) utxo
