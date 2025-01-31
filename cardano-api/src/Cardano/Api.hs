@@ -611,7 +611,7 @@ module Cardano.Api
   , examplePlutusScriptAlwaysFails
 
     -- ** Script data
-  , collectScriptHashes
+  , collectPlutusScriptHashes
   , HashableScriptData
   , hashScriptDataBytes
   , getOriginalScriptDataBytes
@@ -1123,7 +1123,7 @@ import           Cardano.Api.Monad.Error
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.Orphans ()
-import           Cardano.Api.Plutus (collectScriptHashes)
+import           Cardano.Api.Plutus (collectPlutusScriptHashes)
 import           Cardano.Api.Pretty
 import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
