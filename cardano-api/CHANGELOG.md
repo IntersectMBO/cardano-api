@@ -1,5 +1,23 @@
 # Changelog for cardano-api
 
+## 10.8.0.0
+
+- Add QueryFuturePParams
+  (feature, compatible)
+  [PR 739](https://github.com/IntersectMBO/cardano-api/pull/739)
+
+- Re-export `getBlockTxs`
+  (compatible, bugfix)
+  [PR 738](https://github.com/IntersectMBO/cardano-api/pull/738)
+
+- Change a representation of witnesses in transaction's certificates to an ordered map where a certificate is the key.
+  (breaking, bugfix)
+  [PR 734](https://github.com/IntersectMBO/cardano-api/pull/734)
+
+- Add support for the ratify-state query
+  (feature, compatible)
+  [PR 737](https://github.com/IntersectMBO/cardano-api/pull/737)
+
 ## 10.7.0.0
 
 - Deprecate patterns, to lower entry bar knowledge to this codebase
