@@ -236,8 +236,8 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (Ledger.PParams (ShelleyLedgerEra era))
   QueryProtocolParametersUpdate
     :: QueryInShelleyBasedEra
-        era
-        (Map (Hash GenesisKey) ProtocolParametersUpdate)
+         era
+         (Map (Hash GenesisKey) ProtocolParametersUpdate)
   QueryStakeDistribution
     :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
   QueryUTxO
@@ -282,11 +282,13 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (L.GovState (ShelleyLedgerEra era))
   QueryRatifyState
     :: QueryInShelleyBasedEra era (L.RatifyState (ShelleyLedgerEra era))
+  QueryFuturePParams
+    :: QueryInShelleyBasedEra era (Maybe (Core.PParams (ShelleyLedgerEra era)))
   QueryDRepState
     :: Set (Shelley.Credential Shelley.DRepRole StandardCrypto)
     -> QueryInShelleyBasedEra
-        era
-        (Map (Shelley.Credential Shelley.DRepRole StandardCrypto) (L.DRepState StandardCrypto))
+         era
+         (Map (Shelley.Credential Shelley.DRepRole StandardCrypto) (L.DRepState StandardCrypto))
   QueryDRepStakeDistr
     :: Set (Ledger.DRep StandardCrypto)
     -> QueryInShelleyBasedEra era (Map (Ledger.DRep StandardCrypto) L.Coin)
@@ -340,6 +342,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
   nodeToClientVersionOf QueryProposals{} = NodeToClientV_17
   nodeToClientVersionOf QueryRatifyState{} = NodeToClientV_17
+  nodeToClientVersionOf QueryFuturePParams{} = NodeToClientV_18
   nodeToClientVersionOf QueryLedgerPeerSnapshot = NodeToClientV_19
 
 deriving instance Show (QueryInShelleyBasedEra era result)
@@ -538,8 +541,8 @@ fromShelleyPoolDistr =
 
 fromShelleyDelegations
   :: Map
-      (Shelley.Credential Shelley.Staking StandardCrypto)
-      (Shelley.KeyHash Shelley.StakePool StandardCrypto)
+       (Shelley.Credential Shelley.Staking StandardCrypto)
+       (Shelley.KeyHash Shelley.StakePool StandardCrypto)
   -> Map StakeCredential PoolId
 fromShelleyDelegations =
   -- TODO: write an appropriate property to show it is safe to use
@@ -680,6 +683,13 @@ toConsensusQueryShelleyBased sbe = \case
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ error "toConsensusQueryShelleyBased: QueryRatifyState is only available in the Conway era")
       (const $ Some (consensusQueryInEraInMode era Consensus.GetRatifyState))
+      sbe
+  QueryFuturePParams ->
+    caseShelleyToBabbageOrConwayEraOnwards
+      ( const $
+          error "toConsensusQueryShelleyBased: QueryFuturePParams is only available in the Conway era onwards"
+      )
+      (const $ Some (consensusQueryInEraInMode era Consensus.GetFuturePParams))
       sbe
   QueryDRepState creds ->
     caseShelleyToBabbageOrConwayEraOnwards
@@ -997,6 +1007,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryRatifyState{} ->
       case q' of
         Consensus.GetRatifyState{} ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryFuturePParams{} ->
+      case q' of
+        Consensus.GetFuturePParams{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
     QueryDRepState{} ->

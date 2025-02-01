@@ -1032,6 +1032,7 @@ module Cardano.Api
   , queryConstitution
   , queryGovState
   , queryRatifyState
+  , queryFuturePParams
   , queryDRepState
   , queryDRepStakeDistribution
   , querySPOStakeDistribution
