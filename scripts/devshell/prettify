@@ -2,7 +2,7 @@
 
 # Function to display help message
 show_help() {
-    echo "Usage: format <OPTION|FILES>"
+    echo "Usage: $(basename $0) <OPTION|FILES>"
     echo "Format Haskell source files using fourmolu and stylish-haskell."
     echo ""
     echo "Options:"
