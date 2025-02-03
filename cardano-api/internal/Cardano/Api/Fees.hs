@@ -673,8 +673,8 @@ evaluateTransactionExecutionUnits
   -> UTxO era
   -> TxBody era
   -> Either
-      (TransactionValidityError era)
-      (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
+       (TransactionValidityError era)
+       (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
 evaluateTransactionExecutionUnits era systemstart epochInfo pp utxo txbody =
   case makeSignedTransaction' era [] txbody of
     ShelleyTx sbe tx' -> evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo pp utxo tx'
@@ -689,8 +689,8 @@ evaluateTransactionExecutionUnitsShelley
   -> UTxO era
   -> L.Tx (ShelleyLedgerEra era)
   -> Either
-      (TransactionValidityError era)
-      (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
+       (TransactionValidityError era)
+       (Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits)))
 evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtocolParameters pp) utxo tx =
   caseShelleyToMaryOrAlonzoEraOnwards
     (const (Right Map.empty))
@@ -707,8 +707,8 @@ evaluateTransactionExecutionUnitsShelley sbe systemstart epochInfo (LedgerProtoc
     :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
     => AlonzoEraOnwards era
     -> Map
-        (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
-        (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) (EvalTxExecutionUnitsLog, Alonzo.ExUnits))
+         (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
+         (Either (L.TransactionScriptFailure (ShelleyLedgerEra era)) (EvalTxExecutionUnitsLog, Alonzo.ExUnits))
     -> Map ScriptWitnessIndex (Either ScriptExecutionError (EvalTxExecutionUnitsLog, ExecutionUnits))
   fromLedgerScriptExUnitsMap aOnwards exmap =
     fromList
@@ -1502,15 +1502,15 @@ substituteExecutionUnits
       let mappedScriptWitnesses
             :: [ ( Certificate era
                  , Either
-                    (TxBodyErrorAutoBalance era)
-                    ( BuildTxWith
-                        BuildTx
-                        ( Maybe
-                            ( StakeCredential
-                            , Witness WitCtxStake era
-                            )
-                        )
-                    )
+                     (TxBodyErrorAutoBalance era)
+                     ( BuildTxWith
+                         BuildTx
+                         ( Maybe
+                             ( StakeCredential
+                             , Witness WitCtxStake era
+                             )
+                         )
+                     )
                  )
                ]
           mappedScriptWitnesses =
@@ -1523,8 +1523,8 @@ substituteExecutionUnits
     mapScriptWitnessesVotes
       :: Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era))
       -> Either
-          (TxBodyErrorAutoBalance era)
-          (Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era)))
+           (TxBodyErrorAutoBalance era)
+           (Maybe (Featured ConwayEraOnwards era (TxVotingProcedures build era)))
     mapScriptWitnessesVotes Nothing = return Nothing
     mapScriptWitnessesVotes (Just (Featured _ TxVotingProceduresNone)) = return Nothing
     mapScriptWitnessesVotes (Just (Featured _ (TxVotingProcedures _ ViewTx))) = return Nothing
@@ -1544,8 +1544,8 @@ substituteExecutionUnits
     mapScriptWitnessesProposals
       :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
       -> Either
-          (TxBodyErrorAutoBalance era)
-          (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
+           (TxBodyErrorAutoBalance era)
+           (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
     mapScriptWitnessesProposals Nothing = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = return Nothing
     mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures _ ViewTx))) = return Nothing

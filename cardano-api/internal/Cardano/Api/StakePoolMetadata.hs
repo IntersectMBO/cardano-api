@@ -161,8 +161,8 @@ instance Error StakePoolMetadataValidationError where
 validateAndHashStakePoolMetadata
   :: ByteString
   -> Either
-      StakePoolMetadataValidationError
-      (StakePoolMetadata, Hash StakePoolMetadata)
+       StakePoolMetadataValidationError
+       (StakePoolMetadata, Hash StakePoolMetadata)
 validateAndHashStakePoolMetadata bs
   | BS.length bs <= 512 = do
       md <-

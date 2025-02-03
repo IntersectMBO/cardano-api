@@ -108,18 +108,18 @@ instance Error OperationalCertIssueError where
 issueOperationalCertificate
   :: VerificationKey KesKey
   -> Either
-      (SigningKey StakePoolKey)
-      (SigningKey GenesisDelegateExtendedKey)
+       (SigningKey StakePoolKey)
+       (SigningKey GenesisDelegateExtendedKey)
   -- TODO: this may be better with a type that
   -- captured the three (four?) choices, stake pool
   -- or genesis delegate, extended or normal.
   -> Shelley.KESPeriod
   -> OperationalCertificateIssueCounter
   -> Either
-      OperationalCertIssueError
-      ( OperationalCertificate
-      , OperationalCertificateIssueCounter
-      )
+       OperationalCertIssueError
+       ( OperationalCertificate
+       , OperationalCertificateIssueCounter
+       )
 issueOperationalCertificate
   (KesVerificationKey kesVKey)
   skey
@@ -154,8 +154,8 @@ issueOperationalCertificate
 
     signature
       :: Shelley.SignedDSIGN
-          StandardCrypto
-          (Shelley.OCertSignable StandardCrypto)
+           StandardCrypto
+           (Shelley.OCertSignable StandardCrypto)
     signature =
       makeShelleySignature
         (Shelley.OCertSignable kesVKey counter kesPeriod)
