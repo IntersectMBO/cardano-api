@@ -15,6 +15,7 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import           Cardano.Api
+import           Cardano.Api.Address (toShelleyStakeCredential)
 import           Cardano.Api.Fees
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as L
@@ -59,13 +60,9 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
       beo = convert ceo
       meo = convert beo
       sbe = convert ceo
-      era = toCardanoEra sbe
-  aeo <- H.nothingFail $ forEraMaybeEon @AlonzoEraOnwards era
+      aeo = convert beo
 
-  systemStart <-
-    fmap SystemStart . H.evalIO $
-      DT.parseTimeM True DT.defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" "2021-09-01T00:00:00Z"
-
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -75,7 +72,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
   let policyId' = PolicyId sh
   -- one UTXO with an asset - the same we're minting in the transaction
-  let utxos = mkUtxos beo scriptHash
+  let utxos = mkUtxos beo (Just scriptHash)
       txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
       txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
   let address = mkAddress sbe scriptHash
@@ -90,12 +87,12 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         defaultTxBodyContent sbe
           & setTxIns txInputs
           & setTxInsCollateral txInputsCollateral
-          & setTxOuts (mkTxOutput beo address Nothing) -- include minted asset in txout manually
+          & setTxOuts (mkTxOutput beo address (L.Coin 2_000_000) Nothing) -- include minted asset in txout manually
           & setTxMintValue txMint
           & setTxProtocolParams (pure $ pure pparams)
 
   -- tx body content with manually added asset to TxOut
-  let contentWithTxoutAsset = content & setTxOuts (mkTxOutput beo address (Just scriptHash))
+  let contentWithTxoutAsset = content & setTxOuts (mkTxOutput beo address (L.Coin 2_000_000) (Just scriptHash))
 
   -- change txout only with ADA
   (BalancedTxBody balancedContentWithTxoutAsset _ _ feeWithTxoutAsset) <-
@@ -113,7 +110,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         address
         Nothing
   -- the correct amount with manual balancing of assets
-  335_475 === feeWithTxoutAsset
+  335_299 === feeWithTxoutAsset
 
   -- autobalanced body has assets and ADA in the change txout
   (BalancedTxBody balancedContent _ _ fee) <-
@@ -137,19 +134,76 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   H.diff balancedContentWithTxoutAsset (\_ _ -> feeWithTxoutAsset == fee) balancedContent
   feeWithTxoutAsset === fee
 
+prop_make_transaction_body_autobalance_when_deregistering_certs :: Property
+prop_make_transaction_body_autobalance_when_deregistering_certs = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      beo = convert ceo
+      sbe = convert beo
+
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  pparams <-
+    LedgerProtocolParameters
+      <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  (ScriptHash scriptHash, _) <- loadPlutusWitness ceo
+
+  let utxos = mkUtxos beo Nothing
+      txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
+      txInputsTotalCoin = mconcat $ getTxOutCoin =<< M.elems (unUTxO utxos)
+      address = mkAddress sbe scriptHash
+      deregDeposit = L.Coin 20_000_000
+      txOutCoin = L.Coin 20_800_000
+
+  stakeCred <- forAll genStakeCredential
+  let certs =
+        [
+          ( ConwayCertificate ceo $
+              L.ConwayTxCertDeleg (L.ConwayUnRegCert (toShelleyStakeCredential stakeCred) (L.SJust deregDeposit))
+          , Nothing
+          )
+        ]
+
+      content =
+        defaultTxBodyContent sbe
+          & setTxIns txInputs
+          & setTxOuts (mkTxOutput beo address txOutCoin Nothing)
+          & setTxProtocolParams (pure $ pure pparams)
+          & setTxCertificates (mkTxCertificates sbe certs)
+
+  -- autobalanced body has assets and ADA in the change txout
+  (BalancedTxBody _ _ changeOut fee) <-
+    H.leftFail $
+      makeTransactionBodyAutoBalance
+        sbe
+        systemStart
+        epochInfo
+        pparams
+        mempty
+        [(stakeCred, deregDeposit)]
+        mempty
+        utxos
+        content
+        address
+        Nothing
+
+  changeCoin <- getTxOutCoin changeOut
+
+  H.note_ "Sanity check: inputs == outputs"
+  mconcat [deregDeposit, txInputsTotalCoin] === mconcat [txOutCoin, fee, changeCoin]
+
+  180_901 === fee
+
 prop_make_transaction_body_autobalance_multi_asset_collateral :: Property
 prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $ do
   let ceo = ConwayEraOnwardsConway
       beo = convert ceo
       sbe = convert beo
       meo = convert beo
-      era = toCardanoEra sbe
-  aeo <- H.nothingFail $ forEraMaybeEon @AlonzoEraOnwards era
+      aeo = convert beo
 
-  systemStart <-
-    fmap SystemStart . H.evalIO $
-      DT.parseTimeM True DT.defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" "2021-09-01T00:00:00Z"
-
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
   let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
 
   pparams <-
@@ -159,7 +213,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   (sh@(ScriptHash scriptHash), plutusWitness) <- loadPlutusWitness ceo
   let policyId' = PolicyId sh
   -- one UTXO with an asset - the same we're minting in the transaction
-  let utxos = mkUtxos beo scriptHash
+  let utxos = mkUtxos beo (Just scriptHash)
       txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
       txInputsCollateral = TxInsCollateral aeo $ toList . M.keys . unUTxO $ utxos
   let address = mkAddress sbe scriptHash
@@ -172,7 +226,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
         defaultTxBodyContent sbe
           & setTxIns txInputs
           & setTxInsCollateral txInputsCollateral
-          & setTxOuts (mkTxOutput beo address Nothing)
+          & setTxOuts (mkTxOutput beo address (L.Coin 2_000_000) Nothing)
           & setTxMintValue txMint
           & setTxProtocolParams (pure $ pure pparams)
 
@@ -192,7 +246,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
         address
         Nothing
 
-  335_475 === fee
+  335_299 === fee
   TxReturnCollateral _ (TxOut _ txOutValue _ _) <- H.noteShow $ txReturnCollateral balancedContent
   let assets = [a | a@(AssetId _ _, _) <- toList $ txOutValueToValue txOutValue]
   H.note_ "Check that all assets from UTXO, from the collateral txin, are in the return collateral."
@@ -306,8 +360,12 @@ textEnvTypes =
       (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV3))
   ]
 
-mkUtxos :: BabbageEraOnwards era -> L.ScriptHash L.StandardCrypto -> UTxO era
-mkUtxos beo scriptHash = babbageEraOnwardsConstraints beo $ do
+mkUtxos
+  :: BabbageEraOnwards era
+  -> Maybe (L.ScriptHash L.StandardCrypto)
+  -- ^ add an asset to the utxo if the script hash is provided
+  -> UTxO era
+mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
   let sbe = convert beo
   UTxO
     [
@@ -329,7 +387,10 @@ mkUtxos beo scriptHash = babbageEraOnwardsConstraints beo $ do
               sbe
               ( L.MaryValue
                   (L.Coin 4_000_000)
-                  (L.MultiAsset [(L.PolicyID scriptHash, [(L.AssetName "eeee", 1)])])
+                  ( L.MultiAsset $
+                      fromList
+                        [(L.PolicyID scriptHash, [(L.AssetName "eeee", 1)]) | scriptHash <- maybeToList mScriptHash]
+                  )
               )
           )
           TxOutDatumNone
@@ -352,17 +413,19 @@ mkAddress sbe scriptHash =
 mkTxOutput
   :: BabbageEraOnwards era
   -> AddressInEra era
+  -> L.Coin
+  -- ^ output ADA
   -> Maybe (L.ScriptHash L.StandardCrypto)
   -- ^ there will be an asset in the txout if provided
   -> [TxOut CtxTx era]
-mkTxOutput beo address mScriptHash = babbageEraOnwardsConstraints beo $ do
+mkTxOutput beo address coin mScriptHash = babbageEraOnwardsConstraints beo $ do
   let sbe = convert beo
   [ TxOut
       address
       ( TxOutValueShelleyBased
           sbe
           ( L.MaryValue
-              (L.Coin 2_000_000)
+              coin
               ( L.MultiAsset $
                   fromList
                     [(L.PolicyID scriptHash, [(L.AssetName "eeee", 2)]) | scriptHash <- maybeToList mScriptHash]
@@ -372,6 +435,21 @@ mkTxOutput beo address mScriptHash = babbageEraOnwardsConstraints beo $ do
       TxOutDatumNone
       ReferenceScriptNone
     ]
+
+parseSystemStart :: (HasCallStack, MonadTest m, MonadIO m) => String -> m SystemStart
+parseSystemStart timeString =
+  withFrozenCallStack $
+    fmap SystemStart . H.evalIO $
+      DT.parseTimeM True DT.defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" timeString
+
+getTxOutCoin
+  :: forall era ctx m
+   . (HasCallStack, MonadFail m, IsMaryBasedEra era)
+  => TxOut ctx era
+  -> m L.Coin
+getTxOutCoin txout = withFrozenCallStack $ maryEraOnwardsConstraints (maryBasedEra @era) $ do
+  TxOut _ (TxOutValueShelleyBased _ (L.MaryValue changeCoin _)) _ _ <- pure txout
+  pure changeCoin
 
 tests :: TestTree
 tests =
@@ -383,5 +461,8 @@ tests =
     , testProperty
         "makeTransactionBodyAutoBalance autobalances multi-asset collateral"
         prop_make_transaction_body_autobalance_multi_asset_collateral
+    , testProperty
+        "makeTransactionBodyAutoBalance autobalances when deregistering certificates"
+        prop_make_transaction_body_autobalance_when_deregistering_certs
     , testProperty "calcReturnAndTotalCollateral constraints hold" prop_calcReturnAndTotalCollateral
     ]
