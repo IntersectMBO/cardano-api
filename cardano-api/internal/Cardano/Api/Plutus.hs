@@ -18,8 +18,8 @@ import           Cardano.Api.Query (UTxO, toLedgerUTxO)
 import qualified Cardano.Api.ReexposeLedger as L
 import           Cardano.Api.Script (ScriptHash, fromShelleyScriptHash)
 import qualified Cardano.Api.Script as Api
-import           Cardano.Api.Tx.Body (ScriptWitnessIndex (..), TxBody, toScriptIndex)
-import           Cardano.Api.Tx.Sign (Tx (..), makeSignedTransaction)
+import           Cardano.Api.Tx.Body (ScriptWitnessIndex (..), toScriptIndex)
+import           Cardano.Api.Tx.Sign (Tx (..))
 
 import qualified Cardano.Ledger.Alonzo.Scripts as L
 import qualified Cardano.Ledger.Alonzo.UTxO as Alonzo
@@ -105,12 +105,12 @@ lookupPlutusErrorCode code =
 -- and return them in a map with their corresponding 'ScriptWitnessIndex' as key.
 collectPlutusScriptHashes
   :: AlonzoEraOnwards era
-  -> TxBody era
+  -> Tx era
   -> UTxO era
   -> Map ScriptWitnessIndex ScriptHash
-collectPlutusScriptHashes aeo tb utxo =
+collectPlutusScriptHashes aeo tx utxo =
   alonzoEraOnwardsConstraints aeo $
-    let ShelleyTx _ ledgerTx' = makeSignedTransaction [] tb
+    let ShelleyTx _ ledgerTx' = tx
         ledgerUTxO = toLedgerUTxO (convert aeo) utxo
      in getPurposes aeo $ L.getScriptsNeeded ledgerUTxO (ledgerTx' ^. L.bodyTxL)
  where
