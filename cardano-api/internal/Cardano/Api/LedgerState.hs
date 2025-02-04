@@ -513,11 +513,11 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = hand
     -> Env
     -> LedgerState
     -> CSP.ChainSyncClientPipelined
-        BlockInMode
-        ChainPoint
-        ChainTip
-        IO
-        ()
+         BlockInMode
+         ChainPoint
+         ChainTip
+         IO
+         ()
   -- \^ Client returns maybe an error.
   chainSyncClient pipelineSize stateIORef errorIORef env ledgerState0 =
     CSP.ChainSyncClientPipelined $
@@ -666,11 +666,11 @@ chainSyncClientWithLedgerState
   -- ^ Initial ledger state
   -> ValidationMode
   -> CS.ChainSyncClient
-      (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-      ChainPoint
-      ChainTip
-      m
-      a
+       (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+       ChainPoint
+       ChainTip
+       m
+       a
   -- ^ A client to wrap. The block is annotated with a 'Either LedgerStateError
   -- LedgerState'. This is either an error from validating a block or
   -- the current 'LedgerState' from applying the current block. If we
@@ -678,11 +678,11 @@ chainSyncClientWithLedgerState
   -- after a block fails to validate we may still roll back to a validated
   -- block, in which case the valid 'LedgerState' will be passed here again.
   -> CS.ChainSyncClient
-      BlockInMode
-      ChainPoint
-      ChainTip
-      m
-      a
+       BlockInMode
+       ChainPoint
+       ChainTip
+       m
+       a
   -- ^ A client that acts just like the wrapped client but doesn't require the
   -- 'LedgerState' annotation on the block type.
 chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClient clientTop) =
@@ -691,17 +691,17 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
   goClientStIdle
     :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
     -> CS.ClientStIdle
-        (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-        ChainPoint
-        ChainTip
-        m
-        a
+         (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+         ChainPoint
+         ChainTip
+         m
+         a
     -> CS.ClientStIdle
-        BlockInMode
-        ChainPoint
-        ChainTip
-        m
-        a
+         BlockInMode
+         ChainPoint
+         ChainTip
+         m
+         a
   goClientStIdle history client = case client of
     CS.SendMsgRequestNext a b -> CS.SendMsgRequestNext a (goClientStNext history b)
     CS.SendMsgFindIntersect ps a -> CS.SendMsgFindIntersect ps (goClientStIntersect history a)
@@ -712,17 +712,17 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
   goClientStNext
     :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
     -> CS.ClientStNext
-        (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-        ChainPoint
-        ChainTip
-        m
-        a
+         (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+         ChainPoint
+         ChainTip
+         m
+         a
     -> CS.ClientStNext
-        BlockInMode
-        ChainPoint
-        ChainTip
-        m
-        a
+         BlockInMode
+         ChainPoint
+         ChainTip
+         m
+         a
   goClientStNext (Left err) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) =
     CS.ClientStNext
       ( \blkInMode tip ->
@@ -762,9 +762,9 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
               _ Seq.:|> (s, _, _) -> s
               Seq.Empty -> error "Impossible! History should always be non-empty"
             history' = ( \h ->
-                          if Seq.null h
-                            then Left (InvalidRollback oldestSlot point)
-                            else Right h
+                           if Seq.null h
+                             then Left (InvalidRollback oldestSlot point)
+                             else Right h
                        )
               $ case point of
                 ChainPointAtGenesis -> initialLedgerStateHistory
@@ -777,17 +777,17 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
   goClientStIntersect
     :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
     -> CS.ClientStIntersect
-        (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-        ChainPoint
-        ChainTip
-        m
-        a
+         (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+         ChainPoint
+         ChainTip
+         m
+         a
     -> CS.ClientStIntersect
-        BlockInMode
-        ChainPoint
-        ChainTip
-        m
-        a
+         BlockInMode
+         ChainPoint
+         ChainTip
+         m
+         a
   goClientStIntersect history (CS.ClientStIntersect recvMsgIntersectFound recvMsgIntersectNotFound) =
     CS.ClientStIntersect
       ( \point tip ->
@@ -809,17 +809,17 @@ chainSyncClientPipelinedWithLedgerState
   -> LedgerState
   -> ValidationMode
   -> CSP.ChainSyncClientPipelined
-      (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-      ChainPoint
-      ChainTip
-      m
-      a
+       (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+       ChainPoint
+       ChainTip
+       m
+       a
   -> CSP.ChainSyncClientPipelined
-      BlockInMode
-      ChainPoint
-      ChainTip
-      m
-      a
+       BlockInMode
+       ChainPoint
+       ChainTip
+       m
+       a
 chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.ChainSyncClientPipelined clientTop) =
   CSP.ChainSyncClientPipelined
     (goClientPipelinedStIdle (Right initialLedgerStateHistory) Zero <$> clientTop)
@@ -828,19 +828,19 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
     :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
     -> Nat n
     -> CSP.ClientPipelinedStIdle
-        n
-        (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-        ChainPoint
-        ChainTip
-        m
-        a
+         n
+         (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+         ChainPoint
+         ChainTip
+         m
+         a
     -> CSP.ClientPipelinedStIdle
-        n
-        BlockInMode
-        ChainPoint
-        ChainTip
-        m
-        a
+         n
+         BlockInMode
+         ChainPoint
+         ChainTip
+         m
+         a
   goClientPipelinedStIdle history n client = case client of
     CSP.SendMsgRequestNext a b -> CSP.SendMsgRequestNext a (goClientStNext history n b)
     CSP.SendMsgRequestNextPipelined m a -> CSP.SendMsgRequestNextPipelined m (goClientPipelinedStIdle history (Succ n) a)
@@ -858,19 +858,19 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
     :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
     -> Nat n
     -> CSP.ClientStNext
-        n
-        (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-        ChainPoint
-        ChainTip
-        m
-        a
+         n
+         (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+         ChainPoint
+         ChainTip
+         m
+         a
     -> CSP.ClientStNext
-        n
-        BlockInMode
-        ChainPoint
-        ChainTip
-        m
-        a
+         n
+         BlockInMode
+         ChainPoint
+         ChainTip
+         m
+         a
   goClientStNext (Left err) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) =
     CSP.ClientStNext
       ( \blkInMode tip ->
@@ -909,9 +909,9 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
               _ Seq.:|> (s, _, _) -> s
               Seq.Empty -> error "Impossible! History should always be non-empty"
             history' = ( \h ->
-                          if Seq.null h
-                            then Left (InvalidRollback oldestSlot point)
-                            else Right h
+                           if Seq.null h
+                             then Left (InvalidRollback oldestSlot point)
+                             else Right h
                        )
               $ case point of
                 ChainPointAtGenesis -> initialLedgerStateHistory
@@ -924,17 +924,17 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
     :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
     -> Nat n
     -> CSP.ClientPipelinedStIntersect
-        (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
-        ChainPoint
-        ChainTip
-        m
-        a
+         (BlockInMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+         ChainPoint
+         ChainTip
+         m
+         a
     -> CSP.ClientPipelinedStIntersect
-        BlockInMode
-        ChainPoint
-        ChainTip
-        m
-        a
+         BlockInMode
+         ChainPoint
+         ChainTip
+         m
+         a
   goClientPipelinedStIntersect history _ (CSP.ClientPipelinedStIntersect recvMsgIntersectFound recvMsgIntersectNotFound) =
     CSP.ClientPipelinedStIntersect
       (\point tip -> goClientPipelinedStIdle history Zero <$> recvMsgIntersectFound point tip)
@@ -1252,8 +1252,8 @@ type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
 toLedgerStateEvents
   :: Ledger.LedgerResult
-      (Consensus.CardanoLedgerState Consensus.StandardCrypto)
-      (Consensus.CardanoLedgerState Consensus.StandardCrypto)
+       (Consensus.CardanoLedgerState Consensus.StandardCrypto)
+       (Consensus.CardanoLedgerState Consensus.StandardCrypto)
   -> LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
  where
@@ -1288,7 +1288,7 @@ type NodeConfigFile = File NodeConfig
 mkProtocolInfoCardano
   :: GenesisConfig
   -> ( Consensus.ProtocolInfo
-        (Consensus.CardanoBlock Consensus.StandardCrypto)
+         (Consensus.CardanoBlock Consensus.StandardCrypto)
      , IO [BlockForging IO (Consensus.CardanoBlock Consensus.StandardCrypto)]
      )
 mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesisHash transCfg) =
@@ -1862,8 +1862,8 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
         snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
-              (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
-              (SL.IndividualPoolStake Consensus.StandardCrypto)
+               (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
+               (SL.IndividualPoolStake Consensus.StandardCrypto)
         markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
     let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
@@ -1899,8 +1899,8 @@ isLeadingSlotsTPraos
   => Set SlotNo
   -> PoolId
   -> Map
-      (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
-      (SL.IndividualPoolStake Consensus.StandardCrypto)
+       (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
+       (SL.IndividualPoolStake Consensus.StandardCrypto)
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF v
   -> Ledger.ActiveSlotCoeff
@@ -1924,8 +1924,8 @@ isLeadingSlotsPraos
   => Set SlotNo
   -> PoolId
   -> Map
-      (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
-      (SL.IndividualPoolStake Consensus.StandardCrypto)
+       (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
+       (SL.IndividualPoolStake Consensus.StandardCrypto)
   -> Consensus.Nonce
   -> SL.SignKeyVRF Consensus.StandardCrypto
   -> Ledger.ActiveSlotCoeff
@@ -2149,11 +2149,11 @@ foldEpochState nodeConfigFilePath socketPath validationMode terminationEpoch ini
     -> Env
     -> LedgerState
     -> CSP.ChainSyncClientPipelined
-        BlockInMode
-        ChainPoint
-        ChainTip
-        IO
-        ()
+         BlockInMode
+         ChainPoint
+         ChainTip
+         IO
+         ()
   -- \^ Client returns maybe an error.
   chainSyncClient pipelineSize stateMv errorIORef' env ledgerState0 =
     CSP.ChainSyncClientPipelined $

@@ -237,16 +237,16 @@ mkVersionedProtocols
   -> ProtocolClientInfoArgs block
   -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
   -> Net.Versions
-      Net.NodeToClientVersion
-      Net.NodeToClientVersionData
-      ( Net.OuroborosApplicationWithMinimalCtx
-          Net.InitiatorMode
-          Net.LocalAddress
-          LBS.ByteString
-          IO
-          ()
-          Void
-      )
+       Net.NodeToClientVersion
+       Net.NodeToClientVersionData
+       ( Net.OuroborosApplicationWithMinimalCtx
+           Net.InitiatorMode
+           Net.LocalAddress
+           LBS.ByteString
+           IO
+           ()
+           Void
+       )
 mkVersionedProtocols networkid ptcl unversionedClients =
   -- TODO: really we should construct specific combinations of
   -- protocols for the versions we know about, with different protocol
@@ -357,10 +357,10 @@ data LocalNodeClientParams where
   LocalNodeClientParamsSingleBlock
     :: ( ProtocolClient block
        , Consensus.LedgerSupportsProtocol
-          ( Consensus.ShelleyBlock
-              (Consensus.TPraos Consensus.StandardCrypto)
-              (Consensus.ShelleyEra Consensus.StandardCrypto)
-          )
+           ( Consensus.ShelleyBlock
+               (Consensus.TPraos Consensus.StandardCrypto)
+               (Consensus.ShelleyEra Consensus.StandardCrypto)
+           )
        )
     => ProtocolClientInfoArgs block
     -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
@@ -375,36 +375,36 @@ data LocalNodeClientProtocolsForBlock block
   = LocalNodeClientProtocolsForBlock
   { localChainSyncClientForBlock
       :: LocalChainSyncClient
-          block
-          (Consensus.Point block)
-          (Net.Tip block)
-          IO
+           block
+           (Consensus.Point block)
+           (Net.Tip block)
+           IO
   , localStateQueryClientForBlock
       :: Maybe
-          ( LocalStateQueryClient
-              block
-              (Consensus.Point block)
-              (Consensus.Query block)
-              IO
-              ()
-          )
+           ( LocalStateQueryClient
+               block
+               (Consensus.Point block)
+               (Consensus.Query block)
+               IO
+               ()
+           )
   , localTxSubmissionClientForBlock
       :: Maybe
-          ( LocalTxSubmissionClient
-              (Consensus.GenTx block)
-              (Consensus.ApplyTxErr block)
-              IO
-              ()
-          )
+           ( LocalTxSubmissionClient
+               (Consensus.GenTx block)
+               (Consensus.ApplyTxErr block)
+               IO
+               ()
+           )
   , localTxMonitoringClientForBlock
       :: Maybe
-          ( LocalTxMonitorClient
-              (Consensus.TxId (Consensus.GenTx block))
-              (Consensus.GenTx block)
-              SlotNo
-              IO
-              ()
-          )
+           ( LocalTxMonitorClient
+               (Consensus.TxId (Consensus.GenTx block))
+               (Consensus.GenTx block)
+               SlotNo
+               IO
+               ()
+           )
   }
 
 -- | Convert from the mode-parametrised style to the block-parametrised style.

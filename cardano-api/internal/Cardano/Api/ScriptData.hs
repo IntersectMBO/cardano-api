@@ -434,8 +434,8 @@ scriptDataToJsonNoSchema = conv . getScriptData
 scriptDataFromJsonNoSchema
   :: Aeson.Value
   -> Either
-      ScriptDataJsonSchemaError
-      HashableScriptData
+       ScriptDataJsonSchemaError
+       HashableScriptData
 scriptDataFromJsonNoSchema = fmap (\sd -> HashableScriptData (serialiseToCBOR sd) sd) . conv
  where
   conv
@@ -541,8 +541,8 @@ scriptDataToJsonDetailedSchema = conv . getScriptData
 scriptDataFromJsonDetailedSchema
   :: Aeson.Value
   -> Either
-      ScriptDataJsonSchemaError
-      HashableScriptData
+       ScriptDataJsonSchemaError
+       HashableScriptData
 scriptDataFromJsonDetailedSchema = fmap (\sd -> HashableScriptData (serialiseToCBOR sd) sd) . conv
  where
   conv
@@ -583,8 +583,8 @@ scriptDataFromJsonDetailedSchema = fmap (\sd -> HashableScriptData (serialiseToC
   convKeyValuePair
     :: Aeson.Value
     -> Either
-        ScriptDataJsonSchemaError
-        (ScriptData, ScriptData)
+         ScriptDataJsonSchemaError
+         (ScriptData, ScriptData)
   convKeyValuePair (Aeson.Object m)
     | KeyMap.size m == 2
     , Just k <- KeyMap.lookup "k" m

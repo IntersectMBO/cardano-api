@@ -1291,11 +1291,11 @@ data TxCertificates build era where
   TxCertificates
     :: ShelleyBasedEra era
     -> OMap
-        (Certificate era)
-        ( BuildTxWith
-            build
-            (Maybe (StakeCredential, Witness WitCtxStake era))
-        )
+         (Certificate era)
+         ( BuildTxWith
+             build
+             (Maybe (StakeCredential, Witness WitCtxStake era))
+         )
     -> TxCertificates build era
 
 deriving instance Eq (TxCertificates build era)
@@ -1356,12 +1356,12 @@ data TxMintValue build era where
   TxMintValue
     :: MaryEraOnwards era
     -> Map
-        PolicyId
-        [ ( AssetName
-          , Quantity
-          , BuildTxWith build (ScriptWitness WitCtxMint era)
-          )
-        ]
+         PolicyId
+         [ ( AssetName
+           , Quantity
+           , BuildTxWith build (ScriptWitness WitCtxMint era)
+           )
+         ]
     -> TxMintValue build era
 
 deriving instance Eq (TxMintValue build era)
@@ -1405,8 +1405,8 @@ data TxVotingProcedures build era where
   TxVotingProcedures
     :: L.VotingProcedures (ShelleyLedgerEra era)
     -> BuildTxWith
-        build
-        (Map (Ledger.Voter (Ledger.EraCrypto (ShelleyLedgerEra era))) (ScriptWitness WitCtxStake era))
+         build
+         (Map (Ledger.Voter (Ledger.EraCrypto (ShelleyLedgerEra era))) (ScriptWitness WitCtxStake era))
     -> TxVotingProcedures build era
 
 deriving instance Eq (TxVotingProcedures build era)
@@ -2774,17 +2774,17 @@ convScriptData sbe txOuts scriptWitnesses =
               [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
                 ++ [ d
                    | ( _
-                      , AnyScriptWitness
-                          ( PlutusScriptWitness
-                              _
-                              _
-                              _
-                              (ScriptDatumForTxIn (Just d))
-                              _
-                              _
-                            )
-                      ) <-
-                      scriptWitnesses
+                       , AnyScriptWitness
+                           ( PlutusScriptWitness
+                               _
+                               _
+                               _
+                               (ScriptDatumForTxIn (Just d))
+                               _
+                               _
+                             )
+                       ) <-
+                       scriptWitnesses
                    ]
          in TxBodyScriptData w datums redeemers
     )
@@ -3077,17 +3077,17 @@ makeShelleyTransactionBody
       [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
-              , AnyScriptWitness
-                  ( PlutusScriptWitness
-                      _
-                      _
-                      _
-                      (ScriptDatumForTxIn (Just d))
-                      _
-                      _
-                    )
-              ) <-
-              witnesses
+               , AnyScriptWitness
+                   ( PlutusScriptWitness
+                       _
+                       _
+                       _
+                       (ScriptDatumForTxIn (Just d))
+                       _
+                       _
+                     )
+               ) <-
+               witnesses
            ]
 
     redeemers :: Alonzo.Redeemers StandardAlonzo
@@ -3200,17 +3200,17 @@ makeShelleyTransactionBody
       [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
-              , AnyScriptWitness
-                  ( PlutusScriptWitness
-                      _
-                      _
-                      _
-                      (ScriptDatumForTxIn (Just d))
-                      _
-                      _
-                    )
-              ) <-
-              witnesses
+               , AnyScriptWitness
+                   ( PlutusScriptWitness
+                       _
+                       _
+                       _
+                       (ScriptDatumForTxIn (Just d))
+                       _
+                       _
+                     )
+               ) <-
+               witnesses
            ]
 
     redeemers :: Alonzo.Redeemers StandardBabbage
@@ -3338,17 +3338,17 @@ makeShelleyTransactionBody
       [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
         ++ [ d
            | ( _
-              , AnyScriptWitness
-                  ( PlutusScriptWitness
-                      _
-                      _
-                      _
-                      (ScriptDatumForTxIn (Just d))
-                      _
-                      _
-                    )
-              ) <-
-              witnesses
+               , AnyScriptWitness
+                   ( PlutusScriptWitness
+                       _
+                       _
+                       _
+                       (ScriptDatumForTxIn (Just d))
+                       _
+                       _
+                     )
+               ) <-
+               witnesses
            ]
 
     redeemers :: Alonzo.Redeemers StandardConway

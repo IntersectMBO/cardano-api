@@ -446,8 +446,8 @@ metadataFromJson schema =
     :: Aeson.Key
     -> Aeson.Value
     -> Either
-        TxMetadataJsonError
-        (Word64, TxMetadataValue)
+         TxMetadataJsonError
+         (Word64, TxMetadataValue)
   metadataKeyPairFromJson k v = do
     k' <- convTopLevelKey k
     v' <-
@@ -547,8 +547,8 @@ metadataValueToJsonNoSchema = conv
 metadataValueFromJsonNoSchema
   :: Aeson.Value
   -> Either
-      TxMetadataJsonSchemaError
-      TxMetadataValue
+       TxMetadataJsonSchemaError
+       TxMetadataValue
 metadataValueFromJsonNoSchema = conv
  where
   conv
@@ -649,8 +649,8 @@ metadataValueToJsonDetailedSchema = conv
 metadataValueFromJsonDetailedSchema
   :: Aeson.Value
   -> Either
-      TxMetadataJsonSchemaError
-      TxMetadataValue
+       TxMetadataJsonSchemaError
+       TxMetadataValue
 metadataValueFromJsonDetailedSchema = conv
  where
   conv
@@ -683,8 +683,8 @@ metadataValueFromJsonDetailedSchema = conv
   convKeyValuePair
     :: Aeson.Value
     -> Either
-        TxMetadataJsonSchemaError
-        (TxMetadataValue, TxMetadataValue)
+         TxMetadataJsonSchemaError
+         (TxMetadataValue, TxMetadataValue)
   convKeyValuePair (Aeson.Object m)
     | KeyMap.size m == 2
     , Just k <- KeyMap.lookup "k" m

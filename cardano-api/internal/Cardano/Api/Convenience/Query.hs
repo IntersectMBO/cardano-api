@@ -99,23 +99,23 @@ queryStateForBalancedTx
   -> [TxIn]
   -> [Certificate era]
   -> LocalStateQueryExpr
-      block
-      point
-      QueryInMode
-      r
-      IO
-      ( Either
-          QueryConvenienceError
-          ( UTxO era
-          , LedgerProtocolParameters era
-          , EraHistory
-          , SystemStart
-          , Set PoolId
-          , Map StakeCredential L.Coin
-          , Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin
-          , Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
-          )
-      )
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           QueryConvenienceError
+           ( UTxO era
+           , LedgerProtocolParameters era
+           , EraHistory
+           , SystemStart
+           , Set PoolId
+           , Map StakeCredential L.Coin
+           , Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin
+           , Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+           )
+       )
 queryStateForBalancedTx era allTxIns certs = runExceptT $ do
   sbe <-
     requireShelleyBasedEra era

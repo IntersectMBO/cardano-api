@@ -916,14 +916,14 @@ makeSignedTransaction
       L.mkBasicTx txbody
         & L.witsTxL
           .~ ( L.mkBasicTxWits
-                & L.addrTxWitsL .~ fromList [w | ShelleyKeyWitness _ w <- witnesses]
-                & L.scriptTxWitsL
-                  .~ fromList
-                    [ (Ledger.hashScript @ledgerera sw, sw)
-                    | sw <- txscripts
-                    ]
-                & L.bootAddrTxWitsL
-                  .~ fromList [w | ShelleyBootstrapWitness _ w <- witnesses]
+                 & L.addrTxWitsL .~ fromList [w | ShelleyKeyWitness _ w <- witnesses]
+                 & L.scriptTxWitsL
+                   .~ fromList
+                     [ (Ledger.hashScript @ledgerera sw, sw)
+                     | sw <- txscripts
+                     ]
+                 & L.bootAddrTxWitsL
+                   .~ fromList [w | ShelleyBootstrapWitness _ w <- witnesses]
              )
         & L.auxDataTxL .~ maybeToStrictMaybe txmetadata
 
@@ -1048,8 +1048,8 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
   --
   signature
     :: Shelley.SignedDSIGN
-        StandardCrypto
-        (Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody)
+         StandardCrypto
+         (Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody)
   signature =
     makeShelleySignature
       txhash
