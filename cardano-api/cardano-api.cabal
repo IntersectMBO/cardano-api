@@ -51,14 +51,104 @@ common text
   else
     build-depends: text >=2.0
 
-library internal
+library
   import: project-config, maybe-unix, maybe-Win32, text
-  visibility: public
-  hs-source-dirs: internal
+  hs-source-dirs: src
   -- Do not expose any additional modules. The correct way
   -- to expose new functionality is via Cardano.Api or
   -- Cardano.Api.Shelley
   exposed-modules:
+    Cardano.Api
+    Cardano.Api.Byron
+    Cardano.Api.ChainSync.Client
+    Cardano.Api.ChainSync.ClientPipelined
+    Cardano.Api.Compatible
+    Cardano.Api.Consensus
+    Cardano.Api.Crypto.Ed25519Bip32
+    Cardano.Api.Experimental
+    Cardano.Api.Ledger
+    Cardano.Api.Network
+    Cardano.Api.Shelley
+
+  build-depends:
+    FailT,
+    aeson >=1.5.6.0,
+    aeson-pretty >=0.8.5,
+    attoparsec,
+    base16-bytestring >=1.0,
+    base58-bytestring,
+    base64-bytestring,
+    bech32 >=1.1.0,
+    bytestring,
+    cardano-binary,
+    cardano-crypto,
+    cardano-crypto-class ^>=2.1.2,
+    cardano-crypto-wrapper ^>=1.5,
+    cardano-data >=1.0,
+    cardano-ledger-allegra >=1.6,
+    cardano-ledger-alonzo >=1.10.2,
+    cardano-ledger-api >=1.9.3,
+    cardano-ledger-babbage >=1.9,
+    cardano-ledger-binary >=1.3,
+    cardano-ledger-byron >=1.0.1,
+    cardano-ledger-conway >=1.16,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
+    cardano-ledger-mary >=1.7,
+    cardano-ledger-shelley >=1.13,
+    cardano-protocol-tpraos >=1.2,
+    cardano-slotting >=0.2.0.0,
+    cardano-strict-containers >=0.1,
+    cborg,
+    containers,
+    contra-tracer,
+    cryptonite,
+    data-default-class,
+    deepseq,
+    directory,
+    dlist,
+    either,
+    errors,
+    filepath,
+    formatting,
+    groups,
+    iproute,
+    memory,
+    microlens,
+    microlens-aeson,
+    mtl,
+    network,
+    network-mux,
+    nothunks,
+    ordered-containers,
+    ouroboros-consensus ^>=0.22,
+    ouroboros-consensus-cardano ^>=0.21,
+    ouroboros-consensus-diffusion ^>=0.19,
+    ouroboros-consensus-protocol ^>=0.10,
+    ouroboros-network,
+    ouroboros-network-api ^>=0.12,
+    ouroboros-network-framework,
+    ouroboros-network-protocols,
+    parsec,
+    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.37,
+    prettyprinter,
+    prettyprinter-ansi-terminal,
+    prettyprinter-configurable ^>=1.36,
+    random,
+    safe-exceptions,
+    scientific,
+    serialise,
+    small-steps ^>=1.1,
+    sop-core,
+    stm,
+    strict-sop-core,
+    time,
+    transformers,
+    transformers-except ^>=0.1.3,
+    typed-protocols ^>=0.3,
+    vector,
+    yaml,
+
+  other-modules:
     Cardano.Api.Address
     Cardano.Api.Anchor
     Cardano.Api.Block
@@ -160,117 +250,6 @@ library internal
     Cardano.Api.ValueParser
     Cardano.Api.Via.ShowOf
 
-  build-depends:
-    FailT,
-    aeson >=1.5.6.0,
-    aeson-pretty >=0.8.5,
-    attoparsec,
-    base16-bytestring >=1.0,
-    base58-bytestring,
-    base64-bytestring,
-    bech32 >=1.1.0,
-    bytestring,
-    cardano-binary,
-    cardano-crypto,
-    cardano-crypto-class ^>=2.1.2,
-    cardano-crypto-wrapper ^>=1.5,
-    cardano-data >=1.0,
-    cardano-ledger-allegra >=1.6,
-    cardano-ledger-alonzo >=1.10.2,
-    cardano-ledger-api >=1.9.3,
-    cardano-ledger-babbage >=1.9,
-    cardano-ledger-binary >=1.3,
-    cardano-ledger-byron >=1.0.1,
-    cardano-ledger-conway >=1.16,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
-    cardano-ledger-mary >=1.7,
-    cardano-ledger-shelley >=1.13,
-    cardano-protocol-tpraos >=1.2,
-    cardano-slotting >=0.2.0.0,
-    cardano-strict-containers >=0.1,
-    cborg,
-    containers,
-    contra-tracer,
-    data-default-class,
-    deepseq,
-    directory,
-    dlist,
-    either,
-    errors,
-    filepath,
-    formatting,
-    groups,
-    iproute,
-    memory,
-    microlens,
-    microlens-aeson,
-    mtl,
-    network,
-    network-mux,
-    ordered-containers,
-    ouroboros-consensus ^>=0.22,
-    ouroboros-consensus-cardano ^>=0.21,
-    ouroboros-consensus-diffusion ^>=0.19,
-    ouroboros-consensus-protocol ^>=0.10,
-    ouroboros-network,
-    ouroboros-network-api ^>=0.12,
-    ouroboros-network-framework,
-    ouroboros-network-protocols,
-    parsec,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.37,
-    prettyprinter,
-    prettyprinter-ansi-terminal,
-    prettyprinter-configurable ^>=1.36,
-    random,
-    safe-exceptions,
-    scientific,
-    serialise,
-    small-steps ^>=1.1,
-    sop-core,
-    stm,
-    strict-sop-core,
-    time,
-    transformers,
-    transformers-except ^>=0.1.3,
-    typed-protocols ^>=0.3,
-    vector,
-    yaml,
-
-library
-  import: project-config
-  hs-source-dirs: src
-  -- Do not expose any additional modules. The correct way
-  -- to expose new functionality is via Cardano.Api or
-  -- Cardano.Api.Shelley
-  exposed-modules:
-    Cardano.Api
-    Cardano.Api.Byron
-    Cardano.Api.ChainSync.Client
-    Cardano.Api.ChainSync.ClientPipelined
-    Cardano.Api.Compatible
-    Cardano.Api.Consensus
-    Cardano.Api.Crypto.Ed25519Bip32
-    Cardano.Api.Experimental
-    Cardano.Api.Ledger
-    Cardano.Api.Network
-    Cardano.Api.Shelley
-
-  reexported-modules: Cardano.Api.Ledger.Lens
-  build-depends:
-    bytestring,
-    cardano-api:internal,
-    cardano-binary,
-    cardano-crypto,
-    cardano-crypto-class ^>=2.1.2,
-    cardano-ledger-byron,
-    cryptonite,
-    deepseq,
-    memory,
-    nothunks,
-    ouroboros-network,
-    ouroboros-network-protocols,
-    typed-protocols,
-
 library gen
   import: project-config
   visibility: public
@@ -295,7 +274,6 @@ library gen
     base16-bytestring,
     bytestring,
     cardano-api,
-    cardano-api:internal,
     cardano-binary >=1.6 && <1.8,
     cardano-crypto-class ^>=2.1.2,
     cardano-crypto-test ^>=1.5,
@@ -326,7 +304,6 @@ test-suite cardano-api-test
     bytestring,
     cardano-api,
     cardano-api:gen,
-    cardano-api:internal,
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class ^>=2.1.2,
@@ -401,7 +378,6 @@ test-suite cardano-api-golden
     bytestring,
     cardano-api,
     cardano-api:gen,
-    cardano-api:internal,
     cardano-binary,
     cardano-crypto-class ^>=2.1.2,
     cardano-data >=1.0,
