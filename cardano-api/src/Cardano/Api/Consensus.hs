@@ -1,6 +1,6 @@
 module Cardano.Api.Consensus
-  ( module Cardano.Api.ReexposeConsensus
+  ( module Cardano.Api.Internal.ReexposeConsensus
   )
 where
 
-import           Cardano.Api.ReexposeConsensus
+import           Cardano.Api.Internal.ReexposeConsensus

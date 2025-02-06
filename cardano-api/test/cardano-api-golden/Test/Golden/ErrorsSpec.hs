@@ -31,7 +31,7 @@ module Test.Golden.ErrorsSpec
 where
 
 import           Cardano.Api
-import           Cardano.Api.Plutus
+import           Cardano.Api.Internal.Plutus
 import           Cardano.Api.Shelley
 
 import           Cardano.Binary as CBOR
@@ -187,7 +187,7 @@ test_JsonDecodeError =
 test_LeadershipError :: TestTree
 test_LeadershipError =
   testAllErrorMessages_
-    "Cardano.Api.LedgerState"
+    "Cardano.Api.Internal.LedgerState"
     "LeadershipError"
     [ ("LeaderErrDecodeLedgerStateFailure", LeaderErrDecodeLedgerStateFailure)
     ,
@@ -219,7 +219,7 @@ test_OperationalCertIssueError =
 test_ProtocolParametersError :: TestTree
 test_ProtocolParametersError =
   testAllErrorMessages_
-    "Cardano.Api.ProtocolParameters"
+    "Cardano.Api.Internal.ProtocolParameters"
     "ProtocolParametersError"
     [ ("PParamsErrorMissingMinUTxoValue", PParamsErrorMissingMinUTxoValue (AnyCardanoEra ConwayEra))
     , ("PParamsErrorMissingAlonzoProtocolParameter", PParamsErrorMissingAlonzoProtocolParameter)
@@ -275,7 +275,7 @@ test_ScriptDataRangeError =
 test_ScriptExecutionError :: TestTree
 test_ScriptExecutionError =
   testAllErrorMessages_
-    "Cardano.Api.Fees"
+    "Cardano.Api.Internal.Fees"
     "ScriptExecutionError"
     [ ("ScriptErrorMissingTxIn", ScriptErrorMissingTxIn txin1)
     , ("ScriptErrorTxInWithoutDatum", ScriptErrorTxInWithoutDatum txin1)
@@ -385,7 +385,7 @@ testPastHorizonValue = Ledger.TimeTranslationPastHorizon text
 test_TransactionValidityError :: TestTree
 test_TransactionValidityError =
   testAllErrorMessages_
-    "Cardano.Api.Fees"
+    "Cardano.Api.Internal.Fees"
     "TransactionValidityError"
     [
       ( "TransactionValidityCostModelError"
@@ -422,7 +422,7 @@ test_TxBodyError =
 test_TxBodyErrorAutoBalance :: TestTree
 test_TxBodyErrorAutoBalance =
   testAllErrorMessages_
-    "Cardano.Api.Fees"
+    "Cardano.Api.Internal.Fees"
     "TxBodyErrorAutoBalance"
     [ ("TxBodyError", TxBodyError TxBodyEmptyTxIns)
     ,

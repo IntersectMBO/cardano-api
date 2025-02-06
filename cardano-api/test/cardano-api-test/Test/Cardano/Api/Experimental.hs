@@ -9,11 +9,11 @@ module Test.Cardano.Api.Experimental
 where
 
 import qualified Cardano.Api as Api
-import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
 import qualified Cardano.Api.Experimental as Exp
+import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
+import qualified Cardano.Api.Internal.Script as Script
+import           Cardano.Api.Internal.Tx.Sign (Tx (ShelleyTx))
 import qualified Cardano.Api.Ledger as Ledger
-import qualified Cardano.Api.Script as Script
-import           Cardano.Api.Tx.Sign (Tx (ShelleyTx))
 
 import           Lens.Micro ((&))
 
