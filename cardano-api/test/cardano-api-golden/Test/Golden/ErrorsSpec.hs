@@ -31,7 +31,7 @@ module Test.Golden.ErrorsSpec
 where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.Plutus
+import           Cardano.Api.Internal (DebugPlutusFailure (DebugPlutusFailure))
 import           Cardano.Api.Shelley
 
 import           Cardano.Binary as CBOR

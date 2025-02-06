@@ -10,9 +10,8 @@ where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Exp
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
-import qualified Cardano.Api.Internal.Script as Script
-import           Cardano.Api.Internal.Tx.Sign (Tx (ShelleyTx))
+import           Cardano.Api.Internal (ReferenceScript (ReferenceScriptNone),
+                   ShelleyBasedEraConstraints, Tx (ShelleyTx))
 import qualified Cardano.Api.Ledger as Ledger
 
 import           Lens.Micro ((&))
@@ -82,7 +81,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
                   destAddress
                   (Api.TxOutValueShelleyBased sbe (Api.inject (Ledger.Coin 10_000_000)))
                   Api.TxOutDatumNone
-                  Script.ReferenceScriptNone
+                  ReferenceScriptNone
               ]
             & Api.setTxFee (Api.TxFeeExplicit sbe (Ledger.Coin 2_000_000))
 

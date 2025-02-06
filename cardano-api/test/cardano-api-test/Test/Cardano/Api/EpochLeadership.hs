@@ -10,14 +10,10 @@ where
 
 import           Cardano.Api (Key (verificationKeyHash), deterministicSigningKey,
                    getVerificationKey)
-import           Cardano.Api.Internal.Block (EpochNo (..), Hash (StakePoolKeyHash), SlotNo (..))
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
-import           Cardano.Api.Internal.Genesis (shelleyGenesisDefaults)
-import           Cardano.Api.Internal.GenesisParameters (EpochSize (..))
-import           Cardano.Api.Internal.LedgerState (currentEpochEligibleLeadershipSlots)
-import           Cardano.Api.Internal.Modes (ConsensusProtocol)
-import           Cardano.Api.Internal.Query (ProtocolState (..),
-                   SerialisedPoolDistribution (SerialisedPoolDistribution))
+import           Cardano.Api.Internal (ConsensusProtocol, EpochNo (..), EpochSize (..),
+                   Hash (StakePoolKeyHash), ProtocolState (..),
+                   SerialisedPoolDistribution (SerialisedPoolDistribution), ShelleyBasedEra (..),
+                   SlotNo (..), currentEpochEligibleLeadershipSlots, shelleyGenesisDefaults)
 import           Cardano.Api.Ledger (KeyHash (..), StandardCrypto, toCBOR)
 import           Cardano.Api.Shelley (Hash (VrfKeyHash), VrfKey, proxyToAsType, unStakePoolKeyHash)
 

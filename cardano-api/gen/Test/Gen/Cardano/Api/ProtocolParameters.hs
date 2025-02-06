@@ -1,7 +1,11 @@
 module Test.Gen.Cardano.Api.ProtocolParameters where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.ProtocolParameters
+import           Cardano.Api.Internal (AlonzoOnwardsPParams (..),
+                   CommonProtocolParametersUpdate (..), DeprecatedAfterBabbagePParams (..),
+                   DeprecatedAfterMaryPParams (..), EraBasedProtocolParametersUpdate (..),
+                   IntroducedInBabbagePParams (..), IntroducedInConwayPParams (..),
+                   ShelleyToAlonzoPParams (..))
 import           Cardano.Api.Ledger
 
 import           Test.Gen.Cardano.Api.Typed (genCostModels)

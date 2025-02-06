@@ -6,7 +6,7 @@ module Test.Cardano.Api.IO
 where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.IO
+import           Cardano.Api.Internal (checkVrfFilePermissions)
 
 import           System.Directory (removeFile)
 

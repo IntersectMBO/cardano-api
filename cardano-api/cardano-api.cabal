@@ -69,28 +69,7 @@ library
     Cardano.Api.Consensus
     Cardano.Api.Crypto.Ed25519Bip32
     Cardano.Api.Experimental
-    Cardano.Api.Internal.Address
-    Cardano.Api.Internal.Block
-    Cardano.Api.Internal.DRepMetadata
-    Cardano.Api.Internal.Eon.ShelleyBasedEra
-    Cardano.Api.Internal.Eras
-    Cardano.Api.Internal.Error
-    Cardano.Api.Internal.Fees
-    Cardano.Api.Internal.Genesis
-    Cardano.Api.Internal.GenesisParameters
-    Cardano.Api.Internal.Governance.Metadata.Validation
-    Cardano.Api.Internal.IO
-    Cardano.Api.Internal.LedgerState
-    Cardano.Api.Internal.Modes
-    Cardano.Api.Internal.Orphans
-    Cardano.Api.Internal.Plutus
-    Cardano.Api.Internal.Pretty
-    Cardano.Api.Internal.ProtocolParameters
-    Cardano.Api.Internal.Query
-    Cardano.Api.Internal.Script
-    Cardano.Api.Internal.SerialiseLedgerCddl
-    Cardano.Api.Internal.SerialiseTextEnvelope
-    Cardano.Api.Internal.Tx.Sign
+    Cardano.Api.Internal
     Cardano.Api.Ledger
     Cardano.Api.Ledger.Lens
     Cardano.Api.Network

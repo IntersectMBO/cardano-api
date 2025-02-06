@@ -12,9 +12,8 @@ where
 
 import           Cardano.Api (CardanoEra (..), ProtocolParametersConversionError, inEonForEra,
                    prettyPrintJSON)
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
-import           Cardano.Api.Internal.ProtocolParameters (LedgerProtocolParameters (..),
-                   convertToLedgerProtocolParameters, fromLedgerPParams)
+import           Cardano.Api.Internal (LedgerProtocolParameters (..), ShelleyBasedEra (..),
+                   ShelleyLedgerEra, convertToLedgerProtocolParameters, fromLedgerPParams)
 import           Cardano.Api.Ledger (PParams (..))
 
 import           Control.Monad (void)

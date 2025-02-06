@@ -13,9 +13,9 @@ module Test.Cardano.Api.TxBody
 where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.Script
+import           Cardano.Api.Internal (ReferenceScript (ReferenceScript), ShelleyLedgerEra,
+                   refScriptToShelleyScript)
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Data.Maybe (isJust)
 import           Data.Type.Equality (TestEquality (testEquality))

@@ -15,12 +15,11 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import           Cardano.Api
-import           Cardano.Api.Internal.Address (toShelleyStakeCredential)
-import           Cardano.Api.Internal.Fees
-import           Cardano.Api.Internal.Script
+import           Cardano.Api.Internal (LedgerProtocolParameters (LedgerProtocolParameters),
+                   PlutusScriptOrReferenceInput (PScript), ReferenceScript (ReferenceScriptNone),
+                   calcReturnAndTotalCollateral, toShelleyStakeCredential)
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as L
-import           Cardano.Api.Shelley (LedgerProtocolParameters (..))
 
 import qualified Cardano.Ledger.Alonzo.Core as L
 import qualified Cardano.Ledger.Coin as L
