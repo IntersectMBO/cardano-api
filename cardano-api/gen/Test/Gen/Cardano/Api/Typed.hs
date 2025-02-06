@@ -140,10 +140,10 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Byron as Byron
-import           Cardano.Api.Error
+import           Cardano.Api.Internal.Error
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
-import           Cardano.Api.Script (scriptInEraToRefScript)
+import           Cardano.Api.Internal.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley
 import qualified Cardano.Api.Shelley as ShelleyApi
 

@@ -11,9 +11,9 @@ module Test.Cardano.Api.CBOR
 where
 
 import           Cardano.Api
-import           Cardano.Api.Script
-import           Cardano.Api.SerialiseLedgerCddl (cddlTypeToEra)
-import           Cardano.Api.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
+import           Cardano.Api.Internal.Script
+import           Cardano.Api.Internal.SerialiseLedgerCddl (cddlTypeToEra)
+import           Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
 import           Cardano.Api.Shelley (AsType (..))
 
 import qualified Data.ByteString.Base16 as Base16

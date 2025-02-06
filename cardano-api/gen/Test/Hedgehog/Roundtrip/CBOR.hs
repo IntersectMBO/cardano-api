@@ -11,8 +11,8 @@ module Test.Hedgehog.Roundtrip.CBOR
 where
 
 import           Cardano.Api
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Script
+import           Cardano.Api.Internal.Eon.ShelleyBasedEra
+import           Cardano.Api.Internal.Script
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Plutus.Language as Plutus

@@ -13,8 +13,9 @@ where
 
 import           Cardano.Api (AnyPlutusScriptVersion (AnyPlutusScriptVersion), CostModel (..),
                    ExecutionUnits (..), PlutusScriptVersion (..), makePraosNonce)
+import           Cardano.Api.Internal.ProtocolParameters (ExecutionUnitPrices (..),
+                   ProtocolParameters (..))
 import           Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval), StandardCrypto)
-import           Cardano.Api.ProtocolParameters (ExecutionUnitPrices (..), ProtocolParameters (..))
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..))
