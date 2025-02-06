@@ -1535,28 +1535,25 @@ substituteExecutionUnits
           (Featured era (TxVotingProcedures vProcedures (BuildTxWith $ fromList substitutedExecutionUnits)))
 
     mapScriptWitnessesProposals
-      :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era))
+      :: Maybe (Featured ConwayEraOnwards era (TxProposalProcedures BuildTx era))
       -> Either
            (TxBodyErrorAutoBalance era)
-           (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures build era)))
+           (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures BuildTx era)))
     mapScriptWitnessesProposals Nothing = return Nothing
-    mapScriptWitnessesProposals (Just (Featured _ TxProposalProceduresNone)) = return Nothing
-    mapScriptWitnessesProposals (Just (Featured _ (TxProposalProcedures _ ViewTx))) = return Nothing
-    mapScriptWitnessesProposals (Just (Featured era txpp@(TxProposalProcedures osetProposalProcedures (BuildTxWith _)))) = do
+    mapScriptWitnessesProposals (Just (Featured era txpp)) = do
       let eSubstitutedExecutionUnits =
             [ (proposal, updatedWitness)
             | (ix, proposal, scriptWitness) <- indexTxProposalProcedures txpp
             , let updatedWitness = substituteExecUnits ix scriptWitness
             ]
-
       substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
 
-      return $
-        Just
-          ( Featured
-              era
-              (TxProposalProcedures osetProposalProcedures (BuildTxWith $ fromList substitutedExecutionUnits))
-          )
+      pure $
+        Just $
+          Featured era $
+            conwayEraOnwardsConstraints era $
+              mkTxProposalProcedures $
+                second Just <$> substitutedExecutionUnits
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era

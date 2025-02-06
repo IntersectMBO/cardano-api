@@ -84,7 +84,7 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
                     txb & L.updateTxBodyL .~ SJust ledgerPParamsUpdate
 
           pure (updateTxBody, [])
-        NoPParamsUpdate _ -> do
+        NoPParamsUpdate _ ->
           pure (mempty, [])
         ProposalProcedures conwayOnwards proposalProcedures -> do
           let proposals = convProposalProcedures proposalProcedures
