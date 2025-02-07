@@ -4,7 +4,8 @@ module Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
 where
 
 import           Cardano.Api.Internal.Address (fromShelleyStakeCredential)
-import           Cardano.Api.Internal.LedgerEvents.LedgerEvent (LedgerEvent (IncrementalRewardsDistribution))
+import           Cardano.Api.Internal.LedgerEvents.LedgerEvent
+                   (LedgerEvent (IncrementalRewardsDistribution))
 
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Shelley.Rules

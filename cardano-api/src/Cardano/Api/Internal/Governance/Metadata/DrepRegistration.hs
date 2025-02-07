@@ -18,8 +18,8 @@ module Cardano.Api.Internal.Governance.Metadata.DrepRegistration
 where
 
 import           Cardano.Api.Internal.Governance.Metadata.Parsers (textWithMaxLength)
-import           Cardano.Api.Internal.Governance.Metadata.Validation (Authors, Body, GovActionMetadata (..),
-                   HashAlgorithm)
+import           Cardano.Api.Internal.Governance.Metadata.Validation (Authors, Body,
+                   GovActionMetadata (..), HashAlgorithm)
 
 import           Data.Aeson (FromJSON, withObject, (.:), (.:?))
 import qualified Data.Aeson as Aeson

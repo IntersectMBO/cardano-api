@@ -63,11 +63,11 @@ import           Cardano.Api.Internal.Eon.ShelleyBasedEra
 import           Cardano.Api.Internal.Eras.Case
 import           Cardano.Api.Internal.Error (displayError)
 import           Cardano.Api.Internal.HasTypeProxy
-import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Internal.Script
 import           Cardano.Api.Internal.SerialiseRaw
 import           Cardano.Api.Internal.SerialiseUsing
 import           Cardano.Api.Internal.Utils (failEitherWith)
+import qualified Cardano.Api.Ledger.Lens as A
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Allegra.Core as L

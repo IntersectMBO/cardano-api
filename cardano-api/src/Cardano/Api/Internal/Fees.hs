@@ -60,7 +60,6 @@ import           Cardano.Api.Internal.Eras.Case
 import           Cardano.Api.Internal.Eras.Core
 import           Cardano.Api.Internal.Error
 import           Cardano.Api.Internal.Feature
-import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Internal.Plutus
 import           Cardano.Api.Internal.Pretty
 import           Cardano.Api.Internal.ProtocolParameters
@@ -69,6 +68,7 @@ import           Cardano.Api.Internal.Script
 import           Cardano.Api.Internal.Tx.Body
 import           Cardano.Api.Internal.Tx.Sign
 import           Cardano.Api.Internal.Value
+import qualified Cardano.Api.Ledger.Lens as A
 
 import qualified Cardano.Ledger.Alonzo.Core as Ledger
 import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus

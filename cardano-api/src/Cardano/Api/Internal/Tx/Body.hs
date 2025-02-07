@@ -234,7 +234,6 @@ import           Cardano.Api.Internal.Governance.Actions.VotingProcedure
 import           Cardano.Api.Internal.Hash
 import           Cardano.Api.Internal.Keys.Byron
 import           Cardano.Api.Internal.Keys.Shelley
-import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Internal.NetworkId
 import           Cardano.Api.Internal.Pretty
 import           Cardano.Api.Internal.ProtocolParameters
@@ -250,6 +249,7 @@ import           Cardano.Api.Internal.TxMetadata
 import           Cardano.Api.Internal.Utils
 import           Cardano.Api.Internal.Value
 import           Cardano.Api.Internal.ValueParser
+import qualified Cardano.Api.Ledger.Lens as A
 
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
