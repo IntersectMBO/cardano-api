@@ -1203,7 +1203,7 @@ genProtocolParameters era = do
 
   pure ProtocolParameters{..}
 
--- | Generate valid protocol parameters which pass validations in Cardano.Api.ProtocolParameters
+-- | Generate valid protocol parameters which pass validations in Cardano.Api.Internal.ProtocolParameters
 genValidProtocolParameters :: ShelleyBasedEra era -> Gen (LedgerProtocolParameters era)
 genValidProtocolParameters sbe = shelleyBasedEraTestConstraints sbe $ LedgerProtocolParameters <$> Q.arbitrary
 

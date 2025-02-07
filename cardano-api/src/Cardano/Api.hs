@@ -1070,79 +1070,79 @@ module Cardano.Api
   , unsafeBoundedRational
 
     -- ** Supporting modules
-  , module Cardano.Api.Monad.Error
-  , module Cardano.Api.Pretty
+  , module Cardano.Api.Internal.Monad.Error
+  , module Cardano.Api.Internal.Pretty
   )
 where
 
-import           Cardano.Api.Address
-import           Cardano.Api.Anchor
-import           Cardano.Api.Block
-import           Cardano.Api.Certificate
-import           Cardano.Api.Convenience.Construction
-import           Cardano.Api.Convenience.Query
-import           Cardano.Api.DeserialiseAnyOf
-import           Cardano.Api.DRepMetadata
-import           Cardano.Api.Eon.AllegraEraOnwards
-import           Cardano.Api.Eon.AlonzoEraOnwards
-import           Cardano.Api.Eon.BabbageEraOnwards
-import           Cardano.Api.Eon.ByronToAlonzoEra
-import           Cardano.Api.Eon.Convert
-import           Cardano.Api.Eon.ConwayEraOnwards
-import           Cardano.Api.Eon.MaryEraOnwards
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eon.ShelleyEraOnly
-import           Cardano.Api.Eon.ShelleyToAllegraEra
-import           Cardano.Api.Eon.ShelleyToAlonzoEra
-import           Cardano.Api.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Eon.ShelleyToMaryEra
-import           Cardano.Api.Eras
-import           Cardano.Api.Eras.Case
-import           Cardano.Api.Error
-import           Cardano.Api.Feature
-import           Cardano.Api.Fees
-import           Cardano.Api.Genesis
-import           Cardano.Api.GenesisParameters
-import           Cardano.Api.Governance.Actions.ProposalProcedure
-import           Cardano.Api.Governance.Metadata.DrepRegistration (CIP119 (..))
-import           Cardano.Api.Governance.Metadata.GovAction (CIP108 (..))
-import           Cardano.Api.Governance.Metadata.Validation
-import           Cardano.Api.Hash
-import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.InMode
-import           Cardano.Api.IO
-import           Cardano.Api.IPC
-import           Cardano.Api.IPC.Monad
-import           Cardano.Api.Keys.Byron
-import           Cardano.Api.Keys.Class
-import           Cardano.Api.Keys.Read
-import           Cardano.Api.Keys.Shelley
-import           Cardano.Api.LedgerState
-import           Cardano.Api.Modes
-import           Cardano.Api.Monad.Error
-import           Cardano.Api.NetworkId
-import           Cardano.Api.OperationalCertificate
-import           Cardano.Api.Orphans ()
-import           Cardano.Api.Plutus (collectPlutusScriptHashes)
-import           Cardano.Api.Pretty
-import           Cardano.Api.Protocol
-import           Cardano.Api.ProtocolParameters
-import           Cardano.Api.Query hiding (LedgerState (..))
-import           Cardano.Api.Query.Expr
-import           Cardano.Api.Rewards
-import           Cardano.Api.Script
-import           Cardano.Api.ScriptData
-import           Cardano.Api.SerialiseBech32
-import           Cardano.Api.SerialiseCBOR
-import           Cardano.Api.SerialiseJSON
-import           Cardano.Api.SerialiseLedgerCddl
-import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.StakePoolMetadata
-import           Cardano.Api.Tx.Body
-import           Cardano.Api.Tx.Sign
-import           Cardano.Api.TxMetadata
-import           Cardano.Api.Utils
-import           Cardano.Api.Value
-import           Cardano.Api.ValueParser
+import           Cardano.Api.Internal.Address
+import           Cardano.Api.Internal.Anchor
+import           Cardano.Api.Internal.Block
+import           Cardano.Api.Internal.Certificate
+import           Cardano.Api.Internal.Convenience.Construction
+import           Cardano.Api.Internal.Convenience.Query
+import           Cardano.Api.Internal.DeserialiseAnyOf
+import           Cardano.Api.Internal.DRepMetadata
+import           Cardano.Api.Internal.Eon.AllegraEraOnwards
+import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import           Cardano.Api.Internal.Eon.BabbageEraOnwards
+import           Cardano.Api.Internal.Eon.ByronToAlonzoEra
+import           Cardano.Api.Internal.Eon.Convert
+import           Cardano.Api.Internal.Eon.ConwayEraOnwards
+import           Cardano.Api.Internal.Eon.MaryEraOnwards
+import           Cardano.Api.Internal.Eon.ShelleyBasedEra
+import           Cardano.Api.Internal.Eon.ShelleyEraOnly
+import           Cardano.Api.Internal.Eon.ShelleyToAllegraEra
+import           Cardano.Api.Internal.Eon.ShelleyToAlonzoEra
+import           Cardano.Api.Internal.Eon.ShelleyToBabbageEra
+import           Cardano.Api.Internal.Eon.ShelleyToMaryEra
+import           Cardano.Api.Internal.Eras
+import           Cardano.Api.Internal.Eras.Case
+import           Cardano.Api.Internal.Error
+import           Cardano.Api.Internal.Feature
+import           Cardano.Api.Internal.Fees
+import           Cardano.Api.Internal.Genesis
+import           Cardano.Api.Internal.GenesisParameters
+import           Cardano.Api.Internal.Governance.Actions.ProposalProcedure
+import           Cardano.Api.Internal.Governance.Metadata.DrepRegistration (CIP119 (..))
+import           Cardano.Api.Internal.Governance.Metadata.GovAction (CIP108 (..))
+import           Cardano.Api.Internal.Governance.Metadata.Validation
+import           Cardano.Api.Internal.Hash
+import           Cardano.Api.Internal.HasTypeProxy
+import           Cardano.Api.Internal.InMode
+import           Cardano.Api.Internal.IO
+import           Cardano.Api.Internal.IPC
+import           Cardano.Api.Internal.IPC.Monad
+import           Cardano.Api.Internal.Keys.Byron
+import           Cardano.Api.Internal.Keys.Class
+import           Cardano.Api.Internal.Keys.Read
+import           Cardano.Api.Internal.Keys.Shelley
+import           Cardano.Api.Internal.LedgerState
+import           Cardano.Api.Internal.Modes
+import           Cardano.Api.Internal.Monad.Error
+import           Cardano.Api.Internal.NetworkId
+import           Cardano.Api.Internal.OperationalCertificate
+import           Cardano.Api.Internal.Orphans ()
+import           Cardano.Api.Internal.Plutus (collectPlutusScriptHashes)
+import           Cardano.Api.Internal.Pretty
+import           Cardano.Api.Internal.Protocol
+import           Cardano.Api.Internal.ProtocolParameters
+import           Cardano.Api.Internal.Query hiding (LedgerState (..))
+import           Cardano.Api.Internal.Query.Expr
+import           Cardano.Api.Internal.Rewards
+import           Cardano.Api.Internal.Script
+import           Cardano.Api.Internal.ScriptData
+import           Cardano.Api.Internal.SerialiseBech32
+import           Cardano.Api.Internal.SerialiseCBOR
+import           Cardano.Api.Internal.SerialiseJSON
+import           Cardano.Api.Internal.SerialiseLedgerCddl
+import           Cardano.Api.Internal.SerialiseRaw
+import           Cardano.Api.Internal.SerialiseTextEnvelope
+import           Cardano.Api.Internal.SerialiseUsing
+import           Cardano.Api.Internal.StakePoolMetadata
+import           Cardano.Api.Internal.Tx.Body
+import           Cardano.Api.Internal.Tx.Sign
+import           Cardano.Api.Internal.TxMetadata
+import           Cardano.Api.Internal.Utils
+import           Cardano.Api.Internal.Value
+import           Cardano.Api.Internal.ValueParser
