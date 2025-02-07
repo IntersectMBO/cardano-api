@@ -680,6 +680,7 @@ module Cardano.Api
     -- ** Bech32
   , SerialiseAsBech32
   , serialiseToBech32
+  , serialiseToBech32CIP129
   , deserialiseFromBech32
   , deserialiseAnyOfFromBech32
   , Bech32DecodeError (..)

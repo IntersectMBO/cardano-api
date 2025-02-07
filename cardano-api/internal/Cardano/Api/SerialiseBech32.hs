@@ -7,6 +7,7 @@
 module Cardano.Api.SerialiseBech32
   ( SerialiseAsBech32 (..)
   , serialiseToBech32
+  , serialiseToBech32CIP129
   , Bech32DecodeError (..)
   , deserialiseFromBech32
   , deserialiseAnyOfFromBech32
@@ -41,6 +42,27 @@ serialiseToBech32 a =
   Bech32.encodeLenient
     humanReadablePart
     (Bech32.dataPartFromBytes (serialiseToRawBytes a))
+ where
+  humanReadablePart =
+    case Bech32.humanReadablePartFromText (bech32PrefixFor a) of
+      Right p -> p
+      Left err ->
+        error $
+          "serialiseToBech32: invalid prefix "
+            ++ show (bech32PrefixFor a)
+            ++ ", "
+            ++ show err
+
+-- | Implements CIP129 format, which kind of sneaks in an additional
+-- prefix in between the bech prefix and the actual data.
+-- The official CIP is here: https://github.com/cardano-foundation/CIPs/blob/master/CIP-0129/README.md
+-- but the CLI issue is actually more detailed:
+-- https://github.com/IntersectMBO/cardano-cli/issues/883
+serialiseToBech32CIP129 :: SerialiseAsBech32 a => ByteString -> a -> Text
+serialiseToBech32CIP129 dataPrefix a =
+  Bech32.encodeLenient
+    humanReadablePart
+    (Bech32.dataPartFromBytes (dataPrefix <> serialiseToRawBytes a))
  where
   humanReadablePart =
     case Bech32.humanReadablePartFromText (bech32PrefixFor a) of
