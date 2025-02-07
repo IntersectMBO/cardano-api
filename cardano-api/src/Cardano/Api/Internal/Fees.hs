@@ -60,7 +60,7 @@ import           Cardano.Api.Internal.Eras.Case
 import           Cardano.Api.Internal.Eras.Core
 import           Cardano.Api.Internal.Error
 import           Cardano.Api.Internal.Feature
-import qualified Cardano.Api.Internal.Ledger.Lens as A
+import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Internal.Plutus
 import           Cardano.Api.Internal.Pretty
 import           Cardano.Api.Internal.ProtocolParameters

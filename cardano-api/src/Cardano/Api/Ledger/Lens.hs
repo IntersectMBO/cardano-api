@@ -3,7 +3,7 @@
 
 {- HLINT ignore "Eta reduce" -}
 
-module Cardano.Api.Internal.Ledger.Lens
+module Cardano.Api.Ledger.Lens
   ( -- * Types
     TxBody (..)
 
