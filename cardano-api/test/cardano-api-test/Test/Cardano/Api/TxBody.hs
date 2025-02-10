@@ -13,8 +13,8 @@ module Test.Cardano.Api.TxBody
 where
 
 import           Cardano.Api
+import           Cardano.Api.Internal.Script
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Script
 import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import           Data.Maybe (isJust)

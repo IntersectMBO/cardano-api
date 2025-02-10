@@ -157,13 +157,13 @@ where
 
 import           Cardano.Api hiding (Address, Certificate, Lovelace, NetworkMagic, Tx (..), TxIn,
                    TxOut, UTxO (..))
-import           Cardano.Api.Keys.Byron
-import           Cardano.Api.NetworkId hiding (NetworkMagic)
-import           Cardano.Api.SerialiseLedgerCddl
-import           Cardano.Api.SpecialByron
-import           Cardano.Api.Tx.Body hiding (TxIn, TxOut)
-import           Cardano.Api.Tx.Sign hiding (ATxAux (..), Tx (..))
-import           Cardano.Api.Value hiding (Lovelace)
+import           Cardano.Api.Internal.Keys.Byron
+import           Cardano.Api.Internal.NetworkId hiding (NetworkMagic)
+import           Cardano.Api.Internal.SerialiseLedgerCddl
+import           Cardano.Api.Internal.SpecialByron
+import           Cardano.Api.Internal.Tx.Body hiding (TxIn, TxOut)
+import           Cardano.Api.Internal.Tx.Sign hiding (ATxAux (..), Tx (..))
+import           Cardano.Api.Internal.Value hiding (Lovelace)
 
 import           Cardano.Chain.Block (decCBORABlockOrBoundary)
 import           Cardano.Chain.Common (AddrAttributes (..), Address, BlockCount (..), KeyHash,

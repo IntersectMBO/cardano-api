@@ -8,8 +8,8 @@ where
 
 import           Cardano.Api (CIP108 (..), CIP119 (..), File (File), FileDirection (In), FileError,
                    readByteStringFile)
-import           Cardano.Api.DRepMetadata (DRepMetadata (..))
-import           Cardano.Api.Governance.Metadata.Validation (validateGovActionAnchorData)
+import           Cardano.Api.Internal.DRepMetadata (DRepMetadata (..))
+import           Cardano.Api.Internal.Governance.Metadata.Validation (validateGovActionAnchorData)
 
 import           Data.ByteString (ByteString)
 import           Data.Monoid (Any)

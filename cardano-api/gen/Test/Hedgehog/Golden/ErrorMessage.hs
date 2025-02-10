@@ -4,7 +4,7 @@
 module Test.Hedgehog.Golden.ErrorMessage where
 
 import           Cardano.Api (Error (..))
-import           Cardano.Api.Pretty
+import           Cardano.Api.Internal.Pretty
 
 import qualified Control.Concurrent.QSem as IO
 import           Control.Exception (bracket_)

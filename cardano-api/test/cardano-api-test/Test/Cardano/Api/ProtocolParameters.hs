@@ -12,10 +12,10 @@ where
 
 import           Cardano.Api (CardanoEra (..), ProtocolParametersConversionError, inEonForEra,
                    prettyPrintJSON)
-import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
-import           Cardano.Api.Ledger (PParams (..))
-import           Cardano.Api.ProtocolParameters (LedgerProtocolParameters (..),
+import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
+import           Cardano.Api.Internal.ProtocolParameters (LedgerProtocolParameters (..),
                    convertToLedgerProtocolParameters, fromLedgerPParams)
+import           Cardano.Api.Ledger (PParams (..))
 
 import           Control.Monad (void)
 import           Data.Aeson (FromJSON, Object, ToJSON, eitherDecode)

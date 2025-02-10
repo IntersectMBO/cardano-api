@@ -8,9 +8,9 @@ module Test.Cardano.Api.Genesis
   )
 where
 
-import           Cardano.Api.Eon.ShelleyBasedEra
-import           Cardano.Api.Eras
-import           Cardano.Api.Genesis
+import           Cardano.Api.Internal.Eon.ShelleyBasedEra
+import           Cardano.Api.Internal.Eras
+import           Cardano.Api.Internal.Genesis
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
