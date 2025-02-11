@@ -13,6 +13,7 @@ where
 import           Cardano.Api
 import           Cardano.Api.Internal.Script
 import           Cardano.Api.Internal.SerialiseLedgerCddl (cddlTypeToEra)
+import           Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
 import           Cardano.Api.Shelley (AsType (..))
 
 import qualified Data.ByteString.Base16 as Base16
@@ -39,6 +40,30 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
+
+prop_text_envelope_roundtrip_txbody_CBOR :: Property
+prop_text_envelope_roundtrip_txbody_CBOR = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
+  shelleyBasedEraConstraints
+    era
+    ( H.tripping
+        x
+        (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
+        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+    )
+
+prop_text_envelope_roundtrip_tx_CBOR :: Property
+prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ genTx era
+  shelleyBasedEraConstraints
+    era
+    ( H.tripping
+        x
+        (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
+        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+    )
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
@@ -286,7 +311,9 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.CBOR"
-    [ testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
+    [ testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
+    , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
+    , testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
     , testProperty
         "roundtrip operational certificate CBOR"
         prop_roundtrip_operational_certificate_CBOR
