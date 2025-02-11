@@ -461,7 +461,9 @@ module Cardano.Api
   , makeByronKeyWitness
   , ShelleyWitnessSigningKey (..)
   , makeShelleyKeyWitness
+  , makeShelleyKeyWitness'
   , makeShelleyBootstrapWitness
+  , makeShelleyBasedBootstrapWitness
 
     -- * Transaction metadata
 

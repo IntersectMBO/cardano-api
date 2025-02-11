@@ -179,6 +179,7 @@ library
   other-modules:
     Cardano.Api.Internal.Anchor
     Cardano.Api.Internal.Certificate
+    Cardano.Api.Internal.Compatible.Tx
     Cardano.Api.Internal.Convenience.Construction
     Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DeserialiseAnyOf
@@ -247,7 +248,6 @@ library
     Cardano.Api.Internal.SpecialByron
     Cardano.Api.Internal.StakePoolMetadata
     Cardano.Api.Internal.Tx.Body
-    Cardano.Api.Internal.Tx.Compatible
     Cardano.Api.Internal.Tx.UTxO
     Cardano.Api.Internal.TxIn
     Cardano.Api.Internal.TxMetadata

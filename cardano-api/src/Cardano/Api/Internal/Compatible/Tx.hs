@@ -7,10 +7,11 @@
 
 -- | This module provides a way to construct a simple transaction over all eras.
 -- It is exposed for testing purposes only.
-module Cardano.Api.Internal.Tx.Compatible
+module Cardano.Api.Internal.Compatible.Tx
   ( AnyProtocolUpdate (..)
   , AnyVote (..)
-  , createCompatibleSignedTx
+  , createCompatibleTx
+  , addWitnesses
   )
 where
 
@@ -60,19 +61,19 @@ data AnyVote era where
     -> AnyVote era
   NoVotes :: AnyVote era
 
-createCompatibleSignedTx
+-- | Create a transaction in any shelley based era
+createCompatibleTx
   :: forall era
    . ShelleyBasedEra era
   -> [TxIn]
   -> [TxOut CtxTx era]
-  -> [KeyWitness era]
   -> Lovelace
   -- ^ Fee
   -> AnyProtocolUpdate era
   -> AnyVote era
   -> TxCertificates BuildTx era
   -> Either ProtocolParametersConversionError (Tx era)
-createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote txCertificates' =
+createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates' =
   shelleyBasedEraConstraints sbe $ do
     (updateTxBody, extraScriptWitnesses) <-
       case anyProtocolUpdate of
@@ -125,7 +126,7 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
       . ShelleyTx sbe
       $ L.mkBasicTx txbody
         & L.witsTxL
-          .~ allWitnesses (apiScriptWitnesses <> extraScriptWitnesses) allShelleyToBabbageWitnesses
+          %~ setScriptWitnesses (apiScriptWitnesses <> extraScriptWitnesses)
         & updateVotingProcedures
  where
   era = toCardanoEra sbe
@@ -164,11 +165,11 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
     :: [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
   indexedTxCerts = indexTxCertificates txCertificates'
 
-  allWitnesses
+  setScriptWitnesses
     :: [(ScriptWitnessIndex, AnyScriptWitness era)]
     -> L.TxWits (ShelleyLedgerEra era)
     -> L.TxWits (ShelleyLedgerEra era)
-  allWitnesses scriptWitnesses =
+  setScriptWitnesses scriptWitnesses =
     appEndos
       [ monoidForEraInEon
           era
@@ -191,21 +192,6 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
           )
       ]
 
-  allShelleyToBabbageWitnesses
-    :: L.EraTxWits (ShelleyLedgerEra era)
-    => L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-    => L.TxWits (ShelleyLedgerEra era)
-  allShelleyToBabbageWitnesses = do
-    let shelleyKeywitnesses =
-          fromList [w | ShelleyKeyWitness _ w <- witnesses]
-    let shelleyBootstrapWitnesses =
-          fromList [w | ShelleyBootstrapWitness _ w <- witnesses]
-    L.mkBasicTxWits
-      & L.addrTxWitsL
-        .~ shelleyKeywitnesses
-      & L.bootAddrTxWitsL
-        .~ shelleyBootstrapWitnesses
-
 createCommonTxBody
   :: HasCallStack
   => ShelleyBasedEra era
@@ -224,3 +210,31 @@ createCommonTxBody era ins outs txFee' =
             .~ Seq.fromList txOuts'
           & L.feeTxBodyL
             .~ txFee'
+
+-- | Add provided witnesses to the transaction
+addWitnesses
+  :: forall era
+   . [KeyWitness era]
+  -> Tx era
+  -> Tx era
+  -- ^ a signed transaction
+addWitnesses witnesses (ShelleyTx sbe tx) =
+  shelleyBasedEraConstraints sbe $
+    ShelleyTx sbe txCommon
+ where
+  txCommon
+    :: forall ledgerera
+     . ShelleyLedgerEra era ~ ledgerera
+    => L.EraCrypto ledgerera ~ L.StandardCrypto
+    => L.EraTx ledgerera
+    => L.Tx ledgerera
+  txCommon =
+    tx
+      & L.witsTxL
+        %~ ( ( L.addrTxWitsL
+                 %~ (<> fromList [w | ShelleyKeyWitness _ w <- witnesses])
+             )
+               . ( L.bootAddrTxWitsL
+                     %~ (<> fromList [w | ShelleyBootstrapWitness _ w <- witnesses])
+                 )
+           )
