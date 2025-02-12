@@ -41,12 +41,8 @@ import           Test.Tasty.Hedgehog (testProperty)
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
 
--- This is the same test as prop_roundtrip_witness_CBOR but uses the
--- new function `serialiseTxLedgerCddl` instead of the deprecated
--- `serialiseToTextEnvelope`. `deserialiseTxLedgerCddl` must be
--- compatible with both during the transition.
-prop_forward_compatibility_txbody_CBOR :: Property
-prop_forward_compatibility_txbody_CBOR = H.property $ do
+prop_text_envelope_roundtrip_txbody_CBOR :: Property
+prop_text_envelope_roundtrip_txbody_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
   shelleyBasedEraConstraints
@@ -54,14 +50,20 @@ prop_forward_compatibility_txbody_CBOR = H.property $ do
     ( H.tripping
         x
         (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
-        (deserialiseTxLedgerCddl era)
+        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
     )
 
-prop_roundtrip_txbody_CBOR :: Property
-prop_roundtrip_txbody_CBOR = H.property $ do
+prop_text_envelope_roundtrip_tx_CBOR :: Property
+prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
-  H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
+  x <- H.forAll $ genTx era
+  shelleyBasedEraConstraints
+    era
+    ( H.tripping
+        x
+        (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
+        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+    )
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
@@ -289,12 +291,6 @@ prop_TxWitness_cddlTypeToEra = H.property $ do
   getProxy :: forall a. a -> Proxy a
   getProxy _ = Proxy
 
-prop_roundtrip_Tx_Cddl :: Property
-prop_roundtrip_Tx_Cddl = H.property $ do
-  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- forAll $ genTx era
-  H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
-
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do
   AnyShelleyBasedEra sbe <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
@@ -315,7 +311,9 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.CBOR"
-    [ testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
+    [ testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
+    , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
+    , testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
     , testProperty
         "roundtrip operational certificate CBOR"
         prop_roundtrip_operational_certificate_CBOR
@@ -404,9 +402,6 @@ tests =
         "roundtrip UpdateProposal CBOR"
         prop_roundtrip_UpdateProposal_CBOR
     , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
-    , testProperty "roundtrip txbody forward compatibility CBOR" prop_forward_compatibility_txbody_CBOR
-    , testProperty "roundtrip txbody CBOR" prop_roundtrip_txbody_CBOR
-    , testProperty "roundtrip Tx Cddl" prop_roundtrip_Tx_Cddl
     , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
     , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
     , testProperty

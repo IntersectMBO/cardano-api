@@ -22,8 +22,6 @@ module Cardano.Api.Internal.SerialiseLedgerCddl
   , writeTxFileTextEnvelopeCddl
   , writeTxWitnessFileTextEnvelopeCddl
   -- Exported for testing
-  , serialiseTxLedgerCddl
-  , deserialiseTxLedgerCddl
   , deserialiseByronTxCddl
   , serialiseWitnessLedgerCddl
   , deserialiseWitnessLedgerCddl
@@ -122,46 +120,6 @@ instance Error TextEnvelopeCddlError where
     TextEnvelopeCddlErrByronKeyWitnessUnsupported ->
       "TextEnvelopeCddl error: Byron key witnesses are currently unsupported."
 
-{-# DEPRECATED
-  serialiseTxLedgerCddl
-  "Use 'serialiseToTextEnvelope' from 'Cardano.Api.Internal.SerialiseTextEnvelope' instead."
-  #-}
-serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
-serialiseTxLedgerCddl era tx =
-  shelleyBasedEraConstraints era $
-    (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx)
-      { teType = TextEnvelopeType $ T.unpack $ genType tx
-      }
- where
-  genType :: Tx era -> Text
-  genType tx' = case getTxWitnesses tx' of
-    [] -> "Unwitnessed " <> genTxType
-    _ -> "Witnessed " <> genTxType
-  genTxType :: Text
-  genTxType =
-    case era of
-      ShelleyBasedEraShelley -> "Tx ShelleyEra"
-      ShelleyBasedEraAllegra -> "Tx AllegraEra"
-      ShelleyBasedEraMary -> "Tx MaryEra"
-      ShelleyBasedEraAlonzo -> "Tx AlonzoEra"
-      ShelleyBasedEraBabbage -> "Tx BabbageEra"
-      ShelleyBasedEraConway -> "Tx ConwayEra"
-
-{-# DEPRECATED
-  deserialiseTxLedgerCddl
-  "Use 'deserialiseFromTextEnvelope' from 'Cardano.Api.Internal.SerialiseTextEnvelope' instead."
-  #-}
-deserialiseTxLedgerCddl
-  :: forall era
-   . ShelleyBasedEra era
-  -> TextEnvelope
-  -> Either TextEnvelopeError (Tx era)
-deserialiseTxLedgerCddl era =
-  shelleyBasedEraConstraints era $ deserialiseFromTextEnvelope asType
- where
-  asType :: AsType (Tx era)
-  asType = shelleyBasedEraConstraints era $ proxyToAsType Proxy
-
 writeByronTxFileTextEnvelopeCddl
   :: File content Out
   -> Byron.ATxAux ByteString
@@ -254,6 +212,11 @@ writeTxFileTextEnvelopeCddl era path tx =
  where
   txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseTxLedgerCddl era tx) <> "\n"
 
+  serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
+  serialiseTxLedgerCddl era' tx' =
+    shelleyBasedEraConstraints era' $
+      serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx'
+
 writeTxWitnessFileTextEnvelopeCddl
   :: ShelleyBasedEra era
   -> File () Out
@@ -311,6 +274,15 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
   matching :: FromSomeTypeCDDL TextEnvelope b -> Bool
   matching (FromCDDLTx ttoken _f) = TextEnvelopeType (T.unpack ttoken) `legacyComparison` teType teCddl
   matching (FromCDDLWitness ttoken _f) = TextEnvelopeType (T.unpack ttoken) `legacyComparison` teType teCddl
+
+  deserialiseTxLedgerCddl
+    :: forall era
+     . ShelleyBasedEra era
+    -> TextEnvelope
+    -> Either TextEnvelopeError (Tx era)
+  deserialiseTxLedgerCddl era =
+    shelleyBasedEraConstraints era $
+      deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy)
 
 -- Parse the text into types because this will increase code readability and
 -- will make it easier to keep track of the different Cddl descriptions via
