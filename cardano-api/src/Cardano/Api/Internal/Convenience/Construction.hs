@@ -22,6 +22,7 @@ import           Cardano.Api.Internal.ProtocolParameters
 import           Cardano.Api.Internal.Query
 import           Cardano.Api.Internal.Tx.Body
 import           Cardano.Api.Internal.Tx.Sign
+import           Cardano.Api.Internal.Tx.UTxO (UTxO (..))
 import           Cardano.Api.Internal.Utils
 
 import qualified Cardano.Ledger.Api as L
