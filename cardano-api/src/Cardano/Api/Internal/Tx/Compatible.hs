@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | This module provides a way to construct a simple transaction over all eras.
@@ -10,7 +11,8 @@
 module Cardano.Api.Internal.Tx.Compatible
   ( AnyProtocolUpdate (..)
   , AnyVote (..)
-  , createCompatibleSignedTx
+  , createCompatibleTx
+  , Cardano.Api.Internal.Tx.Compatible.makeSignedTransaction
   )
 where
 
@@ -60,19 +62,19 @@ data AnyVote era where
     -> AnyVote era
   NoVotes :: AnyVote era
 
-createCompatibleSignedTx
+-- | Create a transaction in any shelley based era
+createCompatibleTx
   :: forall era
    . ShelleyBasedEra era
   -> [TxIn]
   -> [TxOut CtxTx era]
-  -> [KeyWitness era]
   -> Lovelace
   -- ^ Fee
   -> AnyProtocolUpdate era
   -> AnyVote era
   -> TxCertificates BuildTx era
   -> Either ProtocolParametersConversionError (Tx era)
-createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote txCertificates' =
+createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates' =
   shelleyBasedEraConstraints sbe $ do
     (updateTxBody, extraScriptWitnesses) <-
       case anyProtocolUpdate of
@@ -124,8 +126,7 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
     pure
       . ShelleyTx sbe
       $ L.mkBasicTx txbody
-        & L.witsTxL
-          .~ allWitnesses (apiScriptWitnesses <> extraScriptWitnesses) allShelleyToBabbageWitnesses
+        & L.witsTxL %~ setScriptWitnesses (apiScriptWitnesses <> extraScriptWitnesses)
         & updateVotingProcedures
  where
   era = toCardanoEra sbe
@@ -164,11 +165,11 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
     :: [(ScriptWitnessIndex, Certificate era, StakeCredential, Witness WitCtxStake era)]
   indexedTxCerts = indexTxCertificates txCertificates'
 
-  allWitnesses
+  setScriptWitnesses
     :: [(ScriptWitnessIndex, AnyScriptWitness era)]
     -> L.TxWits (ShelleyLedgerEra era)
     -> L.TxWits (ShelleyLedgerEra era)
-  allWitnesses scriptWitnesses =
+  setScriptWitnesses scriptWitnesses =
     appEndos
       [ monoidForEraInEon
           era
@@ -191,21 +192,6 @@ createCompatibleSignedTx sbe ins outs witnesses txFee' anyProtocolUpdate anyVote
           )
       ]
 
-  allShelleyToBabbageWitnesses
-    :: L.EraTxWits (ShelleyLedgerEra era)
-    => L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-    => L.TxWits (ShelleyLedgerEra era)
-  allShelleyToBabbageWitnesses = do
-    let shelleyKeywitnesses =
-          fromList [w | ShelleyKeyWitness _ w <- witnesses]
-    let shelleyBootstrapWitnesses =
-          fromList [w | ShelleyBootstrapWitness _ w <- witnesses]
-    L.mkBasicTxWits
-      & L.addrTxWitsL
-        .~ shelleyKeywitnesses
-      & L.bootAddrTxWitsL
-        .~ shelleyBootstrapWitnesses
-
 createCommonTxBody
   :: HasCallStack
   => ShelleyBasedEra era
@@ -224,3 +210,77 @@ createCommonTxBody era ins outs txFee' =
             .~ Seq.fromList txOuts'
           & L.feeTxBodyL
             .~ txFee'
+
+-- | Sign a transaction body
+makeSignedTransaction
+  :: forall era
+   . [KeyWitness era]
+  -> TxBody era
+  -> Tx era
+  -- ^ a signed transaction
+makeSignedTransaction
+  witnesses
+  ( ShelleyTxBody
+      sbe
+      txbody
+      txscripts
+      txscriptdata
+      txmetadata
+      scriptValidity
+    ) =
+    case sbe of
+      ShelleyBasedEraShelley -> shelleySignedTransaction
+      ShelleyBasedEraAllegra -> shelleySignedTransaction
+      ShelleyBasedEraMary -> shelleySignedTransaction
+      ShelleyBasedEraAlonzo -> alonzoSignedTransaction
+      ShelleyBasedEraBabbage -> alonzoSignedTransaction
+      ShelleyBasedEraConway -> alonzoSignedTransaction
+   where
+    txCommon
+      :: forall ledgerera
+       . ShelleyLedgerEra era ~ ledgerera
+      => L.EraCrypto ledgerera ~ L.StandardCrypto
+      => L.EraTx ledgerera
+      => L.Tx ledgerera
+    txCommon =
+      L.mkBasicTx txbody
+        & L.witsTxL
+          .~ ( L.mkBasicTxWits
+                 & L.addrTxWitsL .~ fromList [w | ShelleyKeyWitness _ w <- witnesses]
+                 & L.scriptTxWitsL
+                   .~ fromList
+                     [ (L.hashScript @ledgerera sw, sw)
+                     | sw <- txscripts
+                     ]
+                 & L.bootAddrTxWitsL
+                   .~ fromList [w | ShelleyBootstrapWitness _ w <- witnesses]
+             )
+        & L.auxDataTxL .~ maybeToStrictMaybe txmetadata
+
+    shelleySignedTransaction
+      :: forall ledgerera
+       . ShelleyLedgerEra era ~ ledgerera
+      => L.EraCrypto ledgerera ~ L.StandardCrypto
+      => L.EraTx ledgerera
+      => Tx era
+    shelleySignedTransaction = ShelleyTx sbe txCommon
+
+    alonzoSignedTransaction
+      :: forall ledgerera
+       . ShelleyLedgerEra era ~ ledgerera
+      => L.EraCrypto ledgerera ~ L.StandardCrypto
+      => L.AlonzoEraTx ledgerera
+      => Tx era
+    alonzoSignedTransaction =
+      ShelleyTx
+        sbe
+        ( txCommon
+            & L.witsTxL . L.datsTxWitsL .~ datums
+            & L.witsTxL . L.rdmrsTxWitsL .~ redeemers
+            & L.isValidTxL .~ txScriptValidityToIsValid scriptValidity
+        )
+     where
+      (datums, redeemers) =
+        case txscriptdata of
+          TxBodyScriptData _ ds rs -> (ds, rs)
+          TxBodyNoScriptData -> (mempty, L.Redeemers mempty)
