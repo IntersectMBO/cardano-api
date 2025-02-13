@@ -6,7 +6,7 @@ module Cardano.Api.Experimental
 
     -- |
     -- For information and an example on how to create a transaction using the new experimental API,
-    -- check the documentation of the module "Cardano.Api.Experimental.Tx".
+    -- check the documentation of the module "Cardano.Api.Internal.Experimental.Tx".
 
     -- * Contents
 

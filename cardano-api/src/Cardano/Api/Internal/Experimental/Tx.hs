@@ -25,7 +25,7 @@ module Cardano.Api.Internal.Experimental.Tx
     -- This hasn't changed.
     --
     -- To see how to create a transaction using the old API, see the documentation
-    -- of the "Cardano.Api.Tx.Body" module.
+    -- of the "Cardano.Api.Internal.Tx.Body" module.
     --
     -- In the following examples, we are using the following qualified modules:
     --
@@ -36,20 +36,20 @@ module Cardano.Api.Internal.Experimental.Tx
     -- import qualified Cardano.Api.Experimental as Exp   -- the experimental API
     -- @
     --
-    -- You can find a compilable version of these examples in "Test.Cardano.Api.Experimental".
+    -- You can find a compilable version of these examples in @Test.Cardano.Api.Experimental@.
 
     -- ** Creating a 'TxBodyContent'
 
     -- |
     -- Independently of whether we use the Experimental or the traditoinal API, we need to create a 'TxBodyContent'.
     --
-    -- You can see how to do this in the documentation of the "Cardano.Api.Tx.Body" module.
+    -- You can see how to do this in the documentation of the "Cardano.Api.Internal.Tx.Body" module.
 
     -- ** Balancing a transaction
 
     -- |
-    -- If we have a UTxO with exactly 12 ADA, we could just construct the transaction like in the
-    -- previous section directly, and it would be a valid transaction, but:
+    -- If we have a UTxO with exactly 12 ADA, we could just construct the transaction as described in
+    -- "Cardano.Api.Internal.Tx.Body", and it would be a valid transaction, but:
     --
     --   * We are likely wasting ADA
     --   * We may not have exactly one UTxO of 12 ADA
@@ -58,14 +58,14 @@ module Cardano.Api.Internal.Experimental.Tx
     -- For these reasons, it is recommended that we balance the transaction before proceeding with
     -- signing and submitting.
     --
-    -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Fees" module.
+    -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Internal.Fees" module.
 
     -- ** Creating a 'ShelleyWitnessSigningKey'
 
     -- |
     -- To sign the transaction, we need a witness. For example, a 'ShelleyWitnessSigningKey'.
     --
-    -- You can see how to create a 'ShelleyWitnessSigningKey' in the documentation of the "Cardano.Api.Tx.Sign" module.
+    -- You can see how to create a 'ShelleyWitnessSigningKey' in the documentation of the "Cardano.Api.Internal.Tx.Sign" module.
 
     -- ** Creating a transaction using the new API
 

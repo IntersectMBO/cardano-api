@@ -33,7 +33,7 @@ module Cardano.Api.Internal.Tx.Body
     -- This hasn't changed.
     --
     -- To see how to create a transaction using the new API, see the documentation
-    -- of the "Cardano.Api.Experimental.Tx" module.
+    -- of the "Cardano.Api.Internal.Experimental.Tx" module.
     --
     -- In the following examples, we are using the following qualified modules:
     --
@@ -51,13 +51,13 @@ module Cardano.Api.Internal.Tx.Body
     -- we will see how to create a 'TxBodyContent' for a simple transaction using the API.
     --
     -- 'TxBodyContent' datatype provides lots of fields, because transactions can serve multiple
-    -- purposes, but the function 'defaultTxBodyContent' exported from 'Cardano.Api' already provides
+    -- purposes, but the function 'defaultTxBodyContent' exported from "Cardano.Api" already provides
     -- a base 'TxBodyContent' with all fields set to their default values that we can use as a starting point
     -- in order not to have to set all fields manually.
     --
     -- The 'defaultTxBodyContent' takes, as the only parameter, the 'ShelleyBasedEra' witness for the era
     -- we are working with. For example, if we are working with the 'ConwayEra', we can use 'shelleyBasedEra'
-    -- available in 'Cardano.Api', as follows:
+    -- available in "Cardano.Api", as follows:
     --
     -- @
     -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
@@ -141,14 +141,14 @@ module Cardano.Api.Internal.Tx.Body
     -- For these reasons, it is recommended that we balance the transaction before proceeding with
     -- signing and submitting.
     --
-    -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Fees" module.
+    -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Internal.Fees" module.
 
     -- ** Creating a 'ShelleyWitnessSigningKey'
 
     -- |
     -- To sign the transaction, we need a witness. For example, a 'ShelleyWitnessSigningKey'.
     --
-    -- You can see how to create a 'ShelleyWitnessSigningKey' in the documentation of the "Cardano.Api.Tx.Sign" module.
+    -- You can see how to create a 'ShelleyWitnessSigningKey' in the documentation of the "Cardano.Api.Internal.Tx.Sign" module.
 
     -- ** Creating a transaction using the old API
 
@@ -185,7 +185,7 @@ module Cardano.Api.Internal.Tx.Body
 
     -- |
     -- If you are using the new API, you can also derive the 'ShelleyBasedEra' it from 'ConwayEra'
-    -- from 'Cardano.Api.Experimental' by using the 'convert' function:
+    -- from "Cardano.Api.Internal.Experimental" by using the 'convert' function:
     --
     -- @
     -- let era = Exp.ConwayEra
