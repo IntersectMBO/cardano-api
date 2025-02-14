@@ -1,5 +1,35 @@
 # Changelog for cardano-api
 
+## 10.9.0.0
+
+- Re-export `DebugPlutusFailure` and `renderDebugPlutusFailure`.
+  (compatible)
+  [PR 715](https://github.com/IntersectMBO/cardano-api/pull/715)
+
+- Add `Cardano.Api.Tx.UTxO` module for common UTxO operations.
+  (feature, compatible)
+  [PR 710](https://github.com/IntersectMBO/cardano-api/pull/710)
+
+- Removed `serialiseTxLedgerCddl` and `deserialiseTxLedgerCddl`, and updated `writeTxFileTextEnvelopeCddl` to use new format.
+  (breaking)
+  [PR 746](https://github.com/IntersectMBO/cardano-api/pull/746)
+
+- Upgrade ouroboros-consensus-diffusion to >=0.19 && <0.21
+  (compatible)
+  [PR 751](https://github.com/IntersectMBO/cardano-api/pull/751)
+
+- Update TxProposalProcedures type to make invalid states irrepresentable.
+  (breaking, refactoring)
+  [PR 726](https://github.com/IntersectMBO/cardano-api/pull/726)
+
+- Add function `collectPlutusScriptHashes` to collect script hashes needed to validate a given transaction
+  (feature)
+  [PR 735](https://github.com/IntersectMBO/cardano-api/pull/735)
+
+- Fix transaction autobalancing when deregistering a credential
+  (bugfix)
+  [PR 718](https://github.com/IntersectMBO/cardano-api/pull/718)
+
 ## 10.8.0.0
 
 - Add QueryFuturePParams
