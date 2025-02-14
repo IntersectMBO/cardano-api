@@ -20,6 +20,7 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import           Data.Proxy (Proxy (..))
+import           Data.Text (Text)
 import qualified Data.Text as T
 
 import           Test.Gen.Cardano.Api.Hardcoded
@@ -32,7 +33,6 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Gen as Gen
 import qualified Test.Hedgehog.Roundtrip.CBOR as H
-import           Test.Hedgehog.Roundtrip.CBOR
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
@@ -41,12 +41,43 @@ import           Test.Tasty.Hedgehog (testProperty)
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
 
--- This is the same test as prop_roundtrip_witness_CBOR but uses the
--- new function `serialiseTxLedgerCddl` instead of the deprecated
--- `serialiseToTextEnvelope`. `deserialiseTxLedgerCddl` must be
--- compatible with both during the transition.
-prop_forward_compatibility_txbody_CBOR :: Property
-prop_forward_compatibility_txbody_CBOR = H.property $ do
+prop_txbody_backwards_compatibility :: Property
+prop_txbody_backwards_compatibility = H.property $ do
+  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
+  x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
+  shelleyBasedEraConstraints
+    era
+    ( H.tripping
+        x
+        (serialiseTxLedgerCddl era)
+        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+    )
+ where
+  -- This is the old implementation of serialisation for txbodies, and it is
+  -- now deprecated. But we keep it here for testing for backwards compatibility.
+  serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
+  serialiseTxLedgerCddl era tx =
+    shelleyBasedEraConstraints era $
+      (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx)
+        { teType = TextEnvelopeType $ T.unpack $ genType tx
+        }
+   where
+    genType :: Tx era -> Text
+    genType tx' = case getTxWitnesses tx' of
+      [] -> "Unwitnessed " <> genTxType
+      _ -> "Witnessed " <> genTxType
+    genTxType :: Text
+    genTxType =
+      case era of
+        ShelleyBasedEraShelley -> "Tx ShelleyEra"
+        ShelleyBasedEraAllegra -> "Tx AllegraEra"
+        ShelleyBasedEraMary -> "Tx MaryEra"
+        ShelleyBasedEraAlonzo -> "Tx AlonzoEra"
+        ShelleyBasedEraBabbage -> "Tx BabbageEra"
+        ShelleyBasedEraConway -> "Tx ConwayEra"
+
+prop_text_envelope_roundtrip_txbody_CBOR :: Property
+prop_text_envelope_roundtrip_txbody_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
   x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
   shelleyBasedEraConstraints
@@ -54,14 +85,20 @@ prop_forward_compatibility_txbody_CBOR = H.property $ do
     ( H.tripping
         x
         (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
-        (deserialiseTxLedgerCddl era)
+        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
     )
 
-prop_roundtrip_txbody_CBOR :: Property
-prop_roundtrip_txbody_CBOR = H.property $ do
+prop_text_envelope_roundtrip_tx_CBOR :: Property
+prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
   AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- H.forAll $ makeSignedTransaction [] . fst <$> genValidTxBody era
-  H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
+  x <- H.forAll $ genTx era
+  shelleyBasedEraConstraints
+    era
+    ( H.tripping
+        x
+        (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
+        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+    )
 
 prop_roundtrip_tx_CBOR :: Property
 prop_roundtrip_tx_CBOR = H.property $ do
@@ -215,7 +252,7 @@ prop_roundtrip_non_double_encoded_always_succeeds_plutus_V3_CBOR = H.property $ 
 prop_decode_only_double_wrapped_plutus_script_bytes_CBOR :: Property
 prop_decode_only_double_wrapped_plutus_script_bytes_CBOR = H.property $ do
   let alwaysSucceedsDoubleEncoded = Base16.decodeLenient "46450101002499"
-  decodeOnlyPlutusScriptBytes
+  H.decodeOnlyPlutusScriptBytes
     ShelleyBasedEraConway
     PlutusScriptV3
     alwaysSucceedsDoubleEncoded
@@ -224,7 +261,7 @@ prop_decode_only_double_wrapped_plutus_script_bytes_CBOR = H.property $ do
 prop_decode_only_wrapped_plutus_script_V1_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V1_CBOR = H.property $ do
   PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV1
-  decodeOnlyPlutusScriptBytes
+  H.decodeOnlyPlutusScriptBytes
     ShelleyBasedEraConway
     PlutusScriptV1
     (SBS.fromShort shortBs)
@@ -233,7 +270,7 @@ prop_decode_only_wrapped_plutus_script_V1_CBOR = H.property $ do
 prop_decode_only_wrapped_plutus_script_V2_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V2_CBOR = H.property $ do
   PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV2
-  decodeOnlyPlutusScriptBytes
+  H.decodeOnlyPlutusScriptBytes
     ShelleyBasedEraConway
     PlutusScriptV2
     (SBS.fromShort shortBs)
@@ -242,7 +279,7 @@ prop_decode_only_wrapped_plutus_script_V2_CBOR = H.property $ do
 prop_decode_only_wrapped_plutus_script_V3_CBOR :: Property
 prop_decode_only_wrapped_plutus_script_V3_CBOR = H.property $ do
   PlutusScriptSerialised shortBs <- H.forAll $ genPlutusScript PlutusScriptV3
-  decodeOnlyPlutusScriptBytes
+  H.decodeOnlyPlutusScriptBytes
     ShelleyBasedEraConway
     PlutusScriptV3
     (SBS.fromShort shortBs)
@@ -289,12 +326,6 @@ prop_TxWitness_cddlTypeToEra = H.property $ do
   getProxy :: forall a. a -> Proxy a
   getProxy _ = Proxy
 
-prop_roundtrip_Tx_Cddl :: Property
-prop_roundtrip_Tx_Cddl = H.property $ do
-  AnyShelleyBasedEra era <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
-  x <- forAll $ genTx era
-  H.tripping x (serialiseTxLedgerCddl era) (deserialiseTxLedgerCddl era)
-
 prop_roundtrip_TxWitness_Cddl :: Property
 prop_roundtrip_TxWitness_Cddl = H.property $ do
   AnyShelleyBasedEra sbe <- H.noteShowM . H.forAll $ Gen.element [minBound .. maxBound]
@@ -303,11 +334,11 @@ prop_roundtrip_TxWitness_Cddl = H.property $ do
 
 prop_roundtrip_GovernancePoll_CBOR :: Property
 prop_roundtrip_GovernancePoll_CBOR = property $ do
-  trippingCbor AsGovernancePoll =<< forAll genGovernancePoll
+  H.trippingCbor AsGovernancePoll =<< forAll genGovernancePoll
 
 prop_roundtrip_GovernancePollAnswer_CBOR :: Property
 prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
-  trippingCbor AsGovernancePollAnswer =<< forAll genGovernancePollAnswer
+  H.trippingCbor AsGovernancePollAnswer =<< forAll genGovernancePollAnswer
 
 -- -----------------------------------------------------------------------------
 
@@ -315,7 +346,10 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.CBOR"
-    [ testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
+    [ testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
+    , testProperty "txbody backwards compatibility" prop_txbody_backwards_compatibility
+    , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
+    , testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
     , testProperty
         "roundtrip operational certificate CBOR"
         prop_roundtrip_operational_certificate_CBOR
@@ -404,9 +438,6 @@ tests =
         "roundtrip UpdateProposal CBOR"
         prop_roundtrip_UpdateProposal_CBOR
     , testProperty "roundtrip ScriptData CBOR" prop_roundtrip_ScriptData_CBOR
-    , testProperty "roundtrip txbody forward compatibility CBOR" prop_forward_compatibility_txbody_CBOR
-    , testProperty "roundtrip txbody CBOR" prop_roundtrip_txbody_CBOR
-    , testProperty "roundtrip Tx Cddl" prop_roundtrip_Tx_Cddl
     , testProperty "roundtrip TxWitness Cddl" prop_roundtrip_TxWitness_Cddl
     , testProperty "roundtrip tx CBOR" prop_roundtrip_tx_CBOR
     , testProperty
