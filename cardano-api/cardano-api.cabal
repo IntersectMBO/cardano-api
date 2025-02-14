@@ -94,6 +94,7 @@ library
     Cardano.Api.Ledger.Lens
     Cardano.Api.Network
     Cardano.Api.Shelley
+    Cardano.Api.Tx.UTxO
 
   build-depends:
     FailT,
@@ -244,6 +245,7 @@ library
     Cardano.Api.Internal.StakePoolMetadata
     Cardano.Api.Internal.Tx.Body
     Cardano.Api.Internal.Tx.Compatible
+    Cardano.Api.Internal.Tx.UTxO
     Cardano.Api.Internal.TxIn
     Cardano.Api.Internal.TxMetadata
     Cardano.Api.Internal.Utils

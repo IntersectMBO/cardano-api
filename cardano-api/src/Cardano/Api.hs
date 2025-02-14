@@ -1140,6 +1140,7 @@ import           Cardano.Api.Internal.SerialiseUsing
 import           Cardano.Api.Internal.StakePoolMetadata
 import           Cardano.Api.Internal.Tx.Body
 import           Cardano.Api.Internal.Tx.Sign
+import           Cardano.Api.Internal.Tx.UTxO
 import           Cardano.Api.Internal.TxMetadata
 import           Cardano.Api.Internal.Utils
 import           Cardano.Api.Internal.Value
