@@ -1,6 +1,6 @@
 # Changelog for cardano-api
 
-## 10.9.0.0
+## 10.9.0.0
 
 - Re-export `DebugPlutusFailure` and `renderDebugPlutusFailure`.
   (compatible)
