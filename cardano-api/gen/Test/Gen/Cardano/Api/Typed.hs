@@ -132,6 +132,7 @@ module Test.Gen.Cardano.Api.Typed
   , genProposals
   , genProposal
   , genVotingProcedures
+  , genSimpleScriptWithoutEmptyAnys
   )
 where
 
@@ -233,8 +234,14 @@ genScript SimpleScriptLanguage =
 genScript (PlutusScriptLanguage lang) =
   PlutusScript lang <$> genPlutusScript lang
 
+genSimpleScriptWithoutEmptyAnys :: Gen SimpleScript
+genSimpleScriptWithoutEmptyAnys = genRandomSimpleScript False
+
 genSimpleScript :: Gen SimpleScript
-genSimpleScript =
+genSimpleScript = genRandomSimpleScript True
+
+genRandomSimpleScript :: Bool -> Gen SimpleScript
+genRandomSimpleScript hasEmptyAnys=
   genTerm
  where
   genTerm = Gen.recursive Gen.choice nonRecursive recursive
@@ -249,7 +256,7 @@ genSimpleScript =
   -- Recursive generators
   recursive =
     [ RequireAllOf <$> Gen.list (Range.linear 0 10) genTerm
-    , RequireAnyOf <$> Gen.list (Range.linear 0 10) genTerm
+    , RequireAnyOf <$> Gen.list (Range.linear (if hasEmptyAnys then 0 else 1) 10) genTerm
     , do
         ts <- Gen.list (Range.linear 0 10) genTerm
         m <- Gen.integral (Range.constant 0 (length ts))

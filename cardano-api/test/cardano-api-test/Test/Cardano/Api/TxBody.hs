@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -18,15 +19,24 @@ import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import Data.Maybe (isJust)
-import Data.Type.Equality (TestEquality (testEquality))
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.Type.Equality
+  ( TestEquality (testEquality)
+  )
 import GHC.Exts (IsList (..))
 
 import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()
 
-import Hedgehog (MonadTest, Property, (===))
+import Hedgehog
+  ( MonadTest
+  , Property
+  , (===)
+  )
 import Hedgehog qualified as H
+import Hedgehog.Gen (shuffle)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -108,6 +118,34 @@ prop_roundtrip_txbodycontent_conway_fields = H.property $ do
   getProposalProcedures TxProposalProceduresNone = Nothing
   getProposalProcedures (TxProposalProcedures pp) = Just $ fst <$> toList pp
 
+prop_simple_script_witness_count :: Property
+prop_simple_script_witness_count = H.property $ do
+  let sbe = ShelleyBasedEraConway
+  (_, contentWithoutScript) <- H.forAll $ genValidTxBody sbe
+  script <- H.forAll genSimpleScriptWithoutEmptyAnys
+  newTxIn <-
+    H.forAll $
+      (,BuildTxWith
+          ( ScriptWitness
+              ScriptWitnessForSpending
+              (SimpleScriptWitness SimpleScriptInConway (SScript script))
+          ))
+        <$> genTxIn
+  witList <- H.forAll $ satisfyScript script
+  let witCount = fromIntegral $ Set.size witList
+  H.diff
+    (estimateTransactionKeyWitnessCount contentWithoutScript + witCount)
+    (<=)
+    (estimateTransactionKeyWitnessCount (addTxIn newTxIn contentWithoutScript))
+ where
+  satisfyScript :: SimpleScript -> H.Gen (Set (Hash PaymentKey))
+  satisfyScript (RequireSignature paymentKeyHash) = return $ Set.singleton paymentKeyHash
+  satisfyScript (RequireTimeBefore _) = return mempty
+  satisfyScript (RequireTimeAfter _) = return mempty
+  satisfyScript (RequireAllOf simpleScripts) = Set.unions <$> traverse satisfyScript simpleScripts
+  satisfyScript (RequireMOf n simpleScripts) = shuffle simpleScripts >>= satisfyScript . RequireAllOf . take n
+  satisfyScript (RequireAnyOf simpleScripts) = satisfyScript (RequireMOf 1 simpleScripts)
+
 tests :: TestTree
 tests =
   testGroup
@@ -119,4 +157,7 @@ tests =
     , testProperty
         "roundtrip txbodycontent new conway fields"
         prop_roundtrip_txbodycontent_conway_fields
+    , testProperty
+        "simple script witness count"
+        prop_simple_script_witness_count
     ]
