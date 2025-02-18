@@ -16,26 +16,26 @@
 
 module Cardano.Api.Internal.Governance.Actions.VotingProcedure where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Governance.Actions.ProposalProcedure
-import           Cardano.Api.Internal.HasTypeProxy
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Governance.Actions.ProposalProcedure
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseTextEnvelope
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Core as L
+import Cardano.Binary qualified as CBOR
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Core (EraCrypto)
+import Cardano.Ledger.Core qualified as L
 
-import           Control.Monad (foldM)
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
-import           GHC.Generics
+import Control.Monad (foldM)
+import Data.Map qualified as Map
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text.Encoding qualified as Text
+import GHC.Generics
 
 newtype GovernanceActionId era = GovernanceActionId
   { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (ShelleyLedgerEra era))

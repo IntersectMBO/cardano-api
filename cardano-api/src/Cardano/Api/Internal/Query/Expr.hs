@@ -42,42 +42,42 @@ module Cardano.Api.Internal.Query.Expr
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Block
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.GenesisParameters
-import           Cardano.Api.Internal.IPC
-import           Cardano.Api.Internal.IPC.Monad
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.NetworkId
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Internal.Query
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
-import           Cardano.Api.Internal.Tx.UTxO
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Block
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.GenesisParameters
+import Cardano.Api.Internal.IPC
+import Cardano.Api.Internal.IPC.Monad
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.Query
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.Tx.UTxO
 
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Api.State.Query as L
-import qualified Cardano.Ledger.CertState as L
-import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Credential as L
-import qualified Cardano.Ledger.Keys as L
-import           Cardano.Ledger.SafeHash
-import qualified Cardano.Ledger.Shelley.LedgerState as L
-import           Cardano.Slotting.Slot
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
-import           Ouroboros.Network.Block (Serialised)
-import           Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Api.State.Query qualified as L
+import Cardano.Ledger.CertState qualified as L
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Core (EraCrypto)
+import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Keys qualified as L
+import Cardano.Ledger.SafeHash
+import Cardano.Ledger.Shelley.LedgerState qualified as L
+import Cardano.Slotting.Slot
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
+import Ouroboros.Network.Block (Serialised)
+import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
 
-import           Data.Map (Map)
-import           Data.Sequence (Seq)
-import           Data.Set (Set)
-import qualified Data.Set as S
+import Data.Map (Map)
+import Data.Sequence (Seq)
+import Data.Set (Set)
+import Data.Set qualified as S
 
 queryChainBlockNo
   :: ()

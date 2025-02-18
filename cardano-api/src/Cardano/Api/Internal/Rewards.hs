@@ -4,17 +4,17 @@ module Cardano.Api.Internal.Rewards
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Certificate
 
-import qualified Cardano.Ledger.Coin as L
+import Cardano.Ledger.Coin qualified as L
 
-import           Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.List (nub)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           GHC.Exts (IsList (..))
+import Data.Aeson as Aeson
+import Data.Aeson.Types qualified as Aeson
+import Data.List (nub)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import GHC.Exts (IsList (..))
 
 -- | A mapping of Shelley reward accounts to both the stake pool that they
 -- delegate to and their reward account balance.

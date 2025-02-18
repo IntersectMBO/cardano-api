@@ -58,46 +58,46 @@ module Cardano.Api.Internal.Value
   )
 where
 
-import           Cardano.Api.Internal.Eon.MaryEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Error (displayError)
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseUsing
-import           Cardano.Api.Internal.Utils (failEitherWith)
-import qualified Cardano.Api.Ledger.Lens as A
+import Cardano.Api.Internal.Eon.MaryEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Error (displayError)
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.Utils (failEitherWith)
+import Cardano.Api.Ledger.Lens qualified as A
 
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Ledger.Allegra.Core as L
-import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
-import           Cardano.Ledger.Mary.Value (MaryValue (..))
-import qualified Cardano.Ledger.Mary.Value as Mary
+import Cardano.Chain.Common qualified as Byron
+import Cardano.Ledger.Allegra.Core qualified as L
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
+import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value qualified as Mary
 
-import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import           Data.Aeson.Types (Parser, ToJSONKey)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Short as Short
-import           Data.Data (Data)
-import           Data.Function ((&))
-import           Data.Group (invert)
-import qualified Data.List as List
-import qualified Data.Map.Merge.Strict as Map
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.String (IsString (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           GHC.Exts (IsList (..))
-import           Lens.Micro ((%~))
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.Types (Parser, ToJSONKey)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Short qualified as Short
+import Data.Data (Data)
+import Data.Function ((&))
+import Data.Group (invert)
+import Data.List qualified as List
+import Data.Map.Merge.Strict qualified as Map
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.String (IsString (..))
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import GHC.Exts (IsList (..))
+import Lens.Micro ((%~))
 
 toByronLovelace :: Lovelace -> Maybe Byron.Lovelace
 toByronLovelace (L.Coin x) =

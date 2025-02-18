@@ -9,24 +9,24 @@ module Test.Gen.Cardano.Api
   )
 where
 
-import qualified Cardano.Ledger.Alonzo.Core as Ledger
-import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Coin as Ledger
-import qualified Cardano.Ledger.Plutus.CostModels as Plutus
-import qualified Cardano.Ledger.Plutus.Language as Alonzo
-import           Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
+import Cardano.Ledger.Alonzo.Core qualified as Ledger
+import Cardano.Ledger.Alonzo.Genesis qualified as Alonzo
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.Coin qualified as Ledger
+import Cardano.Ledger.Plutus.CostModels qualified as Plutus
+import Cardano.Ledger.Plutus.Language qualified as Alonzo
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 
-import qualified Data.Map.Strict as Map
-import           Data.Word (Word64)
-import           GHC.Exts (IsList (..))
+import Data.Map.Strict qualified as Map
+import Data.Word (Word64)
+import GHC.Exts (IsList (..))
 
-import           Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
+import Test.Gen.Cardano.Api.Typed (genCostModel, genRational)
 
-import           Hedgehog (Gen, Range)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Internal.Range as Range
+import Hedgehog (Gen, Range)
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Internal.Range qualified as Range
 
 genMetadata :: Ledger.Era era => Gen (ShelleyTxAuxData era)
 genMetadata = do

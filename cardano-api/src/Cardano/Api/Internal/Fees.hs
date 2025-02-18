@@ -48,59 +48,59 @@ module Cardano.Api.Internal.Fees
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.MaryEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Eras.Core
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.Feature
-import           Cardano.Api.Internal.Plutus
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Internal.Query
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.Sign
-import           Cardano.Api.Internal.Tx.UTxO
-import           Cardano.Api.Internal.Value
-import qualified Cardano.Api.Ledger.Lens as A
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.MaryEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.Feature
+import Cardano.Api.Internal.Plutus
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.Query
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Tx.UTxO
+import Cardano.Api.Internal.Value
+import Cardano.Api.Ledger.Lens qualified as A
 
-import qualified Cardano.Ledger.Alonzo.Core as Ledger
-import qualified Cardano.Ledger.Alonzo.Plutus.Context as Plutus
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Conway.Governance as L
-import qualified Cardano.Ledger.Core as L
-import           Cardano.Ledger.Credential as Ledger (Credential)
-import qualified Cardano.Ledger.Crypto as Ledger
-import qualified Cardano.Ledger.Keys as Ledger
-import qualified Cardano.Ledger.Plutus.Language as Plutus
-import qualified Cardano.Ledger.Val as L
-import qualified Ouroboros.Consensus.HardFork.History as Consensus
+import Cardano.Ledger.Alonzo.Core qualified as Ledger
+import Cardano.Ledger.Alonzo.Plutus.Context qualified as Plutus
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.Governance qualified as L
+import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Credential as Ledger (Credential)
+import Cardano.Ledger.Crypto qualified as Ledger
+import Cardano.Ledger.Keys qualified as Ledger
+import Cardano.Ledger.Plutus.Language qualified as Plutus
+import Cardano.Ledger.Val qualified as L
+import Ouroboros.Consensus.HardFork.History qualified as Consensus
 
-import           Control.Monad
-import           Data.Bifunctor (bimap, first, second)
-import           Data.ByteString.Short (ShortByteString)
-import           Data.Function ((&))
-import qualified Data.List as List
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe
-import qualified Data.OSet.Strict as OSet
-import           Data.Ratio
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.Text (Text)
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
-import           Lens.Micro ((.~), (^.))
+import Control.Monad
+import Data.Bifunctor (bimap, first, second)
+import Data.ByteString.Short (ShortByteString)
+import Data.Function ((&))
+import Data.List qualified as List
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe
+import Data.OSet.Strict qualified as OSet
+import Data.Ratio
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.Text (Text)
+import GHC.Exts (IsList (..))
+import GHC.Stack
+import Lens.Micro ((.~), (^.))
 
 -- | Type synonym for logs returned by the ledger's @evalTxExUnitsWithLogs@ function.
 -- for scripts in transactions.

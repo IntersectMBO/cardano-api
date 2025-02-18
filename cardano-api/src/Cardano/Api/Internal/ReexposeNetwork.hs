@@ -6,7 +6,7 @@ module Cardano.Api.Internal.ReexposeNetwork
   )
 where
 
-import           Ouroboros.Network.Block (Serialised (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..))
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
+import Ouroboros.Network.Block (Serialised (..))
+import Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..))
+import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
+import Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))

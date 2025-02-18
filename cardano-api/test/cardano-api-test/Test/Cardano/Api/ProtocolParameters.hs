@@ -10,26 +10,33 @@ module Test.Cardano.Api.ProtocolParameters
   )
 where
 
-import           Cardano.Api (CardanoEra (..), ProtocolParametersConversionError, inEonForEra,
-                   prettyPrintJSON)
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
-import           Cardano.Api.Internal.ProtocolParameters (LedgerProtocolParameters (..),
-                   convertToLedgerProtocolParameters, fromLedgerPParams)
-import           Cardano.Api.Ledger (PParams (..))
+import Cardano.Api
+  ( CardanoEra (..)
+  , ProtocolParametersConversionError
+  , inEonForEra
+  , prettyPrintJSON
+  )
+import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
+import Cardano.Api.Internal.ProtocolParameters
+  ( LedgerProtocolParameters (..)
+  , convertToLedgerProtocolParameters
+  , fromLedgerPParams
+  )
+import Cardano.Api.Ledger (PParams (..))
 
-import           Control.Monad (void)
-import           Data.Aeson (FromJSON, Object, ToJSON, eitherDecode)
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.KeyMap as Aeson
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Foldable as Foldable (foldl')
+import Control.Monad (void)
+import Data.Aeson (FromJSON, Object, ToJSON, eitherDecode)
+import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.KeyMap qualified as Aeson
+import Data.ByteString.Lazy qualified as LBS
+import Data.Foldable as Foldable (foldl')
 
-import           Test.Gen.Cardano.Api.Typed (genProtocolParameters)
+import Test.Gen.Cardano.Api.Typed (genProtocolParameters)
 
-import           Hedgehog (Gen, MonadTest, Property, forAll, property, success, (===))
-import           Hedgehog.Extras (leftFail)
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Gen, MonadTest, Property, forAll, property, success, (===))
+import Hedgehog.Extras (leftFail)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 -- Originally, cardano-api used a different type than cardano-ledger to represent
 -- protocol parameters. From conway on, we aim to unify those types and use PParams.

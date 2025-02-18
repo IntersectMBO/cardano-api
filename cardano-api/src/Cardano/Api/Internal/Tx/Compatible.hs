@@ -14,31 +14,31 @@ module Cardano.Api.Internal.Tx.Compatible
   )
 where
 
-import           Cardano.Api.Internal.Address (StakeCredential)
-import           Cardano.Api.Internal.Certificate (Certificate)
-import           Cardano.Api.Internal.Eon.AllegraEraOnwards
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.Sign
-import           Cardano.Api.Internal.Value
+import Cardano.Api.Internal.Address (StakeCredential)
+import Cardano.Api.Internal.Certificate (Certificate)
+import Cardano.Api.Internal.Eon.AllegraEraOnwards
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eon.ShelleyToBabbageEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Value
 
-import qualified Cardano.Ledger.Api as L
+import Cardano.Ledger.Api qualified as L
 
-import qualified Data.Map.Strict as Map
-import           Data.Maybe
-import           Data.Maybe.Strict
-import           Data.Monoid
-import qualified Data.Sequence.Strict as Seq
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
-import           Lens.Micro hiding (ix)
+import Data.Map.Strict qualified as Map
+import Data.Maybe
+import Data.Maybe.Strict
+import Data.Monoid
+import Data.Sequence.Strict qualified as Seq
+import GHC.Exts (IsList (..))
+import GHC.Stack
+import Lens.Micro hiding (ix)
 
 data AnyProtocolUpdate era where
   ProtocolUpdate

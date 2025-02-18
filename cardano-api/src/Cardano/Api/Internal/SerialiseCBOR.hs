@@ -8,12 +8,12 @@ module Cardano.Api.Internal.SerialiseCBOR
   )
 where
 
-import           Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.HasTypeProxy
 
-import           Cardano.Binary (FromCBOR, ToCBOR)
-import qualified Cardano.Binary as CBOR
+import Cardano.Binary (FromCBOR, ToCBOR)
+import Cardano.Binary qualified as CBOR
 
-import           Data.ByteString (ByteString)
+import Data.ByteString (ByteString)
 
 class HasTypeProxy a => SerialiseAsCBOR a where
   serialiseToCBOR :: a -> ByteString

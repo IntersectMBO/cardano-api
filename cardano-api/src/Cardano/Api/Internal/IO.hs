@@ -28,20 +28,20 @@ module Cardano.Api.Internal.IO
   )
 where
 
-import           Cardano.Api.Internal.Error (FileError (..), fileIOExceptT)
-import           Cardano.Api.Internal.IO.Base
-import           Cardano.Api.Internal.IO.Compat
+import Cardano.Api.Internal.Error (FileError (..), fileIOExceptT)
+import Cardano.Api.Internal.IO.Base
+import Cardano.Api.Internal.IO.Compat
 
-import           Control.Monad.Except (runExceptT)
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Lazy as LBSC
-import           Data.Text (Text)
-import qualified Data.Text.IO as Text
+import Control.Monad.Except (runExceptT)
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 qualified as BS
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Lazy qualified as LBSC
+import Data.Text (Text)
+import Data.Text.IO qualified as Text
 
 readByteStringFile
   :: ()

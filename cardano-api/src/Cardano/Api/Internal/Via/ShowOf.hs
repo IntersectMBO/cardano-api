@@ -3,11 +3,11 @@ module Cardano.Api.Internal.Via.ShowOf
   )
 where
 
-import           Data.Aeson
-import qualified Data.Aeson.Key as Key
-import           Data.Aeson.Types
-import qualified Data.Text as Text
-import           Prettyprinter
+import Data.Aeson
+import Data.Aeson.Key qualified as Key
+import Data.Aeson.Types
+import Data.Text qualified as Text
+import Prettyprinter
 
 newtype ShowOf a = ShowOf a
 

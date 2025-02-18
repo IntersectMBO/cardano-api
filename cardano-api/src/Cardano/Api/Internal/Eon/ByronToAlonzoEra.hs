@@ -15,10 +15,10 @@ module Cardano.Api.Internal.Eon.ByronToAlonzoEra
   )
 where
 
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eras.Core
 
-import           Data.Typeable (Typeable)
+import Data.Typeable (Typeable)
 
 data ByronToAlonzoEra era where
   ByronToAlonzoEraByron :: ByronToAlonzoEra ByronEra

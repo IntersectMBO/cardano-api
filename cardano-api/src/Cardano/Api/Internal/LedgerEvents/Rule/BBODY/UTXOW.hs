@@ -11,19 +11,22 @@ module Cardano.Api.Internal.LedgerEvents.Rule.BBODY.UTXOW
   )
 where
 
-import           Cardano.Api.Internal.LedgerEvents.LedgerEvent
+import Cardano.Api.Internal.LedgerEvents.LedgerEvent
 
-import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import           Cardano.Ledger.Alonzo.Rules (AlonzoUtxoEvent (..), AlonzoUtxosEvent (..),
-                   AlonzoUtxowEvent (..))
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import           Cardano.Ledger.Conway
-import qualified Cardano.Ledger.Conway.Rules as Conway
-import qualified Cardano.Ledger.Core as Ledger.Core
-import qualified Cardano.Ledger.Crypto as Crypto
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Allegra.Rules qualified as Allegra
+import Cardano.Ledger.Alonzo.Rules
+  ( AlonzoUtxoEvent (..)
+  , AlonzoUtxosEvent (..)
+  , AlonzoUtxowEvent (..)
+  )
+import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
+import Cardano.Ledger.Conway
+import Cardano.Ledger.Conway.Rules qualified as Conway
+import Cardano.Ledger.Core qualified as Ledger.Core
+import Cardano.Ledger.Crypto qualified as Crypto
+import Cardano.Ledger.Shelley.Rules qualified as Shelley
 
-import           Control.State.Transition.Extended
+import Control.State.Transition.Extended
 
 handleConwayUTxOWEvent
   :: AlonzoUtxowEvent (ConwayEra Crypto.StandardCrypto) -> Maybe LedgerEvent

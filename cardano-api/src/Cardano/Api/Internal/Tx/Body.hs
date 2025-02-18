@@ -216,117 +216,123 @@ module Cardano.Api.Internal.Tx.Body
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.AllegraEraOnwards
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.MaryEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Eras.Core
-import           Cardano.Api.Internal.Error (Error (..), displayError)
-import           Cardano.Api.Internal.Feature
-import           Cardano.Api.Internal.Governance.Actions.VotingProcedure
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.NetworkId
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.ProtocolParameters
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.ScriptData
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseJSON
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.Tx.Sign
-import           Cardano.Api.Internal.TxIn
-import           Cardano.Api.Internal.TxMetadata
-import           Cardano.Api.Internal.Utils
-import           Cardano.Api.Internal.Value
-import           Cardano.Api.Internal.ValueParser
-import qualified Cardano.Api.Ledger.Lens as A
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.AllegraEraOnwards
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.MaryEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eon.ShelleyToBabbageEra
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Error (Error (..), displayError)
+import Cardano.Api.Internal.Feature
+import Cardano.Api.Internal.Governance.Actions.VotingProcedure
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.ScriptData
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseJSON
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.TxIn
+import Cardano.Api.Internal.TxMetadata
+import Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Value
+import Cardano.Api.Internal.ValueParser
+import Cardano.Api.Ledger.Lens qualified as A
 
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.Hashing as Byron
-import qualified Cardano.Ledger.Allegra.Core as L
-import qualified Cardano.Ledger.Alonzo.Core as L
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (hashScriptIntegrity)
-import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Babbage.UTxO as L
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import           Cardano.Ledger.Binary (Annotated (..))
-import qualified Cardano.Ledger.Binary as CBOR
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Conway.Core as L
-import           Cardano.Ledger.Core ()
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-import           Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
-import qualified Cardano.Ledger.Plutus.Data as Plutus
-import qualified Cardano.Ledger.Plutus.Language as Plutus
-import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.Shelley.API as Ledger
-import qualified Cardano.Ledger.Shelley.Genesis as Shelley
-import qualified Cardano.Ledger.Shelley.TxCert as Shelley
-import qualified Cardano.Ledger.TxIn as L
-import           Cardano.Ledger.Val as L (isZero)
-import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardBabbage,
-                   StandardConway, StandardMary, StandardShelley)
+import Cardano.Chain.Common qualified as Byron
+import Cardano.Chain.UTxO qualified as Byron
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Crypto.Hashing qualified as Byron
+import Cardano.Ledger.Allegra.Core qualified as L
+import Cardano.Ledger.Alonzo.Core qualified as L
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Alonzo.Tx qualified as Alonzo (hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Babbage.UTxO qualified as L
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Binary (Annotated (..))
+import Cardano.Ledger.Binary qualified as CBOR
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.Core qualified as L
+import Cardano.Ledger.Core ()
+import Cardano.Ledger.Core qualified as Core
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Credential qualified as Shelley
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Ledger.Mary.Value as L (MaryValue (..), MultiAsset)
+import Cardano.Ledger.Plutus.Data qualified as Plutus
+import Cardano.Ledger.Plutus.Language qualified as Plutus
+import Cardano.Ledger.SafeHash qualified as SafeHash
+import Cardano.Ledger.Shelley.API qualified as Ledger
+import Cardano.Ledger.Shelley.Genesis qualified as Shelley
+import Cardano.Ledger.Shelley.TxCert qualified as Shelley
+import Cardano.Ledger.TxIn qualified as L
+import Cardano.Ledger.Val as L (isZero)
+import Cardano.Slotting.Slot (SlotNo (..))
+import Ouroboros.Consensus.Shelley.Eras
+  ( StandardAllegra
+  , StandardAlonzo
+  , StandardBabbage
+  , StandardConway
+  , StandardMary
+  , StandardShelley
+  )
 
-import           Control.Applicative
-import           Control.Monad
-import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor (Bifunctor (..))
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Char8 as BSC
-import           Data.Foldable (for_)
-import           Data.Function (on)
-import           Data.Functor (($>))
-import           Data.List (sortBy)
-import qualified Data.List as List
-import qualified Data.List.NonEmpty as NonEmpty
-import           Data.Map.Ordered.Strict (OMap)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe
-import           Data.Monoid
-import           Data.OSet.Strict (OSet)
-import qualified Data.OSet.Strict as OSet
-import           Data.Scientific (toBoundedInteger)
-import qualified Data.Sequence.Strict as Seq
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.String
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Type.Equality
-import           Data.Typeable
-import           Data.Word (Word16, Word32, Word64)
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
-import           Lens.Micro hiding (ix)
-import           Lens.Micro.Extras (view)
-import qualified Text.Parsec as Parsec
-import           Text.Parsec ((<?>))
-import qualified Text.Parsec.String as Parsec
+import Control.Applicative
+import Control.Monad
+import Data.Aeson (object, withObject, (.:), (.:?), (.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
+import Data.Bifunctor (Bifunctor (..))
+import Data.ByteString (ByteString)
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as BSC
+import Data.Foldable (for_)
+import Data.Function (on)
+import Data.Functor (($>))
+import Data.List (sortBy)
+import Data.List qualified as List
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Ordered.Strict (OMap)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe
+import Data.Monoid
+import Data.OSet.Strict (OSet)
+import Data.OSet.Strict qualified as OSet
+import Data.Scientific (toBoundedInteger)
+import Data.Sequence.Strict qualified as Seq
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.String
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Type.Equality
+import Data.Typeable
+import Data.Word (Word16, Word32, Word64)
+import GHC.Exts (IsList (..))
+import GHC.Stack
+import Lens.Micro hiding (ix)
+import Lens.Micro.Extras (view)
+import Text.Parsec ((<?>))
+import Text.Parsec qualified as Parsec
+import Text.Parsec.String qualified as Parsec
 
 -- ----------------------------------------------------------------------------
 -- Transaction outputs

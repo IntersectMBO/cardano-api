@@ -9,26 +9,26 @@ module Test.Cardano.Api.Metadata
   )
 where
 
-import           Cardano.Api
+import Cardano.Api
 
-import qualified Data.Aeson as Aeson
-import           Data.ByteString (ByteString)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (mapMaybe)
-import           Data.Word (Word64)
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
-import           Text.InterpolatedString.Perl6
+import Data.Aeson qualified as Aeson
+import Data.ByteString (ByteString)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.Word (Word64)
+import GHC.Exts (IsList (..))
+import GHC.Stack
+import Text.InterpolatedString.Perl6
 
-import           Test.Gen.Cardano.Api.Metadata
+import Test.Gen.Cardano.Api.Metadata
 
-import           Hedgehog (Gen, Property, (===))
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Gen, Property, (===))
+import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 -- ----------------------------------------------------------------------------
 -- Golden / unit tests

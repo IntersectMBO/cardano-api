@@ -14,25 +14,25 @@ module Cardano.Api.Internal.LedgerEvents.LedgerEvent
   )
 where
 
-import           Cardano.Api.Internal.Address (StakeCredential, fromShelleyStakeCredential)
-import           Cardano.Api.Internal.Block (EpochNo)
-import           Cardano.Api.Internal.Keys.Shelley (Hash (..), StakePoolKey)
+import Cardano.Api.Internal.Address (StakeCredential, fromShelleyStakeCredential)
+import Cardano.Api.Internal.Block (EpochNo)
+import Cardano.Api.Internal.Keys.Shelley (Hash (..), StakePoolKey)
 
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Coin as Ledger
-import qualified Cardano.Ledger.Conway.Governance as Ledger
-import qualified Cardano.Ledger.Core as Ledger.Core
-import qualified Cardano.Ledger.Credential as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Ledger
-import           Cardano.Ledger.Plutus.Evaluate (PlutusWithContext)
-import           Cardano.Ledger.Shelley.Rewards (Reward)
-import qualified Cardano.Ledger.TxIn as Ledger
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Coin qualified as Ledger
+import Cardano.Ledger.Conway.Governance qualified as Ledger
+import Cardano.Ledger.Core qualified as Ledger.Core
+import Cardano.Ledger.Credential qualified as Ledger
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys qualified as Ledger
+import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext)
+import Cardano.Ledger.Shelley.Rewards (Reward)
+import Cardano.Ledger.TxIn qualified as Ledger
 
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Set (Set)
 
 data AnyProposals
   = forall era. Ledger.Core.EraPParams era => AnyProposals (Ledger.Proposals era)

@@ -39,33 +39,33 @@ module Cardano.Api.Internal.Keys.Shelley
   )
 where
 
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Class
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.SerialiseBech32
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseJSON
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Class
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.SerialiseBech32
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseJSON
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.SerialiseUsing
 
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Crypto.Wallet as Crypto.HD
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Crypto as Shelley (DSIGN)
-import qualified Cardano.Ledger.Keys as Shelley
+import Cardano.Crypto.DSIGN.Class qualified as Crypto
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Crypto.Seed qualified as Crypto
+import Cardano.Crypto.Wallet qualified as Crypto.HD
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto qualified as Shelley (DSIGN)
+import Cardano.Ledger.Keys qualified as Shelley
 
-import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
-import           Data.Bifunctor (first)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Maybe
-import           Data.String (IsString (..))
+import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
+import Data.Bifunctor (first)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.Either.Combinators (maybeToRight)
+import Data.Maybe
+import Data.String (IsString (..))
 
 --
 -- Shelley payment keys

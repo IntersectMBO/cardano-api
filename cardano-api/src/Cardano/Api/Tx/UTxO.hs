@@ -10,4 +10,4 @@ module Cardano.Api.Tx.UTxO
   )
 where
 
-import qualified Cardano.Api.Internal.Tx.UTxO as UTxO
+import Cardano.Api.Internal.Tx.UTxO qualified as UTxO

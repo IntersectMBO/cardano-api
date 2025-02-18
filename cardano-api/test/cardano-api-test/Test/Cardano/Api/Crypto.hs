@@ -12,18 +12,18 @@ module Test.Cardano.Api.Crypto
   )
 where
 
-import           Cardano.Api.Crypto.Ed25519Bip32 (Ed25519Bip32DSIGN, SignKeyDSIGN (..))
+import Cardano.Api.Crypto.Ed25519Bip32 (Ed25519Bip32DSIGN, SignKeyDSIGN (..))
 
-import           Cardano.Crypto.DSIGN
-import           Cardano.Crypto.Util (SignableRepresentation (..))
-import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Crypto.DSIGN
+import Cardano.Crypto.Util (SignableRepresentation (..))
+import Cardano.Crypto.Wallet qualified as CC
 
-import           Data.Proxy (Proxy (..))
+import Data.Proxy (Proxy (..))
 
-import           Test.Crypto.Util
-import           Test.QuickCheck (Arbitrary (..), Gen, Property, (=/=), (===), (==>))
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.QuickCheck (testProperty)
+import Test.Crypto.Util
+import Test.QuickCheck (Arbitrary (..), Gen, Property, (=/=), (===), (==>))
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (testProperty)
 
 --
 -- The list of all tests

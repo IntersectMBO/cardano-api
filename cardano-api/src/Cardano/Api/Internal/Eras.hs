@@ -50,6 +50,6 @@ module Cardano.Api.Internal.Eras
   )
 where
 
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Eras.Core

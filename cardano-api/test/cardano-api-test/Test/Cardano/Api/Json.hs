@@ -6,22 +6,22 @@ module Test.Cardano.Api.Json
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.Orphans ()
-import           Cardano.Api.Shelley
+import Cardano.Api
+import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Shelley
 
-import           Data.Aeson (eitherDecode, encode)
+import Data.Aeson (eitherDecode, encode)
 
-import           Test.Gen.Cardano.Api (genAlonzoGenesis)
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api (genAlonzoGenesis)
+import Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Orphans ()
+import Test.Cardano.Api.Orphans ()
 
-import           Hedgehog (Property, forAll, tripping)
-import qualified Hedgehog as H
-import qualified Hedgehog.Gen as Gen
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property, forAll, tripping)
+import Hedgehog qualified as H
+import Hedgehog.Gen qualified as Gen
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 

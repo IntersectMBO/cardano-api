@@ -5,18 +5,18 @@ module Test.Cardano.Api.Address
   )
 where
 
-import           Cardano.Api
+import Cardano.Api
 
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 
-import           Test.Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
+import Test.Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
 
-import           Test.Cardano.Api.Orphans ()
+import Test.Cardano.Api.Orphans ()
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property)
+import Hedgehog qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 

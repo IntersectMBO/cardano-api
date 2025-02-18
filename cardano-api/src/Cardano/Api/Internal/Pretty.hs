@@ -22,13 +22,13 @@ module Cardano.Api.Internal.Pretty
   )
 where
 
-import           Cardano.Api.Internal.Via.ShowOf
+import Cardano.Api.Internal.Via.ShowOf
 
-import           Control.Exception.Safe
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as TextLazy
-import           Prettyprinter
-import           Prettyprinter.Render.Terminal
+import Control.Exception.Safe
+import Data.Text qualified as Text
+import Data.Text.Lazy qualified as TextLazy
+import Prettyprinter
+import Prettyprinter.Render.Terminal
 
 -- | 'Ann' is the prettyprinter annotation for cardano-api and cardano-cli to enable the printing
 -- of colored output. This is a type alias for AnsiStyle.

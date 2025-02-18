@@ -13,18 +13,18 @@ module Cardano.Api.Internal.SerialiseRaw
   )
 where
 
-import           Cardano.Api.Internal.Error (Error, prettyError)
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Error (Error, prettyError)
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Pretty
 
-import           Data.Bifunctor (Bifunctor (..))
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16 as Base16
-import           Data.Data (typeRep)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Typeable (TypeRep, Typeable)
+import Data.Bifunctor (Bifunctor (..))
+import Data.ByteString (ByteString)
+import Data.ByteString.Base16 qualified as Base16
+import Data.Data (typeRep)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Typeable (TypeRep, Typeable)
 
 newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
   -- TODO We can do better than use String to carry the error message

@@ -74,48 +74,48 @@ module Cardano.Api.Internal.Tx.Sign
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.Keys.Class
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.NetworkId
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.Keys.Class
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseTextEnvelope
 
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Hashing as Byron
-import qualified Cardano.Crypto.ProtocolMagic as Byron
-import qualified Cardano.Crypto.Signing as Byron
-import qualified Cardano.Crypto.Util as Crypto
-import qualified Cardano.Crypto.Wallet as Crypto.HD
-import qualified Cardano.Ledger.Alonzo.Core as L
-import qualified Cardano.Ledger.Alonzo.TxWits as Alonzo
-import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
-import           Cardano.Ledger.Binary (Annotated (..))
-import qualified Cardano.Ledger.Binary as CBOR
-import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.SafeHash as Ledger
+import Cardano.Chain.Common qualified as Byron
+import Cardano.Chain.UTxO qualified as Byron
+import Cardano.Crypto.DSIGN.Class qualified as Crypto
+import Cardano.Crypto.Hashing qualified as Byron
+import Cardano.Crypto.ProtocolMagic qualified as Byron
+import Cardano.Crypto.Signing qualified as Byron
+import Cardano.Crypto.Util qualified as Crypto
+import Cardano.Crypto.Wallet qualified as Crypto.HD
+import Cardano.Ledger.Alonzo.Core qualified as L
+import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import Cardano.Ledger.Binary (Annotated (..))
+import Cardano.Ledger.Binary qualified as CBOR
+import Cardano.Ledger.Binary.Plain qualified as Plain
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Ledger.SafeHash qualified as Ledger
 
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
-import           Data.Maybe
-import qualified Data.Set as Set
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           GHC.Exts (IsList (..))
-import           Lens.Micro
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as LBS
+import Data.Map.Strict qualified as Map
+import Data.Maybe
+import Data.Set qualified as Set
+import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import GHC.Exts (IsList (..))
+import Lens.Micro
 
 -- ----------------------------------------------------------------------------
 -- Signed transactions

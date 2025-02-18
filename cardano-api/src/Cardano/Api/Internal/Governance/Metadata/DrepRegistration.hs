@@ -17,15 +17,19 @@ module Cardano.Api.Internal.Governance.Metadata.DrepRegistration
   )
 where
 
-import           Cardano.Api.Internal.Governance.Metadata.Parsers (textWithMaxLength)
-import           Cardano.Api.Internal.Governance.Metadata.Validation (Authors, Body,
-                   GovActionMetadata (..), HashAlgorithm)
+import Cardano.Api.Internal.Governance.Metadata.Parsers (textWithMaxLength)
+import Cardano.Api.Internal.Governance.Metadata.Validation
+  ( Authors
+  , Body
+  , GovActionMetadata (..)
+  , HashAlgorithm
+  )
 
-import           Data.Aeson (FromJSON, withObject, (.:), (.:?))
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (Parser)
-import           Data.Text (Text)
-import           GHC.Generics (Generic)
+import Data.Aeson (FromJSON, withObject, (.:), (.:?))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types (Parser)
+import Data.Text (Text)
+import GHC.Generics (Generic)
 
 data CIP119 = DrepRegistrationMetadata
 

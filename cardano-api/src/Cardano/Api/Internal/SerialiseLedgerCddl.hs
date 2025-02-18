@@ -32,34 +32,44 @@ module Cardano.Api.Internal.SerialiseLedgerCddl
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.IO
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelope (..),
-                   TextEnvelopeDescr (TextEnvelopeDescr), TextEnvelopeError (..),
-                   TextEnvelopeType (TextEnvelopeType), deserialiseFromTextEnvelope,
-                   legacyComparison, serialiseToTextEnvelope)
-import           Cardano.Api.Internal.Tx.Sign
-import           Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.IO
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.SerialiseTextEnvelope
+  ( TextEnvelope (..)
+  , TextEnvelopeDescr (TextEnvelopeDescr)
+  , TextEnvelopeError (..)
+  , TextEnvelopeType (TextEnvelopeType)
+  , deserialiseFromTextEnvelope
+  , legacyComparison
+  , serialiseToTextEnvelope
+  )
+import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Utils
 
-import qualified Cardano.Chain.UTxO as Byron
-import           Cardano.Ledger.Binary (DecoderError)
-import qualified Cardano.Ledger.Binary as CBOR
+import Cardano.Chain.UTxO qualified as Byron
+import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.Binary qualified as CBOR
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                   newExceptT, runExceptT)
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
-import           Data.Bifunctor (first)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Data (Data)
-import           Data.Either.Combinators (mapLeft)
-import qualified Data.List as List
-import           Data.Text (Text)
-import qualified Data.Text as T
+import Control.Monad.Trans.Except.Extra
+  ( firstExceptT
+  , handleIOExceptT
+  , hoistEither
+  , newExceptT
+  , runExceptT
+  )
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
+import Data.Bifunctor (first)
+import Data.ByteString (ByteString)
+import Data.ByteString.Lazy qualified as LBS
+import Data.Data (Data)
+import Data.Either.Combinators (mapLeft)
+import Data.List qualified as List
+import Data.Text (Text)
+import Data.Text qualified as T
 
 -- Why have we gone this route? The serialization format of `TxBody era`
 -- differs from the CDDL. We serialize to an intermediate type in order to simplify

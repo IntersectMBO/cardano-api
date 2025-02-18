@@ -1,8 +1,8 @@
 module Cardano.Api.Internal.Governance.Metadata.Parsers (textWithMaxLength) where
 
-import           Data.Aeson.Types (Parser, Value, parseJSON)
-import           Data.Text (Text)
-import qualified Data.Text as T
+import Data.Aeson.Types (Parser, Value, parseJSON)
+import Data.Text (Text)
+import Data.Text qualified as T
 
 -- | Parser for 'Text' that validates that the number of characters is
 -- under a given maximum. The 'String' parameter is meant to be the name

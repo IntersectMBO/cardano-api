@@ -12,18 +12,18 @@ module Cardano.Api.Internal.LedgerEvents.Rule.TICK.NEWEPOCH
   )
 where
 
-import           Cardano.Api.Internal.Address (fromShelleyStakeCredential)
-import           Cardano.Api.Internal.LedgerEvents.LedgerEvent
-import           Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
-import           Cardano.Api.Internal.ReexposeLedger
+import Cardano.Api.Internal.Address (fromShelleyStakeCredential)
+import Cardano.Api.Internal.LedgerEvents.LedgerEvent
+import Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
+import Cardano.Api.Internal.ReexposeLedger
 
-import           Cardano.Ledger.Conway.Rules (ConwayNewEpochEvent)
-import qualified Cardano.Ledger.Conway.Rules as Conway
-import qualified Cardano.Ledger.Core as Core
-import           Cardano.Ledger.Shelley.Rules
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Conway.Rules (ConwayNewEpochEvent)
+import Cardano.Ledger.Conway.Rules qualified as Conway
+import Cardano.Ledger.Core qualified as Core
+import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.Rules qualified as Shelley
 
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 
 type LatestTickEventConstraints ledgerera =
   ( Event (Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera

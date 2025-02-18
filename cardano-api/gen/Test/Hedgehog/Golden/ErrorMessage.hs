@@ -3,32 +3,32 @@
 
 module Test.Hedgehog.Golden.ErrorMessage where
 
-import           Cardano.Api (Error (..))
-import           Cardano.Api.Internal.Pretty
+import Cardano.Api (Error (..))
+import Cardano.Api.Internal.Pretty
 
-import qualified Control.Concurrent.QSem as IO
-import           Control.Exception (bracket_)
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
-import           Data.Algorithm.DiffOutput (ppDiff)
-import           Data.Data
-import qualified Data.List as List
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import qualified GHC.Stack as GHC
-import qualified System.Directory as IO
-import qualified System.Environment as IO
-import           System.FilePath (takeDirectory, (</>))
-import qualified System.IO as IO
-import qualified System.IO.Unsafe as IO
+import Control.Concurrent.QSem qualified as IO
+import Control.Exception (bracket_)
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.Algorithm.Diff (PolyDiff (Both), getGroupedDiff)
+import Data.Algorithm.DiffOutput (ppDiff)
+import Data.Data
+import Data.List qualified as List
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
+import GHC.Stack (HasCallStack, withFrozenCallStack)
+import GHC.Stack qualified as GHC
+import System.Directory qualified as IO
+import System.Environment qualified as IO
+import System.FilePath (takeDirectory, (</>))
+import System.IO qualified as IO
+import System.IO.Unsafe qualified as IO
 
-import           Hedgehog
-import qualified Hedgehog.Extras.Test as H
-import qualified Hedgehog.Internal.Property as H
-import           Test.Tasty
-import           Test.Tasty.Hedgehog
+import Hedgehog
+import Hedgehog.Extras.Test qualified as H
+import Hedgehog.Internal.Property qualified as H
+import Test.Tasty
+import Test.Tasty.Hedgehog
 
 -- | Generate test tree for the list of values. This 'TestTree' will serialize the values using 'Error'
 -- instance and compare them against golden files in the provided location.
@@ -136,9 +136,9 @@ diffVsGoldenFile actualContent goldenFile = GHC.withFrozenCallStack $ do
 
   if
     | recreateGoldenFiles -> writeGoldenFile goldenFile actualContent
-    | fileExists          -> checkAgainstGoldenFile goldenFile actualLines
-    | createGoldenFiles   -> writeGoldenFile goldenFile actualContent
-    | otherwise           -> reportGoldenFileMissing goldenFile
+    | fileExists -> checkAgainstGoldenFile goldenFile actualLines
+    | createGoldenFiles -> writeGoldenFile goldenFile actualContent
+    | otherwise -> reportGoldenFileMissing goldenFile
  where
   actualLines = List.lines actualContent
 

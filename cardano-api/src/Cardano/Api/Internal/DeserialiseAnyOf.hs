@@ -21,31 +21,31 @@ module Cardano.Api.Internal.DeserialiseAnyOf
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.Keys.Class
-import           Cardano.Api.Internal.Keys.Praos
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.SerialiseBech32
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.Keys.Class
+import Cardano.Api.Internal.Keys.Praos
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.SerialiseBech32
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
 
-import qualified Cardano.Chain.Common as Common
-import qualified Cardano.Crypto.Signing as Crypto
+import Cardano.Chain.Common qualified as Common
+import Cardano.Crypto.Signing qualified as Crypto
 
-import qualified Data.Aeson as Aeson
-import           Data.Bifunctor (first)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BSC
-import           Data.Char (toLower)
-import           Data.Data (Data)
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
-import           Formatting (build, sformat, (%))
-import           GHC.Exts (IsList (..))
-import           Prettyprinter
+import Data.Aeson qualified as Aeson
+import Data.Bifunctor (first)
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 qualified as BSC
+import Data.Char (toLower)
+import Data.Data (Data)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Text (Text)
+import Data.Text.Encoding qualified as Text
+import Formatting (build, sformat, (%))
+import GHC.Exts (IsList (..))
+import Prettyprinter
 
 ------------------------------------------------------------------------------
 -- Formatted/encoded input deserialisation

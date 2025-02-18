@@ -13,8 +13,8 @@ module Cardano.Api.Internal.Feature
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras.Core
 
 -- | A value only if the eon includes era
 data Featured eon era a where

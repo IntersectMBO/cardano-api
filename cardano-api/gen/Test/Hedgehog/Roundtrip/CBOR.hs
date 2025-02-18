@@ -10,21 +10,21 @@ module Test.Hedgehog.Roundtrip.CBOR
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Script
+import Cardano.Api
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Script
 
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Plutus.Language as Plutus
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Plutus.Language qualified as Plutus
 
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Short as SBS
-import           Data.Proxy
-import           GHC.Stack (HasCallStack)
-import qualified GHC.Stack as GHC
+import Data.ByteString (ByteString)
+import Data.ByteString.Short qualified as SBS
+import Data.Proxy
+import GHC.Stack (HasCallStack)
+import GHC.Stack qualified as GHC
 
-import qualified Hedgehog as H
-import           Hedgehog.Internal.Property (failWith)
+import Hedgehog qualified as H
+import Hedgehog.Internal.Property (failWith)
 
 {- HLINT ignore "Use camelCase" -}
 

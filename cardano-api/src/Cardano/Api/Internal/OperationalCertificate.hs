@@ -18,24 +18,24 @@ module Cardano.Api.Internal.OperationalCertificate
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.Keys.Class
-import           Cardano.Api.Internal.Keys.Praos
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.Keys.Class
+import Cardano.Api.Internal.Keys.Praos
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.Tx.Sign
 
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Protocol.TPraos.OCert as Shelley
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Protocol.TPraos.OCert qualified as Shelley
 
-import           Data.Word
+import Data.Word
 
 -- ----------------------------------------------------------------------------
 -- Operational certificates

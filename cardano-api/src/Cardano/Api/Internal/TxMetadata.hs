@@ -47,43 +47,43 @@ module Cardano.Api.Internal.TxMetadata
   )
 where
 
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.SerialiseCBOR (SerialiseAsCBOR (..))
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.SerialiseCBOR (SerialiseAsCBOR (..))
 
-import qualified Cardano.Ledger.Binary as CBOR
-import qualified Cardano.Ledger.Shelley.TxAuxData as Shelley
+import Cardano.Ledger.Binary qualified as CBOR
+import Cardano.Ledger.Shelley.TxAuxData qualified as Shelley
 
-import qualified Codec.CBOR.Magic as CBOR
-import           Control.Applicative (Alternative (..))
-import           Control.Monad (guard, when)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Aeson.Text as Aeson.Text
-import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import           Data.Bifunctor (bimap, first)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Data (Data)
-import qualified Data.List as List
-import qualified Data.Map.Lazy as Map.Lazy
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
-import qualified Data.Scientific as Scientific
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.Text.Lazy.Builder as Text.Builder
-import           Data.Word
-import           GHC.Exts (IsList (..))
+import Codec.CBOR.Magic qualified as CBOR
+import Control.Applicative (Alternative (..))
+import Control.Monad (guard, when)
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Text qualified as Aeson.Text
+import Data.Attoparsec.ByteString.Char8 qualified as Atto
+import Data.Bifunctor (bimap, first)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy.Char8 qualified as LBS
+import Data.Data (Data)
+import Data.List qualified as List
+import Data.Map.Lazy qualified as Map.Lazy
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.Scientific qualified as Scientific
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as Text.Lazy
+import Data.Text.Lazy.Builder qualified as Text.Builder
+import Data.Word
+import GHC.Exts (IsList (..))
 
 -- ----------------------------------------------------------------------------
 -- TxMetadata types

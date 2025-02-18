@@ -12,33 +12,33 @@
 
 module Cardano.Api.Internal.Governance.Actions.ProposalProcedure where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.ProtocolParameters
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.TxIn
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.TxIn
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Ledger.Address as L
-import           Cardano.Ledger.BaseTypes
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Conway as Conway
-import qualified Cardano.Ledger.Conway.Governance as Gov
-import qualified Cardano.Ledger.Conway.Governance as Ledger
-import           Cardano.Ledger.Core (EraCrypto)
-import qualified Cardano.Ledger.Core as Shelley
-import qualified Cardano.Ledger.Credential as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
+import Cardano.Binary qualified as CBOR
+import Cardano.Ledger.Address qualified as L
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway qualified as Conway
+import Cardano.Ledger.Conway.Governance qualified as Gov
+import Cardano.Ledger.Conway.Governance qualified as Ledger
+import Cardano.Ledger.Core (EraCrypto)
+import Cardano.Ledger.Core qualified as Shelley
+import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
 
-import           Data.ByteString (ByteString)
-import           Data.Map.Strict (Map)
-import           Data.Maybe (fromMaybe)
-import           Data.Word
-import           GHC.Exts (IsList (..))
+import Data.ByteString (ByteString)
+import Data.Map.Strict (Map)
+import Data.Maybe (fromMaybe)
+import Data.Word
+import GHC.Exts (IsList (..))
 
 data AnyGovernanceAction = forall era. AnyGovernanceAction (Gov.GovAction era)
 

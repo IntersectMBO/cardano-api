@@ -10,18 +10,18 @@ module Test.Gen.Cardano.Api.Era
   )
 where
 
-import           Cardano.Api hiding (txIns)
-import           Cardano.Api.Shelley
+import Cardano.Api hiding (txIns)
+import Cardano.Api.Shelley
 
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Core as Ledger
+import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.Core qualified as Ledger
 
-import qualified Data.Functor.Identity as Ledger
+import Data.Functor.Identity qualified as Ledger
 
-import           Test.Cardano.Ledger.Conway.Arbitrary ()
-import           Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary ()
 
-import           Test.QuickCheck (Arbitrary (..))
+import Test.QuickCheck (Arbitrary (..))
 
 shelleyBasedEraTestConstraints
   :: ()

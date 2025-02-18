@@ -94,134 +94,151 @@ module Cardano.Api.Internal.LedgerState
   )
 where
 
-import           Cardano.Api.Internal.Block
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Eras.Core (CardanoEra, forEraMaybeEon)
-import           Cardano.Api.Internal.Error as Api
-import           Cardano.Api.Internal.Genesis
-import           Cardano.Api.Internal.IO
-import           Cardano.Api.Internal.IPC (ConsensusModeParams (..),
-                   LocalChainSyncClient (LocalChainSyncClientPipelined),
-                   LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
-                   LocalNodeConnectInfo (..), connectToLocalNode)
-import           Cardano.Api.Internal.Keys.Praos
-import           Cardano.Api.Internal.LedgerEvents.ConvertLedgerEvent
-import           Cardano.Api.Internal.LedgerEvents.LedgerEvent
-import           Cardano.Api.Internal.Modes (EpochSlots (..))
-import qualified Cardano.Api.Internal.Modes as Api
-import           Cardano.Api.Internal.Monad.Error
-import           Cardano.Api.Internal.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.Query (CurrentEpochState (..), PoolDistribution (unPoolDistr),
-                   ProtocolState, SerialisedCurrentEpochState (..), SerialisedPoolDistribution,
-                   decodeCurrentEpochState, decodePoolDistribution, decodeProtocolState)
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
-import           Cardano.Api.Internal.SpecialByron as Byron
-import           Cardano.Api.Internal.Utils (textShow)
+import Cardano.Api.Internal.Block
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Eras.Core (CardanoEra, forEraMaybeEon)
+import Cardano.Api.Internal.Error as Api
+import Cardano.Api.Internal.Genesis
+import Cardano.Api.Internal.IO
+import Cardano.Api.Internal.IPC
+  ( ConsensusModeParams (..)
+  , LocalChainSyncClient (LocalChainSyncClientPipelined)
+  , LocalNodeClientProtocols (..)
+  , LocalNodeClientProtocolsInMode
+  , LocalNodeConnectInfo (..)
+  , connectToLocalNode
+  )
+import Cardano.Api.Internal.Keys.Praos
+import Cardano.Api.Internal.LedgerEvents.ConvertLedgerEvent
+import Cardano.Api.Internal.LedgerEvents.LedgerEvent
+import Cardano.Api.Internal.Modes (EpochSlots (..))
+import Cardano.Api.Internal.Modes qualified as Api
+import Cardano.Api.Internal.Monad.Error
+import Cardano.Api.Internal.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Query
+  ( CurrentEpochState (..)
+  , PoolDistribution (unPoolDistr)
+  , ProtocolState
+  , SerialisedCurrentEpochState (..)
+  , SerialisedPoolDistribution
+  , decodeCurrentEpochState
+  , decodePoolDistribution
+  , decodeProtocolState
+  )
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.SpecialByron as Byron
+import Cardano.Api.Internal.Utils (textShow)
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Chain.Genesis
-import qualified Cardano.Chain.Update
-import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
-import qualified Cardano.Crypto.Hash.Blake2b
-import qualified Cardano.Crypto.Hash.Class
-import qualified Cardano.Crypto.Hashing
-import qualified Cardano.Crypto.ProtocolMagic
-import qualified Cardano.Crypto.VRF as Crypto
-import qualified Cardano.Crypto.VRF.Class as VRF
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import qualified Cardano.Ledger.Api.Era as Ledger
-import qualified Cardano.Ledger.Api.Transition as Ledger
-import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.BHeaderView as Ledger
-import           Cardano.Ledger.Binary (DecoderError)
-import qualified Cardano.Ledger.Coin as SL
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import qualified Cardano.Ledger.Keys as SL
-import qualified Cardano.Ledger.PoolDistr as SL
-import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
-import qualified Cardano.Ledger.Shelley.Core as Core
-import qualified Cardano.Ledger.Shelley.Genesis as Ledger
-import qualified Cardano.Protocol.TPraos.API as TPraos
-import           Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
-import qualified Cardano.Protocol.TPraos.BHeader as TPraos
-import           Cardano.Slotting.EpochInfo (EpochInfo)
-import qualified Cardano.Slotting.EpochInfo.API as Slot
-import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
-import qualified Cardano.Slotting.Slot as Slot
-import qualified Ouroboros.Consensus.Block.Abstract as Consensus
-import           Ouroboros.Consensus.Block.Forging (BlockForging)
-import qualified Ouroboros.Consensus.Byron.Ledger as Byron
-import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
-import qualified Ouroboros.Consensus.Cardano.Node as Consensus
-import qualified Ouroboros.Consensus.Config as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
-import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
-import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
-import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
-import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
-import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
-import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
-import           Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
-import qualified Ouroboros.Consensus.Shelley.HFEras as Shelley
-import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
-import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
-import           Ouroboros.Consensus.Storage.Serialisation
-import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
-import           Ouroboros.Network.Block (blockNo)
-import qualified Ouroboros.Network.Block
-import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
-import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
-import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
+import Cardano.Binary qualified as CBOR
+import Cardano.Chain.Genesis qualified
+import Cardano.Chain.Update qualified
+import Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
+import Cardano.Crypto.Hash.Blake2b qualified
+import Cardano.Crypto.Hash.Class qualified
+import Cardano.Crypto.Hashing qualified
+import Cardano.Crypto.ProtocolMagic qualified
+import Cardano.Crypto.VRF qualified as Crypto
+import Cardano.Crypto.VRF.Class qualified as VRF
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Api.Era qualified as Ledger
+import Cardano.Ledger.Api.Transition qualified as Ledger
+import Cardano.Ledger.BHeaderView qualified as Ledger
+import Cardano.Ledger.BaseTypes (Globals (..), Nonce, ProtVer (..), natVersion, (⭒))
+import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.Binary (DecoderError)
+import Cardano.Ledger.Coin qualified as SL
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Keys qualified as SL
+import Cardano.Ledger.PoolDistr qualified as SL
+import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
+import Cardano.Ledger.Shelley.Core qualified as Core
+import Cardano.Ledger.Shelley.Genesis qualified as Ledger
+import Cardano.Protocol.TPraos.API qualified as TPraos
+import Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
+import Cardano.Protocol.TPraos.BHeader qualified as TPraos
+import Cardano.Slotting.EpochInfo (EpochInfo)
+import Cardano.Slotting.EpochInfo.API qualified as Slot
+import Cardano.Slotting.Slot (WithOrigin (At, Origin))
+import Cardano.Slotting.Slot qualified as Slot
+import Ouroboros.Consensus.Block.Abstract qualified as Consensus
+import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Byron.Ledger qualified as Byron
+import Ouroboros.Consensus.Cardano qualified as Consensus
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
+import Ouroboros.Consensus.Cardano.CanHardFork qualified as Consensus
+import Ouroboros.Consensus.Cardano.Node qualified as Consensus
+import Ouroboros.Consensus.Config qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as HFC
+import Ouroboros.Consensus.HardFork.Combinator.Basics qualified as HFC
+import Ouroboros.Consensus.Ledger.Abstract qualified as Ledger
+import Ouroboros.Consensus.Ledger.Extended qualified as Ledger
+import Ouroboros.Consensus.Node.ProtocolInfo qualified as Consensus
+import Ouroboros.Consensus.Protocol.Abstract (ChainDepState, ConsensusProtocol (..))
+import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
+import Ouroboros.Consensus.Protocol.Praos.VRF (mkInputVRF, vrfLeaderValue)
+import Ouroboros.Consensus.Shelley.HFEras qualified as Shelley
+import Ouroboros.Consensus.Shelley.Ledger.Ledger qualified as Shelley
+import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
+import Ouroboros.Consensus.Storage.Serialisation
+import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
+import Ouroboros.Network.Block (blockNo)
+import Ouroboros.Network.Block qualified
+import Ouroboros.Network.Protocol.ChainSync.Client qualified as CS
+import Ouroboros.Network.Protocol.ChainSync.ClientPipelined qualified as CSP
+import Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
-import           Control.Concurrent
-import           Control.DeepSeq
-import           Control.Error.Util (note)
-import           Control.Exception.Safe
-import           Control.Monad
-import           Control.Monad.State.Strict
-import           Data.Aeson as Aeson (FromJSON (parseJSON), Object, eitherDecodeStrict', withObject,
-                   (.:), (.:?))
-import           Data.Aeson.Types (Parser)
-import           Data.Bifunctor
-import           Data.ByteArray (ByteArrayAccess)
-import qualified Data.ByteArray
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LBS
-import           Data.ByteString.Short as BSS
-import           Data.Foldable (asum)
-import           Data.IORef
-import qualified Data.List as List
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe
-import           Data.Proxy (Proxy (Proxy))
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.SOP.Strict.NP
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as LT
-import           Data.Text.Lazy.Builder (toLazyText)
-import           Data.Word
-import qualified Data.Yaml as Yaml
-import           Formatting.Buildable (build)
-import           GHC.Exts (IsList (..))
-import           Lens.Micro
-import qualified Network.Mux as Mux
-import           Network.TypedProtocol.Core (Nat (..))
-import           System.FilePath
+import Control.Concurrent
+import Control.DeepSeq
+import Control.Error.Util (note)
+import Control.Exception.Safe
+import Control.Monad
+import Control.Monad.State.Strict
+import Data.Aeson as Aeson
+  ( FromJSON (parseJSON)
+  , Object
+  , eitherDecodeStrict'
+  , withObject
+  , (.:)
+  , (.:?)
+  )
+import Data.Aeson.Types (Parser)
+import Data.Bifunctor
+import Data.ByteArray (ByteArrayAccess)
+import Data.ByteArray qualified
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short as BSS
+import Data.Foldable (asum)
+import Data.IORef
+import Data.List qualified as List
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe
+import Data.Proxy (Proxy (Proxy))
+import Data.SOP.Strict.NP
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as LT
+import Data.Text.Lazy.Builder (toLazyText)
+import Data.Word
+import Data.Yaml qualified as Yaml
+import Formatting.Buildable (build)
+import GHC.Exts (IsList (..))
+import Lens.Micro
+import Network.Mux qualified as Mux
+import Network.TypedProtocol.Core (Nat (..))
+import System.FilePath
 
 data InitialLedgerStateError
   = -- | Failed to read or parse the network config file.

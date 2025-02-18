@@ -10,11 +10,11 @@ module Test.Gen.Cardano.Api.Hardcoded
   )
 where
 
-import qualified Cardano.Binary as CBOR
+import Cardano.Binary qualified as CBOR
 
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as LBS
 
 exampleDoubleEncodedBytes :: LBS.ByteString
 exampleDoubleEncodedBytes = LBS.fromStrict $ CBOR.toStrictByteString exampleDoubleEncodedBytesEncoding

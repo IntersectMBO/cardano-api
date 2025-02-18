@@ -15,89 +15,89 @@
 
 module Cardano.Api.Internal.Orphans () where
 
-import           Cardano.Api.Internal.Pretty (Pretty (..), prettyException, (<+>))
-import           Cardano.Api.Internal.Via.ShowOf
+import Cardano.Api.Internal.Pretty (Pretty (..), prettyException, (<+>))
+import Cardano.Api.Internal.Via.ShowOf
 
-import           Cardano.Binary (DecoderError (..))
-import qualified Cardano.Chain.Byron.API as L
-import qualified Cardano.Chain.Common as L
-import qualified Cardano.Chain.Delegation.Validation.Scheduling as L.Scheduling
-import qualified Cardano.Chain.Update as L
-import qualified Cardano.Chain.Update.Validation.Endorsement as L.Endorsement
-import qualified Cardano.Chain.Update.Validation.Interface as L.Interface
-import qualified Cardano.Chain.Update.Validation.Registration as L.Registration
-import qualified Cardano.Chain.Update.Validation.Voting as L.Voting
-import qualified Cardano.Chain.UTxO.UTxO as L
-import qualified Cardano.Chain.UTxO.Validation as L
-import qualified Cardano.Ledger.Allegra.Rules as L
-import qualified Cardano.Ledger.Alonzo.PParams as Ledger
-import qualified Cardano.Ledger.Alonzo.Rules as L
-import qualified Cardano.Ledger.Alonzo.Tx as L
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Babbage.PParams as Ledger
-import qualified Cardano.Ledger.Babbage.Rules as L
-import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
-import qualified Cardano.Ledger.BaseTypes as L
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Binary
-import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Conway.PParams as Ledger
-import qualified Cardano.Ledger.Conway.Rules as L
-import qualified Cardano.Ledger.Conway.TxCert as L
-import qualified Cardano.Ledger.Core as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Ledger.Crypto as Crypto
-import qualified Cardano.Ledger.Crypto as L
-import           Cardano.Ledger.HKD (NoUpdate (..))
-import qualified Cardano.Ledger.Keys as L.Keys
-import qualified Cardano.Ledger.SafeHash as L
-import qualified Cardano.Ledger.Shelley.API.Mempool as L
-import qualified Cardano.Ledger.Shelley.PParams as Ledger
-import qualified Cardano.Ledger.Shelley.Rules as L
-import qualified Cardano.Ledger.Shelley.TxBody as L
-import qualified Cardano.Ledger.Shelley.TxCert as L
-import qualified Cardano.Protocol.TPraos.API as Ledger
-import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
-import qualified Cardano.Protocol.TPraos.Rules.Prtcl as L
-import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
-import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
-import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
-import           Ouroboros.Consensus.Protocol.Praos (PraosState)
-import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
-import           Ouroboros.Consensus.Protocol.TPraos (TPraosState)
-import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
-import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
-import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
-import           Ouroboros.Network.Block (HeaderHash, Tip (..))
-import qualified PlutusLedgerApi.Common as P
-import qualified PlutusLedgerApi.V2 as V2
+import Cardano.Binary (DecoderError (..))
+import Cardano.Chain.Byron.API qualified as L
+import Cardano.Chain.Common qualified as L
+import Cardano.Chain.Delegation.Validation.Scheduling qualified as L.Scheduling
+import Cardano.Chain.UTxO.UTxO qualified as L
+import Cardano.Chain.UTxO.Validation qualified as L
+import Cardano.Chain.Update qualified as L
+import Cardano.Chain.Update.Validation.Endorsement qualified as L.Endorsement
+import Cardano.Chain.Update.Validation.Interface qualified as L.Interface
+import Cardano.Chain.Update.Validation.Registration qualified as L.Registration
+import Cardano.Chain.Update.Validation.Voting qualified as L.Voting
+import Cardano.Ledger.Allegra.Rules qualified as L
+import Cardano.Ledger.Alonzo.PParams qualified as Ledger
+import Cardano.Ledger.Alonzo.Rules qualified as L
+import Cardano.Ledger.Alonzo.Tx qualified as L
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Babbage.PParams qualified as Ledger
+import Cardano.Ledger.Babbage.Rules qualified as L
+import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes qualified as L
+import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Plain qualified as Plain
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.PParams qualified as Ledger
+import Cardano.Ledger.Conway.Rules qualified as L
+import Cardano.Ledger.Conway.TxCert qualified as L
+import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto qualified as CC (Crypto)
+import Cardano.Ledger.Crypto qualified as Crypto
+import Cardano.Ledger.Crypto qualified as L
+import Cardano.Ledger.HKD (NoUpdate (..))
+import Cardano.Ledger.Keys qualified as L.Keys
+import Cardano.Ledger.SafeHash qualified as L
+import Cardano.Ledger.Shelley.API.Mempool qualified as L
+import Cardano.Ledger.Shelley.PParams qualified as Ledger
+import Cardano.Ledger.Shelley.Rules qualified as L
+import Cardano.Ledger.Shelley.TxBody qualified as L
+import Cardano.Ledger.Shelley.TxCert qualified as L
+import Cardano.Protocol.TPraos.API qualified as Ledger
+import Cardano.Protocol.TPraos.BHeader (HashHeader (..))
+import Cardano.Protocol.TPraos.Rules.Prtcl qualified as L
+import Cardano.Protocol.TPraos.Rules.Prtcl qualified as Ledger
+import Cardano.Protocol.TPraos.Rules.Tickn qualified as Ledger
+import Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
+import Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
+import Ouroboros.Consensus.Protocol.Praos (PraosState)
+import Ouroboros.Consensus.Protocol.Praos qualified as Consensus
+import Ouroboros.Consensus.Protocol.TPraos (TPraosState)
+import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
+import Ouroboros.Consensus.Shelley.Eras qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
+import Ouroboros.Consensus.Shelley.Ledger.Query qualified as Consensus
+import Ouroboros.Network.Block (HeaderHash, Tip (..))
+import PlutusLedgerApi.Common qualified as P
+import PlutusLedgerApi.V2 qualified as V2
 
-import qualified Codec.Binary.Bech32 as Bech32
-import qualified Codec.CBOR.Read as CBOR
-import           Data.Aeson (KeyValue ((.=)), ToJSON (..), ToJSONKey (..), object, pairs)
-import qualified Data.Aeson as A
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Short as SBS
-import           Data.Data (Data)
-import           Data.Kind (Constraint, Type)
-import           Data.ListMap (ListMap)
-import qualified Data.ListMap as ListMap
-import           Data.Maybe.Strict (StrictMaybe (..))
-import           Data.Monoid
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as Text
-import           Data.Typeable (Typeable)
-import           GHC.Exts (IsList (..))
-import           GHC.Generics
-import           GHC.Stack (HasCallStack)
-import           GHC.TypeLits
-import           Lens.Micro
-import qualified Network.Mux as Mux
+import Codec.Binary.Bech32 qualified as Bech32
+import Codec.CBOR.Read qualified as CBOR
+import Data.Aeson (KeyValue ((.=)), ToJSON (..), ToJSONKey (..), object, pairs)
+import Data.Aeson qualified as A
+import Data.Aeson qualified as Aeson
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Short qualified as SBS
+import Data.Data (Data)
+import Data.Kind (Constraint, Type)
+import Data.ListMap (ListMap)
+import Data.ListMap qualified as ListMap
+import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Monoid
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as Text
+import Data.Typeable (Typeable)
+import GHC.Exts (IsList (..))
+import GHC.Generics
+import GHC.Stack (HasCallStack)
+import GHC.TypeLits
+import Lens.Micro
+import Network.Mux qualified as Mux
 
 deriving instance Generic (L.ApplyTxError era)
 

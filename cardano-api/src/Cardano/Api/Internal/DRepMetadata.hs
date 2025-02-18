@@ -14,20 +14,20 @@ module Cardano.Api.Internal.DRepMetadata
   )
 where
 
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.Keys.Praos
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.Keys.Praos
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.SerialiseRaw
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys qualified as Shelley
 
-import           Data.ByteString (ByteString)
-import           Data.Either.Combinators (maybeToRight)
+import Data.ByteString (ByteString)
+import Data.Either.Combinators (maybeToRight)
 
 -- ----------------------------------------------------------------------------
 -- DRep metadata

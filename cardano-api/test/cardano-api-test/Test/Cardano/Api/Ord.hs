@@ -3,19 +3,19 @@ module Test.Cardano.Api.Ord
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
+import Cardano.Api
+import Cardano.Api.Shelley
 
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Metadata (genTxMetadataValue)
+import Test.Cardano.Api.Metadata (genTxMetadataValue)
 
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Gen as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property, (===))
+import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
+import Hedgehog.Gen qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 

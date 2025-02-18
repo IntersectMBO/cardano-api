@@ -18,31 +18,48 @@ module Cardano.Api.Internal.SpecialByron
   )
 where
 
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.NetworkId (NetworkId, toByronProtocolMagicId)
-import           Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.NetworkId (NetworkId, toByronProtocolMagicId)
+import Cardano.Api.Internal.SerialiseRaw
 
-import qualified Cardano.Binary as Binary
-import           Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
-import           Cardano.Chain.Slotting
-import           Cardano.Chain.Update (AProposal (aBody, annotation), InstallerHash,
-                   ProposalBody (ProposalBody), ProtocolParametersUpdate (..), ProtocolVersion (..),
-                   SoftforkRule, SoftwareVersion, SystemTag, UpId, mkVote, recoverUpId,
-                   recoverVoteId, signProposal)
-import qualified Cardano.Chain.Update as Update
-import qualified Cardano.Chain.Update.Vote as ByronVote
-import           Cardano.Crypto (SafeSigner, noPassSafeSigner)
-import qualified Cardano.Ledger.Binary as Binary (Annotated (..), ByteSpan (..), annotation,
-                   annotationBytes, byronProtVer, reAnnotate)
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import qualified Ouroboros.Consensus.Byron.Ledger.Mempool as Mempool
+import Cardano.Binary qualified as Binary
+import Cardano.Chain.Common (LovelacePortion, TxFeePolicy)
+import Cardano.Chain.Slotting
+import Cardano.Chain.Update
+  ( AProposal (aBody, annotation)
+  , InstallerHash
+  , ProposalBody (ProposalBody)
+  , ProtocolParametersUpdate (..)
+  , ProtocolVersion (..)
+  , SoftforkRule
+  , SoftwareVersion
+  , SystemTag
+  , UpId
+  , mkVote
+  , recoverUpId
+  , recoverVoteId
+  , signProposal
+  )
+import Cardano.Chain.Update qualified as Update
+import Cardano.Chain.Update.Vote qualified as ByronVote
+import Cardano.Crypto (SafeSigner, noPassSafeSigner)
+import Cardano.Ledger.Binary qualified as Binary
+  ( Annotated (..)
+  , ByteSpan (..)
+  , annotation
+  , annotationBytes
+  , byronProtVer
+  , reAnnotate
+  )
+import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import Ouroboros.Consensus.Byron.Ledger.Mempool qualified as Mempool
 
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.Map.Strict as M
-import           Data.Word
-import           Numeric.Natural
+import Data.ByteString (ByteString)
+import Data.ByteString.Lazy qualified as LB
+import Data.Map.Strict qualified as M
+import Data.Word
+import Numeric.Natural
 
 {- HLINT ignore "Use void" -}
 

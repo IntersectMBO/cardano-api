@@ -35,37 +35,37 @@ module Cardano.Api.Internal.TxIn
   )
 where
 
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.SerialiseJSON
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseUsing
-import           Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.SerialiseJSON
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.Utils
 
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.Hashing as Byron
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import qualified Cardano.Ledger.TxIn as Ledger
+import Cardano.Chain.UTxO qualified as Byron
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Crypto.Hashing qualified as Byron
+import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Ledger.SafeHash qualified as SafeHash
+import Cardano.Ledger.Shelley.TxBody qualified as Shelley
+import Cardano.Ledger.TxIn qualified as Ledger
 
-import           Control.Applicative (some)
-import           Data.Aeson (withText)
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
-import qualified Data.ByteString.Char8 as BSC
-import           Data.String
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Text.Parsec as Parsec
-import           Text.Parsec ((<?>))
-import qualified Text.Parsec.Language as Parsec
-import qualified Text.Parsec.String as Parsec
-import qualified Text.Parsec.Token as Parsec
+import Control.Applicative (some)
+import Data.Aeson (withText)
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import Data.ByteString.Char8 qualified as BSC
+import Data.String
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Text.Parsec ((<?>))
+import Text.Parsec qualified as Parsec
+import Text.Parsec.Language qualified as Parsec
+import Text.Parsec.String qualified as Parsec
+import Text.Parsec.Token qualified as Parsec
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use section" -}

@@ -95,68 +95,76 @@ module Cardano.Api.Internal.ProtocolParameters
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Json (toRationalJSON)
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.Orphans ()
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.SerialiseUsing
-import           Cardano.Api.Internal.StakePoolMetadata
-import           Cardano.Api.Internal.TxMetadata
-import           Cardano.Api.Internal.Utils
-import           Cardano.Api.Internal.Value
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Json (toRationalJSON)
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.StakePoolMetadata
+import Cardano.Api.Internal.TxMetadata
+import Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Value
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Alonzo.PParams as Ledger
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Api.Era as Ledger
-import           Cardano.Ledger.Api.PParams
-import qualified Cardano.Ledger.Babbage.Core as Ledger
-import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Conway.PParams as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Keys as Ledger
-import qualified Cardano.Ledger.Plutus.CostModels as Plutus
-import qualified Cardano.Ledger.Plutus.Language as Plutus
-import qualified Cardano.Ledger.Shelley.API as Ledger
-import           Cardano.Slotting.Slot (EpochNo (..))
-import           PlutusLedgerApi.Common (CostModelApplyError)
+import Cardano.Binary qualified as CBOR
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Ledger.Alonzo.PParams qualified as Ledger
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Api.Era qualified as Ledger
+import Cardano.Ledger.Api.PParams
+import Cardano.Ledger.Babbage.Core qualified as Ledger
+import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes qualified as Ledger
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.PParams qualified as Ledger
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys qualified as Ledger
+import Cardano.Ledger.Plutus.CostModels qualified as Plutus
+import Cardano.Ledger.Plutus.Language qualified as Plutus
+import Cardano.Ledger.Shelley.API qualified as Ledger
+import Cardano.Slotting.Slot (EpochNo (..))
+import PlutusLedgerApi.Common (CostModelApplyError)
 
-import           Control.Monad
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
-                   (.=))
-import           Data.Bifunctor (bimap, first)
-import           Data.ByteString (ByteString)
-import           Data.Data (Data)
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Int (Int64)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (isJust)
-import           Data.Maybe.Strict (StrictMaybe (..))
-import           Data.String (IsString)
-import           Data.Text (Text)
-import           Data.Word
-import           GHC.Exts (IsList (..))
-import           GHC.Generics
-import           Lens.Micro
-import           Numeric.Natural
-import           Text.PrettyBy.Default (display)
+import Control.Monad
+import Data.Aeson
+  ( FromJSON (..)
+  , ToJSON (..)
+  , object
+  , withObject
+  , (.!=)
+  , (.:)
+  , (.:?)
+  , (.=)
+  )
+import Data.Bifunctor (bimap, first)
+import Data.ByteString (ByteString)
+import Data.Data (Data)
+import Data.Either.Combinators (maybeToRight)
+import Data.Int (Int64)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust)
+import Data.Maybe.Strict (StrictMaybe (..))
+import Data.String (IsString)
+import Data.Text (Text)
+import Data.Word
+import GHC.Exts (IsList (..))
+import GHC.Generics
+import Lens.Micro
+import Numeric.Natural
+import Text.PrettyBy.Default (display)
 
 -- -----------------------------------------------------------------------------
 -- Era based ledger protocol parameters

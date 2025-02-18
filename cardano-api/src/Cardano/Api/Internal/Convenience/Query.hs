@@ -20,43 +20,43 @@ module Cardano.Api.Internal.Convenience.Query
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Feature (Featured (..))
-import           Cardano.Api.Internal.IO
-import           Cardano.Api.Internal.IPC
-import           Cardano.Api.Internal.IPC.Monad
-import           Cardano.Api.Internal.Monad.Error
-import           Cardano.Api.Internal.NetworkId
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Internal.Query
-import           Cardano.Api.Internal.Query.Expr
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.UTxO
-import           Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.Feature (Featured (..))
+import Cardano.Api.Internal.IO
+import Cardano.Api.Internal.IPC
+import Cardano.Api.Internal.IPC.Monad
+import Cardano.Api.Internal.Monad.Error
+import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.Query
+import Cardano.Api.Internal.Query.Expr
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.UTxO
+import Cardano.Api.Internal.Utils
 
-import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.CertState (DRepState (..))
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Credential as L
-import qualified Cardano.Ledger.Keys as L
-import qualified Cardano.Ledger.Shelley.LedgerState as L
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.CertState (DRepState (..))
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Keys qualified as L
+import Cardano.Ledger.Shelley.LedgerState qualified as L
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
+import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
-import           Control.Exception.Safe (SomeException, displayException)
-import           Control.Monad
-import           Data.Bifunctor (first)
-import           Data.Function ((&))
-import           Data.Map (Map)
-import qualified Data.Map as Map
-import           Data.Maybe (mapMaybe)
-import           Data.Set (Set)
-import           Data.Text (Text)
-import           GHC.Exts (IsList (..), IsString (..))
+import Control.Exception.Safe (SomeException, displayException)
+import Control.Monad
+import Data.Bifunctor (first)
+import Data.Function ((&))
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.Set (Set)
+import Data.Text (Text)
+import GHC.Exts (IsList (..), IsString (..))
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure

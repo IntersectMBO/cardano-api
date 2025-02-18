@@ -21,19 +21,19 @@ module Cardano.Api.Internal.Eras.Case
   )
 where
 
-import           Cardano.Api.Internal.Eon.AllegraEraOnwards
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.ByronToAlonzoEra
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.MaryEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eon.ShelleyEraOnly
-import           Cardano.Api.Internal.Eon.ShelleyToAllegraEra
-import           Cardano.Api.Internal.Eon.ShelleyToAlonzoEra
-import           Cardano.Api.Internal.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Internal.Eon.ShelleyToMaryEra
-import           Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Eon.AllegraEraOnwards
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.ByronToAlonzoEra
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.MaryEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eon.ShelleyEraOnly
+import Cardano.Api.Internal.Eon.ShelleyToAllegraEra
+import Cardano.Api.Internal.Eon.ShelleyToAlonzoEra
+import Cardano.Api.Internal.Eon.ShelleyToBabbageEra
+import Cardano.Api.Internal.Eon.ShelleyToMaryEra
+import Cardano.Api.Internal.Eras.Core
 
 -- | @caseByronOrShelleyBasedEra f g era@ returns @f@ in Byron and applies @g@ to Shelley-based eras.
 caseByronOrShelleyBasedEra

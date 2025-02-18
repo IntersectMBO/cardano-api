@@ -6,22 +6,22 @@
 
 module Cardano.Api.Internal.Tx.UTxO where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (IsShelleyBasedEra)
-import           Cardano.Api.Internal.Eras.Core (IsCardanoEra)
-import           Cardano.Api.Internal.Tx.Body (CtxUTxO, TxOut (..))
-import           Cardano.Api.Internal.TxIn (TxIn (..))
+import Cardano.Api.Internal.Eon.ShelleyBasedEra (IsShelleyBasedEra)
+import Cardano.Api.Internal.Eras.Core (IsCardanoEra)
+import Cardano.Api.Internal.Tx.Body (CtxUTxO, TxOut (..))
+import Cardano.Api.Internal.TxIn (TxIn (..))
 
-import           Cardano.Ledger.Babbage ()
+import Cardano.Ledger.Babbage ()
 
-import           Data.Aeson (FromJSON (..), ToJSON (..))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
-import           Data.Aeson.Types (Parser)
-import           Data.Map (Map)
-import qualified Data.Map as Map
-import           Data.Set (Set)
-import           Data.Text (Text)
-import           GHC.Exts (IsList (..))
+import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Types (Parser)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Set (Set)
+import Data.Text (Text)
+import GHC.Exts (IsList (..))
 
 newtype UTxO era = UTxO {unUTxO :: Map TxIn (TxOut CtxUTxO era)}
   deriving stock (Eq, Show)

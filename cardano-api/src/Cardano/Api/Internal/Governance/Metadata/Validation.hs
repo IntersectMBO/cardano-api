@@ -4,9 +4,9 @@
 
 module Cardano.Api.Internal.Governance.Metadata.Validation (GovActionMetadata (..), Authors, Body, HashAlgorithm, validateGovActionAnchorData) where
 
-import           Data.Aeson (FromJSON, eitherDecodeStrict)
-import           Data.ByteString (ByteString)
-import           Data.Either.Combinators (mapRight)
+import Data.Aeson (FromJSON, eitherDecodeStrict)
+import Data.ByteString (ByteString)
+import Data.Either.Combinators (mapRight)
 
 data GovActionMetadata cip
   = GovActionMetadata

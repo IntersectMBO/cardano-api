@@ -8,32 +8,32 @@ module Test.Cardano.Api.Genesis
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Genesis
-import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.Genesis
+import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Shelley
 
-import qualified Cardano.Binary as CB
-import qualified Cardano.Ledger.Alonzo.Genesis as L
-import qualified Cardano.Ledger.Binary as L
-import qualified Cardano.Ledger.Plutus as L
-import qualified PlutusLedgerApi.V2 as V2
+import Cardano.Binary qualified as CB
+import Cardano.Ledger.Alonzo.Genesis qualified as L
+import Cardano.Ledger.Binary qualified as L
+import Cardano.Ledger.Plutus qualified as L
+import PlutusLedgerApi.V2 qualified as V2
 
-import qualified Codec.CBOR.Decoding as CBOR
-import qualified Codec.CBOR.Encoding as CBOR
-import qualified Codec.CBOR.Write as CBOR
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Either
-import           Data.Int (Int64)
-import qualified Data.Map.Strict as M
-import           Data.Maybe
-import           GHC.Stack
+import Codec.CBOR.Decoding qualified as CBOR
+import Codec.CBOR.Encoding qualified as CBOR
+import Codec.CBOR.Write qualified as CBOR
+import Data.ByteString.Lazy qualified as LBS
+import Data.Either
+import Data.Int (Int64)
+import Data.Map.Strict qualified as M
+import Data.Maybe
+import GHC.Stack
 
-import           Hedgehog as H
-import qualified Hedgehog.Extras as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog as H
+import Hedgehog.Extras qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 -- | Test reading and decoding of AlonzoGenesis with cost models - era dependent test
 prop_reading_plutus_v2_era_sensitive_costmodel

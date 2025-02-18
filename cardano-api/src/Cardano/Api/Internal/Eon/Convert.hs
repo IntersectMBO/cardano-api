@@ -7,7 +7,7 @@ module Cardano.Api.Internal.Eon.Convert
   )
 where
 
-import           Data.Kind (Type)
+import Data.Kind (Type)
 
 -- | The Convert class is aimed at exposing a single interface that lets us
 -- convert between eons. However this is generalizable to any injective

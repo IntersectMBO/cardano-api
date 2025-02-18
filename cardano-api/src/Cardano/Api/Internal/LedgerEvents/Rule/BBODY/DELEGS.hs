@@ -6,9 +6,9 @@ module Cardano.Api.Internal.LedgerEvents.Rule.BBODY.DELEGS
   )
 where
 
-import           Cardano.Api.Internal.LedgerEvents.LedgerEvent
+import Cardano.Api.Internal.LedgerEvents.LedgerEvent
 
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.Rules qualified as Shelley
 
 handleShelleyDELEGSEvent :: Shelley.ShelleyDelegsEvent ledgerera -> Maybe LedgerEvent
 handleShelleyDELEGSEvent _ = Nothing

@@ -3,20 +3,27 @@ module Test.Cardano.Api.Value
   )
 where
 
-import           Cardano.Api (MaryEraOnwards (..), ShelleyBasedEra (..), ValueNestedBundle (..),
-                   ValueNestedRep (..), fromLedgerValue, valueFromNestedRep, valueToNestedRep)
+import Cardano.Api
+  ( MaryEraOnwards (..)
+  , ShelleyBasedEra (..)
+  , ValueNestedBundle (..)
+  , ValueNestedRep (..)
+  , fromLedgerValue
+  , valueFromNestedRep
+  , valueToNestedRep
+  )
 
-import           Prelude
+import Prelude
 
-import           Data.Aeson (eitherDecode, encode)
-import           Data.List (groupBy, sort)
-import qualified Data.Map.Strict as Map
+import Data.Aeson (eitherDecode, encode)
+import Data.List (groupBy, sort)
+import Data.Map.Strict qualified as Map
 
-import           Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
+import Test.Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
 
-import           Hedgehog (Property, forAll, property, tripping, (===))
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property, forAll, property, tripping, (===))
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =

@@ -9,39 +9,41 @@ module Cardano.Api.Internal.Plutus
   )
 where
 
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards (AlonzoEraOnwards (..),
-                   alonzoEraOnwardsConstraints)
-import           Cardano.Api.Internal.Eon.Convert (convert)
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyLedgerEra)
-import           Cardano.Api.Internal.Pretty (Pretty (pretty), docToText)
-import           Cardano.Api.Internal.Query (toLedgerUTxO)
-import qualified Cardano.Api.Internal.ReexposeLedger as L
-import           Cardano.Api.Internal.Script (ScriptHash, fromShelleyScriptHash)
-import qualified Cardano.Api.Internal.Script as Api
-import           Cardano.Api.Internal.Tx.Body (ScriptWitnessIndex (..), toScriptIndex)
-import           Cardano.Api.Internal.Tx.Sign (Tx (..))
-import           Cardano.Api.Internal.Tx.UTxO (UTxO)
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+  ( AlonzoEraOnwards (..)
+  , alonzoEraOnwardsConstraints
+  )
+import Cardano.Api.Internal.Eon.Convert (convert)
+import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyLedgerEra)
+import Cardano.Api.Internal.Pretty (Pretty (pretty), docToText)
+import Cardano.Api.Internal.Query (toLedgerUTxO)
+import Cardano.Api.Internal.ReexposeLedger qualified as L
+import Cardano.Api.Internal.Script (ScriptHash, fromShelleyScriptHash)
+import Cardano.Api.Internal.Script qualified as Api
+import Cardano.Api.Internal.Tx.Body (ScriptWitnessIndex (..), toScriptIndex)
+import Cardano.Api.Internal.Tx.Sign (Tx (..))
+import Cardano.Api.Internal.Tx.UTxO (UTxO)
 
-import qualified Cardano.Ledger.Alonzo.Scripts as L
-import qualified Cardano.Ledger.Alonzo.UTxO as Alonzo
-import           Cardano.Ledger.Binary.Encoding (serialize')
-import           Cardano.Ledger.Binary.Plain (serializeAsHexText)
-import qualified Cardano.Ledger.Plutus.Evaluate as Plutus
-import qualified Cardano.Ledger.Plutus.ExUnits as Plutus
-import qualified Cardano.Ledger.Plutus.Language as Plutus
-import qualified Cardano.Ledger.UTxO as L
-import qualified PlutusLedgerApi.V1 as Plutus
+import Cardano.Ledger.Alonzo.Scripts qualified as L
+import Cardano.Ledger.Alonzo.UTxO qualified as Alonzo
+import Cardano.Ledger.Binary.Encoding (serialize')
+import Cardano.Ledger.Binary.Plain (serializeAsHexText)
+import Cardano.Ledger.Plutus.Evaluate qualified as Plutus
+import Cardano.Ledger.Plutus.ExUnits qualified as Plutus
+import Cardano.Ledger.Plutus.Language qualified as Plutus
+import Cardano.Ledger.UTxO qualified as L
+import PlutusLedgerApi.V1 qualified as Plutus
 
-import           Data.Bifunctor (Bifunctor (..))
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.ByteString.Short as BSS
-import           Data.Map (Map)
-import qualified Data.Map as Map
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Lens.Micro ((^.))
-import           Prettyprinter (indent, line)
+import Data.Bifunctor (Bifunctor (..))
+import Data.ByteString.Base64 qualified as B64
+import Data.ByteString.Short qualified as BSS
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Lens.Micro ((^.))
+import Prettyprinter (indent, line)
 
 -- | A structured representation of Plutus script validation failures,
 -- providing detailed information about the failed execution for debugging purposes.
