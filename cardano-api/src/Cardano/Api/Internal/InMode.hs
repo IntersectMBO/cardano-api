@@ -27,29 +27,29 @@ module Cardano.Api.Internal.InMode
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Modes
-import           Cardano.Api.Internal.Orphans ()
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.Sign
-import           Cardano.Api.Internal.Utils (textShow)
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.Modes
+import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Utils (textShow)
 
-import qualified Cardano.Ledger.Api as L
-import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
-import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
+import Cardano.Ledger.Api qualified as L
+import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
+import Ouroboros.Consensus.Ledger.SupportsMempool qualified as Consensus
+import Ouroboros.Consensus.Shelley.HFEras qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
+import Ouroboros.Consensus.TypeFamilyWrappers qualified as Consensus
 
-import           Data.Aeson (ToJSON (..), (.=))
-import qualified Data.Aeson as Aeson
-import           Data.SOP.Strict (NS (S, Z))
-import qualified Data.Text as Text
-import           GHC.Generics
+import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson qualified as Aeson
+import Data.SOP.Strict (NS (S, Z))
+import Data.Text qualified as Text
+import GHC.Generics
 
 -- ----------------------------------------------------------------------------
 -- Transactions in the context of a consensus mode

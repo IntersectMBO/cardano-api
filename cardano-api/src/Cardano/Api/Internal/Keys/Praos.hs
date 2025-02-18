@@ -25,26 +25,26 @@ module Cardano.Api.Internal.Keys.Praos
   )
 where
 
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Class
-import           Cardano.Api.Internal.SerialiseBech32
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Class
+import Cardano.Api.Internal.SerialiseBech32
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.SerialiseUsing
 
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.KES.Class as Crypto
-import qualified Cardano.Crypto.VRF.Class as Crypto
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Crypto as Shelley (KES, VRF)
-import qualified Cardano.Ledger.Keys as Shelley
+import Cardano.Crypto.DSIGN.Class qualified as Crypto
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Crypto.KES.Class qualified as Crypto
+import Cardano.Crypto.VRF.Class qualified as Crypto
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto qualified as Shelley (KES, VRF)
+import Cardano.Ledger.Keys qualified as Shelley
 
-import           Data.ByteString (ByteString)
-import           Data.Either.Combinators (maybeToRight)
-import           Data.String (IsString (..))
+import Data.ByteString (ByteString)
+import Data.Either.Combinators (maybeToRight)
+import Data.String (IsString (..))
 
 --
 -- KES keys

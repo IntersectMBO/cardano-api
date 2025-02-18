@@ -13,21 +13,21 @@ module Test.Golden.Cardano.Api.Script
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
+import Cardano.Api
+import Cardano.Api.Shelley
 
-import qualified Cardano.Ledger.Api.Era as L
+import Cardano.Ledger.Api.Era qualified as L
 
-import           Data.Aeson
-import           System.FilePath ((</>))
+import Data.Aeson
+import System.FilePath ((</>))
 
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Typed
 
-import           Hedgehog ((===))
-import qualified Hedgehog as H
-import           Hedgehog.Extras.Aeson
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog ((===))
+import Hedgehog qualified as H
+import Hedgehog.Extras.Aeson
+import Test.Tasty (TestTree)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 

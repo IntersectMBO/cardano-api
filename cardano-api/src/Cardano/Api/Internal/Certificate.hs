@@ -77,43 +77,43 @@ module Cardano.Api.Internal.Certificate
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.DRepMetadata
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Error (Error (..))
-import           Cardano.Api.Internal.Governance.Actions.VotingProcedure
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Praos
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.Pretty (Doc)
-import           Cardano.Api.Internal.ReexposeLedger (EraCrypto, StandardCrypto)
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.StakePoolMetadata
-import           Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
-import           Cardano.Api.Internal.Value
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.DRepMetadata
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eon.ShelleyToBabbageEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.Error (Error (..))
+import Cardano.Api.Internal.Governance.Actions.VotingProcedure
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Keys.Praos
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.Pretty (Doc)
+import Cardano.Api.Internal.ReexposeLedger (EraCrypto, StandardCrypto)
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.StakePoolMetadata
+import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
+import Cardano.Api.Internal.Value
 
-import           Cardano.Ledger.BaseTypes (strictMaybe)
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Keys as Ledger
+import Cardano.Ledger.BaseTypes (strictMaybe)
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Keys qualified as Ledger
 
-import           Control.Monad.Except (MonadError (..))
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import           Data.IP (IPv4, IPv6)
-import           Data.Maybe
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Typeable
-import           GHC.Exts (IsList (..), fromString)
-import           Network.Socket (PortNumber)
+import Control.Monad.Except (MonadError (..))
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.IP (IPv4, IPv6)
+import Data.Maybe
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Typeable
+import GHC.Exts (IsList (..), fromString)
+import Network.Socket (PortNumber)
 
 -- ----------------------------------------------------------------------------
 -- Certificates embedded in transactions

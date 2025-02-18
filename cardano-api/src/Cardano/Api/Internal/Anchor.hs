@@ -4,9 +4,9 @@ module Cardano.Api.Internal.Anchor
   )
 where
 
-import qualified Cardano.Ledger.BaseTypes as L
-import qualified Cardano.Ledger.Crypto as Crypto
-import qualified Cardano.Ledger.SafeHash as L
+import Cardano.Ledger.BaseTypes qualified as L
+import Cardano.Ledger.Crypto qualified as Crypto
+import Cardano.Ledger.SafeHash qualified as L
 
 -- | The URL to build the anchor to pass to DRep registration certificate
 newtype AnchorUrl = AnchorUrl

@@ -182,63 +182,172 @@ module Cardano.Api.Internal.ReexposeLedger
   )
 where
 
-import           Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
-import           Cardano.Ledger.Address (RewardAccount (..))
-import           Cardano.Ledger.Allegra.Scripts (showTimelock)
-import           Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxBody (..),
-                   AlonzoEraTxWits (..), AsIx (..), AsIxItem (AsIxItem), CoinPerWord (..), EraGov,
-                   EraTx (bodyTxL, witsTxL), EraTxWits (..), PParamsUpdate (..), Tx, ppPricesL)
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), CostModels, ExUnits (..),
-                   Prices (..), Script, plutusScriptLanguage)
-import           Cardano.Ledger.Alonzo.TxWits (TxDats (..))
-import           Cardano.Ledger.Api (Constitution (..), GovAction (..), unRedeemers)
-import           Cardano.Ledger.Api.Tx.Cert (pattern AuthCommitteeHotKeyTxCert,
-                   pattern DelegStakeTxCert, pattern DelegTxCert, pattern GenesisDelegTxCert,
-                   pattern MirTxCert, pattern RegDRepTxCert, pattern RegDepositDelegTxCert,
-                   pattern RegDepositTxCert, pattern RegPoolTxCert, pattern RegTxCert,
-                   pattern ResignCommitteeColdTxCert, pattern RetirePoolTxCert,
-                   pattern UnRegDRepTxCert, pattern UnRegDepositTxCert, pattern UnRegTxCert)
-import           Cardano.Ledger.Babbage.Core (CoinPerByte (..), getNativeScript)
-import           Cardano.Ledger.BaseTypes (AnchorData (..), DnsName, EpochInterval (..),
-                   Network (..), NonNegativeInterval, ProtVer (..), StrictMaybe (..), UnitInterval,
-                   Url, boundRational, dnsToText, hashAnchorData, maybeToStrictMaybe, mkVersion,
-                   portToWord16, strictMaybeToMaybe, textToDns, textToUrl, txIxToInt,
-                   unboundRational, urlToText)
-import           Cardano.Ledger.Binary (Annotated (..), ByteSpan (..), byronProtVer, fromCBOR,
-                   serialize', slice, toCBOR, toPlainDecoder)
-import           Cardano.Ledger.Binary.Plain (Decoder, serializeAsHexText)
-import           Cardano.Ledger.CertState (DRepState (..), csCommitteeCredsL)
-import           Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
-import           Cardano.Ledger.Conway.Core (DRepVotingThresholds (..), PoolVotingThresholds (..),
-                   dvtPPEconomicGroupL, dvtPPGovGroupL, dvtPPNetworkGroupL, dvtPPTechnicalGroupL,
-                   dvtUpdateToConstitutionL)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import           Cardano.Ledger.Conway.Governance (Anchor (..), Committee (..), GovActionId (..),
-                   GovActionIx (..), GovActionState (..), GovState, ProposalProcedure (..),
-                   Vote (..), Voter (..), VotingProcedure (..), VotingProcedures (..))
-import           Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
-import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import           Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayEraTxCert (..),
-                   ConwayGovCert (..), ConwayTxCert (..), Delegatee (..), pattern UpdateDRepTxCert)
-import           Cardano.Ledger.Core (Era (..), EraPParams (..), EraTxOut, PParams (..),
-                   PoolCert (..), Value, fromEraCBOR, ppMinFeeAL, ppMinUTxOValueL, toEraCBOR)
-import           Cardano.Ledger.Credential (Credential (..), credToText)
-import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
-import           Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
-import           Cardano.Ledger.Keys (HasKeyRole, KeyHash (..), KeyRole (..), VKey (..),
-                   fromVRFVerKeyHash, hashWithSerialiser, toVRFVerKeyHash)
-import           Cardano.Ledger.Plutus.Data (Data (..), unData)
-import           Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
-import           Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
-import           Cardano.Ledger.SafeHash (SafeHash, castSafeHash, extractHash, unsafeMakeSafeHash)
-import           Cardano.Ledger.Shelley.API (AccountState (..), GenDelegPair (..),
-                   NewEpochState (..), StakeReference (..), WitVKey (..), hashKey, hashVerKeyVRF)
-import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..),
-                   secondsToNominalDiffTimeMicro)
-import           Cardano.Ledger.Shelley.LedgerState (PState (..))
-import           Cardano.Ledger.Shelley.TxCert (EraTxCert (..), GenesisDelegCert (..), MIRCert (..),
-                   MIRPot (..), MIRTarget (..), ShelleyDelegCert (..), ShelleyEraTxCert (..),
-                   ShelleyTxCert (..))
-import           Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import           Cardano.Slotting.Slot (EpochNo (..))
+import Cardano.Crypto.Hash.Class (hashFromBytes, hashToBytes)
+import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Allegra.Scripts (showTimelock)
+import Cardano.Ledger.Alonzo.Core
+  ( AlonzoEraScript (..)
+  , AlonzoEraTxBody (..)
+  , AlonzoEraTxWits (..)
+  , AsIx (..)
+  , AsIxItem (AsIxItem)
+  , CoinPerWord (..)
+  , EraGov
+  , EraTx (bodyTxL, witsTxL)
+  , EraTxWits (..)
+  , PParamsUpdate (..)
+  , Tx
+  , ppPricesL
+  )
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import Cardano.Ledger.Alonzo.Scripts
+  ( AlonzoPlutusPurpose (..)
+  , CostModels
+  , ExUnits (..)
+  , Prices (..)
+  , Script
+  , plutusScriptLanguage
+  )
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
+import Cardano.Ledger.Api (Constitution (..), GovAction (..), unRedeemers)
+import Cardano.Ledger.Api.Tx.Cert
+  ( pattern AuthCommitteeHotKeyTxCert
+  , pattern DelegStakeTxCert
+  , pattern DelegTxCert
+  , pattern GenesisDelegTxCert
+  , pattern MirTxCert
+  , pattern RegDRepTxCert
+  , pattern RegDepositDelegTxCert
+  , pattern RegDepositTxCert
+  , pattern RegPoolTxCert
+  , pattern RegTxCert
+  , pattern ResignCommitteeColdTxCert
+  , pattern RetirePoolTxCert
+  , pattern UnRegDRepTxCert
+  , pattern UnRegDepositTxCert
+  , pattern UnRegTxCert
+  )
+import Cardano.Ledger.Babbage.Core (CoinPerByte (..), getNativeScript)
+import Cardano.Ledger.BaseTypes
+  ( AnchorData (..)
+  , DnsName
+  , EpochInterval (..)
+  , Network (..)
+  , NonNegativeInterval
+  , ProtVer (..)
+  , StrictMaybe (..)
+  , UnitInterval
+  , Url
+  , boundRational
+  , dnsToText
+  , hashAnchorData
+  , maybeToStrictMaybe
+  , mkVersion
+  , portToWord16
+  , strictMaybeToMaybe
+  , textToDns
+  , textToUrl
+  , txIxToInt
+  , unboundRational
+  , urlToText
+  )
+import Cardano.Ledger.Binary
+  ( Annotated (..)
+  , ByteSpan (..)
+  , byronProtVer
+  , fromCBOR
+  , serialize'
+  , slice
+  , toCBOR
+  , toPlainDecoder
+  )
+import Cardano.Ledger.Binary.Plain (Decoder, serializeAsHexText)
+import Cardano.Ledger.CertState (DRepState (..), csCommitteeCredsL)
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Conway.Core
+  ( DRepVotingThresholds (..)
+  , PoolVotingThresholds (..)
+  , dvtPPEconomicGroupL
+  , dvtPPGovGroupL
+  , dvtPPNetworkGroupL
+  , dvtPPTechnicalGroupL
+  , dvtUpdateToConstitutionL
+  )
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
+import Cardano.Ledger.Conway.Governance
+  ( Anchor (..)
+  , Committee (..)
+  , GovActionId (..)
+  , GovActionIx (..)
+  , GovActionState (..)
+  , GovState
+  , ProposalProcedure (..)
+  , Vote (..)
+  , Voter (..)
+  , VotingProcedure (..)
+  , VotingProcedures (..)
+  )
+import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.TxCert
+  ( ConwayDelegCert (..)
+  , ConwayEraTxCert (..)
+  , ConwayGovCert (..)
+  , ConwayTxCert (..)
+  , Delegatee (..)
+  , pattern UpdateDRepTxCert
+  )
+import Cardano.Ledger.Core
+  ( Era (..)
+  , EraPParams (..)
+  , EraTxOut
+  , PParams (..)
+  , PoolCert (..)
+  , Value
+  , fromEraCBOR
+  , ppMinFeeAL
+  , ppMinUTxOValueL
+  , toEraCBOR
+  )
+import Cardano.Ledger.Credential (Credential (..), credToText)
+import Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
+import Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
+import Cardano.Ledger.Keys
+  ( HasKeyRole
+  , KeyHash (..)
+  , KeyRole (..)
+  , VKey (..)
+  , fromVRFVerKeyHash
+  , hashWithSerialiser
+  , toVRFVerKeyHash
+  )
+import Cardano.Ledger.Plutus.Data (Data (..), unData)
+import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
+import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
+import Cardano.Ledger.SafeHash (SafeHash, castSafeHash, extractHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Shelley.API
+  ( AccountState (..)
+  , GenDelegPair (..)
+  , NewEpochState (..)
+  , StakeReference (..)
+  , WitVKey (..)
+  , hashKey
+  , hashVerKeyVRF
+  )
+import Cardano.Ledger.Shelley.Genesis
+  ( ShelleyGenesisStaking (..)
+  , secondsToNominalDiffTimeMicro
+  )
+import Cardano.Ledger.Shelley.LedgerState (PState (..))
+import Cardano.Ledger.Shelley.TxCert
+  ( EraTxCert (..)
+  , GenesisDelegCert (..)
+  , MIRCert (..)
+  , MIRPot (..)
+  , MIRTarget (..)
+  , ShelleyDelegCert (..)
+  , ShelleyEraTxCert (..)
+  , ShelleyTxCert (..)
+  )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Slotting.Slot (EpochNo (..))

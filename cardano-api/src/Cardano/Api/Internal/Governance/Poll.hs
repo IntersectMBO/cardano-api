@@ -36,38 +36,38 @@ module Cardano.Api.Internal.Governance.Poll
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.SerialiseUsing
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.Sign
-import           Cardano.Api.Internal.TxMetadata
-import           Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.TxMetadata
+import Cardano.Api.Internal.Utils
 
-import           Cardano.Binary (DecoderError (..))
-import           Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
-import qualified Cardano.Crypto.Hash as Hash
-import           Cardano.Ledger.Crypto (HASH, StandardCrypto)
+import Cardano.Binary (DecoderError (..))
+import Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
+import Cardano.Crypto.Hash qualified as Hash
+import Cardano.Ledger.Crypto (HASH, StandardCrypto)
 
-import           Control.Arrow (left)
-import           Control.Monad (foldM, when)
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Function ((&))
-import qualified Data.Map.Strict as Map
-import           Data.String (IsString (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.Text.Lazy.Builder as Text.Builder
-import           Data.Word (Word64)
-import           Formatting (build, sformat)
-import           GHC.Exts (IsList (..))
+import Control.Arrow (left)
+import Control.Monad (foldM, when)
+import Data.Either.Combinators (maybeToRight)
+import Data.Function ((&))
+import Data.Map.Strict qualified as Map
+import Data.String (IsString (..))
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Lazy qualified as Text.Lazy
+import Data.Text.Lazy.Builder qualified as Text.Builder
+import Data.Word (Word64)
+import Formatting (build, sformat)
+import GHC.Exts (IsList (..))
 
 -- | Associated metadata label as defined in CIP-0094
 pollMetadataLabel :: Word64

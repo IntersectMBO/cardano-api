@@ -18,15 +18,19 @@ module Cardano.Api.Internal.Governance.Metadata.GovAction
   )
 where
 
-import           Cardano.Api.Internal.Governance.Metadata.Parsers (textWithMaxLength)
-import           Cardano.Api.Internal.Governance.Metadata.Validation (Authors, Body,
-                   GovActionMetadata (..), HashAlgorithm)
+import Cardano.Api.Internal.Governance.Metadata.Parsers (textWithMaxLength)
+import Cardano.Api.Internal.Governance.Metadata.Validation
+  ( Authors
+  , Body
+  , GovActionMetadata (..)
+  , HashAlgorithm
+  )
 
-import           Data.Aeson (FromJSON, withArray, withObject, withText, (.:), (.:?))
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (Parser, Value (..))
-import           Data.Text (Text)
-import           GHC.Generics (Generic)
+import Data.Aeson (FromJSON, withArray, withObject, withText, (.:), (.:?))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types (Parser, Value (..))
+import Data.Text (Text)
+import GHC.Generics (Generic)
 
 data CIP108 = BaseGovActionMetadata
 

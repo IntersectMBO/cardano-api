@@ -27,23 +27,26 @@ module Cardano.Api.Internal.Modes
   )
 where
 
-import           Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Eras.Core
 
-import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
-import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
-                   eraIndexZero)
-import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
-import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
-import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
-import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
+import Cardano.Chain.Slotting qualified as Byron (EpochSlots (..))
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
+import Ouroboros.Consensus.Cardano.ByronHFC qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator as Consensus
+  ( EraIndex (..)
+  , eraIndexSucc
+  , eraIndexZero
+  )
+import Ouroboros.Consensus.Protocol.Praos qualified as Consensus
+import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
+import Ouroboros.Consensus.Shelley.HFEras qualified as Consensus
+import Ouroboros.Consensus.Shelley.ShelleyHFC qualified as Consensus
 
-import           Data.SOP (K (K))
-import           Data.SOP.Strict (NS (S, Z))
+import Data.SOP (K (K))
+import Data.SOP.Strict (NS (S, Z))
 
 -- ----------------------------------------------------------------------------
 -- Consensus modes

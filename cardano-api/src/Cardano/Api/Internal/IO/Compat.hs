@@ -8,14 +8,14 @@ module Cardano.Api.Internal.IO.Compat
   )
 where
 
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.IO.Base
-import           Cardano.Api.Internal.IO.Compat.Posix
-import           Cardano.Api.Internal.IO.Compat.Win32
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.IO.Base
+import Cardano.Api.Internal.IO.Compat.Posix
+import Cardano.Api.Internal.IO.Compat.Win32
 
-import           Control.Monad.Except (ExceptT)
-import           Data.ByteString (ByteString)
-import           System.IO
+import Control.Monad.Except (ExceptT)
+import Data.ByteString (ByteString)
+import System.IO
 
 handleFileForWritingWithOwnerPermission
   :: FilePath

@@ -14,28 +14,28 @@ module Cardano.Api.Internal.Convenience.Construction
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Fees
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Internal.Query
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.Sign
-import           Cardano.Api.Internal.Tx.UTxO (UTxO (..))
-import           Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Fees
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.Query
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Tx.UTxO (UTxO (..))
+import Cardano.Api.Internal.Utils
 
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Credential as L
-import qualified Cardano.Ledger.Keys as L
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Keys qualified as L
 
-import qualified Data.List as List
-import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           GHC.Exts (IsList (..))
+import Data.List qualified as List
+import Data.Map.Strict qualified as Map
+import Data.Set (Set)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import GHC.Exts (IsList (..))
 
 -- | Construct a balanced transaction.
 -- See Cardano.Api.Internal.Convenience.Query.queryStateForBalancedTx for a

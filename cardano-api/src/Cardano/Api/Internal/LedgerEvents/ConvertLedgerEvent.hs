@@ -13,37 +13,49 @@ module Cardano.Api.Internal.LedgerEvents.ConvertLedgerEvent
   )
 where
 
-import           Cardano.Api.Internal.LedgerEvents.LedgerEvent
-import           Cardano.Api.Internal.LedgerEvents.Rule.BBODY.DELEGS
-import           Cardano.Api.Internal.LedgerEvents.Rule.BBODY.LEDGER
-import           Cardano.Api.Internal.LedgerEvents.Rule.BBODY.UTXOW
-import           Cardano.Api.Internal.LedgerEvents.Rule.TICK.NEWEPOCH
-import           Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
+import Cardano.Api.Internal.LedgerEvents.LedgerEvent
+import Cardano.Api.Internal.LedgerEvents.Rule.BBODY.DELEGS
+import Cardano.Api.Internal.LedgerEvents.Rule.BBODY.LEDGER
+import Cardano.Api.Internal.LedgerEvents.Rule.BBODY.UTXOW
+import Cardano.Api.Internal.LedgerEvents.Rule.TICK.NEWEPOCH
+import Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
 
-import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..))
-import           Cardano.Ledger.Api.Era (AllegraEra, AlonzoEra, BabbageEra, ConwayEra, MaryEra,
-                   ShelleyEra)
-import qualified Cardano.Ledger.Conway.Rules as Conway
-import           Cardano.Ledger.Core
-import qualified Cardano.Ledger.Core as Ledger.Core
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Shelley.Rules (RupdEvent (..), ShelleyBbodyEvent (LedgersEvent),
-                   ShelleyNewEpochEvent (..), ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
-                   ShelleyUtxowEvent (..))
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import           Ouroboros.Consensus.Cardano.Block (HardForkBlock)
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (getOneEraLedgerEvent)
-import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
-import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock,
-                   ShelleyLedgerEvent (ShelleyLedgerEventBBODY, ShelleyLedgerEventTICK))
-import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (unwrapLedgerEvent))
+import Cardano.Ledger.Allegra.Rules qualified as Allegra
+import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (..))
+import Cardano.Ledger.Api.Era
+  ( AllegraEra
+  , AlonzoEra
+  , BabbageEra
+  , ConwayEra
+  , MaryEra
+  , ShelleyEra
+  )
+import Cardano.Ledger.Conway.Rules qualified as Conway
+import Cardano.Ledger.Core
+import Cardano.Ledger.Core qualified as Ledger.Core
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.Rules
+  ( RupdEvent (..)
+  , ShelleyBbodyEvent (LedgersEvent)
+  , ShelleyNewEpochEvent (..)
+  , ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent)
+  , ShelleyUtxowEvent (..)
+  )
+import Cardano.Ledger.Shelley.Rules qualified as Shelley
+import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import Ouroboros.Consensus.Cardano.Block (HardForkBlock)
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (getOneEraLedgerEvent)
+import Ouroboros.Consensus.Protocol.Praos qualified as Consensus
+import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger
+  ( ShelleyBlock
+  , ShelleyLedgerEvent (ShelleyLedgerEventBBODY, ShelleyLedgerEventTICK)
+  )
+import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (unwrapLedgerEvent))
 
-import           Control.State.Transition (Event)
-import           Data.SOP.Strict
+import Control.State.Transition (Event)
+import Data.SOP.Strict
 
 class ConvertLedgerEvent blk where
   toLedgerEvent :: WrapLedgerEvent blk -> Maybe LedgerEvent

@@ -32,33 +32,33 @@ module Cardano.Api.Internal.Experimental.Eras
   )
 where
 
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
-import qualified Cardano.Api.Internal.Eras as Api
-import           Cardano.Api.Internal.Eras.Core (BabbageEra, ConwayEra, Eon (..))
-import qualified Cardano.Api.Internal.ReexposeLedger as L
-import           Cardano.Api.Internal.Via.ShowOf
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
+import Cardano.Api.Internal.Eras qualified as Api
+import Cardano.Api.Internal.Eras.Core (BabbageEra, ConwayEra, Eon (..))
+import Cardano.Api.Internal.ReexposeLedger qualified as L
+import Cardano.Api.Internal.Via.ShowOf
 
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Babbage as Ledger
-import           Cardano.Ledger.BaseTypes (Inject (..))
-import qualified Cardano.Ledger.Conway as Ledger
-import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Hashes
-import qualified Cardano.Ledger.SafeHash as L
-import qualified Cardano.Ledger.UTxO as L
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Babbage qualified as Ledger
+import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.Conway qualified as Ledger
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Hashes
+import Cardano.Ledger.SafeHash qualified as L
+import Cardano.Ledger.UTxO qualified as L
 
-import           Control.Monad.Error.Class
-import           Data.Aeson (FromJSON (..), ToJSON, withText)
-import           Data.Aeson.Types (ToJSON (..))
-import           Data.Kind
-import           Data.Maybe (isJust)
-import qualified Data.Text as Text
-import           Data.Type.Equality
-import           Data.Typeable
-import           GHC.Exts (IsString)
-import           Prettyprinter
+import Control.Monad.Error.Class
+import Data.Aeson (FromJSON (..), ToJSON, withText)
+import Data.Aeson.Types (ToJSON (..))
+import Data.Kind
+import Data.Maybe (isJust)
+import Data.Text qualified as Text
+import Data.Type.Equality
+import Data.Typeable
+import GHC.Exts (IsString)
+import Prettyprinter
 
 -- | Users typically interact with the latest features on the mainnet or experiment with features
 -- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era

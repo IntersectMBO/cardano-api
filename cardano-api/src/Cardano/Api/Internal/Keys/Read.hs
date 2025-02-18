@@ -11,17 +11,17 @@ module Cardano.Api.Internal.Keys.Read
   )
 where
 
-import           Cardano.Api.Internal.DeserialiseAnyOf
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.IO
-import           Cardano.Api.Internal.SerialiseBech32
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.DeserialiseAnyOf
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.IO
+import Cardano.Api.Internal.SerialiseBech32
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.Utils
 
-import           Control.Monad.Except (runExceptT)
-import           Data.Bifunctor
-import           Data.List.NonEmpty (NonEmpty)
+import Control.Monad.Except (runExceptT)
+import Data.Bifunctor
+import Data.List.NonEmpty (NonEmpty)
 
 -- | Read a cryptographic key from a file.
 --

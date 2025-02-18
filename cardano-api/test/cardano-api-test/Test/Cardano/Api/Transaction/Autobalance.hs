@@ -14,44 +14,44 @@ module Test.Cardano.Api.Transaction.Autobalance
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.Address (toShelleyStakeCredential)
-import           Cardano.Api.Internal.Fees
-import           Cardano.Api.Internal.Script
-import qualified Cardano.Api.Ledger as L
-import qualified Cardano.Api.Ledger.Lens as L
-import           Cardano.Api.Shelley (LedgerProtocolParameters (..))
+import Cardano.Api
+import Cardano.Api.Internal.Address (toShelleyStakeCredential)
+import Cardano.Api.Internal.Fees
+import Cardano.Api.Internal.Script
+import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Ledger.Lens qualified as L
+import Cardano.Api.Shelley (LedgerProtocolParameters (..))
 
-import qualified Cardano.Ledger.Alonzo.Core as L
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Mary.Value as L
-import           Cardano.Ledger.Val ((<->))
-import qualified Cardano.Ledger.Val as L
-import qualified Cardano.Slotting.EpochInfo as CS
-import qualified Cardano.Slotting.Slot as CS
-import qualified Cardano.Slotting.Time as CS
+import Cardano.Ledger.Alonzo.Core qualified as L
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Mary.Value qualified as L
+import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.Val qualified as L
+import Cardano.Slotting.EpochInfo qualified as CS
+import Cardano.Slotting.Slot qualified as CS
+import Cardano.Slotting.Time qualified as CS
 
-import qualified Data.ByteString as B
-import           Data.Default (def)
-import           Data.Function
-import qualified Data.Map.Strict as M
-import           Data.Maybe
-import           Data.Ratio ((%))
-import qualified Data.Time.Format as DT
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
-import           Lens.Micro ((^.))
+import Data.ByteString qualified as B
+import Data.Default (def)
+import Data.Function
+import Data.Map.Strict qualified as M
+import Data.Maybe
+import Data.Ratio ((%))
+import Data.Time.Format qualified as DT
+import GHC.Exts (IsList (..))
+import GHC.Stack
+import Lens.Micro ((^.))
 
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Orphans ()
+import Test.Cardano.Api.Orphans ()
 
-import           Hedgehog (MonadTest, Property, forAll, (===))
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Gen as Gen
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (MonadTest, Property, forAll, (===))
+import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
+import Hedgehog.Gen qualified as Gen
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 -- | Test that the fee is the same when spending minted asset manually or when autobalancing it
 prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset :: Property

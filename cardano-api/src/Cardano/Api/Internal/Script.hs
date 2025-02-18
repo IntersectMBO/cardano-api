@@ -121,65 +121,65 @@ module Cardano.Api.Internal.Script
   )
 where
 
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Eras.Core
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.ScriptData
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseJSON
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.SerialiseUsing
-import           Cardano.Api.Internal.TxIn
-import           Cardano.Api.Internal.Utils (failEitherWith)
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.ScriptData
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseJSON
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.TxIn
+import Cardano.Api.Internal.Utils (failEitherWith)
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Allegra.Scripts as Allegra
-import qualified Cardano.Ledger.Allegra.Scripts as Timelock
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Babbage.Scripts as Babbage
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import qualified Cardano.Ledger.Binary as Binary (decCBOR, decodeFullAnnotator)
-import qualified Cardano.Ledger.Conway.Scripts as Conway
-import           Cardano.Ledger.Core (Era (EraCrypto))
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Keys as Shelley
-import qualified Cardano.Ledger.Plutus.Language as Plutus
-import qualified Cardano.Ledger.Shelley.Scripts as Shelley
-import           Cardano.Slotting.Slot (SlotNo)
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import qualified PlutusLedgerApi.Test.Examples as Plutus
+import Cardano.Binary qualified as CBOR
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Ledger.Allegra.Scripts qualified as Allegra
+import Cardano.Ledger.Allegra.Scripts qualified as Timelock
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Ledger.Babbage.Scripts qualified as Babbage
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Binary qualified as Binary (decCBOR, decodeFullAnnotator)
+import Cardano.Ledger.Conway.Scripts qualified as Conway
+import Cardano.Ledger.Core (Era (EraCrypto))
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Ledger.Plutus.Language qualified as Plutus
+import Cardano.Ledger.Shelley.Scripts qualified as Shelley
+import Cardano.Slotting.Slot (SlotNo)
+import Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import PlutusLedgerApi.Test.Examples qualified as Plutus
 
-import qualified Codec.CBOR.Read as CBOR
-import           Control.Applicative
-import           Control.Monad
-import           Data.Aeson (Value (..), object, (.:), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor
-import qualified Data.ByteString.Lazy as LBS
-import           Data.ByteString.Short (ShortByteString)
-import qualified Data.ByteString.Short as SBS
-import           Data.Either.Combinators (maybeToRight)
-import           Data.Functor
-import           Data.Scientific (toBoundedInteger)
-import           Data.String (IsString)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           Data.Typeable (Typeable)
-import           Data.Vector (Vector)
-import qualified Formatting as B
-import           GHC.Exts (IsList (..))
-import           Numeric.Natural (Natural)
-import           Prettyprinter
+import Codec.CBOR.Read qualified as CBOR
+import Control.Applicative
+import Control.Monad
+import Data.Aeson (Value (..), object, (.:), (.=))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
+import Data.Bifunctor
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short (ShortByteString)
+import Data.ByteString.Short qualified as SBS
+import Data.Either.Combinators (maybeToRight)
+import Data.Functor
+import Data.Scientific (toBoundedInteger)
+import Data.String (IsString)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import Data.Typeable (Typeable)
+import Data.Vector (Vector)
+import Formatting qualified as B
+import GHC.Exts (IsList (..))
+import Numeric.Natural (Natural)
+import Prettyprinter
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version

@@ -3,4 +3,4 @@ module Cardano.Api.Consensus
   )
 where
 
-import           Cardano.Api.Internal.ReexposeConsensus
+import Cardano.Api.Internal.ReexposeConsensus

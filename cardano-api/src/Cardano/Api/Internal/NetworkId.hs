@@ -16,12 +16,14 @@ module Cardano.Api.Internal.NetworkId
   )
 where
 
-import qualified Cardano.Chain.Common as Byron (NetworkMagic (..))
-import qualified Cardano.Chain.Genesis as Byron (mainnetProtocolMagicId)
-import qualified Cardano.Crypto.ProtocolMagic as Byron (ProtocolMagicId (..),
-                   RequiresNetworkMagic (..))
-import qualified Cardano.Ledger.BaseTypes as Shelley (Network (..))
-import           Ouroboros.Network.Magic (NetworkMagic (..))
+import Cardano.Chain.Common qualified as Byron (NetworkMagic (..))
+import Cardano.Chain.Genesis qualified as Byron (mainnetProtocolMagicId)
+import Cardano.Crypto.ProtocolMagic qualified as Byron
+  ( ProtocolMagicId (..)
+  , RequiresNetworkMagic (..)
+  )
+import Cardano.Ledger.BaseTypes qualified as Shelley (Network (..))
+import Ouroboros.Network.Magic (NetworkMagic (..))
 
 -- ----------------------------------------------------------------------------
 -- NetworkId type

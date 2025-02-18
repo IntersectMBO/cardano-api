@@ -3,4 +3,4 @@ module Cardano.Api.Network
   )
 where
 
-import           Cardano.Api.Internal.ReexposeNetwork
+import Cardano.Api.Internal.ReexposeNetwork

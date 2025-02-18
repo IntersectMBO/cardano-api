@@ -45,52 +45,52 @@ module Cardano.Api.Internal.ScriptData
   )
 where
 
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Error
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.Pretty
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseJSON
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseUsing
-import           Cardano.Api.Internal.TxMetadata (pBytes, pSigned, parseAll)
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseJSON
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.TxMetadata (pBytes, pSigned, parseAll)
 
-import qualified Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Core (Era)
-import qualified Cardano.Ledger.Plutus.Data as Plutus
-import qualified Cardano.Ledger.SafeHash as Ledger
-import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
-import qualified PlutusLedgerApi.V1 as PlutusAPI
+import Cardano.Binary qualified as CBOR
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Ledger.Core (Era)
+import Cardano.Ledger.Plutus.Data qualified as Plutus
+import Cardano.Ledger.SafeHash qualified as Ledger
+import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
+import PlutusLedgerApi.V1 qualified as PlutusAPI
 
-import           Codec.Serialise.Class (Serialise (..))
-import           Control.Applicative (Alternative (..))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Aeson.Text as Aeson.Text
-import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import           Data.Bifunctor (first)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.ByteString.Short as SB
-import qualified Data.Char as Char
-import           Data.Data (Data)
-import           Data.Either.Combinators
-import qualified Data.List as List
-import           Data.Maybe (fromMaybe)
-import qualified Data.Scientific as Scientific
-import           Data.String (IsString)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as Text.Lazy
-import           Data.Word
-import           GHC.Exts (IsList (..))
+import Codec.Serialise.Class (Serialise (..))
+import Control.Applicative (Alternative (..))
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Key qualified as Aeson
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Text qualified as Aeson.Text
+import Data.Attoparsec.ByteString.Char8 qualified as Atto
+import Data.Bifunctor (first)
+import Data.ByteString qualified as BS
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy.Char8 qualified as LBS
+import Data.ByteString.Short qualified as SB
+import Data.Char qualified as Char
+import Data.Data (Data)
+import Data.Either.Combinators
+import Data.List qualified as List
+import Data.Maybe (fromMaybe)
+import Data.Scientific qualified as Scientific
+import Data.String (IsString)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as Text.Lazy
+import Data.Word
+import GHC.Exts (IsList (..))
 
 -- Original script data bytes
 data HashableScriptData

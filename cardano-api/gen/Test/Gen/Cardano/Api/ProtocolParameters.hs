@@ -1,17 +1,17 @@
 module Test.Gen.Cardano.Api.ProtocolParameters where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Ledger
+import Cardano.Api
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Ledger
 
-import           Test.Gen.Cardano.Api.Typed (genCostModels)
+import Test.Gen.Cardano.Api.Typed (genCostModels)
 
-import           Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import           Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 
-import           Hedgehog (MonadGen)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Gen.QuickCheck as Q
+import Hedgehog (MonadGen)
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Gen.QuickCheck qualified as Q
 
 genStrictMaybe :: MonadGen m => m a -> m (StrictMaybe a)
 genStrictMaybe gen =

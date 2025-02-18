@@ -11,25 +11,25 @@ module Cardano.Api.Internal.ValueParser
   )
 where
 
-import           Cardano.Api.Internal.Error (displayError)
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.Utils (failEitherWith)
-import           Cardano.Api.Internal.Value
+import Cardano.Api.Internal.Error (displayError)
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.Utils (failEitherWith)
+import Cardano.Api.Internal.Value
 
-import           Control.Applicative (many, some, (<|>))
-import           Control.Monad (unless, when)
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.Char as Char
-import           Data.Functor (void, ($>))
-import           Data.List as List (foldl')
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Word (Word64)
-import           Text.Parsec as Parsec (notFollowedBy, try, (<?>))
-import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
-import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
-import           Text.Parsec.String (Parser)
-import           Text.ParserCombinators.Parsec.Combinator (many1)
+import Control.Applicative (many, some, (<|>))
+import Control.Monad (unless, when)
+import Data.ByteString.Char8 qualified as BSC
+import Data.Char qualified as Char
+import Data.Functor (void, ($>))
+import Data.List as List (foldl')
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Data.Word (Word64)
+import Text.Parsec as Parsec (notFollowedBy, try, (<?>))
+import Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
+import Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
+import Text.Parsec.String (Parser)
+import Text.ParserCombinators.Parsec.Combinator (many1)
 
 -- | The role for which a 'Value' is being parsed.
 data ParserValueRole

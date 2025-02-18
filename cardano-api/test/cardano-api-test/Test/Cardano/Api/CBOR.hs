@@ -10,31 +10,31 @@ module Test.Cardano.Api.CBOR
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.SerialiseLedgerCddl (cddlTypeToEra)
-import           Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
-import           Cardano.Api.Shelley (AsType (..))
+import Cardano.Api
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.SerialiseLedgerCddl (cddlTypeToEra)
+import Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
+import Cardano.Api.Shelley (AsType (..))
 
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Short as SBS
-import           Data.Proxy (Proxy (..))
-import           Data.Text (Text)
-import qualified Data.Text as T
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as SBS
+import Data.Proxy (Proxy (..))
+import Data.Text (Text)
+import Data.Text qualified as T
 
-import           Test.Gen.Cardano.Api.Hardcoded
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Hardcoded
+import Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Orphans ()
+import Test.Cardano.Api.Orphans ()
 
-import           Hedgehog (Property, forAll, property, tripping)
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Gen as Gen
-import qualified Test.Hedgehog.Roundtrip.CBOR as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property, forAll, property, tripping)
+import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
+import Hedgehog.Gen qualified as Gen
+import Test.Hedgehog.Roundtrip.CBOR qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 

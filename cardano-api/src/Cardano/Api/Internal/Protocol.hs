@@ -20,27 +20,27 @@ module Cardano.Api.Internal.Protocol
   )
 where
 
-import           Cardano.Api.Internal.Modes
+import Cardano.Api.Internal.Modes
 
-import           Ouroboros.Consensus.Block.Forging (BlockForging)
-import           Ouroboros.Consensus.Cardano
-import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
-import           Ouroboros.Consensus.Cardano.Node
-import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
-import           Ouroboros.Consensus.Node.Run (RunNode)
-import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
-import qualified Ouroboros.Consensus.Shelley.Eras as Consensus (ShelleyEra)
-import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
-import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
-import           Ouroboros.Consensus.Util.IOLike (IOLike)
+import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Cardano
+import Ouroboros.Consensus.Cardano.Block
+import Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
+import Ouroboros.Consensus.Cardano.Node
+import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
+import Ouroboros.Consensus.Ledger.SupportsProtocol qualified as Consensus (LedgerSupportsProtocol)
+import Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
+import Ouroboros.Consensus.Node.Run (RunNode)
+import Ouroboros.Consensus.Protocol.TPraos qualified as Consensus
+import Ouroboros.Consensus.Shelley.Eras qualified as Consensus (ShelleyEra)
+import Ouroboros.Consensus.Shelley.Ledger.Block qualified as Consensus (ShelleyBlock)
+import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
+import Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
+import Ouroboros.Consensus.Util.IOLike (IOLike)
 
-import           Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap)
 
-import           Type.Reflection ((:~:) (..))
+import Type.Reflection ((:~:) (..))
 
 class (RunNode blk, IOLike m) => Protocol m blk where
   data ProtocolInfoArgs blk

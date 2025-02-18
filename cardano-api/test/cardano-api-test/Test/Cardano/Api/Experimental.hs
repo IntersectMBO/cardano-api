@@ -8,20 +8,20 @@ module Test.Cardano.Api.Experimental
   )
 where
 
-import qualified Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
-import qualified Cardano.Api.Internal.Script as Script
-import           Cardano.Api.Internal.Tx.Sign (Tx (ShelleyTx))
-import qualified Cardano.Api.Ledger as Ledger
+import Cardano.Api qualified as Api
+import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
+import Cardano.Api.Internal.Script qualified as Script
+import Cardano.Api.Internal.Tx.Sign (Tx (ShelleyTx))
+import Cardano.Api.Ledger qualified as Ledger
 
-import           Lens.Micro ((&))
+import Lens.Micro ((&))
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property)
+import Hedgehog qualified as H
+import Hedgehog.Extras qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 -- | Tests in this module can be run by themselves by writing:
 -- ```bash

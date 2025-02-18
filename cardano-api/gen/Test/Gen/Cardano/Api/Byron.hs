@@ -7,17 +7,17 @@ module Test.Gen.Cardano.Api.Byron
   )
 where
 
-import           Cardano.Api hiding (txIns)
-import           Cardano.Api.Byron
+import Cardano.Api hiding (txIns)
+import Cardano.Api.Byron
 
-import           Data.Proxy
+import Data.Proxy
 
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Typed
 
-import           Hedgehog
-import           Test.Hedgehog.Roundtrip.CBOR
-import           Test.Tasty
-import           Test.Tasty.Hedgehog
+import Hedgehog
+import Test.Hedgehog.Roundtrip.CBOR
+import Test.Tasty
+import Test.Tasty.Hedgehog
 
 prop_byron_roundtrip_txbody_CBOR :: Property
 prop_byron_roundtrip_txbody_CBOR = property $ do

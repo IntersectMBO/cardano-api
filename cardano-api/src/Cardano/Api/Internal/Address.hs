@@ -90,39 +90,39 @@ module Cardano.Api.Internal.Address
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Byron
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.NetworkId
-import           Cardano.Api.Internal.Script
-import           Cardano.Api.Internal.SerialiseBech32
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Byron
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.SerialiseBech32
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.Utils
 
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Plutus.TxInfo as Plutus
-import qualified PlutusLedgerApi.V1 as PlutusAPI
+import Cardano.Chain.Common qualified as Byron
+import Cardano.Ledger.Address qualified as Shelley
+import Cardano.Ledger.BaseTypes qualified as Shelley
+import Cardano.Ledger.Credential qualified as Shelley
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Plutus.TxInfo qualified as Plutus
+import PlutusLedgerApi.V1 qualified as PlutusAPI
 
-import           Control.Applicative ((<|>))
-import           Control.DeepSeq (NFData (..), deepseq)
-import           Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
-import qualified Data.Aeson as Aeson
-import           Data.Bifunctor (first)
-import qualified Data.ByteString.Base58 as Base58
-import           Data.Char (isAsciiLower, isAsciiUpper, isDigit)
-import           Data.Either.Combinators (rightToMaybe)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Text.Parsec as Parsec
-import qualified Text.Parsec.String as Parsec
+import Control.Applicative ((<|>))
+import Control.DeepSeq (NFData (..), deepseq)
+import Data.Aeson (FromJSON (..), ToJSON (..), withText, (.=))
+import Data.Aeson qualified as Aeson
+import Data.Bifunctor (first)
+import Data.ByteString.Base58 qualified as Base58
+import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import Data.Either.Combinators (rightToMaybe)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
+import Text.Parsec qualified as Parsec
+import Text.Parsec.String qualified as Parsec
 
 -- ----------------------------------------------------------------------------
 -- Address Serialisation

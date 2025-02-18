@@ -5,16 +5,16 @@ module Test.Cardano.Api.IO
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.IO
+import Cardano.Api
+import Cardano.Api.Internal.IO
 
-import           System.Directory (removeFile)
+import System.Directory (removeFile)
 
-import           Hedgehog
-import qualified Hedgehog.Extras as H
-import           Hedgehog.Internal.Property
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog
+import Hedgehog
+import Hedgehog.Extras qualified as H
+import Hedgehog.Internal.Property
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog
 
 prop_createVrfFileWithOwnerPermissions :: Property
 prop_createVrfFileWithOwnerPermissions =

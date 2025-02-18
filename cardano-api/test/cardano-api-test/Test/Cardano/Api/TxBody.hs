@@ -12,23 +12,23 @@ module Test.Cardano.Api.TxBody
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.Script
-import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
+import Cardano.Api
+import Cardano.Api.Internal.Script
+import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Shelley (ShelleyLedgerEra)
 
-import           Data.Maybe (isJust)
-import           Data.Type.Equality (TestEquality (testEquality))
-import           GHC.Exts (IsList (..))
+import Data.Maybe (isJust)
+import Data.Type.Equality (TestEquality (testEquality))
+import GHC.Exts (IsList (..))
 
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Orphans ()
+import Test.Cardano.Api.Orphans ()
 
-import           Hedgehog (MonadTest, Property, (===))
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (MonadTest, Property, (===))
+import Hedgehog qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 -- | Check the txOuts in a TxBodyContent after a ledger roundtrip.
 prop_roundtrip_txbodycontent_txouts :: forall era. ShelleyBasedEra era -> Property

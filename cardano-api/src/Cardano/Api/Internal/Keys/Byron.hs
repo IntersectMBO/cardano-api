@@ -28,34 +28,34 @@ module Cardano.Api.Internal.Keys.Byron
   )
 where
 
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Class
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.SerialiseCBOR
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
-import           Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Class
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.SerialiseUsing
 
-import           Cardano.Binary (cborError, toStrictByteString)
-import qualified Cardano.Chain.Common as Crypto
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Hashing as Crypto
-import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Crypto.Signing as Crypto
-import qualified Cardano.Crypto.Wallet as Crypto.HD
-import qualified Cardano.Crypto.Wallet as Wallet
+import Cardano.Binary (cborError, toStrictByteString)
+import Cardano.Chain.Common qualified as Crypto
+import Cardano.Crypto.DSIGN.Class qualified as Crypto
+import Cardano.Crypto.Hashing qualified as Crypto
+import Cardano.Crypto.Seed qualified as Crypto
+import Cardano.Crypto.Signing qualified as Crypto
+import Cardano.Crypto.Wallet qualified as Crypto.HD
+import Cardano.Crypto.Wallet qualified as Wallet
 
-import qualified Codec.CBOR.Decoding as CBOR
-import qualified Codec.CBOR.Read as CBOR
-import           Control.Monad
-import           Data.Bifunctor
-import qualified Data.ByteString.Lazy as LB
-import           Data.Either.Combinators
-import           Data.String (IsString)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Formatting (build, formatToString)
+import Codec.CBOR.Decoding qualified as CBOR
+import Codec.CBOR.Read qualified as CBOR
+import Control.Monad
+import Data.Bifunctor
+import Data.ByteString.Lazy qualified as LB
+import Data.Either.Combinators
+import Data.String (IsString)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Formatting (build, formatToString)
 
 -- | Byron-era payment keys. Used for Byron addresses and witnessing
 -- transactions that spend from these addresses.

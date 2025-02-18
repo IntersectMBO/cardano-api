@@ -49,19 +49,19 @@ module Cardano.Api.Internal.Eras.Core
   )
 where
 
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Pretty
 
-import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.BaseTypes (Inject (..))
 
-import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
-import           Data.Kind
-import           Data.Maybe (isJust)
-import           Data.String (IsString)
-import qualified Data.Text as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           Data.Typeable (Typeable, showsTypeRep, typeOf)
+import Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
+import Data.Kind
+import Data.Maybe (isJust)
+import Data.String (IsString)
+import Data.Text qualified as Text
+import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import Data.Typeable (Typeable, showsTypeRep, typeOf)
 
 -- ----------------------------------------------------------------------------
 -- Eras

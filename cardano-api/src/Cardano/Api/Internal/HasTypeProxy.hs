@@ -9,9 +9,9 @@ module Cardano.Api.Internal.HasTypeProxy
   )
 where
 
-import           Data.Kind (Constraint, Type)
-import           Data.Proxy (Proxy (..))
-import           Data.Typeable (Typeable)
+import Data.Kind (Constraint, Type)
+import Data.Proxy (Proxy (..))
+import Data.Typeable (Typeable)
 
 class Typeable t => HasTypeProxy t where
   -- | A family of singleton types used in this API to indicate which type to

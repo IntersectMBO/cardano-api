@@ -14,16 +14,16 @@ module Cardano.Api.Internal.GenesisParameters
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.NetworkId
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Shelley.Genesis as Shelley
-import           Cardano.Slotting.Slot (EpochSize (..))
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Shelley.Genesis qualified as Shelley
+import Cardano.Slotting.Slot (EpochSize (..))
 
-import           Data.Time (NominalDiffTime, UTCTime)
+import Data.Time (NominalDiffTime, UTCTime)
 
 -- ----------------------------------------------------------------------------
 -- Genesis parameters

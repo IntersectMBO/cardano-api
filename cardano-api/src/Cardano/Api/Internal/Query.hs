@@ -64,74 +64,74 @@ module Cardano.Api.Internal.Query
   )
 where
 
-import           Cardano.Api.Internal.Address
-import           Cardano.Api.Internal.Block
-import           Cardano.Api.Internal.Certificate
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Eras.Core
-import           Cardano.Api.Internal.GenesisParameters
-import           Cardano.Api.Internal.IPC.Version
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.Modes
-import           Cardano.Api.Internal.NetworkId
-import           Cardano.Api.Internal.ProtocolParameters
-import           Cardano.Api.Internal.Query.Types
-import qualified Cardano.Api.Internal.ReexposeLedger as Ledger
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.UTxO
+import Cardano.Api.Internal.Address
+import Cardano.Api.Internal.Block
+import Cardano.Api.Internal.Certificate
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.GenesisParameters
+import Cardano.Api.Internal.IPC.Version
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.Modes
+import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.ProtocolParameters
+import Cardano.Api.Internal.Query.Types
+import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.UTxO
 
-import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Api.State.Query as L
-import           Cardano.Ledger.Binary
-import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Cardano.Ledger.CertState as L
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (Crypto)
-import qualified Cardano.Ledger.Shelley.API as Shelley
-import qualified Cardano.Ledger.Shelley.Core as Core
-import qualified Cardano.Ledger.Shelley.LedgerState as L
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
-import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Cardano.Slotting.Time (SystemStart (..))
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
-import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
-import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
-import qualified Ouroboros.Consensus.HardFork.History as Consensus
-import qualified Ouroboros.Consensus.HardFork.History as History
-import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
-import qualified Ouroboros.Consensus.Ledger.Query as Consensus
-import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger.Query.Types as Consensus
-import           Ouroboros.Network.Block (Serialised (..))
-import           Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
+import Cardano.Chain.Update.Validation.Interface qualified as Byron.Update
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Api.State.Query qualified as L
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Plain qualified as Plain
+import Cardano.Ledger.CertState qualified as L
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Credential qualified as Shelley
+import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Shelley.API qualified as Shelley
+import Cardano.Ledger.Shelley.Core qualified as Core
+import Cardano.Ledger.Shelley.LedgerState qualified as L
+import Cardano.Ledger.Shelley.LedgerState qualified as Shelley
+import Cardano.Slotting.EpochInfo (hoistEpochInfo)
+import Cardano.Slotting.Slot (WithOrigin (..))
+import Cardano.Slotting.Time (SystemStart (..))
+import Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime, SlotLength)
+import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
+import Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras qualified as Consensus
+import Ouroboros.Consensus.HardFork.History qualified as Consensus
+import Ouroboros.Consensus.HardFork.History qualified as History
+import Ouroboros.Consensus.HardFork.History.Qry qualified as Qry
+import Ouroboros.Consensus.Ledger.Query qualified as Consensus
+import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
+import Ouroboros.Network.Block (Serialised (..))
+import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
+import Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
+import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
-import           Control.Monad.Trans.Except
-import           Data.Bifunctor (bimap, first)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Either.Combinators (rightToMaybe)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (mapMaybe)
-import           Data.Sequence (Seq)
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.SOP.Constraint (SListI)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Word (Word64)
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
+import Control.Monad.Trans.Except
+import Data.Bifunctor (bimap, first)
+import Data.ByteString.Lazy qualified as LBS
+import Data.Either.Combinators (rightToMaybe)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.SOP.Constraint (SListI)
+import Data.Sequence (Seq)
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Word (Word64)
+import GHC.Exts (IsList (..))
+import GHC.Stack
 
 -- ----------------------------------------------------------------------------
 -- Queries

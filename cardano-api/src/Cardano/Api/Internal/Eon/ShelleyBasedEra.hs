@@ -36,34 +36,40 @@ module Cardano.Api.Internal.Eon.ShelleyBasedEra
   )
 where
 
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eras.Core
-import           Cardano.Api.Internal.Modes
-import           Cardano.Api.Internal.Orphans ()
-import           Cardano.Api.Internal.Pretty (Pretty)
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eras.Core
+import Cardano.Api.Internal.Modes
+import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Pretty (Pretty)
 
-import qualified Cardano.Crypto.Hash.Blake2b as Blake2b
-import qualified Cardano.Crypto.Hash.Class as C
-import qualified Cardano.Crypto.VRF as C
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.BaseTypes as L
-import           Cardano.Ledger.Binary (FromCBOR)
-import qualified Cardano.Ledger.Core as L
-import qualified Cardano.Ledger.SafeHash as L
-import qualified Cardano.Ledger.Shelley.Rules as L
-import qualified Cardano.Ledger.UTxO as L
-import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
-import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
-import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
-                   StandardBabbage, StandardConway, StandardMary, StandardShelley)
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+import Cardano.Crypto.Hash.Blake2b qualified as Blake2b
+import Cardano.Crypto.Hash.Class qualified as C
+import Cardano.Crypto.VRF qualified as C
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.BaseTypes qualified as L
+import Cardano.Ledger.Binary (FromCBOR)
+import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.SafeHash qualified as L
+import Cardano.Ledger.Shelley.Rules qualified as L
+import Cardano.Ledger.UTxO qualified as L
+import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
+import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
+import Ouroboros.Consensus.Shelley.Eras as Consensus
+  ( StandardAllegra
+  , StandardAlonzo
+  , StandardBabbage
+  , StandardConway
+  , StandardMary
+  , StandardShelley
+  )
+import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 
-import           Control.DeepSeq
-import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
-import qualified Data.Text as Text
-import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           Data.Typeable (Typeable)
-import           Text.Pretty (Pretty (..))
+import Control.DeepSeq
+import Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
+import Data.Text qualified as Text
+import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import Data.Typeable (Typeable)
+import Text.Pretty (Pretty (..))
 
 -- | Determine the value to use for a feature in a given 'ShelleyBasedEra'.
 inEonForShelleyBasedEra

@@ -31,7 +31,7 @@ module Cardano.Api.ChainSync.ClientPipelined
   )
 where
 
-import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
-import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
+import Ouroboros.Network.Protocol.ChainSync.ClientPipelined
+import Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 
-import           Network.TypedProtocol.Core (N (..), Nat (..), natToInt)
+import Network.TypedProtocol.Core (N (..), Nat (..), natToInt)

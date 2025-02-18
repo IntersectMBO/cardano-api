@@ -20,31 +20,31 @@ module Cardano.Api.Internal.Experimental.Tx
   )
 where
 
-import           Cardano.Api.Internal.Eon.Convert
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras.Core (ToCardanoEra (toCardanoEra), forEraInEon)
-import           Cardano.Api.Internal.Experimental.Eras
-import           Cardano.Api.Internal.Feature
-import           Cardano.Api.Internal.Pretty (docToString, pretty)
-import           Cardano.Api.Internal.ReexposeLedger (StrictMaybe (..), maybeToStrictMaybe)
-import qualified Cardano.Api.Internal.ReexposeLedger as L
-import           Cardano.Api.Internal.Tx.Body
-import           Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras.Core (ToCardanoEra (toCardanoEra), forEraInEon)
+import Cardano.Api.Internal.Experimental.Eras
+import Cardano.Api.Internal.Feature
+import Cardano.Api.Internal.Pretty (docToString, pretty)
+import Cardano.Api.Internal.ReexposeLedger (StrictMaybe (..), maybeToStrictMaybe)
+import Cardano.Api.Internal.ReexposeLedger qualified as L
+import Cardano.Api.Internal.Tx.Body
+import Cardano.Api.Internal.Tx.Sign
 
-import qualified Cardano.Ledger.Alonzo.TxBody as L
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Babbage as Ledger
-import qualified Cardano.Ledger.Conway as Ledger
-import qualified Cardano.Ledger.Conway.TxBody as L
-import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Ledger.Hashes
-import qualified Cardano.Ledger.Keys as L
-import qualified Cardano.Ledger.SafeHash as L
+import Cardano.Ledger.Alonzo.TxBody qualified as L
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Babbage qualified as Ledger
+import Cardano.Ledger.Conway qualified as Ledger
+import Cardano.Ledger.Conway.TxBody qualified as L
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Ledger.Hashes
+import Cardano.Ledger.Keys qualified as L
+import Cardano.Ledger.SafeHash qualified as L
 
-import qualified Data.Set as Set
-import           GHC.Exts (IsList (..))
-import           GHC.Stack
-import           Lens.Micro
+import Data.Set qualified as Set
+import GHC.Exts (IsList (..))
+import GHC.Stack
+import Lens.Micro
 
 -- | A transaction that can contain everything
 -- except key witnesses

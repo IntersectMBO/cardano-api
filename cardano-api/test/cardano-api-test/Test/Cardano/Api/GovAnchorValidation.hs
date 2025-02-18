@@ -6,19 +6,25 @@ module Test.Cardano.Api.GovAnchorValidation
   )
 where
 
-import           Cardano.Api (CIP108 (..), CIP119 (..), File (File), FileDirection (In), FileError,
-                   readByteStringFile)
-import           Cardano.Api.Internal.DRepMetadata (DRepMetadata (..))
-import           Cardano.Api.Internal.Governance.Metadata.Validation (validateGovActionAnchorData)
+import Cardano.Api
+  ( CIP108 (..)
+  , CIP119 (..)
+  , File (File)
+  , FileDirection (In)
+  , FileError
+  , readByteStringFile
+  )
+import Cardano.Api.Internal.DRepMetadata (DRepMetadata (..))
+import Cardano.Api.Internal.Governance.Metadata.Validation (validateGovActionAnchorData)
 
-import           Data.ByteString (ByteString)
-import           Data.Monoid (Any)
+import Data.ByteString (ByteString)
+import Data.Monoid (Any)
 
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import           Hedgehog.Extras (propertyOnce)
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property, (===))
+import Hedgehog qualified as H
+import Hedgehog.Extras (propertyOnce)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 -- | Tests in this module can be run by themselves by writing:
 -- ```bash

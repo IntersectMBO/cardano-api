@@ -1,33 +1,33 @@
 module Main where
 
-import           Cardano.Crypto.Libsodium (sodiumInit)
+import Cardano.Crypto.Libsodium (sodiumInit)
 
-import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
-import qualified Test.Gen.Cardano.Api.Byron
+import Test.Gen.Cardano.Api.Byron qualified
 
-import qualified Test.Cardano.Api.Address
-import qualified Test.Cardano.Api.Bech32
-import qualified Test.Cardano.Api.CBOR
-import qualified Test.Cardano.Api.Crypto
-import qualified Test.Cardano.Api.Envelope
-import qualified Test.Cardano.Api.EpochLeadership
-import qualified Test.Cardano.Api.Eras
-import qualified Test.Cardano.Api.Genesis
-import qualified Test.Cardano.Api.GovAnchorValidation
-import qualified Test.Cardano.Api.IO
-import qualified Test.Cardano.Api.Json
-import qualified Test.Cardano.Api.KeysByron
-import qualified Test.Cardano.Api.Ledger
-import qualified Test.Cardano.Api.Metadata
-import qualified Test.Cardano.Api.Ord
-import qualified Test.Cardano.Api.ProtocolParameters
-import qualified Test.Cardano.Api.RawBytes
-import qualified Test.Cardano.Api.Transaction.Autobalance
-import qualified Test.Cardano.Api.TxBody
-import qualified Test.Cardano.Api.Value
+import Test.Cardano.Api.Address qualified
+import Test.Cardano.Api.Bech32 qualified
+import Test.Cardano.Api.CBOR qualified
+import Test.Cardano.Api.Crypto qualified
+import Test.Cardano.Api.Envelope qualified
+import Test.Cardano.Api.EpochLeadership qualified
+import Test.Cardano.Api.Eras qualified
+import Test.Cardano.Api.Genesis qualified
+import Test.Cardano.Api.GovAnchorValidation qualified
+import Test.Cardano.Api.IO qualified
+import Test.Cardano.Api.Json qualified
+import Test.Cardano.Api.KeysByron qualified
+import Test.Cardano.Api.Ledger qualified
+import Test.Cardano.Api.Metadata qualified
+import Test.Cardano.Api.Ord qualified
+import Test.Cardano.Api.ProtocolParameters qualified
+import Test.Cardano.Api.RawBytes qualified
+import Test.Cardano.Api.Transaction.Autobalance qualified
+import Test.Cardano.Api.TxBody qualified
+import Test.Cardano.Api.Value qualified
 
-import           Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
 main = do

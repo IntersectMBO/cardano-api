@@ -5,16 +5,16 @@ module Test.Cardano.Api.Eras
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Internal.Orphans ()
+import Cardano.Api
+import Cardano.Api.Internal.Orphans ()
 
-import           Data.Aeson (ToJSON (..), decode, encode)
+import Data.Aeson (ToJSON (..), decode, encode)
 
-import           Hedgehog (Property, forAll, property, (===))
-import qualified Hedgehog as H
-import qualified Hedgehog.Gen as Gen
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property, forAll, property, (===))
+import Hedgehog qualified as H
+import Hedgehog.Gen qualified as Gen
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 --------------------------------------------------------------------------------
 -- Bounded instances

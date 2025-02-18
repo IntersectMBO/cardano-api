@@ -41,33 +41,33 @@ module Cardano.Api.Ledger.Lens
   )
 where
 
-import           Cardano.Api.Internal.Eon.AllegraEraOnwards
-import           Cardano.Api.Internal.Eon.AlonzoEraOnwards
-import           Cardano.Api.Internal.Eon.BabbageEraOnwards
-import           Cardano.Api.Internal.Eon.ConwayEraOnwards
-import           Cardano.Api.Internal.Eon.MaryEraOnwards
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eon.ShelleyEraOnly
-import           Cardano.Api.Internal.Eon.ShelleyToAllegraEra
-import           Cardano.Api.Internal.Eon.ShelleyToBabbageEra
-import           Cardano.Api.Internal.Eras.Case
-import           Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Eon.AllegraEraOnwards
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
+import Cardano.Api.Internal.Eon.BabbageEraOnwards
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.MaryEraOnwards
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eon.ShelleyEraOnly
+import Cardano.Api.Internal.Eon.ShelleyToAllegraEra
+import Cardano.Api.Internal.Eon.ShelleyToBabbageEra
+import Cardano.Api.Internal.Eras.Case
+import Cardano.Api.Internal.Orphans ()
 
-import qualified Cardano.Ledger.Allegra.Core as L
-import qualified Cardano.Ledger.Alonzo.Core as L
-import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
-import qualified Cardano.Ledger.Coin as L
-import qualified Cardano.Ledger.Conway.Core as L
-import qualified Cardano.Ledger.Keys as L
-import qualified Cardano.Ledger.Mary.Value as L
-import qualified Cardano.Ledger.Shelley.PParams as L
-import qualified Cardano.Ledger.TxIn as L
+import Cardano.Ledger.Allegra.Core qualified as L
+import Cardano.Ledger.Alonzo.Core qualified as L
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Conway.Core qualified as L
+import Cardano.Ledger.Keys qualified as L
+import Cardano.Ledger.Mary.Value qualified as L
+import Cardano.Ledger.Shelley.PParams qualified as L
+import Cardano.Ledger.TxIn qualified as L
 
-import qualified Data.OSet.Strict as L
-import qualified Data.Sequence.Strict as L
-import           Data.Set (Set)
-import           Lens.Micro
+import Data.OSet.Strict qualified as L
+import Data.Sequence.Strict qualified as L
+import Data.Set (Set)
+import Lens.Micro
 
 newtype TxBody era = TxBody
   { unTxBody :: L.TxBody (ShelleyLedgerEra era)

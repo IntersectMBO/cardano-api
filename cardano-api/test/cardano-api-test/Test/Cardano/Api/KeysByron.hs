@@ -5,16 +5,16 @@ module Test.Cardano.Api.KeysByron
   )
 where
 
-import           Cardano.Api (AsType (AsByronKey, AsSigningKey), Key (deterministicSigningKey))
+import Cardano.Api (AsType (AsByronKey, AsSigningKey), Key (deterministicSigningKey))
 
-import           Test.Cardano.Api.Orphans ()
-import qualified Test.Gen.Cardano.Crypto.Seed as Gen
+import Test.Cardano.Api.Orphans ()
+import Test.Gen.Cardano.Crypto.Seed qualified as Gen
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import           Test.Hedgehog.Roundtrip.CBOR (trippingCbor)
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property)
+import Hedgehog qualified as H
+import Test.Hedgehog.Roundtrip.CBOR (trippingCbor)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 

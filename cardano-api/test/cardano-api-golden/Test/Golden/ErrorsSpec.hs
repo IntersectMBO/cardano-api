@@ -30,42 +30,42 @@ module Test.Golden.ErrorsSpec
   )
 where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
+import Cardano.Api
+import Cardano.Api.Shelley
 
-import           Cardano.Binary as CBOR
-import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Ledger
-import qualified Cardano.Ledger.Api.Era as Ledger
-import qualified Cardano.Ledger.Binary.Decoding as Binary
-import           Cardano.Ledger.Binary.Version
-import qualified Cardano.Ledger.Coin as L
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Plutus.CostModels as Plutus
-import           Cardano.Ledger.Plutus.Evaluate
-import           Cardano.Ledger.Plutus.ExUnits
-import qualified Cardano.Ledger.Plutus.Language as Language
-import qualified PlutusCore.Evaluation.Machine.CostModelInterface as Plutus
-import qualified PlutusLedgerApi.Common as Plutus hiding (PlutusV2)
+import Cardano.Binary as CBOR
+import Cardano.Crypto.Seed qualified as Crypto
+import Cardano.Ledger.Alonzo.Plutus.TxInfo qualified as Ledger
+import Cardano.Ledger.Api.Era qualified as Ledger
+import Cardano.Ledger.Binary.Decoding qualified as Binary
+import Cardano.Ledger.Binary.Version
+import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Plutus.CostModels qualified as Plutus
+import Cardano.Ledger.Plutus.Evaluate
+import Cardano.Ledger.Plutus.ExUnits
+import Cardano.Ledger.Plutus.Language qualified as Language
+import PlutusCore.Evaluation.Machine.CostModelInterface qualified as Plutus
+import PlutusLedgerApi.Common qualified as Plutus hiding (PlutusV2)
 
-import qualified Codec.Binary.Bech32 as Bech32
-import           Control.Error.Util (hush)
-import qualified Data.Aeson as Aeson
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Data
-import qualified Data.Map as Map
-import           Data.Maybe
-import qualified Data.Set as Set
-import           Data.Text (Text)
-import qualified Data.Text.Encoding as Text
-import           Data.Word
-import           GHC.Exts (IsList (..))
-import           GHC.Stack (HasCallStack)
+import Codec.Binary.Bech32 qualified as Bech32
+import Control.Error.Util (hush)
+import Data.Aeson qualified as Aeson
+import Data.ByteString (ByteString)
+import Data.ByteString.Base64 qualified as B64
+import Data.ByteString.Lazy qualified as LBS
+import Data.Data
+import Data.Map qualified as Map
+import Data.Maybe
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text.Encoding qualified as Text
+import Data.Word
+import GHC.Exts (IsList (..))
+import GHC.Stack (HasCallStack)
 
-import qualified Test.Hedgehog.Golden.ErrorMessage as ErrorMessage
-import           Test.Tasty
+import Test.Hedgehog.Golden.ErrorMessage qualified as ErrorMessage
+import Test.Tasty
 
 seed1 :: ByteString
 seed1 =

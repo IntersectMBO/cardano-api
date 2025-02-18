@@ -8,15 +8,15 @@ module Cardano.Api.Internal.Query.Types
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Orphans ()
 
-import           Cardano.Binary
-import qualified Cardano.Ledger.Binary.Plain as Plain
-import qualified Cardano.Ledger.Shelley.API as Shelley
+import Cardano.Binary
+import Cardano.Ledger.Binary.Plain qualified as Plain
+import Cardano.Ledger.Shelley.API qualified as Shelley
 
-import           Data.Aeson (ToJSON (..), object, (.=))
-import qualified Data.Aeson as Aeson
+import Data.Aeson (ToJSON (..), object, (.=))
+import Data.Aeson qualified as Aeson
 
 newtype DebugLedgerState era = DebugLedgerState
   { unDebugLedgerState :: Shelley.NewEpochState (ShelleyLedgerEra era)

@@ -51,38 +51,38 @@ module Cardano.Api.Internal.Block
   )
 where
 
-import           Cardano.Api.Internal.Eon.ShelleyBasedEra
-import           Cardano.Api.Internal.Eras
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.Keys.Shelley
-import           Cardano.Api.Internal.Modes
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseUsing
-import           Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Eras
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.Modes
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Internal.Tx.Sign
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Crypto.Hashing
-import qualified Cardano.Ledger.Api as L
-import qualified Cardano.Ledger.Block as Ledger
-import qualified Cardano.Ledger.Core as Ledger
-import           Cardano.Slotting.Block (BlockNo)
-import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
-import qualified Ouroboros.Consensus.Block as Consensus
-import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
-import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import qualified Ouroboros.Consensus.Shelley.Protocol.Abstract as Consensus
-import qualified Ouroboros.Network.Block as Consensus
+import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Crypto.Hashing qualified
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.Block qualified as Ledger
+import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Slotting.Block (BlockNo)
+import Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
+import Ouroboros.Consensus.Block qualified as Consensus
+import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
+import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
+import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
+import Ouroboros.Consensus.Shelley.Protocol.Abstract qualified as Consensus
+import Ouroboros.Network.Block qualified as Consensus
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Short as SBS
-import           Data.Foldable (Foldable (toList))
-import           Data.String (IsString)
-import           Data.Text (Text)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
+import Data.Aeson qualified as Aeson
+import Data.ByteString qualified as BS
+import Data.ByteString.Short qualified as SBS
+import Data.Foldable (Foldable (toList))
+import Data.String (IsString)
+import Data.Text (Text)
 
 {- HLINT ignore "Use lambda" -}
 {- HLINT ignore "Use lambda-case" -}
