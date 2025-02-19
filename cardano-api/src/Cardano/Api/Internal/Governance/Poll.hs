@@ -53,7 +53,7 @@ import Cardano.Api.Internal.Utils
 import Cardano.Binary (DecoderError (..))
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
 import Cardano.Crypto.Hash qualified as Hash
-import Cardano.Ledger.Crypto (HASH, StandardCrypto)
+import Cardano.Ledger.Hashes (HASH)
 
 import Control.Arrow (left)
 import Control.Monad (foldM, when)
@@ -183,7 +183,7 @@ instance SerialiseAsCBOR GovernancePoll where
 --
 
 newtype instance Hash GovernancePoll
-  = GovernancePollHash {unGovernancePollHash :: Hash.Hash (HASH StandardCrypto) GovernancePoll}
+  = GovernancePollHash {unGovernancePollHash :: Hash.Hash HASH GovernancePoll}
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash GovernancePoll)
 
@@ -197,7 +197,7 @@ instance SerialiseAsRawBytes (Hash GovernancePoll) where
 
 hashGovernancePoll :: GovernancePoll -> Hash GovernancePoll
 hashGovernancePoll =
-  GovernancePollHash . hashWith @(HASH StandardCrypto) serialiseToCBOR
+  GovernancePollHash . hashWith @HASH serialiseToCBOR
 
 -- ----------------------------------------------------------------------------
 -- Governance Poll Answer

@@ -147,13 +147,11 @@ import Cardano.Ledger.Babbage.Scripts qualified as Babbage
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary qualified as Binary (decCBOR, decodeFullAnnotator)
 import Cardano.Ledger.Conway.Scripts qualified as Conway
-import Cardano.Ledger.Core (Era (EraCrypto))
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Keys qualified as Shelley
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Ledger.Shelley.Scripts qualified as Shelley
 import Cardano.Slotting.Slot (SlotNo)
-import Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import PlutusLedgerApi.Test.Examples qualified as Plutus
 
 import Codec.CBOR.Read qualified as CBOR
@@ -945,7 +943,7 @@ pattern PlutusScriptBinary script = Plutus.Plutus (Plutus.PlutusBinary script)
 -- hash type being parametrised by the era. The representation is era
 -- independent, and there are many places where we want to use a script
 -- hash where we don't want things to be era-parametrised.
-newtype ScriptHash = ScriptHash (Shelley.ScriptHash StandardCrypto)
+newtype ScriptHash = ScriptHash Ledger.ScriptHash
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex ScriptHash
   deriving (ToJSON, FromJSON) via UsingRawBytesHex ScriptHash
@@ -955,12 +953,12 @@ instance HasTypeProxy ScriptHash where
   proxyToAsType _ = AsScriptHash
 
 instance SerialiseAsRawBytes ScriptHash where
-  serialiseToRawBytes (ScriptHash (Shelley.ScriptHash h)) =
+  serialiseToRawBytes (ScriptHash (Ledger.ScriptHash h)) =
     Crypto.hashToBytes h
 
   deserialiseFromRawBytes AsScriptHash bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise ScriptHash") $
-      ScriptHash . Shelley.ScriptHash <$> Crypto.hashFromBytes bs
+      ScriptHash . Ledger.ScriptHash <$> Crypto.hashFromBytes bs
 
 hashScript :: Script lang -> ScriptHash
 hashScript (SimpleScript s) =
@@ -994,10 +992,10 @@ hashScript (PlutusScript PlutusScriptV3 (PlutusScriptSerialised script)) =
     . Plutus.Plutus
     $ Plutus.PlutusBinary script
 
-toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
+toShelleyScriptHash :: ScriptHash -> Ledger.ScriptHash
 toShelleyScriptHash (ScriptHash h) = h
 
-fromShelleyScriptHash :: Shelley.ScriptHash StandardCrypto -> ScriptHash
+fromShelleyScriptHash :: Ledger.ScriptHash -> ScriptHash
 fromShelleyScriptHash = ScriptHash
 
 -- ----------------------------------------------------------------------------
@@ -1293,7 +1291,6 @@ fromShelleyMultiSig = go
 toAllegraTimelock
   :: forall era
    . ( Allegra.AllegraEraScript era
-     , EraCrypto era ~ StandardCrypto
      , Ledger.NativeScript era ~ Allegra.Timelock era
      )
   => SimpleScript -> Ledger.NativeScript era
@@ -1311,7 +1308,7 @@ toAllegraTimelock = go
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
 fromAllegraTimelock
-  :: (Allegra.AllegraEraScript era, EraCrypto era ~ StandardCrypto)
+  :: Allegra.AllegraEraScript era
   => Ledger.NativeScript era -> SimpleScript
 fromAllegraTimelock = go
  where

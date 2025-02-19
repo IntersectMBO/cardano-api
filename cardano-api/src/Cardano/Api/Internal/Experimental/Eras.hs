@@ -45,9 +45,8 @@ import Cardano.Ledger.Babbage qualified as Ledger
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Hashes
-import Cardano.Ledger.SafeHash qualified as L
-import Cardano.Ledger.UTxO qualified as L
+import Cardano.Ledger.Hashes qualified as L
+import Cardano.Ledger.State qualified as L
 
 import Control.Monad.Error.Class
 import Data.Aeson (FromJSON (..), ToJSON, withText)
@@ -64,8 +63,8 @@ import Prettyprinter
 -- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era
 -- and the next era (upcoming era).
 type family LedgerEra era = (r :: Type) | r -> era where
-  LedgerEra BabbageEra = Ledger.Babbage
-  LedgerEra ConwayEra = Ledger.Conway
+  LedgerEra BabbageEra = Ledger.BabbageEra
+  LedgerEra ConwayEra = Ledger.ConwayEra
 
 -- | An existential wrapper for types of kind @k -> Types@. Use it to hold any era e.g. @Some Era@. One can
 -- then bring the era witness back into scope for example using this pattern:
@@ -267,8 +266,7 @@ type EraCommonConstraints era =
   , L.BabbageEraTxBody (LedgerEra era)
   , L.EraTx (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
-  , Ledger.EraCrypto (LedgerEra era) ~ L.StandardCrypto
   , ShelleyLedgerEra era ~ LedgerEra era
-  , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) EraIndependentTxBody L.StandardCrypto
+  , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , IsEra era
   )

@@ -38,7 +38,6 @@ import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.UTxO
 import Cardano.Api.Internal.Utils
 
-import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.CertState (DRepState (..))
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as L
@@ -113,7 +112,7 @@ queryStateForBalancedTx
            , SystemStart
            , Set PoolId
            , Map StakeCredential L.Coin
-           , Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin
+           , Map (L.Credential L.DRepRole) L.Coin
            , Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
            )
        )

@@ -89,6 +89,7 @@ import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
+import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Crypto.Hashing qualified as Byron
 import Cardano.Crypto.ProtocolMagic qualified as Byron
 import Cardano.Crypto.Signing qualified as Byron
@@ -102,9 +103,7 @@ import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys qualified as Shelley
-import Cardano.Ledger.SafeHash qualified as Ledger
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -529,7 +528,7 @@ data TxBodyScriptData era where
 
 deriving instance Eq (TxBodyScriptData era)
 
-deriving instance L.EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto => Show (TxBodyScriptData era)
+deriving instance Show (TxBodyScriptData era)
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
@@ -586,11 +585,11 @@ data KeyWitness era where
     -> KeyWitness ByronEra
   ShelleyBootstrapWitness
     :: ShelleyBasedEra era
-    -> Shelley.BootstrapWitness StandardCrypto
+    -> Shelley.BootstrapWitness
     -> KeyWitness era
   ShelleyKeyWitness
     :: ShelleyBasedEra era
-    -> L.WitVKey Shelley.Witness StandardCrypto
+    -> L.WitVKey Shelley.Witness
     -> KeyWitness era
 
 -- The GADT in the Shelley cases requires a custom instance
@@ -778,7 +777,7 @@ data ShelleyWitnessSigningKey
 -- | We support making key witnesses with both normal and extended signing keys.
 data ShelleySigningKey
   = -- | A normal ed25519 signing key
-    ShelleyNormalSigningKey (Shelley.SignKeyDSIGN StandardCrypto)
+    ShelleyNormalSigningKey (Crypto.SignKeyDSIGN Shelley.DSIGN)
   | -- | An extended ed25519 signing key
     ShelleyExtendedSigningKey Crypto.HD.XPrv
 
@@ -786,7 +785,7 @@ makeShelleySignature
   :: Crypto.SignableRepresentation tosign
   => tosign
   -> ShelleySigningKey
-  -> Shelley.SignedDSIGN StandardCrypto tosign
+  -> (Crypto.SignedDSIGN Shelley.DSIGN) tosign
 makeShelleySignature tosign (ShelleyNormalSigningKey sk) =
   Crypto.signedDSIGN () tosign sk
 makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
@@ -798,7 +797,7 @@ makeShelleySignature tosign (ShelleyExtendedSigningKey sk) =
  where
   fromXSignature
     :: Crypto.HD.XSignature
-    -> Shelley.SignedDSIGN StandardCrypto b
+    -> (Crypto.SignedDSIGN Shelley.DSIGN) b
   fromXSignature =
     Crypto.SignedDSIGN
       . fromMaybe impossible
@@ -867,7 +866,6 @@ getTxWitnesses (ShelleyTx sbe tx') =
   getShelleyTxWitnesses
     :: forall ledgerera
      . L.EraTx ledgerera
-    => L.EraCrypto ledgerera ~ StandardCrypto
     => L.Tx ledgerera
     -> [KeyWitness era]
   getShelleyTxWitnesses tx =
@@ -876,8 +874,7 @@ getTxWitnesses (ShelleyTx sbe tx') =
 
   getAlonzoTxWitnesses
     :: forall ledgerera
-     . L.EraCrypto ledgerera ~ StandardCrypto
-    => L.EraTx ledgerera
+     . L.EraTx ledgerera
     => L.Tx ledgerera
     -> [KeyWitness era]
   getAlonzoTxWitnesses = getShelleyTxWitnesses
@@ -908,7 +905,6 @@ makeSignedTransaction
     txCommon
       :: forall ledgerera
        . ShelleyLedgerEra era ~ ledgerera
-      => L.EraCrypto ledgerera ~ StandardCrypto
       => L.EraTx ledgerera
       => L.Tx ledgerera
     txCommon =
@@ -929,7 +925,6 @@ makeSignedTransaction
     shelleySignedTransaction
       :: forall ledgerera
        . ShelleyLedgerEra era ~ ledgerera
-      => Ledger.EraCrypto ledgerera ~ StandardCrypto
       => Ledger.EraTx ledgerera
       => Tx era
     shelleySignedTransaction = ShelleyTx sbe txCommon
@@ -937,7 +932,6 @@ makeSignedTransaction
     alonzoSignedTransaction
       :: forall ledgerera
        . ShelleyLedgerEra era ~ ledgerera
-      => Ledger.EraCrypto ledgerera ~ StandardCrypto
       => L.AlonzoEraTx ledgerera
       => Tx era
     alonzoSignedTransaction =
@@ -1046,16 +1040,15 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
   -- reuse that here.
   --
   signature
-    :: Shelley.SignedDSIGN
-         StandardCrypto
-         (Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody)
+    :: (Crypto.SignedDSIGN Shelley.DSIGN)
+         (Hash.Hash Ledger.HASH Ledger.EraIndependentTxBody)
   signature =
     makeShelleySignature
       txhash
       -- Make the signature with the extended key directly:
       (ShelleyExtendedSigningKey (Byron.unSigningKey sk))
 
-  txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
+  txhash :: Hash.Hash Ledger.HASH Ledger.EraIndependentTxBody
   txhash = shelleyBasedEraConstraints sbe $ Ledger.extractHash (Ledger.hashAnnotated txbody)
   -- TODO: use Shelley.eraIndTxBodyHash txbody once that function has a
   -- suitably general type.
@@ -1117,8 +1110,8 @@ makeShelleyKeyWitness'
   -> KeyWitness era
 makeShelleyKeyWitness' sbe txBody wsk =
   shelleyBasedEraConstraints sbe $ do
-    let txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
-        txhash = Ledger.extractHash @StandardCrypto (Ledger.hashAnnotated txBody)
+    let txhash :: Hash.Hash Ledger.HASH Ledger.EraIndependentTxBody
+        txhash = Ledger.extractHash (Ledger.hashAnnotated txBody)
         -- To allow sharing of the txhash computation across many signatures we
         -- define and share the txhash outside the lambda for the signing key:
         sk = toShelleySigningKey wsk
@@ -1149,11 +1142,11 @@ toShelleySigningKey key = case key of
 
 getShelleyKeyWitnessVerificationKey
   :: ShelleySigningKey
-  -> Shelley.VKey Shelley.Witness StandardCrypto
+  -> Shelley.VKey Shelley.Witness
 getShelleyKeyWitnessVerificationKey (ShelleyNormalSigningKey sk) =
   ( Shelley.asWitness
-      :: Shelley.VKey Shelley.Payment StandardCrypto
-      -> Shelley.VKey Shelley.Witness StandardCrypto
+      :: Shelley.VKey Shelley.Payment
+      -> Shelley.VKey Shelley.Witness
   )
     . (\(PaymentVerificationKey vk) -> vk)
     . getVerificationKey
@@ -1161,8 +1154,8 @@ getShelleyKeyWitnessVerificationKey (ShelleyNormalSigningKey sk) =
     $ sk
 getShelleyKeyWitnessVerificationKey (ShelleyExtendedSigningKey sk) =
   ( Shelley.asWitness
-      :: Shelley.VKey Shelley.Payment StandardCrypto
-      -> Shelley.VKey Shelley.Witness StandardCrypto
+      :: Shelley.VKey Shelley.Payment
+      -> Shelley.VKey Shelley.Witness
   )
     . (\(PaymentVerificationKey vk) -> vk)
     . ( castVerificationKey

@@ -31,15 +31,14 @@ import Cardano.Api.Internal.ReexposeLedger qualified as L
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
 
+import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Babbage qualified as Ledger
 import Cardano.Ledger.Conway qualified as Ledger
 import Cardano.Ledger.Conway.TxBody qualified as L
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Hashes
-import Cardano.Ledger.Keys qualified as L
-import Cardano.Ledger.SafeHash qualified as L
+import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
@@ -53,8 +52,8 @@ newtype UnsignedTx era
 
 instance IsEra era => Show (UnsignedTx era) where
   showsPrec p (UnsignedTx tx) = case useEra @era of
-    BabbageEra -> showsPrec p (tx :: Ledger.Tx Ledger.Babbage)
-    ConwayEra -> showsPrec p (tx :: Ledger.Tx Ledger.Conway)
+    BabbageEra -> showsPrec p (tx :: Ledger.Tx Ledger.BabbageEra)
+    ConwayEra -> showsPrec p (tx :: Ledger.Tx Ledger.ConwayEra)
 
 newtype UnsignedTxError
   = UnsignedTxError TxBodyError
@@ -161,19 +160,19 @@ eraSpecificLedgerTxBody ConwayEra ledgerbody bc =
             .~ L.maybeToStrictMaybe (unFeatured =<< currentTresuryValue)
 
 hashTxBody
-  :: L.HashAnnotated (Ledger.TxBody era) EraIndependentTxBody L.StandardCrypto
-  => L.TxBody era -> L.Hash L.StandardCrypto EraIndependentTxBody
-hashTxBody = L.extractHash @L.StandardCrypto . L.hashAnnotated
+  :: L.HashAnnotated (Ledger.TxBody era) L.EraIndependentTxBody
+  => L.TxBody era -> Hash.Hash L.HASH L.EraIndependentTxBody
+hashTxBody = L.extractHash . L.hashAnnotated
 
 makeKeyWitness
   :: Era era
   -> UnsignedTx era
   -> ShelleyWitnessSigningKey
-  -> L.WitVKey L.Witness L.StandardCrypto
+  -> L.WitVKey L.Witness
 makeKeyWitness era (UnsignedTx unsignedTx) wsk =
   obtainCommonConstraints era $
     let txbody = unsignedTx ^. L.bodyTxL
-        txhash :: L.Hash L.StandardCrypto EraIndependentTxBody
+        txhash :: Hash.Hash L.HASH L.EraIndependentTxBody
         txhash = obtainCommonConstraints era $ hashTxBody txbody
         sk = toShelleySigningKey wsk
         vk = getShelleyKeyWitnessVerificationKey sk
@@ -182,8 +181,8 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
 
 signTx
   :: Era era
-  -> [L.BootstrapWitness L.StandardCrypto]
-  -> [L.WitVKey L.Witness L.StandardCrypto]
+  -> [L.BootstrapWitness]
+  -> [L.WitVKey L.Witness]
   -> UnsignedTx era
   -> Ledger.Tx (LedgerEra era)
 signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =

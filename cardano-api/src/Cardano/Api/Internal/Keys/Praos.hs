@@ -38,9 +38,8 @@ import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Crypto.KES.Class qualified as Crypto
 import Cardano.Crypto.VRF.Class qualified as Crypto
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Crypto qualified as Shelley (KES, VRF)
-import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Ledger.Hashes (HASH)
+import Cardano.Protocol.Crypto (KES, StandardCrypto, VRF)
 
 import Data.ByteString (ByteString)
 import Data.Either.Combinators (maybeToRight)
@@ -58,14 +57,14 @@ instance HasTypeProxy KesKey where
 
 instance Key KesKey where
   newtype VerificationKey KesKey
-    = KesVerificationKey (Shelley.VerKeyKES StandardCrypto)
+    = KesVerificationKey (Crypto.VerKeyKES (KES StandardCrypto))
     deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey KesKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey KesKey
-    = KesSigningKey (Shelley.SignKeyKES StandardCrypto)
+    = KesSigningKey (Crypto.UnsoundPureSignKeyKES (KES StandardCrypto))
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey KesKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
@@ -73,18 +72,18 @@ instance Key KesKey where
   -- This loses the mlock safety of the seed, since it starts from a normal in-memory seed.
   deterministicSigningKey :: AsType KesKey -> Crypto.Seed -> SigningKey KesKey
   deterministicSigningKey AsKesKey =
-    KesSigningKey . Crypto.genKeyKES
+    KesSigningKey . Crypto.unsoundPureGenKeyKES
 
   deterministicSigningKeySeedSize :: AsType KesKey -> Word
   deterministicSigningKeySeedSize AsKesKey =
     Crypto.seedSizeKES proxy
    where
-    proxy :: Proxy (Shelley.KES StandardCrypto)
+    proxy :: Proxy (KES StandardCrypto)
     proxy = Proxy
 
   getVerificationKey :: SigningKey KesKey -> VerificationKey KesKey
   getVerificationKey (KesSigningKey sk) =
-    KesVerificationKey (Crypto.deriveVerKeyKES sk)
+    KesVerificationKey (Crypto.unsoundPureDeriveVerKeyKES sk)
 
   verificationKeyHash :: VerificationKey KesKey -> Hash KesKey
   verificationKeyHash (KesVerificationKey vkey) =
@@ -100,11 +99,11 @@ instance SerialiseAsRawBytes (VerificationKey KesKey) where
 
 instance SerialiseAsRawBytes (SigningKey KesKey) where
   serialiseToRawBytes (KesSigningKey sk) =
-    Crypto.rawSerialiseSignKeyKES sk
+    Crypto.rawSerialiseUnsoundPureSignKeyKES sk
 
   deserialiseFromRawBytes (AsSigningKey AsKesKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise SigningKey KesKey") $
-      KesSigningKey <$> Crypto.rawDeserialiseSignKeyKES bs
+      KesSigningKey <$> Crypto.rawDeserialiseUnsoundPureSignKeyKES bs
 
 instance SerialiseAsBech32 (VerificationKey KesKey) where
   bech32PrefixFor _ = "kes_vk"
@@ -116,9 +115,9 @@ instance SerialiseAsBech32 (SigningKey KesKey) where
 
 newtype instance Hash KesKey
   = KesKeyHash
-      ( Shelley.Hash
-          StandardCrypto
-          (Shelley.VerKeyKES StandardCrypto)
+      ( Crypto.Hash
+          HASH
+          (Crypto.VerKeyKES (KES StandardCrypto))
       )
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash KesKey)
@@ -138,7 +137,7 @@ instance HasTextEnvelope (VerificationKey KesKey) where
     "KesVerificationKey_"
       <> fromString (Crypto.algorithmNameKES proxy)
    where
-    proxy :: Proxy (Shelley.KES StandardCrypto)
+    proxy :: Proxy (KES StandardCrypto)
     proxy = Proxy
 
 instance HasTextEnvelope (SigningKey KesKey) where
@@ -146,7 +145,7 @@ instance HasTextEnvelope (SigningKey KesKey) where
     "KesSigningKey_"
       <> fromString (Crypto.algorithmNameKES proxy)
    where
-    proxy :: Proxy (Shelley.KES StandardCrypto)
+    proxy :: Proxy (KES StandardCrypto)
     proxy = Proxy
 
 signArbitraryBytesKes
@@ -155,9 +154,9 @@ signArbitraryBytesKes
   -- ^ Desired Kes period
   -> ByteString
   -- ^ Message to sign
-  -> Crypto.SignedKES (Shelley.KES StandardCrypto) ByteString
+  -> Crypto.SignedKES (KES StandardCrypto) ByteString
 signArbitraryBytesKes (KesSigningKey kesKey) period message =
-  Crypto.signedKES @(Shelley.KES StandardCrypto) () period message kesKey
+  Crypto.unsoundPureSignedKES @(KES StandardCrypto) () period message kesKey
 
 --
 -- VRF keys
@@ -171,14 +170,14 @@ instance HasTypeProxy VrfKey where
 
 instance Key VrfKey where
   newtype VerificationKey VrfKey
-    = VrfVerificationKey (Shelley.VerKeyVRF StandardCrypto)
+    = VrfVerificationKey (Crypto.VerKeyVRF (VRF StandardCrypto))
     deriving stock Eq
     deriving (Show, IsString) via UsingRawBytesHex (VerificationKey VrfKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey VrfKey
-    = VrfSigningKey (Shelley.SignKeyVRF StandardCrypto)
+    = VrfSigningKey (Crypto.SignKeyVRF (VRF StandardCrypto))
     deriving (Show, IsString) via UsingRawBytesHex (SigningKey VrfKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
@@ -191,7 +190,7 @@ instance Key VrfKey where
   deterministicSigningKeySeedSize AsVrfKey =
     Crypto.seedSizeVRF proxy
    where
-    proxy :: Proxy (Shelley.VRF StandardCrypto)
+    proxy :: Proxy (VRF StandardCrypto)
     proxy = Proxy
 
   getVerificationKey :: SigningKey VrfKey -> VerificationKey VrfKey
@@ -228,9 +227,9 @@ instance SerialiseAsBech32 (SigningKey VrfKey) where
 
 newtype instance Hash VrfKey
   = VrfKeyHash
-      ( Shelley.Hash
-          StandardCrypto
-          (Shelley.VerKeyVRF StandardCrypto)
+      ( Crypto.Hash
+          HASH
+          (Crypto.VerKeyVRF (VRF StandardCrypto))
       )
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash VrfKey)
@@ -248,11 +247,11 @@ instance SerialiseAsRawBytes (Hash VrfKey) where
 instance HasTextEnvelope (VerificationKey VrfKey) where
   textEnvelopeType _ = "VrfVerificationKey_" <> fromString (Crypto.algorithmNameVRF proxy)
    where
-    proxy :: Proxy (Shelley.VRF StandardCrypto)
+    proxy :: Proxy (VRF StandardCrypto)
     proxy = Proxy
 
 instance HasTextEnvelope (SigningKey VrfKey) where
   textEnvelopeType _ = "VrfSigningKey_" <> fromString (Crypto.algorithmNameVRF proxy)
    where
-    proxy :: Proxy (Shelley.VRF StandardCrypto)
+    proxy :: Proxy (VRF StandardCrypto)
     proxy = Proxy

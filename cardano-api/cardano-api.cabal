@@ -394,6 +394,7 @@ test-suite cardano-api-golden
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test >=1.2.0.1,
+    cardano-protocol-tpraos,
     cardano-slotting ^>=0.2.0.0,
     containers,
     errors,

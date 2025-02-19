@@ -25,7 +25,6 @@ import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.Tx.UTxO (UTxO (..))
 import Cardano.Api.Internal.Utils
 
-import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Keys qualified as L
@@ -57,7 +56,7 @@ constructBalancedTx
   -> Set PoolId
   -- ^ The set of registered stake pools
   -> Map.Map StakeCredential L.Coin
-  -> Map.Map (L.Credential L.DRepRole L.StandardCrypto) L.Coin
+  -> Map.Map (L.Credential L.DRepRole) L.Coin
   -> [ShelleyWitnessSigningKey]
   -> Either (TxBodyErrorAutoBalance era) (Tx era)
 constructBalancedTx

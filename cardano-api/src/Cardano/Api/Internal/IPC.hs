@@ -87,7 +87,7 @@ import Cardano.Api.Internal.Query
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
 
-import Cardano.Ledger.Api qualified as L
+import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.CanHardFork
@@ -372,7 +372,7 @@ data LocalNodeClientParams where
        , Consensus.LedgerSupportsProtocol
            ( Consensus.ShelleyBlock
                (Consensus.TPraos Consensus.StandardCrypto)
-               (Consensus.ShelleyEra Consensus.StandardCrypto)
+               Consensus.ShelleyEra
            )
        )
     => ProtocolClientInfoArgs block
@@ -445,7 +445,7 @@ mkLocalNodeClientParams modeparams clients =
 
 convLocalNodeClientProtocols
   :: ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => LocalNodeClientProtocolsInMode
   -> LocalNodeClientProtocolsForBlock block
 convLocalNodeClientProtocols
@@ -468,7 +468,7 @@ convLocalNodeClientProtocols
 convLocalTxMonitoringClient
   :: forall block m a
    . ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => Functor m
   => LocalTxMonitorClient TxIdInMode TxInMode SlotNo m a
   -> LocalTxMonitorClient (Consensus.TxId (Consensus.GenTx block)) (Consensus.GenTx block) SlotNo m a
@@ -480,7 +480,7 @@ convLocalTxMonitoringClient =
 convLocalChainSyncClient
   :: forall block m a
    . ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => Functor m
   => ChainSyncClient BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClient block (Net.Point block) (Net.Tip block) m a
@@ -494,7 +494,7 @@ convLocalChainSyncClient =
 convLocalChainSyncClientPipelined
   :: forall block m a
    . ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => Functor m
   => ChainSyncClientPipelined BlockInMode ChainPoint ChainTip m a
   -> ChainSyncClientPipelined block (Net.Point block) (Net.Tip block) m a
@@ -508,7 +508,7 @@ convLocalChainSyncClientPipelined =
 convLocalTxSubmissionClient
   :: forall block m a
    . ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => Functor m
   => LocalTxSubmissionClient TxInMode TxValidationErrorInCardanoMode m a
   -> LocalTxSubmissionClient (Consensus.GenTx block) (Consensus.ApplyTxErr block) m a
@@ -518,7 +518,7 @@ convLocalTxSubmissionClient =
 convLocalStateQueryClient
   :: forall block m a
    . ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => Functor m
   => LocalStateQueryClient BlockInMode ChainPoint QueryInMode m a
   -> LocalStateQueryClient block (Consensus.Point block) (Consensus.Query block) m a

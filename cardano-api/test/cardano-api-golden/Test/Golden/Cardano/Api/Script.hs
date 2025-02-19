@@ -131,7 +131,7 @@ test_roundtrip_ScriptData :: TestTree
 test_roundtrip_ScriptData =
   testProperty "roundtrip ScriptData" . H.property $ do
     sData <- H.forAll genHashableScriptData
-    sData === fromAlonzoData (toAlonzoData @L.Alonzo sData)
+    sData === fromAlonzoData (toAlonzoData @L.AlonzoEra sData)
 
 test_roundtrip_HashableScriptData_JSON :: TestTree
 test_roundtrip_HashableScriptData_JSON =

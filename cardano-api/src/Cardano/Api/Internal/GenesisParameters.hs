@@ -19,11 +19,13 @@ import Cardano.Api.Internal.Eras
 import Cardano.Api.Internal.NetworkId
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 
+import Cardano.Ledger.BaseTypes (NonZero)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Shelley.Genesis qualified as Shelley
 import Cardano.Slotting.Slot (EpochSize (..))
 
 import Data.Time (NominalDiffTime, UTCTime)
+import Data.Word (Word64)
 
 -- ----------------------------------------------------------------------------
 -- Genesis parameters
@@ -40,7 +42,7 @@ data GenesisParameters era
   -- each other.
   , protocolParamActiveSlotsCoefficient :: Rational
   -- ^ The Ouroboros Praos active slot coefficient, aka @f@.
-  , protocolParamSecurity :: Int
+  , protocolParamSecurity :: NonZero Word64
   -- ^ The Ouroboros security parameters, aka @k@. This is the maximum
   -- number of blocks the node would ever be prepared to roll back by.
   --
@@ -73,7 +75,7 @@ data GenesisParameters era
 -- Conversion functions
 --
 
-fromShelleyGenesis :: Shelley.ShelleyGenesis Ledger.StandardCrypto -> GenesisParameters ShelleyEra
+fromShelleyGenesis :: Shelley.ShelleyGenesis -> GenesisParameters ShelleyEra
 fromShelleyGenesis
   sg@Shelley.ShelleyGenesis
     { Shelley.sgSystemStart
@@ -100,7 +102,7 @@ fromShelleyGenesis
       , protocolParamActiveSlotsCoefficient =
           Ledger.unboundRational
             sgActiveSlotsCoeff
-      , protocolParamSecurity = fromIntegral sgSecurityParam
+      , protocolParamSecurity = sgSecurityParam
       , protocolParamEpochLength = sgEpochLength
       , protocolParamSlotLength = Shelley.fromNominalDiffTimeMicro sgSlotLength
       , protocolParamSlotsPerKESPeriod = fromIntegral sgSlotsPerKESPeriod
