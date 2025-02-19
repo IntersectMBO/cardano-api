@@ -503,7 +503,7 @@ textEnvTypes =
 
 mkUtxos
   :: BabbageEraOnwards era
-  -> Maybe (L.ScriptHash L.StandardCrypto)
+  -> Maybe L.ScriptHash
   -- ^ add an asset to the utxo if the script hash is provided
   -> UTxO era
 mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
@@ -540,7 +540,7 @@ mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
     ]
 
 -- | Make an address from a script hash
-mkAddress :: ShelleyBasedEra era -> L.ScriptHash L.StandardCrypto -> AddressInEra era
+mkAddress :: ShelleyBasedEra era -> L.ScriptHash -> AddressInEra era
 mkAddress sbe scriptHash =
   AddressInEra
     (ShelleyAddressInEra sbe)
@@ -556,7 +556,7 @@ mkTxOutput
   -> AddressInEra era
   -> L.Coin
   -- ^ output ADA
-  -> Maybe (L.ScriptHash L.StandardCrypto)
+  -> Maybe L.ScriptHash
   -- ^ there will be an asset in the txout if provided
   -> [TxOut CtxTx era]
 mkTxOutput beo address coin mScriptHash = babbageEraOnwardsConstraints beo $ do

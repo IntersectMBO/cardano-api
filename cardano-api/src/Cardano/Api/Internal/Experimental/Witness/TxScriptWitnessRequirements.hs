@@ -25,7 +25,7 @@ import Cardano.Api.Internal.Script (ExecutionUnits, fromAlonzoExUnits)
 import Cardano.Api.Ledger qualified as L
 
 import Cardano.Ledger.Alonzo.TxWits qualified as L
-import Ouroboros.Consensus.Shelley.Eras qualified as Consensus
+import Cardano.Ledger.Api.Era as L
 
 import Data.Map.Strict qualified as Map
 import Data.Set (Set)
@@ -39,25 +39,25 @@ data TxScriptWitnessRequirements era
       (L.TxDats era)
       (L.Redeemers era)
 
-instance Semigroup (TxScriptWitnessRequirements Consensus.StandardAlonzo) where
+instance Semigroup (TxScriptWitnessRequirements L.AlonzoEra) where
   (<>) (TxScriptWitnessRequirements l1 s1 d1 r1) (TxScriptWitnessRequirements l2 s2 d2 r2) =
     TxScriptWitnessRequirements (l1 <> l2) (s1 <> s2) (d1 <> d2) (r1 <> r2)
 
-instance Monoid (TxScriptWitnessRequirements Consensus.StandardAlonzo) where
+instance Monoid (TxScriptWitnessRequirements L.AlonzoEra) where
   mempty = TxScriptWitnessRequirements mempty mempty mempty mempty
 
-instance Semigroup (TxScriptWitnessRequirements Consensus.StandardBabbage) where
+instance Semigroup (TxScriptWitnessRequirements L.BabbageEra) where
   (<>) (TxScriptWitnessRequirements l1 s1 d1 r1) (TxScriptWitnessRequirements l2 s2 d2 r2) =
     TxScriptWitnessRequirements (l1 <> l2) (s1 <> s2) (d1 <> d2) (r1 <> r2)
 
-instance Monoid (TxScriptWitnessRequirements Consensus.StandardBabbage) where
+instance Monoid (TxScriptWitnessRequirements L.BabbageEra) where
   mempty = TxScriptWitnessRequirements mempty mempty mempty mempty
 
-instance Semigroup (TxScriptWitnessRequirements Consensus.StandardConway) where
+instance Semigroup (TxScriptWitnessRequirements L.ConwayEra) where
   (<>) (TxScriptWitnessRequirements l1 s1 d1 r1) (TxScriptWitnessRequirements l2 s2 d2 r2) =
     TxScriptWitnessRequirements (l1 <> l2) (s1 <> s2) (d1 <> d2) (r1 <> r2)
 
-instance Monoid (TxScriptWitnessRequirements Consensus.StandardConway) where
+instance Monoid (TxScriptWitnessRequirements L.ConwayEra) where
   mempty = TxScriptWitnessRequirements mempty mempty mempty mempty
 
 getTxScriptWitnessRequirements

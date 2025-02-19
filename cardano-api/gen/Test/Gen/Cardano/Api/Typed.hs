@@ -519,7 +519,7 @@ genLedgerValueForTxOut sbe = do
     )
     sbe
 
-genLedgerMultiAssetValue :: Gen (L.MultiAsset L.StandardCrypto)
+genLedgerMultiAssetValue :: Gen L.MultiAsset
 genLedgerMultiAssetValue = Q.arbitrary
 
 -- Note that we expect to sometimes generate duplicate policy id keys since we

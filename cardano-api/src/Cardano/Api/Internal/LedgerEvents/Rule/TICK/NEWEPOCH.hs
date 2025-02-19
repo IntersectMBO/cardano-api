@@ -15,7 +15,6 @@ where
 import Cardano.Api.Internal.Address (fromShelleyStakeCredential)
 import Cardano.Api.Internal.LedgerEvents.LedgerEvent
 import Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
-import Cardano.Api.Internal.ReexposeLedger
 
 import Cardano.Ledger.Conway.Rules (ConwayNewEpochEvent)
 import Cardano.Ledger.Conway.Rules qualified as Conway
@@ -27,22 +26,20 @@ import Data.Map.Strict qualified as Map
 
 type LatestTickEventConstraints ledgerera =
   ( Event (Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera
-  , Event (Core.EraRule "RUPD" ledgerera) ~ RupdEvent StandardCrypto
+  , Event (Core.EraRule "RUPD" ledgerera) ~ RupdEvent
   , Event (Core.EraRule "NEWEPOCH" ledgerera) ~ ShelleyNewEpochEvent ledgerera
   , Event (Core.EraRule "EPOCH" ledgerera) ~ Shelley.ShelleyEpochEvent ledgerera
   , Event (Core.EraRule "POOLREAP" ledgerera) ~ Shelley.ShelleyPoolreapEvent ledgerera
   )
 
 handleLedgerTICKEvents
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => LatestTickEventConstraints ledgerera
+  :: LatestTickEventConstraints ledgerera
   => ShelleyTickEvent ledgerera -> Maybe LedgerEvent
 handleLedgerTICKEvents (TickNewEpochEvent newEpochEvent) = handleShelleyNEWEPOCHEvents newEpochEvent
 handleLedgerTICKEvents (TickRupdEvent rewardUpdate) = handleLedgerRUPDEvents rewardUpdate
 
 handleShelleyNEWEPOCHEvents
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => Event (Core.EraRule "EPOCH" ledgerera) ~ ShelleyEpochEvent ledgerera
+  :: Event (Core.EraRule "EPOCH" ledgerera) ~ ShelleyEpochEvent ledgerera
   => Event (Core.EraRule "POOLREAP" ledgerera) ~ ShelleyPoolreapEvent ledgerera
   => ShelleyNewEpochEvent ledgerera -> Maybe LedgerEvent
 handleShelleyNEWEPOCHEvents shelleyNewEpochEvent =
@@ -56,8 +53,7 @@ handleShelleyNEWEPOCHEvents shelleyNewEpochEvent =
     Shelley.TotalAdaPotsEvent{} -> Nothing
 
 handleEpochEvents
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => Event (Core.EraRule "POOLREAP" ledgerera) ~ ShelleyPoolreapEvent ledgerera
+  :: Event (Core.EraRule "POOLREAP" ledgerera) ~ ShelleyPoolreapEvent ledgerera
   => ShelleyEpochEvent ledgerera -> Maybe LedgerEvent
 handleEpochEvents (PoolReapEvent e) =
   case e of
@@ -71,11 +67,10 @@ handleEpochEvents (SnapEvent{}) = Nothing
 handleEpochEvents (UpecEvent{}) = Nothing
 
 handleConwayNEWEPOCHEvents
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => Core.EraPParams ledgerera
+  :: Core.EraPParams ledgerera
   => Event (Core.EraRule "EPOCH" ledgerera) ~ Conway.ConwayEpochEvent ledgerera
   => Event (Core.EraRule "POOLREAP" ledgerera) ~ ShelleyPoolreapEvent ledgerera
-  => Event (Core.EraRule "RUPD" ledgerera) ~ RupdEvent StandardCrypto
+  => Event (Core.EraRule "RUPD" ledgerera) ~ RupdEvent
   => ConwayNewEpochEvent ledgerera -> Maybe LedgerEvent
 handleConwayNEWEPOCHEvents conwayNewEpochEvent =
   case conwayNewEpochEvent of

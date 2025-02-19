@@ -23,9 +23,9 @@ where
 import Cardano.Api.Internal.Modes
 
 import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Byron.ByronHFC (ByronBlockHFC)
 import Ouroboros.Consensus.Cardano
 import Ouroboros.Consensus.Cardano.Block
-import Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
 import Ouroboros.Consensus.Cardano.Node
 import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import Ouroboros.Consensus.Ledger.SupportsProtocol qualified as Consensus (LedgerSupportsProtocol)
@@ -87,14 +87,14 @@ instance
   , Consensus.LedgerSupportsProtocol
       ( Consensus.ShelleyBlock
           (Consensus.TPraos StandardCrypto)
-          (ShelleyEra StandardCrypto)
+          ShelleyEra
       )
   )
-  => Protocol m (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley)
+  => Protocol m (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
   where
-  data ProtocolInfoArgs (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley)
+  data ProtocolInfoArgs (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
     = ProtocolInfoArgsShelley
-        (ShelleyGenesis StandardCrypto)
+        ShelleyGenesis
         (ProtocolParamsShelleyBased StandardCrypto)
         ProtVer
   protocolInfo (ProtocolInfoArgsShelley genesis paramsShelleyBased_ paramsShelley_) =
@@ -105,18 +105,18 @@ instance
   Consensus.LedgerSupportsProtocol
     ( Consensus.ShelleyBlock
         (Consensus.TPraos StandardCrypto)
-        (Consensus.ShelleyEra StandardCrypto)
+        Consensus.ShelleyEra
     )
-  => ProtocolClient (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley)
+  => ProtocolClient (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
   where
-  data ProtocolClientInfoArgs (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley)
+  data ProtocolClientInfoArgs (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
     = ProtocolClientInfoArgsShelley
   protocolClientInfo ProtocolClientInfoArgsShelley =
     inject protocolClientInfoShelley
 
 data BlockType blk where
   ByronBlockType :: BlockType ByronBlockHFC
-  ShelleyBlockType :: BlockType (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) StandardShelley)
+  ShelleyBlockType :: BlockType (ShelleyBlockHFC (Consensus.TPraos StandardCrypto) ShelleyEra)
   CardanoBlockType :: BlockType (CardanoBlock StandardCrypto)
 
 deriving instance Eq (BlockType blk)
