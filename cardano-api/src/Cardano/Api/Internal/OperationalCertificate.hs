@@ -31,8 +31,9 @@ import Cardano.Api.Internal.SerialiseCBOR
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.Tx.Sign
 
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Crypto.DSIGN qualified as DSIGN
 import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.OCert qualified as Shelley
 
 import Data.Word
@@ -153,8 +154,8 @@ issueOperationalCertificate
     ocert = Shelley.OCert kesVKey counter kesPeriod signature
 
     signature
-      :: Shelley.SignedDSIGN
-           StandardCrypto
+      :: DSIGN.SignedDSIGN
+           Shelley.DSIGN
            (Shelley.OCertSignable StandardCrypto)
     signature =
       makeShelleySignature

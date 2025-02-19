@@ -14,7 +14,6 @@
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-imports #-}
 
 module Cardano.Api.Internal.Orphans () where
-
 import Cardano.Api.Internal.Pretty (Pretty (..), prettyException, (<+>))
 import Cardano.Api.Internal.Via.ShowOf
 
@@ -45,19 +44,16 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.Conway.Rules qualified as L
 import Cardano.Ledger.Conway.TxCert qualified as L
-import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Crypto qualified as CC (Crypto)
-import Cardano.Ledger.Crypto qualified as Crypto
-import Cardano.Ledger.Crypto qualified as L
+import Cardano.Ledger.Core qualified as L hiding (KeyHash)
+import Cardano.Ledger.Hashes qualified as L hiding (KeyHash)
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Keys qualified as L.Keys
-import Cardano.Ledger.SafeHash qualified as L
 import Cardano.Ledger.Shelley.API.Mempool qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
 import Cardano.Ledger.Shelley.Rules qualified as L
 import Cardano.Ledger.Shelley.TxBody qualified as L
 import Cardano.Ledger.Shelley.TxCert qualified as L
+import Cardano.Protocol.Crypto qualified as P
 import Cardano.Protocol.TPraos.API qualified as Ledger
 import Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 import Cardano.Protocol.TPraos.Rules.Prtcl qualified as L
@@ -170,28 +166,22 @@ deriving anyclass instance
   => ToJSON (L.ShelleyLedgerPredFailure ledgerera)
 
 deriving anyclass instance
-  ( L.Crypto (L.EraCrypto ledgerera)
-  , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
-  )
+  ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   => ToJSON (L.ShelleyUtxowPredFailure ledgerera)
 
 deriving anyclass instance
-  ( L.Crypto (L.EraCrypto ledgerera)
-  , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
-  )
+  ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   => ToJSON (L.ShelleyPpupPredFailure ledgerera)
 
 deriving anyclass instance
-  ( L.Crypto (L.EraCrypto ledgerera)
-  , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
+  ( ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
   , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
   )
   => ToJSON (L.AlonzoUtxowPredFailure ledgerera)
 
 deriving anyclass instance
-  ( L.Crypto (L.EraCrypto ledgerera)
-  , ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
+  ( ToJSON (L.PredicateFailure (L.EraRule "UTXO" ledgerera))
   , ToJSON (L.TxCert ledgerera)
   , ToJSON (L.PlutusPurpose L.AsItem ledgerera)
   , ToJSON (L.PlutusPurpose L.AsIx ledgerera)
@@ -203,9 +193,9 @@ deriving anyclass instance
   => ToJSON (L.ApplyTxError ledgerera)
 
 deriving via
-  ShowOf (L.Keys.VKey L.Keys.Witness c)
+  ShowOf (L.Keys.VKey L.Keys.Witness)
   instance
-    L.Crypto c => ToJSON (L.Keys.VKey L.Keys.Witness c)
+    ToJSON (L.Keys.VKey L.Keys.Witness)
 
 deriving via
   ShowOf (L.AllegraUtxoPredFailure ledgerera)
@@ -269,12 +259,12 @@ instance Pretty L.Coin where
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 
-instance Crypto.Crypto crypto => ToJSON (Consensus.StakeSnapshots crypto) where
+instance ToJSON Consensus.StakeSnapshots where
   toJSON = object . stakeSnapshotsToPair
   toEncoding = pairs . mconcat . stakeSnapshotsToPair
 
 stakeSnapshotsToPair
-  :: (Aeson.KeyValue e a, Crypto.Crypto crypto) => Consensus.StakeSnapshots crypto -> [a]
+  :: Aeson.KeyValue e a => Consensus.StakeSnapshots -> [a]
 stakeSnapshotsToPair
   Consensus.StakeSnapshots
     { Consensus.ssStakeSnapshots
@@ -291,11 +281,11 @@ stakeSnapshotsToPair
           ]
     ]
 
-instance ToJSON (Consensus.StakeSnapshot crypto) where
+instance ToJSON Consensus.StakeSnapshot where
   toJSON = object . stakeSnapshotToPair
   toEncoding = pairs . mconcat . stakeSnapshotToPair
 
-stakeSnapshotToPair :: Aeson.KeyValue e a => Consensus.StakeSnapshot crypto -> [a]
+stakeSnapshotToPair :: Aeson.KeyValue e a => Consensus.StakeSnapshot -> [a]
 stakeSnapshotToPair
   Consensus.StakeSnapshot
     { Consensus.ssMarkPool
@@ -332,24 +322,24 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
 -- Simple newtype wrappers JSON conversion
 --
 
-deriving newtype instance CC.Crypto crypto => ToJSON (ShelleyHash crypto)
+deriving newtype instance ToJSON ShelleyHash
 
-deriving newtype instance CC.Crypto crypto => ToJSON (HashHeader crypto)
+deriving newtype instance ToJSON HashHeader
 
-deriving instance ToJSON (Ledger.PrtclState StandardCrypto)
+deriving instance ToJSON Ledger.PrtclState
 
 deriving instance ToJSON Ledger.TicknState
 
-deriving instance ToJSON (Ledger.ChainDepState StandardCrypto)
+deriving instance ToJSON Ledger.ChainDepState
 
-instance ToJSON (TPraosState StandardCrypto) where
+instance ToJSON TPraosState where
   toJSON s =
     Aeson.object
       [ "lastSlot" .= Consensus.tpraosStateLastSlot s
       , "chainDepState" .= Consensus.tpraosStateChainDepState s
       ]
 
-instance ToJSON (PraosState StandardCrypto) where
+instance ToJSON PraosState where
   toJSON s =
     Aeson.object
       [ "lastSlot" .= Consensus.praosStateLastSlot s

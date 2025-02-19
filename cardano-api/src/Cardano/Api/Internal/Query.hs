@@ -89,11 +89,9 @@ import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.CertState qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as Shelley
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.LedgerState qualified as L
-import Cardano.Ledger.Shelley.LedgerState qualified as Shelley
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -111,6 +109,7 @@ import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
+import Ouroboros.Consensus.Shelley.Protocol.Abstract (ProtoCrypto)
 import Ouroboros.Network.Block (Serialised (..))
 import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
@@ -163,7 +162,7 @@ instance NodeToClientVersionOf (QueryInMode result) where
 
 data EraHistory where
   EraHistory
-    :: Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
+    :: Consensus.CardanoBlock StandardCrypto ~ Consensus.HardForkBlock xs
     => History.Interpreter xs
     -> EraHistory
 
@@ -281,26 +280,26 @@ data QueryInShelleyBasedEra era result where
   QueryFuturePParams
     :: QueryInShelleyBasedEra era (Maybe (Core.PParams (ShelleyLedgerEra era)))
   QueryDRepState
-    :: Set (Shelley.Credential Shelley.DRepRole StandardCrypto)
+    :: Set (Shelley.Credential Shelley.DRepRole)
     -> QueryInShelleyBasedEra
          era
-         (Map (Shelley.Credential Shelley.DRepRole StandardCrypto) (L.DRepState StandardCrypto))
+         (Map (Shelley.Credential Shelley.DRepRole) L.DRepState)
   QueryDRepStakeDistr
-    :: Set (Ledger.DRep StandardCrypto)
-    -> QueryInShelleyBasedEra era (Map (Ledger.DRep StandardCrypto) L.Coin)
+    :: Set Ledger.DRep
+    -> QueryInShelleyBasedEra era (Map Ledger.DRep L.Coin)
   QuerySPOStakeDistr
-    :: Set (Ledger.KeyHash 'Ledger.StakePool StandardCrypto)
-    -> QueryInShelleyBasedEra era (Map (Ledger.KeyHash 'Ledger.StakePool Ledger.StandardCrypto) L.Coin)
+    :: Set (Ledger.KeyHash 'Ledger.StakePool)
+    -> QueryInShelleyBasedEra era (Map (Ledger.KeyHash 'Ledger.StakePool) L.Coin)
   QueryCommitteeMembersState
-    :: Set (Shelley.Credential Shelley.ColdCommitteeRole StandardCrypto)
-    -> Set (Shelley.Credential Shelley.HotCommitteeRole StandardCrypto)
+    :: Set (Shelley.Credential Shelley.ColdCommitteeRole)
+    -> Set (Shelley.Credential Shelley.HotCommitteeRole)
     -> Set L.MemberStatus
-    -> QueryInShelleyBasedEra era (L.CommitteeMembersState StandardCrypto)
+    -> QueryInShelleyBasedEra era L.CommitteeMembersState
   QueryStakeVoteDelegatees
     :: Set StakeCredential
-    -> QueryInShelleyBasedEra era (Map StakeCredential (Ledger.DRep StandardCrypto))
+    -> QueryInShelleyBasedEra era (Map StakeCredential Ledger.DRep)
   QueryProposals
-    :: Set (L.GovActionId StandardCrypto)
+    :: Set L.GovActionId
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
     :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
@@ -429,16 +428,15 @@ decodePoolState (SerialisedPoolState (Serialised ls)) =
 
 newtype SerialisedPoolDistribution era
   = SerialisedPoolDistribution
-      (Serialised (Consensus.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))))
+      (Serialised (Consensus.PoolDistr StandardCrypto))
 
 newtype PoolDistribution era = PoolDistribution
-  { unPoolDistr :: Consensus.PoolDistr (Core.EraCrypto (ShelleyLedgerEra era))
+  { unPoolDistr :: Consensus.PoolDistr StandardCrypto
   }
 
 decodePoolDistribution
   :: forall era
-   . Crypto (Core.EraCrypto (ShelleyLedgerEra era))
-  => ShelleyBasedEra era
+   . ShelleyBasedEra era
   -> SerialisedPoolDistribution era
   -> Either DecoderError (PoolDistribution era)
 decodePoolDistribution sbe (SerialisedPoolDistribution (Serialised ls)) =
@@ -446,15 +444,13 @@ decodePoolDistribution sbe (SerialisedPoolDistribution (Serialised ls)) =
 
 newtype SerialisedStakeSnapshots era
   = SerialisedStakeSnapshots
-      (Serialised (Consensus.StakeSnapshots (Core.EraCrypto (ShelleyLedgerEra era))))
+      (Serialised Consensus.StakeSnapshots)
 
-newtype StakeSnapshot era = StakeSnapshot (Consensus.StakeSnapshots (Core.EraCrypto (ShelleyLedgerEra era)))
+newtype StakeSnapshot era = StakeSnapshot Consensus.StakeSnapshots
 
 decodeStakeSnapshot
   :: forall era
-   . ()
-  => FromCBOR (Consensus.StakeSnapshots (Core.EraCrypto (ShelleyLedgerEra era)))
-  => SerialisedStakeSnapshots era
+   . SerialisedStakeSnapshots era
   -> Either DecoderError (StakeSnapshot era)
 decodeStakeSnapshot (SerialisedStakeSnapshots (Serialised ls)) = StakeSnapshot <$> Plain.decodeFull ls
 
@@ -466,7 +462,7 @@ decodeBigLedgerPeerSnapshot (Serialised lps) = first (lps,) (Plain.decodeFull lp
 toShelleyAddrSet
   :: CardanoEra era
   -> Set AddressAny
-  -> Set (Shelley.Addr Consensus.StandardCrypto)
+  -> Set Shelley.Addr
 toShelleyAddrSet era =
   fromList
     . map toShelleyAddr
@@ -515,8 +511,8 @@ fromShelleyPoolDistr =
 
 fromShelleyDelegations
   :: Map
-       (Shelley.Credential Shelley.Staking StandardCrypto)
-       (Shelley.KeyHash Shelley.StakePool StandardCrypto)
+       (Shelley.Credential Shelley.Staking)
+       (Shelley.KeyHash Shelley.StakePool)
   -> Map StakeCredential PoolId
 fromShelleyDelegations =
   -- TODO: write an appropriate property to show it is safe to use
@@ -528,7 +524,7 @@ fromShelleyDelegations =
     . toList
 
 fromShelleyRewardAccounts
-  :: Shelley.RewardAccounts Consensus.StandardCrypto
+  :: Map (Shelley.Credential 'Core.Staking) L.Coin
   -> Map StakeCredential L.Coin
 fromShelleyRewardAccounts =
   -- TODO: write an appropriate property to show it is safe to use
@@ -544,7 +540,7 @@ fromShelleyRewardAccounts =
 toConsensusQuery
   :: forall block result
    . ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => QueryInMode result
   -> Some (Consensus.Query block)
 toConsensusQuery QueryCurrentEra =
@@ -572,8 +568,7 @@ toConsensusQueryShelleyBased
   :: forall era protocol block result
    . ()
   => ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol (ShelleyLedgerEra era)
-  => Core.EraCrypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
   -> Some (Consensus.Query block)
@@ -598,12 +593,12 @@ toConsensusQueryShelleyBased sbe = \case
   QueryUTxO (QueryUTxOByAddress addrs) ->
     Some (consensusQueryInEraInMode era (Consensus.GetUTxOByAddress addrs'))
    where
-    addrs' :: Set (Shelley.Addr Consensus.StandardCrypto)
+    addrs' :: Set Shelley.Addr
     addrs' = toShelleyAddrSet era addrs
   QueryUTxO (QueryUTxOByTxIn txins) ->
     Some (consensusQueryInEraInMode era (Consensus.GetUTxOByTxIn txins'))
    where
-    txins' :: Set (Shelley.TxIn Consensus.StandardCrypto)
+    txins' :: Set Shelley.TxIn
     txins' = Set.map toShelleyTxIn txins
   QueryStakeAddresses creds _nId ->
     Some
@@ -612,14 +607,14 @@ toConsensusQueryShelleyBased sbe = \case
           (Consensus.GetFilteredDelegationsAndRewardAccounts creds')
       )
    where
-    creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
+    creds' :: Set (Shelley.Credential Shelley.Staking)
     creds' = Set.map toShelleyStakeCredential creds
   QueryStakePools ->
     Some (consensusQueryInEraInMode era Consensus.GetStakePools)
   QueryStakePoolParameters poolids ->
     Some (consensusQueryInEraInMode era (Consensus.GetStakePoolParams poolids'))
    where
-    poolids' :: Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
+    poolids' :: Set (Shelley.KeyHash Shelley.StakePool)
     poolids' = Set.map unStakePoolKeyHash poolids
   QueryDebugLedgerState ->
     Some (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.DebugNewEpochState))
@@ -643,7 +638,7 @@ toConsensusQueryShelleyBased sbe = \case
     Some
       (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetPoolDistr (getPoolIds <$> poolIds))))
    where
-    getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
+    getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool)
     getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
   QueryStakeDelegDeposits creds ->
     Some (consensusQueryInEraInMode era (Consensus.GetStakeDelegDeposits creds'))
@@ -708,7 +703,7 @@ toConsensusQueryShelleyBased sbe = \case
       )
       sbe
    where
-    creds' :: Set (Shelley.Credential Shelley.Staking StandardCrypto)
+    creds' :: Set (Shelley.Credential Shelley.Staking)
     creds' = Set.map toShelleyStakeCredential creds
   QueryProposals govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
@@ -728,7 +723,7 @@ toConsensusQueryShelleyBased sbe = \case
 consensusQueryInEraInMode
   :: forall era erablock modeblock result result' xs
    . ConsensusBlockForEra era ~ erablock
-  => Consensus.CardanoBlock L.StandardCrypto ~ modeblock
+  => Consensus.CardanoBlock StandardCrypto ~ modeblock
   => modeblock ~ Consensus.HardForkBlock xs
   => Consensus.HardForkQueryResult xs result ~ result'
   => CardanoEra era
@@ -753,7 +748,7 @@ fromConsensusQueryResult
   :: forall block result result'
    . ()
   => HasCallStack
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => QueryInMode result
   -> Consensus.Query block result'
   -> result'
@@ -869,8 +864,8 @@ fromConsensusQueryResultShelleyBased
   :: forall era ledgerera protocol result result'
    . HasCallStack
   => ShelleyLedgerEra era ~ ledgerera
-  => Core.EraCrypto ledgerera ~ Consensus.StandardCrypto
   => ConsensusProtocol era ~ protocol
+  => ProtoCrypto protocol ~ StandardCrypto
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
   -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) result'

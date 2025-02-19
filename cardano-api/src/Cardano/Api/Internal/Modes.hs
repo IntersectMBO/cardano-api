@@ -30,8 +30,7 @@ where
 import Cardano.Api.Internal.Eras.Core
 
 import Cardano.Chain.Slotting qualified as Byron (EpochSlots (..))
-import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.ByronHFC qualified as Consensus
@@ -88,8 +87,8 @@ type family ConsensusBlockForEra era where
 type family ConsensusCryptoForBlock block where
   ConsensusCryptoForBlock Consensus.ByronBlockHFC = StandardCrypto
   ConsensusCryptoForBlock
-    (Consensus.ShelleyBlockHFC (Consensus.TPraos StandardCrypto) Consensus.StandardShelley) =
-    Consensus.StandardShelley
+    (Consensus.ShelleyBlockHFC (Consensus.TPraos StandardCrypto) Consensus.ShelleyEra) =
+    Consensus.ShelleyEra
   ConsensusCryptoForBlock (Consensus.CardanoBlock StandardCrypto) = StandardCrypto
 
 type family ConsensusProtocol era where
@@ -101,12 +100,12 @@ type family ConsensusProtocol era where
   ConsensusProtocol ConwayEra = Consensus.Praos StandardCrypto
 
 type family ChainDepStateProtocol era where
-  ChainDepStateProtocol ShelleyEra = Consensus.TPraosState StandardCrypto
-  ChainDepStateProtocol AllegraEra = Consensus.TPraosState StandardCrypto
-  ChainDepStateProtocol MaryEra = Consensus.TPraosState StandardCrypto
-  ChainDepStateProtocol AlonzoEra = Consensus.TPraosState StandardCrypto
-  ChainDepStateProtocol BabbageEra = Consensus.PraosState StandardCrypto
-  ChainDepStateProtocol ConwayEra = Consensus.PraosState StandardCrypto
+  ChainDepStateProtocol ShelleyEra = Consensus.TPraosState
+  ChainDepStateProtocol AllegraEra = Consensus.TPraosState
+  ChainDepStateProtocol MaryEra = Consensus.TPraosState
+  ChainDepStateProtocol AlonzoEra = Consensus.TPraosState
+  ChainDepStateProtocol BabbageEra = Consensus.PraosState
+  ChainDepStateProtocol ConwayEra = Consensus.PraosState
 
 eraIndex0 :: Consensus.EraIndex (x0 : xs)
 eraIndex0 = Consensus.eraIndexZero
@@ -131,7 +130,7 @@ eraIndex6 = eraIndexSucc eraIndex5
 
 toConsensusEraIndex
   :: ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
+  => Consensus.CardanoBlock StandardCrypto ~ Consensus.HardForkBlock xs
   => CardanoEra era
   -> Consensus.EraIndex xs
 toConsensusEraIndex = \case
