@@ -13,21 +13,21 @@ module Cardano.Api.Internal.Experimental.Tx
   ( -- * Creating transactions using the new API
 
     -- |
-    -- Both the old and the new API can be used to create transactions, and
-    -- it is possible to transform a transaction created in one format to the other
-    -- since they have the same representation underneath. But we will be moving
-    -- towards using the new API and deprecating the old way, since the latter is
-    -- simpler, closer to the ledger, and easier to maintain.
+    -- Both the old and new APIs can be used to create transactions, and
+    -- it is possible to transform a transaction from one format to the other
+    -- as they share the same representation. However, the focus will shift
+    -- towards using the new API, while the old API will be deprecated to ensure
+    -- simplicity, closer alignment with the ledger, and easier maintenance.
     --
-    -- In both the new and the old API, in order to construct a transaction,
-    -- we need to construct a 'TxBodyContent', and we will need at least a
-    -- witness (for example, a 'ShelleyWitnessSigningKey'), to sign the transaction.
-    -- This hasn't changed.
+    -- In both the new and old APIs, constructing a transaction requires creating
+    -- a 'TxBodyContent', along with at least one witness (for example, a
+    -- 'ShelleyWitnessSigningKey') to sign the transaction.
+    -- This process remains unchanged.
     --
-    -- To see how to create a transaction using the old API, see the documentation
-    -- of the "Cardano.Api.Internal.Tx.Body" module.
+    -- To learn how to create a transaction using the old API, see the
+    -- "Cardano.Api.Internal.Tx.Body" documentation.
     --
-    -- In the following examples, we are using the following qualified modules:
+    -- In the following examples, the following qualified modules are used:
     --
     -- @
     -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
@@ -36,68 +36,70 @@ module Cardano.Api.Internal.Experimental.Tx
     -- import qualified Cardano.Api.Experimental as Exp   -- the experimental API
     -- @
     --
-    -- You can find a compilable version of these examples in @Test.Cardano.Api.Experimental@.
+    -- For instructions on how to do this, refer to the @Test.Cardano.Api.Experimental@ documentation.
 
     -- ** Creating a 'TxBodyContent'
 
     -- |
-    -- Independently of whether we use the Experimental or the traditoinal API, we need to create a 'TxBodyContent'.
+    -- Regardless of whether the experimental or the traditional API is used, creating a 'TxBodyContent'
+    -- is necessary.
     --
     -- You can see how to do this in the documentation of the "Cardano.Api.Internal.Tx.Body" module.
 
     -- ** Balancing a transaction
 
     -- |
-    -- If we have a UTxO with exactly 12 ADA, we could just construct the transaction as described in
-    -- "Cardano.Api.Internal.Tx.Body", and it would be a valid transaction, but:
+    -- If a UTXO has exactly 12 ada, the transaction could be constructed as described in
+    -- "Cardano.Api.Internal.Tx.Body", and it would be a valid. However:
     --
-    --   * We are likely wasting ADA
-    --   * We may not have exactly one UTxO of 12 ADA
-    --   * Our transaciton may not be this simple
+    --   * Ada may be wasted
+    --   * The UTXO that we intend to spend may not contain exactly 12 ada
+    --   * The transaction may not be this simple.
     --
-    -- For these reasons, it is recommended that we balance the transaction before proceeding with
+    -- For these reasons, it is recommended to balance the transaction before proceeding with
     -- signing and submitting.
     --
-    -- You can see how to balance a transaction in the documentation of the "Cardano.Api.Internal.Fees" module.
+    -- For instructions on how to balance a transaction, refer to the "Cardano.Api.Internal.Fees" documentation.
 
     -- ** Creating a 'ShelleyWitnessSigningKey'
 
     -- |
-    -- To sign the transaction, we need a witness. For example, a 'ShelleyWitnessSigningKey'.
+    -- Signing a transaction requires a witness, such as a 'ShelleyWitnessSigningKey'.
     --
-    -- You can see how to create a 'ShelleyWitnessSigningKey' in the documentation of the "Cardano.Api.Internal.Tx.Sign" module.
+    -- For instructions on creating a 'ShelleyWitnessSigningKey' refer to the "Cardano.Api.Internal.Tx.Sign" documentation.
 
     -- ** Creating a transaction using the new API
 
     -- |
-    -- Now, let's see how we can create a transaction using the new API. First, we create an 'UnsignedTx' using the 'makeUnsignedTx'
-    -- function and the 'Era' and 'TxBodyContent' that we defined earlier:
+    -- This section outlines how to create a transaction using the new API. First,
+    -- create an 'UnsignedTx' using the 'makeUnsignedTx' function and the 'Era' and
+    -- 'TxBodyContent' that we defined earlier:
     --
     -- @
     -- let (Right unsignedTx) = Exp.makeUnsignedTx era txBodyContent
     -- @
     --
-    -- Then we use the key witness to witness the current unsigned transaction using the 'makeKeyWitness' function:
+    -- Next, use the key witness to sign the unsigned transaction with the 'makeKeyWitness' function:
     --
     -- @
     -- let transactionWitness = Exp.makeKeyWitness era unsignedTx (Api.WitnessPaymentKey signingKey)
     -- @
     --
-    -- Finally, we sign the transaction using the 'signTx' function:
+    -- Finally, sign the transaction using the 'signTx' function:
     --
     -- @
     -- let newApiSignedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra) = Exp.signTx era [] [transactionWitness] unsignedTx
     -- @
     --
-    -- Where the empty list is for the bootstrap witnesses, which, in this case, we don't have any.
+    -- The empty list represents the bootstrap witnesses, which are not needed in this case.
     --
-    -- And that is it. We have a signed transaction.
+    -- The transaction is now signed.
 
     -- ** Converting a transaction from the new API to the old API
 
     -- |
-    -- If we have a transaction created using the new API, we can convert it to the old API very easily by
-    -- just wrapping it using the 'ShelleyTx' constructor:
+    -- A transaction created with the new API can beeasily converted to the old API by
+    -- wrapping it with the 'ShelleyTx' constructor:
     --
     -- @
     -- let oldStyleTx :: Api.Tx Api.ConwayEra = ShelleyTx sbe newApiSignedTx
@@ -106,8 +108,9 @@ module Cardano.Api.Internal.Experimental.Tx
     -- ** Inspecting transactions
 
     -- |
-    -- When using a 'Tx' created using the experimental API, you can extract the 'TxBody' and
-    -- 'TxWits' using the lenses 'txBody' and 'txWits' respectively, from "Cardano.Api.Ledger".
+    -- When using a 'Tx' created with the experimental API, the 'TxBody' and
+    -- 'TxWits' can be extracted using the 'txBody' and 'txWits' lenses from
+    -- "Cardano.Api.Ledger" respectively.
 
     -- * Contents
     UnsignedTx (..)
@@ -147,7 +150,7 @@ import           GHC.Stack
 import           Lens.Micro
 
 -- | A transaction that can contain everything
--- except key witnesses
+-- except key witnesses.
 newtype UnsignedTx era
   = UnsignedTx (Ledger.Tx (LedgerEra era))
 
