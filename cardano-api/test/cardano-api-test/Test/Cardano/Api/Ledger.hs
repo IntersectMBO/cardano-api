@@ -11,8 +11,7 @@ import Cardano.Api.Shelley
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.Tx.Address
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.SafeHash
+import Cardano.Ledger.Hashes
 
 import Control.Monad
 import Control.Monad.Identity
@@ -33,7 +32,7 @@ import Test.Tasty.Hedgehog (testProperty)
 prop_roundtrip_Address_CBOR :: Property
 prop_roundtrip_Address_CBOR = H.property $ do
   -- If this fails, FundPair and ShelleyGenesis can also fail.
-  addr <- H.forAll (arbitrary @(L.Addr StandardCrypto))
+  addr <- H.forAll (arbitrary @L.Addr)
   H.tripping addr serialiseAddr decodeAddrEither
 
 -- prop_original_scriptdata_bytes_preserved and prop_roundtrip_scriptdata_plutusdata
@@ -50,7 +49,7 @@ prop_original_scriptdata_bytes_preserved = H.property $ do
     Left e -> failWith Nothing $ show e
     Right hScriptData -> do
       let ScriptDataHash apiHash = hashScriptDataBytes hScriptData
-          ledgerAlonzoData = toAlonzoData hScriptData :: L.Data L.Alonzo
+          ledgerAlonzoData = toAlonzoData hScriptData :: L.Data L.AlonzoEra
       -- We check that our hashScriptDataBytes is equivalent to `L.hashData`
       -- This test will let us know if our 'hashScriptDataBytes' is ever broken
       L.hashData ledgerAlonzoData === apiHash

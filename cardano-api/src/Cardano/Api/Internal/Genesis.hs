@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -54,7 +55,6 @@ import Cardano.Ledger.Conway.PParams
   , PoolVotingThresholds (..)
   , UpgradeConwayPParams (..)
   )
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus qualified as L
 import Cardano.Ledger.Plutus.CostModels (mkCostModelsLenient)
@@ -65,7 +65,6 @@ import Cardano.Ledger.Shelley.Genesis
   , emptyGenesisStaking
   )
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
-import Ouroboros.Consensus.Shelley.Eras qualified as Shelley
 import PlutusLedgerApi.V2 qualified as V2
 
 import Control.Monad
@@ -96,7 +95,7 @@ import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Plutus (testingCostModelV3)
 
 data ShelleyConfig = ShelleyConfig
-  { scConfig :: !(Ledger.ShelleyGenesis Shelley.StandardCrypto)
+  { scConfig :: !Ledger.ShelleyGenesis
   , scGenesisHash :: !GenesisHashShelley
   }
 
@@ -129,7 +128,7 @@ type ShelleyGenesisConfig = ShelleyConfig
 
 type AlonzoGenesisConfig = AlonzoGenesis
 
-type ConwayGenesisConfig = ConwayGenesis Shelley.StandardCrypto
+type ConwayGenesisConfig = ConwayGenesis
 
 type ByronGenesisFile = File ByronGenesisConfig
 
@@ -149,7 +148,7 @@ type ConwayGenesisFile = File ConwayGenesisConfig
 -- * 'sgInitialFunds' to have any money in the system
 -- * 'sgMaxLovelaceSupply' must be at least the sum of the 'sgInitialFunds'
 --   but more if you want to allow for rewards.
-shelleyGenesisDefaults :: ShelleyGenesis StandardCrypto
+shelleyGenesisDefaults :: ShelleyGenesis
 shelleyGenesisDefaults =
   ShelleyGenesis
     { -- parameters for this specific chain
@@ -160,7 +159,7 @@ shelleyGenesisDefaults =
       sgSlotLength = 1.0 :: NominalDiffTimeMicro -- 1s slots
     , sgActiveSlotsCoeff = unsafeBR (1 % 20) -- f ; 1/f = 20s block times on average
     , sgSecurityParam = k
-    , sgEpochLength = Ledger.EpochSize (k * 10 * 20) -- 10k/f
+    , sgEpochLength = Ledger.EpochSize (unNonZero k * 10 * 20) -- 10k/f
     , sgSlotsPerKESPeriod = 60 * 60 * 36 -- 1.5 days with 1s slots
     , sgMaxKESEvolutions = 60 -- 90 days
     , sgUpdateQuorum = 5 -- assuming 7 genesis keys
@@ -185,14 +184,14 @@ shelleyGenesisDefaults =
     , sgMaxLovelaceSupply = 0
     }
  where
-  k = 2160
+  k = knownNonZeroBounded @2160
   zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
   unsafeBR :: (HasCallStack, Typeable r, BoundedRational r) => Rational -> r
   unsafeBR = unsafeBoundedRational
 
 -- | Some reasonable starting defaults for constructing a 'ConwayGenesis'.
 -- Based on https://github.com/IntersectMBO/cardano-node/blob/master/cardano-testnet/src/Testnet/Defaults.hs
-conwayGenesisDefaults :: ConwayGenesis StandardCrypto
+conwayGenesisDefaults :: ConwayGenesis
 conwayGenesisDefaults =
   ConwayGenesis
     { cgUpgradePParams = defaultUpgradeConwayParams

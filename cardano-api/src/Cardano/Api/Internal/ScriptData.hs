@@ -59,10 +59,10 @@ import Cardano.Api.Internal.TxMetadata (pBytes, pSigned, parseAll)
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash.Class qualified as Crypto
+import Cardano.Ledger.Alonzo qualified as L (AlonzoEra)
 import Cardano.Ledger.Core (Era)
+import Cardano.Ledger.Hashes qualified as Ledger
 import Cardano.Ledger.Plutus.Data qualified as Plutus
-import Cardano.Ledger.SafeHash qualified as Ledger
-import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
 import PlutusLedgerApi.V1 qualified as PlutusAPI
 
 import Codec.Serialise.Class (Serialise (..))
@@ -154,7 +154,7 @@ instance HasTypeProxy ScriptData where
 --
 
 newtype instance Hash ScriptData
-  = ScriptDataHash (Plutus.DataHash StandardCrypto)
+  = ScriptDataHash Plutus.DataHash
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex (Hash ScriptData)
   deriving (ToJSON, FromJSON) via UsingRawBytesHex (Hash ScriptData)
@@ -185,7 +185,7 @@ hashScriptDataBytes :: HashableScriptData -> Hash ScriptData
 hashScriptDataBytes =
   ScriptDataHash
     . Plutus.hashData
-    . (toAlonzoData :: HashableScriptData -> Plutus.Data StandardAlonzo)
+    . (toAlonzoData :: HashableScriptData -> Plutus.Data L.AlonzoEra)
 
 -- ----------------------------------------------------------------------------
 -- Conversion functions

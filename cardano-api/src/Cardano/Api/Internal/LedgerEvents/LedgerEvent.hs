@@ -23,7 +23,6 @@ import Cardano.Ledger.Coin qualified as Ledger
 import Cardano.Ledger.Conway.Governance qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger.Core
 import Cardano.Ledger.Credential qualified as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys qualified as Ledger
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext)
 import Cardano.Ledger.Shelley.Rewards (Reward)
@@ -50,29 +49,29 @@ data LedgerEvent
   | -- | The given pool already exists and is being re-registered.
     PoolReRegistration
   | -- | Incremental rewards are being computed.
-    IncrementalRewardsDistribution EpochNo (Map StakeCredential (Set (Reward StandardCrypto)))
+    IncrementalRewardsDistribution EpochNo (Map StakeCredential (Set Reward))
   | -- | Reward distribution has completed.
-    RewardsDistribution EpochNo (Map StakeCredential (Set (Reward StandardCrypto)))
+    RewardsDistribution EpochNo (Map StakeCredential (Set Reward))
   | -- | MIR are being distributed.
     MIRDistribution MIRDistributionDetails
   | -- | Pools have been reaped and deposits refunded.
     PoolReap PoolReapDetails
   | -- | A number of succeeded Plutus script evaluations.
-    SuccessfulPlutusScript (NonEmpty (PlutusWithContext StandardCrypto))
+    SuccessfulPlutusScript (NonEmpty PlutusWithContext)
   | -- | A number of failed Plutus script evaluations.
-    FailedPlutusScript (NonEmpty (PlutusWithContext StandardCrypto))
+    FailedPlutusScript (NonEmpty PlutusWithContext)
   | -- Only events available on the Conway Era.
     -- TODO: Update the above constructors to work in the conway era.
     -- See toLedgerEventConway
 
     -- | Newly submittted governance proposals in a single transaction.
-    NewGovernanceProposals (Ledger.TxId StandardCrypto) AnyProposals
+    NewGovernanceProposals Ledger.TxId AnyProposals
   | -- | Governance votes that were invalidated.
     RemovedGovernanceVotes
-      (Ledger.TxId StandardCrypto)
-      (Set (Ledger.Voter StandardCrypto, Ledger.GovActionId StandardCrypto))
+      Ledger.TxId
+      (Set (Ledger.Voter, Ledger.GovActionId))
       -- ^ Votes that were replaced in this tx.
-      (Set (Ledger.Credential 'Ledger.DRepRole StandardCrypto))
+      (Set (Ledger.Credential 'Ledger.DRepRole))
       -- ^ Any votes from these DReps in this or in previous txs are removed
   | -- | The current state of governance matters at the epoch boundary.
     -- I.E the current constitution, committee, protocol parameters, etc.
@@ -110,8 +109,8 @@ data PoolReapDetails = PoolReapDetails
 
 convertRetiredPoolsMap
   :: Map
-       (Ledger.StakeCredential StandardCrypto)
-       (Map (Ledger.KeyHash Ledger.StakePool StandardCrypto) Ledger.Coin)
+       Ledger.StakeCredential
+       (Map (Ledger.KeyHash Ledger.StakePool) Ledger.Coin)
   -> Map StakeCredential (Map (Hash StakePoolKey) L.Coin)
 convertRetiredPoolsMap =
   Map.mapKeys fromShelleyStakeCredential

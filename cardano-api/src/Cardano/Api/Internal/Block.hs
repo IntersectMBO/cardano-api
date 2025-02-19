@@ -63,9 +63,9 @@ import Cardano.Api.Internal.Tx.Sign
 
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Crypto.Hashing qualified
-import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
+import Cardano.Protocol.Crypto qualified as L
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
 import Ouroboros.Consensus.Block qualified as Consensus

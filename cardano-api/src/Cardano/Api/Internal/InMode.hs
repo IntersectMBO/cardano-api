@@ -35,7 +35,7 @@ import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.Utils (textShow)
 
-import Cardano.Ledger.Api qualified as L
+import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
@@ -77,7 +77,7 @@ deriving instance Show TxInMode
 
 fromConsensusGenTx
   :: ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => Consensus.GenTx block
   -> TxInMode
 fromConsensusGenTx = \case
@@ -104,7 +104,7 @@ fromConsensusGenTx = \case
 
 toConsensusGenTx
   :: ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => TxInMode
   -> Consensus.GenTx block
 toConsensusGenTx (TxInByronSpecial gtx) =
@@ -153,7 +153,7 @@ data TxIdInMode where
 
 toConsensusTxId
   :: ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => TxIdInMode
   -> Consensus.TxId (Consensus.GenTx block)
 toConsensusTxId (TxIdInMode ByronEra txid) =
@@ -283,7 +283,7 @@ instance ToJSON TxValidationErrorInCardanoMode where
 
 fromConsensusApplyTxErr
   :: ()
-  => Consensus.CardanoBlock L.StandardCrypto ~ block
+  => Consensus.CardanoBlock StandardCrypto ~ block
   => Consensus.ApplyTxErr block
   -> TxValidationErrorInCardanoMode
 fromConsensusApplyTxErr = \case

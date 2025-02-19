@@ -463,10 +463,10 @@ inAnyCardanoEra era a =
 -- ledger library which allows writing conversion functions in a more generic
 -- way.
 type family CardanoLedgerEra era = ledgerera | ledgerera -> era where
-  CardanoLedgerEra ByronEra = L.ByronEra L.StandardCrypto
-  CardanoLedgerEra ShelleyEra = L.ShelleyEra L.StandardCrypto
-  CardanoLedgerEra AllegraEra = L.AllegraEra L.StandardCrypto
-  CardanoLedgerEra MaryEra = L.MaryEra L.StandardCrypto
-  CardanoLedgerEra AlonzoEra = L.AlonzoEra L.StandardCrypto
-  CardanoLedgerEra BabbageEra = L.BabbageEra L.StandardCrypto
-  CardanoLedgerEra ConwayEra = L.ConwayEra L.StandardCrypto
+  CardanoLedgerEra ByronEra = L.ByronEra
+  CardanoLedgerEra ShelleyEra = L.ShelleyEra
+  CardanoLedgerEra AllegraEra = L.AllegraEra
+  CardanoLedgerEra MaryEra = L.MaryEra
+  CardanoLedgerEra AlonzoEra = L.AlonzoEra
+  CardanoLedgerEra BabbageEra = L.BabbageEra
+  CardanoLedgerEra ConwayEra = L.ConwayEra

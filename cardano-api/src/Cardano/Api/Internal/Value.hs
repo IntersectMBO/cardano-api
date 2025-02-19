@@ -79,7 +79,6 @@ import Cardano.Api.Ledger.Lens qualified as A
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Mary.Value qualified as L
@@ -286,7 +285,7 @@ valueToLovelace v =
     [(AdaAssetId, q)] -> Just (quantityToLovelace q)
     _ -> Nothing
 
-toMaryValue :: Value -> MaryValue StandardCrypto
+toMaryValue :: Value -> MaryValue
 toMaryValue v =
   Mary.valueFromList (L.Coin lovelace) other
  where
@@ -296,7 +295,7 @@ toMaryValue v =
     | (AssetId pid name, Quantity q) <- valueToList v
     ]
 
-  toMaryPolicyID :: PolicyId -> Mary.PolicyID StandardCrypto
+  toMaryPolicyID :: PolicyId -> Mary.PolicyID
   toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
 
   toMaryAssetName :: AssetName -> Mary.AssetName
@@ -312,21 +311,21 @@ fromLedgerValue sbe v =
     (const (fromMaryValue v))
     sbe
 
-fromMaryValue :: MaryValue StandardCrypto -> Value
+fromMaryValue :: MaryValue -> Value
 fromMaryValue (MaryValue (L.Coin lovelace) multiAsset) =
   Value
     -- TODO: write QC tests to show it's ok to use Map.fromAscList here
     (fromList [(AdaAssetId, Quantity lovelace) | lovelace /= 0])
     <> fromMultiAsset multiAsset
 
-fromMultiAsset :: L.MultiAsset StandardCrypto -> Value
+fromMultiAsset :: L.MultiAsset -> Value
 fromMultiAsset multiAsset =
   fromList
     [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
     | (pid, name, q) <- Mary.flattenMultiAsset multiAsset
     ]
 
-fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
+fromMaryPolicyID :: Mary.PolicyID -> PolicyId
 fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
 
 fromMaryAssetName :: Mary.AssetName -> AssetName
@@ -380,7 +379,7 @@ valueToPolicyAssets v =
 
 -- | Convert cardano-ledger's 'L.MultiAsset' to a map of 'PolicyAssets'
 multiAssetToPolicyAssets
-  :: L.MultiAsset StandardCrypto
+  :: L.MultiAsset
   -> Map PolicyId PolicyAssets
 multiAssetToPolicyAssets (L.MultiAsset mAssets) =
   fromList
@@ -499,8 +498,8 @@ renderAssetId (AssetId polId (AssetName "")) = renderPolicyId polId
 renderAssetId (AssetId polId assetName) =
   renderPolicyId polId <> "." <> serialiseToRawBytesHexText assetName
 
-renderMultiAsset :: L.MultiAsset StandardCrypto -> Text
+renderMultiAsset :: L.MultiAsset -> Text
 renderMultiAsset = renderValue . fromMultiAsset
 
-renderMultiAssetPretty :: L.MultiAsset StandardCrypto -> Text
+renderMultiAssetPretty :: L.MultiAsset -> Text
 renderMultiAssetPretty = renderValuePretty . fromMultiAsset
