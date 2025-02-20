@@ -360,6 +360,7 @@ deserialiseAnyVerificationKeyTextEnvelope bs =
     , FromSomeType (AsVerificationKey AsCommitteeHotExtendedKey) ACommitteeHotExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentKey) APaymentVerificationKey
     , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsStakeKey) AStakeVerificationKey
     , FromSomeType (AsVerificationKey AsStakeExtendedKey) AStakeExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsGenesisUTxOKey) AGenesisUTxOVerificationKey
     , FromSomeType (AsVerificationKey AsGenesisExtendedKey) AGenesisExtendedVerificationKey
