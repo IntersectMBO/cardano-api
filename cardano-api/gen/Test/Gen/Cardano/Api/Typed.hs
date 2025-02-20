@@ -241,7 +241,7 @@ genSimpleScript :: Gen SimpleScript
 genSimpleScript = genRandomSimpleScript True
 
 genRandomSimpleScript :: Bool -> Gen SimpleScript
-genRandomSimpleScript hasEmptyAnys=
+genRandomSimpleScript hasEmptyAnys =
   genTerm
  where
   genTerm = Gen.recursive Gen.choice nonRecursive recursive
