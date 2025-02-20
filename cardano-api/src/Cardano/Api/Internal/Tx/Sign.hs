@@ -16,34 +16,34 @@
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
 
--- | Complete, signed transactions
+-- | Creating complete, signed transactions.
 module Cardano.Api.Internal.Tx.Sign
   ( -- * Example: Creating a 'ShelleyWitnessSigningKey'
 
     -- |
-    -- To sign a transaction, we need a witness. For example, a 'ShelleyWitnessSigningKey'.
+    -- Signing a transaction requires a witness -- for example, a 'ShelleyWitnessSigningKey'.
     --
-    -- In this example, we are using the following qualified module:
+    -- This example uses the following qualified module:
     --
     -- @
     -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
     -- @
     --
-    -- There are several ways of doing this, and several ways of representing a signing key. But let us assume
-    -- we have the bech32 representation of the signing key. In that case we can use the 'deserialiseFromBech32' function
-    -- as follows:
+    -- There are several ways of signing a transaction and representing a signing key. If the
+    -- bech32 representation of the signing key is available, it is possible to use the
+    -- 'deserialiseFromBech32' function as follows:
     --
     -- @
     -- let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
     -- @
     --
-    -- Then we simply wrap the signing key in a 'ShelleyWitnessSigningKey' value:
+    -- Then, simply wrap the signing key in a 'ShelleyWitnessSigningKey' value:
     --
     -- @
     -- let witness = Api.WitnessPaymentKey signingKey
     -- @
     --
-    -- We could do it analogously if we wanted to use an extended key, for example, using 'AsPaymentExtendedKey' and 'WitnessPaymentExtendedKey'.
+    -- This could also be done using an extended key, such as 'AsPaymentExtendedKey' and 'WitnessPaymentExtendedKey'.
 
     -- * Contents
 
