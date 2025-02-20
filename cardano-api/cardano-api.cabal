@@ -75,6 +75,7 @@ library
     Cardano.Api.Internal.Eras
     Cardano.Api.Internal.Error
     Cardano.Api.Internal.Experimental.Tx
+    Cardano.Api.Internal.Experimental.Eras
     Cardano.Api.Internal.Fees
     Cardano.Api.Internal.Genesis
     Cardano.Api.Internal.GenesisParameters
@@ -194,7 +195,6 @@ library
     Cardano.Api.Internal.Eon.ShelleyToMaryEra
     Cardano.Api.Internal.Eras.Case
     Cardano.Api.Internal.Eras.Core
-    Cardano.Api.Internal.Experimental.Eras
     Cardano.Api.Internal.Feature
     Cardano.Api.Internal.Governance.Actions.ProposalProcedure
     Cardano.Api.Internal.Governance.Actions.VotingProcedure
