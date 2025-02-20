@@ -249,7 +249,7 @@ instance IsEra BabbageEra where
 instance IsEra ConwayEra where
   useEra = ConwayEra
 
--- | A temporary compatibility instance, for easier conversion between the experimental and old API.
+-- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
 instance Eon Era where
   inEonForEra v f = \case
     Api.ConwayEra -> f ConwayEra

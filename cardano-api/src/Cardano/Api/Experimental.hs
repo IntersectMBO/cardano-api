@@ -1,12 +1,12 @@
 -- |
--- This module provides an experimental library interface intended to replacethe existing API.
+-- This module provides an experimental library interface intended to replace the existing API.
 -- It is subject to significant changes. Please, use it with caution.
 module Cardano.Api.Experimental
   ( -- * Creating transactions
 
     -- |
     -- For details and an example of creating a transaction using the experimental API,
-    -- see the module "Cardano.Api.Internal.Experimental.Tx" documentation.
+    -- see the "Cardano.Api.Internal.Experimental.Tx" documentation.
 
     -- * Contents
 

@@ -27,7 +27,7 @@ module Cardano.Api.Internal.Experimental.Tx
     -- To learn how to create a transaction using the old API, see the
     -- "Cardano.Api.Internal.Tx.Body" documentation.
     --
-    -- In the following examples, the following qualified modules are used:
+    -- In the examples below, the following qualified modules are used:
     --
     -- @
     -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
@@ -50,7 +50,7 @@ module Cardano.Api.Internal.Experimental.Tx
 
     -- |
     -- If a UTXO has exactly 12 ada, the transaction could be constructed as described in
-    -- "Cardano.Api.Internal.Tx.Body", and it would be a valid. However:
+    -- "Cardano.Api.Internal.Tx.Body", and it would be valid. However:
     --
     --   * Ada may be wasted
     --   * The UTXO that we intend to spend may not contain exactly 12 ada
@@ -98,7 +98,7 @@ module Cardano.Api.Internal.Experimental.Tx
     -- ** Converting a transaction from the new API to the old API
 
     -- |
-    -- A transaction created with the new API can beeasily converted to the old API by
+    -- A transaction created with the new API can be easily converted to the old API by
     -- wrapping it with the 'ShelleyTx' constructor:
     --
     -- @

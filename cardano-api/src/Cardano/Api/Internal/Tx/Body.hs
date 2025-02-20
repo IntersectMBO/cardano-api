@@ -24,7 +24,7 @@ module Cardano.Api.Internal.Tx.Body
     -- Both the old and new APIs support transaction creation. Transactions can be
     -- converted between formats, as they share the same underlying representation.
     -- @cardano-api@ will be moving towards using the new API and deprecating
-    -- the old way to ensure simpliciy, closer alignment with the ledger, and
+    -- the old way to ensure simplicity, closer alignment with the ledger, and
     -- easier maintenance.
     --
     -- In both the new and old APIs, to construct a transaction, you need
@@ -56,7 +56,7 @@ module Cardano.Api.Internal.Tx.Body
     -- so as not to have to set all fields manually.
     --
     -- The 'defaultTxBodyContent' takes, as the only parameter, the 'ShelleyBasedEra' witness for the era
-    -- we you are working with. For example, if you are working with the 'ConwayEra', use 'shelleyBasedEra'
+    -- you are working with. For example, if you are working with the 'ConwayEra', use 'shelleyBasedEra'
     -- available in "Cardano.Api", as follows:
     --
     -- @
@@ -110,7 +110,7 @@ module Cardano.Api.Internal.Tx.Body
     --               Script.ReferenceScriptNone
     -- @
     --
-    -- Note to se the transaction fee. For example, set it to 2 ada:
+    -- Note to set the transaction fee. For example, set it to 2 ada:
     --
     -- @
     -- let txFee = Api.TxFeeExplicit sbe 2_000_000
@@ -146,7 +146,7 @@ module Cardano.Api.Internal.Tx.Body
     -- ** Creating a 'ShelleyWitnessSigningKey'
 
     -- |
-    -- Signing a transaction requires a witness -- for example, a 'ShelleyWitnessSigningKey'.
+    -- Signing a transaction requires a witness, for example, a 'ShelleyWitnessSigningKey'.
     --
     -- Learn how to create a 'ShelleyWitnessSigningKey' in the "Cardano.Api.Internal.Tx.Sign" documentation.
 

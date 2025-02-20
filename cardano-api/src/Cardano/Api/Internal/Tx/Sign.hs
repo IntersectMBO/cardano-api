@@ -21,7 +21,7 @@ module Cardano.Api.Internal.Tx.Sign
   ( -- * Example: Creating a 'ShelleyWitnessSigningKey'
 
     -- |
-    -- Signing a transaction requires a witness -- for example, a 'ShelleyWitnessSigningKey'.
+    -- Signing a transaction requires a witness, for example, a 'ShelleyWitnessSigningKey'.
     --
     -- This example uses the following qualified module:
     --

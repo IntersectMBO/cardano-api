@@ -34,7 +34,7 @@ module Cardano.Api.Internal.Fees
     -- In this equation, the inputs would include the minted tokens, and the outputs would include the
     -- burned tokens.
     --
-    -- However, we don't always want to spend all the ada from a UTxO. Balancing a transaction ensures
+    -- However, we don't always want to spend all the ada from a UTXO. Balancing a transaction ensures
     -- that we send the desired amount, pay only the necessary fees, and calculate any extra currency
     -- to be sent back to a change address.
     --
@@ -102,7 +102,7 @@ module Cardano.Api.Internal.Fees
     -- * 1 input of 12 ada (from the UTXO)
     -- * 1 output of 10 ada (to the recipient address)
     -- * 1 output of 1.8 ada (to the change address)
-    -- * 0.2 ada in fees (calculated fees, in this case, an overestimation)
+    -- * 0.2 ada in fees (calculated fees, in this case, an overestimation).
     --
     -- We would then have to update the 'TxBodyContent' accordingly and continue building
     -- the transaction as demonstrated in "Cardano.Api.Internal.Experimental.Tx".
@@ -159,7 +159,7 @@ module Cardano.Api.Internal.Fees
     --              "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
     -- @
     --
-    -- Alternatively, we can get it from our signing key
+    -- Alternatively, we can get it from our signing key:
     --
     -- @
     -- let exampleChangeAddress =
@@ -173,7 +173,7 @@ module Cardano.Api.Internal.Fees
     --           Api.NoStakeAddress                    -- Potentially, the stake credential if we want to use one
     -- @
     --
-    -- 7. Finally, we need the total amount of ada (and other tokens) in the UTxOs being spent. In this example,
+    -- 7. Finally, we need the total amount of ada (and other tokens) in the UTXOs being spent. In this example,
     -- the transaction spends 12 ada:
     --
     -- @
@@ -217,7 +217,7 @@ module Cardano.Api.Internal.Fees
     --
     -- The following details are required:
     --
-    -- 1. Shelley-based era witness for thecurrent era, retrievable using 'shelleyBasedEra'.
+    -- 1. Shelley-based era witness for the current era, retrievable using 'shelleyBasedEra'.
     --
     -- @
     -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
