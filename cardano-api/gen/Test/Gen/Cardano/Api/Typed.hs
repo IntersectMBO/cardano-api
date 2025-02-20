@@ -240,6 +240,15 @@ genSimpleScriptWithoutEmptyAnys = genRandomSimpleScript False
 genSimpleScript :: Gen SimpleScript
 genSimpleScript = genRandomSimpleScript True
 
+-- | We include a @hasEmptyAnys@ parameter to control whether we allow empty
+-- 'RequireAnyOf' constructors. This is because an empty 'RequireAnyOf',
+-- same as a 'RequireMOf' with less than M elements, is not satisfiable.
+-- In the function @satisfyScript@ in the "Test.Cardano.Api.TxBody" module,
+-- we look for a set of witnesses that satisfy a script, and we can't do it
+-- if the script consists of an empty 'RequireAnyOf' constructor.
+-- Note that this is not the only way to make an unsatisfiable script,
+-- but this is the one that affects the @satisfyScript@ function, because
+-- it is only concerned with the witnesses, and not with the times.
 genRandomSimpleScript :: Bool -> Gen SimpleScript
 genRandomSimpleScript hasEmptyAnys =
   genTerm
