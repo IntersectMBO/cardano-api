@@ -133,6 +133,10 @@ prop_simple_script_witness_count = H.property $ do
         <$> genTxIn
   witList <- H.forAll $ satisfyScript script
   let witCount = fromIntegral $ Set.size witList
+  -- We use the inequality @<=@ instead of @==@ because 'estimateTransactionKeyWitnessCount'
+  -- calculates an upper bound on the number of key witnesses required to validate a transaction,
+  -- and the @witList@ contains a random subset that can potentially be used to satisfy the script.
+  -- So we only know it must be smaller or equal to the upper bound.
   H.diff
     (estimateTransactionKeyWitnessCount contentWithoutScript + witCount)
     (<=)
