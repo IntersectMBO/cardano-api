@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -13,8 +12,6 @@
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-
-{- HLINT ignore "Avoid lambda using `infix`" -}
 
 -- | Complete, signed transactions
 module Cardano.Api.Internal.Tx.Sign
@@ -43,8 +40,10 @@ module Cardano.Api.Internal.Tx.Sign
   , makeByronKeyWitness
   , ShelleyWitnessSigningKey (..)
   , makeShelleyKeyWitness
+  , makeShelleyKeyWitness'
   , WitnessNetworkIdOrByronAddress (..)
   , makeShelleyBootstrapWitness
+  , makeShelleyBasedBootstrapWitness
   , makeShelleySignature
   , getShelleyKeyWitnessVerificationKey
   , getTxBodyAndWitnesses
@@ -126,6 +125,12 @@ data Tx era where
     :: ShelleyBasedEra era
     -> L.Tx (ShelleyLedgerEra era)
     -> Tx era
+
+-- | This pattern will be deprecated in the future. We advise against introducing new usage of it.
+pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
+pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
+  where
+    Tx txbody ws = makeSignedTransaction ws txbody
 
 instance Show (InAnyCardanoEra Tx) where
   show (InAnyCardanoEra _ tx) = show tx
@@ -749,12 +754,6 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
 getTxBodyAndWitnesses :: Tx era -> (TxBody era, [KeyWitness era])
 getTxBodyAndWitnesses tx = (getTxBody tx, getTxWitnesses tx)
 
--- | This pattern will be deprecated in the future. We advise against introducing new usage of it.
-pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
-pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
-  where
-    Tx txbody ws = makeSignedTransaction ws txbody
-
 {-# COMPLETE Tx #-}
 
 data ShelleyWitnessSigningKey
@@ -1106,19 +1105,27 @@ makeShelleyKeyWitness
   -> TxBody era
   -> ShelleyWitnessSigningKey
   -> KeyWitness era
-makeShelleyKeyWitness sbe = \case
-  ShelleyTxBody _ txbody _ _ _ _ ->
-    shelleyBasedEraConstraints sbe $
-      let txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
-          txhash = Ledger.extractHash @StandardCrypto (Ledger.hashAnnotated txbody)
-       in -- To allow sharing of the txhash computation across many signatures we
-          -- define and share the txhash outside the lambda for the signing key:
-          \wsk ->
-            let sk = toShelleySigningKey wsk
-                vk = getShelleyKeyWitnessVerificationKey sk
-                signature = makeShelleySignature txhash sk
-             in ShelleyKeyWitness sbe $
-                  L.WitVKey vk signature
+makeShelleyKeyWitness sbe (ShelleyTxBody _ txBody _ _ _ _) =
+  makeShelleyKeyWitness' sbe txBody
+
+makeShelleyKeyWitness'
+  :: forall era
+   . ()
+  => ShelleyBasedEra era
+  -> L.TxBody (ShelleyLedgerEra era)
+  -> ShelleyWitnessSigningKey
+  -> KeyWitness era
+makeShelleyKeyWitness' sbe txBody wsk =
+  shelleyBasedEraConstraints sbe $ do
+    let txhash :: Shelley.Hash StandardCrypto Ledger.EraIndependentTxBody
+        txhash = Ledger.extractHash @StandardCrypto (Ledger.hashAnnotated txBody)
+        -- To allow sharing of the txhash computation across many signatures we
+        -- define and share the txhash outside the lambda for the signing key:
+        sk = toShelleySigningKey wsk
+        vk = getShelleyKeyWitnessVerificationKey sk
+        signature = makeShelleySignature txhash sk
+    ShelleyKeyWitness sbe $
+      L.WitVKey vk signature
 
 toShelleySigningKey :: ShelleyWitnessSigningKey -> ShelleySigningKey
 toShelleySigningKey key = case key of
