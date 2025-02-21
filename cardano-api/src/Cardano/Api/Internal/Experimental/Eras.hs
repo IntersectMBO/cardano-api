@@ -83,8 +83,8 @@ data Some (f :: k -> Type) where
     => f a
     -> Some f
 
--- | Represents Cardano blockchain eras, including those currently on mainnet
--- and new eras in development.
+-- | Represents the latest Cardano blockchain eras, including
+-- the one currently on mainnet and the upcoming one.
 --
 -- After a hard fork, the era is deprecated and removed
 -- after a deprecation period. During this period,
