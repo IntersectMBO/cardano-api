@@ -61,14 +61,16 @@ import GHC.Exts (IsString)
 import Prettyprinter
 
 -- | Users typically interact with the latest features on the mainnet or experiment with features
--- from the upcoming era. Hence, the protocol versions are limited to the current mainnet era
--- and the next era (upcoming era).
+-- from the upcoming era. Therefore, protocol versions are limited to the current mainnet era
+-- and the next (upcoming) era.
 type family LedgerEra era = (r :: Type) | r -> era where
   LedgerEra BabbageEra = Ledger.Babbage
   LedgerEra ConwayEra = Ledger.Conway
 
--- | An existential wrapper for types of kind @k -> Types@. Use it to hold any era e.g. @Some Era@. One can
--- then bring the era witness back into scope for example using this pattern:
+-- | An existential wrapper for types of kind @k -> Type@. It can hold any
+-- era, for example, @Some Era@. The era witness can be brought back into scope,
+-- for example, using this pattern:
+--
 -- @
 -- anyEra = Some ConwayEra
 -- -- then later in the code
@@ -82,15 +84,15 @@ data Some (f :: k -> Type) where
     => f a
     -> Some f
 
--- | Represents the eras in Cardano's blockchain.
--- This type represents eras currently on mainnet and new eras which are
--- in development.
+-- | Represents the latest Cardano blockchain eras, including
+-- the one currently on mainnet and the upcoming one.
 --
--- After a hardfork, the era from which we hardfork from gets deprecated and
--- after deprecation period, gets removed. During deprecation period,
--- consumers of cardano-api should update their codebase to the mainnet era.
+-- After a hard fork takes place, the era on mainnet before the hard fork
+-- is deprecated and, after a deprecation period, removed from @cardano-api@.
+-- During the deprecation period, @cardano-api@ users should update their
+-- codebase to the new mainnet era.
 data Era era where
-  -- | The era currently active on Cardano's mainnet.
+  -- | The currently active era on the Cardano mainnet.
   BabbageEra :: Era BabbageEra
   -- | The upcoming era in development.
   ConwayEra :: Era ConwayEra
@@ -159,15 +161,16 @@ eraFromStringLike = \case
   "Conway" -> pure $ Some ConwayEra
   wrong -> Left wrong
 
--- | How to deprecate an era
+-- | How to deprecate an era:
 --
---   1. Add DEPRECATED pragma to the era type tag and the era constructor at the same time:
+--   1. Add the DEPRECATED pragma to the era type tag and constructor at the same time:
+--
 -- @
 -- {-# DEPRECATED BabbageEra "BabbageEra no longer supported, use ConwayEra" #-}
 -- data BabbageEra
 -- @
 --
---   2. Update haddock for the constructor of the deprecated era, mentioning deprecation.
+--   2. Update the Haddock documentation for the constructor of the deprecated era, mentioning the deprecation.
 --
 -- @
 -- data Era era where
@@ -177,7 +180,9 @@ eraFromStringLike = \case
 --   ConwayEra :: Era ConwayEra
 -- @
 --
---   3. Add new 'IsEra' instance and update the deprecated era instance to produce a compile-time error:
+--   3. Add a new 'IsEra' instance and update the deprecated era instance to
+--   produce a compile-time error:
+--
 -- @
 -- instance TypeError ('Text "IsEra BabbageEra: Deprecated. Update to ConwayEra") => IsEra BabbageEra where
 --   useEra = error "unreachable"
@@ -248,7 +253,7 @@ instance IsEra BabbageEra where
 instance IsEra ConwayEra where
   useEra = ConwayEra
 
--- | A temporary compatibility instance, for easier conversion between experimental and old API.
+-- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
 instance Eon Era where
   inEonForEra v f = \case
     Api.ConwayEra -> f ConwayEra

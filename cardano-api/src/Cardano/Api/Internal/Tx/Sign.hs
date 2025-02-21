@@ -13,9 +13,38 @@
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
--- | Complete, signed transactions
+-- | Creating complete, signed transactions.
 module Cardano.Api.Internal.Tx.Sign
-  ( -- * Signing transactions
+  ( -- * Example: Creating a 'ShelleyWitnessSigningKey'
+
+    -- |
+    -- Signing a transaction requires a witness, for example, a 'ShelleyWitnessSigningKey'.
+    --
+    -- This example uses the following qualified module:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
+    -- @
+    --
+    -- There are several ways of signing a transaction and representing a signing key. If the
+    -- bech32 representation of the signing key is available, it is possible to use the
+    -- 'deserialiseFromBech32' function as follows:
+    --
+    -- @
+    -- let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"
+    -- @
+    --
+    -- Then, simply wrap the signing key in a 'ShelleyWitnessSigningKey' value:
+    --
+    -- @
+    -- let witness = Api.WitnessPaymentKey signingKey
+    -- @
+    --
+    -- This could also be done using an extended key, such as 'AsPaymentExtendedKey' and 'WitnessPaymentExtendedKey'.
+
+    -- * Contents
+
+    -- ** Signing transactions
 
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx (.., Tx)
@@ -26,13 +55,13 @@ module Cardano.Api.Internal.Tx.Sign
   , getTxWitnessesByron
   , ScriptValidity (..)
 
-    -- ** Signing in one go
+    -- *** Signing in one go
   , ShelleySigningKey (..)
   , toShelleySigningKey
   , signByronTransaction
   , signShelleyTransaction
 
-    -- ** Incremental signing and separate witnesses
+    -- *** Incremental signing and separate witnesses
   , makeSignedByronTransaction
   , makeSignedTransaction
   , makeSignedTransaction'
@@ -48,7 +77,7 @@ module Cardano.Api.Internal.Tx.Sign
   , getShelleyKeyWitnessVerificationKey
   , getTxBodyAndWitnesses
 
-    -- * Data family instances
+    -- ** Data family instances
   , AsType
     ( AsTx
     , AsMaryTx
