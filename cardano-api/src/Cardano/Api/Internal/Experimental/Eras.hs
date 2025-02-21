@@ -67,7 +67,7 @@ type family LedgerEra era = (r :: Type) | r -> era where
   LedgerEra BabbageEra = Ledger.Babbage
   LedgerEra ConwayEra = Ledger.Conway
 
--- | An existential wrapper for types of kind @k -> Types@. It can hold any
+-- | An existential wrapper for types of kind @k -> Type@. It can hold any
 -- era, for example, @Some Era@. The era witness can be brought back into scope,
 -- for example, using this pattern:
 -- @
