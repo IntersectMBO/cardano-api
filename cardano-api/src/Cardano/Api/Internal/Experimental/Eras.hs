@@ -86,9 +86,10 @@ data Some (f :: k -> Type) where
 -- | Represents the latest Cardano blockchain eras, including
 -- the one currently on mainnet and the upcoming one.
 --
--- After a hard fork, the era is deprecated and removed
--- after a deprecation period. During this period,
--- @cardano-api@ users should update their codebase to the mainnet era.
+-- After a hard fork takes place, the era on mainnet before the hard fork
+-- is deprecated and, after a deprecation period, removed from @cardano-api@.
+-- During the deprecation period, @cardano-api@ users should update their
+-- codebase to the new mainnet era.
 data Era era where
   -- | The currently active era on the Cardano mainnet.
   BabbageEra :: Era BabbageEra
