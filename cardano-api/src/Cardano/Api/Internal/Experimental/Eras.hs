@@ -70,6 +70,7 @@ type family LedgerEra era = (r :: Type) | r -> era where
 -- | An existential wrapper for types of kind @k -> Type@. It can hold any
 -- era, for example, @Some Era@. The era witness can be brought back into scope,
 -- for example, using this pattern:
+--
 -- @
 -- anyEra = Some ConwayEra
 -- -- then later in the code
@@ -163,6 +164,7 @@ eraFromStringLike = \case
 -- | How to deprecate an era:
 --
 --   1. Add the DEPRECATED pragma to the era type tag and constructor at the same time:
+--
 -- @
 -- {-# DEPRECATED BabbageEra "BabbageEra no longer supported, use ConwayEra" #-}
 -- data BabbageEra
@@ -180,6 +182,7 @@ eraFromStringLike = \case
 --
 --   3. Add a new 'IsEra' instance and update the deprecated era instance to
 --   produce a compile-time error:
+--
 -- @
 -- instance TypeError ('Text "IsEra BabbageEra: Deprecated. Update to ConwayEra") => IsEra BabbageEra where
 --   useEra = error "unreachable"
