@@ -86,14 +86,20 @@ import Cardano.Ledger.Val qualified as L
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
 
 import Control.Monad
-import Data.Bifunctor (bimap, first, second)
+import Data.Bifunctor
+  ( bimap
+  , first
+  , second
+  )
 import Data.ByteString.Short (ShortByteString)
 import Data.Function ((&))
+import Data.List (sortBy)
 import Data.List qualified as List
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.OSet.Strict qualified as OSet
+import Data.Ord (Down (Down), comparing)
 import Data.Ratio
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -464,7 +470,7 @@ estimateTransactionKeyWitnessCount
     , txUpdateProposal
     } =
     fromIntegral $
-      length [() | (_txin, BuildTxWith KeyWitness{}) <- txIns]
+      sum (map estimateTxInWitnesses txIns)
         + case txInsCollateral of
           TxInsCollateral _ txins ->
             length txins
@@ -486,6 +492,27 @@ estimateTransactionKeyWitnessCount
           TxUpdateProposal _ (UpdateProposal updatePerGenesisKey _) ->
             Map.size updatePerGenesisKey
           _ -> 0
+   where
+    estimateTxInWitnesses :: (TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era)) -> Int
+    estimateTxInWitnesses (_, BuildTxWith (KeyWitness _)) = 1
+    estimateTxInWitnesses (_, BuildTxWith (ScriptWitness _ (SimpleScriptWitness _ (SScript simpleScript)))) = maxWitnessesInSimpleScript simpleScript
+    estimateTxInWitnesses (_, BuildTxWith (ScriptWitness _ (SimpleScriptWitness _ (SReferenceScript _)))) = 0
+    estimateTxInWitnesses (_, BuildTxWith (ScriptWitness _ (PlutusScriptWitness{}))) = 0
+
+    -- This is a rough conservative estimate of the maximum number of witnesses
+    -- needed for a simple script to be satisfied. It is conservative because it
+    -- assumes that each key hash only appears once, and it assumes the worst
+    -- scenario. A more accurate estimate for the maximum could be computed by
+    -- keeping track of the possible combinations of key hashes that have
+    -- potentially already been counted, but that would increase complexity a lot,
+    -- and it would still be a conservative estimate.
+    maxWitnessesInSimpleScript :: SimpleScript -> Int
+    maxWitnessesInSimpleScript (RequireSignature _) = 1
+    maxWitnessesInSimpleScript (RequireTimeBefore _) = 0
+    maxWitnessesInSimpleScript (RequireTimeAfter _) = 0
+    maxWitnessesInSimpleScript (RequireAllOf simpleScripts) = sum $ map maxWitnessesInSimpleScript simpleScripts
+    maxWitnessesInSimpleScript (RequireAnyOf simpleScripts) = maximum $ map maxWitnessesInSimpleScript simpleScripts
+    maxWitnessesInSimpleScript (RequireMOf n simpleScripts) = sum $ take n $ sortBy (comparing Down) (map maxWitnessesInSimpleScript simpleScripts)
 
 -- ----------------------------------------------------------------------------
 -- Script execution units
@@ -841,6 +868,7 @@ data TxBodyErrorAutoBalance era
     -- input ada.
     TxBodyErrorAdaBalanceTooSmall
       -- \^ Offending TxOut
+
       TxOutInAnyEra
       -- ^ Minimum UTxO
       L.Coin
@@ -857,6 +885,7 @@ data TxBodyErrorAutoBalance era
   | -- | The minimum spendable UTxO threshold has not been met.
     TxBodyErrorMinUTxONotMet
       -- \^ Offending TxOut
+
       TxOutInAnyEra
       -- ^ Minimum UTxO
       L.Coin

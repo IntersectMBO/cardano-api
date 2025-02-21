@@ -132,6 +132,7 @@ module Test.Gen.Cardano.Api.Typed
   , genProposals
   , genProposal
   , genVotingProcedures
+  , genSimpleScriptWithoutEmptyAnys
   )
 where
 
@@ -233,8 +234,23 @@ genScript SimpleScriptLanguage =
 genScript (PlutusScriptLanguage lang) =
   PlutusScript lang <$> genPlutusScript lang
 
+genSimpleScriptWithoutEmptyAnys :: Gen SimpleScript
+genSimpleScriptWithoutEmptyAnys = genRandomSimpleScript False
+
 genSimpleScript :: Gen SimpleScript
-genSimpleScript =
+genSimpleScript = genRandomSimpleScript True
+
+-- | We include a @hasEmptyAnys@ parameter to control whether we allow empty
+-- 'RequireAnyOf' constructors. This is because an empty 'RequireAnyOf',
+-- same as a 'RequireMOf' with less than M elements, is not satisfiable.
+-- In the function @satisfyScript@ in the "Test.Cardano.Api.TxBody" module,
+-- we look for a set of witnesses that satisfy a script, and we can't do it
+-- if the script consists of an empty 'RequireAnyOf' constructor.
+-- Note that this is not the only way to make an unsatisfiable script,
+-- but this is the one that affects the @satisfyScript@ function, because
+-- it is only concerned with the witnesses, and not with the times.
+genRandomSimpleScript :: Bool -> Gen SimpleScript
+genRandomSimpleScript hasEmptyAnys =
   genTerm
  where
   genTerm = Gen.recursive Gen.choice nonRecursive recursive
@@ -249,7 +265,7 @@ genSimpleScript =
   -- Recursive generators
   recursive =
     [ RequireAllOf <$> Gen.list (Range.linear 0 10) genTerm
-    , RequireAnyOf <$> Gen.list (Range.linear 0 10) genTerm
+    , RequireAnyOf <$> Gen.list (Range.linear (if hasEmptyAnys then 0 else 1) 10) genTerm
     , do
         ts <- Gen.list (Range.linear 0 10) genTerm
         m <- Gen.integral (Range.constant 0 (length ts))
