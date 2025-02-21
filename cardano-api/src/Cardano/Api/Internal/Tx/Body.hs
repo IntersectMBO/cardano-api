@@ -179,7 +179,7 @@ module Cardano.Api.Internal.Tx.Body
     -- or 'createTransactionBody', as in the example.
     --
     -- To extract the 'TxBody' and the 'KeyWitness'es from an old-style 'Tx', use
-    -- the lenses 'getTxBody' and 'getTxWitnesses' respectively, from "Cardano.Api".
+    -- the functions 'getTxBody' and 'getTxWitnesses' respectively, from "Cardano.Api".
 
     -- ** Appendix: Getting Shelley-based era witness from the new API
 
