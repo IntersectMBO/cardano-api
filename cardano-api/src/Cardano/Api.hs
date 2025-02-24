@@ -955,8 +955,6 @@ module Cardano.Api
   , ProtocolParametersConversionError (..)
 
     -- ** Conversions
-  , toLedgerPParams
-  , fromLedgerPParams
   , toCtxUTxOTxOut
   -- TODO: arrange not to export these
   , fromNetworkMagic
