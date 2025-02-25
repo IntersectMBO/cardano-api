@@ -133,7 +133,7 @@ library
     cborg,
     containers,
     contra-tracer,
-    cryptonite,
+    crypton,
     data-default-class,
     deepseq,
     directory,
