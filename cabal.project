@@ -28,7 +28,7 @@ if impl(ghc < 9.8)
 program-options
   ghc-options: -Werror
 
-package cryptonite
+package crypton
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
   flags: -support_rdrand
