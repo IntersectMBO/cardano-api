@@ -31,6 +31,7 @@ import Cardano.Slotting.EpochInfo qualified as CS
 import Cardano.Slotting.Slot qualified as CS
 import Cardano.Slotting.Time qualified as CS
 
+import Data.Aeson (eitherDecodeStrict)
 import Data.ByteString qualified as B
 import Data.Default (def)
 import Data.Function
@@ -358,7 +359,109 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
         H.note_ "Check that collateral balance is equal to collateral in tx body"
         resTotCollValue === collBalance
 
+-- | Regression test for: https://github.com/IntersectMBO/cardano-cli/issues/1073
+prop_ensure_gov_actions_are_preserved_by_autobalance :: Property
+prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      sbe = convert ceo
+
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  pparams <-
+    LedgerProtocolParameters
+      <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  -- One UTXO with 2000 ADA
+  let utxos = mkSimpleUTxOs sbe
+      txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
+  address <- H.forAll (genAddressInEra sbe)
+
+  anchorUrl <- H.evalEither $ eitherDecodeStrict "\"https://tinyurl.com/cardano-qa-anchor\""
+  anchorDataHash <-
+    H.evalEither $
+      eitherDecodeStrict "\"f08cc9640136b1ae47428f646a9b5aadc0045fafb5529ca3ba1723784e6f0750\""
+  let anchor =
+        L.Anchor
+          { L.anchorUrl = anchorUrl
+          , L.anchorDataHash = anchorDataHash
+          }
+      proposalProcedure =
+        L.ProposalProcedure
+          { L.pProcDeposit = 100_000_000
+          , L.pProcReturnAddr =
+              L.RewardAccount
+                { L.raNetwork = L.Testnet
+                , L.raCredential =
+                    L.KeyHashObj (L.KeyHash{L.unKeyHash = "0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"})
+                }
+          , L.pProcGovAction = L.InfoAction
+          , L.pProcAnchor = anchor
+          }
+
+  let content =
+        defaultTxBodyContent sbe
+          & setTxIns txInputs
+          & setTxProtocolParams (pure $ pure pparams)
+          & setTxProposalProcedures
+            ( pure $
+                Featured
+                  ConwayEraOnwardsConway
+                  ( TxProposalProcedures
+                      (fromList [(proposalProcedure, BuildTxWith Nothing)])
+                  )
+            )
+
+  -- Autobalanced body should preserve the governance action
+  (BalancedTxBody _ balancedTxBody _ _) <-
+    H.leftFail $
+      makeTransactionBodyAutoBalance
+        sbe
+        systemStart
+        epochInfo
+        pparams
+        mempty
+        mempty
+        mempty
+        utxos
+        content
+        address
+        Nothing
+
+  let balancedContent = getTxBodyContent balancedTxBody
+  Featured _ (TxProposalProcedures balancedProposalProcedureOMap) <-
+    H.evalMaybe $ txProposalProcedures balancedContent
+  let balancedProposalProcedureList = toList balancedProposalProcedureOMap
+  balancedProposalProcedureList === [(proposalProcedure, ViewTx)]
+
 -- * Utilities
+
+mkSimpleUTxOs :: ShelleyBasedEra ConwayEra -> UTxO ConwayEra
+mkSimpleUTxOs sbe =
+  UTxO
+    [
+      ( TxIn
+          "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
+          (TxIx 0)
+      , TxOut
+          ( AddressInEra
+              (ShelleyAddressInEra sbe)
+              ( ShelleyAddress
+                  L.Testnet
+                  ( L.KeyHashObj $
+                      L.KeyHash "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
+                  )
+                  L.StakeRefNull
+              )
+          )
+          ( lovelaceToTxOutValue
+              sbe
+              2_000_000_000
+          )
+          TxOutDatumNone
+          ReferenceScriptNone
+      )
+    ]
 
 loadPlutusWitness
   :: HasCallStack
@@ -499,4 +602,7 @@ tests =
         "makeTransactionBodyAutoBalance autobalances when deregistering certificates"
         prop_make_transaction_body_autobalance_when_deregistering_certs
     , testProperty "calcReturnAndTotalCollateral constraints hold" prop_calcReturnAndTotalCollateral
+    , testProperty
+        "Governance actions are preserved by autobalance"
+        prop_ensure_gov_actions_are_preserved_by_autobalance
     ]
