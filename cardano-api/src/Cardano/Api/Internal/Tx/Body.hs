@@ -322,6 +322,7 @@ module Cardano.Api.Internal.Tx.Body
   , TxProposalProcedures (..)
   , mkTxProposalProcedures
   , indexTxProposalProcedures
+  , indexWitnessedTxProposalProcedures
   , convProposalProcedures
 
     -- *** Building vs viewing transactions
@@ -1678,15 +1679,27 @@ mkTxProposalProcedures proposals = do
         map (second pure) proposals
 
 -- | Index proposal procedures by their order ('Ord').
+-- | and filter out the ones that do not have a witness.
 indexTxProposalProcedures
   :: TxProposalProcedures BuildTx era
   -> [(ScriptWitnessIndex, L.ProposalProcedure (ShelleyLedgerEra era), ScriptWitness WitCtxStake era)]
-indexTxProposalProcedures TxProposalProceduresNone = []
-indexTxProposalProcedures (TxProposalProcedures proposals) = do
-  let allProposalsList = fst <$> toList proposals
-  [ (ScriptWitnessIndexProposing $ fromIntegral ix, proposal, scriptWitness)
-    | (proposal, BuildTxWith (Just scriptWitness)) <- toList proposals
-    , ix <- maybeToList $ List.elemIndex proposal allProposalsList
+indexTxProposalProcedures proposals =
+  [ (ix, proposal, scriptWitness)
+  | (proposal, Just (ix, scriptWitness)) <- indexWitnessedTxProposalProcedures proposals
+  ]
+
+-- | Index proposal procedures by their order ('Ord').
+indexWitnessedTxProposalProcedures
+  :: TxProposalProcedures BuildTx era
+  -> [ ( L.ProposalProcedure (ShelleyLedgerEra era)
+       , Maybe (ScriptWitnessIndex, ScriptWitness WitCtxStake era)
+       )
+     ]
+indexWitnessedTxProposalProcedures TxProposalProceduresNone = []
+indexWitnessedTxProposalProcedures (TxProposalProcedures proposals) = do
+  let allProposalsList = zip [0 ..] $ toList proposals
+  [ (proposal, fmap (ScriptWitnessIndexProposing ix,) mScriptWitness)
+    | (ix, (proposal, BuildTxWith mScriptWitness)) <- allProposalsList
     ]
 
 -- ----------------------------------------------------------------------------

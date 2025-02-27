@@ -379,11 +379,8 @@ import Cardano.Ledger.Val qualified as L
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
 
 import Control.Monad
-import Data.Bifunctor
-  ( bimap
-  , first
-  , second
-  )
+import Data.Bifunctor (bimap, first, second)
+import Data.Bitraversable (bitraverse)
 import Data.ByteString.Short (ShortByteString)
 import Data.Function ((&))
 import Data.List (sortBy)
@@ -1864,20 +1861,16 @@ substituteExecutionUnits
            (TxBodyErrorAutoBalance era)
            (Maybe (Featured ConwayEraOnwards era (TxProposalProcedures BuildTx era)))
     mapScriptWitnessesProposals Nothing = return Nothing
-    mapScriptWitnessesProposals (Just (Featured era txpp)) = do
-      let eSubstitutedExecutionUnits =
-            [ (proposal, updatedWitness)
-            | (ix, proposal, scriptWitness) <- indexTxProposalProcedures txpp
-            , let updatedWitness = substituteExecUnits ix scriptWitness
-            ]
-      substitutedExecutionUnits <- traverseScriptWitnesses eSubstitutedExecutionUnits
-
+    mapScriptWitnessesProposals (Just (Featured era proposals)) = do
+      substitutedExecutionUnits <-
+        traverse
+          (bitraverse pure $ traverse $ uncurry substituteExecUnits)
+          $ indexWitnessedTxProposalProcedures proposals
       pure $
         Just $
           Featured era $
             conwayEraOnwardsConstraints era $
-              mkTxProposalProcedures $
-                second Just <$> substitutedExecutionUnits
+              mkTxProposalProcedures substitutedExecutionUnits
 
     mapScriptWitnessesMinting
       :: TxMintValue BuildTx era
