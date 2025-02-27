@@ -109,6 +109,18 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         contentWithTxoutAsset
         address
         Nothing
+
+  -- check if execution units have changed
+  [ ExecutionUnits
+      { executionSteps = 84_851_308
+      , executionMemory = 325_610
+      }
+    ]
+    === [ exUnits
+        | (_, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ exUnits)) <-
+            collectTxBodyScriptWitnesses sbe balancedContentWithTxoutAsset
+        ]
+
   -- the correct amount with manual balancing of assets
   335_299 === feeWithTxoutAsset
 
@@ -127,6 +139,17 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         content
         address
         Nothing
+
+  -- check if execution units have changed
+  [ ExecutionUnits
+      { executionSteps = 84_851_308
+      , executionMemory = 325_610
+      }
+    ]
+    === [ exUnits
+        | (_, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ exUnits)) <-
+            collectTxBodyScriptWitnesses sbe balancedContent
+        ]
 
   H.noteShow_ feeWithTxoutAsset
   H.noteShow_ fee
@@ -245,6 +268,17 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
         content
         address
         Nothing
+
+  -- check if execution units have changed
+  [ ExecutionUnits
+      { executionSteps = 84_851_308
+      , executionMemory = 325_610
+      }
+    ]
+    === [ exUnits
+        | (_, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ exUnits)) <-
+            collectTxBodyScriptWitnesses sbe balancedContent
+        ]
 
   335_299 === fee
   TxReturnCollateral _ (TxOut _ txOutValue _ _) <- H.noteShow $ txReturnCollateral balancedContent
