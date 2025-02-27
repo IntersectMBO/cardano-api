@@ -1082,38 +1082,6 @@ fromBabbageTxOutDatum _ w (Plutus.Datum binData) =
   TxOutDatumInline w $ binaryDataToScriptData w binData
 
 -- ----------------------------------------------------------------------------
--- Building vs viewing transactions
---
-
-data ViewTx
-
-data BuildTx
-
-data BuildTxWith build a where
-  ViewTx :: BuildTxWith ViewTx a
-  BuildTxWith :: a -> BuildTxWith BuildTx a
-
-instance Functor (BuildTxWith build) where
-  fmap _ ViewTx = ViewTx
-  fmap f (BuildTxWith x) = BuildTxWith (f x)
-
-instance Applicative (BuildTxWith ViewTx) where
-  pure _ = ViewTx
-  _ <*> _ = ViewTx
-
-instance Applicative (BuildTxWith BuildTx) where
-  pure = BuildTxWith
-  (BuildTxWith f) <*> (BuildTxWith a) = BuildTxWith (f a)
-
-buildTxWithToMaybe :: BuildTxWith build a -> Maybe a
-buildTxWithToMaybe ViewTx = Nothing
-buildTxWithToMaybe (BuildTxWith a) = Just a
-
-deriving instance Eq a => Eq (BuildTxWith build a)
-
-deriving instance Show a => Show (BuildTxWith build a)
-
--- ----------------------------------------------------------------------------
 -- Transaction input values (era-dependent)
 --
 
