@@ -1,5 +1,28 @@
 # Changelog for cardano-api
 
+## 10.10.0.0
+
+- Include deserialisation of stake keys in deserialiseAnyVerificationKeyTextEnvelope
+  (feature, compatible)
+  [PR 757](https://github.com/IntersectMBO/cardano-api/pull/757)
+
+- Fixed a bug that caused balancing algorithm to drop unwitnessed government actions
+  (bugfix)
+  [PR 765](https://github.com/IntersectMBO/cardano-api/pull/765)
+
+- Modify `estimateTransactionKeyWitnessCount` to estimate simple scripts too
+  (bugfix)
+  [PR 755](https://github.com/IntersectMBO/cardano-api/pull/755)
+
+- Split compatible transaction building into separate building and signing functions.
+  Rename `Cardano.Api.Internal.Tx.Compatible` to `Cardano.Api.Internal.Compatible.Tx`.
+  (breaking)
+  [PR 750](https://github.com/IntersectMBO/cardano-api/pull/750)
+
+- Fixed wrong type of space in cardano-api's change log
+  (bugfix)
+  [PR 754](https://github.com/IntersectMBO/cardano-api/pull/754)
+
 ## 10.9.0.0
 
 - Re-export `DebugPlutusFailure` and `renderDebugPlutusFailure`.
