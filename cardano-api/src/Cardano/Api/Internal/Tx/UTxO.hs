@@ -77,3 +77,11 @@ inputSet = Map.keysSet . unUTxO
 -- | Remove the right hand side from the left hand side.
 difference :: UTxO era -> UTxO era -> UTxO era
 difference a b = UTxO $ Map.difference (unUTxO a) (unUTxO b)
+
+-- | Convert from a list of key/value pairs.
+fromList :: UTxO era -> [(TxIn, (TxOut CtxUTxO era))]
+fromList (UTxO xs) = Map.fromList xs
+
+-- | Convert to a list of key/value pairs.
+toList :: [(TxIn, (TxOut CtxUTxO era))] -> UTxO era
+toList = UTxO . Map.toList
