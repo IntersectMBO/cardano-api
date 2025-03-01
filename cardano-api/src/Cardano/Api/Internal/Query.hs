@@ -79,7 +79,7 @@ import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.Query.Types
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Tx.Body
-import Cardano.Api.Internal.Tx.UTxO
+import Cardano.Api.Internal.Tx.UTxO (UTxO (..))
 
 import Cardano.Chain.Update.Validation.Interface qualified as Byron.Update
 import Cardano.Ledger.Api qualified as L

@@ -360,7 +360,7 @@ import Cardano.Api.Internal.Query
 import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
-import Cardano.Api.Internal.Tx.UTxO
+import Cardano.Api.Internal.Tx.UTxO (UTxO (..))
 import Cardano.Api.Internal.Value
 import Cardano.Api.Ledger.Lens qualified as A
 
