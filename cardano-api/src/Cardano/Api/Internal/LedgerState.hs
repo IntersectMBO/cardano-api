@@ -1698,7 +1698,7 @@ tickThenReapplyCheckHash cfg block lsb =
   if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
     then
       Right . toLedgerStateEvents $
-        Ledger.tickThenReapplyLedgerResult cfg block lsb
+        Ledger.tickThenReapplyLedgerResult Ledger.ComputeLedgerEvents cfg block lsb
     else
       Left $
         ApplyBlockHashMismatch $
@@ -1733,7 +1733,7 @@ tickThenApply
 tickThenApply cfg block lsb =
   either (Left . ApplyBlockError) (Right . toLedgerStateEvents) $
     runExcept $
-      Ledger.tickThenApplyLedgerResult cfg block lsb
+      Ledger.tickThenApplyLedgerResult Ledger.ComputeLedgerEvents cfg block lsb
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =

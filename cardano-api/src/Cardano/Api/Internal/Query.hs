@@ -75,7 +75,6 @@ import Cardano.Api.Internal.IPC.Version
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.Modes
 import Cardano.Api.Internal.NetworkId
-import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.Query.Types
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Tx.Body
@@ -229,10 +228,6 @@ data QueryInShelleyBasedEra era result where
     :: QueryInShelleyBasedEra era (GenesisParameters ShelleyEra)
   QueryProtocolParameters
     :: QueryInShelleyBasedEra era (Ledger.PParams (ShelleyLedgerEra era))
-  QueryProtocolParametersUpdate
-    :: QueryInShelleyBasedEra
-         era
-         (Map (Hash GenesisKey) ProtocolParametersUpdate)
   QueryStakeDistribution
     :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
   QueryUTxO
@@ -312,7 +307,6 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryEpoch = NodeToClientV_16
   nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_16
   nodeToClientVersionOf QueryProtocolParameters = NodeToClientV_16
-  nodeToClientVersionOf QueryProtocolParametersUpdate = NodeToClientV_16
   nodeToClientVersionOf QueryStakeDistribution = NodeToClientV_16
   nodeToClientVersionOf (QueryUTxO f) = nodeToClientVersionOf f
   nodeToClientVersionOf (QueryStakeAddresses _ _) = NodeToClientV_16
@@ -584,8 +578,6 @@ toConsensusQueryShelleyBased sbe = \case
     Some (consensusQueryInEraInMode era Consensus.GetGenesisConfig)
   QueryProtocolParameters ->
     Some (consensusQueryInEraInMode era Consensus.GetCurrentPParams)
-  QueryProtocolParametersUpdate ->
-    Some (consensusQueryInEraInMode era Consensus.GetProposedPParamsUpdates)
   QueryStakeDistribution ->
     Some (consensusQueryInEraInMode era Consensus.GetStakeDistribution)
   QueryUTxO QueryUTxOWhole ->
@@ -888,10 +880,6 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryProtocolParameters ->
       case q' of
         Consensus.GetCurrentPParams -> r'
-        _ -> fromConsensusQueryResultMismatch
-    QueryProtocolParametersUpdate ->
-      case q' of
-        Consensus.GetProposedPParamsUpdates -> fromLedgerProposedPPUpdates sbe r'
         _ -> fromConsensusQueryResultMismatch
     QueryStakeDistribution ->
       case q' of

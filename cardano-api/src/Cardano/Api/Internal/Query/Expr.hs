@@ -17,7 +17,6 @@ module Cardano.Api.Internal.Query.Expr
   , queryPoolDistribution
   , queryPoolState
   , queryProtocolParameters
-  , queryProtocolParametersUpdate
   , queryProtocolState
   , queryStakeAddresses
   , queryStakeDelegDeposits
@@ -55,7 +54,6 @@ import Cardano.Api.Internal.IPC
 import Cardano.Api.Internal.IPC.Monad
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.NetworkId
-import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.Query
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Tx.UTxO
@@ -234,22 +232,6 @@ queryConstitutionHash sbe =
     queryExpr $
       QueryInEra $
         QueryInShelleyBasedEra sbe QueryConstitution
-
-queryProtocolParametersUpdate
-  :: ()
-  => ShelleyBasedEra era
-  -> LocalStateQueryExpr
-       block
-       point
-       QueryInMode
-       r
-       IO
-       ( Either
-           UnsupportedNtcVersionError
-           (Either EraMismatch (Map (Hash GenesisKey) ProtocolParametersUpdate))
-       )
-queryProtocolParametersUpdate sbe =
-  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryProtocolParametersUpdate
 
 queryProtocolState
   :: ()

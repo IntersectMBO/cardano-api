@@ -63,8 +63,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 0d750d882181b12fad62ff28de056ee85c7e0c0e
-  --sha256: sha256-LLp+FHSuVG2IsnXDv0aGMRaX19+trs5AT1gql6oji0U=
+  tag: 251358eb32c897631d83c5c08528858ec0e7e741
+  --sha256: sha256-sLiBTVWzwRvdz5v4mTbVP02YsQLdNctHQtmE9ifQcS8=
   subdir:
       eras/allegra/impl
       eras/alonzo/impl
@@ -98,8 +98,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: c97a657928adaebccf5f38484e910843af8c59e7
-  --sha256: sha256-LG29k3Ii3+yxkKskTjwlVZ99LJSzuWzUJYjDC5thyiw=
+  tag: b6ee0fafeb7372a1e9b4e5d6d058df50951edf6d
+  --sha256: sha256-//dvcqJiTJ8tZbNfzL5XP8dCl/g1c/BlgfZsqC19E24=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano

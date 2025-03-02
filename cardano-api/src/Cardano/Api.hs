@@ -1020,7 +1020,6 @@ module Cardano.Api
   , queryPoolDistribution
   , queryPoolState
   , queryProtocolParameters
-  , queryProtocolParametersUpdate
   , queryProtocolState
   , queryStakeAddresses
   , queryStakeDelegDeposits
