@@ -3,12 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
@@ -71,6 +73,7 @@ import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Eras.Case
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.GenesisParameters
+import Cardano.Api.Internal.HasTypeProxy (HasTypeProxy (..), Proxy)
 import Cardano.Api.Internal.IPC.Version
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.Modes
@@ -78,9 +81,15 @@ import Cardano.Api.Internal.NetworkId
 import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.Query.Types
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
+import Cardano.Api.Internal.SerialiseCBOR (SerialiseAsCBOR (deserialiseFromCBOR, serialiseToCBOR))
+import Cardano.Api.Internal.SerialiseTextEnvelope
+  ( HasTextEnvelope (textEnvelopeType)
+  , TextEnvelopeType
+  )
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.UTxO
 
+import Cardano.Binary qualified as CBOR
 import Cardano.Chain.Update.Validation.Interface qualified as Byron.Update
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
@@ -116,13 +125,16 @@ import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
+import Codec.Serialise qualified as CBOR
 import Control.Monad.Trans.Except
 import Data.Bifunctor (bimap, first)
+import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.Either.Combinators (rightToMaybe)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
+import Data.Reflection (give)
 import Data.SOP.Constraint (SListI)
 import Data.Sequence (Seq)
 import Data.Set (Set)
@@ -166,6 +178,25 @@ data EraHistory where
     :: Consensus.CardanoBlock L.StandardCrypto ~ Consensus.HardForkBlock xs
     => History.Interpreter xs
     -> EraHistory
+
+instance HasTypeProxy EraHistory where
+  data AsType EraHistory = AsEraHistory
+
+  proxyToAsType :: Proxy EraHistory -> AsType EraHistory
+  proxyToAsType _ = AsEraHistory
+
+instance SerialiseAsCBOR EraHistory where
+  serialiseToCBOR :: EraHistory -> BS.ByteString
+  serialiseToCBOR (EraHistory interpreter) = CBOR.toStrictByteString (give History.EraParamsWithGenesisWindow (CBOR.encode interpreter))
+
+  deserialiseFromCBOR :: AsType EraHistory -> BS.ByteString -> Either DecoderError EraHistory
+  deserialiseFromCBOR _ bs =
+    EraHistory
+      <$> CBOR.decodeFullDecoder' "EraHistory" (give History.EraParamsWithGenesisWindow CBOR.decode) bs
+
+instance HasTextEnvelope EraHistory where
+  textEnvelopeType :: AsType EraHistory -> TextEnvelopeType
+  textEnvelopeType _ = "EraHistory"
 
 getProgress
   :: ()
