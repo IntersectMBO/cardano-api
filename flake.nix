@@ -3,14 +3,11 @@
 
   inputs = {
     hackageNix = {
-      # The "for-stakage" part is a workaround haskell.nix and hackage.nix
-      # being out of sync until we drop support for GHC 8.10
-      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
+      url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
     haskellNix = {
-      # master at 2025-03-03
-      url = "github:input-output-hk/haskell.nix?ref=4fd706000172895925a78b3d97436d7711be93b6";
+      url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
     };
     # blst fails to build for x86_64-darwin 
