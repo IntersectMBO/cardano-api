@@ -7,6 +7,8 @@ module Cardano.Api.Tx.UTxO
   , UTxO.filterWithKey
   , UTxO.inputSet
   , UTxO.difference
+  , UTxO.fromList
+  , UTxO.toList
   )
 where
 

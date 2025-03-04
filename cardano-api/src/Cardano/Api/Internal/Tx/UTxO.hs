@@ -21,11 +21,11 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Text (Text)
-import GHC.Exts (IsList (..))
+import GHC.Exts qualified as GHC
 
 newtype UTxO era = UTxO {unUTxO :: Map TxIn (TxOut CtxUTxO era)}
   deriving stock (Eq, Show)
-  deriving newtype (Semigroup, Monoid, IsList)
+  deriving newtype (Semigroup, Monoid, GHC.IsList)
 
 instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
@@ -36,7 +36,7 @@ instance
   => FromJSON (UTxO era)
   where
   parseJSON = Aeson.withObject "UTxO" $ \hm -> do
-    let l = toList $ KeyMap.toHashMapText hm
+    let l = GHC.toList $ KeyMap.toHashMapText hm
     res <- mapM toTxIn l
     pure . UTxO $ Map.fromList res
    where
@@ -77,3 +77,11 @@ inputSet = Map.keysSet . unUTxO
 -- | Remove the right hand side from the left hand side.
 difference :: UTxO era -> UTxO era -> UTxO era
 difference a b = UTxO $ Map.difference (unUTxO a) (unUTxO b)
+
+-- | Convert from a list of key/value pairs.
+fromList :: [(TxIn, TxOut CtxUTxO era)] -> UTxO era
+fromList = UTxO . Map.fromList
+
+-- | Convert to a list of key/value pairs.
+toList :: UTxO era -> [(TxIn, TxOut CtxUTxO era)]
+toList (UTxO xs) = Map.toList xs
