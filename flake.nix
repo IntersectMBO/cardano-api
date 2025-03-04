@@ -13,7 +13,9 @@
       url = "github:input-output-hk/haskell.nix?ref=4fd706000172895925a78b3d97436d7711be93b6";
       inputs.hackage.follows = "hackageNix";
     };
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    # blst fails to build for x86_64-darwin 
+    # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     # non-flake nix compatibility
