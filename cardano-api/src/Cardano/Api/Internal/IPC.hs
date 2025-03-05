@@ -561,6 +561,8 @@ mapLocalTxMonitoringClient convTxid convTx ltxmc =
     CTxMon.SendMsgAwaitAcquire $ (fmap . fmap) convClientStateAcquired f
   convClientStateAcquired (CTxMon.SendMsgRelease eff) =
     CTxMon.SendMsgRelease (convClientStateIdle <$> eff)
+  convClientStateAcquired (CTxMon.SendMsgGetMeasures f) =
+    CTxMon.SendMsgGetMeasures $ (fmap . fmap) convClientStateAcquired f
 
 -- ----------------------------------------------------------------------------
 -- Wrappers for specific protocol use-cases

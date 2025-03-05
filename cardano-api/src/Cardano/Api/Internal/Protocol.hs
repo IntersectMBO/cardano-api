@@ -23,9 +23,9 @@ where
 import Cardano.Api.Internal.Modes
 
 import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Byron.ByronHFC (ByronBlockHFC)
 import Ouroboros.Consensus.Cardano
 import Ouroboros.Consensus.Cardano.Block
-import Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
 import Ouroboros.Consensus.Cardano.Node
 import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import Ouroboros.Consensus.Ledger.SupportsProtocol qualified as Consensus (LedgerSupportsProtocol)

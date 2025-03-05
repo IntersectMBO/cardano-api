@@ -156,7 +156,7 @@ library
     ouroboros-consensus-diffusion ^>=0.19 || ^>=0.20,
     ouroboros-consensus-protocol ^>=0.10,
     ouroboros-network,
-    ouroboros-network-api ^>=0.12,
+    ouroboros-network-api ^>=0.13,
     ouroboros-network-framework,
     ouroboros-network-protocols,
     parsec,

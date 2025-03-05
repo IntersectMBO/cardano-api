@@ -166,10 +166,10 @@ import Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import Cardano.Slotting.Slot qualified as Slot
 import Ouroboros.Consensus.Block.Abstract qualified as Consensus
 import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Byron.ByronHFC qualified as Consensus
 import Ouroboros.Consensus.Byron.Ledger qualified as Byron
 import Ouroboros.Consensus.Cardano qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
-import Ouroboros.Consensus.Cardano.CanHardFork qualified as Consensus
 import Ouroboros.Consensus.Cardano.Node qualified as Consensus
 import Ouroboros.Consensus.Config qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
@@ -1698,7 +1698,7 @@ tickThenReapplyCheckHash cfg block lsb =
   if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
     then
       Right . toLedgerStateEvents $
-        Ledger.tickThenReapplyLedgerResult cfg block lsb
+        Ledger.tickThenReapplyLedgerResult Ledger.ComputeLedgerEvents cfg block lsb
     else
       Left $
         ApplyBlockHashMismatch $
@@ -1733,7 +1733,7 @@ tickThenApply
 tickThenApply cfg block lsb =
   either (Left . ApplyBlockError) (Right . toLedgerStateEvents) $
     runExcept $
-      Ledger.tickThenApplyLedgerResult cfg block lsb
+      Ledger.tickThenApplyLedgerResult Ledger.ComputeLedgerEvents cfg block lsb
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =

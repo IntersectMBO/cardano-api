@@ -31,9 +31,9 @@ import Cardano.Api.Internal.Eras.Core
 
 import Cardano.Chain.Slotting qualified as Byron (EpochSlots (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
+import Ouroboros.Consensus.Byron.ByronHFC qualified as Consensus
 import Ouroboros.Consensus.Byron.Ledger qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
-import Ouroboros.Consensus.Cardano.ByronHFC qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator as Consensus
   ( EraIndex (..)
   , eraIndexSucc

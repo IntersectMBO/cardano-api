@@ -184,7 +184,7 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
 
   H.success
 
-exampleProtocolParams :: Ledger.PParams (UnexportedLedger.ConwayEra Ledger.StandardCrypto)
+exampleProtocolParams :: Ledger.PParams UnexportedLedger.ConwayEra
 exampleProtocolParams =
   UnexportedLedger.upgradePParams conwayUpgrade $
     UnexportedLedger.upgradePParams () $
