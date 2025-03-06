@@ -77,8 +77,6 @@ library
     Cardano.Api.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Internal.Eras
     Cardano.Api.Internal.Error
-    Cardano.Api.Internal.Experimental.Eras
-    Cardano.Api.Internal.Experimental.Tx
     Cardano.Api.Internal.Fees
     Cardano.Api.Internal.Genesis
     Cardano.Api.Internal.GenesisParameters
@@ -206,6 +204,15 @@ library
     Cardano.Api.Internal.Eon.ShelleyToMaryEra
     Cardano.Api.Internal.Eras.Case
     Cardano.Api.Internal.Eras.Core
+    Cardano.Api.Internal.Experimental.Eras
+    Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
+    Cardano.Api.Internal.Experimental.Plutus.Script
+    Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
+    Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
+    Cardano.Api.Internal.Experimental.Simple.Script
+    Cardano.Api.Internal.Experimental.Tx
+    Cardano.Api.Internal.Experimental.Witness.AnyWitness
+    Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
     Cardano.Api.Internal.Feature
     Cardano.Api.Internal.Governance.Actions.ProposalProcedure
     Cardano.Api.Internal.Governance.Actions.VotingProcedure
@@ -255,6 +262,7 @@ library
     Cardano.Api.Internal.SerialiseUsing
     Cardano.Api.Internal.SpecialByron
     Cardano.Api.Internal.StakePoolMetadata
+    Cardano.Api.Internal.Tx.BuildTxWith
     Cardano.Api.Internal.Tx.UTxO
     Cardano.Api.Internal.TxIn
     Cardano.Api.Internal.TxMetadata
