@@ -7,20 +7,17 @@
       flake = false;
     };
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix?ref=2024.09.15";
+      url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
     };
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    # blst fails to build for x86_64-darwin 
+    # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     # non-flake nix compatibility
     flake-compat = {
       url = "github:edolstra/flake-compat";
-      flake = false;
-    };
-
-    cardano-mainnet-mirror = {
-      url = "github:input-output-hk/cardano-mainnet-mirror";
       flake = false;
     };
 
