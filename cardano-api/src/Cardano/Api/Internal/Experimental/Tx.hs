@@ -127,6 +127,7 @@ import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Eras.Core (ToCardanoEra (toCardanoEra), forEraInEon)
 import Cardano.Api.Internal.Experimental.Eras
+import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Feature
 import Cardano.Api.Internal.Pretty (docToString, pretty)
 import Cardano.Api.Internal.ReexposeLedger (StrictMaybe (..), maybeToStrictMaybe)
@@ -168,10 +169,13 @@ makeUnsignedTx
   -> Either TxBodyError (UnsignedTx era)
 makeUnsignedTx era bc = obtainCommonConstraints era $ do
   let sbe = convert era
+      aeon = convert era
+  TxScriptWitnessRequirements languages scripts datums redeemers <-
+    shelleyBasedEraConstraints sbe $
+      collectTxBodyScriptWitnessRequirements (convert era) bc
 
   -- cardano-api types
   let apiTxOuts = txOuts bc
-      apiScriptWitnesses = collectTxBodyScriptWitnesses sbe bc
       apiScriptValidity = txScriptValidity bc
       apiMintValue = txMintValue bc
       apiProtocolParameters = txProtocolParams bc
@@ -192,12 +196,13 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
       totalCollateral = convTotalCollateral apiTotalCollateral
       certs = convCertificates sbe $ txCertificates bc
       txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
-      scripts = convScripts apiScriptWitnesses
-      languages = convLanguages apiScriptWitnesses
-      sData = convScriptData sbe apiTxOuts apiScriptWitnesses
-      (datums, redeemers) = case sData of
-        TxBodyScriptData _ ds rs -> (ds, rs)
-        TxBodyNoScriptData -> (mempty, L.Redeemers mempty)
+      scriptIntegrityHash =
+        convPParamsToScriptIntegrityHash
+          aeon
+          apiProtocolParameters
+          redeemers
+          datums
+          languages
 
   let setMint = convMintValue apiMintValue
       setReqSignerHashes = convExtraKeyWitnesses apiExtraKeyWitnesses
@@ -213,7 +218,7 @@ makeUnsignedTx era bc = obtainCommonConstraints era $ do
           & L.vldtTxBodyL . L.invalidBeforeL .~ convValidityLowerBound (txValidityLowerBound bc)
           & L.vldtTxBodyL . L.invalidHereAfterL .~ convValidityUpperBound sbe (txValidityUpperBound bc)
           & L.reqSignerHashesTxBodyL .~ setReqSignerHashes
-          & L.scriptIntegrityHashTxBodyL .~ getScriptIntegrityHash apiProtocolParameters languages sData
+          & L.scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
           & L.withdrawalsTxBodyL .~ withdrawals
           & L.certsTxBodyL .~ certs
           & L.mintTxBodyL .~ setMint

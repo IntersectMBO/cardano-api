@@ -336,6 +336,7 @@ module Cardano.Api.Internal.Tx.Body
   , ScriptWitnessIndex (..)
   , renderScriptWitnessIndex
   , collectTxBodyScriptWitnesses
+  , collectTxBodyScriptWitnessRequirements
   , toScriptIndex
 
     -- ** Conversion to inline data
@@ -347,6 +348,7 @@ module Cardano.Api.Internal.Tx.Body
   , convExtraKeyWitnesses
   , convLanguages
   , convMintValue
+  , convPParamsToScriptIntegrityHash
   , convReferenceInputs
   , convReturnCollateral
   , convScripts
@@ -404,7 +406,18 @@ import Cardano.Api.Internal.Eon.ShelleyToBabbageEra
 import Cardano.Api.Internal.Eras.Case
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.Error (Error (..), displayError)
+import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
+  ( Cert
+  , Mint
+  , Withdrawal
+  , Witnessable (..)
+  , obtainAlonzoScriptPurposeConstraints
+  )
+import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness qualified as NewSWit
+import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
+import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Feature
+import Cardano.Api.Internal.Governance.Actions.ProposalProcedure
 import Cardano.Api.Internal.Governance.Actions.VotingProcedure
 import Cardano.Api.Internal.Hash
 import Cardano.Api.Internal.Keys.Byron
@@ -418,6 +431,7 @@ import Cardano.Api.Internal.ScriptData
 import Cardano.Api.Internal.SerialiseCBOR
 import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.Tx.BuildTxWith
 import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.TxIn
 import Cardano.Api.Internal.TxMetadata
@@ -498,9 +512,13 @@ import Data.String
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as LText
+import Data.Text.Lazy.Builder qualified as LText
 import Data.Type.Equality
 import Data.Typeable
 import Data.Word (Word16, Word32, Word64)
+import Formatting.Buildable (Buildable)
+import Formatting.Buildable qualified as Build
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro hiding (ix)
@@ -2016,7 +2034,8 @@ getTxIdShelley _ tx =
 --
 
 data TxBodyError
-  = TxBodyEmptyTxIns
+  = TxBodyPlutusScriptDecodeError CBOR.DecoderError
+  | TxBodyEmptyTxIns
   | TxBodyEmptyTxInsCollateral
   | TxBodyEmptyTxOuts
   | TxBodyOutputNegative !Quantity !TxOutInAnyEra
@@ -2027,8 +2046,13 @@ data TxBodyError
   | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
   deriving (Eq, Show)
 
+renderBuildable :: Buildable a => a -> Text
+renderBuildable e = LText.toStrict . LText.toLazyText $ Build.build e
+
 instance Error TxBodyError where
   prettyError = \case
+    TxBodyPlutusScriptDecodeError err ->
+      "Error decoding Plutus script: " <> pretty (renderBuildable err)
     TxBodyEmptyTxIns ->
       "Transaction body has no inputs"
     TxBodyEmptyTxInsCollateral ->
@@ -2069,16 +2093,21 @@ instance Error TxBodyError where
       "Errors in protocol parameters conversion: " <> prettyError ppces
 
 createTransactionBody
-  :: ()
-  => HasCallStack
+  :: forall era
+   . HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
+    TxScriptWitnessRequirements languages scripts dats redeemers
+      :: TxScriptWitnessRequirements (ShelleyLedgerEra era) <-
+      caseShelleyToMaryOrAlonzoEraOnwards
+        (const $ error "Impossible to construct TxScriptWitnessRequirements in pre-Alonzo era")
+        (flip collectTxBodyScriptWitnessRequirements bc)
+        sbe
     let era = toCardanoEra sbe
-        apiTxOuts = txOuts bc
-        apiScriptWitnesses = collectTxBodyScriptWitnesses sbe bc
+
         apiScriptValidity = txScriptValidity bc
         apiMintValue = txMintValue bc
         apiProtocolParameters = txProtocolParams bc
@@ -2095,9 +2124,11 @@ createTransactionBody sbe bc =
         totalCollateral = convTotalCollateral apiTotalCollateral
         certs = convCertificates sbe $ txCertificates bc
         txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
-        scripts = convScripts apiScriptWitnesses
-        languages = convLanguages apiScriptWitnesses
-        sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+        sData =
+          caseShelleyToMaryOrAlonzoEraOnwards
+            (const TxBodyNoScriptData)
+            (\eon -> TxBodyScriptData eon dats redeemers)
+            sbe
         proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
         votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
         currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
