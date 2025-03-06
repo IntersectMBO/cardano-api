@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
   ( -- * Constuct an indexed plutus script witness.
@@ -19,34 +19,33 @@ module Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
   , Cert
   , Voter
   , Proposal
-    
-    -- * Create the index for a witnessable thing. 
-  , GetPlutusScriptPurpose (..)
 
+    -- * Create the index for a witnessable thing.
+  , GetPlutusScriptPurpose (..)
   , createIndexedPlutusScriptWitnesses
   , getAnyWitnessRedeemerPointerMap
   , obtainAlonzoScriptPurposeConstraints
   )
 where
 
-import Data.Word
-import Cardano.Ledger.Conway.Scripts qualified as L
-import Cardano.Api.Internal.TxIn
-import Cardano.Api.Internal.Value
 import Cardano.Api.Internal.Address
 import Cardano.Api.Internal.Certificate
 import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
-import Cardano.Api.Internal.Governance.Actions.ProposalProcedure qualified as Api
-import Cardano.Api.Internal.Governance.Actions.VotingProcedure qualified as Api
 import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
 import Cardano.Api.Internal.Experimental.Witness.AnyWitness
+import Cardano.Api.Internal.Governance.Actions.ProposalProcedure qualified as Api
+import Cardano.Api.Internal.Governance.Actions.VotingProcedure qualified as Api
 import Cardano.Api.Internal.Script (toAlonzoExUnits)
 import Cardano.Api.Internal.ScriptData
+import Cardano.Api.Internal.TxIn
+import Cardano.Api.Internal.Value
 import Cardano.Api.Ledger qualified as L
 
 import Cardano.Ledger.Alonzo.TxWits qualified as L
+import Cardano.Ledger.Conway.Scripts qualified as L
 
+import Data.Word
 import GHC.Exts
 
 -- | A Plutus script witness along the thing it is witnessing and the index of that thing.
@@ -65,7 +64,6 @@ data AnyIndexedPlutusScriptWitness era where
     :: GetPlutusScriptPurpose era
     => IndexedPlutusScriptWitness witnessable lang purpose era
     -> AnyIndexedPlutusScriptWitness era
-
 
 -- | These are all of the "things" a plutus script can witness. We include the relevant
 -- type class constraint to avoid boilerplate when creating the 'PlutusPurpose' in
@@ -95,8 +93,6 @@ type Voter = Api.AnyVoter
 
 type Proposal = Api.AnyProposal
 
-
-
 -- | To reduce boilerplate, we reuse the `PlutusPurpose` type from `cardano-ledger`.
 -- This type is utilized in constructing the redeemer pointers map, which
 -- links the redeemer and execution units with the entity being witnessed.
@@ -120,8 +116,6 @@ instance GetPlutusScriptPurpose era where
   toPlutusScriptPurpose index WitTxCert{} = L.mkCertifyingPurpose (L.AsIx index)
   toPlutusScriptPurpose index WitVote{} = L.mkVotingPurpose (L.AsIx index)
   toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
-
-
 
 createIndexedPlutusScriptWitness
   :: Word32
