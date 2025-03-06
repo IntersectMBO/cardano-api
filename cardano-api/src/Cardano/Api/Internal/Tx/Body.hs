@@ -477,6 +477,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as BSC
+import Data.Either (fromRight)
 import Data.Foldable (for_)
 import Data.Function (on)
 import Data.Functor (($>))
@@ -1185,6 +1186,49 @@ instance IsCardanoEra era => ToJSON (TxOutValue era) where
       toJSON ll
     TxOutValueShelleyBased sbe val ->
       shelleyBasedEraConstraints sbe $ toJSON (fromLedgerValue sbe val)
+
+hsd1 =
+  either (error . show) id $
+    deserialiseFromCBOR
+      AsHashableScriptData
+      "\216y\159\216y\159\SOH\161\216y\159\216y\159X\FS\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#E\255\216z\159\255\255\NUL\SOH\SOH\SOH\164\SOH\216y\159\SOH\SOH\255\STX\216y\159\STX\STX\255\ETX\216y\159\ETX\ETX\255\EOT\216y\159\EOT\EOT\255\255\255"
+
+rehsd1Det = either (error . show) id $ do
+  scriptDataFromJsonDetailedSchema $ scriptDataToJsonDetailedSchema hsd1
+
+-- deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR $
+
+rehsd1NoDet = either (error . show) id $ do
+  scriptDataFromJson ScriptDataJsonNoSchema $ scriptDataToJson ScriptDataJsonNoSchema hsd1
+
+-- deserialiseFromCBOR AsHashableScriptData $ serialiseToCBOR $
+
+hsd2 =
+  either (error . show) id $
+    deserialiseFromCBOR
+      AsHashableScriptData
+      "\216y\159\216y\159\SOH\161\216y\159\216y\159X\FS\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#E\255\216z\128\255\NUL\SOH\SOH\SOH\164\SOH\216y\159\SOH\SOH\255\STX\216y\159\STX\STX\255\ETX\216y\159\ETX\ETX\255\EOT\216y\159\EOT\EOT\255\255\255"
+
+-- >>> show hsd1
+-- "HashableScriptData \"\\216y\\159\\216y\\159\\SOH\\161\\216y\\159\\216y\\159X\\FS\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#E\\255\\216z\\159\\255\\255\\NUL\\SOH\\SOH\\SOH\\164\\SOH\\216y\\159\\SOH\\SOH\\255\\STX\\216y\\159\\STX\\STX\\255\\ETX\\216y\\159\\ETX\\ETX\\255\\EOT\\216y\\159\\EOT\\EOT\\255\\255\\255\" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataNumber 1,ScriptDataMap [(ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes \"\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#E\"],ScriptDataConstructor 1 []],ScriptDataNumber 0)],ScriptDataNumber 1,ScriptDataNumber 1,ScriptDataNumber 1,ScriptDataMap [(ScriptDataNumber 1,ScriptDataConstructor 0 [ScriptDataNumber 1,ScriptDataNumber 1]),(ScriptDataNumber 2,ScriptDataConstructor 0 [ScriptDataNumber 2,ScriptDataNumber 2]),(ScriptDataNumber 3,ScriptDataConstructor 0 [ScriptDataNumber 3,ScriptDataNumber 3]),(ScriptDataNumber 4,ScriptDataConstructor 0 [ScriptDataNumber 4,ScriptDataNumber 4])]]])"
+
+-- >>> show rehsd1
+-- "HashableScriptData \"\\216y\\159\\216y\\159\\SOH\\161\\216y\\159\\216y\\159X\\FS\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#E\\255\\216z\\128\\255\\NUL\\SOH\\SOH\\SOH\\164\\SOH\\216y\\159\\SOH\\SOH\\255\\STX\\216y\\159\\STX\\STX\\255\\ETX\\216y\\159\\ETX\\ETX\\255\\EOT\\216y\\159\\EOT\\EOT\\255\\255\\255\" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataNumber 1,ScriptDataMap [(ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes \"\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#E\"],ScriptDataConstructor 1 []],ScriptDataNumber 0)],ScriptDataNumber 1,ScriptDataNumber 1,ScriptDataNumber 1,ScriptDataMap [(ScriptDataNumber 1,ScriptDataConstructor 0 [ScriptDataNumber 1,ScriptDataNumber 1]),(ScriptDataNumber 2,ScriptDataConstructor 0 [ScriptDataNumber 2,ScriptDataNumber 2]),(ScriptDataNumber 3,ScriptDataConstructor 0 [ScriptDataNumber 3,ScriptDataNumber 3]),(ScriptDataNumber 4,ScriptDataConstructor 0 [ScriptDataNumber 4,ScriptDataNumber 4])]]])"
+
+-- >>> hsd1 == rehsd1Det
+-- False
+
+-- >>> hsd1 == rehsd1NoDet
+-- False
+
+-- >>> show hsd2
+-- "HashableScriptData \"\\216y\\159\\216y\\159\\SOH\\161\\216y\\159\\216y\\159X\\FS\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#E\\255\\216z\\128\\255\\NUL\\SOH\\SOH\\SOH\\164\\SOH\\216y\\159\\SOH\\SOH\\255\\STX\\216y\\159\\STX\\STX\\255\\ETX\\216y\\159\\ETX\\ETX\\255\\EOT\\216y\\159\\EOT\\EOT\\255\\255\\255\" (ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataNumber 1,ScriptDataMap [(ScriptDataConstructor 0 [ScriptDataConstructor 0 [ScriptDataBytes \"\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#Eg\\137\\SOH#E\"],ScriptDataConstructor 1 []],ScriptDataNumber 0)],ScriptDataNumber 1,ScriptDataNumber 1,ScriptDataNumber 1,ScriptDataMap [(ScriptDataNumber 1,ScriptDataConstructor 0 [ScriptDataNumber 1,ScriptDataNumber 1]),(ScriptDataNumber 2,ScriptDataConstructor 0 [ScriptDataNumber 2,ScriptDataNumber 2]),(ScriptDataNumber 3,ScriptDataConstructor 0 [ScriptDataNumber 3,ScriptDataNumber 3]),(ScriptDataNumber 4,ScriptDataConstructor 0 [ScriptDataNumber 4,ScriptDataNumber 4])]]])"
+
+-- >>> hsd1 == hsd2
+-- False
+
+-- >>> rehsd1 == hsd2
+-- True
 
 instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
   parseJSON = withObject "TxOutValue" $ \o ->

@@ -10,6 +10,7 @@ module Test.Golden.Cardano.Api.Script
   , test_roundtrip_SimpleScript_JSON
   , test_roundtrip_ScriptData
   , test_roundtrip_HashableScriptData_JSON
+  , test_faulty_HashableScriptData_JSON
   )
 where
 
@@ -138,3 +139,80 @@ test_roundtrip_HashableScriptData_JSON =
   testProperty "roundtrip HashableScriptData" . H.property $ do
     sData <- H.forAll genHashableScriptData
     H.tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
+
+test_faulty_HashableScriptData_JSON :: TestTree
+test_faulty_HashableScriptData_JSON = testProperty "hashable dick data" . H.property $ do
+  let hsd1 =
+        either (error . show) id $
+          deserialiseFromCBOR AsHashableScriptData hsd1Bytes
+      hsd1Bytes =
+        "\216y\159\216y\159\SOH\161\216y\159\216y\159X\FS\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#E\255\216z\159\255\255\NUL\SOH\SOH\SOH\164\SOH\216y\159\SOH\SOH\255\STX\216y\159\STX\STX\255\ETX\216y\159\ETX\ETX\255\EOT\216y\159\EOT\EOT\255\255\255"
+
+      hsd2 =
+        either (error . show) id $
+          scriptDataFromJsonDetailedSchema $
+            scriptDataToJsonDetailedSchema hsd1
+      hsd2Bytes = serialiseToCBOR hsd2
+
+  -- hsd1 === hsd2
+  hsd1Bytes === hsd2Bytes
+  H.failure
+
+-- let hsd1 =
+--       ScriptDataConstructor
+--         0
+--         [ ScriptDataConstructor
+--             0
+--             [ ScriptDataNumber 1
+--             , ScriptDataMap
+--                 [
+--                   ( ScriptDataConstructor
+--                       0
+--                       [ ScriptDataConstructor
+--                           0
+--                           [ScriptDataBytes "\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#E"]
+--                       , ScriptDataConstructor 1 []
+--                       ]
+--                   , ScriptDataNumber 0
+--                   )
+--                 ]
+--             , ScriptDataNumber 1
+--             , ScriptDataNumber 1
+--             , ScriptDataNumber 1
+--             , ScriptDataMap
+--                 [ (ScriptDataNumber 1, ScriptDataConstructor 0 [ScriptDataNumber 1, ScriptDataNumber 1])
+--                 , (ScriptDataNumber 2, ScriptDataConstructor 0 [ScriptDataNumber 2, ScriptDataNumber 2])
+--                 , (ScriptDataNumber 3, ScriptDataConstructor 0 [ScriptDataNumber 3, ScriptDataNumber 3])
+--                 , (ScriptDataNumber 4, ScriptDataConstructor 0 [ScriptDataNumber 4, ScriptDataNumber 4])
+--                 ]
+--             ]
+--         ]
+--     hsd2 =
+--       ScriptDataConstructor
+--         0
+--         [ ScriptDataConstructor
+--             0
+--             [ ScriptDataNumber 1
+--             , ScriptDataMap
+--                 [
+--                   ( ScriptDataConstructor
+--                       0
+--                       [ ScriptDataConstructor
+--                           0
+--                           [ScriptDataBytes "\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#Eg\137\SOH#E"]
+--                       , ScriptDataConstructor 1 []
+--                       ]
+--                   , ScriptDataNumber 0
+--                   )
+--                 ]
+--             , ScriptDataNumber 1
+--             , ScriptDataNumber 1
+--             , ScriptDataNumber 1
+--             , ScriptDataMap
+--                 [ (ScriptDataNumber 1, ScriptDataConstructor 0 [ScriptDataNumber 1, ScriptDataNumber 1])
+--                 , (ScriptDataNumber 2, ScriptDataConstructor 0 [ScriptDataNumber 2, ScriptDataNumber 2])
+--                 , (ScriptDataNumber 3, ScriptDataConstructor 0 [ScriptDataNumber 3, ScriptDataNumber 3])
+--                 , (ScriptDataNumber 4, ScriptDataConstructor 0 [ScriptDataNumber 4, ScriptDataNumber 4])
+--                 ]
+--             ]
+--         ]
