@@ -32,6 +32,7 @@ module Cardano.Api.Internal.Experimental.Eras
   )
 where
 
+import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
@@ -218,6 +219,11 @@ instance Convert Era ShelleyBasedEra where
   convert = \case
     BabbageEra -> ShelleyBasedEraBabbage
     ConwayEra -> ShelleyBasedEraConway
+
+instance Convert Era AlonzoEraOnwards where
+  convert = \case
+    BabbageEra -> AlonzoEraOnwardsBabbage
+    ConwayEra -> AlonzoEraOnwardsConway
 
 instance Convert Era BabbageEraOnwards where
   convert = \case

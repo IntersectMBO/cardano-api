@@ -11,7 +11,10 @@ where
 
 import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
-    ( forShelleyBasedEraInEon, ShelleyBasedEra(..), ShelleyLedgerEra )
+  ( ShelleyBasedEra (..)
+  , ShelleyLedgerEra
+  , forShelleyBasedEraInEon
+  )
 import Cardano.Api.Internal.Experimental.Plutus.Script
 import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
 import Cardano.Api.Internal.Experimental.Simple.Script
@@ -37,7 +40,7 @@ import GHC.Exts
 --
 -- Note that 'AnyKeyWitnessPlaceholder' does not contain the actual key witness. This is because
 -- key witnesses are provided in the signing stage of the transaction. However we need this constuctor
--- to index the witnessable things correctly when plutus scripts are being used within the transaction. 
+-- to index the witnessable things correctly when plutus scripts are being used within the transaction.
 -- AnyWitness is solely used to contruct the transaction body.
 data AnyWitness era where
   AnyKeyWitnessPlaceholder :: AnyWitness era

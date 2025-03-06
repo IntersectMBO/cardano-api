@@ -10,7 +10,7 @@
 
 module Cardano.Api.Internal.ScriptData
   ( -- * Script data
-    HashableScriptData
+    HashableScriptData (..)
   , hashScriptDataBytes
   , getOriginalScriptDataBytes
   , getScriptData
