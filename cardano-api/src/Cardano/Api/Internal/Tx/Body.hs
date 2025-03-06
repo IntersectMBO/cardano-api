@@ -3837,7 +3837,187 @@ collectTxBodyScriptWitnesses
         | (ix, _, witness) <- indexTxProposalProcedures txp
         ]
 
--- TODO: Investigate if we need
+getSupplementalDatums
+  :: AlonzoEraOnwards era -> [TxOut CtxTx era] -> L.TxDats (ShelleyLedgerEra era)
+getSupplementalDatums eon [] = alonzoEraOnwardsConstraints eon mempty
+getSupplementalDatums eon txouts =
+  alonzoEraOnwardsConstraints eon $
+    L.TxDats $
+      fromList
+        [ (L.hashData ledgerData, ledgerData)
+        | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txouts
+        , let ledgerData = toAlonzoData d
+        ]
+
+collectTxBodyScriptWitnessRequirements
+  :: forall era
+   . IsShelleyBasedEra era
+  => AlonzoEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> Either
+       TxBodyError
+       (TxScriptWitnessRequirements (ShelleyLedgerEra era))
+collectTxBodyScriptWitnessRequirements
+  aEon
+  bc@TxBodyContent
+    { txOuts
+    } =
+    obtainAlonzoScriptPurposeConstraints aEon $ do
+      let sbe = shelleyBasedEra @era
+          supplementaldatums = TxScriptWitnessRequirements mempty mempty (getSupplementalDatums aEon txOuts) mempty
+      txInWits <-
+        first TxBodyPlutusScriptDecodeError $
+          legacyWitnessToScriptRequirements aEon $
+            extractWitnessableTxIns aEon bc
+
+      txWithdrawalWits <-
+        first TxBodyPlutusScriptDecodeError $
+          legacyWitnessToScriptRequirements aEon $
+            extractWitnessableWithdrawals aEon bc
+
+      txCertWits <-
+        first TxBodyPlutusScriptDecodeError $
+          legacyWitnessToScriptRequirements aEon $
+            extractWitnessableCertificates aEon bc
+
+      txMintWits <-
+        first TxBodyPlutusScriptDecodeError $
+          legacyWitnessToScriptRequirements aEon $
+            extractWitnessableMints aEon bc
+
+      txVotingWits <-
+        caseShelleyToBabbageOrConwayEraOnwards
+          ( \w ->
+              shelleyToBabbageEraConstraints w $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty
+          )
+          ( \eon ->
+              first TxBodyPlutusScriptDecodeError $
+                legacyWitnessToScriptRequirements aEon $
+                  extractWitnessableVotes eon bc
+          )
+          sbe
+      txProposalWits <-
+        caseShelleyToBabbageOrConwayEraOnwards
+          (const $ Right $ TxScriptWitnessRequirements mempty mempty mempty mempty)
+          ( \eon ->
+              first TxBodyPlutusScriptDecodeError $
+                legacyWitnessToScriptRequirements aEon $
+                  extractWitnessableProposals eon bc
+          )
+          sbe
+
+      return $
+        obtainMonoidConstraint aEon $
+          mconcat
+            [ supplementaldatums
+            , txInWits
+            , txWithdrawalWits
+            , txCertWits
+            , txMintWits
+            , txVotingWits
+            , txProposalWits
+            ]
+
+extractWitnessableTxIns
+  :: AlonzoEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> [(Witnessable TxIn (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+extractWitnessableTxIns aeon TxBodyContent{txIns} =
+  alonzoEraOnwardsConstraints aeon $
+    List.nub [(WitTxIn txin, wit) | (txin, wit) <- txIns]
+
+extractWitnessableWithdrawals
+  :: AlonzoEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> [(Witnessable Withdrawal (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+extractWitnessableWithdrawals aeon TxBodyContent{txWithdrawals} =
+  alonzoEraOnwardsConstraints aeon $
+    List.nub
+      [ (WitWithdrawal (addr, withAmt), wit)
+      | (addr, withAmt, wit) <- getWithdrawals txWithdrawals
+      ]
+ where
+  getWithdrawals TxWithdrawalsNone = []
+  getWithdrawals (TxWithdrawals _ txws) = txws
+
+extractWitnessableCertificates
+  :: AlonzoEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> [(Witnessable Cert (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+extractWitnessableCertificates aeon TxBodyContent{txCertificates} =
+  alonzoEraOnwardsConstraints aeon $
+    List.nub
+      [ ( WitTxCert (AnyCertificate cert, stakeCred)
+        , BuildTxWith wit
+        )
+      | (cert, BuildTxWith (Just (stakeCred, wit))) <- getCertificates txCertificates
+      ]
+ where
+  getCertificates TxCertificatesNone = []
+  getCertificates (TxCertificates _ txcs) = toList txcs
+
+extractWitnessableMints
+  :: AlonzoEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> [(Witnessable Mint (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxMint era))]
+extractWitnessableMints aeon TxBodyContent{txMintValue} =
+  alonzoEraOnwardsConstraints aeon $
+    List.nub
+      [ (WitMint (policyId, assetName, quantity), BuildTxWith $ ScriptWitness ScriptWitnessForMinting wit)
+      | (policyId, assetsWithWits) <- getMints txMintValue
+      , (assetName, quantity, BuildTxWith wit) <- assetsWithWits
+      ]
+ where
+  getMints TxMintNone = []
+  getMints (TxMintValue _ txms) = toList txms
+
+extractWitnessableVotes
+  :: ConwayEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> [(Witnessable NewSWit.Voter (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedures} =
+  List.nub
+    [ (WitVote $ AnyVoter vote, BuildTxWith wit)
+    | (vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
+    ]
+ where
+  getVotes
+    :: ConwayEraOnwards era
+    -> TxVotingProcedures BuildTx era
+    -> [(Voter era, Witness WitCtxStake era)]
+  getVotes ConwayEraOnwardsConway TxVotingProceduresNone = []
+  getVotes ConwayEraOnwardsConway (TxVotingProcedures allVotingProcedures (BuildTxWith scriptWitnessedVotes)) =
+    [ (Voter singleVoter, wit)
+    | (singleVoter, _) <- toList $ L.unVotingProcedures allVotingProcedures
+    , let wit = case Map.lookup singleVoter scriptWitnessedVotes of
+            Just sWit -> ScriptWitness ScriptWitnessForStakeAddr sWit
+            Nothing -> KeyWitness KeyWitnessForStakeAddr
+    ]
+
+extractWitnessableProposals
+  :: ConwayEraOnwards era
+  -> TxBodyContent BuildTx era
+  -> [(Witnessable NewSWit.Proposal (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+extractWitnessableProposals e@ConwayEraOnwardsConway TxBodyContent{txProposalProcedures} =
+  List.nub
+    [ (WitProposal $ AnyProposal prop, BuildTxWith wit)
+    | (prop, wit) <-
+        getProposals e $ maybe TxProposalProceduresNone unFeatured txProposalProcedures
+    ]
+ where
+  getProposals
+    :: ConwayEraOnwards era
+    -> TxProposalProcedures BuildTx era
+    -> [(Proposal era, Witness WitCtxStake era)]
+  getProposals ConwayEraOnwardsConway TxProposalProceduresNone = []
+  getProposals ConwayEraOnwardsConway (TxProposalProcedures txps) =
+    [ (Proposal p, wit)
+    | (p, BuildTxWith mScriptWit) <- toList txps
+    , let wit = case mScriptWit of
+            Just sWit -> ScriptWitness ScriptWitnessForStakeAddr sWit
+            Nothing -> KeyWitness KeyWitnessForStakeAddr
+    ]
+
 toShelleyWithdrawal :: [(StakeAddress, L.Coin, a)] -> L.Withdrawals StandardCrypto
 toShelleyWithdrawal withdrawals =
   L.Withdrawals $
