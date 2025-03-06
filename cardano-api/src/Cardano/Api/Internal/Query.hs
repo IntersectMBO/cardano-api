@@ -194,6 +194,9 @@ instance SerialiseAsCBOR EraHistory where
     EraHistory
       <$> CBOR.decodeFullDecoder' "EraHistory" (give History.EraParamsWithGenesisWindow CBOR.decode) bs
 
+-- | The @HasTextEnvelope@ instance for @EraHistory@ is required by the
+-- @transaction calculate-plutus-script-cost@ command in @cartdano-cli and it
+-- can be obtained through the @query era-history@ command.
 instance HasTextEnvelope EraHistory where
   textEnvelopeType :: AsType EraHistory -> TextEnvelopeType
   textEnvelopeType _ = "EraHistory"
