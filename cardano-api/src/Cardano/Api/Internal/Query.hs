@@ -149,6 +149,8 @@ data QueryInMode result where
     :: QueryInMode (WithOrigin BlockNo)
   QueryChainPoint
     :: QueryInMode ChainPoint
+  QueryLedgerConfig
+    :: QueryInMode (Consensus.HardForkLedgerConfig (Consensus.CardanoEras StandardCrypto))
 
 instance NodeToClientVersionOf (QueryInMode result) where
   nodeToClientVersionOf = \case
@@ -158,6 +160,7 @@ instance NodeToClientVersionOf (QueryInMode result) where
     QuerySystemStart -> NodeToClientV_16
     QueryChainBlockNo -> NodeToClientV_16
     QueryChainPoint -> NodeToClientV_16
+    QueryLedgerConfig -> NodeToClientV_20
 
 data EraHistory where
   EraHistory
@@ -298,6 +301,9 @@ data QueryInShelleyBasedEra era result where
     -> QueryInShelleyBasedEra era (Seq (L.GovActionState (ShelleyLedgerEra era)))
   QueryLedgerPeerSnapshot
     :: QueryInShelleyBasedEra era (Serialised LedgerPeerSnapshot)
+  QueryStakePoolDefaultVote
+    :: Ledger.KeyHash 'Ledger.StakePool
+    -> QueryInShelleyBasedEra era L.DefaultVote
 
 -- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
 -- information about queries versioning can be found:
@@ -333,6 +339,7 @@ instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
   nodeToClientVersionOf QueryRatifyState{} = NodeToClientV_17
   nodeToClientVersionOf QueryFuturePParams{} = NodeToClientV_18
   nodeToClientVersionOf QueryLedgerPeerSnapshot = NodeToClientV_19
+  nodeToClientVersionOf QueryStakePoolDefaultVote{} = NodeToClientV_20
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -557,6 +564,7 @@ toConsensusQuery (QueryInEra QueryByronUpdateState) =
         Consensus.GetUpdateInterfaceState
 toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
   shelleyBasedEraConstraints sbe $ toConsensusQueryShelleyBased sbe q
+toConsensusQuery QueryLedgerConfig = Some Consensus.GetLedgerConfig
 
 toConsensusQueryShelleyBased
   :: forall era protocol block result
@@ -709,6 +717,16 @@ toConsensusQueryShelleyBased sbe = \case
       sbe
   QueryLedgerPeerSnapshot ->
     Some (consensusQueryInEraInMode era (Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot))
+  QueryStakePoolDefaultVote govActs ->
+    caseShelleyToBabbageOrConwayEraOnwards
+      ( const $
+          error "toConsensusQueryShelleyBased: QueryProposals is only available in the Conway era"
+      )
+      ( const $
+          Some
+            (consensusQueryInEraInMode era (Consensus.QueryStakePoolDefaultVote govActs))
+      )
+      sbe
  where
   era = toCardanoEra sbe
 
@@ -769,6 +787,11 @@ fromConsensusQueryResult QueryCurrentEra q' r' =
   case q' of
     Consensus.BlockQuery (Consensus.QueryHardFork Consensus.GetCurrentEra) ->
       fromConsensusEraIndex r'
+    _ -> fromConsensusQueryResultMismatch
+fromConsensusQueryResult QueryLedgerConfig q' r' =
+  case q' of
+    Consensus.GetLedgerConfig ->
+      r'
     _ -> fromConsensusQueryResultMismatch
 fromConsensusQueryResult (QueryInEra QueryByronUpdateState) q' r' =
   case q' of
@@ -1004,6 +1027,11 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryLedgerPeerSnapshot{} ->
       case q' of
         Consensus.GetCBOR Consensus.GetBigLedgerPeerSnapshot ->
+          r'
+        _ -> fromConsensusQueryResultMismatch
+    QueryStakePoolDefaultVote{} ->
+      case q' of
+        Consensus.QueryStakePoolDefaultVote{} ->
           r'
         _ -> fromConsensusQueryResultMismatch
 
