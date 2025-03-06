@@ -338,6 +338,7 @@ module Cardano.Api.Internal.Tx.Body
   , ScriptWitnessIndex (..)
   , renderScriptWitnessIndex
   , collectTxBodyScriptWitnesses
+  , collectTxBodyScriptWitnessRequirements
   , toScriptIndex
 
     -- ** Conversion to inline data
@@ -349,6 +350,7 @@ module Cardano.Api.Internal.Tx.Body
   , convExtraKeyWitnesses
   , convLanguages
   , convMintValue
+  , convPParamsToScriptIntegrityHash
   , convReferenceInputs
   , convReturnCollateral
   , convScripts
@@ -406,7 +408,15 @@ import Cardano.Api.Internal.Eon.ShelleyToBabbageEra
 import Cardano.Api.Internal.Eras.Case
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.Error (Error (..), displayError)
+import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
+  ( Witnessable (..)
+  , WitnessableItem (..)
+  , obtainAlonzoScriptPurposeConstraints
+  )
+import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
+import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Feature
+import Cardano.Api.Internal.Governance.Actions.ProposalProcedure
 import Cardano.Api.Internal.Governance.Actions.VotingProcedure
 import Cardano.Api.Internal.Hash
 import Cardano.Api.Internal.Keys.Byron
@@ -420,6 +430,7 @@ import Cardano.Api.Internal.ScriptData
 import Cardano.Api.Internal.SerialiseCBOR
 import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.Tx.BuildTxWith
 import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.TxIn
 import Cardano.Api.Internal.TxMetadata
@@ -501,9 +512,13 @@ import Data.String
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as LText
+import Data.Text.Lazy.Builder qualified as LText
 import Data.Type.Equality
 import Data.Typeable
 import Data.Word (Word16, Word32, Word64)
+import Formatting.Buildable (Buildable)
+import Formatting.Buildable qualified as Build
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro hiding (ix)
@@ -2046,7 +2061,8 @@ getTxIdShelley _ tx =
 --
 
 data TxBodyError
-  = TxBodyEmptyTxIns
+  = TxBodyPlutusScriptDecodeError CBOR.DecoderError
+  | TxBodyEmptyTxIns
   | TxBodyEmptyTxInsCollateral
   | TxBodyEmptyTxOuts
   | TxBodyOutputNegative !Quantity !TxOutInAnyEra
@@ -2057,8 +2073,13 @@ data TxBodyError
   | TxBodyProtocolParamsConversionError !ProtocolParametersConversionError
   deriving (Eq, Show)
 
+renderBuildable :: Buildable a => a -> Text
+renderBuildable e = LText.toStrict . LText.toLazyText $ Build.build e
+
 instance Error TxBodyError where
   prettyError = \case
+    TxBodyPlutusScriptDecodeError err ->
+      "Error decoding Plutus script: " <> pretty (renderBuildable err)
     TxBodyEmptyTxIns ->
       "Transaction body has no inputs"
     TxBodyEmptyTxInsCollateral ->
@@ -2099,19 +2120,42 @@ instance Error TxBodyError where
       "Errors in protocol parameters conversion: " <> prettyError ppces
 
 createTransactionBody
-  :: ()
-  => HasCallStack
+  :: forall era
+   . HasCallStack
   => ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
+    (sData, mScriptIntegrityHash, scripts) <-
+      caseShelleyToMaryOrAlonzoEraOnwards
+        ( \eon -> do
+            let scripts =
+                  catMaybes
+                    [ toShelleyScript <$> getScriptWitnessScript scriptwitness
+                    | (_, AnyScriptWitness scriptwitness) <-
+                        collectTxBodyScriptWitnesses (convert eon) bc
+                    ]
+            return (TxBodyNoScriptData, SNothing, scripts)
+        )
+        ( \aeon -> do
+            TxScriptWitnessRequirements languages scripts dats redeemers <-
+              collectTxBodyScriptWitnessRequirements aeon bc
+
+            let pparams = txProtocolParams bc
+                sData = TxBodyScriptData aeon dats redeemers
+                mScriptIntegrityHash = getScriptIntegrityHash pparams languages sData
+            return
+              ( sData
+              , mScriptIntegrityHash
+              , scripts
+              )
+        )
+        sbe
     let era = toCardanoEra sbe
-        apiTxOuts = txOuts bc
-        apiScriptWitnesses = collectTxBodyScriptWitnesses sbe bc
+
         apiScriptValidity = txScriptValidity bc
         apiMintValue = txMintValue bc
-        apiProtocolParameters = txProtocolParams bc
         apiCollateralTxIns = txInsCollateral bc
         apiReferenceInputs = txInsReference bc
         apiExtraKeyWitnesses = txExtraKeyWits bc
@@ -2125,9 +2169,7 @@ createTransactionBody sbe bc =
         totalCollateral = convTotalCollateral apiTotalCollateral
         certs = convCertificates sbe $ txCertificates bc
         txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
-        scripts = convScripts apiScriptWitnesses
-        languages = convLanguages apiScriptWitnesses
-        sData = convScriptData sbe apiTxOuts apiScriptWitnesses
+
         proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
         votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
         currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
@@ -2145,7 +2187,7 @@ createTransactionBody sbe bc =
     setScriptIntegrityHash <- monoidForEraInEonA era $ \w ->
       pure $
         Endo $
-          A.scriptIntegrityHashTxBodyL w .~ getScriptIntegrityHash apiProtocolParameters languages sData
+          A.scriptIntegrityHashTxBodyL w .~ mScriptIntegrityHash
 
     setCollateralInputs <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.collateralInputsTxBodyL w .~ collTxIns
@@ -3921,7 +3963,7 @@ collectTxBodyScriptWitnessRequirements
 extractWitnessableTxIns
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable TxIn (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+  -> [(Witnessable TxInItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxTxIn era))]
 extractWitnessableTxIns aeon TxBodyContent{txIns} =
   alonzoEraOnwardsConstraints aeon $
     List.nub [(WitTxIn txin, wit) | (txin, wit) <- txIns]
@@ -3929,11 +3971,11 @@ extractWitnessableTxIns aeon TxBodyContent{txIns} =
 extractWitnessableWithdrawals
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable Withdrawal (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable WithdrawalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableWithdrawals aeon TxBodyContent{txWithdrawals} =
   alonzoEraOnwardsConstraints aeon $
     List.nub
-      [ (WitWithdrawal (addr, withAmt), wit)
+      [ (WitWithdrawal addr withAmt, wit)
       | (addr, withAmt, wit) <- getWithdrawals txWithdrawals
       ]
  where
@@ -3943,11 +3985,11 @@ extractWitnessableWithdrawals aeon TxBodyContent{txWithdrawals} =
 extractWitnessableCertificates
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable Cert (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable CertItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableCertificates aeon TxBodyContent{txCertificates} =
   alonzoEraOnwardsConstraints aeon $
     List.nub
-      [ ( WitTxCert (AnyCertificate cert, stakeCred)
+      [ ( WitTxCert (certificateToTxCert cert) stakeCred
         , BuildTxWith wit
         )
       | (cert, BuildTxWith (Just (stakeCred, wit))) <- getCertificates txCertificates
@@ -3959,13 +4001,12 @@ extractWitnessableCertificates aeon TxBodyContent{txCertificates} =
 extractWitnessableMints
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable Mint (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxMint era))]
+  -> [(Witnessable MintItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxMint era))]
 extractWitnessableMints aeon TxBodyContent{txMintValue} =
   alonzoEraOnwardsConstraints aeon $
     List.nub
-      [ (WitMint (policyId, assetName, quantity), BuildTxWith $ ScriptWitness ScriptWitnessForMinting wit)
-      | (policyId, assetsWithWits) <- getMints txMintValue
-      , (assetName, quantity, BuildTxWith wit) <- assetsWithWits
+      [ (WitMint policyId policyAssets, BuildTxWith $ ScriptWitness ScriptWitnessForMinting wit)
+      | (policyId, (policyAssets, BuildTxWith wit)) <- getMints txMintValue
       ]
  where
   getMints TxMintNone = []
@@ -3974,11 +4015,11 @@ extractWitnessableMints aeon TxBodyContent{txMintValue} =
 extractWitnessableVotes
   :: ConwayEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable NewSWit.Voter (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedures} =
   List.nub
-    [ (WitVote $ AnyVoter vote, BuildTxWith wit)
-    | (vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
+    [ (WitVote vote, BuildTxWith wit)
+    | (Voter vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
     ]
  where
   getVotes
@@ -3997,11 +4038,11 @@ extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedure
 extractWitnessableProposals
   :: ConwayEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable NewSWit.Proposal (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable ProposalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableProposals e@ConwayEraOnwardsConway TxBodyContent{txProposalProcedures} =
   List.nub
-    [ (WitProposal $ AnyProposal prop, BuildTxWith wit)
-    | (prop, wit) <-
+    [ (WitProposal prop, BuildTxWith wit)
+    | (Proposal prop, wit) <-
         getProposals e $ maybe TxProposalProceduresNone unFeatured txProposalProcedures
     ]
  where
