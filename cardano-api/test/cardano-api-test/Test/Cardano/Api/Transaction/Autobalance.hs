@@ -20,7 +20,11 @@ import Cardano.Api.Internal.Fees
 import Cardano.Api.Internal.Script
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger.Lens qualified as L
-import Cardano.Api.Shelley (LedgerProtocolParameters (..))
+import Cardano.Api.Shelley
+  ( LedgerProtocolParameters (..)
+  , collectTxBodyScriptWitnessRequirements
+  , extractExecutionUnits
+  )
 
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Coin qualified as L
@@ -111,16 +115,16 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         address
         Nothing
 
+  scriptWitReqsWithAsset <-
+    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo balancedContentWithTxoutAsset
+
   -- check if execution units have changed
   [ ExecutionUnits
       { executionSteps = 84_851_308
       , executionMemory = 325_610
       }
     ]
-    === [ exUnits
-        | (_, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ exUnits)) <-
-            collectTxBodyScriptWitnesses sbe balancedContentWithTxoutAsset
-        ]
+    === extractExecutionUnits scriptWitReqsWithAsset
 
   -- the correct amount with manual balancing of assets
   335_299 === feeWithTxoutAsset
@@ -141,16 +145,16 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         address
         Nothing
 
+  scriptWitReqsBalanced <-
+    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo balancedContent
+
   -- check if execution units have changed
   [ ExecutionUnits
       { executionSteps = 84_851_308
       , executionMemory = 325_610
       }
     ]
-    === [ exUnits
-        | (_, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ exUnits)) <-
-            collectTxBodyScriptWitnesses sbe balancedContent
-        ]
+    === extractExecutionUnits scriptWitReqsBalanced
 
   H.noteShow_ feeWithTxoutAsset
   H.noteShow_ fee
@@ -270,16 +274,16 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
         address
         Nothing
 
+  scriptWitReqsBalanced <-
+    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo balancedContent
+
   -- check if execution units have changed
   [ ExecutionUnits
       { executionSteps = 84_851_308
       , executionMemory = 325_610
       }
     ]
-    === [ exUnits
-        | (_, AnyScriptWitness (PlutusScriptWitness _ _ _ _ _ exUnits)) <-
-            collectTxBodyScriptWitnesses sbe balancedContent
-        ]
+    === extractExecutionUnits scriptWitReqsBalanced
 
   335_299 === fee
   TxReturnCollateral _ (TxOut _ txOutValue _ _) <- H.noteShow $ txReturnCollateral balancedContent
