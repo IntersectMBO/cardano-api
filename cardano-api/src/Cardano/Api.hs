@@ -1039,6 +1039,7 @@ module Cardano.Api
   , queryProposals
   , queryCommitteeMembersState
   , queryStakeVoteDelegatees
+  , queryStakePoolDefaultVote
 
     -- ** Committee State Query
   , MemberStatus (..)

@@ -38,6 +38,7 @@ module Cardano.Api.Internal.Query.Expr
   , queryFuturePParams
   , queryStakeVoteDelegatees
   , queryProposals
+  , queryStakePoolDefaultVote
   )
 where
 
@@ -536,3 +537,23 @@ queryProposals cOnwards govActionIds = do
   queryExpr $
     QueryInEra . QueryInShelleyBasedEra sbe $
       QueryProposals govActionIds
+
+queryStakePoolDefaultVote
+  :: forall era block point r
+   . ConwayEraOnwards era
+  -> L.KeyHash 'L.StakePool
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Either EraMismatch L.DefaultVote)
+       )
+queryProposals cOnwards stakePools = do
+  let sbe = convert cOnwards
+  queryExpr $
+    QueryInEra . QueryInShelleyBasedEra sbe $
+      QueryStakePoolDefaultVote stakePools
