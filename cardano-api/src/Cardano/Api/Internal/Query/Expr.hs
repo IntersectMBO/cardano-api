@@ -69,8 +69,8 @@ import Cardano.Ledger.Hashes hiding (Hash)
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Shelley.LedgerState qualified as L
 import Cardano.Slotting.Slot
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import Ouroboros.Network.Block (Serialised)
 import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
 
@@ -99,7 +99,16 @@ queryChainPoint =
 
 queryLedgerConfig
   :: ()
-  => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError (Consensus.HardForkLedgerConfig (Consensus.CardanoEras Ledger.StandardCrypto)))
+  => LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Consensus.CardanoLedgerConfig Ledger.StandardCrypto)
+       )
 queryLedgerConfig =
   queryExpr QueryLedgerConfig
 

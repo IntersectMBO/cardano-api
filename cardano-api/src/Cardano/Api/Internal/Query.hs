@@ -150,7 +150,7 @@ data QueryInMode result where
   QueryChainPoint
     :: QueryInMode ChainPoint
   QueryLedgerConfig
-    :: QueryInMode (Consensus.HardForkLedgerConfig (Consensus.CardanoEras StandardCrypto))
+    :: QueryInMode (Consensus.CardanoLedgerConfig StandardCrypto)
 
 instance NodeToClientVersionOf (QueryInMode result) where
   nodeToClientVersionOf = \case
@@ -720,7 +720,7 @@ toConsensusQueryShelleyBased sbe = \case
   QueryStakePoolDefaultVote govActs ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
-          error "toConsensusQueryShelleyBased: QueryProposals is only available in the Conway era"
+          error "toConsensusQueryShelleyBased: QueryStakePoolDefaultVote is only available in the Conway era"
       )
       ( const $
           Some
