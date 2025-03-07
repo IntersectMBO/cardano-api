@@ -38,6 +38,8 @@ module Cardano.Api.Internal.Query.Expr
   , queryFuturePParams
   , queryStakeVoteDelegatees
   , queryProposals
+  , queryStakePoolDefaultVote
+  , queryLedgerConfig
   )
 where
 
@@ -67,6 +69,7 @@ import Cardano.Ledger.Hashes hiding (Hash)
 import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Shelley.LedgerState qualified as L
 import Cardano.Slotting.Slot
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 import Ouroboros.Network.Block (Serialised)
 import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
@@ -93,6 +96,21 @@ queryChainPoint
   => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError ChainPoint)
 queryChainPoint =
   queryExpr QueryChainPoint
+
+queryLedgerConfig
+  :: ()
+  => LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Consensus.CardanoLedgerConfig Ledger.StandardCrypto)
+       )
+queryLedgerConfig =
+  queryExpr QueryLedgerConfig
 
 queryCurrentEra
   :: ()
@@ -536,3 +554,23 @@ queryProposals cOnwards govActionIds = do
   queryExpr $
     QueryInEra . QueryInShelleyBasedEra sbe $
       QueryProposals govActionIds
+
+queryStakePoolDefaultVote
+  :: forall era block point r
+   . ConwayEraOnwards era
+  -> L.KeyHash 'L.StakePool
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Either EraMismatch L.DefaultVote)
+       )
+queryStakePoolDefaultVote cOnwards stakePools = do
+  let sbe = convert cOnwards
+  queryExpr $
+    QueryInEra . QueryInShelleyBasedEra sbe $
+      QueryStakePoolDefaultVote stakePools
