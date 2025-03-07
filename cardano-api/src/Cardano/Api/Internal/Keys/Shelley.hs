@@ -24,6 +24,7 @@ module Cardano.Api.Internal.Keys.Shelley
   , PaymentExtendedKey
   , StakeKey
   , StakeExtendedKey
+  , StakePoolExtendedKey
   , StakePoolKey
   , GenesisKey
   , GenesisExtendedKey
@@ -1776,6 +1777,133 @@ instance HasTextEnvelope (SigningKey StakePoolKey) where
    where
     proxy :: Proxy (Shelley.DSIGN StandardCrypto)
     proxy = Proxy
+
+---
+--- Stake pool extended keys
+---
+
+data StakePoolExtendedKey
+
+instance HasTypeProxy StakePoolExtendedKey where
+  data AsType StakePoolExtendedKey = AsStakePoolExtendedKey
+  proxyToAsType _ = AsStakePoolExtendedKey
+
+instance Key StakePoolExtendedKey where
+  newtype VerificationKey StakePoolExtendedKey
+    = StakePoolExtendedVerificationKey Crypto.HD.XPub
+    deriving stock Eq
+    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakePoolExtendedKey)
+    deriving anyclass SerialiseAsCBOR
+
+  newtype SigningKey StakePoolExtendedKey
+    = StakePoolExtendedSigningKey Crypto.HD.XPrv
+    deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakePoolExtendedKey)
+    deriving anyclass SerialiseAsCBOR
+
+  deterministicSigningKey
+    :: AsType StakePoolExtendedKey
+    -> Crypto.Seed
+    -> SigningKey StakePoolExtendedKey
+  deterministicSigningKey AsStakePoolExtendedKey seed =
+    StakePoolExtendedSigningKey
+      (Crypto.HD.generate seedbs BS.empty)
+   where
+    (seedbs, _) = Crypto.getBytesFromSeedT 32 seed
+
+  deterministicSigningKeySeedSize :: AsType StakePoolExtendedKey -> Word
+  deterministicSigningKeySeedSize AsStakePoolExtendedKey = 32
+
+  getVerificationKey
+    :: SigningKey StakePoolExtendedKey
+    -> VerificationKey StakePoolExtendedKey
+  getVerificationKey (StakePoolExtendedSigningKey sk) =
+    StakePoolExtendedVerificationKey (Crypto.HD.toXPub sk)
+
+  -- \| We use the hash of the normal non-extended pub key so that it is
+  -- consistent with the one used in addresses and signatures.
+  verificationKeyHash
+    :: VerificationKey StakePoolExtendedKey
+    -> Hash StakePoolExtendedKey
+  verificationKeyHash (StakePoolExtendedVerificationKey vk) =
+    StakePoolExtendedKeyHash
+      . Shelley.KeyHash
+      . Crypto.castHash
+      $ Crypto.hashWith Crypto.HD.xpubPublicKey vk
+
+instance ToCBOR (VerificationKey StakePoolExtendedKey) where
+  toCBOR (StakePoolExtendedVerificationKey xpub) =
+    toCBOR (Crypto.HD.unXPub xpub)
+
+instance FromCBOR (VerificationKey StakePoolExtendedKey) where
+  fromCBOR = do
+    bs <- fromCBOR
+    either
+      fail
+      (return . StakePoolExtendedVerificationKey)
+      (Crypto.HD.xpub (bs :: ByteString))
+
+instance ToCBOR (SigningKey StakePoolExtendedKey) where
+  toCBOR (StakePoolExtendedSigningKey xprv) =
+    toCBOR (Crypto.HD.unXPrv xprv)
+
+instance FromCBOR (SigningKey StakePoolExtendedKey) where
+  fromCBOR = do
+    bs <- fromCBOR
+    either
+      fail
+      (return . StakePoolExtendedSigningKey)
+      (Crypto.HD.xprv (bs :: ByteString))
+
+instance SerialiseAsRawBytes (VerificationKey StakePoolExtendedKey) where
+  serialiseToRawBytes (StakePoolExtendedVerificationKey xpub) =
+    Crypto.HD.unXPub xpub
+
+  deserialiseFromRawBytes (AsVerificationKey AsStakePoolExtendedKey) bs =
+    first
+      ( \msg ->
+          SerialiseAsRawBytesError
+            ("Unable to deserialise VerificationKey StakePoolExtendedKey: " ++ msg)
+      )
+      $ StakePoolExtendedVerificationKey <$> Crypto.HD.xpub bs
+
+instance SerialiseAsRawBytes (SigningKey StakePoolExtendedKey) where
+  serialiseToRawBytes (StakePoolExtendedSigningKey xprv) =
+    Crypto.HD.unXPrv xprv
+
+  deserialiseFromRawBytes (AsSigningKey AsStakePoolExtendedKey) bs =
+    first
+      ( \msg ->
+          SerialiseAsRawBytesError
+            ("Unable to deserialise SigningKey StakePoolExtendedKey: " ++ msg)
+      )
+      $ StakePoolExtendedSigningKey <$> Crypto.HD.xprv bs
+
+newtype instance Hash StakePoolExtendedKey
+  = StakePoolExtendedKeyHash
+  {unStakePoolExtendedKeyHash :: Shelley.KeyHash Shelley.StakePool StandardCrypto}
+
+instance SerialiseAsRawBytes (Hash StakePoolExtendedKey) where
+  serialiseToRawBytes (StakePoolExtendedKeyHash (Shelley.KeyHash vkh)) =
+    Crypto.hashToBytes vkh
+
+  deserialiseFromRawBytes (AsHash AsStakePoolExtendedKey) bs =
+    maybeToRight
+      (SerialiseAsRawBytesError "Unable to deserialise Hash StakePoolExtendedKey")
+      (StakePoolExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
+
+instance HasTextEnvelope (VerificationKey StakePoolExtendedKey) where
+  textEnvelopeType _ = "StakePoolExtendedVerificationKey_ed25519_bip32"
+
+instance HasTextEnvelope (SigningKey StakePoolExtendedKey) where
+  textEnvelopeType _ = "StakePoolExtendedSigningKey_ed25519_bip32"
+
+instance SerialiseAsBech32 (VerificationKey StakePoolExtendedKey) where
+  bech32PrefixFor _ = "pool_xvk"
+  bech32PrefixesPermitted _ = ["pool_xvk"]
+
+instance SerialiseAsBech32 (SigningKey StakePoolExtendedKey) where
+  bech32PrefixFor _ = "pool_xsk"
+  bech32PrefixesPermitted _ = ["pool_xsk"]
 
 --
 -- DRep keys
