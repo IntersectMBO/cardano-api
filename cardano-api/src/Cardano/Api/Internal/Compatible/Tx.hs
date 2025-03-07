@@ -134,10 +134,9 @@ createCompatibleTx sbe ins outs txFee' anyProtocolUpdate anyVote txCertificates'
 
   setCerts :: Endo (L.TxBody (ShelleyLedgerEra era))
   setCerts =
-    monoidForEraInEon era $ \aeo ->
-      alonzoEraOnwardsConstraints aeo $
-        Endo $
-          L.certsTxBodyL .~ convCertificates sbe txCertificates'
+    shelleyBasedEraConstraints sbe $
+      Endo $
+        L.certsTxBodyL .~ convCertificates sbe txCertificates'
 
   setRefInputs :: Endo (L.TxBody (ShelleyLedgerEra era))
   setRefInputs = do
