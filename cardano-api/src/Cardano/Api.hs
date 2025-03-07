@@ -254,6 +254,7 @@ module Cardano.Api
   , renderValuePretty
   , toLedgerValue
   , fromLedgerValue
+  , MintValue (..)
 
     -- ** Ada \/ Lovelace within multi-asset values
   , Lovelace

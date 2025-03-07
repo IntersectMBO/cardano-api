@@ -25,6 +25,7 @@ module Cardano.Api.Internal.Value
   , negateValue
   , negateLedgerValue
   , calcMinimumDeposit
+  , MintValue (..)
 
     -- ** Ada \/ L.Coin specifically
   , Lovelace
@@ -92,6 +93,7 @@ import Data.List qualified as List
 import Data.Map.Merge.Strict qualified as Map
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.MonoTraversable
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -323,6 +325,34 @@ fromMaryValue (MaryValue (L.Coin lovelace) other) =
 calcMinimumDeposit :: Value -> Lovelace -> Lovelace
 calcMinimumDeposit v =
   Mary.scaledMinDeposit (toMaryValue v)
+
+-- | Map of non-ADA assets with their quantity
+newtype MintValue = MintValue (Map AssetName Quantity)
+  deriving Eq
+
+type instance Element MintValue = Quantity
+
+instance MonoFunctor MintValue where
+  omap f (MintValue as) = MintValue $ f <$> as
+
+instance Semigroup MintValue where
+  MintValue a <> MintValue b = MintValue $ Map.unionWith (<>) a b
+
+instance Monoid MintValue where
+  mempty = MintValue Map.empty
+
+instance IsList MintValue where
+  type Item MintValue = (AssetName, Quantity)
+  fromList =
+    MintValue
+      . Map.filter (/= 0)
+      . Map.fromListWith (<>)
+  toList (MintValue m) = toList m
+
+instance Show MintValue where
+  showsPrec d v =
+    showParen (d > 10) $
+      showString "mintValueFromList " . shows (toList v)
 
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation

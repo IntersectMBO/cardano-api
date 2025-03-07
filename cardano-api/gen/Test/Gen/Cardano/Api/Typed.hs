@@ -861,11 +861,11 @@ genTxMintValue =
       policies <- Gen.list (Range.constant 1 3) genPolicyId
       assets <- forM policies $ \policy ->
         (,) policy <$>
-          Gen.list
-            (Range.constant 1 3)
-            ((,,) <$> genAssetName
-                  <*> genPositiveQuantity
-                  <*> fmap (fmap pure) genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w))
+          ((,) <$> Gen.list
+                    (Range.constant 1 3)
+                    ((,) <$> genAssetName
+                         <*> genPositiveQuantity)
+               <*> fmap (fmap pure) genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w))
       Gen.choice
         [ pure TxMintNone
         , pure $ TxMintValue w (fromList assets)
