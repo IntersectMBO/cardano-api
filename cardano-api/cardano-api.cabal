@@ -146,6 +146,7 @@ library
     memory,
     microlens,
     microlens-aeson,
+    mono-traversable,
     mtl,
     network,
     network-mux,

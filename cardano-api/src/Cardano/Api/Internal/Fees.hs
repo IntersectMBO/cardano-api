@@ -1878,11 +1878,13 @@ substituteExecutionUnits
     mapScriptWitnessesMinting TxMintNone = Right TxMintNone
     mapScriptWitnessesMinting txMintValue'@(TxMintValue w _) = do
       let mappedScriptWitnesses =
-            [ (policyId, pure . (assetName',quantity,) <$> substitutedWitness)
+            [ (policyId, (fromList [(assetName', quantity)],) <$> substitutedWitness)
             | (ix, policyId, assetName', quantity, BuildTxWith witness) <- indexTxMintValue txMintValue'
             , let substitutedWitness = BuildTxWith <$> substituteExecUnits ix witness
             ]
-      final <- Map.fromListWith (<>) <$> traverseScriptWitnesses mappedScriptWitnesses
+          -- merge map elements, wit1 == wit2 will always hold
+          mergeValues (assets1, wit1) (assets2, _wit2) = (assets1 <> assets2, wit1)
+      final <- Map.fromListWith mergeValues <$> traverseScriptWitnesses mappedScriptWitnesses
       pure $ TxMintValue w final
 
 traverseScriptWitnesses
