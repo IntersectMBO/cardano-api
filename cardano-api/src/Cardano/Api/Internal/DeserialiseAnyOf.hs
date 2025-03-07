@@ -236,6 +236,8 @@ data SomeAddressVerificationKey
   | AVrfVerificationKey (VerificationKey VrfKey)
   | AStakeVerificationKey (VerificationKey StakeKey)
   | AStakeExtendedVerificationKey (VerificationKey StakeExtendedKey)
+  | AStakePoolVerificationKey (VerificationKey StakePoolKey)
+  | AStakePoolExtendedVerificationKey (VerificationKey StakePoolExtendedKey)
   | ADRepVerificationKey (VerificationKey DRepKey)
   | ADRepExtendedVerificationKey (VerificationKey DRepExtendedKey)
   | ACommitteeColdVerificationKey (VerificationKey CommitteeColdKey)
@@ -264,6 +266,8 @@ renderSomeAddressVerificationKey =
     AKesVerificationKey vk -> serialiseToBech32 vk
     AVrfVerificationKey vk -> serialiseToBech32 vk
     AStakeVerificationKey vk -> serialiseToBech32 vk
+    AStakePoolVerificationKey vk -> serialiseToBech32 vk
+    AStakePoolExtendedVerificationKey vk -> serialiseToBech32 vk
     AStakeExtendedVerificationKey vk -> serialiseToBech32 vk
     ADRepVerificationKey vk -> serialiseToBech32 vk
     ADRepExtendedVerificationKey vk -> serialiseToBech32 vk
@@ -287,6 +291,8 @@ mapSomeAddressVerificationKey f = \case
   AGenesisExtendedVerificationKey vk -> f vk
   AVrfVerificationKey vk -> f vk
   AStakeVerificationKey vk -> f vk
+  AStakePoolVerificationKey vk -> f vk
+  AStakePoolExtendedVerificationKey vk -> f vk
   AStakeExtendedVerificationKey vk -> f vk
   ADRepVerificationKey vk -> f vk
   ADRepExtendedVerificationKey vk -> f vk
@@ -340,6 +346,8 @@ deserialiseAnyVerificationKeyBech32 =
     , FromSomeType (AsVerificationKey AsVrfKey) AVrfVerificationKey
     , FromSomeType (AsVerificationKey AsStakeKey) AStakeVerificationKey
     , FromSomeType (AsVerificationKey AsStakeExtendedKey) AStakeExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsStakePoolKey) AStakePoolVerificationKey
+    , FromSomeType (AsVerificationKey AsStakePoolExtendedKey) AStakePoolExtendedVerificationKey
     ]
 
 deserialiseAnyVerificationKeyTextEnvelope
@@ -362,6 +370,8 @@ deserialiseAnyVerificationKeyTextEnvelope bs =
     , FromSomeType (AsVerificationKey AsPaymentExtendedKey) APaymentExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsStakeKey) AStakeVerificationKey
     , FromSomeType (AsVerificationKey AsStakeExtendedKey) AStakeExtendedVerificationKey
+    , FromSomeType (AsVerificationKey AsStakePoolKey) AStakePoolVerificationKey
+    , FromSomeType (AsVerificationKey AsStakePoolExtendedKey) AStakePoolExtendedVerificationKey
     , FromSomeType (AsVerificationKey AsGenesisUTxOKey) AGenesisUTxOVerificationKey
     , FromSomeType (AsVerificationKey AsGenesisExtendedKey) AGenesisExtendedVerificationKey
     ]
