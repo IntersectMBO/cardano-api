@@ -169,6 +169,10 @@ instance IsShelleyBasedEra era => Show (Proposal era) where
 instance IsShelleyBasedEra era => Eq (Proposal era) where
   (Proposal pp1) == (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ pp1 == pp2
 
+instance IsShelleyBasedEra era => Ord (Proposal era) where
+  compare (Proposal pp1) (Proposal pp2) =
+    shelleyBasedEraConstraints (shelleyBasedEra @era) $ compare pp1 pp2
+
 instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
   toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
 
@@ -197,6 +201,18 @@ instance Eq AnyProposal where
     case testEquality p p' of
       Nothing -> False
       Just Refl -> p == p'
+
+instance Ord AnyProposal where
+  compare (AnyProposal p) (AnyProposal p') =
+    case testEquality p p' of
+      Nothing ->
+        error $
+          unlines
+            [ "Ord AnyProposal: not possible to combine proposals of different eras"
+            , "Proposal 1: " ++ show p
+            , "Proposal 2: " ++ show p'
+            ]
+      Just Refl -> compare p p'
 
 createProposalProcedure
   :: ShelleyBasedEra era

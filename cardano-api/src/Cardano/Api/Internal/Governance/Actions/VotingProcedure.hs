@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
@@ -84,7 +85,7 @@ instance IsShelleyBasedEra era => FromCBOR (Voter era) where
     pure $ Voter v
 
 data AnyVoter where
-  AnyVoter :: Voter era -> AnyVoter
+  AnyVoter :: Typeable era => Voter era -> AnyVoter
 
 deriving instance Show AnyVoter
 
@@ -93,6 +94,19 @@ instance Eq AnyVoter where
     case testEquality v v' of
       Nothing -> False
       Just Refl -> v == v'
+
+instance Ord AnyVoter where
+  compare :: AnyVoter -> AnyVoter -> Ordering
+  compare (AnyVoter (v :: Voter eraA)) (AnyVoter (v' :: Voter eraB)) =
+    case eqT @eraA @eraB of
+      Just Refl -> compare v v'
+      Nothing ->
+        error $
+          unlines
+            [ "Ord AnyVoter: not possible to combine voters of different eras"
+            , "Voter 1: " ++ show v
+            , "Voter 2: " ++ show v'
+            ]
 
 data Vote
   = No
