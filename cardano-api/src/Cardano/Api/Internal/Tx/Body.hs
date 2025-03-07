@@ -2104,7 +2104,7 @@ createTransactionBody sbe bc =
       :: TxScriptWitnessRequirements (ShelleyLedgerEra era) <-
       caseShelleyToMaryOrAlonzoEraOnwards
         (const $ error "Impossible to construct TxScriptWitnessRequirements in pre-Alonzo era")
-        (flip collectTxBodyScriptWitnessRequirements bc)
+        (`collectTxBodyScriptWitnessRequirements` bc)
         sbe
     let era = toCardanoEra sbe
 

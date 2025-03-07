@@ -225,7 +225,7 @@ instance
     ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
 
 data AnyCertificate where
-  AnyCertificate :: Certificate era -> AnyCertificate
+  AnyCertificate :: Typeable era => Certificate era -> AnyCertificate
 
 deriving instance Show AnyCertificate
 
@@ -236,6 +236,18 @@ instance Eq AnyCertificate where
       case testEquality cert cert' of
         Nothing -> False
         Just Refl -> cert == cert'
+
+instance Ord AnyCertificate where
+  compare (AnyCertificate (c1 :: Certificate era1)) (AnyCertificate (c2 :: Certificate era2)) =
+    case eqT @era1 @era2 of
+      Just Refl -> compare c1 c2 -- Same era: valid comparison
+      Nothing ->
+        error $
+          unlines
+            [ "Ord AnyCertificate: Not possible to use certificates from different eras"
+            , "Certificate 1: " <> show c1
+            , "Certificate 2: " <> show c2
+            ]
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
