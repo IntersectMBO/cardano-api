@@ -33,7 +33,6 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Conway.Rules qualified as Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Core qualified as Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.Rules
   ( RupdEvent (..)
   , ShelleyBbodyEvent (LedgersEvent)
@@ -42,6 +41,7 @@ import Cardano.Ledger.Shelley.Rules
   , ShelleyUtxowEvent (..)
   )
 import Cardano.Ledger.Shelley.Rules qualified as Shelley
+import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import Ouroboros.Consensus.Cardano.Block (HardForkBlock)
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
@@ -63,16 +63,15 @@ class ConvertLedgerEvent blk where
 instance ConvertLedgerEvent ByronBlock where
   toLedgerEvent _ = Nothing
 
-instance ConvertLedgerEvent (ShelleyBlock protocol (ShelleyEra StandardCrypto)) where
+instance ConvertLedgerEvent (ShelleyBlock protocol ShelleyEra) where
   toLedgerEvent = toLedgerEventShelley
 
 toLedgerEventShelley
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => Event (Ledger.Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera
+  :: Event (Ledger.Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera
   => Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ ShelleyNewEpochEvent ledgerera
   => Event (Ledger.Core.EraRule "POOLREAP" ledgerera) ~ Shelley.ShelleyPoolreapEvent ledgerera
   => Event (Ledger.Core.EraRule "EPOCH" ledgerera) ~ Shelley.ShelleyEpochEvent ledgerera
-  => Event (Ledger.Core.EraRule "RUPD" ledgerera) ~ RupdEvent StandardCrypto
+  => Event (Ledger.Core.EraRule "RUPD" ledgerera) ~ RupdEvent
   => Event (Ledger.Core.EraRule "BBODY" ledgerera) ~ ShelleyBbodyEvent ledgerera
   => Event (Ledger.Core.EraRule "LEDGERS" ledgerera) ~ Shelley.ShelleyLedgersEvent ledgerera
   => Event (Ledger.Core.EraRule "LEDGER" ledgerera) ~ Shelley.ShelleyLedgerEvent ledgerera
@@ -98,19 +97,18 @@ handleShelleyLedgerBBODYEvents (LedgersEvent (Shelley.LedgerEvent e)) =
     Shelley.UtxowEvent ev -> handlePreAlonzoUTxOWEvent ev
     Shelley.DelegsEvent ev -> handleShelleyDELEGSEvent ev
 
-instance ConvertLedgerEvent (ShelleyBlock protocol (MaryEra StandardCrypto)) where
+instance ConvertLedgerEvent (ShelleyBlock protocol MaryEra) where
   toLedgerEvent = toLedgerEventAllegraMary
 
-instance ConvertLedgerEvent (ShelleyBlock protocol (AllegraEra StandardCrypto)) where
+instance ConvertLedgerEvent (ShelleyBlock protocol AllegraEra) where
   toLedgerEvent = toLedgerEventAllegraMary
 
 toLedgerEventAllegraMary
-  :: EraCrypto ledgerera ~ StandardCrypto
-  => Event (Ledger.Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera
+  :: Event (Ledger.Core.EraRule "TICK" ledgerera) ~ ShelleyTickEvent ledgerera
   => Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ ShelleyNewEpochEvent ledgerera
   => Event (Ledger.Core.EraRule "POOLREAP" ledgerera) ~ Shelley.ShelleyPoolreapEvent ledgerera
   => Event (Ledger.Core.EraRule "EPOCH" ledgerera) ~ Shelley.ShelleyEpochEvent ledgerera
-  => Event (Ledger.Core.EraRule "RUPD" ledgerera) ~ RupdEvent StandardCrypto
+  => Event (Ledger.Core.EraRule "RUPD" ledgerera) ~ RupdEvent
   => Event (Ledger.Core.EraRule "BBODY" ledgerera) ~ ShelleyBbodyEvent ledgerera
   => Event (Ledger.Core.EraRule "LEDGERS" ledgerera) ~ Shelley.ShelleyLedgersEvent ledgerera
   => Event (Ledger.Core.EraRule "LEDGER" ledgerera) ~ Shelley.ShelleyLedgerEvent ledgerera
@@ -137,16 +135,15 @@ handleAllegraMaryLedgerBBODYEvents (LedgersEvent (Shelley.LedgerEvent e)) =
     Shelley.UtxowEvent ev -> handleAllegraMaryUTxOWEvent ev
     Shelley.DelegsEvent ev -> handleShelleyDELEGSEvent ev
 
-instance ConvertLedgerEvent (ShelleyBlock protocol (AlonzoEra StandardCrypto)) where
+instance ConvertLedgerEvent (ShelleyBlock protocol AlonzoEra) where
   toLedgerEvent = toAlonzoOrBabbageLedgerEvents
 
-instance ConvertLedgerEvent (ShelleyBlock protocol (BabbageEra StandardCrypto)) where
+instance ConvertLedgerEvent (ShelleyBlock protocol BabbageEra) where
   toLedgerEvent = toAlonzoOrBabbageLedgerEvents
 
 toAlonzoOrBabbageLedgerEvents
   :: LatestTickEventConstraints ledgerera
   => LatestBBodyEventConstraints ledgerera
-  => EraCrypto ledgerera ~ StandardCrypto
   => WrapLedgerEvent (ShelleyBlock protocol ledgerera) -> Maybe LedgerEvent
 toAlonzoOrBabbageLedgerEvents e =
   case unwrapLedgerEvent e of
@@ -155,18 +152,17 @@ toAlonzoOrBabbageLedgerEvents e =
 
 handleAlonzoToBabbageLedgerBBODYEvents
   :: LatestBBodyEventConstraints ledgerera
-  => EraCrypto ledgerera ~ StandardCrypto
   => AlonzoBbodyEvent ledgerera -> Maybe LedgerEvent
 handleAlonzoToBabbageLedgerBBODYEvents (ShelleyInAlonzoEvent (LedgersEvent (Shelley.LedgerEvent ledgerEvent))) =
   handleShelleyLEDGEREvents ledgerEvent
 
-instance ConvertLedgerEvent (ShelleyBlock protocol (ConwayEra StandardCrypto)) where
+instance ConvertLedgerEvent (ShelleyBlock protocol ConwayEra) where
   toLedgerEvent = toLedgerEventConway
 
 -- LEDGER rule is defined anew in Conway
 
 toLedgerEventConway
-  :: WrapLedgerEvent (ShelleyBlock protocol (ConwayEra StandardCrypto))
+  :: WrapLedgerEvent (ShelleyBlock protocol ConwayEra)
   -> Maybe LedgerEvent
 toLedgerEventConway evt =
   case unwrapLedgerEvent evt of
@@ -177,7 +173,6 @@ toLedgerEventConway evt =
         case conwayLedgerEvent of
           Conway.UtxowEvent utxowEvent -> handleConwayUTxOWEvent utxowEvent
           Conway.CertsEvent{} -> Nothing
-          Conway.MempoolEvent{} -> Nothing
           Conway.GovEvent govEvent ->
             case govEvent of
               Conway.GovNewProposals txid props ->
@@ -205,31 +200,31 @@ instance ConvertLedgerEvent (HardForkBlock (Consensus.CardanoEras StandardCrypto
   #-}
 
 pattern ShelleyLedgerEvent
-  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (ShelleyEra StandardCrypto))
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) ShelleyEra)
   -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
 pattern ShelleyLedgerEvent x = S (Z x)
 
 pattern AllegraLedgerEvent
-  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (AllegraEra StandardCrypto))
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) AllegraEra)
   -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
 pattern AllegraLedgerEvent x = S (S (Z x))
 
 pattern MaryLedgerEvent
-  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (MaryEra StandardCrypto))
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) MaryEra)
   -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
 pattern MaryLedgerEvent x = S (S (S (Z x)))
 
 pattern AlonzoLedgerEvent
-  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) (AlonzoEra StandardCrypto))
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.TPraos StandardCrypto) AlonzoEra)
   -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
 pattern AlonzoLedgerEvent x = S (S (S (S (Z x))))
 
 pattern BabbageLedgerEvent
-  :: WrapLedgerEvent (ShelleyBlock (Consensus.Praos StandardCrypto) (BabbageEra StandardCrypto))
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.Praos StandardCrypto) BabbageEra)
   -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
 pattern BabbageLedgerEvent x = S (S (S (S (S (Z x)))))
 
 pattern ConwayLedgerEvent
-  :: WrapLedgerEvent (ShelleyBlock (Consensus.Praos StandardCrypto) (ConwayEra StandardCrypto))
+  :: WrapLedgerEvent (ShelleyBlock (Consensus.Praos StandardCrypto) ConwayEra)
   -> NS WrapLedgerEvent (Consensus.CardanoEras StandardCrypto)
 pattern ConwayLedgerEvent x = S (S (S (S (S (S (Z x))))))

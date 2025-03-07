@@ -310,8 +310,14 @@ import Cardano.Ledger.Core
   , toEraCBOR
   )
 import Cardano.Ledger.Credential (Credential (..), credToText)
-import Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..), drepAnchorL, drepDepositL, drepExpiryL)
+import Cardano.Ledger.Hashes 
+  ( ADDRHASH
+  , SafeHash
+  , castSafeHash
+  , extractHash
+  , unsafeMakeSafeHash
+  )
 import Cardano.Ledger.Keys
   ( HasKeyRole
   , KeyHash (..)
@@ -324,7 +330,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))
-import Cardano.Ledger.SafeHash (SafeHash, castSafeHash, extractHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.API
   ( AccountState (..)
   , GenDelegPair (..)
@@ -350,4 +355,5 @@ import Cardano.Ledger.Shelley.TxCert
   , ShelleyTxCert (..)
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Protocol.Crypto (Crypto, StandardCrypto)
 import Cardano.Slotting.Slot (EpochNo (..))

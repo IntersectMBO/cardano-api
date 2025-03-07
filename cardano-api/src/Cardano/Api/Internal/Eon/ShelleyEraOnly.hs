@@ -31,8 +31,8 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.SafeHash qualified as L
 import Cardano.Ledger.Shelley.TxCert qualified as L
+import Cardano.Protocol.Crypto qualified as L
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
@@ -69,22 +69,20 @@ instance Convert ShelleyEraOnly ShelleyBasedEra where
     ShelleyEraOnlyShelley -> ShelleyBasedEraShelley
 
 type ShelleyEraOnlyConstraints era =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
-  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
+  ( C.HashAlgorithm L.HASH
+  , C.Signable (L.VRF L.StandardCrypto) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
-  , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+  , L.ADDRHASH ~ Blake2b.Blake2b_224
   , L.Era (ShelleyLedgerEra era)
-  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.ExactEra L.ShelleyEra (ShelleyLedgerEra era)
   , L.ExactEra L.ShelleyEra (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.ProtVerAtMost (ShelleyLedgerEra era) 2
   , L.ProtVerAtMost (ShelleyLedgerEra era) 6
   , L.ProtVerAtMost (ShelleyLedgerEra era) 8

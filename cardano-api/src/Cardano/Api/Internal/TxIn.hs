@@ -47,9 +47,7 @@ import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Crypto.Hashing qualified as Byron
 import Cardano.Ledger.BaseTypes qualified as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys qualified as Shelley
-import Cardano.Ledger.SafeHash qualified as SafeHash
+import Cardano.Ledger.Hashes qualified as Hashes
 import Cardano.Ledger.Shelley.TxBody qualified as Shelley
 import Cardano.Ledger.TxIn qualified as Ledger
 
@@ -74,7 +72,7 @@ import Text.Parsec.Token qualified as Parsec
 -- Transaction Ids
 --
 
-newtype TxId = TxId (Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody)
+newtype TxId = TxId (Crypto.Hash Hashes.HASH Shelley.EraIndependentTxBody)
   -- We use the Shelley representation and convert to/from the Byron one
   deriving stock (Eq, Ord)
   deriving (Show, IsString) via UsingRawBytesHex TxId
@@ -95,13 +93,13 @@ toByronTxId :: TxId -> Byron.TxId
 toByronTxId (TxId h) =
   Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
 
-toShelleyTxId :: TxId -> Ledger.TxId StandardCrypto
+toShelleyTxId :: TxId -> Ledger.TxId
 toShelleyTxId (TxId h) =
-  Ledger.TxId (SafeHash.unsafeMakeSafeHash (Crypto.castHash h))
+  Ledger.TxId (Hashes.unsafeMakeSafeHash (Crypto.castHash h))
 
-fromShelleyTxId :: Ledger.TxId StandardCrypto -> TxId
+fromShelleyTxId :: Ledger.TxId -> TxId
 fromShelleyTxId (Ledger.TxId h) =
-  TxId (Crypto.castHash (SafeHash.extractHash h))
+  TxId (Crypto.castHash (Hashes.extractHash h))
 
 -- ----------------------------------------------------------------------------
 -- Transaction inputs
@@ -163,10 +161,10 @@ toByronTxIn (TxIn txid (TxIx txix)) =
 
 -- | This function may overflow on the transaction index. Call sites must ensure
 -- that all uses of this function are appropriately guarded.
-toShelleyTxIn :: TxIn -> Ledger.TxIn StandardCrypto
+toShelleyTxIn :: TxIn -> Ledger.TxIn
 toShelleyTxIn (TxIn txid (TxIx txix)) =
   Ledger.TxIn (toShelleyTxId txid) (Ledger.TxIx $ fromIntegral txix)
 
-fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
+fromShelleyTxIn :: Ledger.TxIn -> TxIn
 fromShelleyTxIn (Ledger.TxIn txid (Ledger.TxIx txix)) =
   TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))

@@ -22,7 +22,7 @@ import Cardano.Api.Internal.ProtocolParameters
   ( ExecutionUnitPrices (..)
   , ProtocolParameters (..)
   )
-import Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval), StandardCrypto)
+import Cardano.Api.Ledger (Coin (..), EpochInterval (EpochInterval))
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..))
@@ -59,13 +59,13 @@ test_golden_ProtocolParameters_to_PParams =
     "golden ProtocolParameter tests"
     [ testProperty "ShelleyPParams" $
         goldenLegacyProtocolParametersToPParams
-          (Proxy :: Proxy (ShelleyPParams Identity (ShelleyEra StandardCrypto)))
+          (Proxy :: Proxy (ShelleyPParams Identity ShelleyEra))
     , testProperty "AlonzoPParams" $
         goldenLegacyProtocolParametersToPParams
-          (Proxy :: Proxy (AlonzoPParams Identity (AlonzoEra StandardCrypto)))
+          (Proxy :: Proxy (AlonzoPParams Identity AlonzoEra))
     , testProperty "BabbagePParams" $
         goldenLegacyProtocolParametersToPParams
-          (Proxy :: Proxy (BabbagePParams Identity (BabbageEra StandardCrypto)))
+          (Proxy :: Proxy (BabbagePParams Identity BabbageEra))
     ]
 
 -- Test that tries decoding the legacy protocol parameters golden file

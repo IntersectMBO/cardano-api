@@ -225,7 +225,6 @@ addWitnesses witnesses (ShelleyTx sbe tx) =
   txCommon
     :: forall ledgerera
      . ShelleyLedgerEra era ~ ledgerera
-    => L.EraCrypto ledgerera ~ L.StandardCrypto
     => L.EraTx ledgerera
     => L.Tx ledgerera
   txCommon =

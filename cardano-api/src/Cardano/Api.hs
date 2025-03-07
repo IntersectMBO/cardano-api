@@ -1020,7 +1020,6 @@ module Cardano.Api
   , queryPoolDistribution
   , queryPoolState
   , queryProtocolParameters
-  , queryProtocolParametersUpdate
   , queryProtocolState
   , queryStakeAddresses
   , queryStakeDelegDeposits
@@ -1040,6 +1039,8 @@ module Cardano.Api
   , queryProposals
   , queryCommitteeMembersState
   , queryStakeVoteDelegatees
+  , queryStakePoolDefaultVote
+  , queryLedgerConfig
 
     -- ** Committee State Query
   , MemberStatus (..)
