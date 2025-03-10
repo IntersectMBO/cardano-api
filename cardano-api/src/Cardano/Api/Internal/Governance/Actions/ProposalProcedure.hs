@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -37,6 +38,8 @@ import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
 import Data.ByteString (ByteString)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
+import Data.Type.Equality (TestEquality (..))
+import Data.Typeable
 import Data.Word
 import GHC.Exts (IsList (..))
 
@@ -144,7 +147,19 @@ fromGovernanceAction = \case
   Gov.InfoAction ->
     InfoAct
 
-newtype Proposal era = Proposal {unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era)}
+data Proposal era where
+  Proposal :: Typeable era => Gov.ProposalProcedure (ShelleyLedgerEra era) -> Proposal era
+
+instance TestEquality Proposal where
+  testEquality (Proposal v) (Proposal v') =
+    proposalTypeEquality v v'
+
+proposalTypeEquality
+  :: (Typeable eraA, Typeable eraB)
+  => Gov.ProposalProcedure (ShelleyLedgerEra eraA)
+  -> Gov.ProposalProcedure (ShelleyLedgerEra eraB)
+  -> Maybe (eraA :~: eraB)
+proposalTypeEquality _ _ = eqT
 
 instance IsShelleyBasedEra era => Show (Proposal era) where
   show (Proposal pp) = do
@@ -153,6 +168,10 @@ instance IsShelleyBasedEra era => Show (Proposal era) where
 
 instance IsShelleyBasedEra era => Eq (Proposal era) where
   (Proposal pp1) == (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ pp1 == pp2
+
+instance IsShelleyBasedEra era => Ord (Proposal era) where
+  compare (Proposal pp1) (Proposal pp2) =
+    shelleyBasedEraConstraints (shelleyBasedEra @era) $ compare pp1 pp2
 
 instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
   toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
@@ -171,6 +190,29 @@ instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
 instance HasTypeProxy era => HasTypeProxy (Proposal era) where
   data AsType (Proposal era) = AsProposal
   proxyToAsType _ = AsProposal
+
+data AnyProposal where
+  AnyProposal :: IsShelleyBasedEra era => Proposal era -> AnyProposal
+
+deriving instance Show AnyProposal
+
+instance Eq AnyProposal where
+  (==) (AnyProposal p) (AnyProposal p') =
+    case testEquality p p' of
+      Nothing -> False
+      Just Refl -> p == p'
+
+instance Ord AnyProposal where
+  compare (AnyProposal p) (AnyProposal p') =
+    case testEquality p p' of
+      Nothing ->
+        error $
+          unlines
+            [ "Ord AnyProposal: not possible to combine proposals of different eras"
+            , "Proposal 1: " ++ show p
+            , "Proposal 2: " ++ show p'
+            ]
+      Just Refl -> compare p p'
 
 createProposalProcedure
   :: ShelleyBasedEra era
