@@ -101,6 +101,7 @@ module Test.Gen.Cardano.Api.Typed
   , genTxInsReference
   , genTxMetadataInEra
   , genTxMintValue
+  , genMintValue
   , genLovelace
   , genPositiveLovelace
   , genValue
@@ -858,18 +859,24 @@ genTxMintValue =
   inEonForEra
     (pure TxMintNone)
     $ \w -> do
+      -- TODO update this generator to generate witnesses, and then calculate policy id (via scriptHash) from the
+      -- witnesses
       policies <- Gen.list (Range.constant 1 3) genPolicyId
-      assets <- forM policies $ \policy ->
-        (,) policy <$>
-          ((,) <$> Gen.list
-                    (Range.constant 1 3)
-                    ((,) <$> genAssetName
-                         <*> genPositiveQuantity)
-               <*> fmap (fmap pure) genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w))
+      assets <- forM policies $ \policy -> do
+        mintValue <- genMintValue
+        witness <- genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w)
+        pure (policy, (mintValue, pure witness))
+
       Gen.choice
         [ pure TxMintNone
         , pure $ TxMintValue w (fromList assets)
         ]
+
+genMintValue :: Gen MintValue
+genMintValue = do
+  assetQuantities <- Gen.list (Range.constant 0 5) $
+    (,) <$> genAssetName <*> genPositiveQuantity
+  pure $ fromList assetQuantities
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent sbe = do

@@ -1,13 +1,11 @@
 {-# LANGUAGE OverloadedLists #-}
 
 module Cardano.Api.Internal.ValueParser
-  ( parseValue
-  , parseTxOutMultiAssetValue
+  ( parseTxOutMultiAssetValue
   , parseMintingMultiAssetValue
   , parseUTxOValue
   , parseAssetName
   , parsePolicyId
-  , ParserValueRole (..)
   )
 where
 
@@ -25,6 +23,7 @@ import Data.List as List (foldl')
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Word (Word64)
+import GHC.Exts (IsList (..))
 import Text.Parsec as Parsec (notFollowedBy, try, (<?>))
 import Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
 import Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
@@ -62,12 +61,23 @@ parseValue role = do
           "Lovelace must be zero in minting value: " <> show value
       return value
 
+-- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
+-- to succeed.
 parseTxOutMultiAssetValue :: Parser Value
 parseTxOutMultiAssetValue = parseValue RoleUTxO
 
-parseMintingMultiAssetValue :: Parser Value
-parseMintingMultiAssetValue = parseValue RoleMint
+-- | Parse a 'MintValue' from its string representation. The string representation cannot contain ADA.
+parseMintingMultiAssetValue :: Parser MintValue
+parseMintingMultiAssetValue = do
+  result <- parseValue RoleMint
+  -- parseValue makes sure we don't have ADA here
+  pure . fromList $
+    [ ((policyId, assetName), quantity)
+    | (AssetId policyId assetName, quantity) <- toList result
+    ]
 
+-- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
+-- to succeed.
 parseUTxOValue :: Parser Value
 parseUTxOValue = parseValue RoleUTxO
 

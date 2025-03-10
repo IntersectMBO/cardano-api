@@ -26,6 +26,7 @@ module Cardano.Api.Internal.Value
   , negateLedgerValue
   , calcMinimumDeposit
   , MintValue (..)
+  , mintValueToValue
 
     -- ** Ada \/ L.Coin specifically
   , Lovelace
@@ -82,6 +83,7 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, wit
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
 import Data.Aeson.Types (Parser, ToJSONKey)
+import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
@@ -327,7 +329,7 @@ calcMinimumDeposit v =
   Mary.scaledMinDeposit (toMaryValue v)
 
 -- | Map of non-ADA assets with their quantity
-newtype MintValue = MintValue (Map AssetName Quantity)
+newtype MintValue = MintValue (Map (PolicyId, AssetName) Quantity)
   deriving Eq
 
 type instance Element MintValue = Quantity
@@ -342,7 +344,7 @@ instance Monoid MintValue where
   mempty = MintValue Map.empty
 
 instance IsList MintValue where
-  type Item MintValue = (AssetName, Quantity)
+  type Item MintValue = ((PolicyId, AssetName), Quantity)
   fromList =
     MintValue
       . Map.filter (/= 0)
@@ -353,6 +355,9 @@ instance Show MintValue where
   showsPrec d v =
     showParen (d > 10) $
       showString "mintValueFromList " . shows (toList v)
+
+mintValueToValue :: MintValue -> Value
+mintValueToValue = fromList . map (first (uncurry AssetId)) . toList
 
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation
