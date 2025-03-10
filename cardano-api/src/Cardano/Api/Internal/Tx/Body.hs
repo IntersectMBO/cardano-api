@@ -487,6 +487,7 @@ import Data.Map.Ordered.Strict (OMap)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.MonoTraversable (omap)
 import Data.Monoid
 import Data.OSet.Strict (OSet)
 import Data.OSet.Strict qualified as OSet
@@ -1105,6 +1106,9 @@ instance Applicative (BuildTxWith BuildTx) where
   pure = BuildTxWith
   (BuildTxWith f) <*> (BuildTxWith a) = BuildTxWith (f a)
 
+instance Semigroup (BuildTxWith ViewTx a) where
+  ViewTx <> ViewTx = ViewTx
+
 buildTxWithToMaybe :: BuildTxWith build a -> Maybe a
 buildTxWithToMaybe ViewTx = Nothing
 buildTxWithToMaybe (BuildTxWith a) = Just a
@@ -1536,43 +1540,42 @@ data TxMintValue build era where
     :: MaryEraOnwards era
     -> Map
          PolicyId
-         [ ( AssetName
-           , Quantity
-           , BuildTxWith build (ScriptWitness WitCtxMint era)
-           )
-         ]
+         ( L.MultiAsset StandardCrypto
+         , BuildTxWith build (ScriptWitness WitCtxMint era)
+         )
     -> TxMintValue build era
 
 deriving instance Eq (TxMintValue build era)
 
 deriving instance Show (TxMintValue build era)
 
+mkTxMintValue
+  :: [(MintValue, BuildTxWith build (ScriptWitness WitCtxMint era))]
+  -> TxMintValue build era
+mkTxMintValue [] = TxMintNone
+mkTxMintValue vs = TODO
+
 -- | Convert 'TxMintValue' to a more handy 'Value'.
 txMintValueToValue :: TxMintValue build era -> Value
 txMintValueToValue TxMintNone = mempty
 txMintValueToValue (TxMintValue _ policiesWithAssets) =
-  fromList
-    [ (AssetId policyId' assetName', quantity)
-    | (policyId', assets) <- toList policiesWithAssets
-    , (assetName', quantity, _) <- assets
-    ]
+  mconcat
+    . map (mintValueToValue . fst)
+    $ Map.elems policiesWithAssets
 
 -- | Index the assets with witnesses in the order of policy ids.
 -- See section 4.1 of https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf
 indexTxMintValue
   :: TxMintValue build era
   -> [ ( ScriptWitnessIndex
-       , PolicyId
-       , AssetName
-       , Quantity
+       , MintValue
        , BuildTxWith build (ScriptWitness WitCtxMint era)
        )
      ]
 indexTxMintValue TxMintNone = []
 indexTxMintValue (TxMintValue _ policiesWithAssets) =
-  [ (ScriptWitnessIndexMint ix, policyId', assetName', quantity, witness)
-  | (ix, (policyId', assets)) <- zip [0 ..] $ toList policiesWithAssets
-  , (assetName', quantity, witness) <- assets
+  [ (ScriptWitnessIndexMint ix, assets, witness)
+  | (ix, (_, (assets, witness))) <- zip [0 ..] $ toList policiesWithAssets
   ]
 
 -- ----------------------------------------------------------------------------
@@ -1967,23 +1970,23 @@ modTxMintValue f tx = tx{txMintValue = f (txMintValue tx)}
 
 addTxMintValue
   :: IsMaryBasedEra era
-  => Map PolicyId [(AssetName, Quantity, BuildTxWith build (ScriptWitness WitCtxMint era))]
+  => Map PolicyId (MintValue, BuildTxWith build (ScriptWitness WitCtxMint era))
   -> TxBodyContent build era
   -> TxBodyContent build era
 addTxMintValue assets =
   modTxMintValue
     ( \case
         TxMintNone -> TxMintValue maryBasedEra assets
-        TxMintValue era t -> TxMintValue era (t <> assets)
+        TxMintValue era t -> TxMintValue era $ Map.unionWith (\(v1, w1) (v2, _w2) -> (v1 <> v2, w1)) assets t -- w1 == w2
     )
 
 -- | Adds the negation of the provided assets and quantities to the txMintValue field of the `TxBodyContent`.
 subtractTxMintValue
   :: IsMaryBasedEra era
-  => Map PolicyId [(AssetName, Quantity, BuildTxWith build (ScriptWitness WitCtxMint era))]
+  => Map PolicyId (MintValue, BuildTxWith build (ScriptWitness WitCtxMint era))
   -> TxBodyContent build era
   -> TxBodyContent build era
-subtractTxMintValue assets = addTxMintValue (fmap (fmap (\(x, y, z) -> (x, negate y, z))) assets)
+subtractTxMintValue assets = addTxMintValue $ first (omap negate) <$> assets
 
 setTxScriptValidity :: TxScriptValidity era -> TxBodyContent build era -> TxBodyContent build era
 setTxScriptValidity v txBodyContent = txBodyContent{txScriptValidity = v}
@@ -2782,7 +2785,7 @@ fromLedgerTxMintValue sbe body = forEraInEon (toCardanoEra sbe) TxMintNone $ \w 
         TxMintValue w $
           Map.fromListWith
             (<>)
-            [ (policyId', [(assetName', quantity, ViewTx)])
+            [ (policyId', (fromList [((policyId', assetName'), quantity)], ViewTx))
             | -- only non-ada can be here
             (AssetId policyId' assetName', quantity) <- toList assetMap
             ]
@@ -3823,7 +3826,7 @@ collectTxBodyScriptWitnesses
     scriptWitnessesMinting txMintValue' =
       List.nub
         [ (ix, AnyScriptWitness witness)
-        | (ix, _, _, _, BuildTxWith witness) <- indexTxMintValue txMintValue'
+        | (ix, _, BuildTxWith witness) <- indexTxMintValue txMintValue'
         ]
 
     scriptWitnessesVoting

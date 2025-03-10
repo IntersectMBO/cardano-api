@@ -25,6 +25,8 @@ module Cardano.Api.Internal.Value
   , negateValue
   , negateLedgerValue
   , calcMinimumDeposit
+  , MintValue (..)
+  , mintValueToValue
 
     -- ** Ada \/ L.Coin specifically
   , Lovelace
@@ -81,6 +83,7 @@ import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, wit
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
 import Data.Aeson.Types (Parser, ToJSONKey)
+import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
@@ -92,6 +95,7 @@ import Data.List qualified as List
 import Data.Map.Merge.Strict qualified as Map
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.MonoTraversable
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -323,6 +327,37 @@ fromMaryValue (MaryValue (L.Coin lovelace) other) =
 calcMinimumDeposit :: Value -> Lovelace -> Lovelace
 calcMinimumDeposit v =
   Mary.scaledMinDeposit (toMaryValue v)
+
+-- | Map of non-ADA assets with their quantity
+newtype MintValue = MintValue (Map (PolicyId, AssetName) Quantity)
+  deriving Eq
+
+type instance Element MintValue = Quantity
+
+instance MonoFunctor MintValue where
+  omap f (MintValue as) = MintValue $ f <$> as
+
+instance Semigroup MintValue where
+  MintValue a <> MintValue b = MintValue $ Map.unionWith (<>) a b
+
+instance Monoid MintValue where
+  mempty = MintValue Map.empty
+
+instance IsList MintValue where
+  type Item MintValue = ((PolicyId, AssetName), Quantity)
+  fromList =
+    MintValue
+      . Map.filter (/= 0)
+      . Map.fromListWith (<>)
+  toList (MintValue m) = toList m
+
+instance Show MintValue where
+  showsPrec d v =
+    showParen (d > 10) $
+      showString "mintValueFromList " . shows (toList v)
+
+mintValueToValue :: MintValue -> Value
+mintValueToValue = fromList . map (first (uncurry AssetId)) . toList
 
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation
