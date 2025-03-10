@@ -96,8 +96,11 @@
               ghcid = "0.8.9";
               cabal-gild = "1.3.1.2";
               fourmolu = "0.18.0.0";
-              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
               hlint = "3.8";
+            } // lib.optionalAttrs (builtins.compareVersions nixpkgs.haskell-nix.compiler.${config.compiler-nix-name} "9.8" <0) {
+              # HLS is corrently broken for GHC >=9.8
+              # See https://github.com/haskell/haskell-language-server/issues/4493
+              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
             };
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck];
