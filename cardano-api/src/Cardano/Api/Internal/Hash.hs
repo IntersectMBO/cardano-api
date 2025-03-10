@@ -12,7 +12,7 @@ where
 import Cardano.Api.Internal.HasTypeProxy
 
 import Cardano.Crypto.Hash qualified as Hash
-import Cardano.Ledger.SafeHash qualified as Ledger
+import Cardano.Ledger.Hashes qualified as Ledger
 
 import Data.Kind (Type)
 import Data.Text qualified as Text
@@ -26,5 +26,5 @@ instance HasTypeProxy a => HasTypeProxy (Hash a) where
   data AsType (Hash a) = AsHash (AsType a)
   proxyToAsType _ = AsHash (proxyToAsType (Proxy :: Proxy a))
 
-renderSafeHashAsHex :: Ledger.SafeHash c tag -> Text.Text
+renderSafeHashAsHex :: Ledger.SafeHash tag -> Text.Text
 renderSafeHashAsHex = Hash.hashToTextAsHex . Ledger.extractHash

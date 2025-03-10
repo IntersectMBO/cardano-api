@@ -72,7 +72,6 @@ import Cardano.Api.Ledger.Lens qualified as A
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Mary.Value qualified as Mary
@@ -276,7 +275,7 @@ valueToLovelace v =
     [(AdaAssetId, q)] -> Just (quantityToLovelace q)
     _ -> Nothing
 
-toMaryValue :: Value -> MaryValue StandardCrypto
+toMaryValue :: Value -> MaryValue
 toMaryValue v =
   Mary.valueFromList (L.Coin lovelace) other
  where
@@ -286,7 +285,7 @@ toMaryValue v =
     | (AssetId pid name, Quantity q) <- valueToList v
     ]
 
-  toMaryPolicyID :: PolicyId -> Mary.PolicyID StandardCrypto
+  toMaryPolicyID :: PolicyId -> Mary.PolicyID
   toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
 
   toMaryAssetName :: AssetName -> Mary.AssetName
@@ -302,7 +301,7 @@ fromLedgerValue sbe v =
     (const (fromMaryValue v))
     sbe
 
-fromMaryValue :: MaryValue StandardCrypto -> Value
+fromMaryValue :: MaryValue -> Value
 fromMaryValue (MaryValue (L.Coin lovelace) other) =
   Value $
     -- TODO: write QC tests to show it's ok to use Map.fromAscList here
@@ -312,7 +311,7 @@ fromMaryValue (MaryValue (L.Coin lovelace) other) =
            | (pid, name, q) <- Mary.flattenMultiAsset other
            ]
  where
-  fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
+  fromMaryPolicyID :: Mary.PolicyID -> PolicyId
   fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
 
   fromMaryAssetName :: Mary.AssetName -> AssetName

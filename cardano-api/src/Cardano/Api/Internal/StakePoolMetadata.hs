@@ -27,8 +27,7 @@ import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
 
 import Cardano.Crypto.Hash.Class qualified as Crypto
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Ledger.Hashes (HASH)
 
 import Data.Aeson ((.:))
 import Data.Aeson qualified as Aeson
@@ -63,7 +62,7 @@ data StakePoolMetadata
   deriving (Eq, Show)
 
 newtype instance Hash StakePoolMetadata
-  = StakePoolMetadataHash (Shelley.Hash StandardCrypto ByteString)
+  = StakePoolMetadataHash (Crypto.Hash HASH ByteString)
   deriving (Eq, Show)
 
 instance HasTypeProxy StakePoolMetadata where

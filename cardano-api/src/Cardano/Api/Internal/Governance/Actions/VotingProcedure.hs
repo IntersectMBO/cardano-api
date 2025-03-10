@@ -27,7 +27,6 @@ import Cardano.Api.Internal.SerialiseTextEnvelope
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Core (EraCrypto)
 import Cardano.Ledger.Core qualified as L
 
 import Control.Monad (foldM)
@@ -38,7 +37,7 @@ import Data.Text.Encoding qualified as Text
 import GHC.Generics
 
 newtype GovernanceActionId era = GovernanceActionId
-  { unGovernanceActionId :: Ledger.GovActionId (EraCrypto (ShelleyLedgerEra era))
+  { unGovernanceActionId :: Ledger.GovActionId
   }
   deriving (Show, Eq, Ord)
 
@@ -52,7 +51,7 @@ instance IsShelleyBasedEra era => FromCBOR (GovernanceActionId era) where
     !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
     return $ GovernanceActionId v
 
-newtype Voter era = Voter (Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era)))
+newtype Voter era = Voter Ledger.Voter
   deriving (Show, Eq, Ord)
 
 instance IsShelleyBasedEra era => ToCBOR (Voter era) where
@@ -155,8 +154,8 @@ emptyVotingProcedures = VotingProcedures $ L.VotingProcedures Map.empty
 singletonVotingProcedures
   :: ()
   => ConwayEraOnwards era
-  -> L.Voter (L.EraCrypto (ShelleyLedgerEra era))
-  -> L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))
+  -> L.Voter
+  -> L.GovActionId
   -> L.VotingProcedure (ShelleyLedgerEra era)
   -> VotingProcedures era
 singletonVotingProcedures _ voter govActionId votingProcedure =
@@ -168,8 +167,8 @@ singletonVotingProcedures _ voter govActionId votingProcedure =
 -- | A voter, and the conflicting votes of this voter (i.e. votes with the same governance action identifier)
 newtype VotesMergingConflict era
   = VotesMergingConflict
-      ( L.Voter (L.EraCrypto (ShelleyLedgerEra era))
-      , [L.GovActionId (L.EraCrypto (ShelleyLedgerEra era))]
+      ( L.Voter
+      , [L.GovActionId]
       )
   deriving Show
 

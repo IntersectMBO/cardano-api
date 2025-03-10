@@ -17,7 +17,6 @@ module Cardano.Api.Internal.Query.Expr
   , queryPoolDistribution
   , queryPoolState
   , queryProtocolParameters
-  , queryProtocolParametersUpdate
   , queryProtocolState
   , queryStakeAddresses
   , queryStakeDelegDeposits
@@ -39,6 +38,8 @@ module Cardano.Api.Internal.Query.Expr
   , queryFuturePParams
   , queryStakeVoteDelegatees
   , queryProposals
+  , queryStakePoolDefaultVote
+  , queryLedgerConfig
   )
 where
 
@@ -55,7 +56,6 @@ import Cardano.Api.Internal.IPC
 import Cardano.Api.Internal.IPC.Monad
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.NetworkId
-import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.Query
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Tx.UTxO
@@ -64,12 +64,12 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
 import Cardano.Ledger.CertState qualified as L
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Core (EraCrypto)
 import Cardano.Ledger.Credential qualified as L
+import Cardano.Ledger.Hashes hiding (Hash)
 import Cardano.Ledger.Keys qualified as L
-import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState qualified as L
 import Cardano.Slotting.Slot
+import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus
 import Ouroboros.Network.Block (Serialised)
 import Ouroboros.Network.PeerSelection.LedgerPeers (LedgerPeerSnapshot)
@@ -96,6 +96,21 @@ queryChainPoint
   => LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError ChainPoint)
 queryChainPoint =
   queryExpr QueryChainPoint
+
+queryLedgerConfig
+  :: ()
+  => LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Consensus.CardanoLedgerConfig Ledger.StandardCrypto)
+       )
+queryLedgerConfig =
+  queryExpr QueryLedgerConfig
 
 queryCurrentEra
   :: ()
@@ -228,29 +243,13 @@ queryConstitutionHash
        IO
        ( Either
            UnsupportedNtcVersionError
-           (Either EraMismatch (SafeHash (EraCrypto (ShelleyLedgerEra era)) L.AnchorData))
+           (Either EraMismatch (SafeHash L.AnchorData))
        )
 queryConstitutionHash sbe =
   (fmap . fmap . fmap) (L.anchorDataHash . L.constitutionAnchor) $
     queryExpr $
       QueryInEra $
         QueryInShelleyBasedEra sbe QueryConstitution
-
-queryProtocolParametersUpdate
-  :: ()
-  => ShelleyBasedEra era
-  -> LocalStateQueryExpr
-       block
-       point
-       QueryInMode
-       r
-       IO
-       ( Either
-           UnsupportedNtcVersionError
-           (Either EraMismatch (Map (Hash GenesisKey) ProtocolParametersUpdate))
-       )
-queryProtocolParametersUpdate sbe =
-  queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe QueryProtocolParametersUpdate
 
 queryProtocolState
   :: ()
@@ -434,7 +433,7 @@ queryFuturePParams era = do
 
 queryDRepState
   :: ConwayEraOnwards era
-  -> Set (L.Credential L.DRepRole L.StandardCrypto)
+  -> Set (L.Credential L.DRepRole)
   -- ^ An empty credentials set means that states for all DReps will be returned
   -> LocalStateQueryExpr
        block
@@ -444,7 +443,7 @@ queryDRepState
        IO
        ( Either
            UnsupportedNtcVersionError
-           (Either EraMismatch (Map (L.Credential L.DRepRole L.StandardCrypto) (L.DRepState L.StandardCrypto)))
+           (Either EraMismatch (Map (L.Credential L.DRepRole) L.DRepState))
        )
 queryDRepState era drepCreds = do
   let sbe = convert era
@@ -452,7 +451,7 @@ queryDRepState era drepCreds = do
 
 queryDRepStakeDistribution
   :: ConwayEraOnwards era
-  -> Set (L.DRep L.StandardCrypto)
+  -> Set L.DRep
   -- ^ An empty DRep set means that distributions for all DReps will be returned
   -> LocalStateQueryExpr
        block
@@ -460,14 +459,14 @@ queryDRepStakeDistribution
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (Map (L.DRep L.StandardCrypto) L.Coin)))
+       (Either UnsupportedNtcVersionError (Either EraMismatch (Map L.DRep L.Coin)))
 queryDRepStakeDistribution era dreps = do
   let sbe = convert era
   queryExpr $ QueryInEra $ QueryInShelleyBasedEra sbe $ QueryDRepStakeDistr dreps
 
 querySPOStakeDistribution
   :: ConwayEraOnwards era
-  -> Set (L.KeyHash 'L.StakePool L.StandardCrypto)
+  -> Set (L.KeyHash 'L.StakePool)
   -- ^ An empty SPO key hash set means that distributions for all SPOs will be returned
   -> LocalStateQueryExpr
        block
@@ -477,7 +476,7 @@ querySPOStakeDistribution
        IO
        ( Either
            UnsupportedNtcVersionError
-           (Either EraMismatch (Map (L.KeyHash 'L.StakePool L.StandardCrypto) L.Coin))
+           (Either EraMismatch (Map (L.KeyHash 'L.StakePool) L.Coin))
        )
 querySPOStakeDistribution era spos = do
   let sbe = convert era
@@ -487,8 +486,8 @@ querySPOStakeDistribution era spos = do
 -- If empty sets are passed as filters, then no filtering is done.
 queryCommitteeMembersState
   :: ConwayEraOnwards era
-  -> Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
-  -> Set (L.Credential L.HotCommitteeRole L.StandardCrypto)
+  -> Set (L.Credential L.ColdCommitteeRole)
+  -> Set (L.Credential L.HotCommitteeRole)
   -> Set L.MemberStatus
   -> LocalStateQueryExpr
        block
@@ -496,7 +495,7 @@ queryCommitteeMembersState
        QueryInMode
        r
        IO
-       (Either UnsupportedNtcVersionError (Either EraMismatch (L.CommitteeMembersState L.StandardCrypto)))
+       (Either UnsupportedNtcVersionError (Either EraMismatch L.CommitteeMembersState))
 queryCommitteeMembersState era coldCreds hotCreds statuses = do
   let sbe = convert era
   queryExpr $
@@ -514,7 +513,7 @@ queryStakeVoteDelegatees
        IO
        ( Either
            UnsupportedNtcVersionError
-           (Either EraMismatch (Map StakeCredential (L.DRep L.StandardCrypto)))
+           (Either EraMismatch (Map StakeCredential L.DRep))
        )
 queryStakeVoteDelegatees era stakeCredentials = do
   let sbe = convert era
@@ -539,7 +538,7 @@ queryProposals
    . ConwayEraOnwards era
   -- Specify a set of Governance Action IDs to filter the proposals. When this set is
   -- empty, all the proposals considered for ratification will be returned.
-  -> Set (L.GovActionId L.StandardCrypto)
+  -> Set L.GovActionId
   -> LocalStateQueryExpr
        block
        point
@@ -555,3 +554,23 @@ queryProposals cOnwards govActionIds = do
   queryExpr $
     QueryInEra . QueryInShelleyBasedEra sbe $
       QueryProposals govActionIds
+
+queryStakePoolDefaultVote
+  :: forall era block point r
+   . ConwayEraOnwards era
+  -> L.KeyHash 'L.StakePool
+  -> LocalStateQueryExpr
+       block
+       point
+       QueryInMode
+       r
+       IO
+       ( Either
+           UnsupportedNtcVersionError
+           (Either EraMismatch L.DefaultVote)
+       )
+queryStakePoolDefaultVote cOnwards stakePools = do
+  let sbe = convert cOnwards
+  queryExpr $
+    QueryInEra . QueryInShelleyBasedEra sbe $
+      QueryStakePoolDefaultVote stakePools

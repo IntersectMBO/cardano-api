@@ -20,7 +20,6 @@ import Cardano.Ledger.Alonzo.Rules
   )
 import Cardano.Ledger.Alonzo.Rules qualified as Alonzo
 import Cardano.Ledger.Core qualified as Ledger.Core
-import Cardano.Ledger.Crypto qualified as Crypto
 import Cardano.Ledger.Shelley.Rules qualified as Shelley
 
 import Control.State.Transition.Extended
@@ -40,7 +39,6 @@ handleShelleyLEDGEREvents
   => Event (Ledger.Core.EraRule "UTXO" ledgerera) ~ AlonzoUtxoEvent ledgerera
   => Event (Ledger.Core.EraRule "UTXOS" ledgerera) ~ AlonzoUtxosEvent ledgerera
   => Event (Ledger.Core.EraRule "DELEGS" ledgerera) ~ Shelley.ShelleyDelegsEvent ledgerera
-  => Ledger.Core.EraCrypto ledgerera ~ Crypto.StandardCrypto
   => Shelley.ShelleyLedgerEvent ledgerera -> Maybe LedgerEvent
 handleShelleyLEDGEREvents ledgerEvent =
   case ledgerEvent of
