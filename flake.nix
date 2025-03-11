@@ -7,20 +7,17 @@
       flake = false;
     };
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix?ref=2024.09.15";
+      url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
     };
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    # blst fails to build for x86_64-darwin 
+    # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     # non-flake nix compatibility
     flake-compat = {
       url = "github:edolstra/flake-compat";
-      flake = false;
-    };
-
-    cardano-mainnet-mirror = {
-      url = "github:input-output-hk/cardano-mainnet-mirror";
       flake = false;
     };
 
@@ -39,7 +36,7 @@
     ];
 
     # see flake `variants` below for alternative compilers
-    defaultCompiler = "ghc982";
+    defaultCompiler = "ghc984";
     # Used for cross compilation, and so referenced in .github/workflows/release-upload.yml. Adapt the
     # latter if you change this value.
     crossCompilerVersion = "ghc966";
@@ -99,8 +96,11 @@
               ghcid = "0.8.9";
               cabal-gild = "1.3.1.2";
               fourmolu = "0.18.0.0";
-              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
               hlint = "3.8";
+            } // lib.optionalAttrs (builtins.compareVersions nixpkgs.haskell-nix.compiler.${config.compiler-nix-name}.version "9.8" <0) {
+              # HLS is corrently broken for GHC >=9.8
+              # See https://github.com/haskell/haskell-language-server/issues/4493
+              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
             };
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck];
