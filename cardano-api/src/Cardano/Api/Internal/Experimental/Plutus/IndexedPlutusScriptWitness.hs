@@ -85,15 +85,15 @@ deriving instance Show (Witnessable thing era)
 
 deriving instance Eq (Witnessable thing era)
 
-instance Ord (Witnessable thing era) where
-  compare a b =
-    case (a, b) of
-      (WitTxIn txinA, WitTxIn txinB) -> compare txinA txinB
-      (WitTxCert{}, WitTxCert{}) -> LT -- Certificates in the ledger are in an `OSet` therefore we preserve the order.
-      (WitMint mintA, WitMint mintB) -> compare mintA mintB
-      (WitWithdrawal (stakeAddrA, _), WitWithdrawal (stakeAddrB, _)) -> compare stakeAddrA stakeAddrB
-      (WitVote voterA, WitVote voterB) -> compare voterA voterB
-      (WitProposal propA, WitProposal propB) -> compare propA propB
+compareWitnesses :: Witnessable thing era -> Witnessable thing era -> Ordering
+compareWitnesses a b =
+  case (a, b) of
+    (WitTxIn txinA, WitTxIn txinB) -> compare txinA txinB
+    (WitTxCert{}, WitTxCert{}) -> LT -- Certificates in the ledger are in an `OSet` therefore we preserve the order.
+    (WitMint mintA, WitMint mintB) -> compare mintA mintB
+    (WitWithdrawal (stakeAddrA, _), WitWithdrawal (stakeAddrB, _)) -> compare stakeAddrA stakeAddrB
+    (WitVote voterA, WitVote voterB) -> compare voterA voterB
+    (WitProposal propA, WitProposal propB) -> compare propA propB
 
 type Mint = (PolicyId, AssetName, Quantity)
 
@@ -145,7 +145,7 @@ createIndexedPlutusScriptWitnesses witnessableThings =
   | (index, (thing, AnyPlutusScriptWitness sWit)) <- zip [0 ..] $ enforceOrdering witnessableThings
   ]
  where
-  enforceOrdering = List.sortBy (compare `on` fst)
+  enforceOrdering = List.sortBy (compareWitnesses `on` fst)
 
 -- | The transaction's redeemer pointer map allows the ledger to connect a redeemer and execution unit pairing to the relevant
 -- script. The ledger basically reconstructs the indicies (redeemer pointers) of this map can then look up the relevant
