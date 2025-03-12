@@ -190,6 +190,7 @@ library
 
   other-modules:
     Cardano.Api.Internal.Anchor
+    Cardano.Api.Internal.CIP.CIP129
     Cardano.Api.Internal.Certificate
     Cardano.Api.Internal.Compatible.Tx
     Cardano.Api.Internal.Convenience.Construction

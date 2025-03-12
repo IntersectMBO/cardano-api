@@ -2102,6 +2102,7 @@ instance HasTextEnvelope (SigningKey DRepKey) where
 ---
 --- Drep extended keys
 ---
+
 data DRepExtendedKey
 
 instance HasTypeProxy DRepExtendedKey where
