@@ -709,6 +709,11 @@ module Cardano.Api
   , Bech32DecodeError (..)
   , UsingBech32 (..)
 
+    -- ** Bech32 CIP-129
+  , CIP129 (..)
+  , deserialiseFromBech32CIP129
+  , serialiseToBech32CIP129
+
     -- ** Addresses
 
     -- | Address serialisation is (sadly) special
@@ -1103,6 +1108,7 @@ where
 import Cardano.Api.Internal.Address
 import Cardano.Api.Internal.Anchor
 import Cardano.Api.Internal.Block
+import Cardano.Api.Internal.CIP.CIP129
 import Cardano.Api.Internal.Certificate
 import Cardano.Api.Internal.Convenience.Construction
 import Cardano.Api.Internal.Convenience.Query
