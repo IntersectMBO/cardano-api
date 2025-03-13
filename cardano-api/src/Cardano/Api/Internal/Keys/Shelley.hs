@@ -1,11 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
@@ -37,6 +40,7 @@ module Cardano.Api.Internal.Keys.Shelley
   , VerificationKey (..)
   , SigningKey (..)
   , Hash (..)
+  , AnyStakePoolKey (..)
   )
 where
 
@@ -1657,6 +1661,242 @@ instance CastSigningKeyRole GenesisUTxOKey PaymentKey where
 --
 -- stake pool keys
 --
+
+--  | Wrapper that handles both normal and extended StakePoolKeys
+data AnyStakePoolKey stakePoolKeyType where
+  StakePoolKeyNormal :: StakePoolKey -> AnyStakePoolKey StakePoolKey
+  StakePoolKeyExtended :: StakePoolExtendedKey -> AnyStakePoolKey StakePoolExtendedKey
+
+instance HasTypeProxy (AnyStakePoolKey StakePoolKey) where
+  data AsType (AnyStakePoolKey StakePoolKey) where
+    AsAnyStakePoolKeyNormal :: AsType (AnyStakePoolKey StakePoolKey)
+  proxyToAsType (Proxy :: Proxy (AnyStakePoolKey StakePoolKey)) = AsAnyStakePoolKeyNormal
+
+instance HasTypeProxy (AnyStakePoolKey StakePoolExtendedKey) where
+  data AsType (AnyStakePoolKey StakePoolExtendedKey) where
+    AsAnyStakePoolKeyExtended :: AsType (AnyStakePoolKey StakePoolExtendedKey)
+  proxyToAsType (Proxy :: Proxy (AnyStakePoolKey StakePoolExtendedKey)) = AsAnyStakePoolKeyExtended
+
+instance Key (AnyStakePoolKey StakePoolKey) where
+  data VerificationKey (AnyStakePoolKey StakePoolKey)
+    = StakePoolVerificationKeyNormal (VerificationKey StakePoolKey)
+    deriving stock Eq
+    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey (AnyStakePoolKey StakePoolKey))
+    deriving anyclass SerialiseAsCBOR
+
+  data SigningKey (AnyStakePoolKey StakePoolKey) = StakePoolSigningKeyNormal (SigningKey StakePoolKey)
+    deriving (Show, IsString) via UsingRawBytesHex (SigningKey (AnyStakePoolKey StakePoolKey))
+    deriving anyclass SerialiseAsCBOR
+
+  deterministicSigningKey
+    :: AsType (AnyStakePoolKey StakePoolKey) -> Crypto.Seed -> SigningKey (AnyStakePoolKey StakePoolKey)
+  deterministicSigningKey AsAnyStakePoolKeyNormal seed =
+    StakePoolSigningKeyNormal (deterministicSigningKey AsStakePoolKey seed)
+
+  deterministicSigningKeySeedSize :: AsType (AnyStakePoolKey StakePoolKey) -> Word
+  deterministicSigningKeySeedSize AsAnyStakePoolKeyNormal =
+    deterministicSigningKeySeedSize AsStakePoolKey
+
+  getVerificationKey
+    :: SigningKey (AnyStakePoolKey StakePoolKey) -> VerificationKey (AnyStakePoolKey StakePoolKey)
+  getVerificationKey (StakePoolSigningKeyNormal sk) =
+    StakePoolVerificationKeyNormal (getVerificationKey sk)
+
+  verificationKeyHash
+    :: VerificationKey (AnyStakePoolKey StakePoolKey) -> Hash (AnyStakePoolKey StakePoolKey)
+  verificationKeyHash (StakePoolVerificationKeyNormal vkey) =
+    StakePoolKeyNormalHash (verificationKeyHash vkey)
+
+instance ToCBOR (VerificationKey (AnyStakePoolKey StakePoolKey)) where
+  toCBOR (StakePoolVerificationKeyNormal vk) = toCBOR vk
+
+instance FromCBOR (VerificationKey (AnyStakePoolKey StakePoolKey)) where
+  fromCBOR = StakePoolVerificationKeyNormal <$> fromCBOR
+
+instance ToCBOR (SigningKey (AnyStakePoolKey StakePoolKey)) where
+  toCBOR (StakePoolSigningKeyNormal sk) = toCBOR sk
+
+instance FromCBOR (SigningKey (AnyStakePoolKey StakePoolKey)) where
+  fromCBOR = StakePoolSigningKeyNormal <$> fromCBOR
+
+instance SerialiseAsRawBytes (VerificationKey (AnyStakePoolKey StakePoolKey)) where
+  serialiseToRawBytes (StakePoolVerificationKeyNormal vk) = serialiseToRawBytes vk
+
+  deserialiseFromRawBytes (AsVerificationKey AsAnyStakePoolKeyNormal) bs =
+    StakePoolVerificationKeyNormal <$> deserialiseFromRawBytes (AsVerificationKey AsStakePoolKey) bs
+
+instance SerialiseAsRawBytes (SigningKey (AnyStakePoolKey StakePoolKey)) where
+  serialiseToRawBytes (StakePoolSigningKeyNormal sk) = serialiseToRawBytes sk
+
+  deserialiseFromRawBytes (AsSigningKey AsAnyStakePoolKeyNormal) bs =
+    StakePoolSigningKeyNormal <$> deserialiseFromRawBytes (AsSigningKey AsStakePoolKey) bs
+
+instance SerialiseAsBech32 (VerificationKey (AnyStakePoolKey StakePoolKey)) where
+  bech32PrefixFor (StakePoolVerificationKeyNormal vk) = bech32PrefixFor vk
+
+  bech32PrefixesPermitted (AsVerificationKey AsAnyStakePoolKeyNormal) =
+    bech32PrefixesPermitted (AsVerificationKey AsStakePoolKey)
+
+instance SerialiseAsBech32 (SigningKey (AnyStakePoolKey StakePoolKey)) where
+  bech32PrefixFor (StakePoolSigningKeyNormal sk) = bech32PrefixFor sk
+
+  bech32PrefixesPermitted (AsSigningKey AsAnyStakePoolKeyNormal) =
+    bech32PrefixesPermitted (AsSigningKey AsStakePoolKey)
+
+instance Key (AnyStakePoolKey StakePoolExtendedKey) where
+  data VerificationKey (AnyStakePoolKey StakePoolExtendedKey)
+    = StakePoolVerificationKeyExtended (VerificationKey StakePoolExtendedKey)
+    deriving Eq
+    deriving
+      (Show, IsString)
+      via UsingRawBytesHex (VerificationKey (AnyStakePoolKey StakePoolExtendedKey))
+    deriving anyclass SerialiseAsCBOR
+
+  data SigningKey (AnyStakePoolKey StakePoolExtendedKey)
+    = StakePoolSigningKeyExtended (SigningKey StakePoolExtendedKey)
+    deriving (Show, IsString) via UsingRawBytesHex (SigningKey (AnyStakePoolKey StakePoolExtendedKey))
+    deriving anyclass SerialiseAsCBOR
+
+  deterministicSigningKey
+    :: AsType (AnyStakePoolKey StakePoolExtendedKey)
+    -> Crypto.Seed
+    -> SigningKey (AnyStakePoolKey StakePoolExtendedKey)
+  deterministicSigningKey AsAnyStakePoolKeyExtended seed =
+    StakePoolSigningKeyExtended (deterministicSigningKey AsStakePoolExtendedKey seed)
+
+  deterministicSigningKeySeedSize :: AsType (AnyStakePoolKey StakePoolExtendedKey) -> Word
+  deterministicSigningKeySeedSize AsAnyStakePoolKeyExtended =
+    deterministicSigningKeySeedSize AsStakePoolExtendedKey
+
+  getVerificationKey
+    :: SigningKey (AnyStakePoolKey StakePoolExtendedKey)
+    -> VerificationKey (AnyStakePoolKey StakePoolExtendedKey)
+  getVerificationKey (StakePoolSigningKeyExtended sk) =
+    StakePoolVerificationKeyExtended (getVerificationKey sk)
+
+  verificationKeyHash
+    :: VerificationKey (AnyStakePoolKey StakePoolExtendedKey)
+    -> Hash (AnyStakePoolKey StakePoolExtendedKey)
+  verificationKeyHash (StakePoolVerificationKeyExtended vkey) =
+    StakePoolKeyExtendedHash (verificationKeyHash vkey)
+
+instance ToCBOR (VerificationKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  toCBOR (StakePoolVerificationKeyExtended vk) = toCBOR vk
+
+instance FromCBOR (VerificationKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  fromCBOR = StakePoolVerificationKeyExtended <$> fromCBOR
+
+instance ToCBOR (SigningKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  toCBOR (StakePoolSigningKeyExtended sk) = toCBOR sk
+
+instance FromCBOR (SigningKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  fromCBOR = StakePoolSigningKeyExtended <$> fromCBOR
+
+instance SerialiseAsRawBytes (VerificationKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  serialiseToRawBytes (StakePoolVerificationKeyExtended vk) = serialiseToRawBytes vk
+
+  deserialiseFromRawBytes (AsVerificationKey AsAnyStakePoolKeyExtended) bs =
+    StakePoolVerificationKeyExtended
+      <$> deserialiseFromRawBytes (AsVerificationKey AsStakePoolExtendedKey) bs
+
+instance SerialiseAsRawBytes (SigningKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  serialiseToRawBytes (StakePoolSigningKeyExtended sk) = serialiseToRawBytes sk
+
+  deserialiseFromRawBytes (AsSigningKey AsAnyStakePoolKeyExtended) bs =
+    StakePoolSigningKeyExtended <$> deserialiseFromRawBytes (AsSigningKey AsStakePoolExtendedKey) bs
+
+instance SerialiseAsBech32 (VerificationKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  bech32PrefixFor (StakePoolVerificationKeyExtended vk) = bech32PrefixFor vk
+
+  bech32PrefixesPermitted (AsVerificationKey AsAnyStakePoolKeyExtended) =
+    bech32PrefixesPermitted (AsVerificationKey AsStakePoolExtendedKey)
+
+instance SerialiseAsBech32 (SigningKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  bech32PrefixFor (StakePoolSigningKeyExtended sk) = bech32PrefixFor sk
+
+  bech32PrefixesPermitted (AsSigningKey AsAnyStakePoolKeyExtended) =
+    bech32PrefixesPermitted (AsSigningKey AsStakePoolExtendedKey)
+
+data instance Hash (AnyStakePoolKey stakePoolKeyType) where
+  StakePoolKeyNormalHash :: Hash StakePoolKey -> Hash (AnyStakePoolKey StakePoolKey)
+  StakePoolKeyExtendedHash :: Hash StakePoolExtendedKey -> Hash (AnyStakePoolKey StakePoolExtendedKey)
+
+deriving via
+  (UsingRawBytesHex (Hash (AnyStakePoolKey StakePoolKey)))
+  instance
+    (Show (Hash (AnyStakePoolKey StakePoolKey)))
+
+deriving via
+  (UsingRawBytesHex (Hash (AnyStakePoolKey StakePoolExtendedKey)))
+  instance
+    (Show (Hash (AnyStakePoolKey StakePoolExtendedKey)))
+
+deriving via
+  (UsingRawBytesHex (Hash (AnyStakePoolKey StakePoolKey)))
+  instance
+    (IsString (Hash (AnyStakePoolKey StakePoolKey)))
+
+deriving via
+  (UsingRawBytesHex (Hash (AnyStakePoolKey StakePoolExtendedKey)))
+  instance
+    (IsString (Hash (AnyStakePoolKey StakePoolExtendedKey)))
+
+deriving via
+  (UsingRawBytes (Hash (AnyStakePoolKey StakePoolKey)))
+  instance
+    ToCBOR (Hash (AnyStakePoolKey StakePoolKey))
+
+deriving via
+  (UsingRawBytes (Hash (AnyStakePoolKey StakePoolExtendedKey)))
+  instance
+    ToCBOR (Hash (AnyStakePoolKey StakePoolExtendedKey))
+
+deriving via
+  (UsingRawBytes (Hash (AnyStakePoolKey StakePoolKey)))
+  instance
+    FromCBOR (Hash (AnyStakePoolKey StakePoolKey))
+
+deriving via
+  (UsingRawBytes (Hash (AnyStakePoolKey StakePoolExtendedKey)))
+  instance
+    FromCBOR (Hash (AnyStakePoolKey StakePoolExtendedKey))
+
+deriving anyclass instance SerialiseAsCBOR (Hash (AnyStakePoolKey StakePoolKey))
+
+deriving anyclass instance SerialiseAsCBOR (Hash (AnyStakePoolKey StakePoolExtendedKey))
+
+deriving stock instance Eq (Hash StakePoolKey) => Eq (Hash (AnyStakePoolKey StakePoolKey))
+
+deriving stock instance
+  Eq (Hash StakePoolExtendedKey) => Eq (Hash (AnyStakePoolKey StakePoolExtendedKey))
+
+deriving stock instance Ord (Hash StakePoolKey) => Ord (Hash (AnyStakePoolKey StakePoolKey))
+
+deriving stock instance
+  Ord (Hash StakePoolExtendedKey) => Ord (Hash (AnyStakePoolKey StakePoolExtendedKey))
+
+instance SerialiseAsRawBytes (Hash (AnyStakePoolKey StakePoolKey)) where
+  serialiseToRawBytes (StakePoolKeyNormalHash vkh) = serialiseToRawBytes vkh
+  deserialiseFromRawBytes (AsHash AsAnyStakePoolKeyNormal) bs =
+    StakePoolKeyNormalHash <$> deserialiseFromRawBytes (AsHash AsStakePoolKey) bs
+
+instance SerialiseAsRawBytes (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
+  serialiseToRawBytes (StakePoolKeyExtendedHash vkh) = serialiseToRawBytes vkh
+
+  deserialiseFromRawBytes (AsHash AsAnyStakePoolKeyExtended) bs =
+    StakePoolKeyExtendedHash <$> deserialiseFromRawBytes (AsHash AsStakePoolExtendedKey) bs
+
+instance HasTextEnvelope (VerificationKey (AnyStakePoolKey StakePoolKey)) where
+  textEnvelopeType (AsVerificationKey AsAnyStakePoolKeyNormal) = textEnvelopeType (AsVerificationKey AsStakePoolKey)
+
+instance HasTextEnvelope (VerificationKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  textEnvelopeType (AsVerificationKey AsAnyStakePoolKeyExtended) = textEnvelopeType (AsVerificationKey AsStakePoolExtendedKey)
+
+instance HasTextEnvelope (SigningKey (AnyStakePoolKey StakePoolKey)) where
+  textEnvelopeType (AsSigningKey AsAnyStakePoolKeyNormal) = textEnvelopeType (AsSigningKey AsStakePoolKey)
+
+instance HasTextEnvelope (SigningKey (AnyStakePoolKey StakePoolExtendedKey)) where
+  textEnvelopeType (AsSigningKey AsAnyStakePoolKeyExtended) = textEnvelopeType (AsSigningKey AsStakePoolExtendedKey)
 
 data StakePoolKey
 
