@@ -26,7 +26,7 @@ common project-config
     ImportQualifiedPost
     OverloadedStrings
 
-  build-depends: base >=4.14 && <4.21
+  build-depends: base >=4.14 && <4.22
   ghc-options:
     -Wall
     -Wcompat
