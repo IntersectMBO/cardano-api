@@ -169,6 +169,7 @@ import qualified Data.ByteString.Base16 as Base16
 import           Data.Ratio (Ratio, (%))
 import           Data.String
 import Test.Gen.Cardano.Api.Hardcoded
+import Data.Typeable
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
@@ -707,7 +708,7 @@ genTxWithdrawals =
           ]
     )
 
-genTxCertificates :: CardanoEra era -> Gen (TxCertificates BuildTx era)
+genTxCertificates :: Typeable era => CardanoEra era -> Gen (TxCertificates BuildTx era)
 genTxCertificates =
   inEonForEra
     (pure TxCertificatesNone)
@@ -720,7 +721,7 @@ genTxCertificates =
           ]
     )
 
-genCertificate :: forall era. ShelleyBasedEra era -> Gen (Certificate era)
+genCertificate :: forall era. Typeable era => ShelleyBasedEra era -> Gen (Certificate era)
 genCertificate sbe =
   Gen.choice
     $ catMaybes
@@ -871,7 +872,7 @@ genTxMintValue =
         , pure $ TxMintValue w (fromList assets)
         ]
 
-genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
+genTxBodyContent :: Typeable era => ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent sbe = do
   let era = toCardanoEra sbe
   txIns <-
@@ -992,7 +993,8 @@ genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
 
 -- | This generator validates generated 'TxBodyContent' and backtracks when the generated body
 -- fails the validation. That also means that it is quite slow.
-genValidTxBody :: ShelleyBasedEra era
+genValidTxBody :: Typeable era 
+               => ShelleyBasedEra era
                -> Gen (TxBody era, TxBodyContent BuildTx era) -- ^ validated 'TxBody' and 'TxBodyContent'
 genValidTxBody sbe =
   Gen.mapMaybe
@@ -1003,7 +1005,7 @@ genValidTxBody sbe =
     (genTxBodyContent sbe)
 
 -- | Partial! This function will throw an error when the generated transaction is invalid.
-genTxBody :: HasCallStack => ShelleyBasedEra era -> Gen (TxBody era)
+genTxBody :: (HasCallStack, Typeable era) => ShelleyBasedEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- Api.createTransactionBody era <$> genTxBodyContent era
   case res of
@@ -1042,7 +1044,7 @@ genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 
 genTx
-  :: ()
+  :: Typeable era
   => ShelleyBasedEra era
   -> Gen (Tx era)
 genTx era =
@@ -1050,7 +1052,7 @@ genTx era =
     <$> genWitnesses era
     <*> (fst <$> genValidTxBody era)
 
-genWitnesses :: ShelleyBasedEra era -> Gen [KeyWitness era]
+genWitnesses :: Typeable era => ShelleyBasedEra era -> Gen [KeyWitness era]
 genWitnesses sbe = do
   bsWits <- Gen.list (Range.constant 0 10) (genShelleyBootstrapWitness sbe)
   keyWits <- Gen.list (Range.constant 0 10) (genShelleyKeyWitness sbe)
@@ -1095,7 +1097,7 @@ genWitnessNetworkIdOrByronAddress =
     ]
 
 genShelleyBootstrapWitness
-  :: ()
+  :: Typeable era
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genShelleyBootstrapWitness sbe =
@@ -1104,8 +1106,10 @@ genShelleyBootstrapWitness sbe =
     <*> (fst <$> genValidTxBody sbe)
     <*> genSigningKey AsByronKey
 
+ 
 genShelleyKeyWitness
   :: ()
+  => Typeable era
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genShelleyKeyWitness sbe =
@@ -1114,7 +1118,7 @@ genShelleyKeyWitness sbe =
     <*> genShelleyWitnessSigningKey
 
 genShelleyWitness
-  :: ()
+  :: Typeable era
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genShelleyWitness sbe =
@@ -1135,7 +1139,7 @@ genShelleyWitnessSigningKey =
     ]
 
 genCardanoKeyWitness
-  :: ()
+  :: Typeable era
   => ShelleyBasedEra era
   -> Gen (KeyWitness era)
 genCardanoKeyWitness = genShelleyWitness
