@@ -3,11 +3,14 @@
 
   inputs = {
     hackageNix = {
-      url = "github:input-output-hk/hackage.nix";
+      # The "for-stakage" part is a workaround haskell.nix and hackage.nix
+      # being out of sync until we drop support for GHC 8.10
+      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
       flake = false;
     };
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix?ref=2024.09.15";
+      # master at 2025-03-03
+      url = "github:input-output-hk/haskell.nix?ref=4fd706000172895925a78b3d97436d7711be93b6";
       inputs.hackage.follows = "hackageNix";
     };
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
@@ -16,11 +19,6 @@
     # non-flake nix compatibility
     flake-compat = {
       url = "github:edolstra/flake-compat";
-      flake = false;
-    };
-
-    cardano-mainnet-mirror = {
-      url = "github:input-output-hk/cardano-mainnet-mirror";
       flake = false;
     };
 
