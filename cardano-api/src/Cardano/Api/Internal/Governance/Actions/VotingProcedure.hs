@@ -100,13 +100,7 @@ instance Ord AnyVoter where
   compare (AnyVoter (v :: Voter eraA)) (AnyVoter (v' :: Voter eraB)) =
     case eqT @eraA @eraB of
       Just Refl -> compare v v'
-      Nothing ->
-        error $
-          unlines
-            [ "Ord AnyVoter: not possible to combine voters of different eras"
-            , "Voter 1: " ++ show v
-            , "Voter 2: " ++ show v'
-            ]
+      Nothing -> compare (typeRep v) (typeRep v')
 
 data Vote
   = No

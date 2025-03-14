@@ -2130,17 +2130,35 @@ createTransactionBody
   -> Either TxBodyError (TxBody era)
 createTransactionBody sbe bc =
   shelleyBasedEraConstraints sbe $ do
-    TxScriptWitnessRequirements languages scripts dats redeemers
-      :: TxScriptWitnessRequirements (ShelleyLedgerEra era) <-
+    (sData, mScriptIntegrityHash, scripts) <-
       caseShelleyToMaryOrAlonzoEraOnwards
-        (const $ error "Impossible to construct TxScriptWitnessRequirements in pre-Alonzo era")
-        (`collectTxBodyScriptWitnessRequirements` bc)
+        ( \eon -> do
+            let scripts =
+                  catMaybes
+                    [ toShelleyScript <$> getScriptWitnessScript scriptwitness
+                    | (_, AnyScriptWitness scriptwitness) <-
+                        collectTxBodyScriptWitnesses (convert eon) bc
+                    ]
+            return (TxBodyNoScriptData, SNothing, scripts)
+        )
+        ( \aeon -> do
+            TxScriptWitnessRequirements languages scripts dats redeemers <-
+              collectTxBodyScriptWitnessRequirements aeon bc
+
+            let pparams = txProtocolParams bc
+                sData = TxBodyScriptData aeon dats redeemers
+                mScriptIntegrityHash = getScriptIntegrityHash pparams languages sData
+            return
+              ( sData
+              , mScriptIntegrityHash
+              , scripts
+              )
+        )
         sbe
     let era = toCardanoEra sbe
 
         apiScriptValidity = txScriptValidity bc
         apiMintValue = txMintValue bc
-        apiProtocolParameters = txProtocolParams bc
         apiCollateralTxIns = txInsCollateral bc
         apiReferenceInputs = txInsReference bc
         apiExtraKeyWitnesses = txExtraKeyWits bc
@@ -2154,11 +2172,7 @@ createTransactionBody sbe bc =
         totalCollateral = convTotalCollateral apiTotalCollateral
         certs = convCertificates sbe $ txCertificates bc
         txAuxData = toAuxiliaryData sbe (txMetadata bc) (txAuxScripts bc)
-        sData =
-          caseShelleyToMaryOrAlonzoEraOnwards
-            (const TxBodyNoScriptData)
-            (\eon -> TxBodyScriptData eon dats redeemers)
-            sbe
+
         proposalProcedures = convProposalProcedures $ maybe TxProposalProceduresNone unFeatured (txProposalProcedures bc)
         votingProcedures = convVotingProcedures $ maybe TxVotingProceduresNone unFeatured (txVotingProcedures bc)
         currentTreasuryValue = Ledger.maybeToStrictMaybe $ unFeatured =<< txCurrentTreasuryValue bc
@@ -2176,7 +2190,7 @@ createTransactionBody sbe bc =
     setScriptIntegrityHash <- monoidForEraInEonA era $ \w ->
       pure $
         Endo $
-          A.scriptIntegrityHashTxBodyL w .~ getScriptIntegrityHash apiProtocolParameters languages sData
+          A.scriptIntegrityHashTxBodyL w .~ mScriptIntegrityHash
 
     setCollateralInputs <- monoidForEraInEonA era $ \w ->
       pure $ Endo $ A.collateralInputsTxBodyL w .~ collTxIns

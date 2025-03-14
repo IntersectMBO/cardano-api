@@ -85,6 +85,9 @@ deriving instance Show (Witnessable thing era)
 
 deriving instance Eq (Witnessable thing era)
 
+-- | We have to enforce the same ordering of witnessable things that exists in the ledger.
+-- If we don't our redeemer pointer map will be incorrect and the transaction will be invalid.
+-- See section 4.1 Combining Scripts with Their Inputs of the Alonzo ledger specification.
 compareWitnesses :: Witnessable thing era -> Witnessable thing era -> Ordering
 compareWitnesses a b =
   case (a, b) of
@@ -137,6 +140,8 @@ createIndexedPlutusScriptWitness
 createIndexedPlutusScriptWitness index witnessable =
   IndexedPlutusScriptWitness witnessable (toPlutusScriptPurpose index witnessable)
 
+-- | Create a list of indexed plutus script witnesses from anything witnessable that has been
+-- witnesseed by a plutus script.
 createIndexedPlutusScriptWitnesses
   :: [(Witnessable witnessable era, AnyWitness era)]
   -> [AnyIndexedPlutusScriptWitness era]

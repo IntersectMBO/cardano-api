@@ -164,7 +164,7 @@ proposalTypeEquality _ _ = eqT
 instance IsShelleyBasedEra era => Show (Proposal era) where
   show (Proposal pp) = do
     let ppStr = shelleyBasedEraConstraints (shelleyBasedEra @era) $ show pp
-    "Proposal {unProposal = " <> ppStr <> "}"
+    "Proposal " <> ppStr <> "}"
 
 instance IsShelleyBasedEra era => Eq (Proposal era) where
   (Proposal pp1) == (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ pp1 == pp2
