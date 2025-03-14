@@ -86,6 +86,14 @@
               secure: True
             active-repositories: hackage.haskell.org, cardano-haskell-packages-local
           '';
+          shell.packages = p: [
+            # Packages in this repo
+            p.cardano-api p.cardano-api-gen
+            # Work around for issue created by our inability to register sublibs.
+            # This package may need to be built and we need to make sure its dependencies
+            # are included in `ghc-pkg list` (in particular `compact`)
+            p.ouroboros-consensus-cardano
+          ];
           # tools we want in our shell, from hackage
           shell.tools =
             {
