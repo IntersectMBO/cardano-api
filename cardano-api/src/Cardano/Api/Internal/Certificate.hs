@@ -156,7 +156,8 @@ instance TestEquality Certificate where
     shelleyCertTypeEquality c c'
   testEquality (ConwayCertificate _ c) (ConwayCertificate _ c') =
     conwayCertTypeEquality c c'
-  testEquality _ _ = Nothing
+  testEquality ShelleyRelatedCertificate{} ConwayCertificate{} = Nothing
+  testEquality ConwayCertificate{} ShelleyRelatedCertificate{} = Nothing
 
 conwayCertTypeEquality
   :: (Typeable eraA, Typeable eraB)
@@ -240,14 +241,8 @@ instance Eq AnyCertificate where
 instance Ord AnyCertificate where
   compare (AnyCertificate (c1 :: Certificate era1)) (AnyCertificate (c2 :: Certificate era2)) =
     case eqT @era1 @era2 of
-      Just Refl -> compare c1 c2 -- Same era: valid comparison
-      Nothing ->
-        error $
-          unlines
-            [ "Ord AnyCertificate: Not possible to use certificates from different eras"
-            , "Certificate 1: " <> show c1
-            , "Certificate 2: " <> show c2
-            ]
+      Just Refl -> compare c1 c2
+      Nothing -> compare (typeOf c1) (typeOf c2)
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters

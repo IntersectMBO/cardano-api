@@ -104,14 +104,7 @@ createPlutusScriptDatum
 createPlutusScriptDatum missingContext plutusVersion oldDatum =
   case (missingContext, oldDatum) of
     (w@WitTxIn{}, d@Old.ScriptDatumForTxIn{}) -> toPlutusScriptDatum w plutusVersion d
-    (WitTxIn{}, Old.InlineScriptDatum) -> NoScriptDatum
-    (WitTxIn{}, _) ->
-      error $
-        unlines
-          [ "createPlutusScriptDatum: invalid combination of witnessable and script datum"
-          , "Witnessable: " ++ show missingContext
-          , "Script Datum: " ++ show oldDatum
-          ]
+    (WitTxIn{}, _) -> NoScriptDatum
     (WitMint{}, _) -> NoScriptDatum
     (WitWithdrawal{}, _) -> NoScriptDatum
     (WitProposal{}, _) -> NoScriptDatum
@@ -131,16 +124,12 @@ toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV1 (Old.ScriptDatumForTxIn (Just r
 -- \^ V2 and V3 scripts can have inline datums
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV3 Old.InlineScriptDatum = InlineDatum
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV2 Old.InlineScriptDatum = InlineDatum
--- \^ Everything else is not allowed. The old api does not prevent these invalid combinations
--- so we are forced to error here. The valid combinations are enforced in the PlutusScriptDatum
--- type family within the resultant PlutusScriptDatum GADT.
-toPlutusScriptDatum WitTxIn{} scriptVersion datum =
-  error $
-    unlines
-      [ "toPlutusScriptDatum: invalid combination of script version and script datum"
-      , "Script Version: " ++ show scriptVersion
-      , "Script Datum: " ++ show datum
-      ]
+-- \^ Everything else is not allowed. The old api does not prevent these invalid combinations.
+-- The valid combinations are enforced in the PlutusScriptDatum type family within the
+-- resultant PlutusScriptDatum GADT.
+toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV1 Old.InlineScriptDatum = NoScriptDatum
+toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV1 (Old.ScriptDatumForTxIn Nothing) = NoScriptDatum
+toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV2 (Old.ScriptDatumForTxIn Nothing) = NoScriptDatum
 
 toNewPlutusScriptWitness
   :: forall era lang purpose
