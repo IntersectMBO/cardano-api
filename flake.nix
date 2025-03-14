@@ -7,20 +7,17 @@
       flake = false;
     };
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix?ref=2024.09.15";
+      url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
     };
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    # blst fails to build for x86_64-darwin 
+    # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     # non-flake nix compatibility
     flake-compat = {
       url = "github:edolstra/flake-compat";
-      flake = false;
-    };
-
-    cardano-mainnet-mirror = {
-      url = "github:input-output-hk/cardano-mainnet-mirror";
       flake = false;
     };
 
@@ -89,6 +86,14 @@
               secure: True
             active-repositories: hackage.haskell.org, cardano-haskell-packages-local
           '';
+          shell.packages = p: [
+            # Packages in this repo
+            p.cardano-api p.cardano-api-gen
+            # Work around for issue created by our inability to register sublibs.
+            # This package may need to be built and we need to make sure its dependencies
+            # are included in `ghc-pkg list` (in particular `compact`)
+            p.ouroboros-consensus-cardano
+          ];
           # tools we want in our shell, from hackage
           shell.tools =
             {
@@ -100,7 +105,8 @@
               cabal-gild = "1.3.1.2";
               fourmolu = "0.18.0.0";
               haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
-              hlint = "3.8";
+              # This index-state makes it work for GHC 9.8.2 (it will need to tbe removed for 9.8.4)
+              hlint = { version = "3.8"; index-state = "2024-12-01T00:00:00Z"; };
             };
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck];

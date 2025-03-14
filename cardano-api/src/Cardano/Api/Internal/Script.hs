@@ -174,7 +174,6 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import Data.Typeable (Typeable)
 import Data.Vector (Vector)
 import Formatting qualified as B
 import GHC.Exts (IsList (..))
@@ -1516,8 +1515,6 @@ data ReferenceScript era where
 deriving instance Eq (ReferenceScript era)
 
 deriving instance Show (ReferenceScript era)
-
-deriving instance Typeable (ReferenceScript era)
 
 instance IsCardanoEra era => ToJSON (ReferenceScript era) where
   toJSON (ReferenceScript _ s) = object ["referenceScript" .= s]
