@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -101,11 +100,11 @@ module Test.Gen.Cardano.Api.Typed
   , genTxInsReference
   , genTxMetadataInEra
   , genTxMintValue
+  , genPolicyAssets
   , genLovelace
   , genPositiveLovelace
   , genValue
   , genValueDefault
-  , genValueForRole
   , genVerificationKey
   , genVerificationKeyHash
   , genUpdateProposal
@@ -124,6 +123,8 @@ module Test.Gen.Cardano.Api.Typed
   , genPositiveQuantity
   , genValueForMinting
   , genValueForTxOut
+  , genLedgerValueForTxOut
+  , genLedgerMultiAssetValue
   , genWitnesses
   , genWitnessNetworkIdOrByronAddress
   , genRational
@@ -186,6 +187,7 @@ import           Hedgehog (Gen, MonadGen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
+
 
 
 genAddressByron :: Gen (Address ByronAddr)
@@ -486,13 +488,10 @@ genLedgerValue w genAId genQuant =
 genValueDefault :: MaryEraOnwards era -> Gen (L.Value (ShelleyLedgerEra era))
 genValueDefault w = genLedgerValue w genAssetId genSignedNonZeroQuantity
 
-genValueForRole :: MaryEraOnwards era -> ParserValueRole -> Gen Value
-genValueForRole w =
-  \case
-    RoleMint ->
-      genValueForMinting
-    RoleUTxO ->
-      fromLedgerValue (convert w) <$> genValueForTxOut (convert w)
+-- | Generate a 'Value' suitable for use in a transaction output, with non-zero ADA,
+-- any asset IDs and with positive quantities
+genValueForTxOut :: ShelleyBasedEra era -> Gen Value
+genValueForTxOut w = fromLedgerValue w <$> genLedgerValueForTxOut w
 
 -- | Generate a 'Value' suitable for minting, i.e. non-ADA asset ID and a
 -- positive or negative quantity.
@@ -505,8 +504,8 @@ genValueForMinting =
 
 -- | Generate a 'Value' suitable for usage in a transaction output, i.e. any
 -- asset ID and a positive quantity.
-genValueForTxOut :: ShelleyBasedEra era -> Gen (L.Value (ShelleyLedgerEra era))
-genValueForTxOut sbe = do
+genLedgerValueForTxOut :: ShelleyBasedEra era -> Gen (L.Value (ShelleyLedgerEra era))
+genLedgerValueForTxOut sbe = do
   -- Generate at least one positive ADA, without it Value in TxOut makes no sense
   -- and will fail deserialization starting with ConwayEra
   ada <- A.mkAdaValue sbe . L.Coin <$> Gen.integral (Range.constant 1 2)
@@ -519,6 +518,9 @@ genValueForTxOut sbe = do
         pure $ ada <> mconcat v
     )
     sbe
+
+genLedgerMultiAssetValue :: Gen (L.MultiAsset L.StandardCrypto)
+genLedgerMultiAssetValue = Q.arbitrary
 
 -- Note that we expect to sometimes generate duplicate policy id keys since we
 -- pick 90% of policy ids from a set of just three.
@@ -631,7 +633,7 @@ genTxIndex :: Gen TxIx
 genTxIndex = TxIx . fromIntegral <$> Gen.word16 Range.constantBounded
 
 genTxOutValue :: ShelleyBasedEra era -> Gen (TxOutValue era)
-genTxOutValue sbe = shelleyBasedEraConstraints sbe $ TxOutValueShelleyBased sbe <$> genValueForTxOut sbe
+genTxOutValue sbe = shelleyBasedEraConstraints sbe $ TxOutValueShelleyBased sbe <$> genLedgerValueForTxOut sbe
 
 genTxOutTxContext :: ShelleyBasedEra era -> Gen (TxOut CtxTx era)
 genTxOutTxContext era =
@@ -858,18 +860,24 @@ genTxMintValue =
   inEonForEra
     (pure TxMintNone)
     $ \w -> do
+      -- TODO update this generator to generate witnesses, and then calculate policy id (via scriptHash) from the
+      -- witnesses
       policies <- Gen.list (Range.constant 1 3) genPolicyId
-      assets <- forM policies $ \policy ->
-        (,) policy <$>
-          Gen.list
-            (Range.constant 1 3)
-            ((,,) <$> genAssetName
-                  <*> genPositiveQuantity
-                  <*> fmap (fmap pure) genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w))
+      assets <- forM policies $ \policy -> do
+        mintValue <- genPolicyAssets
+        witness <- genScriptWitnessForMint (maryEraOnwardsToShelleyBasedEra w)
+        pure (policy, (mintValue, pure witness))
+
       Gen.choice
         [ pure TxMintNone
         , pure $ TxMintValue w (fromList assets)
         ]
+
+genPolicyAssets :: Gen PolicyAssets
+genPolicyAssets = do
+  assetQuantities <- Gen.list (Range.constant 0 5) $
+    (,) <$> genAssetName <*> genPositiveQuantity
+  pure $ fromList assetQuantities
 
 genTxBodyContent :: ShelleyBasedEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent sbe = do

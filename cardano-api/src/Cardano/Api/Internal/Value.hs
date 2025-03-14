@@ -25,6 +25,10 @@ module Cardano.Api.Internal.Value
   , negateValue
   , negateLedgerValue
   , calcMinimumDeposit
+  , PolicyAssets (..)
+  , policyAssetsToValue
+  , valueToPolicyAssets
+  , multiAssetToPolicyAssets
 
     -- ** Ada \/ L.Coin specifically
   , Lovelace
@@ -43,6 +47,8 @@ module Cardano.Api.Internal.Value
     -- ** Rendering
   , renderValue
   , renderValuePretty
+  , renderMultiAsset
+  , renderMultiAssetPretty
 
     -- * Internal conversion functions
   , toByronLovelace
@@ -50,6 +56,7 @@ module Cardano.Api.Internal.Value
   , fromShelleyDeltaLovelace
   , toMaryValue
   , fromMaryValue
+  , fromMultiAsset
   , fromLedgerValue
   , toLedgerValue
 
@@ -75,12 +82,14 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.TxOut as Mary (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Mary.Value qualified as Mary
 
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
 import Data.Aeson.Types (Parser, ToJSONKey)
+import Data.Bifunctor (bimap, first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
@@ -92,6 +101,7 @@ import Data.List qualified as List
 import Data.Map.Merge.Strict qualified as Map
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.MonoTraversable
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -303,26 +313,85 @@ fromLedgerValue sbe v =
     sbe
 
 fromMaryValue :: MaryValue StandardCrypto -> Value
-fromMaryValue (MaryValue (L.Coin lovelace) other) =
-  Value $
+fromMaryValue (MaryValue (L.Coin lovelace) multiAsset) =
+  Value
     -- TODO: write QC tests to show it's ok to use Map.fromAscList here
-    fromList $
-      [(AdaAssetId, Quantity lovelace) | lovelace /= 0]
-        ++ [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
-           | (pid, name, q) <- Mary.flattenMultiAsset other
-           ]
- where
-  fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
-  fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
+    (fromList [(AdaAssetId, Quantity lovelace) | lovelace /= 0])
+    <> fromMultiAsset multiAsset
 
-  fromMaryAssetName :: Mary.AssetName -> AssetName
-  fromMaryAssetName (Mary.AssetName n) = AssetName $ Short.fromShort n
+fromMultiAsset :: L.MultiAsset StandardCrypto -> Value
+fromMultiAsset multiAsset =
+  fromList
+    [ (AssetId (fromMaryPolicyID pid) (fromMaryAssetName name), Quantity q)
+    | (pid, name, q) <- Mary.flattenMultiAsset multiAsset
+    ]
+
+fromMaryPolicyID :: Mary.PolicyID StandardCrypto -> PolicyId
+fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
+
+fromMaryAssetName :: Mary.AssetName -> AssetName
+fromMaryAssetName (Mary.AssetName n) = AssetName $ Short.fromShort n
 
 -- | Calculate cost of making a UTxO entry for a given 'Value' and
 -- mininimum UTxO value derived from the 'ProtocolParameters'
 calcMinimumDeposit :: Value -> Lovelace -> Lovelace
 calcMinimumDeposit v =
   Mary.scaledMinDeposit (toMaryValue v)
+
+-- | Map of non-ADA assets with their quantity, for a single policy
+newtype PolicyAssets = PolicyAssets (Map AssetName Quantity)
+  deriving Eq
+
+type instance Element PolicyAssets = Quantity
+
+instance MonoFunctor PolicyAssets where
+  omap f (PolicyAssets as) = PolicyAssets $ f <$> as
+
+instance Semigroup PolicyAssets where
+  PolicyAssets a <> PolicyAssets b = PolicyAssets $ Map.unionWith (<>) a b
+
+instance Monoid PolicyAssets where
+  mempty = PolicyAssets Map.empty
+
+instance IsList PolicyAssets where
+  type Item PolicyAssets = (AssetName, Quantity)
+  fromList =
+    PolicyAssets
+      . Map.filter (/= 0)
+      . Map.fromListWith (<>)
+  toList (PolicyAssets m) = toList m
+
+instance Show PolicyAssets where
+  showsPrec d v =
+    showParen (d > 10) $
+      showString "policyAssetsFromList " . shows (toList v)
+
+policyAssetsToValue :: PolicyId -> PolicyAssets -> Value
+policyAssetsToValue policyId = fromList . map (first (AssetId policyId)) . toList
+
+-- | Converts 'Value' to 'PolicyAssets'. Discards any ADA value stored in 'Value'.
+valueToPolicyAssets :: Value -> Map PolicyId PolicyAssets
+valueToPolicyAssets v =
+  Map.fromListWith
+    (<>)
+    [ (policyId, fromList [(assetName, q)])
+    | (AssetId policyId assetName, q) <- toList v
+    ]
+
+-- | Convert cardano-ledger's 'L.MultiAsset' to a map of 'PolicyAssets'
+multiAssetToPolicyAssets
+  :: L.MultiAsset StandardCrypto
+  -> Map PolicyId PolicyAssets
+multiAssetToPolicyAssets (L.MultiAsset mAssets) =
+  fromList
+    [ (fromMaryPolicyID ledgerPolicyId, PolicyAssets assetsQs)
+    | (ledgerPolicyId, ledgerAssetsQs) <- toList mAssets
+    , let assetsQs =
+            Map.filter (/= 0)
+              . fromList
+              . map (bimap fromMaryAssetName Quantity)
+              $ toList ledgerAssetsQs
+    ]
 
 -- ----------------------------------------------------------------------------
 -- An alternative nested representation
@@ -429,3 +498,9 @@ renderAssetId AdaAssetId = "lovelace"
 renderAssetId (AssetId polId (AssetName "")) = renderPolicyId polId
 renderAssetId (AssetId polId assetName) =
   renderPolicyId polId <> "." <> serialiseToRawBytesHexText assetName
+
+renderMultiAsset :: L.MultiAsset StandardCrypto -> Text
+renderMultiAsset = renderValue . fromMultiAsset
+
+renderMultiAssetPretty :: L.MultiAsset StandardCrypto -> Text
+renderMultiAssetPretty = renderValuePretty . fromMultiAsset
