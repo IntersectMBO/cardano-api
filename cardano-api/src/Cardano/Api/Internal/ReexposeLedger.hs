@@ -56,6 +56,7 @@ module Cardano.Api.Internal.ReexposeLedger
   , TxId (..)
   , TxIn (..)
   , Value
+  , MultiAsset (..)
   , addDeltaCoin
   , castSafeHash
   , toDeltaCoin
@@ -321,6 +322,7 @@ import Cardano.Ledger.Keys
   , hashWithSerialiser
   , toVRFVerKeyHash
   )
+import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), unData)
 import Cardano.Ledger.Plutus.Language (Language, Plutus, languageToText, plutusBinary)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..), StakePoolRelay (..))

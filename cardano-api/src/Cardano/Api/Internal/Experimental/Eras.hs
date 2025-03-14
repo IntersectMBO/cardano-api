@@ -148,6 +148,19 @@ instance FromJSON (Some Era) where
       )
         . eraFromStringLike
 
+-- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
+instance Eon Era where
+  inEonForEra v f = \case
+    Api.ConwayEra -> f ConwayEra
+    Api.BabbageEra -> f BabbageEra
+    _ -> v
+
+-- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
+instance Api.ToCardanoEra Era where
+  toCardanoEra = \case
+    BabbageEra -> Api.BabbageEra
+    ConwayEra -> Api.ConwayEra
+
 eraToStringLike :: IsString a => Era era -> a
 {-# INLINE eraToStringLike #-}
 eraToStringLike = \case
@@ -252,13 +265,6 @@ instance IsEra BabbageEra where
 
 instance IsEra ConwayEra where
   useEra = ConwayEra
-
--- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
-instance Eon Era where
-  inEonForEra v f = \case
-    Api.ConwayEra -> f ConwayEra
-    Api.BabbageEra -> f BabbageEra
-    _ -> v
 
 obtainCommonConstraints
   :: Era era

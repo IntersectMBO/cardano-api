@@ -6,13 +6,17 @@ import Cardano.Api
   , ValueNestedBundle (..)
   , ValueNestedRep (..)
   , fromLedgerValue
-  , parseValue
+  , parseMintingMultiAssetValue
+  , parseTxOutMultiAssetValue
+  , renderMultiAsset
+  , renderMultiAssetPretty
   , renderValue
   , renderValuePretty
   , valueFromNestedRep
   , valueToNestedRep
   )
 import Cardano.Api qualified as Api
+import Cardano.Api.Internal.Eras
 
 import Prelude
 
@@ -24,56 +28,65 @@ import GHC.Exts (IsList (..))
 import Text.Parsec qualified as Parsec (parse)
 
 import Test.Gen.Cardano.Api.Typed
-  ( genAssetName
-  , genValueDefault
-  , genValueForRole
-  , genValueNestedRep
-  )
 
-import Hedgehog (Property, forAll, property, tripping, (===))
+import Hedgehog
 import Hedgehog.Extras qualified as H
 import Hedgehog.Extras.Test.Golden qualified as H
-import Hedgehog.Gen qualified as Gen
 
-{- HLINT ignore "Use let" -}
+currentEra :: MaryEraOnwards ConwayEra
+currentEra = MaryEraOnwardsConway
 
-hprop_roundtrip_Value_parse_render :: Property
-hprop_roundtrip_Value_parse_render =
+hprop_roundtrip_txout_Value_parse_render :: Property
+hprop_roundtrip_txout_Value_parse_render =
   property $ do
-    valueRole <- forAll Gen.enumBounded
-    value <- forAll $ genValueForRole MaryEraOnwardsConway valueRole
-    H.noteShow_ value
+    value <- forAll $ genValueForTxOut (convert currentEra)
     tripping
       value
       renderValue
-      (Parsec.parse (parseValue valueRole) "" . Text.unpack)
+      (Parsec.parse parseTxOutMultiAssetValue "" . Text.unpack)
 
-hprop_roundtrip_Value_parse_renderPretty :: Property
-hprop_roundtrip_Value_parse_renderPretty =
+hprop_roundtrip_txout_Value_parse_renderPretty :: Property
+hprop_roundtrip_txout_Value_parse_renderPretty =
   property $ do
-    valueRole <- forAll Gen.enumBounded
-    value <- forAll $ genValueForRole MaryEraOnwardsConway valueRole
-    H.noteShow_ value
+    value <- forAll $ genValueForTxOut (convert currentEra)
     tripping
       value
       renderValuePretty
-      (Parsec.parse (parseValue valueRole) "" . Text.unpack)
+      (Parsec.parse parseTxOutMultiAssetValue "" . Text.unpack)
+
+hprop_roundtrip_mint_Value_parse_render :: Property
+hprop_roundtrip_mint_Value_parse_render =
+  property $ do
+    value <- forAll genLedgerMultiAssetValue
+    tripping
+      value
+      renderMultiAsset
+      (Parsec.parse (parseMintingMultiAssetValue currentEra) "" . Text.unpack)
+
+hprop_roundtrip_mint_Value_parse_renderPretty :: Property
+hprop_roundtrip_mint_Value_parse_renderPretty =
+  property $ do
+    value <- forAll genLedgerMultiAssetValue
+    tripping
+      value
+      renderMultiAssetPretty
+      (Parsec.parse (parseMintingMultiAssetValue currentEra) "" . Text.unpack)
 
 hprop_goldenValue_1_lovelace :: Property
 hprop_goldenValue_1_lovelace =
   H.propertyOnce $ do
-    valueList <- pure [(Api.AdaAssetId, 1)]
-    value <- pure $ Text.unpack $ Api.renderValuePretty $ fromList valueList
+    let valueList = [(Api.AdaAssetId, 1)]
+        value = Text.unpack $ Api.renderValuePretty $ fromList valueList
 
     H.diffVsGoldenFile value "test/cardano-api-golden/files/golden/Cardano/Api/Value/value-ada-1.json"
 
 hprop_goldenValue1 :: Property
 hprop_goldenValue1 =
   H.propertyOnce $ do
-    policyId <- pure $ Api.PolicyId "a0000000000000000000000000000000000000000000000000000000"
-    assetName <- pure $ Api.AssetName "asset1"
-    valueList <- pure [(Api.AssetId policyId assetName, 1)]
-    value <- pure $ Text.unpack $ Api.renderValuePretty $ fromList valueList
+    let policyId = Api.PolicyId "a0000000000000000000000000000000000000000000000000000000"
+        assetName = Api.AssetName "asset1"
+        valueList = [(Api.AssetId policyId assetName, 1)]
+        value = Text.unpack $ Api.renderValuePretty $ fromList valueList
 
     H.diffVsGoldenFile
       value

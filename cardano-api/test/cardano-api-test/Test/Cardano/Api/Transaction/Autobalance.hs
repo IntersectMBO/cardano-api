@@ -81,7 +81,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   let txMint =
         TxMintValue
           meo
-          [(policyId', [("eeee", 1, BuildTxWith plutusWitness)])]
+          [(policyId', ([("eeee", 1)], BuildTxWith plutusWitness))]
 
   -- tx body content without an asset in TxOut
   let content =
@@ -244,7 +244,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   let txMint =
         TxMintValue
           meo
-          [(policyId', [("eeee", 1, BuildTxWith plutusWitness)])]
+          [(policyId', ([("eeee", 1)], BuildTxWith plutusWitness))]
 
   let content =
         defaultTxBodyContent sbe
@@ -297,7 +297,7 @@ prop_calcReturnAndTotalCollateral = H.withTests 400 . H.property $ do
       sbe = convert beo
       era = convert beo
   feeCoin@(L.Coin fee) <- forAll genLovelace
-  totalCollateral <- forAll $ genValueForTxOut sbe
+  totalCollateral <- forAll $ genLedgerValueForTxOut sbe
   let totalCollateralAda = totalCollateral ^. L.adaAssetL sbe
   pparams <-
     H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"

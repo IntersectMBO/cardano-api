@@ -1,20 +1,22 @@
 {-# LANGUAGE OverloadedLists #-}
 
 module Cardano.Api.Internal.ValueParser
-  ( parseValue
-  , parseTxOutMultiAssetValue
+  ( parseTxOutMultiAssetValue
   , parseMintingMultiAssetValue
   , parseUTxOValue
   , parseAssetName
   , parsePolicyId
-  , ParserValueRole (..)
   )
 where
 
+import Cardano.Api.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Internal.Error (displayError)
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Utils (failEitherWith)
 import Cardano.Api.Internal.Value
+
+import Cardano.Ledger.Crypto qualified as L
+import Cardano.Ledger.Mary.Value qualified as L
 
 import Control.Applicative (many, some, (<|>))
 import Control.Monad (unless, when)
@@ -62,12 +64,19 @@ parseValue role = do
           "Lovelace must be zero in minting value: " <> show value
       return value
 
+-- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
+-- to succeed.
 parseTxOutMultiAssetValue :: Parser Value
 parseTxOutMultiAssetValue = parseValue RoleUTxO
 
-parseMintingMultiAssetValue :: Parser Value
-parseMintingMultiAssetValue = parseValue RoleMint
+-- | Parse a 'MintValue' from its string representation. The string representation cannot contain ADA.
+parseMintingMultiAssetValue :: MaryEraOnwards era -> Parser (L.MultiAsset L.StandardCrypto)
+parseMintingMultiAssetValue w = maryEraOnwardsConstraints w $ do
+  L.MaryValue 0 result <- toLedgerValue w <$> parseValue RoleMint
+  pure result
 
+-- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
+-- to succeed.
 parseUTxOValue :: Parser Value
 parseUTxOValue = parseValue RoleUTxO
 
