@@ -3,17 +3,16 @@
 
   inputs = {
     hackageNix = {
-      # The "for-stakage" part is a workaround haskell.nix and hackage.nix
-      # being out of sync until we drop support for GHC 8.10
-      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
+      url = "github:input-output-hk/hackage.nix";
       flake = false;
     };
     haskellNix = {
-      # master at 2025-03-03
-      url = "github:input-output-hk/haskell.nix?ref=4fd706000172895925a78b3d97436d7711be93b6";
+      url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
     };
-    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    # blst fails to build for x86_64-darwin 
+    # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
     # non-flake nix compatibility
@@ -98,7 +97,8 @@
               cabal-gild = "1.3.1.2";
               fourmolu = "0.18.0.0";
               haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
-              hlint = "3.8";
+              # This index-state makes it work for GHC 9.8.2 (it will need to tbe removed for 9.8.4)
+              hlint = { version = "3.8"; index-state = "2024-12-01T00:00:00Z"; };
             };
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck];
