@@ -1906,6 +1906,13 @@ instance SerialiseAsBech32 (SigningKey StakePoolExtendedKey) where
   bech32PrefixFor _ = "pool_xsk"
   bech32PrefixesPermitted _ = ["pool_xsk"]
 
+instance CastVerificationKeyRole StakePoolExtendedKey StakePoolKey where
+  castVerificationKey (StakePoolExtendedVerificationKey vk) =
+    StakePoolVerificationKey
+      (Shelley.VKey (fromMaybe impossible (Crypto.rawDeserialiseVerKeyDSIGN (Crypto.HD.xpubPublicKey vk))))
+   where
+    impossible = error "castVerificationKey: byron and shelley key sizes do not match!"
+
 --
 -- DRep keys
 --
@@ -2033,6 +2040,7 @@ instance HasTextEnvelope (SigningKey DRepKey) where
 ---
 --- Drep extended keys
 ---
+
 data DRepExtendedKey
 
 instance HasTypeProxy DRepExtendedKey where
