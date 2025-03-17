@@ -41,6 +41,7 @@ module Cardano.Api.Internal.Keys.Shelley
   , SigningKey (..)
   , Hash (..)
   , AnyStakePoolKey (..)
+  , AnyStakePoolKeyWrapper (..)
   )
 where
 
@@ -1661,6 +1662,10 @@ instance CastSigningKeyRole GenesisUTxOKey PaymentKey where
 --
 -- stake pool keys
 --
+
+-- | Wrapper that handles both normal and extended StakePoolKeys and hides the type with an existential
+data AnyStakePoolKeyWrapper t
+  = forall stakePoolKeyType. AnyStakePoolKeyWrapper (t (AnyStakePoolKey stakePoolKeyType))
 
 --  | Wrapper that handles both normal and extended StakePoolKeys
 data AnyStakePoolKey stakePoolKeyType where
