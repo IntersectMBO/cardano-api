@@ -234,8 +234,6 @@ module Cardano.Api
   , AssetName (..)
   , AssetId (..)
   , Value
-  , ParserValueRole (..)
-  , parseValue
   , parsePolicyId
   , parseAssetName
   , parseTxOutMultiAssetValue
@@ -251,9 +249,15 @@ module Cardano.Api
   , valueToNestedRep
   , valueFromNestedRep
   , renderValue
+  , renderMultiAsset
   , renderValuePretty
+  , renderMultiAssetPretty
   , toLedgerValue
   , fromLedgerValue
+  , PolicyAssets (..)
+  , policyAssetsToValue
+  , valueToPolicyAssets
+  , multiAssetToPolicyAssets
 
     -- ** Ada \/ Lovelace within multi-asset values
   , Lovelace
@@ -395,6 +399,7 @@ module Cardano.Api
   , mkTxCertificates
   , TxUpdateProposal (..)
   , TxMintValue (..)
+  , mkTxMintValue
   , txMintValueToValue
   , indexTxMintValue
   , TxVotingProcedures (..)
