@@ -179,6 +179,22 @@ module Cardano.Api
   , castHash
   , renderSafeHashAsHex
 
+    -- * Mnemonics
+
+    -- | Functions for working with mnemonics
+    -- ** Mnemonics generation
+  , MnemonicSize (..)
+  , generateMnemonic
+
+    -- ** Key derivation from mnemonics
+  , MnemonicToSigningKeyError (..)
+  , signingKeyFromMnemonic
+  , signingKeyFromMnemonicWithPaymentKeyIndex
+
+    -- ** Mnemonic word queries
+  , findMnemonicWordsWithPrefix
+  , autocompleteMnemonicPrefix
+
     -- * Payment addresses
 
     -- | Constructing and inspecting normal payment addresses
@@ -1124,6 +1140,7 @@ import Cardano.Api.Internal.IPC.Monad
 import Cardano.Api.Internal.InMode
 import Cardano.Api.Internal.Keys.Byron
 import Cardano.Api.Internal.Keys.Class
+import Cardano.Api.Internal.Keys.Mnemonics
 import Cardano.Api.Internal.Keys.Read
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.LedgerState

@@ -110,8 +110,11 @@ library
     base16-bytestring >=1.0,
     base58-bytestring,
     base64-bytestring,
+    basement,
     bech32 >=1.1.0,
     bytestring,
+    bytestring-trie,
+    cardano-addresses ^>=4.0.0,
     cardano-binary,
     cardano-crypto,
     cardano-crypto-class ^>=2.1.2,
@@ -139,6 +142,7 @@ library
     directory,
     either,
     errors,
+    extra,
     filepath,
     formatting,
     groups,
@@ -161,7 +165,7 @@ library
     ouroboros-network-framework,
     ouroboros-network-protocols,
     parsec,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.37,
+    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.40,
     prettyprinter,
     prettyprinter-ansi-terminal,
     prettyprinter-configurable ^>=1.36,
@@ -222,6 +226,7 @@ library
     Cardano.Api.Internal.Json
     Cardano.Api.Internal.Keys.Byron
     Cardano.Api.Internal.Keys.Class
+    Cardano.Api.Internal.Keys.Mnemonics
     Cardano.Api.Internal.Keys.Praos
     Cardano.Api.Internal.Keys.Read
     Cardano.Api.Internal.Keys.Shelley
@@ -404,7 +409,7 @@ test-suite cardano-api-golden
     hedgehog-extras ^>=0.7,
     microlens,
     parsec,
-    plutus-core ^>=1.37,
+    plutus-core ^>=1.40,
     plutus-ledger-api,
     tasty,
     tasty-hedgehog,
