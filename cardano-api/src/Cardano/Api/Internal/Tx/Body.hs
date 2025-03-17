@@ -288,6 +288,7 @@ module Cardano.Api.Internal.Tx.Body
   , TxOutValue (..)
   , TxOutDatum (TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline)
   , toCtxUTxOTxOut
+  , fromCtxUTxOTxOut
   , lovelaceToTxOutValue
   , prettyRenderTxOut
   , txOutValueToLovelace
@@ -558,6 +559,14 @@ toCtxUTxOTxOut (TxOut addr val d refS) =
         TxOutDatumNone -> TxOutDatumNone
         TxOutDatumHash s h -> TxOutDatumHash s h
         TxOutSupplementalDatum s datum -> TxOutDatumHash s $ hashScriptDataBytes datum
+        TxOutDatumInline s sd -> TxOutDatumInline s sd
+   in TxOut addr val dat refS
+
+fromCtxUTxOTxOut :: TxOut CtxUTxO era -> TxOut CtxTx era
+fromCtxUTxOTxOut (TxOut addr val d refS) =
+  let dat = case d of
+        TxOutDatumNone -> TxOutDatumNone
+        TxOutDatumHash s h -> TxOutDatumHash s h
         TxOutDatumInline s sd -> TxOutDatumInline s sd
    in TxOut addr val dat refS
 
