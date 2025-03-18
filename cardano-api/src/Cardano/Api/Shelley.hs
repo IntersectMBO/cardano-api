@@ -205,6 +205,10 @@ module Cardano.Api.Shelley
     -- ** Stake pool operator's keys
   , AnyStakePoolKey (..)
   , AnyStakePoolKeyWrapper (..)
+  , rewrapAnyStakePoolKey
+  , foldStakePoolKey
+  , liftStakePoolKey
+  , liftStakePoolKeyM
   , Hash (StakePoolKeyNormalHash, StakePoolKeyExtendedHash)
   , StakePoolExtendedKey
   , StakePoolKey

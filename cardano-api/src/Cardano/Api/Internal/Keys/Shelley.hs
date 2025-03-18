@@ -7,9 +7,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -42,6 +45,11 @@ module Cardano.Api.Internal.Keys.Shelley
   , Hash (..)
   , AnyStakePoolKey (..)
   , AnyStakePoolKeyWrapper (..)
+  , rewrapAnyStakePoolKey
+  , foldStakePoolKey
+  , liftStakePoolKey
+  , liftStakePoolKeyM
+  , unStakePoolAnyKeyHash
   )
 where
 
@@ -415,6 +423,10 @@ instance SerialiseAsRawBytes (Hash StakeKey) where
   deserialiseFromRawBytes (AsHash AsStakeKey) bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash StakeKey") $
       StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
+
+instance SerialiseAsBech32 (Hash StakeKey) where
+  bech32PrefixFor _ = "pool"
+  bech32PrefixesPermitted _ = ["pool"]
 
 instance HasTextEnvelope (VerificationKey StakeKey) where
   textEnvelopeType _ =
@@ -1665,7 +1677,83 @@ instance CastSigningKeyRole GenesisUTxOKey PaymentKey where
 
 -- | Wrapper that handles both normal and extended StakePoolKeys and hides the type with an existential
 data AnyStakePoolKeyWrapper t
-  = forall stakePoolKeyType. AnyStakePoolKeyWrapper (t (AnyStakePoolKey stakePoolKeyType))
+  = forall x. StakePoolKey ~ x => StakePoolNormalKeyWrapper (t (AnyStakePoolKey x))
+  | forall x. StakePoolExtendedKey ~ x => StakePoolExtendedKeyWrapper (t (AnyStakePoolKey x))
+
+instance
+  (Eq (t (AnyStakePoolKey StakePoolKey)), Eq (t (AnyStakePoolKey StakePoolExtendedKey)))
+  => Eq (AnyStakePoolKeyWrapper t)
+  where
+  (==) :: AnyStakePoolKeyWrapper t -> AnyStakePoolKeyWrapper t -> Bool
+  (==) (StakePoolNormalKeyWrapper x) (StakePoolNormalKeyWrapper y) = x == y
+  (==) (StakePoolExtendedKeyWrapper x) (StakePoolExtendedKeyWrapper y) = x == y
+  (==) _ _ = False
+
+instance
+  (Ord (t (AnyStakePoolKey StakePoolKey)), Ord (t (AnyStakePoolKey StakePoolExtendedKey)))
+  => Ord (AnyStakePoolKeyWrapper t)
+  where
+  compare :: AnyStakePoolKeyWrapper t -> AnyStakePoolKeyWrapper t -> Ordering
+  compare (StakePoolNormalKeyWrapper x) (StakePoolNormalKeyWrapper y) = compare x y
+  compare (StakePoolExtendedKeyWrapper x) (StakePoolExtendedKeyWrapper y) = compare x y
+  compare (StakePoolNormalKeyWrapper _) (StakePoolExtendedKeyWrapper _) = LT
+  compare (StakePoolExtendedKeyWrapper _) (StakePoolNormalKeyWrapper _) = GT
+
+instance
+  (Show (t (AnyStakePoolKey StakePoolKey)), (Show (t (AnyStakePoolKey StakePoolExtendedKey))))
+  => Show (AnyStakePoolKeyWrapper t)
+  where
+  show (StakePoolNormalKeyWrapper x) = show x
+  show (StakePoolExtendedKeyWrapper x) = show x
+
+rewrapAnyStakePoolKey
+  :: (forall x. t (AnyStakePoolKey x) -> f (AnyStakePoolKey x))
+  -> AnyStakePoolKeyWrapper t
+  -> AnyStakePoolKeyWrapper f
+rewrapAnyStakePoolKey f x = liftStakePoolKey x (const f)
+
+foldStakePoolKey
+  :: AnyStakePoolKeyWrapper t
+  -> ( forall a
+        . ( Key (AnyStakePoolKey a)
+          , SerialiseAsBech32
+              (VerificationKey (AnyStakePoolKey a))
+          , ToJSON (Hash (AnyStakePoolKey a))
+          )
+       => AsType (AnyStakePoolKey a) -> t (AnyStakePoolKey a) -> f
+     )
+  -> f
+foldStakePoolKey (StakePoolNormalKeyWrapper x) f = f AsAnyStakePoolKeyNormal x
+foldStakePoolKey (StakePoolExtendedKeyWrapper x) f = f AsAnyStakePoolKeyExtended x
+
+liftStakePoolKey
+  :: AnyStakePoolKeyWrapper t
+  -> ( forall a
+        . ( Key (AnyStakePoolKey a)
+          , SerialiseAsBech32
+              (VerificationKey (AnyStakePoolKey a))
+          )
+       => AsType (AnyStakePoolKey a) -> t (AnyStakePoolKey a) -> f (AnyStakePoolKey a)
+     )
+  -> AnyStakePoolKeyWrapper f
+liftStakePoolKey (StakePoolNormalKeyWrapper x) f = StakePoolNormalKeyWrapper $ f AsAnyStakePoolKeyNormal x
+liftStakePoolKey (StakePoolExtendedKeyWrapper x) f = StakePoolExtendedKeyWrapper $ f AsAnyStakePoolKeyExtended x
+
+liftStakePoolKeyM
+  :: Applicative g
+  => AnyStakePoolKeyWrapper t
+  -> ( forall a
+        . ( Key (AnyStakePoolKey a)
+          , SerialiseAsBech32
+              (VerificationKey (AnyStakePoolKey a))
+          )
+       => AsType (AnyStakePoolKey a) -> t (AnyStakePoolKey a) -> g (f (AnyStakePoolKey a))
+     )
+  -> g (AnyStakePoolKeyWrapper f)
+liftStakePoolKeyM (StakePoolNormalKeyWrapper x) f = do
+  StakePoolNormalKeyWrapper <$> f AsAnyStakePoolKeyNormal x
+liftStakePoolKeyM (StakePoolExtendedKeyWrapper x) f = do
+  StakePoolExtendedKeyWrapper <$> f AsAnyStakePoolKeyExtended x
 
 --  | Wrapper that handles both normal and extended StakePoolKeys
 data AnyStakePoolKey stakePoolKeyType where
@@ -1891,6 +1979,32 @@ instance SerialiseAsRawBytes (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
   deserialiseFromRawBytes (AsHash AsAnyStakePoolKeyExtended) bs =
     StakePoolKeyExtendedHash <$> deserialiseFromRawBytes (AsHash AsStakePoolExtendedKey) bs
 
+instance SerialiseAsBech32 (Hash (AnyStakePoolKey StakePoolKey)) where
+  bech32PrefixFor (StakePoolKeyNormalHash spkh) = bech32PrefixFor spkh
+  bech32PrefixesPermitted (AsHash AsAnyStakePoolKeyNormal) = bech32PrefixesPermitted (AsHash AsStakePoolKey)
+
+instance SerialiseAsBech32 (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
+  bech32PrefixFor (StakePoolKeyExtendedHash spkh) = bech32PrefixFor spkh
+  bech32PrefixesPermitted (AsHash AsAnyStakePoolKeyExtended) = bech32PrefixesPermitted (AsHash AsStakePoolExtendedKey)
+
+instance ToJSON (Hash (AnyStakePoolKey StakePoolKey)) where
+  toJSON (StakePoolKeyNormalHash spk) = toJSON $ serialiseToBech32 spk
+
+instance ToJSONKey (Hash (AnyStakePoolKey StakePoolKey)) where
+  toJSONKey = toJSONKeyText serialiseToBech32 -- FixMe: ensure this is correct
+
+instance FromJSON (Hash (AnyStakePoolKey StakePoolKey)) where
+  parseJSON x = StakePoolKeyNormalHash <$> parseJSON x
+
+instance ToJSON (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
+  toJSON (StakePoolKeyExtendedHash spk) = toJSON $ serialiseToBech32 spk
+
+instance ToJSONKey (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
+  toJSONKey = toJSONKeyText serialiseToBech32 -- FixMe: ensure this is correct
+
+instance FromJSON (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
+  parseJSON x = StakePoolKeyExtendedHash <$> parseJSON x
+
 instance HasTextEnvelope (VerificationKey (AnyStakePoolKey StakePoolKey)) where
   textEnvelopeType (AsVerificationKey AsAnyStakePoolKeyNormal) = textEnvelopeType (AsVerificationKey AsStakePoolKey)
 
@@ -1902,6 +2016,11 @@ instance HasTextEnvelope (SigningKey (AnyStakePoolKey StakePoolKey)) where
 
 instance HasTextEnvelope (SigningKey (AnyStakePoolKey StakePoolExtendedKey)) where
   textEnvelopeType (AsSigningKey AsAnyStakePoolKeyExtended) = textEnvelopeType (AsSigningKey AsStakePoolExtendedKey)
+
+unStakePoolAnyKeyHash
+  :: AnyStakePoolKeyWrapper Hash -> Shelley.KeyHash Shelley.StakePool StandardCrypto
+unStakePoolAnyKeyHash (StakePoolNormalKeyWrapper (StakePoolKeyNormalHash (StakePoolKeyHash spkh))) = spkh
+unStakePoolAnyKeyHash (StakePoolExtendedKeyWrapper (StakePoolKeyExtendedHash (StakePoolExtendedKeyHash spkh))) = spkh
 
 data StakePoolKey
 
@@ -1986,8 +2105,8 @@ instance SerialiseAsRawBytes (Hash StakePoolKey) where
       (StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash StakePoolKey) where
-  bech32PrefixFor _ = "pool"
-  bech32PrefixesPermitted _ = ["pool"]
+  bech32PrefixFor _ = "pool_xvkh"
+  bech32PrefixesPermitted _ = ["pool_xvkh"]
 
 instance ToJSON (Hash StakePoolKey) where
   toJSON = toJSON . serialiseToBech32
@@ -2137,6 +2256,10 @@ instance SerialiseAsRawBytes (Hash StakePoolExtendedKey) where
       (SerialiseAsRawBytesError "Unable to deserialise Hash StakePoolExtendedKey")
       (StakePoolExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
+instance SerialiseAsBech32 (Hash StakePoolExtendedKey) where
+  bech32PrefixFor _ = "pool_x" -- FixMe: make sure this is right
+  bech32PrefixesPermitted _ = ["pool_x"]
+
 instance HasTextEnvelope (VerificationKey StakePoolExtendedKey) where
   textEnvelopeType _ = "StakePoolExtendedVerificationKey_ed25519_bip32"
 
@@ -2150,6 +2273,24 @@ instance SerialiseAsBech32 (VerificationKey StakePoolExtendedKey) where
 instance SerialiseAsBech32 (SigningKey StakePoolExtendedKey) where
   bech32PrefixFor _ = "pool_xsk"
   bech32PrefixesPermitted _ = ["pool_xsk"]
+
+instance ToJSON (Hash StakePoolExtendedKey) where
+  toJSON = toJSON . serialiseToBech32
+
+instance ToJSONKey (Hash StakePoolExtendedKey) where
+  toJSONKey = toJSONKeyText serialiseToBech32
+
+instance FromJSON (Hash StakePoolExtendedKey) where
+  parseJSON = withText "PoolId" $ \str ->
+    case deserialiseFromBech32 (AsHash AsStakePoolExtendedKey) str of
+      Left err ->
+        fail $
+          docToString $
+            mconcat
+              [ "Error deserialising Hash StakePoolKey: " <> pretty str
+              , " Error: " <> prettyError err
+              ]
+      Right h -> pure h
 
 instance CastVerificationKeyRole StakePoolExtendedKey StakePoolKey where
   castVerificationKey (StakePoolExtendedVerificationKey vk) =
