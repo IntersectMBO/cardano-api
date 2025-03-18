@@ -320,6 +320,7 @@ instance Error ScriptDataRangeError where
 -- can round-trip the JSON.
 --
 -- The subset of JSON supported is all JSON except:
+--
 -- * No null or bool values
 -- * No floating point, only integers in the range of a 64bit signed integer
 -- * A limitation on string lengths
@@ -345,6 +346,20 @@ instance Error ScriptDataRangeError where
 -- precisely. It also means any script data can be converted into the JSON and
 -- back without loss. That is we can round-trip the script data via the JSON and
 -- also round-trip schema-compliant JSON via script data.
+--
+-- *Warning*: While the JSON representation does round-trip, the CBOR through
+-- JSON does not. When serialising and deserialising 'HashableScriptData'
+-- through JSON e.g:
+-- @
+--   CBOR -> HashableScriptData -> JSON -> HashableScriptData -> CBOR
+-- @
+-- the original CBOR representation is lost and the resulting CBOR *will*
+-- be different resulting in a different script data hash, which is
+-- calculated from CBOR. This is because cardano-ledger does not canonicalise
+-- CBOR representation, so you can have few slightly different serialised
+-- representations of a data structure, which represent the same value.
+--
+-- See: https://github.com/IntersectMBO/cardano-api/issues/612#issuecomment-2701256007
 data ScriptDataJsonSchema
   = -- | Use the \"no schema\" mapping between JSON and script data as
     -- described above.
@@ -507,6 +522,10 @@ scriptDataJsonToHashable schema scriptDataVal = do
 -- JSON conversion using the "detailed schema" style
 --
 
+-- | Convert a script data value into JSON using detailed schema.
+--
+-- This conversion is total but is not necessarily invertible.
+-- See 'ScriptDataJsonSchema' for the details.
 scriptDataToJsonDetailedSchema :: HashableScriptData -> Aeson.Value
 scriptDataToJsonDetailedSchema = conv . getScriptData
  where
@@ -538,6 +557,10 @@ scriptDataToJsonDetailedSchema = conv . getScriptData
 
   singleFieldObject name v = Aeson.object [(name, v)]
 
+-- | Convert a script data value from JSON using detailed schema.
+--
+-- This conversion is total but is not necessarily invertible.
+-- See 'ScriptDataJsonSchema' for the details.
 scriptDataFromJsonDetailedSchema
   :: Aeson.Value
   -> Either
