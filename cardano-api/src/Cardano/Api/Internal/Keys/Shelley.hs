@@ -2105,8 +2105,8 @@ instance SerialiseAsRawBytes (Hash StakePoolKey) where
       (StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash StakePoolKey) where
-  bech32PrefixFor _ = "pool_xvkh"
-  bech32PrefixesPermitted _ = ["pool_xvkh"]
+  bech32PrefixFor _ = "pool"
+  bech32PrefixesPermitted _ = ["pool"]
 
 instance ToJSON (Hash StakePoolKey) where
   toJSON = toJSON . serialiseToBech32
@@ -2257,8 +2257,8 @@ instance SerialiseAsRawBytes (Hash StakePoolExtendedKey) where
       (StakePoolExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash StakePoolExtendedKey) where
-  bech32PrefixFor _ = "pool_x" -- FixMe: make sure this is right
-  bech32PrefixesPermitted _ = ["pool_x"]
+  bech32PrefixFor _ = "pool_xvkh"
+  bech32PrefixesPermitted _ = ["pool_xvkh"]
 
 instance HasTextEnvelope (VerificationKey StakePoolExtendedKey) where
   textEnvelopeType _ = "StakePoolExtendedVerificationKey_ed25519_bip32"
