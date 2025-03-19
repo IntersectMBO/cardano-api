@@ -1712,6 +1712,13 @@ instance
   show (StakePoolNormalKeyWrapper x) = show x
   show (StakePoolExtendedKeyWrapper x) = show x
 
+instance ToCBOR (AnyStakePoolKeyWrapper VerificationKey) where
+  toCBOR (StakePoolNormalKeyWrapper x) = toCBOR x
+  toCBOR (StakePoolExtendedKeyWrapper x) = toCBOR x
+
+instance FromCBOR (AnyStakePoolKeyWrapper VerificationKey) where
+  fromCBOR = undefined -- FixMe: implement this
+
 rewrapAnyStakePoolKey
   :: (forall x. t (AnyStakePoolKey x) -> f (AnyStakePoolKey x))
   -> AnyStakePoolKeyWrapper t
@@ -1738,6 +1745,7 @@ liftStakePoolKey
         . ( Key (AnyStakePoolKey a)
           , SerialiseAsBech32
               (VerificationKey (AnyStakePoolKey a))
+          , HasTypeProxy (AnyStakePoolKey a)
           )
        => AsType (AnyStakePoolKey a) -> t (AnyStakePoolKey a) -> f (AnyStakePoolKey a)
      )
@@ -1752,6 +1760,7 @@ liftStakePoolKeyM
         . ( Key (AnyStakePoolKey a)
           , SerialiseAsBech32
               (VerificationKey (AnyStakePoolKey a))
+          , HasTypeProxy (AnyStakePoolKey a)
           )
        => AsType (AnyStakePoolKey a) -> t (AnyStakePoolKey a) -> g (f (AnyStakePoolKey a))
      )

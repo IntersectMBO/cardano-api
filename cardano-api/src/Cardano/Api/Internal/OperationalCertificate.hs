@@ -44,14 +44,14 @@ import Data.Word
 data OperationalCertificate
   = OperationalCertificate
       !(Shelley.OCert StandardCrypto)
-      !(VerificationKey StakePoolKey)
+      !(AnyStakePoolKeyWrapper VerificationKey)
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
 data OperationalCertificateIssueCounter
   = OperationalCertificateIssueCounter
   { opCertIssueCount :: !Word64
-  , opCertIssueColdKey :: !(VerificationKey StakePoolKey) -- For consistency checking
+  , opCertIssueColdKey :: !(AnyStakePoolKeyWrapper VerificationKey) -- For consistency checking
   }
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
@@ -95,8 +95,8 @@ data OperationalCertIssueError
     --
     -- Order: pool vkey expected, pool skey supplied
     OperationalCertKeyMismatch
-      (VerificationKey StakePoolKey)
-      (VerificationKey StakePoolKey)
+      (AnyStakePoolKeyWrapper VerificationKey)
+      (AnyStakePoolKeyWrapper VerificationKey)
   deriving Show
 
 instance Error OperationalCertIssueError where
@@ -108,7 +108,7 @@ instance Error OperationalCertIssueError where
 issueOperationalCertificate
   :: VerificationKey KesKey
   -> Either
-       (SigningKey StakePoolKey)
+       (AnyStakePoolKeyWrapper SigningKey)
        (SigningKey GenesisDelegateExtendedKey)
   -- TODO: this may be better with a type that
   -- captured the three (four?) choices, stake pool
@@ -133,8 +133,12 @@ issueOperationalCertificate
           , OperationalCertificateIssueCounter (succ counter) poolVKey
           )
    where
-    poolVKey' :: VerificationKey StakePoolKey
-    poolVKey' = either getVerificationKey (convert . getVerificationKey) skey
+    poolVKey' :: AnyStakePoolKeyWrapper VerificationKey
+    poolVKey' =
+      either
+        (\x -> liftStakePoolKey x (const getVerificationKey))
+        (StakePoolNormalKeyWrapper . StakePoolVerificationKeyNormal . convert . getVerificationKey)
+        skey
      where
       convert
         :: VerificationKey GenesisDelegateExtendedKey
@@ -163,8 +167,13 @@ issueOperationalCertificate
      where
       skey' :: ShelleySigningKey
       skey' = case skey of
-        Left (StakePoolSigningKey poolSKey) ->
+        Left (StakePoolNormalKeyWrapper (StakePoolSigningKeyNormal (StakePoolSigningKey poolSKey))) ->
           ShelleyNormalSigningKey poolSKey
+        Left
+          ( StakePoolExtendedKeyWrapper
+              (StakePoolSigningKeyExtended (StakePoolExtendedSigningKey poolExtendedSKey))
+            ) ->
+            ShelleyExtendedSigningKey poolExtendedSKey
         Right (GenesisDelegateExtendedSigningKey delegSKey) ->
           ShelleyExtendedSigningKey delegSKey
 
