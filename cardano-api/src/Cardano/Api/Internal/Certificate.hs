@@ -14,8 +14,7 @@
 
 -- | Certificates embedded in transactions
 module Cardano.Api.Internal.Certificate
-  ( AnyCertificate (..)
-  , Certificate (..)
+  ( Certificate (..)
 
     -- * Registering stake address and delegating
   , StakeAddressRequirements (..)
@@ -73,6 +72,7 @@ module Cardano.Api.Internal.Certificate
   , AsType (..)
 
     -- * Internal functions
+  , certificateToTxCert
   , filterUnRegCreds
   , filterUnRegDRepCreds
   , isDRepRegOrUpdateCert
@@ -101,6 +101,7 @@ import Cardano.Api.Internal.StakePoolMetadata
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
 import Cardano.Api.Internal.Value
 
+import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Keys qualified as Ledger
@@ -225,24 +226,19 @@ instance
     ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RegPool{}) -> "Pool registration"
     ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
 
-data AnyCertificate where
-  AnyCertificate :: Typeable era => Certificate era -> AnyCertificate
-
-deriving instance Show AnyCertificate
-
-instance Eq AnyCertificate where
-  (==)
-    (AnyCertificate cert)
-    (AnyCertificate cert') =
-      case testEquality cert cert' of
-        Nothing -> False
-        Just Refl -> cert == cert'
-
-instance Ord AnyCertificate where
-  compare (AnyCertificate (c1 :: Certificate era1)) (AnyCertificate (c2 :: Certificate era2)) =
-    case eqT @era1 @era2 of
-      Just Refl -> compare c1 c2
-      Nothing -> compare (typeOf c1) (typeOf c2)
+certificateToTxCert :: Certificate era -> L.TxCert (ShelleyLedgerEra era)
+certificateToTxCert c =
+  case c of
+    ShelleyRelatedCertificate eon cert ->
+      case eon of
+        ShelleyToBabbageEraShelley -> cert
+        ShelleyToBabbageEraAllegra -> cert
+        ShelleyToBabbageEraMary -> cert
+        ShelleyToBabbageEraAlonzo -> cert
+        ShelleyToBabbageEraBabbage -> cert
+    ConwayCertificate eon cert ->
+      case eon of
+        ConwayEraOnwardsConway -> cert
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters

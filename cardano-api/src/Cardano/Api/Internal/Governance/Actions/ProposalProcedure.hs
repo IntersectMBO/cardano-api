@@ -5,7 +5,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -190,29 +189,6 @@ instance IsShelleyBasedEra era => HasTextEnvelope (Proposal era) where
 instance HasTypeProxy era => HasTypeProxy (Proposal era) where
   data AsType (Proposal era) = AsProposal
   proxyToAsType _ = AsProposal
-
-data AnyProposal where
-  AnyProposal :: IsShelleyBasedEra era => Proposal era -> AnyProposal
-
-deriving instance Show AnyProposal
-
-instance Eq AnyProposal where
-  (==) (AnyProposal p) (AnyProposal p') =
-    case testEquality p p' of
-      Nothing -> False
-      Just Refl -> p == p'
-
-instance Ord AnyProposal where
-  compare (AnyProposal p) (AnyProposal p') =
-    case testEquality p p' of
-      Nothing ->
-        error $
-          unlines
-            [ "Ord AnyProposal: not possible to combine proposals of different eras"
-            , "Proposal 1: " ++ show p
-            , "Proposal 2: " ++ show p'
-            ]
-      Just Refl -> compare p p'
 
 createProposalProcedure
   :: ShelleyBasedEra era

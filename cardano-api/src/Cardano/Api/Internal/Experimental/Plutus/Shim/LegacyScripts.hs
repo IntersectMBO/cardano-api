@@ -58,12 +58,12 @@ toAnyWitness eon (witnessable, BuildTxWith (Old.ScriptWitness _ oldApiPlutusScri
   convertToNewPlutusScriptWitness eon oldApiPlutusScriptWitness witnessable
 
 type family ToPlutusScriptPurpose witnessable = (purpose :: PlutusScriptPurpose) | purpose -> witnessable where
-  ToPlutusScriptPurpose TxIn = SpendingScript
-  ToPlutusScriptPurpose Mint = MintingScript
-  ToPlutusScriptPurpose Cert = CertifyingScript
-  ToPlutusScriptPurpose Withdrawal = WithdrawingScript
-  ToPlutusScriptPurpose Proposal = ProposingScript
-  ToPlutusScriptPurpose Voter = VotingScript
+  ToPlutusScriptPurpose TxInItem = SpendingScript
+  ToPlutusScriptPurpose CertItem = MintingScript
+  ToPlutusScriptPurpose MintItem = CertifyingScript
+  ToPlutusScriptPurpose WithdrawalItem = WithdrawingScript
+  ToPlutusScriptPurpose VoterItem = ProposingScript
+  ToPlutusScriptPurpose ProposalItem = VotingScript
 
 convertToNewPlutusScriptWitness
   :: AlonzoEraOnwards era
@@ -112,10 +112,10 @@ createPlutusScriptDatum missingContext plutusVersion oldDatum =
     (WitTxCert{}, _) -> NoScriptDatum
 
 toPlutusScriptDatum
-  :: Witnessable TxIn era
+  :: Witnessable TxInItem era
   -> Old.PlutusScriptVersion lang
   -> Old.ScriptDatum Old.WitCtxTxIn
-  -> PlutusScriptDatum (Old.ToLedgerPlutusLanguage lang) (ToPlutusScriptPurpose TxIn)
+  -> PlutusScriptDatum (Old.ToLedgerPlutusLanguage lang) (ToPlutusScriptPurpose TxInItem)
 -- ^ Encapsulates CIP-69: V3 spending script datums are optional
 toPlutusScriptDatum WitTxIn{} Old.PlutusScriptV3 (Old.ScriptDatumForTxIn r) = SpendingScriptDatum r
 -- \^ V2 and V1 spending script datums are required

@@ -409,13 +409,10 @@ import Cardano.Api.Internal.Eras.Case
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.Error (Error (..), displayError)
 import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
-  ( Cert
-  , Mint
-  , Withdrawal
-  , Witnessable (..)
+  ( Witnessable (..)
+  , WitnessableItem (..)
   , obtainAlonzoScriptPurposeConstraints
   )
-import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness qualified as NewSWit
 import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
 import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Feature
@@ -3966,7 +3963,7 @@ collectTxBodyScriptWitnessRequirements
 extractWitnessableTxIns
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable TxIn (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+  -> [(Witnessable TxInItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxTxIn era))]
 extractWitnessableTxIns aeon TxBodyContent{txIns} =
   alonzoEraOnwardsConstraints aeon $
     List.nub [(WitTxIn txin, wit) | (txin, wit) <- txIns]
@@ -3974,7 +3971,7 @@ extractWitnessableTxIns aeon TxBodyContent{txIns} =
 extractWitnessableWithdrawals
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable Withdrawal (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable WithdrawalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableWithdrawals aeon TxBodyContent{txWithdrawals} =
   alonzoEraOnwardsConstraints aeon $
     List.nub
@@ -3988,11 +3985,11 @@ extractWitnessableWithdrawals aeon TxBodyContent{txWithdrawals} =
 extractWitnessableCertificates
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable Cert (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable CertItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableCertificates aeon TxBodyContent{txCertificates} =
   alonzoEraOnwardsConstraints aeon $
     List.nub
-      [ ( WitTxCert (AnyCertificate cert, stakeCred)
+      [ ( WitTxCert (certificateToTxCert cert, stakeCred)
         , BuildTxWith wit
         )
       | (cert, BuildTxWith (Just (stakeCred, wit))) <- getCertificates txCertificates
@@ -4004,7 +4001,7 @@ extractWitnessableCertificates aeon TxBodyContent{txCertificates} =
 extractWitnessableMints
   :: AlonzoEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable Mint (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxMint era))]
+  -> [(Witnessable MintItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxMint era))]
 extractWitnessableMints aeon TxBodyContent{txMintValue} =
   alonzoEraOnwardsConstraints aeon $
     List.nub
@@ -4019,11 +4016,11 @@ extractWitnessableMints aeon TxBodyContent{txMintValue} =
 extractWitnessableVotes
   :: ConwayEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable NewSWit.Voter (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable VoterItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedures} =
   List.nub
-    [ (WitVote $ AnyVoter vote, BuildTxWith wit)
-    | (vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
+    [ (WitVote vote, BuildTxWith wit)
+    | (Voter vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
     ]
  where
   getVotes
@@ -4042,11 +4039,11 @@ extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedure
 extractWitnessableProposals
   :: ConwayEraOnwards era
   -> TxBodyContent BuildTx era
-  -> [(Witnessable NewSWit.Proposal (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
+  -> [(Witnessable ProposalItem (ShelleyLedgerEra era), BuildTxWith BuildTx (Witness WitCtxStake era))]
 extractWitnessableProposals e@ConwayEraOnwardsConway TxBodyContent{txProposalProcedures} =
   List.nub
-    [ (WitProposal $ AnyProposal prop, BuildTxWith wit)
-    | (prop, wit) <-
+    [ (WitProposal prop, BuildTxWith wit)
+    | (Proposal prop, wit) <-
         getProposals e $ maybe TxProposalProceduresNone unFeatured txProposalProcedures
     ]
  where

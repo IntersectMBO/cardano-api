@@ -13,12 +13,7 @@ module Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
 
     -- * Witnessable things.
   , Witnessable (..)
-  , TxIn
-  , Mint
-  , Withdrawal
-  , Cert
-  , Voter
-  , Proposal
+  , WitnessableItem (..)
 
     -- * Create the index for a witnessable thing.
   , GetPlutusScriptPurpose (..)
@@ -29,13 +24,10 @@ module Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
 where
 
 import Cardano.Api.Internal.Address
-import Cardano.Api.Internal.Certificate
 import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
 import Cardano.Api.Internal.Experimental.Witness.AnyWitness
-import Cardano.Api.Internal.Governance.Actions.ProposalProcedure qualified as Api
-import Cardano.Api.Internal.Governance.Actions.VotingProcedure qualified as Api
 import Cardano.Api.Internal.Script (toAlonzoExUnits)
 import Cardano.Api.Internal.ScriptData
 import Cardano.Api.Internal.TxIn
@@ -70,16 +62,31 @@ data AnyIndexedPlutusScriptWitness era where
 -- | These are all of the "things" a plutus script can witness. We include the relevant
 -- type class constraint to avoid boilerplate when creating the 'PlutusPurpose' in
 -- the 'GetPlutusScriptPurpose' instances.
-data Witnessable thing era where
-  WitTxIn :: L.AlonzoEraScript era => TxIn -> Witnessable TxIn era
-  WitTxCert :: L.AlonzoEraScript era => Cert -> Witnessable Cert era
-  WitMint :: L.AlonzoEraScript era => Mint -> Witnessable Mint era
+data Witnessable (thing :: WitnessableItem) era where
+  WitTxIn
+    :: L.AlonzoEraScript era
+    => TxIn
+    -> Witnessable TxInItem era
+  WitTxCert
+    :: (L.EraTxCert era, L.AlonzoEraScript era)
+    => (L.TxCert era, StakeCredential)
+    -> Witnessable CertItem era
+  WitMint
+    :: L.AlonzoEraScript era
+    => (PolicyId, AssetName, Quantity)
+    -> Witnessable MintItem era
   WitWithdrawal
-    :: L.AlonzoEraScript era => Withdrawal -> Witnessable Withdrawal era
+    :: L.AlonzoEraScript era
+    => (StakeAddress, L.Coin)
+    -> Witnessable WithdrawalItem era
   WitVote
     :: L.ConwayEraScript era
-    => Voter -> Witnessable Voter era
-  WitProposal :: L.ConwayEraScript era => Proposal -> Witnessable Proposal era
+    => L.Voter (L.EraCrypto era)
+    -> Witnessable VoterItem era
+  WitProposal
+    :: (L.ConwayEraScript era, L.EraPParams era)
+    => L.ProposalProcedure era
+    -> Witnessable ProposalItem era
 
 deriving instance Show (Witnessable thing era)
 
@@ -98,15 +105,13 @@ compareWitnesses a b =
     (WitVote voterA, WitVote voterB) -> compare voterA voterB
     (WitProposal propA, WitProposal propB) -> compare propA propB
 
-type Mint = (PolicyId, AssetName, Quantity)
-
-type Withdrawal = (StakeAddress, L.Coin)
-
-type Cert = (AnyCertificate, StakeCredential)
-
-type Voter = Api.AnyVoter
-
-type Proposal = Api.AnyProposal
+data WitnessableItem
+  = TxInItem
+  | CertItem
+  | MintItem
+  | WithdrawalItem
+  | VoterItem
+  | ProposalItem
 
 -- | To reduce boilerplate, we reuse the `PlutusPurpose` type from `cardano-ledger`.
 -- This type is utilized in constructing the redeemer pointers map, which
