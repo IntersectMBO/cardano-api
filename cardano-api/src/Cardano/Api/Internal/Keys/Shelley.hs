@@ -50,6 +50,7 @@ module Cardano.Api.Internal.Keys.Shelley
   , liftStakePoolKey
   , liftStakePoolKeyM
   , unStakePoolAnyKeyHash
+  , castHashToNormal
   )
 where
 
@@ -1759,6 +1760,10 @@ liftStakePoolKeyM (StakePoolNormalKeyWrapper x) f = do
   StakePoolNormalKeyWrapper <$> f AsAnyStakePoolKeyNormal x
 liftStakePoolKeyM (StakePoolExtendedKeyWrapper x) f = do
   StakePoolExtendedKeyWrapper <$> f AsAnyStakePoolKeyExtended x
+
+castHashToNormal :: AnyStakePoolKeyWrapper Hash -> Hash StakePoolKey
+castHashToNormal (StakePoolNormalKeyWrapper (StakePoolKeyNormalHash x)) = x
+castHashToNormal (StakePoolExtendedKeyWrapper (StakePoolKeyExtendedHash (StakePoolExtendedKeyHash x))) = StakePoolKeyHash x
 
 --  | Wrapper that handles both normal and extended StakePoolKeys
 data AnyStakePoolKey stakePoolKeyType where
