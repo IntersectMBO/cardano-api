@@ -1,5 +1,38 @@
 # Changelog for cardano-api
 
+## 10.11.0.0
+
+- Added support for generating mnemonics and for deriving payment and stake keys from mnemonics.
+  (feature)
+  [PR 678](https://github.com/IntersectMBO/cardano-api/pull/678)
+
+- Add `fromCtxUTxOTxOut`, inverse of `toCtxUTxOTxOut`
+  (compatible)
+  [PR 770](https://github.com/IntersectMBO/cardano-api/pull/770)
+
+- Make 1-1 relationship of witness and policy ID in TxMintValue instead of 1-*
+  Remove exports: `parseValue`, `ParserValueRole`
+  Add new type `PolicyAssets` representing minted assets within a single PolicyId
+  Add `mkTxMintValue` helper function
+  (breaking, refactoring)
+  [PR 776](https://github.com/IntersectMBO/cardano-api/pull/776)
+
+- Add Key instance for StakePoolExtendedKey
+  (feature, compatible)
+  [PR 777](https://github.com/IntersectMBO/cardano-api/pull/777)
+
+- Add missing certificates in compatible transaction building in eras after Shelley and prior to Alonzo
+  (bugfix)
+  [PR 775](https://github.com/IntersectMBO/cardano-api/pull/775)
+
+- Added `HasTextEnvelope` instance for `EraHistory`
+  (feature, compatible)
+  [PR 771](https://github.com/IntersectMBO/cardano-api/pull/771)
+
+- Define `fromList` and `toList` in `Cardano.Api.UTxO` module.
+  (compatible)
+  [PR 767](https://github.com/IntersectMBO/cardano-api/pull/767)
+
 ## 10.10.0.0
 
 - Include deserialisation of stake keys in deserialiseAnyVerificationKeyTextEnvelope
