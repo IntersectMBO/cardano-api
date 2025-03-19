@@ -92,6 +92,7 @@ library
     Cardano.Api.Internal.ProtocolParameters
     Cardano.Api.Internal.Query
     Cardano.Api.Internal.Script
+    Cardano.Api.Internal.Serialise.Cbor.Canonical
     Cardano.Api.Internal.SerialiseLedgerCddl
     Cardano.Api.Internal.SerialiseTextEnvelope
     Cardano.Api.Internal.Tx.Body

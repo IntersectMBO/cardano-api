@@ -12,13 +12,21 @@ where
 
 import Cardano.Api
 import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.Serialise.Cbor.Canonical (canonicaliseCborBs)
 import Cardano.Api.Internal.SerialiseLedgerCddl (cddlTypeToEra)
 import Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
 import Cardano.Api.Shelley (AsType (..))
 
+import Cardano.Binary qualified as CBOR
+
+import Codec.CBOR.Read qualified as CBOR
+import Codec.CBOR.Term (Term (..))
+import Codec.CBOR.Term qualified as CBOR
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Data.List (sortOn)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text qualified as T
@@ -28,7 +36,7 @@ import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()
 
-import Hedgehog (Property, forAll, property, tripping)
+import Hedgehog (Property, forAll, property, tripping, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
@@ -340,13 +348,72 @@ prop_roundtrip_GovernancePollAnswer_CBOR :: Property
 prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
   H.trippingCbor AsGovernancePollAnswer =<< forAll genGovernancePollAnswer
 
+-- | Test CBOR canonicalisation (according to RFC 7049, part of CIP-21)
+-- We're only testing ordering of the map keys and converting to finite collections here
+-- - the smallest representation is implemented in cborg library.
+prop_canonicalise_cbor :: Property
+prop_canonicalise_cbor = property $ do
+  let inputMap =
+        TMapI
+          [ (TInt 22, TString "d")
+          , (TInt 11, TString "a")
+          , (TInt 1, TString "b")
+          , (TInt 3, TString "c")
+          , (TInt 2, TString "b")
+          , (TBytes "aa", TString "e")
+          , (TBytes "a", TString "f")
+          , (TBytes "a0", TString "f")
+          , (TBytes "bc", TString "g")
+          , (TBytes "b", TString "g")
+          , (TBytes "bb", TString "h")
+          , (TBytes "ba", TListI [TString "i", TString "j"])
+          ]
+      inputMapBs = CBOR.serialize' inputMap
+  inputMapTerm <- decodeExampleTerm inputMapBs
+
+  inputMapCanonicalisedBs <- H.leftFail $ canonicaliseCborBs inputMapBs
+
+  inputMapCanonicalisedTerm@(TMap elemTerms) <- decodeExampleTerm inputMapCanonicalisedBs
+
+  H.annotate "sanity check that cbor round trip does not change the order"
+  inputMap === inputMapTerm
+
+  H.annotate "Print bytes hex representation of the keys in the map"
+  H.annotateShow
+    . sortOn fst
+    . map (\(e, _) -> (BS.toLazyByteString . BS.byteStringHex $ CBOR.serialize' e, e))
+    $ elemTerms
+
+  H.annotate "Check that expected canonicalised CBOR is equal to the result"
+  TMap
+    [ (TInt 1, TString "b")
+    , (TInt 2, TString "b")
+    , (TInt 3, TString "c")
+    , (TInt 11, TString "a")
+    , (TInt 22, TString "d")
+    , (TBytes "a", TString "f")
+    , (TBytes "b", TString "g")
+    , (TBytes "a0", TString "f")
+    , (TBytes "aa", TString "e")
+    , (TBytes "ba", TList [TString "i", TString "j"])
+    , (TBytes "bb", TString "h")
+    , (TBytes "bc", TString "g")
+    ]
+    === inputMapCanonicalisedTerm
+ where
+  decodeExampleTerm bs = do
+    (leftover, term) <- H.leftFail $ CBOR.deserialiseFromBytes CBOR.decodeTerm (LBS.fromStrict bs)
+    H.assertWith leftover LBS.null
+    pure term
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.CBOR"
-    [ testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
+    [ testProperty "test canonicalisation of CBOR" prop_canonicalise_cbor
+    , testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
     , testProperty "txbody backwards compatibility" prop_txbody_backwards_compatibility
     , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
     , testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR

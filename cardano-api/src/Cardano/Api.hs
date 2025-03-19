@@ -758,6 +758,7 @@ module Cardano.Api
   , readFileTextEnvelopeCddlAnyOf
   , deserialiseFromTextEnvelopeCddlAnyOf
   , writeTxFileTextEnvelopeCddl
+  , writeTxFileTextEnvelopeCanonicalCddl
   , writeTxWitnessFileTextEnvelopeCddl
   , deserialiseByronTxCddl
   , serialiseWitnessLedgerCddl

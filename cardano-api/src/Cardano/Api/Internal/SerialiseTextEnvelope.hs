@@ -25,6 +25,7 @@ module Cardano.Api.Internal.SerialiseTextEnvelope
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
   , textEnvelopeToJSON
+  , serialiseTextEnvelope
   , legacyComparison
 
     -- * Reading one of several key types
@@ -115,11 +116,11 @@ instance FromJSON TextEnvelope where
     parseJSONBase16 v =
       either fail return . Base16.decode . Text.encodeUtf8 =<< parseJSON v
 
-textEnvelopeJSONConfig :: Config
-textEnvelopeJSONConfig = defConfig{confCompare = textEnvelopeJSONKeyOrder}
+textEnvelopeJsonConfig :: Config
+textEnvelopeJsonConfig = defConfig{confCompare = textEnvelopeJsonKeyOrder}
 
-textEnvelopeJSONKeyOrder :: Text -> Text -> Ordering
-textEnvelopeJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
+textEnvelopeJsonKeyOrder :: Text -> Text -> Ordering
+textEnvelopeJsonKeyOrder = keyOrder ["type", "description", "cborHex"]
 
 textEnvelopeRawCBOR :: TextEnvelope -> ByteString
 textEnvelopeRawCBOR = teRawCBOR
@@ -254,7 +255,11 @@ writeFileTextEnvelope outputFile mbDescr a =
 
 textEnvelopeToJSON :: HasTextEnvelope a => Maybe TextEnvelopeDescr -> a -> LBS.ByteString
 textEnvelopeToJSON mbDescr a =
-  encodePretty' textEnvelopeJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
+  serialiseTextEnvelope $ serialiseToTextEnvelope mbDescr a
+
+-- | Serialise text envelope to pretty JSON
+serialiseTextEnvelope :: TextEnvelope -> LBS.ByteString
+serialiseTextEnvelope te = encodePretty' textEnvelopeJsonConfig te <> "\n"
 
 readFileTextEnvelope
   :: HasTextEnvelope a
