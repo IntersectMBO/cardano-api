@@ -159,7 +159,7 @@ getAnyWitnessRedeemerPointerMap
   :: AlonzoEraOnwards era
   -> (Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))
   -> L.Redeemers (ShelleyLedgerEra era)
-getAnyWitnessRedeemerPointerMap eon (_, AnyKeyWitness) = alonzoEraOnwardsConstraints eon mempty
+getAnyWitnessRedeemerPointerMap eon (_, AnyKeyWitnessPlaceholder) = alonzoEraOnwardsConstraints eon mempty
 getAnyWitnessRedeemerPointerMap eon (_, AnySimpleScriptWitness{}) = alonzoEraOnwardsConstraints eon mempty
 getAnyWitnessRedeemerPointerMap eon anyWit =
   constructRedeeemerPointerMap eon $

@@ -51,9 +51,9 @@ toAnyWitness
        CBOR.DecoderError
        (Witnessable thing (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))
 toAnyWitness _ (witnessable, BuildTxWith (Old.KeyWitness _)) =
-  return (witnessable, AnyKeyWitness)
+  return (witnessable, AnyKeyWitnessPlaceholder)
 toAnyWitness _ (witnessable, BuildTxWith (Old.ScriptWitness _ Old.SimpleScriptWitness{})) =
-  return (witnessable, AnyKeyWitness)
+  return (witnessable, AnyKeyWitnessPlaceholder)
 toAnyWitness eon (witnessable, BuildTxWith (Old.ScriptWitness _ oldApiPlutusScriptWitness)) =
   convertToNewPlutusScriptWitness eon oldApiPlutusScriptWitness witnessable
 

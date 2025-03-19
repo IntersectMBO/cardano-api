@@ -4009,8 +4009,8 @@ extractWitnessableMints aeon TxBodyContent{txMintValue} =
   alonzoEraOnwardsConstraints aeon $
     List.nub
       [ (WitMint (policyId, assetName, quantity), BuildTxWith $ ScriptWitness ScriptWitnessForMinting wit)
-      | (policyId, assetsWithWits) <- getMints txMintValue
-      , (assetName, quantity, BuildTxWith wit) <- assetsWithWits
+      | (policyId, (policyAssets, BuildTxWith wit)) <- getMints txMintValue
+      , (assetName, quantity) <- toList policyAssets
       ]
  where
   getMints TxMintNone = []

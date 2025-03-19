@@ -38,23 +38,23 @@ import GHC.Exts
 -- * simple script witnesses
 -- * Plutus script witnesses
 --
--- Note that 'AnyKeyWitness' does not contain the actual key witness. This is because
+-- Note that 'AnyKeyWitnessPlaceholder' does not contain the actual key witness. This is because
 -- key witnesses are provided in the signing stage of the transaction. However we need this constuctor
 -- to index the witnessable things correctly when plutus scripts are being used within the transaction.
 -- AnyWitness is solely used to contruct the transaction body.
 data AnyWitness era where
-  AnyKeyWitness :: AnyWitness era
+  AnyKeyWitnessPlaceholder :: AnyWitness era
   AnySimpleScriptWitness :: SimpleScriptOrReferenceInput era -> AnyWitness era
   AnyPlutusScriptWitness :: PlutusScriptWitness lang purpose era -> AnyWitness era
 
 getAnyWitnessPlutusLanguage :: AnyWitness era -> Maybe L.Language
-getAnyWitnessPlutusLanguage AnyKeyWitness = Nothing
+getAnyWitnessPlutusLanguage AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessPlutusLanguage (AnySimpleScriptWitness _) = Nothing
 getAnyWitnessPlutusLanguage (AnyPlutusScriptWitness swit) = Just $ getPlutusScriptWitnessLanguage swit
 
 getAnyWitnessSimpleScript
   :: AnyWitness (ShelleyLedgerEra era) -> Maybe (L.NativeScript (ShelleyLedgerEra era))
-getAnyWitnessSimpleScript AnyKeyWitness = Nothing
+getAnyWitnessSimpleScript AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessSimpleScript (AnySimpleScriptWitness simpleScriptOrRefInput) =
   case simpleScriptOrRefInput of
     SScript (SimpleScript simpleScript) -> Just simpleScript
@@ -65,7 +65,7 @@ getAnyWitnessPlutusScript
   :: AlonzoEraOnwards era
   -> AnyWitness (ShelleyLedgerEra era)
   -> Maybe (L.PlutusScript (ShelleyLedgerEra era))
-getAnyWitnessPlutusScript _ AnyKeyWitness = Nothing
+getAnyWitnessPlutusScript _ AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessPlutusScript _ (AnySimpleScriptWitness _) = Nothing
 getAnyWitnessPlutusScript
   eon
@@ -78,7 +78,7 @@ getAnyWitnessPlutusScript _ (AnyPlutusScriptWitness (PlutusScriptWitness _ (PRef
 -- | NB this does not include datums from inline datums existing at tx outputs!
 getAnyWitnessScriptData
   :: AlonzoEraOnwards era -> AnyWitness (ShelleyLedgerEra era) -> L.TxDats (ShelleyLedgerEra era)
-getAnyWitnessScriptData eon AnyKeyWitness = alonzoEraOnwardsConstraints eon mempty
+getAnyWitnessScriptData eon AnyKeyWitnessPlaceholder = alonzoEraOnwardsConstraints eon mempty
 getAnyWitnessScriptData eon AnySimpleScriptWitness{} = alonzoEraOnwardsConstraints eon mempty
 getAnyWitnessScriptData eon (AnyPlutusScriptWitness (PlutusScriptWitness l _ scriptDatum _ _)) =
   let alonzoSdat = toAlonzoDatum eon l scriptDatum
@@ -89,7 +89,7 @@ getAnyWitnessScriptData eon (AnyPlutusScriptWitness (PlutusScriptWitness l _ scr
 
 getAnyWitnessScript
   :: ShelleyBasedEra era -> AnyWitness (ShelleyLedgerEra era) -> Maybe (L.Script (ShelleyLedgerEra era))
-getAnyWitnessScript _ AnyKeyWitness = Nothing
+getAnyWitnessScript _ AnyKeyWitnessPlaceholder = Nothing
 getAnyWitnessScript era ss@(AnySimpleScriptWitness{}) =
   case era of
     ShelleyBasedEraShelley -> getAnyWitnessSimpleScript ss
