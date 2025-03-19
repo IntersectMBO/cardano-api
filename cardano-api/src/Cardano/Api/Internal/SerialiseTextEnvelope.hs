@@ -43,7 +43,7 @@ import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.IO
 import Cardano.Api.Internal.Orphans ()
 import Cardano.Api.Internal.Pretty
-import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.Utils (readFileBlocking)
 
 import Cardano.Binary (DecoderError)

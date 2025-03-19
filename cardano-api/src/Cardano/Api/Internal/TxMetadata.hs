@@ -51,7 +51,7 @@ import Cardano.Api.Internal.Eras
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Pretty
-import Cardano.Api.Internal.SerialiseCBOR (SerialiseAsCBOR (..))
+import Cardano.Api.Internal.Serialise.Cbor (SerialiseAsCBOR (..))
 
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Shelley.TxAuxData qualified as Shelley

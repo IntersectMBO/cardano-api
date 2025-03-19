@@ -32,7 +32,7 @@ import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Hash
 import Cardano.Api.Internal.Keys.Class
 import Cardano.Api.Internal.Keys.Shelley
-import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.SerialiseUsing

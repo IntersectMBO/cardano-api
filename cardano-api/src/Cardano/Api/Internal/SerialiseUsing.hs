@@ -11,8 +11,8 @@ where
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseBech32
-import Cardano.Api.Internal.SerialiseCBOR
 import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
 

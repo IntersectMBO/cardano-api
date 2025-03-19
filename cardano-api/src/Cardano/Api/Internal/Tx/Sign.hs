@@ -112,7 +112,7 @@ import Cardano.Api.Internal.Keys.Byron
 import Cardano.Api.Internal.Keys.Class
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.NetworkId
-import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseTextEnvelope
 
 import Cardano.Chain.Common qualified as Byron

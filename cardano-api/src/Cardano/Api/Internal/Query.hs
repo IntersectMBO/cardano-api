@@ -81,7 +81,7 @@ import Cardano.Api.Internal.NetworkId
 import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.Query.Types
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
-import Cardano.Api.Internal.SerialiseCBOR (SerialiseAsCBOR (deserialiseFromCBOR, serialiseToCBOR))
+import Cardano.Api.Internal.Serialise.Cbor (SerialiseAsCBOR (deserialiseFromCBOR, serialiseToCBOR))
 import Cardano.Api.Internal.SerialiseTextEnvelope
   ( HasTextEnvelope (textEnvelopeType)
   , TextEnvelopeType
