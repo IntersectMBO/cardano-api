@@ -73,7 +73,12 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Crypto qualified as Shelley (DSIGN)
 import Cardano.Ledger.Keys qualified as Shelley
 
-import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
+import Data.Aeson.Types
+  ( ToJSONKey (..)
+  , contramapToJSONKeyFunction
+  , toJSONKeyText
+  , withText
+  )
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -1991,7 +1996,8 @@ instance ToJSON (Hash (AnyStakePoolKey StakePoolKey)) where
   toJSON (StakePoolKeyNormalHash spk) = toJSON $ serialiseToBech32 spk
 
 instance ToJSONKey (Hash (AnyStakePoolKey StakePoolKey)) where
-  toJSONKey = toJSONKeyText serialiseToBech32 -- FixMe: ensure this is correct
+  toJSONKey =
+    contramapToJSONKeyFunction (\(StakePoolKeyNormalHash x) -> x) toJSONKey
 
 instance FromJSON (Hash (AnyStakePoolKey StakePoolKey)) where
   parseJSON x = StakePoolKeyNormalHash <$> parseJSON x
@@ -2000,7 +2006,8 @@ instance ToJSON (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
   toJSON (StakePoolKeyExtendedHash spk) = toJSON $ serialiseToBech32 spk
 
 instance ToJSONKey (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
-  toJSONKey = toJSONKeyText serialiseToBech32 -- FixMe: ensure this is correct
+  toJSONKey =
+    contramapToJSONKeyFunction (\(StakePoolKeyExtendedHash x) -> x) toJSONKey
 
 instance FromJSON (Hash (AnyStakePoolKey StakePoolExtendedKey)) where
   parseJSON x = StakePoolKeyExtendedHash <$> parseJSON x
