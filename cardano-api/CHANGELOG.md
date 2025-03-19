@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.11.1.0
+
+- Add missing `CastVerificationKeyRole StakePoolExtendedKey StakePoolKey` instance
+  (compatible)
+  [PR 782](https://github.com/IntersectMBO/cardano-api/pull/782)
+
 ## 10.11.0.0
 
 - Added support for generating mnemonics and for deriving payment and stake keys from mnemonics.
