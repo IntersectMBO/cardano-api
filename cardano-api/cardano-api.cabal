@@ -249,6 +249,7 @@ library
     Cardano.Api.Internal.Rewards
     Cardano.Api.Internal.ScriptData
     Cardano.Api.Internal.Serialise.Cbor
+    Cardano.Api.Internal.Serialise.Cbor.Canonical
     Cardano.Api.Internal.SerialiseBech32
     Cardano.Api.Internal.SerialiseJSON
     Cardano.Api.Internal.SerialiseRaw

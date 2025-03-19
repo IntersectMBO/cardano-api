@@ -340,13 +340,17 @@ prop_roundtrip_GovernancePollAnswer_CBOR :: Property
 prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
   H.trippingCbor AsGovernancePollAnswer =<< forAll genGovernancePollAnswer
 
+prop_canonicalise_cbor :: Property
+prop_canonicalise_cbor = undefined
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Typed.CBOR"
-    [ testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
+    [ testProperty "test canonicalisation of CBOR" prop_canonicalise_cbor
+    , testProperty "rountrip txbody text envelope" prop_text_envelope_roundtrip_txbody_CBOR
     , testProperty "txbody backwards compatibility" prop_txbody_backwards_compatibility
     , testProperty "rountrip tx text envelope" prop_text_envelope_roundtrip_tx_CBOR
     , testProperty "roundtrip witness CBOR" prop_roundtrip_witness_CBOR
