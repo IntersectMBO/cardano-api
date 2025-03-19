@@ -206,6 +206,7 @@ module Cardano.Api.Shelley
   , foldStakePoolKey
   , liftStakePoolKey
   , liftStakePoolKeyM
+  , castHashToNormal
   , Hash (StakePoolKeyNormalHash, StakePoolKeyExtendedHash)
   , StakePoolExtendedKey
   , StakePoolKey
