@@ -137,7 +137,7 @@ issueOperationalCertificate
     poolVKey' =
       either
         (\x -> liftStakePoolKey x (const getVerificationKey))
-        (StakePoolNormalKeyWrapper . StakePoolVerificationKeyNormal . convert . getVerificationKey)
+        (StakePoolNormalKeyWrapper . convert . getVerificationKey)
         skey
      where
       convert
@@ -167,11 +167,11 @@ issueOperationalCertificate
      where
       skey' :: ShelleySigningKey
       skey' = case skey of
-        Left (StakePoolNormalKeyWrapper (StakePoolSigningKeyNormal (StakePoolSigningKey poolSKey))) ->
+        Left (StakePoolNormalKeyWrapper (StakePoolSigningKey poolSKey)) ->
           ShelleyNormalSigningKey poolSKey
         Left
           ( StakePoolExtendedKeyWrapper
-              (StakePoolSigningKeyExtended (StakePoolExtendedSigningKey poolExtendedSKey))
+              (StakePoolExtendedSigningKey poolExtendedSKey)
             ) ->
             ShelleyExtendedSigningKey poolExtendedSKey
         Right (GenesisDelegateExtendedSigningKey delegSKey) ->
