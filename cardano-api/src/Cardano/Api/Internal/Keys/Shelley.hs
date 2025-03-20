@@ -9,9 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
@@ -43,13 +41,10 @@ module Cardano.Api.Internal.Keys.Shelley
   , VerificationKey (..)
   , SigningKey (..)
   , Hash (..)
-  , AnyStakePoolKeyWrapper (..)
-  , rewrapAnyStakePoolKey
-  , foldStakePoolKey
-  , liftStakePoolKey
-  , liftStakePoolKeyM
-  , unStakePoolAnyKeyHash
-  , castHashToNormal
+  , AnyStakePoolVerificationKey (..)
+  , anyStakePoolVerificationKeyHash
+  , AnyStakePoolSigningKey (..)
+  , anyStakePoolSigningKeyToVerificationKey
   )
 where
 
@@ -65,6 +60,7 @@ import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.SerialiseUsing
 
+import Cardano.Binary (DecoderError (DecoderErrorUnknownTag), cborError)
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Crypto.Seed qualified as Crypto
@@ -73,6 +69,8 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Crypto qualified as Shelley (DSIGN)
 import Cardano.Ledger.Keys qualified as Shelley
 
+import Codec.CBOR.Decoding (decodeListLenOf)
+import Codec.CBOR.Encoding (encodeListLen)
 import Data.Aeson.Types
   ( ToJSONKey (..)
   , toJSONKeyText
@@ -84,6 +82,7 @@ import Data.ByteString qualified as BS
 import Data.Either.Combinators (maybeToRight)
 import Data.Maybe
 import Data.String (IsString (..))
+import Data.Word (Word8)
 
 --
 -- Shelley payment keys
@@ -1679,103 +1678,43 @@ instance CastSigningKeyRole GenesisUTxOKey PaymentKey where
 -- stake pool keys
 --
 
--- | Wrapper that handles both normal and extended StakePoolKeys and hides the type with an existential
-data AnyStakePoolKeyWrapper t
-  = forall x. StakePoolKey ~ x => StakePoolNormalKeyWrapper (t x)
-  | forall x. StakePoolExtendedKey ~ x => StakePoolExtendedKeyWrapper (t x)
+-- | Wrapper that handles both normal and extended StakePoolKeys VerificationKeys
+data AnyStakePoolVerificationKey
+  = AnyStakePoolNormalVerificationKey (VerificationKey StakePoolKey)
+  | AnyStakePoolExtendedVerificationKey (VerificationKey StakePoolExtendedKey)
+  deriving (Show, Eq)
 
-instance
-  (Eq (t StakePoolKey), Eq (t StakePoolExtendedKey))
-  => Eq (AnyStakePoolKeyWrapper t)
-  where
-  (==) :: AnyStakePoolKeyWrapper t -> AnyStakePoolKeyWrapper t -> Bool
-  (==) (StakePoolNormalKeyWrapper x) (StakePoolNormalKeyWrapper y) = x == y
-  (==) (StakePoolExtendedKeyWrapper x) (StakePoolExtendedKeyWrapper y) = x == y
-  (==) _ _ = False
+instance ToCBOR AnyStakePoolVerificationKey where
+  toCBOR (AnyStakePoolNormalVerificationKey vk) =
+    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR vk
+  toCBOR (AnyStakePoolExtendedVerificationKey vk) =
+    encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR vk
 
-instance
-  (Ord (t StakePoolKey), Ord (t StakePoolExtendedKey))
-  => Ord (AnyStakePoolKeyWrapper t)
-  where
-  compare :: AnyStakePoolKeyWrapper t -> AnyStakePoolKeyWrapper t -> Ordering
-  compare (StakePoolNormalKeyWrapper x) (StakePoolNormalKeyWrapper y) = compare x y
-  compare (StakePoolExtendedKeyWrapper x) (StakePoolExtendedKeyWrapper y) = compare x y
-  compare (StakePoolNormalKeyWrapper _) (StakePoolExtendedKeyWrapper _) = LT
-  compare (StakePoolExtendedKeyWrapper _) (StakePoolNormalKeyWrapper _) = GT
+instance FromCBOR AnyStakePoolVerificationKey where
+  fromCBOR =
+    decodeListLenOf 2 >> do
+      tag <- fromCBOR
+      case tag of
+        0 -> AnyStakePoolNormalVerificationKey <$> fromCBOR
+        1 -> AnyStakePoolExtendedVerificationKey <$> fromCBOR
+        _ -> cborError $ DecoderErrorUnknownTag "AnyStakePoolVerificationKey" tag
 
-instance
-  (Show (t StakePoolKey), (Show (t StakePoolExtendedKey)))
-  => Show (AnyStakePoolKeyWrapper t)
-  where
-  show (StakePoolNormalKeyWrapper x) = show x
-  show (StakePoolExtendedKeyWrapper x) = show x
+anyStakePoolVerificationKeyHash :: AnyStakePoolVerificationKey -> Hash StakePoolKey
+anyStakePoolVerificationKeyHash (AnyStakePoolNormalVerificationKey vk) = verificationKeyHash vk
+anyStakePoolVerificationKeyHash (AnyStakePoolExtendedVerificationKey vk) =
+  let StakePoolExtendedKeyHash hash = verificationKeyHash vk in StakePoolKeyHash hash
 
-instance ToCBOR (AnyStakePoolKeyWrapper VerificationKey) where
-  toCBOR (StakePoolNormalKeyWrapper x) = toCBOR x
-  toCBOR (StakePoolExtendedKeyWrapper x) = toCBOR x
+-- | Wrapper that handles both normal and extended StakePoolKeys SigningKeys
+data AnyStakePoolSigningKey
+  = AnyStakePoolNormalSigningKey (SigningKey StakePoolKey)
+  | AnyStakePoolExtendedSigningKey (SigningKey StakePoolExtendedKey)
+  deriving Show
 
-instance FromCBOR (AnyStakePoolKeyWrapper VerificationKey) where
-  fromCBOR = undefined -- FixMe: implement this
-
-rewrapAnyStakePoolKey
-  :: (forall x. t x -> f x)
-  -> AnyStakePoolKeyWrapper t
-  -> AnyStakePoolKeyWrapper f
-rewrapAnyStakePoolKey f x = liftStakePoolKey x (const f)
-
-foldStakePoolKey
-  :: AnyStakePoolKeyWrapper t
-  -> ( forall a
-        . ( Key a
-          , SerialiseAsBech32
-              (VerificationKey a)
-          , ToJSON (Hash a)
-          )
-       => AsType a -> t a -> f
-     )
-  -> f
-foldStakePoolKey (StakePoolNormalKeyWrapper x) f = f AsStakePoolKey x
-foldStakePoolKey (StakePoolExtendedKeyWrapper x) f = f AsStakePoolExtendedKey x
-
-liftStakePoolKey
-  :: AnyStakePoolKeyWrapper t
-  -> ( forall a
-        . ( Key a
-          , SerialiseAsBech32
-              (VerificationKey a)
-          , HasTypeProxy a
-          )
-       => AsType a -> t a -> f a
-     )
-  -> AnyStakePoolKeyWrapper f
-liftStakePoolKey (StakePoolNormalKeyWrapper x) f = StakePoolNormalKeyWrapper $ f AsStakePoolKey x
-liftStakePoolKey (StakePoolExtendedKeyWrapper x) f = StakePoolExtendedKeyWrapper $ f AsStakePoolExtendedKey x
-
-liftStakePoolKeyM
-  :: Applicative g
-  => AnyStakePoolKeyWrapper t
-  -> ( forall a
-        . ( Key a
-          , SerialiseAsBech32
-              (VerificationKey a)
-          , HasTypeProxy a
-          )
-       => AsType a -> t a -> g (f a)
-     )
-  -> g (AnyStakePoolKeyWrapper f)
-liftStakePoolKeyM (StakePoolNormalKeyWrapper x) f = do
-  StakePoolNormalKeyWrapper <$> f AsStakePoolKey x
-liftStakePoolKeyM (StakePoolExtendedKeyWrapper x) f = do
-  StakePoolExtendedKeyWrapper <$> f AsStakePoolExtendedKey x
-
-castHashToNormal :: AnyStakePoolKeyWrapper Hash -> Hash StakePoolKey
-castHashToNormal (StakePoolNormalKeyWrapper x) = x
-castHashToNormal (StakePoolExtendedKeyWrapper (StakePoolExtendedKeyHash x)) = StakePoolKeyHash x
-
-unStakePoolAnyKeyHash
-  :: AnyStakePoolKeyWrapper Hash -> Shelley.KeyHash Shelley.StakePool StandardCrypto
-unStakePoolAnyKeyHash (StakePoolNormalKeyWrapper (StakePoolKeyHash spkh)) = spkh
-unStakePoolAnyKeyHash (StakePoolExtendedKeyWrapper (StakePoolExtendedKeyHash spkh)) = spkh
+anyStakePoolSigningKeyToVerificationKey :: AnyStakePoolSigningKey -> AnyStakePoolVerificationKey
+anyStakePoolSigningKeyToVerificationKey (AnyStakePoolNormalSigningKey sk) =
+  AnyStakePoolNormalVerificationKey (getVerificationKey sk)
+anyStakePoolSigningKeyToVerificationKey (AnyStakePoolExtendedSigningKey vk) =
+  AnyStakePoolExtendedVerificationKey (getVerificationKey vk)
 
 data StakePoolKey
 
