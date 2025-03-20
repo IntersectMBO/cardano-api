@@ -559,10 +559,10 @@ genOperationalCertificateWithCounter
 genOperationalCertificateWithCounter = do
   kesVKey <- genVerificationKey AsKesKey
   stkPoolOrGenDelExtSign <-
-    Gen.either (StakePoolNormalKeyWrapper <$> genSigningKey AsAnyStakePoolKeyNormal) (genSigningKey AsGenesisDelegateExtendedKey)
+    Gen.either (StakePoolNormalKeyWrapper <$> genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
   kesP <- genKESPeriod
   c <- Gen.integral $ Range.linear 0 1000
-  let stakePoolVer = either (\x -> liftStakePoolKey x (const getVerificationKey)) (StakePoolNormalKeyWrapper . StakePoolVerificationKeyNormal . convert' . getVerificationKey) stkPoolOrGenDelExtSign
+  let stakePoolVer = either (\x -> liftStakePoolKey x (const getVerificationKey)) (StakePoolNormalKeyWrapper . convert' . getVerificationKey) stkPoolOrGenDelExtSign
       iCounter = OperationalCertificateIssueCounter c stakePoolVer
 
   case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
