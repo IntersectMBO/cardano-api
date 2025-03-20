@@ -1,0 +1,52 @@
+cabal-version: 3.4
+name: cardano-api-wasm
+version: 1.0.0.0
+synopsis: The cardano API
+description: The cardano API.
+category:
+  Cardano,
+  API,
+
+copyright: 2020-2025 Input Output Global Inc (IOG).
+author: IOHK
+maintainer: operations@iohk.io
+license: Apache-2.0
+
+
+build-type: Simple
+
+common project-config
+  default-language: Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
+
+  build-depends: base >=4.14 && <5
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wno-unticked-promoted-constructors
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+
+executable cardano-api-wasm
+  import: project-config
+  hs-source-dirs: app
+  main-is: cardano-api-wasm.hs
+  ghc-options: 
+    -- --strip-all 90 MB to 56 MB   
+    -optl=-Wl,--strip-all   
+    
+-- Did not further reduce executable size    -split-sections/ -fsplit-sections
+  
+    
+  build-depends:
+    base,
+    cardano-api >=10.11.1.0,
+
+-- does nothing package cardano-ledger-conway
+-- does nothing   flags: -asserts -debug
