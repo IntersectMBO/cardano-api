@@ -212,7 +212,12 @@ test_OperationalCertIssueError =
   testAllErrorMessages_
     "Cardano.Api.OperationalCertificate"
     "OperationalCertIssueError"
-    [ ("OperationalCertKeyMismatch", OperationalCertKeyMismatch stakePoolVerKey1 stakePoolVerKey2)
+    [
+      ( "OperationalCertKeyMismatch"
+      , OperationalCertKeyMismatch
+          (AnyStakePoolNormalVerificationKey stakePoolVerKey1)
+          (AnyStakePoolNormalVerificationKey stakePoolVerKey2)
+      )
     ]
 
 test_ProtocolParametersError :: TestTree
