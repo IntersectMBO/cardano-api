@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -69,8 +70,8 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Crypto qualified as Shelley (DSIGN)
 import Cardano.Ledger.Keys qualified as Shelley
 
-import Codec.CBOR.Decoding (decodeListLenOf)
-import Codec.CBOR.Encoding (encodeListLen)
+import Codec.CBOR.Decoding (Decoder, TokenType (TypeListLen), decodeListLenOf, peekTokenType)
+import Codec.CBOR.Encoding (Encoding, encodeListLen)
 import Data.Aeson.Types
   ( ToJSONKey (..)
   , toJSONKeyText
@@ -1685,19 +1686,25 @@ data AnyStakePoolVerificationKey
   deriving (Show, Eq)
 
 instance ToCBOR AnyStakePoolVerificationKey where
+  toCBOR :: AnyStakePoolVerificationKey -> Encoding
   toCBOR (AnyStakePoolNormalVerificationKey vk) =
     encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR vk
   toCBOR (AnyStakePoolExtendedVerificationKey vk) =
     encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR vk
 
 instance FromCBOR AnyStakePoolVerificationKey where
+  fromCBOR :: Decoder s AnyStakePoolVerificationKey
   fromCBOR =
-    decodeListLenOf 2 >> do
-      tag <- fromCBOR
-      case tag of
-        0 -> AnyStakePoolNormalVerificationKey <$> fromCBOR
-        1 -> AnyStakePoolExtendedVerificationKey <$> fromCBOR
-        _ -> cborError $ DecoderErrorUnknownTag "AnyStakePoolVerificationKey" tag
+    peekTokenType >>= \case
+      TypeListLen ->
+        decodeListLenOf 2 >> do
+          tag <- fromCBOR
+          case tag of
+            0 -> AnyStakePoolNormalVerificationKey <$> fromCBOR
+            1 -> AnyStakePoolExtendedVerificationKey <$> fromCBOR
+            _ -> cborError $ DecoderErrorUnknownTag "AnyStakePoolVerificationKey" tag
+      -- This case is for backwards compatibility (with CBOR encoding that doesn't support extended keys)
+      _ -> AnyStakePoolNormalVerificationKey <$> fromCBOR
 
 anyStakePoolVerificationKeyHash :: AnyStakePoolVerificationKey -> Hash StakePoolKey
 anyStakePoolVerificationKeyHash (AnyStakePoolNormalVerificationKey vk) = verificationKeyHash vk
