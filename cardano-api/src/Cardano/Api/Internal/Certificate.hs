@@ -10,6 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Certificates embedded in transactions
 module Cardano.Api.Internal.Certificate
@@ -71,6 +72,7 @@ module Cardano.Api.Internal.Certificate
   , AsType (..)
 
     -- * Internal functions
+  , certificateToTxCert
   , filterUnRegCreds
   , filterUnRegDRepCreds
   , isDRepRegOrUpdateCert
@@ -99,6 +101,7 @@ import Cardano.Api.Internal.StakePoolMetadata
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)
 import Cardano.Api.Internal.Value
 
+import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Keys qualified as Ledger
@@ -111,6 +114,7 @@ import Data.Maybe
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Type.Equality (TestEquality (..))
 import Data.Typeable
 import GHC.Exts (IsList (..), fromString)
 import Network.Socket (PortNumber)
@@ -129,13 +133,15 @@ data Certificate era where
   --   6. Genesis delegation
   --   7. MIR certificates
   ShelleyRelatedCertificate
-    :: ShelleyToBabbageEra era
+    :: Typeable era
+    => ShelleyToBabbageEra era
     -> Ledger.ShelleyTxCert (ShelleyLedgerEra era)
     -> Certificate era
   -- Conway onwards
   -- TODO: Add comments about the new types of certificates
   ConwayCertificate
-    :: ConwayEraOnwards era
+    :: Typeable era
+    => ConwayEraOnwards era
     -> Ledger.ConwayTxCert (ShelleyLedgerEra era)
     -> Certificate era
   deriving anyclass SerialiseAsCBOR
@@ -145,6 +151,28 @@ deriving instance Eq (Certificate era)
 deriving instance Ord (Certificate era)
 
 deriving instance Show (Certificate era)
+
+instance TestEquality Certificate where
+  testEquality (ShelleyRelatedCertificate _ c) (ShelleyRelatedCertificate _ c') =
+    shelleyCertTypeEquality c c'
+  testEquality (ConwayCertificate _ c) (ConwayCertificate _ c') =
+    conwayCertTypeEquality c c'
+  testEquality ShelleyRelatedCertificate{} ConwayCertificate{} = Nothing
+  testEquality ConwayCertificate{} ShelleyRelatedCertificate{} = Nothing
+
+conwayCertTypeEquality
+  :: (Typeable eraA, Typeable eraB)
+  => Ledger.ConwayTxCert (ShelleyLedgerEra eraA)
+  -> Ledger.ConwayTxCert (ShelleyLedgerEra eraB)
+  -> Maybe (eraA :~: eraB)
+conwayCertTypeEquality _ _ = eqT
+
+shelleyCertTypeEquality
+  :: (Typeable eraA, Typeable eraB)
+  => Ledger.ShelleyTxCert (ShelleyLedgerEra eraA)
+  -> Ledger.ShelleyTxCert (ShelleyLedgerEra eraB)
+  -> Maybe (eraA :~: eraB)
+shelleyCertTypeEquality _ _ = eqT
 
 instance Typeable era => HasTypeProxy (Certificate era) where
   data AsType (Certificate era) = AsCertificate
@@ -197,6 +225,20 @@ instance
     ConwayCertificate _ (Ledger.ConwayTxCertDeleg Ledger.ConwayRegDelegCert{}) -> "Stake address registration and delegation"
     ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RegPool{}) -> "Pool registration"
     ConwayCertificate _ (Ledger.ConwayTxCertPool Ledger.RetirePool{}) -> "Pool retirement"
+
+certificateToTxCert :: Certificate era -> L.TxCert (ShelleyLedgerEra era)
+certificateToTxCert c =
+  case c of
+    ShelleyRelatedCertificate eon cert ->
+      case eon of
+        ShelleyToBabbageEraShelley -> cert
+        ShelleyToBabbageEraAllegra -> cert
+        ShelleyToBabbageEraMary -> cert
+        ShelleyToBabbageEraAlonzo -> cert
+        ShelleyToBabbageEraBabbage -> cert
+    ConwayCertificate eon cert ->
+      case eon of
+        ConwayEraOnwardsConway -> cert
 
 -- ----------------------------------------------------------------------------
 -- Stake pool parameters
@@ -373,7 +415,8 @@ data GenesisKeyDelegationRequirements era where
     -> Hash VrfKey
     -> GenesisKeyDelegationRequirements era
 
-makeGenesisKeyDelegationCertificate :: GenesisKeyDelegationRequirements era -> Certificate era
+makeGenesisKeyDelegationCertificate
+  :: Typeable era => GenesisKeyDelegationRequirements era -> Certificate era
 makeGenesisKeyDelegationCertificate
   ( GenesisKeyDelegationRequirements
       atMostEra
@@ -394,7 +437,7 @@ data MirCertificateRequirements era where
     -> MirCertificateRequirements era
 
 makeMIRCertificate
-  :: ()
+  :: Typeable era
   => MirCertificateRequirements era
   -> Certificate era
 makeMIRCertificate (MirCertificateRequirements atMostEra mirPot mirTarget) =
@@ -410,7 +453,7 @@ data DRepRegistrationRequirements era where
     -> DRepRegistrationRequirements era
 
 makeDrepRegistrationCertificate
-  :: ()
+  :: Typeable era
   => DRepRegistrationRequirements era
   -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
   -> Certificate era
@@ -427,7 +470,7 @@ data CommitteeHotKeyAuthorizationRequirements era where
     -> CommitteeHotKeyAuthorizationRequirements era
 
 makeCommitteeHotKeyAuthorizationCertificate
-  :: ()
+  :: Typeable era
   => CommitteeHotKeyAuthorizationRequirements era
   -> Certificate era
 makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequirements cOnwards coldKeyCredential hotKeyCredential) =
@@ -443,7 +486,7 @@ data CommitteeColdkeyResignationRequirements era where
     -> CommitteeColdkeyResignationRequirements era
 
 makeCommitteeColdkeyResignationCertificate
-  :: ()
+  :: Typeable era
   => CommitteeColdkeyResignationRequirements era
   -> Certificate era
 makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequirements cOnwards coldKeyCred anchor) =
@@ -461,7 +504,7 @@ data DRepUnregistrationRequirements era where
     -> DRepUnregistrationRequirements era
 
 makeDrepUnregistrationCertificate
-  :: ()
+  :: Typeable era
   => DRepUnregistrationRequirements era
   -> Certificate era
 makeDrepUnregistrationCertificate (DRepUnregistrationRequirements conwayOnwards vcred deposit) =
@@ -488,7 +531,8 @@ data DRepUpdateRequirements era where
     -> DRepUpdateRequirements era
 
 makeDrepUpdateCertificate
-  :: DRepUpdateRequirements era
+  :: Typeable era
+  => DRepUpdateRequirements era
   -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
   -> Certificate era
 makeDrepUpdateCertificate (DRepUpdateRequirements conwayOnwards vcred) mAnchor =
