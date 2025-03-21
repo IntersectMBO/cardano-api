@@ -65,12 +65,6 @@ prop_roundtrip_praos_nonce_JSON = H.property $ do
   pNonce <- forAll $ Gen.just genMaybePraosNonce
   tripping pNonce encode eitherDecode
 
-prop_roundtrip_protocol_parameters_JSON :: Property
-prop_roundtrip_protocol_parameters_JSON = H.property $ do
-  AnyCardanoEra era <- forAll $ Gen.element [minBound .. maxBound]
-  pp <- forAll (genProtocolParameters era)
-  tripping pp encode eitherDecode
-
 tests :: TestTree
 tests =
   testGroup
@@ -83,5 +77,4 @@ tests =
     , testProperty "json roundtrip txout utxo context" prop_json_roundtrip_txout_utxo_context
     , testProperty "json roundtrip scriptdata detailed json" prop_json_roundtrip_scriptdata_detailed_json
     , testProperty "json roundtrip praos nonce" prop_roundtrip_praos_nonce_JSON
-    , testProperty "json roundtrip protocol parameters" prop_roundtrip_protocol_parameters_JSON
     ]

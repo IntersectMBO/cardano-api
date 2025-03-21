@@ -30,9 +30,7 @@
 -- * parameters fixed in the genesis file: 'GenesisParameters'
 module Cardano.Api.Internal.ProtocolParameters
   ( -- * The updatable protocol parameters
-    ProtocolParameters (..)
-  , checkProtocolParameters
-  , EpochNo
+    EpochNo
 
     -- * The updatable protocol parameters
   , LedgerProtocolParameters (..)
@@ -45,7 +43,6 @@ module Cardano.Api.Internal.ProtocolParameters
   , IntroducedInBabbagePParams (..)
   , IntroducedInConwayPParams (..)
   , createEraBasedProtocolParamUpdate
-  , convertToLedgerProtocolParameters
   , createPParams
 
     -- * Deprecated
@@ -76,9 +73,7 @@ module Cardano.Api.Internal.ProtocolParameters
   , fromLedgerUpdate
   , toLedgerProposedPPUpdates
   , fromLedgerProposedPPUpdates
-  , toLedgerPParams
   , toLedgerPParamsUpdate
-  , fromLedgerPParams
   , fromLedgerPParamsUpdate
   , toAlonzoPrices
   , fromAlonzoPrices
@@ -155,7 +150,6 @@ import Data.Either.Combinators (maybeToRight)
 import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (isJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.String (IsString)
 import Data.Text (Text)
@@ -182,17 +176,6 @@ instance IsShelleyBasedEra era => Eq (LedgerProtocolParameters era) where
   LedgerProtocolParameters a == LedgerProtocolParameters b =
     shelleyBasedEraConstraints (shelleyBasedEra @era) $
       a == b
-
-{-# DEPRECATED
-  convertToLedgerProtocolParameters
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-convertToLedgerProtocolParameters
-  :: ShelleyBasedEra era
-  -> ProtocolParameters
-  -> Either ProtocolParametersConversionError (LedgerProtocolParameters era)
-convertToLedgerProtocolParameters sbe pp =
-  LedgerProtocolParameters <$> toLedgerPParams sbe pp
 
 createPParams
   :: ShelleyBasedEra era
@@ -1281,13 +1264,6 @@ toBabbagePParamsUpdate
             & ppuProtocolVersionL .~ noInlineMaybeToStrictMaybe protVer
     pure ppuBabbage
 
-requireParam
-  :: String
-  -> (a -> Either ProtocolParametersConversionError b)
-  -> Maybe a
-  -> Either ProtocolParametersConversionError b
-requireParam paramName = maybe (Left $ PpceMissingParameter paramName)
-
 mkProtVer :: (Natural, Natural) -> Either ProtocolParametersConversionError Ledger.ProtVer
 mkProtVer (majorProtVer, minorProtVer) =
   maybeToRight (PpceVersionInvalid majorProtVer) $
@@ -1461,377 +1437,6 @@ fromConwayPParamsUpdate
   => PParamsUpdate ledgerera
   -> ProtocolParametersUpdate
 fromConwayPParamsUpdate = fromBabbageCommonPParamsUpdate
-
--- ----------------------------------------------------------------------------
--- Conversion functions: protocol parameters to ledger types
---
-
-toLedgerPParams
-  :: ShelleyBasedEra era
-  -> ProtocolParameters
-  -> Either ProtocolParametersConversionError (Ledger.PParams (ShelleyLedgerEra era))
-toLedgerPParams ShelleyBasedEraShelley = toShelleyPParams
-toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
-toLedgerPParams ShelleyBasedEraMary = toShelleyPParams
-toLedgerPParams ShelleyBasedEraAlonzo = toAlonzoPParams
-toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
-toLedgerPParams ShelleyBasedEraConway = toConwayPParams
-
-toShelleyCommonPParams
-  :: EraPParams ledgerera
-  => ProtocolParameters
-  -> Either ProtocolParametersConversionError (PParams ledgerera)
-toShelleyCommonPParams
-  ProtocolParameters
-    { protocolParamProtocolVersion
-    , protocolParamMaxBlockHeaderSize
-    , protocolParamMaxBlockBodySize
-    , protocolParamMaxTxSize
-    , protocolParamTxFeeFixed
-    , protocolParamTxFeePerByte
-    , protocolParamStakeAddressDeposit
-    , protocolParamStakePoolDeposit
-    , protocolParamMinPoolCost
-    , protocolParamPoolRetireMaxEpoch
-    , protocolParamStakePoolTargetNum
-    , protocolParamPoolPledgeInfluence
-    , protocolParamMonetaryExpansion
-    , protocolParamTreasuryCut
-    } = do
-    a0 <- boundRationalEither "A0" protocolParamPoolPledgeInfluence
-    rho <- boundRationalEither "Rho" protocolParamMonetaryExpansion
-    tau <- boundRationalEither "Tau" protocolParamTreasuryCut
-    protVer <- mkProtVer protocolParamProtocolVersion
-    let ppCommon =
-          emptyPParams
-            & ppMinFeeAL .~ protocolParamTxFeePerByte
-            & ppMinFeeBL .~ protocolParamTxFeeFixed
-            & ppMaxBBSizeL .~ fromIntegral protocolParamMaxBlockBodySize
-            & ppMaxTxSizeL .~ fromIntegral protocolParamMaxTxSize
-            & ppMaxBHSizeL .~ fromIntegral protocolParamMaxBlockHeaderSize
-            & ppKeyDepositL .~ protocolParamStakeAddressDeposit
-            & ppPoolDepositL .~ protocolParamStakePoolDeposit
-            & ppEMaxL .~ protocolParamPoolRetireMaxEpoch
-            & ppNOptL .~ protocolParamStakePoolTargetNum
-            & ppA0L .~ a0
-            & ppRhoL .~ rho
-            & ppTauL .~ tau
-            & ppProtocolVersionL .~ protVer
-            & ppMinPoolCostL .~ protocolParamMinPoolCost
-    pure ppCommon
-
-toShelleyPParams
-  :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
-     )
-  => ProtocolParameters
-  -> Either ProtocolParametersConversionError (PParams ledgerera)
-toShelleyPParams
-  protocolParameters@ProtocolParameters
-    { protocolParamDecentralization
-    , protocolParamExtraPraosEntropy
-    , protocolParamMinUTxOValue
-    } = do
-    ppCommon <- toShelleyCommonPParams protocolParameters
-    d <-
-      boundRationalEither "D"
-        =<< maybeToRight (PpceMissingParameter "decentralization") protocolParamDecentralization
-    minUTxOValue <-
-      maybeToRight (PpceMissingParameter "protocolParamMinUTxOValue") protocolParamMinUTxOValue
-    let ppShelley =
-          ppCommon
-            & ppDL .~ d
-            & ppExtraEntropyL .~ toLedgerNonce protocolParamExtraPraosEntropy
-            & ppMinUTxOValueL .~ minUTxOValue
-    pure ppShelley
-
-toAlonzoCommonPParams
-  :: AlonzoEraPParams ledgerera
-  => ProtocolParameters
-  -> Either ProtocolParametersConversionError (PParams ledgerera)
-toAlonzoCommonPParams
-  protocolParameters@ProtocolParameters
-    { protocolParamCostModels
-    , protocolParamPrices
-    , protocolParamMaxTxExUnits
-    , protocolParamMaxBlockExUnits
-    , protocolParamMaxValueSize
-    , protocolParamCollateralPercent
-    , protocolParamMaxCollateralInputs
-    } = do
-    ppShelleyCommon <- toShelleyCommonPParams protocolParameters
-    costModels <- toAlonzoCostModels protocolParamCostModels
-    prices <-
-      requireParam "protocolParamPrices" toAlonzoPrices protocolParamPrices
-    maxTxExUnits <-
-      requireParam "protocolParamMaxTxExUnits" Right protocolParamMaxTxExUnits
-    maxBlockExUnits <-
-      requireParam "protocolParamMaxBlockExUnits" Right protocolParamMaxBlockExUnits
-    maxValueSize <-
-      requireParam "protocolParamMaxBlockExUnits" Right protocolParamMaxValueSize
-    collateralPercent <-
-      requireParam "protocolParamCollateralPercent" Right protocolParamCollateralPercent
-    maxCollateralInputs <-
-      requireParam "protocolParamMaxCollateralInputs" Right protocolParamMaxCollateralInputs
-    let ppAlonzoCommon =
-          ppShelleyCommon
-            & ppCostModelsL .~ costModels
-            & ppPricesL .~ prices
-            & ppMaxTxExUnitsL .~ toAlonzoExUnits maxTxExUnits
-            & ppMaxBlockExUnitsL .~ toAlonzoExUnits maxBlockExUnits
-            & ppMaxValSizeL .~ maxValueSize
-            & ppCollateralPercentageL .~ collateralPercent
-            & ppMaxCollateralInputsL .~ maxCollateralInputs
-    pure ppAlonzoCommon
-
-toAlonzoPParams
-  :: Ledger.Crypto crypto
-  => ProtocolParameters
-  -> Either ProtocolParametersConversionError (PParams (Ledger.AlonzoEra crypto))
-toAlonzoPParams
-  protocolParameters@ProtocolParameters
-    { protocolParamDecentralization
-    } = do
-    ppAlonzoCommon <- toAlonzoCommonPParams protocolParameters
-    d <-
-      requireParam
-        "protocolParamDecentralization"
-        (boundRationalEither "D")
-        protocolParamDecentralization
-    let ppAlonzo =
-          ppAlonzoCommon
-            & ppDL .~ d
-    pure ppAlonzo
-
-toBabbagePParams
-  :: BabbageEraPParams ledgerera
-  => ProtocolParameters
-  -> Either ProtocolParametersConversionError (PParams ledgerera)
-toBabbagePParams
-  protocolParameters@ProtocolParameters
-    { protocolParamUTxOCostPerByte
-    } = do
-    ppAlonzoCommon <- toAlonzoCommonPParams protocolParameters
-    utxoCostPerByte <-
-      requireParam "protocolParamUTxOCostPerByte" Right protocolParamUTxOCostPerByte
-    let ppBabbage =
-          ppAlonzoCommon
-            & ppCoinsPerUTxOByteL .~ CoinPerByte utxoCostPerByte
-    pure ppBabbage
-
-toConwayPParams
-  :: BabbageEraPParams ledgerera
-  => ProtocolParameters
-  -> Either ProtocolParametersConversionError (PParams ledgerera)
-toConwayPParams = toBabbagePParams
-
--- ----------------------------------------------------------------------------
--- Conversion functions: protocol parameters from ledger types
---
-
-{-# DEPRECATED
-  fromLedgerPParams
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-fromLedgerPParams
-  :: ShelleyBasedEra era
-  -> Ledger.PParams (ShelleyLedgerEra era)
-  -> ProtocolParameters
-fromLedgerPParams ShelleyBasedEraShelley = fromShelleyPParams
-fromLedgerPParams ShelleyBasedEraAllegra = fromShelleyPParams
-fromLedgerPParams ShelleyBasedEraMary = fromShelleyPParams
-fromLedgerPParams ShelleyBasedEraAlonzo = fromExactlyAlonzoPParams
-fromLedgerPParams ShelleyBasedEraBabbage = fromBabbagePParams
-fromLedgerPParams ShelleyBasedEraConway = fromConwayPParams
-
-{-# DEPRECATED
-  fromShelleyCommonPParams
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-fromShelleyCommonPParams
-  :: EraPParams ledgerera
-  => PParams ledgerera
-  -> ProtocolParameters
-fromShelleyCommonPParams pp =
-  ProtocolParameters
-    { protocolParamProtocolVersion = case pp ^. ppProtocolVersionL of
-        Ledger.ProtVer a b -> (Ledger.getVersion a, b)
-    , protocolParamMaxBlockHeaderSize = fromIntegral $ pp ^. ppMaxBHSizeL
-    , protocolParamMaxBlockBodySize = fromIntegral $ pp ^. ppMaxBBSizeL
-    , protocolParamMaxTxSize = fromIntegral $ pp ^. ppMaxTxSizeL
-    , protocolParamTxFeeFixed = pp ^. ppMinFeeBL
-    , protocolParamTxFeePerByte = pp ^. ppMinFeeAL
-    , protocolParamStakeAddressDeposit = pp ^. ppKeyDepositL
-    , protocolParamStakePoolDeposit = pp ^. ppPoolDepositL
-    , protocolParamMinPoolCost = pp ^. ppMinPoolCostL
-    , protocolParamPoolRetireMaxEpoch = pp ^. ppEMaxL
-    , protocolParamStakePoolTargetNum = pp ^. ppNOptL
-    , protocolParamPoolPledgeInfluence = Ledger.unboundRational (pp ^. ppA0L)
-    , protocolParamMonetaryExpansion = Ledger.unboundRational (pp ^. ppRhoL)
-    , protocolParamTreasuryCut = Ledger.unboundRational (pp ^. ppTauL)
-    , protocolParamCostModels = mempty -- Only from Alonzo onwards
-    , protocolParamPrices = Nothing -- Only from Alonzo onwards
-    , protocolParamMaxTxExUnits = Nothing -- Only from Alonzo onwards
-    , protocolParamMaxBlockExUnits = Nothing -- Only from Alonzo onwards
-    , protocolParamMaxValueSize = Nothing -- Only from Alonzo onwards
-    , protocolParamCollateralPercent = Nothing -- Only from Alonzo onwards
-    , protocolParamMaxCollateralInputs = Nothing -- Only from Alonzo onwards
-    , protocolParamUTxOCostPerByte = Nothing -- Only from Babbage onwards
-    , protocolParamDecentralization = Nothing -- Obsolete from Babbage onwards
-    , protocolParamExtraPraosEntropy = Nothing -- Obsolete from Alonzo onwards
-    , protocolParamMinUTxOValue = Nothing -- Obsolete from Alonzo onwards
-    }
-
-{-# DEPRECATED
-  fromShelleyPParams
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-fromShelleyPParams
-  :: ( EraPParams ledgerera
-     , Ledger.AtMostEra Ledger.MaryEra ledgerera
-     , Ledger.AtMostEra Ledger.AlonzoEra ledgerera
-     )
-  => PParams ledgerera
-  -> ProtocolParameters
-fromShelleyPParams pp =
-  (fromShelleyCommonPParams pp)
-    { protocolParamDecentralization = Just . Ledger.unboundRational $ pp ^. ppDL
-    , protocolParamExtraPraosEntropy = fromLedgerNonce $ pp ^. ppExtraEntropyL
-    , protocolParamMinUTxOValue = Just $ pp ^. ppMinUTxOValueL
-    }
-
-{-# DEPRECATED
-  fromAlonzoPParams
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-fromAlonzoPParams
-  :: AlonzoEraPParams ledgerera
-  => PParams ledgerera
-  -> ProtocolParameters
-fromAlonzoPParams pp =
-  (fromShelleyCommonPParams pp)
-    { protocolParamCostModels = fromAlonzoCostModels $ pp ^. ppCostModelsL
-    , protocolParamDecentralization = Just . Ledger.unboundRational $ pp ^. ppDG
-    , protocolParamPrices = Just . fromAlonzoPrices $ pp ^. ppPricesL
-    , protocolParamMaxTxExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxTxExUnitsL
-    , protocolParamMaxBlockExUnits = Just . fromAlonzoExUnits $ pp ^. ppMaxBlockExUnitsL
-    , protocolParamMaxValueSize = Just $ pp ^. ppMaxValSizeL
-    , protocolParamCollateralPercent = Just $ pp ^. ppCollateralPercentageL
-    , protocolParamMaxCollateralInputs = Just $ pp ^. ppMaxCollateralInputsL
-    }
-
-{-# DEPRECATED
-  fromExactlyAlonzoPParams
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-fromExactlyAlonzoPParams
-  :: (AlonzoEraPParams ledgerera, Ledger.ExactEra Ledger.AlonzoEra ledgerera)
-  => PParams ledgerera
-  -> ProtocolParameters
-fromExactlyAlonzoPParams pp =
-  (fromAlonzoPParams pp)
-    { protocolParamUTxOCostPerByte = Just . unCoinPerWord $ pp ^. ppCoinsPerUTxOWordL
-    }
-
-{-# DEPRECATED
-  fromBabbagePParams
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-fromBabbagePParams
-  :: BabbageEraPParams ledgerera
-  => PParams ledgerera
-  -> ProtocolParameters
-fromBabbagePParams pp =
-  (fromAlonzoPParams pp)
-    { protocolParamUTxOCostPerByte = Just . unCoinPerByte $ pp ^. ppCoinsPerUTxOByteL
-    , protocolParamDecentralization = Nothing
-    }
-
-{-# DEPRECATED
-  fromConwayPParams
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork."
-  #-}
-fromConwayPParams
-  :: BabbageEraPParams ledgerera
-  => PParams ledgerera
-  -> ProtocolParameters
-fromConwayPParams = fromBabbagePParams
-
-{-# DEPRECATED
-  checkProtocolParameters
-  "Use the ledger's PParams (from module Cardano.Api.Ledger) type instead of ProtocolParameters. The type will be removed after Chang hard fork. PParams natively enforce these checks."
-  #-}
-checkProtocolParameters
-  :: ()
-  => ShelleyBasedEra era
-  -> ProtocolParameters
-  -> Either ProtocolParametersError ()
-checkProtocolParameters sbe ProtocolParameters{..} =
-  case sbe of
-    ShelleyBasedEraShelley -> checkMinUTxOVal
-    ShelleyBasedEraAllegra -> checkMinUTxOVal
-    ShelleyBasedEraMary -> checkMinUTxOVal
-    ShelleyBasedEraAlonzo -> checkAlonzoParams
-    ShelleyBasedEraBabbage -> checkBabbageParams
-    ShelleyBasedEraConway -> checkBabbageParams
- where
-  era = toCardanoEra sbe
-
-  cModel = not $ Map.null protocolParamCostModels
-  prices = isJust protocolParamPrices
-  maxTxUnits = isJust protocolParamMaxTxExUnits
-  maxBlockExUnits = isJust protocolParamMaxBlockExUnits
-  maxValueSize = isJust protocolParamMaxValueSize
-  collateralPercent = isJust protocolParamCollateralPercent
-  maxCollateralInputs = isJust protocolParamMaxCollateralInputs
-  costPerByte = isJust protocolParamUTxOCostPerByte
-  decentralization = isJust protocolParamDecentralization
-  extraPraosEntropy = isJust protocolParamExtraPraosEntropy
-
-  alonzoPParamFieldsRequirements :: [Bool]
-  alonzoPParamFieldsRequirements =
-    [ cModel
-    , prices
-    , maxTxUnits
-    , maxBlockExUnits
-    , maxValueSize
-    , collateralPercent
-    , maxCollateralInputs
-    , not costPerByte
-    ]
-
-  babbagePParamFieldsRequirements :: [Bool]
-  babbagePParamFieldsRequirements =
-    [ cModel
-    , prices
-    , maxTxUnits
-    , maxBlockExUnits
-    , maxValueSize
-    , collateralPercent
-    , maxCollateralInputs
-    , costPerByte
-    , not decentralization
-    , not extraPraosEntropy
-    ]
-
-  checkAlonzoParams :: Either ProtocolParametersError ()
-  checkAlonzoParams = do
-    if all (== True) alonzoPParamFieldsRequirements
-      then return ()
-      else Left PParamsErrorMissingAlonzoProtocolParameter
-
-  checkBabbageParams :: Either ProtocolParametersError ()
-  checkBabbageParams =
-    if all (== True) babbagePParamFieldsRequirements
-      then return ()
-      else Left PParamsErrorMissingAlonzoProtocolParameter
-
-  checkMinUTxOVal :: Either ProtocolParametersError ()
-  checkMinUTxOVal =
-    if isJust protocolParamMinUTxOValue
-      then return ()
-      else Left . PParamsErrorMissingMinUTxoValue $ cardanoEraConstraints era $ AnyCardanoEra era
 
 data ProtocolParametersError
   = PParamsErrorMissingMinUTxoValue !AnyCardanoEra
