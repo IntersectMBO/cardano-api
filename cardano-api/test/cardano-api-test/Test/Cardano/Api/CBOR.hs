@@ -12,23 +12,34 @@ where
 
 import Cardano.Api
 import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.Serialise.Cbor.Canonical (canonicaliseCborBs)
 import Cardano.Api.Internal.SerialiseLedgerCddl (cddlTypeToEra)
 import Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
 import Cardano.Api.Shelley (AsType (..))
 
+import Cardano.Binary qualified as CBOR
+
+import Codec.CBOR.Read qualified as CBOR
+import Codec.CBOR.Term (Term (..))
+import Codec.CBOR.Term qualified as CBOR
+import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
+import Data.List (sortOn)
+import Data.Map.Strict (Map)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text qualified as T
+import GHC.Exts (fromList)
 
 import Test.Gen.Cardano.Api.Hardcoded
 import Test.Gen.Cardano.Api.Typed
 
 import Test.Cardano.Api.Orphans ()
 
-import Hedgehog (Property, forAll, property, tripping)
+import Hedgehog (Property, forAll, property, tripping, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
@@ -341,7 +352,56 @@ prop_roundtrip_GovernancePollAnswer_CBOR = property $ do
   H.trippingCbor AsGovernancePollAnswer =<< forAll genGovernancePollAnswer
 
 prop_canonicalise_cbor :: Property
-prop_canonicalise_cbor = undefined
+prop_canonicalise_cbor = property $ do
+  let someMap =
+        TMap
+          [ (TInt 22, TString "d")
+          , (TInt 11, TString "a")
+          , (TInt 1, TString "b")
+          , (TInt 3, TString "c")
+          , (TInt 2, TString "b")
+          , (TBytes "aa", TString "e")
+          , (TBytes "a", TString "f")
+          , (TBytes "a0", TString "f")
+          , (TBytes "bc", TString "g")
+          , (TBytes "b", TString "g")
+          , (TBytes "bb", TString "h")
+          ]
+      someMapBs = CBOR.serialize' someMap
+  someMapTerm <- decodeExampleTerm someMapBs
+
+  someMapCanonicalisedBs <- H.leftFail $ canonicaliseCborBs someMapBs
+
+  someMapCanonicalisedTerm@(TMap elemTerms) <- decodeExampleTerm someMapCanonicalisedBs
+
+  -- sanity check that cbor round trip does not change the order
+  someMap === someMapTerm
+
+  H.annotate "Print bytes hex representation of the keys in the map"
+  H.annotateShow
+    . sortOn fst
+    . map (\(e, _) -> (BS.toLazyByteString . BS.byteStringHex $ CBOR.serialize' e, e))
+    $ elemTerms
+
+  TMap
+    [ (TInt 1, TString "b")
+    , (TInt 2, TString "b")
+    , (TInt 3, TString "c")
+    , (TInt 11, TString "a")
+    , (TInt 22, TString "d")
+    , (TBytes "a", TString "f")
+    , (TBytes "b", TString "g")
+    , (TBytes "a0", TString "f")
+    , (TBytes "aa", TString "e")
+    , (TBytes "bb", TString "h")
+    , (TBytes "bc", TString "g")
+    ]
+    === someMapCanonicalisedTerm
+ where
+  decodeExampleTerm bs = do
+    (leftover, term) <- H.leftFail $ CBOR.deserialiseFromBytes CBOR.decodeTerm (LBS.fromStrict bs)
+    H.assertWith leftover LBS.null
+    pure term
 
 -- -----------------------------------------------------------------------------
 

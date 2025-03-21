@@ -25,7 +25,7 @@ import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Lazy qualified as LBS
-import Data.List (sort, sortOn)
+import Data.List (sort, sortBy, sortOn)
 import Data.Tuple.Extra (both)
 
 instance HasTypeProxy Term where
@@ -49,12 +49,13 @@ decodeTermFromBs input = do
   pure result
 
 canonicaliseCborBs :: BS.ByteString -> Either DecoderError BS.ByteString
-canonicaliseCborBs originalCborBytes = (serialiseToCBOR . canonicaliseTerm) <$> deserialiseFromCBOR AsTerm originalCborBytes
+canonicaliseCborBs originalCborBytes = serialiseToCBOR . canonicaliseTerm <$> deserialiseFromCBOR AsTerm originalCborBytes
 
 canonicaliseTerm :: Term -> Term
-canonicaliseTerm (TMap termPairs) = TMap . sortOn fst $ map (both canonicaliseTerm) termPairs
-canonicaliseTerm (TMapI termPairs) = TMapI . sortOn fst $ map (both canonicaliseTerm) termPairs
-canonicaliseTerm (TList terms) = TList . sort $ map canonicaliseTerm terms
-canonicaliseTerm (TListI terms) = TListI . sort $ map canonicaliseTerm terms
+canonicaliseTerm (TMap termPairs) = TMap . sortBy compareTerms $ map (both canonicaliseTerm) termPairs
+canonicaliseTerm (TMapI termPairs) = TMapI . sortBy compareTerms $ map (both canonicaliseTerm) termPairs
 canonicaliseTerm (TTagged tag term) = TTagged tag $ canonicaliseTerm term
 canonicaliseTerm term = term
+
+compareTerms :: (Term, a) -> (Term, a) -> Ordering
+compareTerms (t1, _) (t2, _) = compare (serialiseToCBOR t1) (serialiseToCBOR t2)
