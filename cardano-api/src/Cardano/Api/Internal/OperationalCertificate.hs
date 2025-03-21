@@ -27,7 +27,7 @@ import Cardano.Api.Internal.Keys.Class
 import Cardano.Api.Internal.Keys.Praos
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.ProtocolParameters
-import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.Tx.Sign
 

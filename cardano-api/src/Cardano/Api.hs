@@ -1156,8 +1156,8 @@ import Cardano.Api.Internal.Query.Expr
 import Cardano.Api.Internal.Rewards
 import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.ScriptData
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseBech32
-import Cardano.Api.Internal.SerialiseCBOR
 import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseLedgerCddl
 import Cardano.Api.Internal.SerialiseRaw
