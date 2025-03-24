@@ -204,8 +204,4 @@ source-repository-package
     ouroboros-network-framework
     monoidal-synchronisation
 
-
-allow-newer: *
--- contra-tracer, cardano-crypto-class
-allow-older: *
--- prettyprinter-configurable
+allow-newer: base
