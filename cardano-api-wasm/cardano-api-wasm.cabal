@@ -37,7 +37,16 @@ executable cardano-api-wasm
   import: project-config
   hs-source-dirs: app
   main-is: cardano-api-wasm.hs
+  ghc-options: 
+    -- --strip-all 90 MB to 56 MB   
+    -optl=-Wl,--strip-all   
+    
+-- Did not further reduce executable size    -split-sections/ -fsplit-sections
+  
+    
   build-depends:
     base,
     cardano-ledger-conway >=1.16,
 
+-- does nothing package cardano-ledger-conway
+-- does nothing   flags: -asserts -debug

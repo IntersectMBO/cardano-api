@@ -4,7 +4,7 @@
 source $HOME/.ghc-wasm/env
 
 # This should be able to build!
-# cabal build --project-file=cabal-wasm.project cardano-api-wasm --keep-going
+# cabal build --project-file=cabal-wasm.project cardano-api-wasm --keep-going --enable-split-sections
 
 cabal install happy
 
