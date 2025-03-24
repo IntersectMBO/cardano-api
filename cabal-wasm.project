@@ -76,8 +76,8 @@ if impl (ghc >= 9.12)
     , http-api-data:base
 
 
--- with-compiler: wasm32-wasi-ghc
--- with-hc-pkg:   wasm32-wasi-ghc-pkg
+with-compiler: wasm32-wasi-ghc
+with-hc-pkg:   wasm32-wasi-ghc-pkg
 
 
 source-repository-package
@@ -101,6 +101,7 @@ source-repository-package
     libs/cardano-ledger-api
     libs/cardano-ledger-binary
     libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos 
     libs/non-integral 
     libs/set-algebra 
     libs/small-steps 
@@ -139,6 +140,7 @@ source-repository-package
     plutus-ledger-api
     plutus-tx
     
+    
 
 package plutus-core 
   flags: +do-not-build-plutus-exec
@@ -158,4 +160,52 @@ source-repository-package
   subdir: contra-tracer
 
 
-allow-newer:contra-tracer
+source-repository-package
+  type: git
+  location: https://github.com/amesgen/cborg
+  tag: c3b5c696f62d04c0d87f55250bfc0016ab94d800
+  subdir: cborg
+
+-- aniketd/release-10-3 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 8c151452d9a7f7ffd37a27272c9f80a85eef38d7
+  subdir: cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/typed-protocols.git
+  tag: typed-protocols-0.3.0.0
+  subdir: typed-protocols
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: 1e2c0fed8e81c15575bf3cd3aaa9b6efde328d8d
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    strict-sop-core
+    
+
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 515767407e4a5a240e61e014c8e6d107b4fbceb9
+  subdir:
+    network-mux
+    ouroboros-network
+    ouroboros-network-api
+    ouroboros-network-protocols
+    ouroboros-network-framework
+    monoidal-synchronisation
+
+
+allow-newer: *
+-- contra-tracer, cardano-crypto-class
+allow-older: *
+-- prettyprinter-configurable

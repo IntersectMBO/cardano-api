@@ -1,5 +1,5 @@
-import Cardano.Ledger.Conway.Governance
+import Cardano.Api
 
 main :: IO ()
 main =
-  print DefaultNo
+  print $ defaultTxBodyContent ShelleyBasedEraConway

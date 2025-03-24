@@ -33,7 +33,7 @@ common project-config
     -Wunused-packages
 
 
-executable cardano-api-wasm 
+executable cardano-api-wasm
   import: project-config
   hs-source-dirs: app
   main-is: cardano-api-wasm.hs
@@ -46,7 +46,7 @@ executable cardano-api-wasm
     
   build-depends:
     base,
-    cardano-ledger-conway >=1.16,
+    cardano-api >=10.11.1.0,
 
 -- does nothing package cardano-ledger-conway
 -- does nothing   flags: -asserts -debug

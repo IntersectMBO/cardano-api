@@ -6,7 +6,13 @@ source $HOME/.ghc-wasm/env
 # This should be able to build!
 # cabal build --project-file=cabal-wasm.project cardano-api-wasm --keep-going --enable-split-sections
 
-cabal install happy
+# Check if `happy` is already installed
+if ! command -v happy &> /dev/null; then
+    echo "Happy is not installed. Installing it now..."
+    cabal install happy
+else
+    echo "Happy is already installed. Skipping installation."
+fi
 
 wasm32-wasi-cabal build --project-file=cabal-wasm.project cardano-api-wasm --keep-going
 
