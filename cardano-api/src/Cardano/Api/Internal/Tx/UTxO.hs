@@ -71,7 +71,7 @@ filterWithKey :: (TxIn -> TxOut CtxUTxO era -> Bool) -> UTxO era -> UTxO era
 filterWithKey fn = UTxO . Map.filterWithKey fn . unUTxO
 
 -- | Get the 'UTxO domain input's set
-inputSet :: UTxO (TxOut CtxUTxO era) -> Set TxIn
+inputSet :: UTxO era -> Set TxIn
 inputSet = Map.keysSet . unUTxO
 
 -- | Remove the right hand side from the left hand side.
