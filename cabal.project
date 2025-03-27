@@ -73,3 +73,10 @@ if impl (ghc >= 9.12)
 
     -- https://github.com/fizruk/http-api-data/pull/146
     , http-api-data:base
+
+    -- https://github.com/IntersectMBO/ouroboros-consensus/blob/main/cabal.project#L70-L74
+    , ouroboros-network-protocols:base
+    , ouroboros-network-framework:base
+    , ouroboros-network-api:base
+    , network-mux:base
+    , ouroboros-network:base
