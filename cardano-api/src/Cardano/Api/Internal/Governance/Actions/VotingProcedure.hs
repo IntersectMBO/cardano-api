@@ -12,6 +12,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Internal.Governance.Actions.VotingProcedure where
@@ -35,6 +36,8 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
+import Data.Type.Equality (TestEquality (..))
+import Data.Typeable
 import GHC.Generics
 
 newtype GovernanceActionId era = GovernanceActionId
@@ -52,8 +55,25 @@ instance IsShelleyBasedEra era => FromCBOR (GovernanceActionId era) where
     !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
     return $ GovernanceActionId v
 
-newtype Voter era = Voter (Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era)))
-  deriving (Show, Eq, Ord)
+data Voter era where
+  Voter :: Typeable era => (Ledger.Voter (L.EraCrypto (ShelleyLedgerEra era))) -> Voter era
+
+deriving instance Show (Voter era)
+
+deriving instance Eq (Voter era)
+
+deriving instance Ord (Voter era)
+
+instance TestEquality Voter where
+  testEquality (Voter v) (Voter v') =
+    voterTypeEquality v v'
+
+voterTypeEquality
+  :: (Typeable eraA, Typeable eraB)
+  => Ledger.Voter (L.EraCrypto (ShelleyLedgerEra eraA))
+  -> Ledger.Voter (L.EraCrypto (ShelleyLedgerEra eraB))
+  -> Maybe (eraA :~: eraB)
+voterTypeEquality _ _ = eqT
 
 instance IsShelleyBasedEra era => ToCBOR (Voter era) where
   toCBOR (Voter v) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(ShelleyLedgerEra era) v

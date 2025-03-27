@@ -37,6 +37,8 @@ import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
 import Data.ByteString (ByteString)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
+import Data.Type.Equality (TestEquality (..))
+import Data.Typeable
 import Data.Word
 import GHC.Exts (IsList (..))
 
@@ -144,15 +146,31 @@ fromGovernanceAction = \case
   Gov.InfoAction ->
     InfoAct
 
-newtype Proposal era = Proposal {unProposal :: Gov.ProposalProcedure (ShelleyLedgerEra era)}
+data Proposal era where
+  Proposal :: Typeable era => Gov.ProposalProcedure (ShelleyLedgerEra era) -> Proposal era
+
+instance TestEquality Proposal where
+  testEquality (Proposal v) (Proposal v') =
+    proposalTypeEquality v v'
+
+proposalTypeEquality
+  :: (Typeable eraA, Typeable eraB)
+  => Gov.ProposalProcedure (ShelleyLedgerEra eraA)
+  -> Gov.ProposalProcedure (ShelleyLedgerEra eraB)
+  -> Maybe (eraA :~: eraB)
+proposalTypeEquality _ _ = eqT
 
 instance IsShelleyBasedEra era => Show (Proposal era) where
   show (Proposal pp) = do
     let ppStr = shelleyBasedEraConstraints (shelleyBasedEra @era) $ show pp
-    "Proposal {unProposal = " <> ppStr <> "}"
+    "Proposal " <> ppStr <> "}"
 
 instance IsShelleyBasedEra era => Eq (Proposal era) where
   (Proposal pp1) == (Proposal pp2) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ pp1 == pp2
+
+instance IsShelleyBasedEra era => Ord (Proposal era) where
+  compare (Proposal pp1) (Proposal pp2) =
+    shelleyBasedEraConstraints (shelleyBasedEra @era) $ compare pp1 pp2
 
 instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
   toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp

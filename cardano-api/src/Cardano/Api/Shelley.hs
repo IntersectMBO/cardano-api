@@ -278,6 +278,7 @@ module Cardano.Api.Shelley
   , toConsensusGenTx
   , fromAlonzoCostModels
   -- TODO: arrange not to export these
+  , collectTxBodyScriptWitnessRequirements
   , toLedgerNonce
   , toShelleyNetwork
   , fromShelleyPoolParams
@@ -285,6 +286,7 @@ module Cardano.Api.Shelley
   , emptyVotingProcedures
   , mergeVotingProcedures
   , singletonVotingProcedures
+  , extractExecutionUnits
   , VotesMergingConflict (..)
   )
 where
@@ -295,6 +297,7 @@ import Cardano.Api.Internal.Block
 import Cardano.Api.Internal.Certificate
 import Cardano.Api.Internal.DRepMetadata
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Fees
 import Cardano.Api.Internal.Genesis
 import Cardano.Api.Internal.Governance.Actions.ProposalProcedure
