@@ -17,7 +17,7 @@ else
     echo "Happy is already installed. Skipping installation."
 fi
 
-
+wasm32-wasi-cabal update  --project-file=cabal-wasm-ledger-only.project --keep-going
 wasm32-wasi-cabal build  --project-file=cabal-wasm-ledger-only.project \
   cardano-api-wasm-ledger-only 
 
