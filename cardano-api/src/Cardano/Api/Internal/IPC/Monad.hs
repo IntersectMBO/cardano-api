@@ -12,6 +12,7 @@ where
 import Cardano.Api.Internal.Block
 import Cardano.Api.Internal.IPC
 import Cardano.Api.Internal.IPC.Version
+import Cardano.Api.Internal.Query
 
 import Cardano.Ledger.Shelley.Scripts ()
 import Ouroboros.Network.Protocol.LocalStateQuery.Client qualified as Net.Query
@@ -99,15 +100,14 @@ getNtcVersion = LocalStateQueryExpr ask
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
 queryExpr
   :: QueryInMode a
-  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
+  -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcError a)
 queryExpr q = do
-  let minNtcVersion = nodeToClientVersionOf q
   ntcVersion <- getNtcVersion
-  if ntcVersion >= minNtcVersion
-    then fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f ->
+  case isQuerySupportedInNtcVersion (toConsensusQuery q) ntcVersion of
+    Nothing -> fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f ->
       pure $
         Net.Query.SendMsgQuery q $
           Net.Query.ClientStQuerying
             { Net.Query.recvMsgResult = f
             }
-    else pure (Left (UnsupportedNtcVersionError minNtcVersion ntcVersion))
+    Just err -> pure (Left err)

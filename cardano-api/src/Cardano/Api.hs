@@ -903,7 +903,7 @@ module Cardano.Api
   , UTxO (..)
   , queryNodeLocalState
   , executeQueryCardanoMode
-  , UnsupportedNtcVersionError (..)
+  , UnsupportedNtcError (..)
 
     -- *** Local tx monitoring
   , LocalTxMonitorClient (..)
