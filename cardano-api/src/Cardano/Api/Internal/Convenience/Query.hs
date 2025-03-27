@@ -61,7 +61,7 @@ data QueryConvenienceError
   = AcqFailure AcquiringFailure
   | QueryEraMismatch EraMismatch
   | ByronEraNotSupported
-  | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
+  | QceUnsupportedNtcVersion !UnsupportedNtcError
   | QceUnexpectedException !SomeException
   deriving Show
 
@@ -77,14 +77,31 @@ renderQueryConvenienceError (QueryEraMismatch (EraMismatch ledgerEraName' otherE
     <> " era."
 renderQueryConvenienceError ByronEraNotSupported =
   "Byron era not supported"
-renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionError minNtcVersion ntcVersion)) =
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionError ntcVersion)) =
   "Unsupported feature for the node-to-client protocol version.\n"
-    <> "This query requires at least "
-    <> textShow minNtcVersion
-    <> " but the node negotiated "
+    <> "The negotiated version is "
+    <> textShow ntcVersion
+    <> " but this version does not allow for the requested query.\n"
+    <> "Probably either the client or the node is out-of-date.\n"
+    <> "Later node versions support later node-to-client protocol versions (but development protocol versions are not enabled in the node by default)."
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcDisabledEra ntcVersion)) =
+  "The era for which the query was sent is disabled for the NTC version we are using: "
     <> textShow ntcVersion
     <> ".\n"
-    <> "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
+    <> "This should never be the case with a cardano-node.\n"
+    <> "Please submit a ticket with the version of node and client you are using to https://github.com/IntersectMBO/cardano-node."
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnknownNtcVersion ntcVersion)) =
+  "The version chosen "
+    <> textShow ntcVersion
+    <> " has no corresponding CardanoNodeToClientVersion associated.\n"
+    <> "This should never be the case with a cardano-node.\n"
+    <> "Please submit a ticket with the version of node and client you are using to https://github.com/IntersectMBO/cardano-node."
+renderQueryConvenienceError (QceUnsupportedNtcVersion (HardForkDisabled ntcVersion)) =
+  "The CardanoNodeToClientVersion defined by the chosen NodeToClient version "
+    <> textShow ntcVersion
+    <> " has the HardFork layer disabled for NTC.\n"
+    <> "This should never be the case with a cardano-node.\n"
+    <> "Please submit a ticket with the version of node and client you are using to https://github.com/IntersectMBO/cardano-node."
 renderQueryConvenienceError (QceUnexpectedException e) =
   "Unexpected exception while processing query:\n" <> fromString (displayException e)
 

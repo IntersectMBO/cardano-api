@@ -70,7 +70,7 @@ module Cardano.Api.Internal.IPC
   -- TODO: These should be exported via Cardano.Api.Mode
   , toAcquiringFailure
   , NodeToClientVersion (..)
-  , UnsupportedNtcVersionError (..)
+  , UnsupportedNtcError (..)
   )
 where
 
