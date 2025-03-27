@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
 module Cardano.Api.Internal.IPC.Version
   ( isQuerySupportedInNtcVersion
 
@@ -16,8 +17,8 @@ import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.Node ()
 import Ouroboros.Consensus.HardFork.Combinator.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common qualified as Consensus
-import Ouroboros.Consensus.Node.NetworkProtocolVersion qualified as Consensus
 import Ouroboros.Consensus.Ledger.Query qualified as Consensus
+import Ouroboros.Consensus.Node.NetworkProtocolVersion qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
@@ -52,32 +53,25 @@ import Data.SOP.Strict
 isQuerySupportedInNtcVersion
   :: Some (Consensus.Query (Consensus.CardanoBlock StandardCrypto))
   -> NodeToClientVersion
-  -> Maybe UnsupportedNtcError
+  -> Either UnsupportedNtcError ()
 isQuerySupportedInNtcVersion (Some q) ntc = case hfNTC of
   Just
     ( Consensus.HardForkNodeToClientEnabled
         _hfSpecificNTC
         (_ :* npNTC)
       ) ->
-      either
-        Just
-        ( \x ->
-            if not x
-              then Just (UnsupportedNtcVersionError ntc)
-              else Nothing
-        )
-        $ case q of
-          Consensus.GetChainBlockNo -> Right True
-          Consensus.GetSystemStart -> Right True
-          Consensus.GetChainPoint -> Right True
-          Consensus.GetLedgerConfig -> Right True
-          Consensus.BlockQuery q' -> case q' of
-            Consensus.QueryAnytime _ _ -> Right True
-            Consensus.QueryHardFork _ -> Right True
-            Consensus.QueryIfCurrent (Consensus.QZ _byronQuery) -> Right True
-            Consensus.QueryIfCurrent (Consensus.QS q'') -> getNTC npNTC q''
-  Just (Consensus.HardForkNodeToClientDisabled _) -> Just HardForkDisabled
-  Nothing -> Just UnknownNtcVersion
+      case q of
+        Consensus.GetChainBlockNo -> return ()
+        Consensus.GetSystemStart -> return ()
+        Consensus.GetChainPoint -> return ()
+        Consensus.GetLedgerConfig -> return ()
+        Consensus.BlockQuery q' -> case q' of
+          Consensus.QueryAnytime _ _ -> return ()
+          Consensus.QueryHardFork _ -> return ()
+          Consensus.QueryIfCurrent (Consensus.QZ _byronQuery) -> return ()
+          Consensus.QueryIfCurrent (Consensus.QS q'') -> getNTC npNTC q''
+  Just (Consensus.HardForkNodeToClientDisabled _) -> Left $ HardForkDisabled ntc
+  Nothing -> Left $ UnknownNtcVersion ntc
  where
   hfNTC =
     Consensus.supportedNodeToClientVersions
@@ -88,7 +82,7 @@ isQuerySupportedInNtcVersion (Some q) ntc = case hfNTC of
     :: forall result
      . NP Consensus.EraNodeToClientVersion (Consensus.CardanoShelleyEras StandardCrypto)
     -> Consensus.QueryIfCurrent (Consensus.CardanoShelleyEras StandardCrypto) result
-    -> Either UnsupportedNtcError Bool
+    -> Either UnsupportedNtcError ()
   getNTC = go
    where
     go
@@ -96,17 +90,19 @@ isQuerySupportedInNtcVersion (Some q) ntc = case hfNTC of
        . All Consensus.IsShelleyBlock xs
       => NP Consensus.EraNodeToClientVersion xs
       -> Consensus.QueryIfCurrent xs result
-      -> Either UnsupportedNtcError Bool
+      -> Either UnsupportedNtcError ()
     go (Consensus.EraNodeToClientEnabled supportedNtc :* _) (Consensus.QZ q') =
-      Right $ Consensus.querySupportedVersion q' supportedNtc
+      if Consensus.querySupportedVersion q' supportedNtc
+        then return ()
+        else Left $ UnsupportedNtcVersionError ntc
     go (Consensus.EraNodeToClientDisabled :* _) Consensus.QZ{} =
-      Left undefined
+      Left $ UnsupportedNtcDisabledEra ntc
     go Nil qq = case qq of {}
     go (_ :* n) (Consensus.QS q') = go n q'
 
 data UnsupportedNtcError
-  = UnsupportedNtcDisabledEra
-  | UnknownNtcVersion
-  | HardForkDisabled
+  = UnsupportedNtcDisabledEra !NodeToClientVersion
+  | UnknownNtcVersion !NodeToClientVersion
+  | HardForkDisabled !NodeToClientVersion
   | UnsupportedNtcVersionError !NodeToClientVersion
   deriving (Eq, Show)

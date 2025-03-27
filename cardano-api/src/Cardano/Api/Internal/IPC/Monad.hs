@@ -103,11 +103,10 @@ queryExpr
   -> LocalStateQueryExpr block point QueryInMode r IO (Either UnsupportedNtcError a)
 queryExpr q = do
   ntcVersion <- getNtcVersion
-  case isQuerySupportedInNtcVersion (toConsensusQuery q) ntcVersion of
-    Nothing -> fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f ->
-      pure $
-        Net.Query.SendMsgQuery q $
-          Net.Query.ClientStQuerying
-            { Net.Query.recvMsgResult = f
-            }
-    Just err -> pure (Left err)
+  void . return $ isQuerySupportedInNtcVersion (toConsensusQuery q) ntcVersion
+  fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f ->
+    pure $
+      Net.Query.SendMsgQuery q $
+        Net.Query.ClientStQuerying
+          { Net.Query.recvMsgResult = f
+          }

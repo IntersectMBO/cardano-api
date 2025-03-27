@@ -84,16 +84,22 @@ renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionErro
     <> " but this version does not allow for the requested query.\n"
     <> "Probably either the client or the node is out-of-date.\n"
     <> "Later node versions support later node-to-client protocol versions (but development protocol versions are not enabled in the node by default)."
-renderQueryConvenienceError (QceUnsupportedNtcVersion UnsupportedNtcDisabledEra) =
-  "The era for which the query was sent is disabled for the NTC version we are using.\n"
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcDisabledEra ntcVersion)) =
+  "The era for which the query was sent is disabled for the NTC version we are using: "
+    <> textShow ntcVersion
+    <> ".\n"
     <> "This should never be the case with a cardano-node.\n"
     <> "Please submit a ticket with the version of node and client you are using to https://github.com/IntersectMBO/cardano-node."
-renderQueryConvenienceError (QceUnsupportedNtcVersion UnknownNtcVersion) =
-  "The version chosen in cardano-api has no corresponding CardanoNodeToClientVersion associated.\n"
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnknownNtcVersion ntcVersion)) =
+  "The version chosen "
+    <> textShow ntcVersion
+    <> " has no corresponding CardanoNodeToClientVersion associated.\n"
     <> "This should never be the case with a cardano-node.\n"
     <> "Please submit a ticket with the version of node and client you are using to https://github.com/IntersectMBO/cardano-node."
-renderQueryConvenienceError (QceUnsupportedNtcVersion HardForkDisabled) =
-  "The CardanoNodeToClientVersion defined by the chosen NodeToClient version has the HardFork layer disabled for NTC.\n"
+renderQueryConvenienceError (QceUnsupportedNtcVersion (HardForkDisabled ntcVersion)) =
+  "The CardanoNodeToClientVersion defined by the chosen NodeToClient version "
+    <> textShow ntcVersion
+    <> " has the HardFork layer disabled for NTC.\n"
     <> "This should never be the case with a cardano-node.\n"
     <> "Please submit a ticket with the version of node and client you are using to https://github.com/IntersectMBO/cardano-node."
 renderQueryConvenienceError (QceUnexpectedException e) =
