@@ -673,6 +673,14 @@ instance CastVerificationKeyRole GenesisKey PaymentKey where
   castVerificationKey (GenesisVerificationKey (Shelley.VKey vk)) =
     PaymentVerificationKey (Shelley.VKey vk)
 
+instance SerialiseAsBech32 (VerificationKey GenesisKey) where
+  bech32PrefixFor _ = "gen_vk"
+  bech32PrefixesPermitted _ = ["gen_vk"]
+
+instance SerialiseAsBech32 (SigningKey GenesisKey) where
+  bech32PrefixFor _ = "gen_sk"
+  bech32PrefixesPermitted _ = ["gen_sk"]
+
 --
 -- Constitutional Committee Hot Keys
 --
@@ -1408,6 +1416,14 @@ instance CastVerificationKeyRole StakePoolKey StakeKey where
   castVerificationKey (StakePoolVerificationKey (Shelley.VKey vkey)) =
     StakeVerificationKey (Shelley.VKey vkey)
 
+instance SerialiseAsBech32 (VerificationKey GenesisDelegateKey) where
+  bech32PrefixFor _ = "gen_deleg_vk"
+  bech32PrefixesPermitted _ = ["gen_deleg_vk"]
+
+instance SerialiseAsBech32 (SigningKey GenesisDelegateKey) where
+  bech32PrefixFor _ = "gen_deleg_sk"
+  bech32PrefixesPermitted _ = ["gen_deleg_sk"]
+
 --
 -- Shelley genesis delegate extended ed25519 keys
 --
@@ -1561,6 +1577,7 @@ data GenesisUTxOKey
 
 instance HasTypeProxy GenesisUTxOKey where
   data AsType GenesisUTxOKey = AsGenesisUTxOKey
+  proxyToAsType :: Proxy GenesisUTxOKey -> AsType GenesisUTxOKey
   proxyToAsType _ = AsGenesisUTxOKey
 
 instance Key GenesisUTxOKey where
@@ -1642,6 +1659,14 @@ instance HasTextEnvelope (SigningKey GenesisUTxOKey) where
    where
     proxy :: Proxy (Shelley.DSIGN StandardCrypto)
     proxy = Proxy
+
+instance SerialiseAsBech32 (VerificationKey GenesisUTxOKey) where
+  bech32PrefixFor _ = "gen_utxo_vk"
+  bech32PrefixesPermitted _ = ["gen_utxo_vk"]
+
+instance SerialiseAsBech32 (SigningKey GenesisUTxOKey) where
+  bech32PrefixFor _ = "gen_utxo_sk"
+  bech32PrefixesPermitted _ = ["gen_utxo_sk"]
 
 -- TODO: use a different type from the stake pool key, since some operations
 -- need a genesis key specifically
