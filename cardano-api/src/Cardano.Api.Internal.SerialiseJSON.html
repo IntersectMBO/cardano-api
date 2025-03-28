@@ -1,0 +1,398 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621681039630"><span id="local-6989586621681039631"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">-- | JSON serialisation</span></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Internal.SerialiseJSON</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#serialiseToJSON"><span class="hs-identifier">serialiseToJSON</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSONKey</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#deserialiseFromJSON"><span class="hs-identifier">deserialiseFromJSON</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#prettyPrintJSON"><span class="hs-identifier">prettyPrintJSON</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">FromJSONKey</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier">JsonDecodeError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#readFileJSON"><span class="hs-identifier">readFileJSON</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#writeFileJSON"><span class="hs-identifier">writeFileJSON</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.Error.html"><span class="hs-identifier">Cardano.Api.Internal.Error</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.Internal.HasTypeProxy</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.Pretty.html"><span class="hs-identifier">Cardano.Api.Internal.Pretty</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html"><span class="hs-identifier">Control.Monad.Trans.Except</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier">runExceptT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Except.Extra</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">firstExceptT</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">handleIOExceptT</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">hoistEither</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">FromJSONKey</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSONKey</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Encode.Pretty</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">encodePretty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">newtype</span><span> </span><span id="JsonDecodeError"><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier hs-var">JsonDecodeError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="JsonDecodeError"><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier hs-var">JsonDecodeError</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681039646"><span id="local-6989586621681039652"><span class="annot"><span class="annottext">JsonDecodeError -&gt; JsonDecodeError -&gt; Bool
+(JsonDecodeError -&gt; JsonDecodeError -&gt; Bool)
+-&gt; (JsonDecodeError -&gt; JsonDecodeError -&gt; Bool)
+-&gt; Eq JsonDecodeError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: JsonDecodeError -&gt; JsonDecodeError -&gt; Bool
+== :: JsonDecodeError -&gt; JsonDecodeError -&gt; Bool
+$c/= :: JsonDecodeError -&gt; JsonDecodeError -&gt; Bool
+/= :: JsonDecodeError -&gt; JsonDecodeError -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681039660"><span id="local-6989586621681039667"><span id="local-6989586621681039671"><span class="annot"><span class="annottext">Int -&gt; JsonDecodeError -&gt; ShowS
+[JsonDecodeError] -&gt; ShowS
+JsonDecodeError -&gt; String
+(Int -&gt; JsonDecodeError -&gt; ShowS)
+-&gt; (JsonDecodeError -&gt; String)
+-&gt; ([JsonDecodeError] -&gt; ShowS)
+-&gt; Show JsonDecodeError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; JsonDecodeError -&gt; ShowS
+showsPrec :: Int -&gt; JsonDecodeError -&gt; ShowS
+$cshow :: JsonDecodeError -&gt; String
+show :: JsonDecodeError -&gt; String
+$cshowList :: [JsonDecodeError] -&gt; ShowS
+showList :: [JsonDecodeError] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681039678"><span id="local-6989586621681039683"><span id="local-6989586621681039687"><span id="local-6989586621681039689"><span id="local-6989586621681039691"><span id="local-6989586621681039697"><span id="local-6989586621681039702"><span id="local-6989586621681039705"><span id="local-6989586621681039708"><span id="local-6989586621681039711"><span id="local-6989586621681039714"><span id="local-6989586621681039717"><span id="local-6989586621681039722"><span id="local-6989586621681039727"><span class="annot"><span class="annottext">Typeable JsonDecodeError
+Typeable JsonDecodeError =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; JsonDecodeError -&gt; c JsonDecodeError)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c JsonDecodeError)
+-&gt; (JsonDecodeError -&gt; Constr)
+-&gt; (JsonDecodeError -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c JsonDecodeError))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c JsonDecodeError))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; JsonDecodeError -&gt; JsonDecodeError)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; JsonDecodeError -&gt; m JsonDecodeError)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; JsonDecodeError -&gt; m JsonDecodeError)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; JsonDecodeError -&gt; m JsonDecodeError)
+-&gt; Data JsonDecodeError
+JsonDecodeError -&gt; Constr
+JsonDecodeError -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b) -&gt; JsonDecodeError -&gt; JsonDecodeError
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c JsonDecodeError
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; JsonDecodeError -&gt; c JsonDecodeError
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c JsonDecodeError)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c JsonDecodeError)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; JsonDecodeError -&gt; c JsonDecodeError
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; JsonDecodeError -&gt; c JsonDecodeError
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c JsonDecodeError
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c JsonDecodeError
+$ctoConstr :: JsonDecodeError -&gt; Constr
+toConstr :: JsonDecodeError -&gt; Constr
+$cdataTypeOf :: JsonDecodeError -&gt; DataType
+dataTypeOf :: JsonDecodeError -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c JsonDecodeError)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c JsonDecodeError)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c JsonDecodeError)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c JsonDecodeError)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; JsonDecodeError -&gt; JsonDecodeError
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; JsonDecodeError -&gt; JsonDecodeError
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; JsonDecodeError -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; JsonDecodeError -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; JsonDecodeError -&gt; m JsonDecodeError
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier hs-type">JsonDecodeError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621681039740"><span class="annot"><span class="annottext">prettyError :: forall ann. JsonDecodeError -&gt; Doc ann
+</span><a href="#local-6989586621681039740"><span class="hs-identifier hs-var hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier hs-type">JsonDecodeError</span></a></span><span> </span><span id="local-6989586621681039742"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039742"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039742"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span id="local-6989586621681039557"><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#serialiseToJSON"><span class="hs-identifier hs-type">serialiseToJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621681039557"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681039557"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span></span><span>
+</span><span id="line-40"></span><span id="serialiseToJSON"><span class="annot"><span class="annottext">serialiseToJSON :: forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#serialiseToJSON"><span class="hs-identifier hs-var hs-var">serialiseToJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LazyByteString -&gt; ByteString
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">LBS.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(LazyByteString -&gt; ByteString)
+-&gt; (a -&gt; LazyByteString) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; LazyByteString
+forall a. ToJSON a =&gt; a -&gt; LazyByteString
+</span><span class="hs-identifier hs-var">Aeson.encode</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span id="local-6989586621681039749"><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#prettyPrintJSON"><span class="hs-identifier hs-type">prettyPrintJSON</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621681039749"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681039749"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span></span><span>
+</span><span id="line-43"></span><span id="prettyPrintJSON"><span class="annot"><span class="annottext">prettyPrintJSON :: forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#prettyPrintJSON"><span class="hs-identifier hs-var hs-var">prettyPrintJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LazyByteString -&gt; ByteString
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">LBS.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(LazyByteString -&gt; ByteString)
+-&gt; (a -&gt; LazyByteString) -&gt; a -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; LazyByteString
+forall a. ToJSON a =&gt; a -&gt; LazyByteString
+</span><span class="hs-identifier hs-var">encodePretty</span></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span id="local-6989586621681039567"><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#deserialiseFromJSON"><span class="hs-identifier hs-type">deserialiseFromJSON</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621681039567"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681039567"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier hs-type">JsonDecodeError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681039567"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-50"></span><span id="deserialiseFromJSON"><span class="annot"><span class="annottext">deserialiseFromJSON :: forall a.
+FromJSON a =&gt;
+AsType a -&gt; ByteString -&gt; Either JsonDecodeError a
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#deserialiseFromJSON"><span class="hs-identifier hs-var hs-var">deserialiseFromJSON</span></a></span></span><span> </span><span id="local-6989586621681039754"><span class="annot"><span class="annottext">AsType a
+</span><a href="#local-6989586621681039754"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">(String -&gt; Either JsonDecodeError a)
+-&gt; (a -&gt; Either JsonDecodeError a)
+-&gt; Either String a
+-&gt; Either JsonDecodeError a
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">JsonDecodeError -&gt; Either JsonDecodeError a
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(JsonDecodeError -&gt; Either JsonDecodeError a)
+-&gt; (String -&gt; JsonDecodeError)
+-&gt; String
+-&gt; Either JsonDecodeError a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JsonDecodeError
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier hs-var">JsonDecodeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a -&gt; Either JsonDecodeError a
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">(Either String a -&gt; Either JsonDecodeError a)
+-&gt; (ByteString -&gt; Either String a)
+-&gt; ByteString
+-&gt; Either JsonDecodeError a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String a
+forall a. FromJSON a =&gt; ByteString -&gt; Either String a
+</span><span class="hs-identifier hs-var">Aeson.eitherDecodeStrict'</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span id="local-6989586621681039577"><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#readFileJSON"><span class="hs-identifier hs-type">readFileJSON</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621681039577"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681039577"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Internal.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#JsonDecodeError"><span class="hs-identifier hs-type">JsonDecodeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621681039577"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-59"></span><span id="readFileJSON"><span class="annot"><span class="annottext">readFileJSON :: forall a.
+FromJSON a =&gt;
+AsType a -&gt; String -&gt; IO (Either (FileError JsonDecodeError) a)
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#readFileJSON"><span class="hs-identifier hs-var hs-var">readFileJSON</span></a></span></span><span> </span><span id="local-6989586621681039769"><span class="annot"><span class="annottext">AsType a
+</span><a href="#local-6989586621681039769"><span class="hs-identifier hs-var">ttoken</span></a></span></span><span> </span><span id="local-6989586621681039770"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039770"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">ExceptT (FileError JsonDecodeError) IO a
+-&gt; IO (Either (FileError JsonDecodeError) a)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError JsonDecodeError) IO a
+ -&gt; IO (Either (FileError JsonDecodeError) a))
+-&gt; ExceptT (FileError JsonDecodeError) IO a
+-&gt; IO (Either (FileError JsonDecodeError) a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621681039771"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681039771"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (String -&gt; IO ByteString)
+-&gt; ExceptT (FileError JsonDecodeError) IO ByteString
+forall (m :: * -&gt; *) s e.
+MonadIO m =&gt;
+String -&gt; (String -&gt; IO s) -&gt; ExceptT (FileError e) m s
+</span><a href="Cardano.Api.Internal.Error.html#fileIOExceptT"><span class="hs-identifier hs-var">fileIOExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039770"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ByteString
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#readFile"><span class="hs-identifier hs-var">BS.readFile</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">(JsonDecodeError -&gt; FileError JsonDecodeError)
+-&gt; ExceptT JsonDecodeError IO a
+-&gt; ExceptT (FileError JsonDecodeError) IO a
+forall (m :: * -&gt; *) x y a.
+Functor m =&gt;
+(x -&gt; y) -&gt; ExceptT x m a -&gt; ExceptT y m a
+</span><span class="hs-identifier hs-var">firstExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; JsonDecodeError -&gt; FileError JsonDecodeError
+forall e. String -&gt; e -&gt; FileError e
+</span><a href="Cardano.Api.Internal.Error.html#FileError"><span class="hs-identifier hs-var">FileError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039770"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ExceptT JsonDecodeError IO a
+ -&gt; ExceptT (FileError JsonDecodeError) IO a)
+-&gt; ExceptT JsonDecodeError IO a
+-&gt; ExceptT (FileError JsonDecodeError) IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="annot"><span class="annottext">Either JsonDecodeError a -&gt; ExceptT JsonDecodeError IO a
+forall (m :: * -&gt; *) x a. Monad m =&gt; Either x a -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">hoistEither</span></span><span> </span><span class="annot"><span class="annottext">(Either JsonDecodeError a -&gt; ExceptT JsonDecodeError IO a)
+-&gt; Either JsonDecodeError a -&gt; ExceptT JsonDecodeError IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><span class="annottext">AsType a -&gt; ByteString -&gt; Either JsonDecodeError a
+forall a.
+FromJSON a =&gt;
+AsType a -&gt; ByteString -&gt; Either JsonDecodeError a
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#deserialiseFromJSON"><span class="hs-identifier hs-var">deserialiseFromJSON</span></a></span><span> </span><span class="annot"><span class="annottext">AsType a
+</span><a href="#local-6989586621681039769"><span class="hs-identifier hs-var">ttoken</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681039771"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span id="local-6989586621681039602"><span class="annot"><a href="Cardano.Api.Internal.SerialiseJSON.html#writeFileJSON"><span class="hs-identifier hs-type">writeFileJSON</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621681039602"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681039602"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Internal.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-71"></span><span id="writeFileJSON"><span class="annot"><span class="annottext">writeFileJSON :: forall a. ToJSON a =&gt; String -&gt; a -&gt; IO (Either (FileError ()) ())
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#writeFileJSON"><span class="hs-identifier hs-var hs-var">writeFileJSON</span></a></span></span><span> </span><span id="local-6989586621681039778"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039778"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621681039779"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681039779"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="annottext">ExceptT (FileError ()) IO () -&gt; IO (Either (FileError ()) ())
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError ()) IO () -&gt; IO (Either (FileError ()) ()))
+-&gt; ExceptT (FileError ()) IO () -&gt; IO (Either (FileError ()) ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">(IOException -&gt; FileError ())
+-&gt; IO () -&gt; ExceptT (FileError ()) IO ()
+forall (m :: * -&gt; *) x a.
+MonadIO m =&gt;
+(IOException -&gt; x) -&gt; IO a -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">handleIOExceptT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; IOException -&gt; FileError ()
+forall e. String -&gt; IOException -&gt; FileError e
+</span><a href="Cardano.Api.Internal.Error.html#FileIOError"><span class="hs-identifier hs-var">FileIOError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039778"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; ExceptT (FileError ()) IO ())
+-&gt; IO () -&gt; ExceptT (FileError ()) IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; ByteString -&gt; IO ()
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#writeFile"><span class="hs-identifier hs-var">BS.writeFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681039778"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><a href="Cardano.Api.Internal.SerialiseJSON.html#serialiseToJSON"><span class="hs-identifier hs-var">serialiseToJSON</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681039779"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span></pre></body></html>
