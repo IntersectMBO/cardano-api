@@ -1,5 +1,25 @@
 # Changelog for cardano-api
 
+## 10.12.0.0
+
+- Bumped ledger and dependencies for node 10.3 release.
+  (breaking)
+  [PR 758](https://github.com/IntersectMBO/cardano-api/pull/758)
+    * Removed `queryProtocolParametersUpdate` and the use of parameterised crypto (`EraCrypto c`, this enables many other data types to become mono-morphic over `StandardCrypto`)
+    * Added `queryStakePoolDefaultVote` and `queryLedgerConfig`
+
+- New witness api
+  (feature, compatible, refactoring)
+  [PR 763](https://github.com/IntersectMBO/cardano-api/pull/763)
+
+- Fix inputSet to be parameterized on the era
+  (breaking, bugfix)
+  [PR 788](https://github.com/IntersectMBO/cardano-api/pull/788)
+
+- Remove the ProtocolParameters type, that has been deprecated for a while
+  (breaking)
+  [PR 729](https://github.com/IntersectMBO/cardano-api/pull/729)
+
 ## 10.11.1.0
 
 - Add missing `CastVerificationKeyRole StakePoolExtendedKey StakePoolKey` instance
