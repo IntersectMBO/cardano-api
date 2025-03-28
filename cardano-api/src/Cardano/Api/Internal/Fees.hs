@@ -372,8 +372,6 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
 import Cardano.Ledger.Core qualified as L
 import Cardano.Ledger.Credential as Ledger (Credential)
-import Cardano.Ledger.Crypto qualified as Ledger
-import Cardano.Ledger.Keys qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Ledger.Val qualified as L
 import Ouroboros.Consensus.HardFork.History qualified as Consensus
@@ -419,7 +417,7 @@ estimateOrCalculateBalancedTxBody
   -> TxBodyContent BuildTx era
   -> Set PoolId
   -> Map StakeCredential L.Coin
-  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
+  -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
   -> AddressInEra era
   -> Either (AutoBalanceError era) (BalancedTxBody era)
 estimateOrCalculateBalancedTxBody era feeEstMode pparams txBodyContent poolids stakeDelegDeposits drepDelegDeposits changeAddr =
@@ -498,7 +496,7 @@ estimateBalancedTxBody
   -> Map StakeCredential L.Coin
   -- ^ A map of all deposits for stake credentials that are being
   --   unregistered in this transaction.
-  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
+  -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
   -- ^ A map of all deposits for DRep credentials that are being
   --   unregistered in this transaction.
   -> Map ScriptWitnessIndex ExecutionUnits
@@ -819,7 +817,7 @@ data ResolvablePointers where
             (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
             ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
             , Maybe (PlutusScriptBytes, Plutus.Language)
-            , Ledger.ScriptHash Ledger.StandardCrypto
+            , Ledger.ScriptHash
             )
         )
     -> ResolvablePointers
@@ -1074,11 +1072,11 @@ extractScriptBytesAndLanguage
   :: Alonzo.AlonzoEraScript (ShelleyLedgerEra era)
   => ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
      , Maybe (Alonzo.PlutusScript (ShelleyLedgerEra era))
-     , L.ScriptHash Ledger.StandardCrypto
+     , L.ScriptHash
      )
   -> ( L.PlutusPurpose L.AsItem (ShelleyLedgerEra era)
      , Maybe (PlutusScriptBytes, Plutus.Language)
-     , Ledger.ScriptHash Ledger.StandardCrypto
+     , Ledger.ScriptHash
      )
 extractScriptBytesAndLanguage (purpose, mbScript, scriptHash) =
   (purpose, fmap extractPlutusScriptAndLanguage mbScript, scriptHash)
@@ -1109,7 +1107,7 @@ evaluateTransactionBalance
   -> Ledger.PParams (ShelleyLedgerEra era)
   -> Set PoolId
   -> Map StakeCredential L.Coin
-  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
+  -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
   -> UTxO era
   -> TxBody era
   -> TxOutValue era
@@ -1124,16 +1122,16 @@ evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits u
         (toLedgerUTxO sbe utxo)
         txbody
  where
-  isRegPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
+  isRegPool :: Ledger.KeyHash Ledger.StakePool -> Bool
   isRegPool kh = StakePoolKeyHash kh `Set.member` poolids
 
   lookupDelegDeposit
-    :: Ledger.Credential 'Ledger.Staking L.StandardCrypto -> Maybe L.Coin
+    :: Ledger.Credential 'Ledger.Staking -> Maybe L.Coin
   lookupDelegDeposit stakeCred =
     Map.lookup (fromShelleyStakeCredential stakeCred) stakeDelegDeposits
 
   lookupDRepDeposit
-    :: Ledger.Credential 'Ledger.DRepRole L.StandardCrypto -> Maybe L.Coin
+    :: Ledger.Credential 'Ledger.DRepRole -> Maybe L.Coin
   lookupDRepDeposit drepCred =
     Map.lookup drepCred drepDelegDeposits
 
@@ -1336,7 +1334,7 @@ makeTransactionBodyAutoBalance
   -> Map StakeCredential L.Coin
   -- ^ The map of all deposits for stake credentials that are being
   --   unregistered in this transaction
-  -> Map (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto) L.Coin
+  -> Map (Ledger.Credential Ledger.DRepRole) L.Coin
   -- ^ The map of all deposits for DRep credentials that are being
   --   unregistered in this transaction
   -> UTxO era

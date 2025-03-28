@@ -84,7 +84,7 @@ data Witnessable (thing :: WitnessableItem) era where
     -> Witnessable WithdrawalItem era
   WitVote
     :: L.ConwayEraScript era
-    => L.Voter (L.EraCrypto era)
+    => L.Voter
     -> Witnessable VoterItem era
   WitProposal
     :: (L.ConwayEraScript era, L.EraPParams era)

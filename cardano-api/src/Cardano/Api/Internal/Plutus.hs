@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeOperators #-}
 
 -- | This module provides utilities to render the result of plutus execution.
 module Cardano.Api.Internal.Plutus
@@ -31,7 +30,7 @@ import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Plutus.Evaluate qualified as Plutus
 import Cardano.Ledger.Plutus.ExUnits qualified as Plutus
 import Cardano.Ledger.Plutus.Language qualified as Plutus
-import Cardano.Ledger.UTxO qualified as L
+import Cardano.Ledger.State qualified as L
 import PlutusLedgerApi.V1 qualified as Plutus
 
 import Data.Bifunctor (Bifunctor (..))
@@ -54,7 +53,7 @@ import Prettyprinter (indent, line)
 data DebugPlutusFailure
   = DebugPlutusFailure
   { dpfEvaluationError :: Plutus.EvaluationError
-  , dpfScriptWithContext :: Plutus.PlutusWithContext L.StandardCrypto
+  , dpfScriptWithContext :: Plutus.PlutusWithContext
   , dpfExecutionUnits :: Plutus.ExUnits
   , dpfExecutionLogs :: [Text]
   }
@@ -118,8 +117,7 @@ collectPlutusScriptHashes aeo tx utxo =
      in getPurposes aeo $ L.getScriptsNeeded ledgerUTxO (ledgerTx' ^. L.bodyTxL)
  where
   getPurposes
-    :: L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
-    => AlonzoEraOnwards era
+    :: AlonzoEraOnwards era
     -> Alonzo.AlonzoScriptsNeeded (ShelleyLedgerEra era)
     -> Map ScriptWitnessIndex Api.ScriptHash
   getPurposes aeo' (Alonzo.AlonzoScriptsNeeded purposes) =

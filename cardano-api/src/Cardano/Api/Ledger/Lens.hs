@@ -59,7 +59,6 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.Core qualified as L
-import Cardano.Ledger.Keys qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as L
 import Cardano.Ledger.TxIn qualified as L
@@ -152,23 +151,23 @@ updateTxBodyL
   :: ShelleyToBabbageEra era -> Lens' (TxBody era) (StrictMaybe (L.Update (ShelleyLedgerEra era)))
 updateTxBodyL w = shelleyToBabbageEraConstraints w $ txBodyL . L.updateTxBodyL
 
-mintTxBodyL :: MaryEraOnwards era -> Lens' (TxBody era) (L.MultiAsset L.StandardCrypto)
+mintTxBodyL :: MaryEraOnwards era -> Lens' (TxBody era) L.MultiAsset
 mintTxBodyL w = maryEraOnwardsConstraints w $ txBodyL . L.mintTxBodyL
 
 scriptIntegrityHashTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (TxBody era) (StrictMaybe (L.ScriptIntegrityHash L.StandardCrypto))
+  :: AlonzoEraOnwards era -> Lens' (TxBody era) (StrictMaybe L.ScriptIntegrityHash)
 scriptIntegrityHashTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.scriptIntegrityHashTxBodyL
 
 collateralInputsTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (TxBody era) (Set (L.TxIn L.StandardCrypto))
+  :: AlonzoEraOnwards era -> Lens' (TxBody era) (Set L.TxIn)
 collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collateralInputsTxBodyL
 
 reqSignerHashesTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (TxBody era) (Set (L.KeyHash L.Witness L.StandardCrypto))
+  :: AlonzoEraOnwards era -> Lens' (TxBody era) (Set (L.KeyHash L.Witness))
 reqSignerHashesTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 
 referenceInputsTxBodyL
-  :: BabbageEraOnwards era -> Lens' (TxBody era) (Set (L.TxIn L.StandardCrypto))
+  :: BabbageEraOnwards era -> Lens' (TxBody era) (Set L.TxIn)
 referenceInputsTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.referenceInputsTxBodyL
 
 collateralReturnTxBodyL
@@ -198,7 +197,7 @@ treasuryDonationTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.treasury
 
 mkAdaOnlyTxOut
   :: ShelleyBasedEra era
-  -> L.Addr (L.EraCrypto (ShelleyLedgerEra era))
+  -> L.Addr
   -> L.Coin
   -> L.TxOut (ShelleyLedgerEra era)
 mkAdaOnlyTxOut sbe addr coin =
@@ -206,7 +205,7 @@ mkAdaOnlyTxOut sbe addr coin =
 
 mkBasicTxOut
   :: ShelleyBasedEra era
-  -> L.Addr (L.EraCrypto (ShelleyLedgerEra era))
+  -> L.Addr
   -> L.Value (ShelleyLedgerEra era)
   -> L.TxOut (ShelleyLedgerEra era)
 mkBasicTxOut sbe addr value =
@@ -231,7 +230,7 @@ adaAssetShelleyToAllegraEraL
 adaAssetShelleyToAllegraEraL w =
   shelleyToAllegraEraConstraints w $ lens id const
 
-adaAssetMaryEraOnwardsL :: MaryEraOnwards era -> Lens' (L.MaryValue L.StandardCrypto) L.Coin
+adaAssetMaryEraOnwardsL :: MaryEraOnwards era -> Lens' L.MaryValue L.Coin
 adaAssetMaryEraOnwardsL w =
   maryEraOnwardsConstraints w $
     lens
@@ -239,7 +238,7 @@ adaAssetMaryEraOnwardsL w =
       (\(L.MaryValue _ ma) c -> L.MaryValue c ma)
 
 multiAssetL
-  :: MaryEraOnwards era -> Lens' (L.MaryValue L.StandardCrypto) (L.MultiAsset L.StandardCrypto)
+  :: MaryEraOnwards era -> Lens' L.MaryValue L.MultiAsset
 multiAssetL w =
   maryEraOnwardsConstraints w $
     lens

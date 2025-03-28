@@ -92,7 +92,6 @@ import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Keys.Praos
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.Pretty (Doc)
-import Cardano.Api.Internal.ReexposeLedger (EraCrypto, StandardCrypto)
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.SerialiseCBOR
@@ -337,7 +336,7 @@ data StakeDelegationRequirements era where
   StakeDelegationRequirementsConwayOnwards
     :: ConwayEraOnwards era
     -> StakeCredential
-    -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Delegatee
     -> StakeDelegationRequirements era
   StakeDelegationRequirementsPreConway
     :: ShelleyToBabbageEra era
@@ -359,11 +358,11 @@ makeStakeAddressDelegationCertificate = \case
 data StakePoolRegistrationRequirements era where
   StakePoolRegistrationRequirementsConwayOnwards
     :: ConwayEraOnwards era
-    -> Ledger.PoolParams (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.PoolParams
     -> StakePoolRegistrationRequirements era
   StakePoolRegistrationRequirementsPreConway
     :: ShelleyToBabbageEra era
-    -> Ledger.PoolParams (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.PoolParams
     -> StakePoolRegistrationRequirements era
 
 makeStakePoolRegistrationCertificate
@@ -433,7 +432,7 @@ data MirCertificateRequirements era where
   MirCertificateRequirements
     :: ShelleyToBabbageEra era
     -> Ledger.MIRPot
-    -> Ledger.MIRTarget (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.MIRTarget
     -> MirCertificateRequirements era
 
 makeMIRCertificate
@@ -448,14 +447,14 @@ makeMIRCertificate (MirCertificateRequirements atMostEra mirPot mirTarget) =
 data DRepRegistrationRequirements era where
   DRepRegistrationRequirements
     :: ConwayEraOnwards era
-    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
+    -> (Ledger.Credential Ledger.DRepRole)
     -> L.Coin
     -> DRepRegistrationRequirements era
 
 makeDrepRegistrationCertificate
   :: Typeable era
   => DRepRegistrationRequirements era
-  -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
+  -> Maybe Ledger.Anchor
   -> Certificate era
 makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcred deposit) anchor =
   ConwayCertificate conwayOnwards
@@ -465,8 +464,8 @@ makeDrepRegistrationCertificate (DRepRegistrationRequirements conwayOnwards vcre
 data CommitteeHotKeyAuthorizationRequirements era where
   CommitteeHotKeyAuthorizationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.Credential Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
-    -> Ledger.Credential Ledger.HotCommitteeRole (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.ColdCommitteeRole
+    -> Ledger.Credential Ledger.HotCommitteeRole
     -> CommitteeHotKeyAuthorizationRequirements era
 
 makeCommitteeHotKeyAuthorizationCertificate
@@ -481,8 +480,8 @@ makeCommitteeHotKeyAuthorizationCertificate (CommitteeHotKeyAuthorizationRequire
 data CommitteeColdkeyResignationRequirements era where
   CommitteeColdkeyResignationRequirements
     :: ConwayEraOnwards era
-    -> Ledger.Credential Ledger.ColdCommitteeRole (EraCrypto (ShelleyLedgerEra era))
-    -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
+    -> Ledger.Credential Ledger.ColdCommitteeRole
+    -> Maybe Ledger.Anchor
     -> CommitteeColdkeyResignationRequirements era
 
 makeCommitteeColdkeyResignationCertificate
@@ -499,7 +498,7 @@ makeCommitteeColdkeyResignationCertificate (CommitteeColdkeyResignationRequireme
 data DRepUnregistrationRequirements era where
   DRepUnregistrationRequirements
     :: ConwayEraOnwards era
-    -> (Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era)))
+    -> (Ledger.Credential Ledger.DRepRole)
     -> L.Coin
     -> DRepUnregistrationRequirements era
 
@@ -516,7 +515,7 @@ makeStakeAddressAndDRepDelegationCertificate
   :: ()
   => ConwayEraOnwards era
   -> StakeCredential
-  -> Ledger.Delegatee (EraCrypto (ShelleyLedgerEra era))
+  -> Ledger.Delegatee
   -> L.Coin
   -> Certificate era
 makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
@@ -527,13 +526,13 @@ makeStakeAddressAndDRepDelegationCertificate w cred delegatee deposit =
 data DRepUpdateRequirements era where
   DRepUpdateRequirements
     :: ConwayEraOnwards era
-    -> Ledger.Credential Ledger.DRepRole (EraCrypto (ShelleyLedgerEra era))
+    -> Ledger.Credential Ledger.DRepRole
     -> DRepUpdateRequirements era
 
 makeDrepUpdateCertificate
   :: Typeable era
   => DRepUpdateRequirements era
-  -> Maybe (Ledger.Anchor (EraCrypto (ShelleyLedgerEra era)))
+  -> Maybe Ledger.Anchor
   -> Certificate era
 makeDrepUpdateCertificate (DRepUpdateRequirements conwayOnwards vcred) mAnchor =
   ConwayCertificate conwayOnwards
@@ -600,7 +599,7 @@ filterUnRegCreds =
         Ledger.UnRegTxCert cred -> Just cred
 
 filterUnRegDRepCreds
-  :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole Ledger.StandardCrypto)
+  :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole)
 filterUnRegDRepCreds = \case
   ShelleyRelatedCertificate _ _ -> Nothing
   ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
@@ -643,7 +642,7 @@ fromShelleyCertificate
 fromShelleyCertificate =
   caseShelleyToBabbageOrConwayEraOnwards ShelleyRelatedCertificate ConwayCertificate
 
-toShelleyPoolParams :: StakePoolParameters -> Ledger.PoolParams StandardCrypto
+toShelleyPoolParams :: StakePoolParameters -> Ledger.PoolParams
 toShelleyPoolParams
   StakePoolParameters
     { stakePoolId = StakePoolKeyHash poolkh
@@ -716,7 +715,7 @@ toShelleyPoolParams
         Ledger.textToUrl (Text.length url) url
 
 fromShelleyPoolParams
-  :: Ledger.PoolParams StandardCrypto
+  :: Ledger.PoolParams
   -> StakePoolParameters
 fromShelleyPoolParams
   Ledger.PoolParams
@@ -795,7 +794,7 @@ instance Error AnchorDataFromCertificateError where
 -- means that the certificate does not contain anchor data.
 getAnchorDataFromCertificate
   :: Certificate era
-  -> Either AnchorDataFromCertificateError (Maybe (Ledger.Anchor StandardCrypto))
+  -> Either AnchorDataFromCertificateError (Maybe Ledger.Anchor)
 getAnchorDataFromCertificate c =
   case c of
     ShelleyRelatedCertificate stbe scert ->
@@ -828,7 +827,7 @@ getAnchorDataFromCertificate c =
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateError m
     => Ledger.PoolMetadata
-    -> m (Maybe (Ledger.Anchor StandardCrypto))
+    -> m (Maybe Ledger.Anchor)
   anchorDataFromPoolMetadata (Ledger.PoolMetadata{Ledger.pmUrl = url, Ledger.pmHash = hashBytes}) = do
     hash <-
       maybe (throwError $ InvalidPoolMetadataHashError url hashBytes) return $

@@ -23,8 +23,7 @@ import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.SerialiseRaw
 
 import Cardano.Crypto.Hash.Class qualified as Crypto
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys qualified as Shelley
+import Cardano.Ledger.Hashes (HASH)
 
 import Data.ByteString (ByteString)
 import Data.Either.Combinators (maybeToRight)
@@ -39,7 +38,7 @@ newtype DRepMetadata = DRepMetadata
   }
   deriving (Eq, Show)
 
-newtype instance Hash DRepMetadata = DRepMetadataHash (Shelley.Hash StandardCrypto ByteString)
+newtype instance Hash DRepMetadata = DRepMetadataHash (Crypto.Hash HASH ByteString)
   deriving (Eq, Show)
 
 instance HasTypeProxy DRepMetadata where

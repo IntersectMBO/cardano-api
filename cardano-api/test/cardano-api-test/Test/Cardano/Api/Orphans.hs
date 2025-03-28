@@ -2,16 +2,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Api.Orphans () where
 
 import Cardano.Api.Shelley
-
-import Cardano.Crypto.Hash hiding (Hash)
-import Cardano.Crypto.KES
-import Cardano.Crypto.Libsodium (SodiumHashAlgorithm)
 
 import Test.Cardano.Crypto.Orphans ()
 
@@ -34,12 +29,3 @@ deriving instance Eq (SigningKey GenesisUTxOKey)
 deriving instance Eq (SigningKey KesKey)
 
 deriving instance Eq (SigningKey VrfKey)
-
-instance
-  ( KESAlgorithm d
-  , SodiumHashAlgorithm h
-  , SizeHash h ~ SeedSizeKES d
-  )
-  => Eq (SignKeyKES (SumKES h d))
-  where
-  k1 == k2 = rawSerialiseSignKeyKES k1 == rawSerialiseSignKeyKES k2

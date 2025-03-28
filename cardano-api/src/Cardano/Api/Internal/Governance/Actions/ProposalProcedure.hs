@@ -28,10 +28,8 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway qualified as Conway
 import Cardano.Ledger.Conway.Governance qualified as Gov
 import Cardano.Ledger.Conway.Governance qualified as Ledger
-import Cardano.Ledger.Core (EraCrypto)
 import Cardano.Ledger.Core qualified as Shelley
 import Cardano.Ledger.Credential qualified as L
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole))
 
 import Data.ByteString (ByteString)
@@ -50,13 +48,13 @@ data GovernanceAction era
       (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
   | ProposeNewConstitution
       (StrictMaybe (Ledger.GovPurposeId Ledger.ConstitutionPurpose (ShelleyLedgerEra era)))
-      (Ledger.Anchor StandardCrypto)
-      (StrictMaybe (Shelley.ScriptHash StandardCrypto))
+      Ledger.Anchor
+      (StrictMaybe Shelley.ScriptHash)
   | ProposeNewCommittee
       (StrictMaybe (Ledger.GovPurposeId Ledger.CommitteePurpose (ShelleyLedgerEra era)))
-      [L.Credential ColdCommitteeRole StandardCrypto]
+      [L.Credential ColdCommitteeRole]
       -- ^ Old constitutional committee
-      (Map (L.Credential ColdCommitteeRole StandardCrypto) EpochNo)
+      (Map (L.Credential ColdCommitteeRole) EpochNo)
       -- ^ New committee members with epoch number when each of them expires
       Rational
       -- ^ Quorum of the committee that is necessary for a successful vote
@@ -64,7 +62,7 @@ data GovernanceAction era
   | -- | Governance policy
     TreasuryWithdrawal
       [(Network, StakeCredential, L.Coin)]
-      !(StrictMaybe (Shelley.ScriptHash StandardCrypto))
+      !(StrictMaybe Shelley.ScriptHash)
   | InitiateHardfork
       (StrictMaybe (Ledger.GovPurposeId Ledger.HardForkPurpose (ShelleyLedgerEra era)))
       ProtVer
@@ -72,7 +70,7 @@ data GovernanceAction era
     UpdatePParams
       (StrictMaybe (Ledger.GovPurposeId Ledger.PParamUpdatePurpose (ShelleyLedgerEra era)))
       (Ledger.PParamsUpdate (ShelleyLedgerEra era))
-      !(StrictMaybe (Shelley.ScriptHash StandardCrypto))
+      !(StrictMaybe Shelley.ScriptHash)
 
 toGovernanceAction
   :: ()
@@ -116,8 +114,7 @@ toGovernanceAction sbe =
       Gov.ParameterChange preGovId ppup govPol
 
 fromGovernanceAction
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Gov.GovAction (ShelleyLedgerEra era)
+  :: Gov.GovAction (ShelleyLedgerEra era)
   -> GovernanceAction era
 fromGovernanceAction = \case
   Gov.NoConfidence prevGovId ->
@@ -173,11 +170,12 @@ instance IsShelleyBasedEra era => Ord (Proposal era) where
     shelleyBasedEraConstraints (shelleyBasedEra @era) $ compare pp1 pp2
 
 instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
-  toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.Conway vp
+  toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.ConwayEra vp
 
 instance IsShelleyBasedEra era => FromCBOR (Proposal era) where
   fromCBOR =
-    Proposal <$> shelleyBasedEraConstraints (shelleyBasedEra @era) (Shelley.fromEraCBOR @Conway.Conway)
+    Proposal
+      <$> shelleyBasedEraConstraints (shelleyBasedEra @era) (Shelley.fromEraCBOR @Conway.ConwayEra)
 
 instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
   serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
@@ -198,7 +196,7 @@ createProposalProcedure
   -> StakeCredential
   -- ^ Credential to return the deposit to.
   -> GovernanceAction era
-  -> Ledger.Anchor StandardCrypto
+  -> Ledger.Anchor
   -> Proposal era
 createProposalProcedure sbe nw dep cred govAct anchor =
   shelleyBasedEraConstraints sbe $
@@ -223,34 +221,32 @@ fromProposalProcedure sbe (Proposal pp) =
     )
 
 createPreviousGovernanceActionId
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => TxId
+  :: TxId
   -> Word16
   -- ^ Governance action transation index
   -> Ledger.GovPurposeId (r :: Ledger.GovActionPurpose) (ShelleyLedgerEra era)
 createPreviousGovernanceActionId txid index =
   Ledger.GovPurposeId $ createGovernanceActionId txid index
 
-createGovernanceActionId :: TxId -> Word16 -> Gov.GovActionId StandardCrypto
+createGovernanceActionId :: TxId -> Word16 -> Gov.GovActionId
 createGovernanceActionId txid index =
   Ledger.GovActionId
     { Ledger.gaidTxId = toShelleyTxId txid
     , Ledger.gaidGovActionIx = Ledger.GovActionIx index
     }
 
-createAnchor :: Url -> ByteString -> Anchor StandardCrypto
+createAnchor :: Url -> ByteString -> Anchor
 createAnchor url anchorData =
   Ledger.Anchor
     { anchorUrl = url
-    , anchorDataHash = hashAnchorData $ Ledger.AnchorData anchorData
+    , anchorDataHash = Shelley.hashAnnotated $ Ledger.AnchorData anchorData
     }
 
 -- | Get anchor data url and hash from a governance action. A return value of `Nothing`
 -- means that the governance action does not contain anchor data.
 getAnchorDataFromGovernanceAction
-  :: EraCrypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Gov.GovAction (ShelleyLedgerEra era)
-  -> Maybe (Ledger.Anchor StandardCrypto)
+  :: Gov.GovAction (ShelleyLedgerEra era)
+  -> Maybe Ledger.Anchor
 getAnchorDataFromGovernanceAction govAction =
   case govAction of
     Gov.ParameterChange{} -> Nothing

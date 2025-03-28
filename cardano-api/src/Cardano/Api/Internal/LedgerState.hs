@@ -152,10 +152,11 @@ import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Coin qualified as SL
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Keys qualified as SL
-import Cardano.Ledger.PoolDistr qualified as SL
 import Cardano.Ledger.Shelley.API qualified as ShelleyAPI
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.Genesis qualified as Ledger
+import Cardano.Ledger.State qualified as SL
+import Cardano.Protocol.Crypto qualified as Crypto
 import Cardano.Protocol.TPraos.API qualified as TPraos
 import Cardano.Protocol.TPraos.BHeader (checkLeaderNatValue)
 import Cardano.Protocol.TPraos.BHeader qualified as TPraos
@@ -165,10 +166,10 @@ import Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import Cardano.Slotting.Slot qualified as Slot
 import Ouroboros.Consensus.Block.Abstract qualified as Consensus
 import Ouroboros.Consensus.Block.Forging (BlockForging)
+import Ouroboros.Consensus.Byron.ByronHFC qualified as Consensus
 import Ouroboros.Consensus.Byron.Ledger qualified as Byron
 import Ouroboros.Consensus.Cardano qualified as Consensus
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
-import Ouroboros.Consensus.Cardano.CanHardFork qualified as Consensus
 import Ouroboros.Consensus.Cardano.Node qualified as Consensus
 import Ouroboros.Consensus.Config qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
@@ -1288,7 +1289,7 @@ data GenesisConfig
       !NodeConfig
       !Cardano.Chain.Genesis.Config
       !GenesisHashShelley
-      !(Ledger.TransitionConfig (Ledger.LatestKnownEra Consensus.StandardCrypto))
+      !(Ledger.TransitionConfig Ledger.LatestKnownEra)
 
 newtype LedgerStateDir = LedgerStateDir
   { unLedgerStateDir :: FilePath
@@ -1439,7 +1440,7 @@ readAlonzoGenesisConfig mEra enc = do
 readConwayGenesisConfig
   :: MonadIOTransError GenesisConfigError t m
   => NodeConfig
-  -> t m (ConwayGenesis Consensus.StandardCrypto)
+  -> t m ConwayGenesis
 readConwayGenesisConfig enc = do
   let mFile = ncConwayGenesisFile enc
   case mFile of
@@ -1567,7 +1568,7 @@ readConwayGenesis
    . MonadIOTransError ConwayGenesisError t m
   => Maybe (ConwayGenesisFile 'In)
   -> Maybe GenesisHashConway
-  -> t m (ConwayGenesis Consensus.StandardCrypto)
+  -> t m ConwayGenesis
 readConwayGenesis Nothing Nothing = return conwayGenesisDefaults
 readConwayGenesis (Just fp) Nothing = throwError $ ConwayGenesisHashMissing $ unFile fp
 readConwayGenesis Nothing (Just _) = throwError ConwayGenesisFileMissing
@@ -1633,7 +1634,7 @@ renderHash
   :: Cardano.Crypto.Hash.Class.Hash Cardano.Crypto.Hash.Blake2b.Blake2b_256 ByteString -> Text
 renderHash h = Text.decodeUtf8 $ Base16.encode (Cardano.Crypto.Hash.Class.hashToBytes h)
 
-newtype StakeCred = StakeCred {_unStakeCred :: Ledger.Credential 'Ledger.Staking Consensus.StandardCrypto}
+newtype StakeCred = StakeCred {_unStakeCred :: Ledger.Credential 'Ledger.Staking}
   deriving (Eq, Ord)
 
 data Env = Env
@@ -1642,7 +1643,7 @@ data Env = Env
   }
 
 envSecurityParam :: Env -> Word64
-envSecurityParam env = k
+envSecurityParam env = Ledger.unNonZero k
  where
   Consensus.SecurityParam k =
     HFC.hardForkConsensusConfigK $
@@ -1697,7 +1698,7 @@ tickThenReapplyCheckHash cfg block lsb =
   if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
     then
       Right . toLedgerStateEvents $
-        Ledger.tickThenReapplyLedgerResult cfg block lsb
+        Ledger.tickThenReapplyLedgerResult Ledger.ComputeLedgerEvents cfg block lsb
     else
       Left $
         ApplyBlockHashMismatch $
@@ -1732,7 +1733,7 @@ tickThenApply
 tickThenApply cfg block lsb =
   either (Left . ApplyBlockError) (Right . toLedgerStateEvents) $
     runExcept $
-      Ledger.tickThenApplyLedgerResult cfg block lsb
+      Ledger.tickThenApplyLedgerResult Ledger.ComputeLedgerEvents cfg block lsb
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =
@@ -1795,7 +1796,7 @@ nextEpochEligibleLeadershipSlots
   :: forall era
    . ()
   => ShelleyBasedEra era
-  -> ShelleyGenesis Consensus.StandardCrypto
+  -> ShelleyGenesis
   -> SerialisedCurrentEpochState era
   -- ^ We need the mark stake distribution in order to predict
   --   the following epoch's leadership schedule
@@ -1826,7 +1827,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
     -- f is the active slot coefficient
     let stabilityWindowR :: Rational
         stabilityWindowR =
-          fromIntegral (stabilityWindowConst * sgSecurityParam sGen)
+          fromIntegral (stabilityWindowConst * Ledger.unNonZero (sgSecurityParam sGen))
             / Ledger.unboundRational (sgActiveSlotsCoeff sGen)
         stabilityWindowSlots :: SlotNo
         stabilityWindowSlots = fromIntegral @Word64 $ floor $ fromRational @Double stabilityWindowR
@@ -1875,12 +1876,12 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
       first LeaderErrDecodeProtocolEpochStateFailure $
         decodeCurrentEpochState sbe serCurrEpochState
 
-    let snapshot :: ShelleyAPI.SnapShot Consensus.StandardCrypto
+    let snapshot :: ShelleyAPI.SnapShot
         snapshot = ShelleyAPI.ssStakeMark $ ShelleyAPI.esSnapshots cEstate
         markSnapshotPoolDistr
           :: Map
-               (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
-               (SL.IndividualPoolStake Consensus.StandardCrypto)
+               (SL.KeyHash 'SL.StakePool)
+               SL.IndividualPoolStake
         markSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr $ snapshot
 
     let slotRangeOfInterest :: Core.EraPParams ledgerera => Core.PParams ledgerera -> Set SlotNo
@@ -1916,8 +1917,8 @@ isLeadingSlotsTPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
-       (SL.IndividualPoolStake Consensus.StandardCrypto)
+       (SL.KeyHash 'SL.StakePool)
+       SL.IndividualPoolStake
   -> Consensus.Nonce
   -> Crypto.SignKeyVRF v
   -> Ledger.ActiveSlotCoeff
@@ -1941,10 +1942,10 @@ isLeadingSlotsPraos
   => Set SlotNo
   -> PoolId
   -> Map
-       (SL.KeyHash 'SL.StakePool Consensus.StandardCrypto)
-       (SL.IndividualPoolStake Consensus.StandardCrypto)
+       (SL.KeyHash 'SL.StakePool)
+       SL.IndividualPoolStake
   -> Consensus.Nonce
-  -> SL.SignKeyVRF Consensus.StandardCrypto
+  -> Crypto.SignKeyVRF (Crypto.VRF Consensus.StandardCrypto)
   -> Ledger.ActiveSlotCoeff
   -> Either LeadershipError (Set SlotNo)
 isLeadingSlotsPraos slotRangeOfInterest poolid snapshotPoolDistr eNonce vrfSkey activeSlotCoeff' = do
@@ -1967,7 +1968,7 @@ currentEpochEligibleLeadershipSlots
   :: forall era
    . ()
   => ShelleyBasedEra era
-  -> ShelleyGenesis Consensus.StandardCrypto
+  -> ShelleyGenesis
   -> EpochInfo (Either Text)
   -> Ledger.PParams (ShelleyLedgerEra era)
   -> ProtocolState era
@@ -2019,7 +2020,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pp ptclState poolid (VrfSigni
 
 -- TODO remove me?
 constructGlobals
-  :: ShelleyGenesis Consensus.StandardCrypto
+  :: ShelleyGenesis
   -> EpochInfo (Either Text)
   -> Globals
 constructGlobals = Ledger.mkShelleyGlobals
@@ -2306,7 +2307,7 @@ handleExceptions = liftEither <=< liftIO . runExceptT . flip catches handlers
 
 -- WARNING: Do NOT use this function anywhere else except in its current call sites.
 -- This is a temporary work around.
-fromConsensusPoolDistr :: Consensus.PoolDistr c -> SL.PoolDistr c
+fromConsensusPoolDistr :: Consensus.PoolDistr c -> SL.PoolDistr
 fromConsensusPoolDistr cpd =
   SL.PoolDistr
     { SL.unPoolDistr = Map.map toLedgerIndividualPoolStake $ Consensus.unPoolDistr cpd
@@ -2315,7 +2316,7 @@ fromConsensusPoolDistr cpd =
 
 -- WARNING: Do NOT use this function anywhere else except in its current call sites.
 -- This is a temporary work around.
-toLedgerIndividualPoolStake :: Consensus.IndividualPoolStake c -> SL.IndividualPoolStake c
+toLedgerIndividualPoolStake :: Consensus.IndividualPoolStake c -> SL.IndividualPoolStake
 toLedgerIndividualPoolStake ips =
   SL.IndividualPoolStake
     { SL.individualPoolStake = Consensus.individualPoolStake ips

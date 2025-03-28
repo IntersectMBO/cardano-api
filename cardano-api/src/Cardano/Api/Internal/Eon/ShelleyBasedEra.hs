@@ -49,19 +49,11 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes qualified as L
 import Cardano.Ledger.Binary (FromCBOR)
 import Cardano.Ledger.Core qualified as L
-import Cardano.Ledger.SafeHash qualified as L
 import Cardano.Ledger.Shelley.Rules qualified as L
-import Cardano.Ledger.UTxO qualified as L
+import Cardano.Ledger.State qualified as L
+import Cardano.Protocol.Crypto qualified as L
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
-import Ouroboros.Consensus.Shelley.Eras as Consensus
-  ( StandardAllegra
-  , StandardAlonzo
-  , StandardBabbage
-  , StandardConway
-  , StandardMary
-  , StandardShelley
-  )
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 
 import Control.DeepSeq
@@ -214,22 +206,20 @@ instance IsShelleyBasedEra ConwayEra where
   shelleyBasedEra = ShelleyBasedEraConway
 
 type ShelleyBasedEraConstraints era =
-  ( C.HashAlgorithm (L.HASH (L.EraCrypto (ShelleyLedgerEra era)))
-  , C.Signable (L.VRF (L.EraCrypto (ShelleyLedgerEra era))) L.Seed
+  ( C.HashAlgorithm L.HASH
+  , C.Signable (L.VRF L.StandardCrypto) L.Seed
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
-  , L.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
-  , L.Crypto (L.EraCrypto (ShelleyLedgerEra era))
+  , L.ADDRHASH ~ Blake2b.Blake2b_224
   , L.Era (ShelleyLedgerEra era)
-  , L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
   , L.EraPParams (ShelleyLedgerEra era)
   , L.EraTx (ShelleyLedgerEra era)
   , L.EraTxBody (ShelleyLedgerEra era)
   , L.EraTxOut (ShelleyLedgerEra era)
   , L.EraUTxO (ShelleyLedgerEra era)
   , L.EraTxWits (ShelleyLedgerEra era)
-  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody L.StandardCrypto
+  , L.HashAnnotated (L.TxBody (ShelleyLedgerEra era)) L.EraIndependentTxBody
   , L.ShelleyEraTxCert (ShelleyLedgerEra era)
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , IsCardanoEra era
@@ -336,23 +326,23 @@ inAnyShelleyBasedEra sbe a =
 -- ledger library which allows writing conversion functions in a more generic
 -- way.
 type family ShelleyLedgerEra era = ledgerera | ledgerera -> era where
-  ShelleyLedgerEra ShelleyEra = Consensus.StandardShelley
-  ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
-  ShelleyLedgerEra MaryEra = Consensus.StandardMary
-  ShelleyLedgerEra AlonzoEra = Consensus.StandardAlonzo
-  ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
-  ShelleyLedgerEra ConwayEra = Consensus.StandardConway
+  ShelleyLedgerEra ShelleyEra = L.ShelleyEra
+  ShelleyLedgerEra AllegraEra = L.AllegraEra
+  ShelleyLedgerEra MaryEra = L.MaryEra
+  ShelleyLedgerEra AlonzoEra = L.AlonzoEra
+  ShelleyLedgerEra BabbageEra = L.BabbageEra
+  ShelleyLedgerEra ConwayEra = L.ConwayEra
 
 -- | Lookup the lower major protocol version for the shelley based era. In other words
 -- this is the major protocol version that the era has started in.
 eraProtVerLow :: ShelleyBasedEra era -> L.Version
 eraProtVerLow = \case
-  ShelleyBasedEraShelley -> L.eraProtVerLow @L.Shelley
-  ShelleyBasedEraAllegra -> L.eraProtVerLow @L.Allegra
-  ShelleyBasedEraMary -> L.eraProtVerLow @L.Mary
-  ShelleyBasedEraAlonzo -> L.eraProtVerLow @L.Alonzo
-  ShelleyBasedEraBabbage -> L.eraProtVerLow @L.Babbage
-  ShelleyBasedEraConway -> L.eraProtVerLow @L.Conway
+  ShelleyBasedEraShelley -> L.eraProtVerLow @L.ShelleyEra
+  ShelleyBasedEraAllegra -> L.eraProtVerLow @L.AllegraEra
+  ShelleyBasedEraMary -> L.eraProtVerLow @L.MaryEra
+  ShelleyBasedEraAlonzo -> L.eraProtVerLow @L.AlonzoEra
+  ShelleyBasedEraBabbage -> L.eraProtVerLow @L.BabbageEra
+  ShelleyBasedEraConway -> L.eraProtVerLow @L.ConwayEra
 
 requireShelleyBasedEra
   :: ()

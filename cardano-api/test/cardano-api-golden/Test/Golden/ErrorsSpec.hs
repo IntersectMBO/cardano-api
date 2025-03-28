@@ -40,7 +40,6 @@ import Cardano.Ledger.Api.Era qualified as Ledger
 import Cardano.Ledger.Binary.Decoding qualified as Binary
 import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
 import Cardano.Ledger.Plutus.Evaluate
 import Cardano.Ledger.Plutus.ExUnits
@@ -307,7 +306,7 @@ test_ScriptExecutionError =
     , ("ScriptErrorTranslationError", ScriptErrorTranslationError testPastHorizonValue)
     ]
 
-examplePlutusWithContext :: PlutusWithContext StandardCrypto
+examplePlutusWithContext :: PlutusWithContext
 examplePlutusWithContext =
   PlutusWithContext
     { pwcProtocolVersion = defaultVersion
@@ -378,7 +377,7 @@ test_TextEnvelopeError =
     , TextEnvelopeAesonDecodeError string
     ]
 
-testPastHorizonValue :: Ledger.AlonzoContextError (Ledger.AlonzoEra StandardCrypto)
+testPastHorizonValue :: Ledger.AlonzoContextError Ledger.AlonzoEra
 testPastHorizonValue = Ledger.TimeTranslationPastHorizon text
 
 test_TransactionValidityError :: TestTree

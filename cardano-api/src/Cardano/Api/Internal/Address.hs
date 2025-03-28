@@ -106,7 +106,6 @@ import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Address qualified as Shelley
 import Cardano.Ledger.BaseTypes qualified as Shelley
 import Cardano.Ledger.Credential qualified as Shelley
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Plutus.TxInfo qualified as Plutus
 import PlutusLedgerApi.V1 qualified as PlutusAPI
 
@@ -188,8 +187,8 @@ data Address addrtype where
   -- in Shelley era and are thus supported from the Shelley era onwards
   ShelleyAddress
     :: Shelley.Network
-    -> Shelley.PaymentCredential StandardCrypto
-    -> Shelley.StakeReference StandardCrypto
+    -> Shelley.PaymentCredential
+    -> Shelley.StakeReference
     -> Address ShelleyAddr
 
 -- Note that the two ledger credential types here are parametrised by
@@ -231,7 +230,7 @@ instance SerialiseAsRawBytes (Address ByronAddr) where
       $ addr
 
   deserialiseFromRawBytes (AsAddress AsByronAddr) bs =
-    case Shelley.decodeAddr bs :: Maybe (Shelley.Addr StandardCrypto) of
+    case Shelley.decodeAddr bs :: Maybe Shelley.Addr of
       Nothing -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
       Just Shelley.Addr{} -> Left (SerialiseAsRawBytesError "Unable to deserialise Address ByronAddr")
       Just (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) ->
@@ -352,7 +351,7 @@ instance SerialiseAddress AddressAny where
     (AddressByron <$> deserialiseAddress (AsAddress AsByronAddr) t)
       <|> (AddressShelley <$> deserialiseAddress (AsAddress AsShelleyAddr) t)
 
-fromShelleyAddrToAny :: Shelley.Addr StandardCrypto -> AddressAny
+fromShelleyAddrToAny :: Shelley.Addr -> AddressAny
 fromShelleyAddrToAny (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
   AddressByron $ ByronAddress addr
 fromShelleyAddrToAny (Shelley.Addr nw pc scr) =
@@ -531,7 +530,7 @@ makeShelleyAddressInEra sbe nw pc scr =
 data StakeAddress where
   StakeAddress
     :: Shelley.Network
-    -> Shelley.StakeCredential StandardCrypto
+    -> Shelley.StakeCredential
     -> StakeAddress
   deriving (Eq, Ord, Show)
 
@@ -634,7 +633,7 @@ shelleyPayAddrToPlutusPubKHash (ShelleyAddress _ payCred _) =
 -- Internal conversion functions
 --
 
-toShelleyAddr :: AddressInEra era -> Shelley.Addr StandardCrypto
+toShelleyAddr :: AddressInEra era -> Shelley.Addr
 toShelleyAddr (AddressInEra ByronAddressInAnyEra (ByronAddress addr)) =
   Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)
 toShelleyAddr
@@ -644,7 +643,7 @@ toShelleyAddr
     ) =
     Shelley.Addr nw pc scr
 
-toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAccount StandardCrypto
+toShelleyStakeAddr :: StakeAddress -> Shelley.RewardAccount
 toShelleyStakeAddr (StakeAddress nw sc) =
   Shelley.RewardAccount
     { Shelley.raNetwork = nw
@@ -653,7 +652,7 @@ toShelleyStakeAddr (StakeAddress nw sc) =
 
 toShelleyPaymentCredential
   :: PaymentCredential
-  -> Shelley.PaymentCredential StandardCrypto
+  -> Shelley.PaymentCredential
 toShelleyPaymentCredential (PaymentCredentialByKey (PaymentKeyHash kh)) =
   Shelley.KeyHashObj kh
 toShelleyPaymentCredential (PaymentCredentialByScript sh) =
@@ -661,7 +660,7 @@ toShelleyPaymentCredential (PaymentCredentialByScript sh) =
 
 toShelleyStakeCredential
   :: StakeCredential
-  -> Shelley.StakeCredential StandardCrypto
+  -> Shelley.StakeCredential
 toShelleyStakeCredential (StakeCredentialByKey (StakeKeyHash kh)) =
   Shelley.KeyHashObj kh
 toShelleyStakeCredential (StakeCredentialByScript sh) =
@@ -669,7 +668,7 @@ toShelleyStakeCredential (StakeCredentialByScript sh) =
 
 toShelleyStakeReference
   :: StakeAddressReference
-  -> Shelley.StakeReference StandardCrypto
+  -> Shelley.StakeReference
 toShelleyStakeReference (StakeAddressByValue stakecred) =
   Shelley.StakeRefBase (toShelleyStakeCredential stakecred)
 toShelleyStakeReference (StakeAddressByPointer ptr) =
@@ -680,7 +679,7 @@ toShelleyStakeReference NoStakeAddress =
 fromShelleyAddrIsSbe
   :: ()
   => ShelleyBasedEra era
-  -> Shelley.Addr StandardCrypto
+  -> Shelley.Addr
   -> AddressInEra era
 fromShelleyAddrIsSbe sbe = \case
   Shelley.AddrBootstrap (Shelley.BootstrapAddress addr) ->
@@ -690,7 +689,7 @@ fromShelleyAddrIsSbe sbe = \case
 
 fromShelleyAddr
   :: ShelleyBasedEra era
-  -> Shelley.Addr StandardCrypto
+  -> Shelley.Addr
   -> AddressInEra era
 fromShelleyAddr _ (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
   AddressInEra ByronAddressInAnyEra (ByronAddress addr)
@@ -699,11 +698,11 @@ fromShelleyAddr sBasedEra (Shelley.Addr nw pc scr) =
     (ShelleyAddressInEra sBasedEra)
     (ShelleyAddress nw pc scr)
 
-fromShelleyStakeAddr :: Shelley.RewardAccount StandardCrypto -> StakeAddress
+fromShelleyStakeAddr :: Shelley.RewardAccount -> StakeAddress
 fromShelleyStakeAddr (Shelley.RewardAccount nw sc) = StakeAddress nw sc
 
 fromShelleyStakeCredential
-  :: Shelley.StakeCredential StandardCrypto
+  :: Shelley.StakeCredential
   -> StakeCredential
 fromShelleyStakeCredential (Shelley.KeyHashObj kh) =
   StakeCredentialByKey (StakeKeyHash kh)
@@ -711,7 +710,7 @@ fromShelleyStakeCredential (Shelley.ScriptHashObj sh) =
   StakeCredentialByScript (fromShelleyScriptHash sh)
 
 fromShelleyPaymentCredential
-  :: Shelley.PaymentCredential StandardCrypto
+  :: Shelley.PaymentCredential
   -> PaymentCredential
 fromShelleyPaymentCredential (Shelley.KeyHashObj kh) =
   PaymentCredentialByKey (PaymentKeyHash kh)
@@ -719,7 +718,7 @@ fromShelleyPaymentCredential (Shelley.ScriptHashObj sh) =
   PaymentCredentialByScript (ScriptHash sh)
 
 fromShelleyStakeReference
-  :: Shelley.StakeReference StandardCrypto
+  :: Shelley.StakeReference
   -> StakeAddressReference
 fromShelleyStakeReference (Shelley.StakeRefBase stakecred) =
   StakeAddressByValue (fromShelleyStakeCredential stakecred)

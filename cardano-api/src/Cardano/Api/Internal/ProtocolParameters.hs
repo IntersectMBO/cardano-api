@@ -114,6 +114,7 @@ import Cardano.Api.Internal.Utils
 import Cardano.Api.Internal.Value
 
 import Cardano.Binary qualified as CBOR
+import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
@@ -124,8 +125,7 @@ import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys qualified as Ledger
+import Cardano.Ledger.Hashes (HASH)
 import Cardano.Ledger.Plutus.CostModels qualified as Plutus
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 import Cardano.Ledger.Shelley.API qualified as Ledger
@@ -890,7 +890,7 @@ instance FromCBOR ProtocolParametersUpdate where
 -- Praos nonce
 --
 
-newtype PraosNonce = PraosNonce {unPraosNonce :: Ledger.Hash StandardCrypto ByteString}
+newtype PraosNonce = PraosNonce {unPraosNonce :: Hash.Hash HASH ByteString}
   deriving stock (Eq, Ord, Generic)
   deriving (Show, IsString) via UsingRawBytesHex PraosNonce
   deriving (ToJSON, FromJSON) via UsingRawBytesHex PraosNonce
@@ -1218,9 +1218,8 @@ toAlonzoCommonPParamsUpdate
     pure ppuAlonzoCommon
 
 toAlonzoPParamsUpdate
-  :: Ledger.Crypto crypto
-  => ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (PParamsUpdate (Ledger.AlonzoEra crypto))
+  :: ProtocolParametersUpdate
+  -> Either ProtocolParametersConversionError (PParamsUpdate Ledger.AlonzoEra)
 toAlonzoPParamsUpdate
   protocolParametersUpdate@ProtocolParametersUpdate
     { protocolUpdateProtocolVersion
@@ -1250,9 +1249,8 @@ toBabbageCommonPParamsUpdate
     pure ppuBabbage
 
 toBabbagePParamsUpdate
-  :: Ledger.Crypto crypto
-  => ProtocolParametersUpdate
-  -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate (Ledger.BabbageEra crypto))
+  :: ProtocolParametersUpdate
+  -> Either ProtocolParametersConversionError (Ledger.PParamsUpdate Ledger.BabbageEra)
 toBabbagePParamsUpdate
   protocolParametersUpdate@ProtocolParametersUpdate
     { protocolUpdateProtocolVersion
@@ -1290,7 +1288,6 @@ toConwayPParamsUpdate = toBabbageCommonPParamsUpdate
 fromLedgerUpdate
   :: forall era ledgerera
    . ShelleyLedgerEra era ~ ledgerera
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => ShelleyBasedEra era
   -> Ledger.Update ledgerera
   -> UpdateProposal
@@ -1300,7 +1297,6 @@ fromLedgerUpdate sbe (Ledger.Update ppup epochno) =
 fromLedgerProposedPPUpdates
   :: forall era ledgerera
    . ShelleyLedgerEra era ~ ledgerera
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
   => ShelleyBasedEra era
   -> Ledger.ProposedPPUpdates ledgerera
   -> Map (Hash GenesisKey) ProtocolParametersUpdate
@@ -1402,8 +1398,7 @@ fromAlonzoCommonPParamsUpdate ppu =
     }
 
 fromAlonzoPParamsUpdate
-  :: Ledger.Crypto crypto
-  => PParamsUpdate (Ledger.AlonzoEra crypto)
+  :: PParamsUpdate Ledger.AlonzoEra
   -> ProtocolParametersUpdate
 fromAlonzoPParamsUpdate ppu =
   (fromAlonzoCommonPParamsUpdate ppu)
@@ -1422,8 +1417,7 @@ fromBabbageCommonPParamsUpdate ppu =
     }
 
 fromBabbagePParamsUpdate
-  :: Ledger.Crypto crypto
-  => PParamsUpdate (Ledger.BabbageEra crypto)
+  :: PParamsUpdate Ledger.BabbageEra
   -> ProtocolParametersUpdate
 fromBabbagePParamsUpdate ppu =
   (fromBabbageCommonPParamsUpdate ppu)
