@@ -1,12 +1,17 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -37,6 +42,10 @@ module Cardano.Api.Internal.Keys.Shelley
   , VerificationKey (..)
   , SigningKey (..)
   , Hash (..)
+  , AnyStakePoolVerificationKey (..)
+  , anyStakePoolVerificationKeyHash
+  , AnyStakePoolSigningKey (..)
+  , anyStakePoolSigningKeyToVerificationKey
   )
 where
 
@@ -52,6 +61,7 @@ import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.SerialiseUsing
 
+import Cardano.Binary (DecoderError (DecoderErrorUnknownTag), cborError)
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
 import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Crypto.Seed qualified as Crypto
@@ -60,13 +70,20 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Crypto qualified as Shelley (DSIGN)
 import Cardano.Ledger.Keys qualified as Shelley
 
-import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
+import Codec.CBOR.Decoding (Decoder, TokenType (TypeListLen), decodeListLenOf, peekTokenType)
+import Codec.CBOR.Encoding (Encoding, encodeListLen)
+import Data.Aeson.Types
+  ( ToJSONKey (..)
+  , toJSONKeyText
+  , withText
+  )
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Either.Combinators (maybeToRight)
 import Data.Maybe
 import Data.String (IsString (..))
+import Data.Word (Word8)
 
 --
 -- Shelley payment keys
@@ -1658,6 +1675,50 @@ instance CastSigningKeyRole GenesisUTxOKey PaymentKey where
 -- stake pool keys
 --
 
+-- | Wrapper that handles both normal and extended StakePoolKeys VerificationKeys
+data AnyStakePoolVerificationKey
+  = AnyStakePoolNormalVerificationKey (VerificationKey StakePoolKey)
+  | AnyStakePoolExtendedVerificationKey (VerificationKey StakePoolExtendedKey)
+  deriving (Show, Eq)
+
+instance ToCBOR AnyStakePoolVerificationKey where
+  toCBOR :: AnyStakePoolVerificationKey -> Encoding
+  toCBOR (AnyStakePoolNormalVerificationKey vk) =
+    encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR vk
+  toCBOR (AnyStakePoolExtendedVerificationKey vk) =
+    encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR vk
+
+instance FromCBOR AnyStakePoolVerificationKey where
+  fromCBOR :: Decoder s AnyStakePoolVerificationKey
+  fromCBOR =
+    peekTokenType >>= \case
+      TypeListLen ->
+        decodeListLenOf 2 >> do
+          tag <- fromCBOR
+          case tag of
+            0 -> AnyStakePoolNormalVerificationKey <$> fromCBOR
+            1 -> AnyStakePoolExtendedVerificationKey <$> fromCBOR
+            _ -> cborError $ DecoderErrorUnknownTag "AnyStakePoolVerificationKey" tag
+      -- This case is for backwards compatibility (with CBOR encoding that doesn't support extended keys)
+      _ -> AnyStakePoolNormalVerificationKey <$> fromCBOR
+
+anyStakePoolVerificationKeyHash :: AnyStakePoolVerificationKey -> Hash StakePoolKey
+anyStakePoolVerificationKeyHash (AnyStakePoolNormalVerificationKey vk) = verificationKeyHash vk
+anyStakePoolVerificationKeyHash (AnyStakePoolExtendedVerificationKey vk) =
+  let StakePoolExtendedKeyHash hash = verificationKeyHash vk in StakePoolKeyHash hash
+
+-- | Wrapper that handles both normal and extended StakePoolKeys SigningKeys
+data AnyStakePoolSigningKey
+  = AnyStakePoolNormalSigningKey (SigningKey StakePoolKey)
+  | AnyStakePoolExtendedSigningKey (SigningKey StakePoolExtendedKey)
+  deriving Show
+
+anyStakePoolSigningKeyToVerificationKey :: AnyStakePoolSigningKey -> AnyStakePoolVerificationKey
+anyStakePoolSigningKeyToVerificationKey (AnyStakePoolNormalSigningKey sk) =
+  AnyStakePoolNormalVerificationKey (getVerificationKey sk)
+anyStakePoolSigningKeyToVerificationKey (AnyStakePoolExtendedSigningKey vk) =
+  AnyStakePoolExtendedVerificationKey (getVerificationKey vk)
+
 data StakePoolKey
 
 instance HasTypeProxy StakePoolKey where
@@ -1892,6 +1953,10 @@ instance SerialiseAsRawBytes (Hash StakePoolExtendedKey) where
       (SerialiseAsRawBytesError "Unable to deserialise Hash StakePoolExtendedKey")
       (StakePoolExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
+instance SerialiseAsBech32 (Hash StakePoolExtendedKey) where
+  bech32PrefixFor _ = "pool_xvkh"
+  bech32PrefixesPermitted _ = ["pool_xvkh"]
+
 instance HasTextEnvelope (VerificationKey StakePoolExtendedKey) where
   textEnvelopeType _ = "StakePoolExtendedVerificationKey_ed25519_bip32"
 
@@ -1905,6 +1970,24 @@ instance SerialiseAsBech32 (VerificationKey StakePoolExtendedKey) where
 instance SerialiseAsBech32 (SigningKey StakePoolExtendedKey) where
   bech32PrefixFor _ = "pool_xsk"
   bech32PrefixesPermitted _ = ["pool_xsk"]
+
+instance ToJSON (Hash StakePoolExtendedKey) where
+  toJSON = toJSON . serialiseToBech32
+
+instance ToJSONKey (Hash StakePoolExtendedKey) where
+  toJSONKey = toJSONKeyText serialiseToBech32
+
+instance FromJSON (Hash StakePoolExtendedKey) where
+  parseJSON = withText "PoolId" $ \str ->
+    case deserialiseFromBech32 (AsHash AsStakePoolExtendedKey) str of
+      Left err ->
+        fail $
+          docToString $
+            mconcat
+              [ "Error deserialising Hash StakePoolKey: " <> pretty str
+              , " Error: " <> prettyError err
+              ]
+      Right h -> pure h
 
 instance CastVerificationKeyRole StakePoolExtendedKey StakePoolKey where
   castVerificationKey (StakePoolExtendedVerificationKey vk) =
