@@ -20,6 +20,7 @@ module Cardano.Api.Internal.SerialiseLedgerCddl
   , readFileTextEnvelopeCddlAnyOf
   , deserialiseFromTextEnvelopeCddlAnyOf
   , writeTxFileTextEnvelopeCddl
+  , writeTxFileTextEnvelopeCanonicalCddl
   , writeTxWitnessFileTextEnvelopeCddl
   -- Exported for testing
   , deserialiseByronTxCddl
@@ -37,6 +38,7 @@ import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.IO
 import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Serialise.Cbor.Canonical
 import Cardano.Api.Internal.SerialiseTextEnvelope
   ( TextEnvelope (..)
   , TextEnvelopeDescr (TextEnvelopeDescr)
@@ -211,12 +213,30 @@ deserialiseWitnessLedgerCddl sbe te =
   legacyDecoding _ v = v
 
 writeTxFileTextEnvelopeCddl
-  :: ()
-  => ShelleyBasedEra era
+  :: ShelleyBasedEra era
   -> File content Out
   -> Tx era
   -> IO (Either (FileError ()) ())
-writeTxFileTextEnvelopeCddl era path tx =
+writeTxFileTextEnvelopeCddl sbe = writeTxFileTextEnvelopeCddl' sbe False
+
+-- | Write transaction in the text envelope format, the CBOR will be in canonical format according
+-- to CIP-21 https://github.com/cardano-foundation/CIPs/blob/master/CIP-0021/README.md#canonical-cbor-serialization-format
+writeTxFileTextEnvelopeCanonicalCddl
+  :: ShelleyBasedEra era
+  -> File content Out
+  -> Tx era
+  -> IO (Either (FileError ()) ())
+writeTxFileTextEnvelopeCanonicalCddl sbe = writeTxFileTextEnvelopeCddl' sbe True
+
+writeTxFileTextEnvelopeCddl'
+  :: ()
+  => ShelleyBasedEra era
+  -> Bool
+  -- ^ True to produce canonical CBOR
+  -> File content Out
+  -> Tx era
+  -> IO (Either (FileError ()) ())
+writeTxFileTextEnvelopeCddl' era isCanonicalCbor path tx =
   runExceptT $ do
     handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
  where
@@ -224,8 +244,18 @@ writeTxFileTextEnvelopeCddl era path tx =
 
   serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
   serialiseTxLedgerCddl era' tx' =
-    shelleyBasedEraConstraints era' $
-      serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx'
+    shelleyBasedEraConstraints era' $ do
+      let te = serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx'
+      if isCanonicalCbor
+        then do
+          let canonicalisedTxBs =
+                either
+                  (\err -> error $ "Impossible - deserialisation of just serialised bytes failed " <> show err)
+                  id
+                  . canonicaliseCborBs
+                  $ teRawCBOR te
+          te{teRawCBOR = canonicalisedTxBs}
+        else te
 
 writeTxWitnessFileTextEnvelopeCddl
   :: ShelleyBasedEra era

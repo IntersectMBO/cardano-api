@@ -427,7 +427,7 @@ import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.ScriptData
-import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Tx.BuildTxWith
