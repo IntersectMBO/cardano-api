@@ -428,10 +428,6 @@ instance SerialiseAsRawBytes (Hash StakeKey) where
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise Hash StakeKey") $
       StakeKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs
 
-instance SerialiseAsBech32 (Hash StakeKey) where
-  bech32PrefixFor _ = "pool"
-  bech32PrefixesPermitted _ = ["pool"]
-
 instance HasTextEnvelope (VerificationKey StakeKey) where
   textEnvelopeType _ =
     "StakeVerificationKeyShelley_"
