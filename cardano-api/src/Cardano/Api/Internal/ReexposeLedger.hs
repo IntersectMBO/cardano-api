@@ -83,6 +83,7 @@ module Cardano.Api.Internal.ReexposeLedger
   , GovActionId (..)
   , GovActionIx (..)
   , GovActionState (..)
+  , GovPurposeId (..)
   , Vote (..)
   , Voter (..)
   , VotingProcedure (..)
@@ -210,7 +211,7 @@ import Cardano.Ledger.Alonzo.Scripts
   , plutusScriptLanguage
   )
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
-import Cardano.Ledger.Api (Constitution (..), GovAction (..), unRedeemers)
+import Cardano.Ledger.Api (Constitution (..), GovAction (..), GovPurposeId (..), unRedeemers)
 import Cardano.Ledger.Api.Tx.Cert
   ( pattern AuthCommitteeHotKeyTxCert
   , pattern DelegStakeTxCert
