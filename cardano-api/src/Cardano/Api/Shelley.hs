@@ -251,7 +251,6 @@ module Cardano.Api.Shelley
 
     -- ** Governance
   , GovernanceAction (..)
-  , GovernanceActionId (..)
   , Proposal (..)
   , VotingProcedure (..)
   , VotingProcedures (..)
@@ -259,7 +258,6 @@ module Cardano.Api.Shelley
   , GovernancePollAnswer (..)
   , GovernancePollError (..)
   , Vote (..)
-  , Voter (..)
   , createProposalProcedure
   , createVotingProcedure
   , renderGovernancePollError

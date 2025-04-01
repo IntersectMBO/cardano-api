@@ -4017,18 +4017,18 @@ extractWitnessableVotes
 extractWitnessableVotes e@ConwayEraOnwardsConway TxBodyContent{txVotingProcedures} =
   List.nub
     [ (WitVote vote, BuildTxWith wit)
-    | (Voter vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
+    | (vote, wit) <- getVotes e $ maybe TxVotingProceduresNone unFeatured txVotingProcedures
     ]
  where
   getVotes
     :: ConwayEraOnwards era
     -> TxVotingProcedures BuildTx era
-    -> [(Voter era, Witness WitCtxStake era)]
+    -> [(L.Voter, Witness WitCtxStake era)]
   getVotes ConwayEraOnwardsConway TxVotingProceduresNone = []
   getVotes ConwayEraOnwardsConway (TxVotingProcedures allVotingProcedures (BuildTxWith scriptWitnessedVotes)) =
-    [ (Voter singleVoter, wit)
-    | (singleVoter, _) <- toList $ L.unVotingProcedures allVotingProcedures
-    , let wit = case Map.lookup singleVoter scriptWitnessedVotes of
+    [ (voter, wit)
+    | (voter, _) <- toList $ L.unVotingProcedures allVotingProcedures
+    , let wit = case Map.lookup voter scriptWitnessedVotes of
             Just sWit -> ScriptWitness ScriptWitnessForStakeAddr sWit
             Nothing -> KeyWitness KeyWitnessForStakeAddr
     ]
