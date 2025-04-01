@@ -12,8 +12,181 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 -- | Node IPC protocols
+--
+-- This module provides the client side of the node-to-client IPC protocol
+-- used to communicate with a local Cardano node. This can be used to
+-- query the node for information, to submit transactions, and even to
+-- get historical information aobut the chain by using the
+-- 'ChainSync' protocol.
 module Cardano.Api.Internal.IPC
-  ( -- * Node interaction
+  ( -- * Examples
+
+    -- | In this section, we show two examples: one for querying the node
+    -- and obtain some basic information, and another one for submitting a
+    -- transaction to the node.
+    --
+    -- To find out about how to create a transaction, see the documentation
+    -- in "Cardano.Api.Internal.Tx.Body".
+    --
+    -- For the following examples we will use the following qualified imports
+    -- from @cardano-api@:
+    --
+    -- @
+    -- import qualified Cardano.Api as Api
+    -- import qualified Cardano.Api.Consensus as Consensus
+    -- import qualified Cardano.Api.Network as Network
+    -- import qualified Cardano.Api.Shelley as Shelley
+    -- @
+    --
+    -- We will also use the following explicit import from @base@:
+    --
+    -- @
+    -- import Control.Monad.Except (runExceptT)
+    -- @
+    --
+    -- And we will assume we are working on top of the @IO@ monad and that
+    -- we have unqualified access to the @Prelude@ module.
+
+    -- ** Constructing connection information
+
+    -- | Independently of whether we want to query the node or submit transactions,
+    -- the first thing we need to do is to gather the connection information.
+    --
+    -- We need three pieces of information:
+    --
+    --    * The number of slots per epoch for the network the node is connected to.
+    --      We can obtain this information by looking for the @epochLength@ key in
+    --      the @shelley-genesis.json@ file that the node is using to connect to the
+    --      network. For the preview network, this is currently @86_400@.
+    --    * In the case we are connecting to a testnet, we also need to find out
+    --      the magic number for the network the node is connected to. This can be
+    --      obtained by looking for the @networkMagic@ key in the @shelley-genesis.json@
+    --      file that the node is using to connect to the network. For the preview
+    --      network, the magic number is currently @2@.
+    --    * The path to the socket file of the node. This can be set when starting the
+    --      node by using the @--socket-path@ parameter. By default it can usually be
+    --      found in the @db@ subfolder of the node's working directory.
+    --
+    --  Then, we gather all the information into a 'LocalNodeConnectInfo' value.
+    --
+    --  For example, let's assume we are connecting to the preview network, and that the
+    --  socket file is located at @\/home\/user\/cardano-node\/db\/node.socket@. We could
+    --  then create the 'LocalNodeConnectInfo' value as follows:
+    --
+    -- @
+    -- let connectionInfo =
+    --       Api.LocalNodeConnectInfo
+    --          { Api.localConsensusModeParams = Api.CardanoModeParams (Api.EpochSlots 86_400)
+    --          , Api.localNodeNetworkId = Api.Testnet (Api.NetworkMagic 2)
+    --          , Api.localNodeSocketPath = Api.File "\/home\/user\/cardano-node\/db\/node.socket"
+    --          }
+    -- @
+
+    -- ** Querying the node for the UTxO set
+
+    -- | Let's imagine we want to obtain the set of transaction outputs that
+    -- are currently unspent in the network (UTxO set).
+
+    -- *** Obtaining the current era
+
+    -- | Depending on the type of query we want to perform, we usually need
+    -- to know what era the node is currently in. We can hardcode this
+    -- information by using one of the constructors of the 'ShelleyBasedEra' type.
+    -- But we can also obtain this information from the node, as follows:
+    --
+    -- @
+    -- eEra <- runExceptT $ Api.queryNodeLocalState connectionInfo Network.VolatileTip Api.QueryCurrentEra
+    -- @
+    --
+    -- Here, 'VolatileTip' means we want to get the information out of the most recent node that the
+    -- node is aware of. The disadvantage is that the information we get may potentially be rolled back
+    -- and stop being valid. We need to account for this. Alternatively, we can use 'ImmutableTip' to
+    -- obtain the information from the most recent block that is assumed by the consensus algorithm
+    -- to be final, and that won't be rolled back. But this information is not so recent, in mainnet
+    -- this is about 36 hours in the past.
+    --
+    -- 'QueryCurrentEra' is the constructor of the query we want to run. In this case, we want to
+    -- obtain the current era of the node.
+    --
+    -- The result of the query is an 'ExceptT' monad, which we can run by using the 'runExceptT'
+    -- function, which in turn gives us a @eEra@ value of type @Either AcquiringFailure AnyCardanoEra@.
+    --
+    -- This is an example of how to unwrap this value into a 'ShelleyBasedEra' based era, assuming the node
+    -- is not still running Byron:
+    --
+    -- @
+    -- Api.AnyShelleyBasedEra sbe :: Api.AnyShelleyBasedEra <- case eEra of
+    --   Right (Api.AnyCardanoEra era) ->
+    --     Api.caseByronOrShelleyBasedEra
+    --       (error "Error, we are in Byron era")
+    --       (return . Api.AnyShelleyBasedEra)
+    --       era
+    --   Left Shelley.AFPointTooOld -> error "Error, point queried in the chain is too old!"
+    --   Left Shelley.AFPointNotOnChain -> error "Error, point queried is not on chain!"
+    -- @
+    --
+    -- 'AFPointToolOld' and 'AFPointNotOnChain' should not happen either with 'VolatileTip' or 'ImmutableTip'.
+
+    -- *** Obtaining the UTxO set
+
+    -- | Now that we know the current era, we can query the node for the UTxO set similarly
+    -- by using the 'QueryUTxO' query as follow:
+    --
+    -- @
+    -- eUtxo <-
+    --   runExceptT $
+    --     Api.queryNodeLocalState
+    --       connectionInfo
+    --       Network.VolatileTip
+    --       (Api.QueryInEra (Api.QueryInShelleyBasedEra sbe (Api.QueryUTxO Api.QueryUTxOWhole)))
+    -- @
+    --
+    -- This time, @eUtxo@ has a nested type of @Either AcquiringFailure (Either EraMismatch (UTxO era))@.
+    -- So we can unwrap it as follows:
+    --
+    -- @
+    -- utxo <- case eUtxo of
+    --   Right (Right (Api.UTxO utxo)) -> do
+    --     return utxo
+    --   Right (Left (Consensus.EraMismatch{Consensus.ledgerEraName, Consensus.otherEraName})) ->
+    --     error
+    --       ( "Error, we assumed era was "
+    --           ++ show otherEraName
+    --           ++ " but it was "
+    --           ++ show ledgerEraName
+    --       )
+    --   Left Shelley.AFPointTooOld -> error "Error, point queried in the chain is too old!"
+    --   Left Shelley.AFPointNotOnChain -> error "Error, point queried is not on chain!"
+    -- @
+    --
+    -- The obtained @utxo@ is a standard @Map@ of type @Map TxIn (TxOut CtxUTxO era)@.
+
+    -- ** Submitting a transaction
+
+    -- | Let's assume we have a signed transaction of the right era that we want to submit to the node,
+    -- and that it is in the variable @signedTx@ of type @Tx era@.
+    --
+    -- You can find out how to make such a transaction by looking at the documentation of the
+    -- "Cardano.Api.Internal.Tx.Body" module.
+    --
+    -- We can send it to the node by using the 'submitTxToNodeLocal' function as follows:
+    --
+    -- @
+    -- result <- Api.submitTxToNodeLocal connectionInfo (Api.TxInMode sbe signedTx)
+    -- @
+    --
+    -- The result of the submission is a 'SubmitResult' value, which can be inspected as follows:
+    --
+    -- @
+    -- case result of
+    --   Api.SubmitSuccess -> putStrLn "Transaction submitted successfully!"
+    --   Api.SubmitFail reason -> error $ "Error submitting transaction: " ++ show reason
+    -- @
+    --
+    -- If the command succeeds, then the transaction will be on the node's mempool ready
+    -- to be included in a block.
+
+    -- * Node interaction
 
     -- | Operations that involve talking to a local Cardano node.
     connectToLocalNode
