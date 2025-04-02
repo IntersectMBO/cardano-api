@@ -977,6 +977,7 @@ module Cardano.Api
 
     -- ** Conversions
   , toCtxUTxOTxOut
+  , fromCtxUTxOTxOut
   -- TODO: arrange not to export these
   , fromNetworkMagic
   , toNetworkMagic
