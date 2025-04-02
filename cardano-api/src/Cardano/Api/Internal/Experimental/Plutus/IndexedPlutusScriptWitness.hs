@@ -20,6 +20,9 @@ module Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
   , createIndexedPlutusScriptWitnesses
   , getAnyWitnessRedeemerPointerMap
   , obtainAlonzoScriptPurposeConstraints
+
+    -- * Exposed for testing
+  , constructRedeeemerPointerMap
   )
 where
 
@@ -48,16 +51,21 @@ import GHC.Exts
 -- and the index of the thing it is witnessing.
 data IndexedPlutusScriptWitness witnessable (lang :: L.Language) (purpose :: PlutusScriptPurpose) era where
   IndexedPlutusScriptWitness
-    :: Witnessable witnessable era
+    :: L.AlonzoEraScript era
+    => Witnessable witnessable era
     -> (L.PlutusPurpose L.AsIx era)
     -> (PlutusScriptWitness lang purpose era)
     -> IndexedPlutusScriptWitness witnessable lang purpose era
+
+deriving instance Show (IndexedPlutusScriptWitness witnessable lang purpose era)
 
 data AnyIndexedPlutusScriptWitness era where
   AnyIndexedPlutusScriptWitness
     :: GetPlutusScriptPurpose era
     => IndexedPlutusScriptWitness witnessable lang purpose era
     -> AnyIndexedPlutusScriptWitness era
+
+deriving instance Show (AnyIndexedPlutusScriptWitness era)
 
 -- | These are all of the "things" a plutus script can witness. We include the relevant
 -- type class constraint to avoid boilerplate when creating the 'PlutusPurpose' in
@@ -141,7 +149,8 @@ instance GetPlutusScriptPurpose era where
   toPlutusScriptPurpose index WitProposal{} = L.mkProposingPurpose (L.AsIx index)
 
 createIndexedPlutusScriptWitness
-  :: Word32
+  :: L.AlonzoEraScript era
+  => Word32
   -> Witnessable witnessable era
   -> PlutusScriptWitness lang purpose era
   -> IndexedPlutusScriptWitness witnessable lang purpose era
@@ -151,7 +160,8 @@ createIndexedPlutusScriptWitness index witnessable =
 -- | Create a list of indexed plutus script witnesses from anything witnessable that has been
 -- witnesseed by a plutus script.
 createIndexedPlutusScriptWitnesses
-  :: [(Witnessable witnessable era, AnyWitness era)]
+  :: L.AlonzoEraScript era
+  => [(Witnessable witnessable era, AnyWitness era)]
   -> [AnyIndexedPlutusScriptWitness era]
 createIndexedPlutusScriptWitnesses witnessableThings =
   [ AnyIndexedPlutusScriptWitness $ createIndexedPlutusScriptWitness index thing sWit
@@ -162,16 +172,15 @@ createIndexedPlutusScriptWitnesses witnessableThings =
 
 -- | The transaction's redeemer pointer map allows the ledger to connect a redeemer and execution unit pairing to the relevant
 -- script. The ledger basically reconstructs the indicies (redeemer pointers) of this map can then look up the relevant
--- execution units/redeemer pairing. NB the redeemer pointer has been renamed to 'PlutusPurpose AsIndex' in the ledger.
+-- execution units/redeemer pairing. NB: the redeemer pointer has been renamed to 'PlutusPurpose AsIndex' in the ledger.
 getAnyWitnessRedeemerPointerMap
   :: AlonzoEraOnwards era
-  -> (Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))
+  -> [(Witnessable witnessable (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))]
   -> L.Redeemers (ShelleyLedgerEra era)
-getAnyWitnessRedeemerPointerMap eon (_, AnyKeyWitnessPlaceholder) = alonzoEraOnwardsConstraints eon mempty
-getAnyWitnessRedeemerPointerMap eon (_, AnySimpleScriptWitness{}) = alonzoEraOnwardsConstraints eon mempty
 getAnyWitnessRedeemerPointerMap eon anyWit =
   constructRedeeemerPointerMap eon $
-    createIndexedPlutusScriptWitnesses [anyWit]
+    alonzoEraOnwardsConstraints eon $
+      createIndexedPlutusScriptWitnesses anyWit
 
 -- | An 'IndexedPlutusScriptWitness' contains everything we need to construct a single
 -- entry in the redeemer pointer map.

@@ -98,7 +98,7 @@ data HashableScriptData
       !BS.ByteString
       -- ^ Original 'ScriptData' bytes
       !ScriptData
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 instance HasTypeProxy HashableScriptData where
   data AsType HashableScriptData = AsHashableScriptData

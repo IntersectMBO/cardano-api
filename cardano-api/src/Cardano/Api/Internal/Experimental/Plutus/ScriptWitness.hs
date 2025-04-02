@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -64,6 +65,8 @@ data PlutusScriptWitness (lang :: L.Language) (purpose :: PlutusScriptPurpose) e
     -> ScriptRedeemer
     -> ExecutionUnits
     -> PlutusScriptWitness lang purpose era
+
+deriving instance Show (PlutusScriptWitness lang purpose era)
 
 getPlutusScriptWitnessLanguage :: PlutusScriptWitness lang purpose era -> L.Language
 getPlutusScriptWitnessLanguage (PlutusScriptWitness l _ _ _ _) =
