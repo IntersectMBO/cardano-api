@@ -333,12 +333,16 @@ test-suite cardano-api-test
     containers,
     data-default,
     directory,
+    filepath,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
     interpolatedstring-perl6,
+    lifted-base,
     microlens,
+    monad-control,
     mtl,
+    network,
     ouroboros-consensus,
     ouroboros-consensus-cardano,
     ouroboros-consensus-protocol,
@@ -362,6 +366,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO
+    Test.Cardano.Api.IPCMock
     Test.Cardano.Api.Json
     Test.Cardano.Api.KeysByron
     Test.Cardano.Api.Ledger

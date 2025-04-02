@@ -17,6 +17,7 @@ import Test.Cardano.Api.Experimental qualified
 import Test.Cardano.Api.Genesis qualified
 import Test.Cardano.Api.GovAnchorValidation qualified
 import Test.Cardano.Api.IO qualified
+import Test.Cardano.Api.IPCMock qualified
 import Test.Cardano.Api.Json qualified
 import Test.Cardano.Api.KeysByron qualified
 import Test.Cardano.Api.Ledger qualified
@@ -53,6 +54,7 @@ tests =
     , Test.Cardano.Api.Experimental.tests
     , Test.Cardano.Api.Genesis.tests
     , Test.Cardano.Api.IO.tests
+    , Test.Cardano.Api.IPCMock.tests
     , Test.Cardano.Api.Json.tests
     , Test.Cardano.Api.KeysByron.tests
     , Test.Cardano.Api.Ledger.tests
