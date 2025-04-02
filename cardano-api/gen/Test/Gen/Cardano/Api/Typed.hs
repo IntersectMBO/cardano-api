@@ -119,6 +119,7 @@ module Test.Gen.Cardano.Api.Typed
   , genTxValidityUpperBound
   , genTxWithdrawals
   , genUnsignedQuantity
+
   , genPositiveQuantity
   , genValueForMinting
   , genValueForTxOut
@@ -133,11 +134,15 @@ module Test.Gen.Cardano.Api.Typed
   , genProposal
   , genVotingProcedures
   , genSimpleScriptWithoutEmptyAnys
+  , genWitnessable
+  , genPlutusScriptWitness
+  , genIndexedPlutusScriptWitness
   )
 where
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
+import qualified Cardano.Api.Experimental as Exp 
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Byron as Byron
@@ -146,6 +151,8 @@ import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
 import           Cardano.Api.Internal.Script (scriptInEraToRefScript)
 import           Cardano.Api.Shelley
+import           Cardano.Ledger.Plutus.Language qualified as L
+
 import qualified Cardano.Api.Shelley as ShelleyApi
 
 import qualified Cardano.Binary as CBOR
@@ -168,8 +175,8 @@ import           Data.Maybe
 import qualified Data.ByteString.Base16 as Base16
 import           Data.Ratio (Ratio, (%))
 import           Data.String
-import Test.Gen.Cardano.Api.Hardcoded
-import Data.Typeable
+import           Test.Gen.Cardano.Api.Hardcoded
+import           Data.Typeable
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
@@ -1361,6 +1368,38 @@ genCurrentTreasuryValue _era = Q.arbitrary
 
 genTreasuryDonation :: ConwayEraOnwards era -> Gen L.Coin
 genTreasuryDonation _era = Q.arbitrary
+
+genWitnessable :: L.AlonzoEraScript era => Gen (Exp.Witnessable Exp.TxInItem era)
+genWitnessable = Exp.WitTxIn <$> genTxIn  
+
+genIndexedPlutusScriptWitness 
+  :: L.AlonzoEraScript (ShelleyLedgerEra era) 
+  => Gen (Exp.IndexedPlutusScriptWitness Exp.TxInItem L.PlutusV3 Exp.SpendingScript (ShelleyLedgerEra era))
+genIndexedPlutusScriptWitness =  do
+    index <- Gen.word32 $ Range.linear 1 10
+    witnessable <- genWitnessable
+    Exp.IndexedPlutusScriptWitness 
+       <$> genWitnessable
+       <*> genPlutusPurpose index witnessable
+       <*> genPlutusScriptWitness 
+
+genPlutusPurpose 
+  :: Word32 
+  -> Exp.Witnessable thing (ShelleyLedgerEra era) 
+  -> Gen (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
+genPlutusPurpose index wit = return $ Exp.toPlutusScriptPurpose index wit
+
+genPlutusScriptWitness :: Gen (Exp.PlutusScriptWitness L.PlutusV3 purpose era)
+genPlutusScriptWitness = do 
+  let l = Exp.toPlutusSLanguage PlutusScriptV3
+  Exp.PlutusScriptWitness l . Exp.PReferenceScript 
+    <$> genTxIn
+    <*> genPlutusScriptDatum
+    <*> genHashableScriptData
+    <*> genExecutionUnits 
+
+genPlutusScriptDatum :: Gen (Exp.PlutusScriptDatum lang purpose)
+genPlutusScriptDatum = return Exp.NoScriptDatum 
 
 -- | This generator does not generate a valid witness - just a random one.
 genScriptWitnessForStake :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxStake era)

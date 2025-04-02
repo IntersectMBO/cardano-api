@@ -24,6 +24,7 @@ import Test.Cardano.Api.Metadata qualified
 import Test.Cardano.Api.Ord qualified
 import Test.Cardano.Api.RawBytes qualified
 import Test.Cardano.Api.Transaction.Autobalance qualified
+import Test.Cardano.Api.Transaction.Body.Plutus.Scripts qualified
 import Test.Cardano.Api.TxBody qualified
 import Test.Cardano.Api.Value qualified
 
@@ -59,6 +60,7 @@ tests =
     , Test.Cardano.Api.Metadata.tests
     , Test.Cardano.Api.Ord.tests
     , Test.Cardano.Api.RawBytes.tests
+    , Test.Cardano.Api.Transaction.Body.Plutus.Scripts.tests
     , Test.Cardano.Api.Transaction.Autobalance.tests
     , Test.Cardano.Api.TxBody.tests
     , Test.Cardano.Api.Value.tests
