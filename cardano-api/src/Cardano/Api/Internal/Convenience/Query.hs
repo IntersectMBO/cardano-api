@@ -77,14 +77,15 @@ renderQueryConvenienceError (QueryEraMismatch (EraMismatch ledgerEraName' otherE
     <> " era."
 renderQueryConvenienceError ByronEraNotSupported =
   "Byron era not supported"
-renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionError minNtcVersion ntcVersion)) =
+renderQueryConvenienceError (QceUnsupportedNtcVersion (UnsupportedNtcVersionError ntcVersion supportedVersions)) =
   "Unsupported feature for the node-to-client protocol version.\n"
-    <> "This query requires at least "
-    <> textShow minNtcVersion
-    <> " but the node negotiated "
+    <> "The negotiated version is "
     <> textShow ntcVersion
+    <> " but this query is only supported in "
+    <> textShow supportedVersions
     <> ".\n"
-    <> "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
+    <> "Probably either the client or the node is out-of-date.\n"
+    <> "Later node versions support later node-to-client protocol versions (but development protocol versions are not enabled in the node by default)."
 renderQueryConvenienceError (QceUnexpectedException e) =
   "Unexpected exception while processing query:\n" <> fromString (displayException e)
 

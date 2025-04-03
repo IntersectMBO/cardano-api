@@ -74,7 +74,6 @@ import Cardano.Api.Internal.Eras.Case
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.GenesisParameters
 import Cardano.Api.Internal.HasTypeProxy (HasTypeProxy (..), Proxy)
-import Cardano.Api.Internal.IPC.Version
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.Modes
 import Cardano.Api.Internal.NetworkId
@@ -119,7 +118,6 @@ import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
 import Ouroboros.Consensus.Shelley.Protocol.Abstract (ProtoCrypto)
 import Ouroboros.Network.Block (Serialised (..))
-import Ouroboros.Network.NodeToClient.Version (NodeToClientVersion (..))
 import Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
 
@@ -162,16 +160,6 @@ data QueryInMode result where
     :: QueryInMode ChainPoint
   QueryLedgerConfig
     :: QueryInMode (Consensus.CardanoLedgerConfig StandardCrypto)
-
-instance NodeToClientVersionOf (QueryInMode result) where
-  nodeToClientVersionOf = \case
-    QueryCurrentEra -> NodeToClientV_16
-    QueryInEra q -> nodeToClientVersionOf q
-    QueryEraHistory -> NodeToClientV_16
-    QuerySystemStart -> NodeToClientV_16
-    QueryChainBlockNo -> NodeToClientV_16
-    QueryChainPoint -> NodeToClientV_16
-    QueryLedgerConfig -> NodeToClientV_20
 
 data EraHistory where
   EraHistory
@@ -250,10 +238,6 @@ data QueryInEra era result where
     :: ShelleyBasedEra era
     -> QueryInShelleyBasedEra era result
     -> QueryInEra era result
-
-instance NodeToClientVersionOf (QueryInEra era result) where
-  nodeToClientVersionOf QueryByronUpdateState = NodeToClientV_16
-  nodeToClientVersionOf (QueryInShelleyBasedEra _ q) = nodeToClientVersionOf q
 
 deriving instance Show (QueryInEra era result)
 
@@ -338,42 +322,6 @@ data QueryInShelleyBasedEra era result where
     :: Ledger.KeyHash 'Ledger.StakePool
     -> QueryInShelleyBasedEra era L.DefaultVote
 
--- | Mapping for queries in Shelley-based eras returning minimal node-to-client protocol versions. More
--- information about queries versioning can be found:
---   * https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-NodeToClient.html#t:NodeToClientVersion
---   * https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/QueryVersioning/#implementation
-instance NodeToClientVersionOf (QueryInShelleyBasedEra era result) where
-  nodeToClientVersionOf QueryEpoch = NodeToClientV_16
-  nodeToClientVersionOf QueryGenesisParameters = NodeToClientV_16
-  nodeToClientVersionOf QueryProtocolParameters = NodeToClientV_16
-  nodeToClientVersionOf QueryStakeDistribution = NodeToClientV_16
-  nodeToClientVersionOf (QueryUTxO f) = nodeToClientVersionOf f
-  nodeToClientVersionOf (QueryStakeAddresses _ _) = NodeToClientV_16
-  nodeToClientVersionOf QueryStakePools = NodeToClientV_16
-  nodeToClientVersionOf (QueryStakePoolParameters _) = NodeToClientV_16
-  nodeToClientVersionOf QueryDebugLedgerState = NodeToClientV_16
-  nodeToClientVersionOf QueryProtocolState = NodeToClientV_16
-  nodeToClientVersionOf QueryCurrentEpochState = NodeToClientV_16
-  -- Babbage >= v13
-  nodeToClientVersionOf (QueryPoolState _) = NodeToClientV_16
-  nodeToClientVersionOf (QueryPoolDistribution _) = NodeToClientV_16
-  nodeToClientVersionOf (QueryStakeSnapshot _) = NodeToClientV_16
-  nodeToClientVersionOf (QueryStakeDelegDeposits _) = NodeToClientV_16
-  -- Conway >= v16
-  nodeToClientVersionOf QueryAccountState = NodeToClientV_16
-  nodeToClientVersionOf QueryConstitution = NodeToClientV_16
-  nodeToClientVersionOf QueryGovState = NodeToClientV_16
-  nodeToClientVersionOf QueryDRepState{} = NodeToClientV_16
-  nodeToClientVersionOf QueryDRepStakeDistr{} = NodeToClientV_16
-  nodeToClientVersionOf QuerySPOStakeDistr{} = NodeToClientV_16
-  nodeToClientVersionOf QueryCommitteeMembersState{} = NodeToClientV_16
-  nodeToClientVersionOf QueryStakeVoteDelegatees{} = NodeToClientV_16
-  nodeToClientVersionOf QueryProposals{} = NodeToClientV_17
-  nodeToClientVersionOf QueryRatifyState{} = NodeToClientV_17
-  nodeToClientVersionOf QueryFuturePParams{} = NodeToClientV_18
-  nodeToClientVersionOf QueryLedgerPeerSnapshot = NodeToClientV_19
-  nodeToClientVersionOf QueryStakePoolDefaultVote{} = NodeToClientV_20
-
 deriving instance Show (QueryInShelleyBasedEra era result)
 
 -- ----------------------------------------------------------------------------
@@ -394,11 +342,6 @@ data QueryUTxOFilter
   | -- | /O(m log n) time, O(m) space/ for utxo size n, and address set size m
     QueryUTxOByTxIn (Set TxIn)
   deriving (Eq, Show)
-
-instance NodeToClientVersionOf QueryUTxOFilter where
-  nodeToClientVersionOf QueryUTxOWhole = NodeToClientV_16
-  nodeToClientVersionOf (QueryUTxOByAddress _) = NodeToClientV_16
-  nodeToClientVersionOf (QueryUTxOByTxIn _) = NodeToClientV_16
 
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
