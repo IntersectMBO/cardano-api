@@ -4,7 +4,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Api.IPCMock
+module Test.Cardano.Api.IPC
   ( tests
   )
 where
@@ -27,7 +27,6 @@ import Lens.Micro ((&))
 import Network.Socket
 import Network.Socket.ByteString (sendAll)
 import System.Directory (removeFile)
-import System.FilePath ((</>))
 
 import Test.Cardano.Ledger.Common (HasCallStack, when)
 
@@ -51,7 +50,8 @@ prop_mockInteractionWithNode =
     -- We make a query to obtain the current era
     eEra <-
       mockNode
-        (work </> "ms1")
+        work
+        "ms1"
         "test/cardano-api-test/files/input/ipc-mock/server-client-1.raw"
         ( \socketFile ->
             H.evalIO $
@@ -84,7 +84,8 @@ prop_mockInteractionWithNode =
     -- We make a query to obtain the UTxOs for the given address
     eUtxo <-
       mockNode
-        (work </> "ms2")
+        work
+        "ms2"
         "test/cardano-api-test/files/input/ipc-mock/server-client-2.raw"
         ( \socketFile ->
             H.evalIO $
@@ -172,7 +173,8 @@ prop_mockInteractionWithNode =
 
     result <-
       mockNode
-        (work </> "ms3")
+        work
+        "ms3"
         "test/cardano-api-test/files/input/ipc-mock/server-client-3.raw"
         ( \socketFile ->
             H.evalIO $ Api.submitTxToNodeLocal (connectionInfo (File socketFile)) (Api.TxInMode sbe signedTx)
@@ -185,7 +187,7 @@ prop_mockInteractionWithNode =
 tests :: TestTree
 tests =
   testGroup
-    "Test.Cardano.Api.IPCMock"
+    "Test.Cardano.Api.IPC"
     [ testProperty "Test mock interation with node" prop_mockInteractionWithNode
     ]
 
@@ -209,17 +211,18 @@ mockNode
   => FilePath
   -- ^ Directory to create the socket file in.
   -> FilePath
+  -- ^ Name of the unix socket file to create
+  -> FilePath
   -- ^ File to read the raw replay data from.
   -> (FilePath -> m a)
   -- ^ Action to run while the server is being mocked.
   -> m a
-mockNode work rawReplayData action = do
+mockNode work fileName rawReplayData action = do
   actionFinished :: MVar () <- H.evalIO newEmptyMVar
   bracket
     -- Server set-up (resource acquisition)
     ( do
-        _ <- H.createDirectoryIfMissing work
-        socketFile <- H.noteTempFile work "mock-node.socket"
+        socketFile <- H.noteTempFile work fileName
         sock <- H.evalIO $ do
           sock <- socket AF_UNIX Stream defaultProtocol
           bind sock (SockAddrUnix socketFile)

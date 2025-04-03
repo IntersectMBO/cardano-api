@@ -333,7 +333,6 @@ test-suite cardano-api-test
     containers,
     data-default,
     directory,
-    filepath,
     hedgehog >=1.1,
     hedgehog-extras,
     hedgehog-quickcheck,
@@ -366,7 +365,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO
-    Test.Cardano.Api.IPCMock
+    Test.Cardano.Api.IPC
     Test.Cardano.Api.Json
     Test.Cardano.Api.KeysByron
     Test.Cardano.Api.Ledger
