@@ -16,7 +16,7 @@
 -- This module provides the client side of the node-to-client IPC protocol
 -- used to communicate with a local Cardano node. This can be used to
 -- query the node for information, to submit transactions, and even to
--- get historical information aobut the chain by using the
+-- get historical information about the chain by using the
 -- 'ChainSync' protocol.
 module Cardano.Api.Internal.IPC
   ( -- * Examples
@@ -59,10 +59,10 @@ module Cardano.Api.Internal.IPC
     --      the @shelley-genesis.json@ file that the node is using to connect to the
     --      network. For the preview network, this is currently @86_400@.
     --    * In the case we are connecting to a testnet, we also need to find out
-    --      the magic number for the network the node is connected to. This can be
+    --      the network identifier for the network the node is connected to. This can be
     --      obtained by looking for the @networkMagic@ key in the @shelley-genesis.json@
     --      file that the node is using to connect to the network. For the preview
-    --      network, the magic number is currently @2@.
+    --      network, the network identifier is currently @2@.
     --    * The path to the socket file of the node. This can be set when starting the
     --      node by using the @--socket-path@ parameter. By default it can usually be
     --      found in the @db@ subfolder of the node's working directory.
@@ -98,7 +98,7 @@ module Cardano.Api.Internal.IPC
     -- eEra <- runExceptT $ Api.queryNodeLocalState connectionInfo Network.VolatileTip Api.QueryCurrentEra
     -- @
     --
-    -- Here, 'VolatileTip' means we want to get the information out of the most recent node that the
+    -- Here, 'VolatileTip' means we want to get the information out of the most recent block that the
     -- node is aware of. The disadvantage is that the information we get may potentially be rolled back
     -- and stop being valid. We need to account for this. Alternatively, we can use 'ImmutableTip' to
     -- obtain the information from the most recent block that is assumed by the consensus algorithm
@@ -163,7 +163,7 @@ module Cardano.Api.Internal.IPC
 
     -- ** Submitting a transaction
 
-    -- | Let's assume we have a signed transaction of the right era that we want to submit to the node,
+    -- | Let's assume we have a signed transaction of the latest era that we want to submit to the node,
     -- and that it is in the variable @signedTx@ of type @Tx era@.
     --
     -- You can find out how to make such a transaction by looking at the documentation of the
