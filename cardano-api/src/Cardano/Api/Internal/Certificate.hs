@@ -94,7 +94,7 @@ import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.Pretty (Doc)
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Script
-import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.StakePoolMetadata
 import Cardano.Api.Internal.Utils (noInlineMaybeToStrictMaybe)

@@ -20,6 +20,7 @@ module Cardano.Api.Internal.SerialiseLedgerCddl
   , readFileTextEnvelopeCddlAnyOf
   , deserialiseFromTextEnvelopeCddlAnyOf
   , writeTxFileTextEnvelopeCddl
+  , writeTxFileTextEnvelopeCanonicalCddl
   , writeTxWitnessFileTextEnvelopeCddl
   -- Exported for testing
   , deserialiseByronTxCddl
@@ -37,6 +38,7 @@ import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.IO
 import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Serialise.Cbor.Canonical
 import Cardano.Api.Internal.SerialiseTextEnvelope
   ( TextEnvelope (..)
   , TextEnvelopeDescr (TextEnvelopeDescr)
@@ -44,6 +46,7 @@ import Cardano.Api.Internal.SerialiseTextEnvelope
   , TextEnvelopeType (TextEnvelopeType)
   , deserialiseFromTextEnvelope
   , legacyComparison
+  , serialiseTextEnvelope
   , serialiseToTextEnvelope
   )
 import Cardano.Api.Internal.Tx.Sign
@@ -55,13 +58,11 @@ import Cardano.Ledger.Binary qualified as CBOR
 
 import Control.Monad.Trans.Except.Extra
   ( firstExceptT
-  , handleIOExceptT
   , hoistEither
   , newExceptT
   , runExceptT
   )
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as LBS
@@ -134,11 +135,10 @@ writeByronTxFileTextEnvelopeCddl
   :: File content Out
   -> Byron.ATxAux ByteString
   -> IO (Either (FileError ()) ())
-writeByronTxFileTextEnvelopeCddl path w =
-  runExceptT $ do
-    handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
- where
-  txJson = encodePretty' textEnvelopeCddlJSONConfig (serializeByronTx w) <> "\n"
+writeByronTxFileTextEnvelopeCddl path =
+  writeLazyByteStringFile path
+    . serialiseTextEnvelope
+    . serializeByronTx
 
 serializeByronTx :: Byron.ATxAux ByteString -> TextEnvelope
 serializeByronTx tx =
@@ -211,39 +211,59 @@ deserialiseWitnessLedgerCddl sbe te =
   legacyDecoding _ v = v
 
 writeTxFileTextEnvelopeCddl
-  :: ()
-  => ShelleyBasedEra era
+  :: ShelleyBasedEra era
   -> File content Out
   -> Tx era
   -> IO (Either (FileError ()) ())
-writeTxFileTextEnvelopeCddl era path tx =
-  runExceptT $ do
-    handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
- where
-  txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseTxLedgerCddl era tx) <> "\n"
+writeTxFileTextEnvelopeCddl sbe path =
+  writeLazyByteStringFile path
+    . serialiseTextEnvelope
+    . serialiseTxToTextEnvelope sbe
 
-  serialiseTxLedgerCddl :: ShelleyBasedEra era -> Tx era -> TextEnvelope
-  serialiseTxLedgerCddl era' tx' =
-    shelleyBasedEraConstraints era' $
-      serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")) tx'
+-- | Write transaction in the text envelope format. The CBOR will be in canonical format according
+-- to RFC 7049. It is also a requirement of CIP-21, which is not fully implemented.
+--
+-- 1. RFC 7049: https://datatracker.ietf.org/doc/html/rfc7049#section-3.9
+-- 2. CIP-21: https://github.com/cardano-foundation/CIPs/blob/master/CIP-0021/README.md#canonical-cbor-serialization-format
+writeTxFileTextEnvelopeCanonicalCddl
+  :: ShelleyBasedEra era
+  -> File content Out
+  -> Tx era
+  -> IO (Either (FileError ()) ())
+writeTxFileTextEnvelopeCanonicalCddl sbe path =
+  writeLazyByteStringFile path
+    . serialiseTextEnvelope
+    . canonicaliseTextEnvelopeCbor
+    . serialiseTxToTextEnvelope sbe
+ where
+  canonicaliseTextEnvelopeCbor :: TextEnvelope -> TextEnvelope
+  canonicaliseTextEnvelopeCbor te = do
+    let canonicalisedTxBs =
+          either
+            ( \err ->
+                error $
+                  "writeTxFileTextEnvelopeCanonicalCddl: Impossible - deserialisation of just serialised bytes failed "
+                    <> show err
+            )
+            id
+            . canonicaliseCborBs
+            $ teRawCBOR te
+    te{teRawCBOR = canonicalisedTxBs}
+
+serialiseTxToTextEnvelope :: ShelleyBasedEra era -> Tx era -> TextEnvelope
+serialiseTxToTextEnvelope era' tx' =
+  shelleyBasedEraConstraints era' $ do
+    serialiseToTextEnvelope (Just "Ledger Cddl Format") tx'
 
 writeTxWitnessFileTextEnvelopeCddl
   :: ShelleyBasedEra era
   -> File () Out
   -> KeyWitness era
   -> IO (Either (FileError ()) ())
-writeTxWitnessFileTextEnvelopeCddl sbe path w =
-  runExceptT $ do
-    handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) txJson
- where
-  txJson = encodePretty' textEnvelopeCddlJSONConfig (serialiseWitnessLedgerCddl sbe w) <> "\n"
-
-textEnvelopeCddlJSONConfig :: Config
-textEnvelopeCddlJSONConfig =
-  defConfig{confCompare = textEnvelopeCddlJSONKeyOrder}
-
-textEnvelopeCddlJSONKeyOrder :: Text -> Text -> Ordering
-textEnvelopeCddlJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
+writeTxWitnessFileTextEnvelopeCddl sbe path =
+  writeLazyByteStringFile path
+    . serialiseTextEnvelope
+    . serialiseWitnessLedgerCddl sbe
 
 -- | This GADT allows us to deserialise a tx or key witness without
 -- having to provide the era.

@@ -17,7 +17,7 @@ import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
-import Cardano.Api.Internal.SerialiseCBOR
+import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.TxIn
 

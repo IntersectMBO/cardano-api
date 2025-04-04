@@ -1,7 +1,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 
 -- | CBOR serialisation
-module Cardano.Api.Internal.SerialiseCBOR
+module Cardano.Api.Internal.Serialise.Cbor
   ( SerialiseAsCBOR (..)
   , FromCBOR (..)
   , ToCBOR (..)
