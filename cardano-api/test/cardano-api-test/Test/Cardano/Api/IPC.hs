@@ -19,22 +19,29 @@ import Control.Concurrent (MVar, killThread, newEmptyMVar, putMVar, readMVar)
 import Control.Concurrent.Lifted (forkFinally)
 import Control.Exception.Lifted (bracket)
 import Control.Monad.Trans.Control (MonadBaseControl)
+import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.Map qualified as Map
 import Data.Monoid (Any)
 import Data.Set qualified as Set
+import Data.String (fromString)
 import Lens.Micro ((&))
 import Network.Socket
 import Network.Socket.ByteString (sendAll)
 import System.Directory (removeFile)
+import System.Info qualified as SYS
 
 import Test.Cardano.Ledger.Common (HasCallStack, when)
 
 import Hedgehog (MonadTest, Property, success)
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
+import Hedgehog.Extras.Stock.OS (isWin32)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog
+import Test.Tasty.ExpectedFailure (wrapTest)
+import Test.Tasty.Hedgehog qualified as H
+import Test.Tasty.Providers (testPassed)
+import Test.Tasty.Runners (Result (resultShortDescription))
 
 prop_mockInteractionWithNode :: Property
 prop_mockInteractionWithNode =
@@ -188,8 +195,27 @@ tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.IPC"
-    [ testProperty "Test mock interation with node" prop_mockInteractionWithNode
+    [ ignoreOnMacAndWindows "Test mock interation with node" prop_mockInteractionWithNode
     ]
+
+type Os = String
+
+isMacOS :: Bool
+isMacOS = SYS.os == "darwin"
+
+ignoreOnMacAndWindows :: String -> Property -> TestTree
+ignoreOnMacAndWindows pName prop =
+  bool id (ignoreOn "MacOS and Windows") (isMacOS || isWin32) $
+    H.testPropertyNamed pName (fromString pName) prop
+
+ignoreOn :: Os -> TestTree -> TestTree
+ignoreOn os =
+  wrapTest $
+    const $
+      return $
+        (testPassed ("IGNORED on " <> os))
+          { resultShortDescription = "IGNORED on " <> os
+          }
 
 -- | Creates a mock node socket that replays the binary data from the given file.
 -- To capture the raw data you could run @socat@ like this:

@@ -348,6 +348,7 @@ test-suite cardano-api-test
     ouroboros-network-api,
     plutus-ledger-api,
     tasty,
+    tasty-expected-failure,
     tasty-hedgehog,
     tasty-quickcheck,
     text,
