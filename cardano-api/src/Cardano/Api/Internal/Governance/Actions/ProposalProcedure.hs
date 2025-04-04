@@ -220,14 +220,6 @@ fromProposalProcedure sbe (Proposal pp) =
     , fromGovernanceAction (Gov.pProcGovAction pp)
     )
 
-createPreviousGovernanceActionId
-  :: TxId
-  -> Word16
-  -- ^ Governance action transation index
-  -> Ledger.GovPurposeId (r :: Ledger.GovActionPurpose) (ShelleyLedgerEra era)
-createPreviousGovernanceActionId txid index =
-  Ledger.GovPurposeId $ createGovernanceActionId txid index
-
 createGovernanceActionId :: TxId -> Word16 -> Gov.GovActionId
 createGovernanceActionId txid index =
   Ledger.GovActionId

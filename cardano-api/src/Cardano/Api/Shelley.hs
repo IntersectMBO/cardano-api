@@ -192,7 +192,6 @@ module Cardano.Api.Shelley
 
     -- * Governance Actions
   , createAnchor
-  , createPreviousGovernanceActionId
   , createGovernanceActionId
 
     -- * DRep
