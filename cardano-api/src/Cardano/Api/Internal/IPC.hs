@@ -57,7 +57,9 @@ module Cardano.Api.Internal.IPC
     --    * The number of slots per epoch for the network the node is connected to.
     --      We can obtain this information by looking for the @epochLength@ key in
     --      the @shelley-genesis.json@ file that the node is using to connect to the
-    --      network. For the preview network, this is currently @86_400@.
+    --      network. For the preview network, at the time of writing, it is @86_400@,
+    --      but it can change. This value, and other genesis parameters, can also be
+    --      queried by using the 'QueryGenesisParameters' query.
     --    * In the case we are connecting to a testnet, we also need to find out
     --      the network identifier for the network the node is connected to. This can be
     --      obtained by looking for the @networkMagic@ key in the @shelley-genesis.json@
@@ -159,6 +161,8 @@ module Cardano.Api.Internal.IPC
     --   Left Shelley.AFPointNotOnChain -> error "Error, point queried is not on chain!"
     -- @
     --
+    -- Alternatively, to avoid having nested result types, we can also use the convenience
+    -- functions and types from "Cardano.Api.Internal.Convenience.Query".
     -- The obtained @utxo@ is a standard @Map@ of type @Map TxIn (TxOut CtxUTxO era)@.
 
     -- ** Submitting a transaction

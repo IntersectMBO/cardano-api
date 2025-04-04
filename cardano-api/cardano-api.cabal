@@ -73,6 +73,7 @@ library
     Cardano.Api.Experimental
     Cardano.Api.Internal.Address
     Cardano.Api.Internal.Block
+    Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DRepMetadata
     Cardano.Api.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Internal.Eras
@@ -191,7 +192,6 @@ library
     Cardano.Api.Internal.Certificate
     Cardano.Api.Internal.Compatible.Tx
     Cardano.Api.Internal.Convenience.Construction
-    Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DeserialiseAnyOf
     Cardano.Api.Internal.Eon.AllegraEraOnwards
     Cardano.Api.Internal.Eon.AlonzoEraOnwards
