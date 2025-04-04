@@ -34,9 +34,35 @@ module Cardano.Api.Experimental
   , babbageEraOnwardsToEra
   , eraToBabbageEraOnwards
   , sbeToEra
+
+    -- ** Witness related
+  , AnyWitness (..)
+  , PlutusScriptWitness (..)
+  , Witnessable (..)
+  , WitnessableItem (..)
+
+    -- ** Plutus related
+  , PlutusScriptInEra (..)
+  , PlutusScriptOrReferenceInput (..)
+  , IndexedPlutusScriptWitness (..)
+  , PlutusScriptPurpose (..)
+  , PlutusScriptDatum (..)
+  , NoScriptDatum (..)
+
+    -- ** Internal
+  , getAnyWitnessRedeemerPointerMap
+  , toPlutusScriptPurpose
+
+    -- ** Legacy
+  , toPlutusSLanguage
   )
 where
 
 import Cardano.Api.Internal.Experimental.Eras
+import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
+import Cardano.Api.Internal.Experimental.Plutus.Script
+import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
+import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
 import Cardano.Api.Internal.Experimental.Tx
+import Cardano.Api.Internal.Experimental.Witness.AnyWitness
 import Cardano.Api.Internal.Fees (evaluateTransactionExecutionUnitsShelley)
