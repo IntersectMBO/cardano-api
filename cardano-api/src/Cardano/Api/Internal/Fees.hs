@@ -70,7 +70,9 @@ module Cardano.Api.Internal.Fees
     -- @
     --
     -- 2. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'
-    -- query defined in "Cardano.Api.Internal.Query". Let's assume they are stored in the @exampleProtocolParams@ variable.
+    -- query defined in "Cardano.Api.Internal.Query". "Cardano.Api.Internal.IPC" documentation illustrates how
+    -- to make a query using IPC protocol.
+    -- Let's assume they are stored in the @exampleProtocolParams@ variable.
     --
     -- 3. The draft transaction body, which can be created using 'createTransactionBody' defined in "Cardano.Api.Internal.Tx.Body":
     --
@@ -127,7 +129,8 @@ module Cardano.Api.Internal.Fees
     -- in "Cardano.Api.Internal.Tx.Body". It is assumed to be stored in the @txBodyContent@ variable.
     --
     -- 3. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'
-    -- query defined in "Cardano.Api.Internal.Query". Let's assume they are stored in the @exampleProtocolParams@ variable.
+    -- query defined in "Cardano.Api.Internal.Query". "Cardano.Api.Internal.IPC" documentation illustrates how
+    -- to make a query using IPC protocol. Let's assume they are stored in the @exampleProtocolParams@ variable.
     --
     -- 4. For stake pool and governance actions, we will also need:
     --
@@ -224,7 +227,8 @@ module Cardano.Api.Internal.Fees
     -- @
     --
     -- 2. Network start time, obtainable using the 'QuerySystemStart' query defined in
-    -- "Cardano.Api.Internal.Query". Assume we have it in the @exampleSystemStart@ variable.
+    -- "Cardano.Api.Internal.Query". "Cardano.Api.Internal.IPC" documentation illustrates how
+    -- to make a query using IPC protocol. Assume we have it in the @exampleSystemStart@ variable.
     --
     -- 3. Ledger epoch information, derivable by applying 'toLedgerEpochInfo' to the
     -- 'EraHistory', which can be retrieved using the 'QueryEraHistory' query defined in
