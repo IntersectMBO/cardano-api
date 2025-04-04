@@ -1,5 +1,32 @@
 # Changelog for cardano-api
 
+## 10.13.0.0
+
+- Sort transaction fields in CBOR representation
+  (feature, compatible)
+  [PR 785](https://github.com/IntersectMBO/cardano-api/pull/785)
+
+- Fix bug in the construction of the redeemer pointer map. 
+  (breaking, bugfix)
+  [PR 800](https://github.com/IntersectMBO/cardano-api/pull/800)
+
+- Removed `createPreviousGovernanceActionId`. Use `GovPurposeId . createGovernanceActionId` instead.
+  Export `GovPurposeId` through `Cardano.Api.Ledger`.
+  (breaking, refactoring)
+  [PR 797](https://github.com/IntersectMBO/cardano-api/pull/797)
+
+- Remove unused ledger types' wrappers: `GovernanceActionId` and `Voter`. Use `GovActionId` and `Voter` from ledger instead.
+  (breaking, refactoring)
+  [PR 796](https://github.com/IntersectMBO/cardano-api/pull/796)
+
+- Delegate decision on supported versions for queries to Consensus.
+  (feature)
+  [PR 790](https://github.com/IntersectMBO/cardano-api/pull/790)
+
+- Adding missing `fromCtxUTxOTxOut` export
+  (compatible)
+  [PR 794](https://github.com/IntersectMBO/cardano-api/pull/794)
+
 ## 10.12.0.0
 
 - Bumped ledger and dependencies for node 10.3 release.
