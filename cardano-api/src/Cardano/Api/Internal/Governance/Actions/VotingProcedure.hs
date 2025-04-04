@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -12,8 +11,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Api.Internal.Governance.Actions.VotingProcedure where
 
@@ -35,40 +32,7 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
-import Data.Typeable
 import GHC.Generics
-
-newtype GovernanceActionId era = GovernanceActionId
-  { unGovernanceActionId :: Ledger.GovActionId
-  }
-  deriving (Show, Eq, Ord)
-
-instance IsShelleyBasedEra era => ToCBOR (GovernanceActionId era) where
-  toCBOR = \case
-    GovernanceActionId v ->
-      shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(ShelleyLedgerEra era) v
-
-instance IsShelleyBasedEra era => FromCBOR (GovernanceActionId era) where
-  fromCBOR = do
-    !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
-    return $ GovernanceActionId v
-
-data Voter era where
-  Voter :: Typeable era => Ledger.Voter -> Voter era
-
-deriving instance Show (Voter era)
-
-deriving instance Eq (Voter era)
-
-deriving instance Ord (Voter era)
-
-instance IsShelleyBasedEra era => ToCBOR (Voter era) where
-  toCBOR (Voter v) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.toEraCBOR @(ShelleyLedgerEra era) v
-
-instance IsShelleyBasedEra era => FromCBOR (Voter era) where
-  fromCBOR = do
-    !v <- shelleyBasedEraConstraints (shelleyBasedEra @era) $ Ledger.fromEraCBOR @(ShelleyLedgerEra era)
-    pure $ Voter v
 
 data Vote
   = No
