@@ -8,9 +8,11 @@ module Test.Cardano.Api.Transaction.Body.Plutus.Scripts
 where
 
 import Cardano.Api (AlonzoEraOnwards (..))
+import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Shelley (fromAlonzoData)
+import Cardano.Api.Shelley qualified as Api
 
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Conway qualified as L
@@ -20,7 +22,12 @@ import Prelude
 import Data.List qualified as List
 import Data.Map.Strict qualified as Map
 
-import Test.Gen.Cardano.Api.Typed (genIndexedPlutusScriptWitness, genWitnessable)
+import Test.Gen.Cardano.Api.Typed
+  ( genIndexedPlutusScriptWitness
+  , genMintWitnessable
+  , genSimpleScriptMintWitness
+  , genWitnessable
+  )
 
 import Test.Cardano.Api.Orphans ()
 
@@ -79,9 +86,57 @@ prop_getAnyWitnessRedeemerPointerMap = property $ do
   -- Confirm we have idential redeemers
   List.sort initialRedeemers === List.sort convertedRedeemers
 
+-- | Previously toAnyWitness was not handling simple scripts correctly resulting
+-- in their exclusion in the resultant transaction.
+prop_toAnyWitness :: Property
+prop_toAnyWitness =
+  property $ do
+    let eon = AlonzoEraOnwardsConway
+    l <- forAll $ Gen.int (Range.linear 2 5)
+    witnessables <-
+      fmap List.nub $ forAll $ Gen.list (Range.singleton l) $ genMintWitnessable @L.ConwayEra
+
+    simpleScripts <-
+      fmap List.nub $
+        forAll $
+          Gen.list (Range.singleton l) $
+            genSimpleScriptMintWitness Api.ShelleyBasedEraConway
+
+    let excludeReferenceScripts = filter (not . isReferenceScript) simpleScripts
+        finalLength = List.length zipped
+        zipped = zip witnessables excludeReferenceScripts
+
+    res <-
+      evalEither $
+        (legacyWitnessConversion eon) $
+          zip witnessables (map Api.BuildTxWith excludeReferenceScripts)
+
+    annotateShow (extractSimpleScripts res)
+
+    cover 30 "More than one script generated" $ length res > 1
+
+    finalLength === length (extractSimpleScripts res) + length (extractPlutusScripts res)
+
+-- | We exclude reference scripts because they do not end up in the resulting transaction.
+isReferenceScript :: Api.Witness witctx era -> Bool
+isReferenceScript (Api.ScriptWitness _ (Api.SimpleScriptWitness _ (Api.SReferenceScript{}))) = True
+isReferenceScript (Api.ScriptWitness _ (Api.PlutusScriptWitness _ _ (Api.PReferenceScript{}) _ _ _)) = False
+isReferenceScript _ = False
+
+extractSimpleScripts
+  :: [(Witnessable 'MintItem era, AnyWitness era)]
+  -> [SimpleScriptOrReferenceInput era]
+extractSimpleScripts wits =
+  [s | (_, AnySimpleScriptWitness s) <- wits]
+
+extractPlutusScripts :: [(Witnessable witctz era, AnyWitness era)] -> [AnyWitness era]
+extractPlutusScripts wits =
+  [AnyPlutusScriptWitness s | (_, AnyPlutusScriptWitness s) <- wits]
+
 tests :: TestTree
 tests =
   testGroup
     "Test.Cardano.Api.Transaction.Body.Plutus.Scripts"
     [ testProperty "prop_getAnyWitnessRedeemerPointerMap" prop_getAnyWitnessRedeemerPointerMap
+    , testProperty "prop_toAnyWitness" prop_toAnyWitness
     ]

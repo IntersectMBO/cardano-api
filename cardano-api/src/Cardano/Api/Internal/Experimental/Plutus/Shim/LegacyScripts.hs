@@ -12,6 +12,7 @@
 
 module Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
   ( legacyWitnessToScriptRequirements
+  , legacyWitnessConversion
   , toPlutusSLanguage
   )
 where
