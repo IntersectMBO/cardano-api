@@ -13,6 +13,7 @@ module Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 
     -- * For testing only
   , extractExecutionUnits
+  , getTxScriptWitnessRequirements
   )
 where
 

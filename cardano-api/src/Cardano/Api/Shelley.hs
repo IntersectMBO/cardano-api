@@ -284,6 +284,7 @@ module Cardano.Api.Shelley
   , mergeVotingProcedures
   , singletonVotingProcedures
   , extractExecutionUnits
+  , getTxScriptWitnessRequirements
   , VotesMergingConflict (..)
   )
 where
