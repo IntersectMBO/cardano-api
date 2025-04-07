@@ -44,14 +44,14 @@ import Data.Word
 data OperationalCertificate
   = OperationalCertificate
       !(Shelley.OCert StandardCrypto)
-      !AnyStakePoolVerificationKey
+      !(VerificationKey StakePoolKey)
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
 data OperationalCertificateIssueCounter
   = OperationalCertificateIssueCounter
   { opCertIssueCount :: !Word64
-  , opCertIssueColdKey :: !AnyStakePoolVerificationKey -- For consistency checking
+  , opCertIssueColdKey :: !(VerificationKey StakePoolKey) -- For consistency checking
   }
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
@@ -95,8 +95,8 @@ data OperationalCertIssueError
     --
     -- Order: pool vkey expected, pool skey supplied
     OperationalCertKeyMismatch
-      AnyStakePoolVerificationKey
-      AnyStakePoolVerificationKey
+      (VerificationKey StakePoolKey)
+      (VerificationKey StakePoolKey)
   deriving Show
 
 instance Error OperationalCertIssueError where
@@ -133,11 +133,20 @@ issueOperationalCertificate
           , OperationalCertificateIssueCounter (succ counter) poolVKey
           )
    where
-    poolVKey' :: AnyStakePoolVerificationKey
+    castAnyStakePoolSigningKeyToNormalVerificationKey
+      :: AnyStakePoolSigningKey
+      -> VerificationKey StakePoolKey
+    castAnyStakePoolSigningKeyToNormalVerificationKey anyStakePoolSKey =
+      case anyStakePoolSigningKeyToVerificationKey anyStakePoolSKey of
+        AnyStakePoolNormalVerificationKey normalStakePoolVKey -> normalStakePoolVKey
+        AnyStakePoolExtendedVerificationKey extendedStakePoolVKey ->
+          castVerificationKey extendedStakePoolVKey
+
+    poolVKey' :: VerificationKey StakePoolKey
     poolVKey' =
       either
-        anyStakePoolSigningKeyToVerificationKey
-        (AnyStakePoolNormalVerificationKey . convert . getVerificationKey)
+        castAnyStakePoolSigningKeyToNormalVerificationKey
+        (convert . getVerificationKey)
         skey
      where
       convert

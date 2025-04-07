@@ -215,8 +215,8 @@ test_OperationalCertIssueError =
     [
       ( "OperationalCertKeyMismatch"
       , OperationalCertKeyMismatch
-          (AnyStakePoolNormalVerificationKey stakePoolVerKey1)
-          (AnyStakePoolNormalVerificationKey stakePoolVerKey2)
+          stakePoolVerKey1
+          stakePoolVerKey2
       )
     ]
 
