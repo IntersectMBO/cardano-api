@@ -195,7 +195,7 @@ legacyWitnessToScriptRequirements eon wits = do
 -- Misc helpers
 
 getVersion :: forall era. AlonzoEraOnwards era -> Version
-getVersion eon = alonzoEraOnwardsConstraints eon $ L.eraProtVerLow @(ShelleyLedgerEra era)
+getVersion eon = alonzoEraOnwardsConstraints eon $ L.eraProtVerHigh @(ShelleyLedgerEra era)
 
 obtainConstraints
   :: Old.PlutusScriptVersion lang
