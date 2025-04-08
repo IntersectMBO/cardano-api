@@ -224,6 +224,7 @@ type ShelleyBasedEraConstraints era =
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , IsCardanoEra era
   , IsShelleyBasedEra era
+  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" (ShelleyLedgerEra era)))
   , Typeable era
   )
