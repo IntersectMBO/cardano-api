@@ -1,5 +1,12 @@
 # Changelog for cardano-api
 
+## 10.14.0.0
+
+- Fix `toAnyWitness` to not ignore simple scripts
+  Update `getVersion` to retrieve the highest protocol version given an era
+  (compatible, bugfix)
+  [PR 805](https://github.com/IntersectMBO/cardano-api/pull/805)
+
 ## 10.13.0.0
 
 - Sort transaction fields in CBOR representation
