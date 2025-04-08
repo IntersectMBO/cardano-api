@@ -47,6 +47,7 @@ module Test.Gen.Cardano.Api.Typed
   , genScript
   , genValidScript
   , genSimpleScript
+  , genSimpleScriptMintWitness
   , genPlutusScript
   , genPlutusV1Script
   , genPlutusV2Script
@@ -135,6 +136,7 @@ module Test.Gen.Cardano.Api.Typed
   , genVotingProcedures
   , genSimpleScriptWithoutEmptyAnys
   , genWitnessable
+  , genMintWitnessable
   , genPlutusScriptWitness
   , genIndexedPlutusScriptWitness
   )
@@ -248,6 +250,9 @@ genSimpleScriptWithoutEmptyAnys = genRandomSimpleScript False
 
 genSimpleScript :: Gen SimpleScript
 genSimpleScript = genRandomSimpleScript True
+
+genSimpleScriptMintWitness :: ShelleyBasedEra era -> Gen (Witness WitCtxMint era)
+genSimpleScriptMintWitness sbe = ScriptWitness ScriptWitnessForMinting <$> genScriptWitnessForMint sbe
 
 -- | We include a @hasEmptyAnys@ parameter to control whether we allow empty
 -- 'RequireAnyOf' constructors. This is because an empty 'RequireAnyOf',
@@ -1371,6 +1376,9 @@ genTreasuryDonation _era = Q.arbitrary
 
 genWitnessable :: L.AlonzoEraScript era => Gen (Exp.Witnessable Exp.TxInItem era)
 genWitnessable = Exp.WitTxIn <$> genTxIn  
+
+genMintWitnessable :: L.AlonzoEraScript era => Gen (Exp.Witnessable Exp.MintItem era)
+genMintWitnessable = Exp.WitMint <$> genPolicyId <*> genPolicyAssets 
 
 genIndexedPlutusScriptWitness 
   :: L.AlonzoEraScript (ShelleyLedgerEra era) 

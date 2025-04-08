@@ -12,6 +12,7 @@
 
 module Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
   ( legacyWitnessToScriptRequirements
+  , legacyWitnessConversion
   , toPlutusSLanguage
   )
 where
@@ -53,10 +54,10 @@ toAnyWitness
        (Witnessable thing (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))
 toAnyWitness _ (witnessable, BuildTxWith (Old.KeyWitness _)) =
   return (witnessable, AnyKeyWitnessPlaceholder)
-toAnyWitness _ (witnessable, BuildTxWith (Old.ScriptWitness _ Old.SimpleScriptWitness{})) =
-  return (witnessable, AnyKeyWitnessPlaceholder)
+toAnyWitness eon (witnessable, BuildTxWith (Old.ScriptWitness _ oldSw@Old.SimpleScriptWitness{})) =
+  convertToNewScriptWitness eon oldSw witnessable
 toAnyWitness eon (witnessable, BuildTxWith (Old.ScriptWitness _ oldApiPlutusScriptWitness)) =
-  convertToNewPlutusScriptWitness eon oldApiPlutusScriptWitness witnessable
+  convertToNewScriptWitness eon oldApiPlutusScriptWitness witnessable
 
 type family ToPlutusScriptPurpose witnessable = (purpose :: PlutusScriptPurpose) | purpose -> witnessable where
   ToPlutusScriptPurpose TxInItem = SpendingScript
@@ -66,14 +67,14 @@ type family ToPlutusScriptPurpose witnessable = (purpose :: PlutusScriptPurpose)
   ToPlutusScriptPurpose VoterItem = ProposingScript
   ToPlutusScriptPurpose ProposalItem = VotingScript
 
-convertToNewPlutusScriptWitness
+convertToNewScriptWitness
   :: AlonzoEraOnwards era
   -> Old.ScriptWitness witctx era
   -> Witnessable thing (ShelleyLedgerEra era)
   -> Either
        CBOR.DecoderError
        (Witnessable thing (ShelleyLedgerEra era), AnyWitness (ShelleyLedgerEra era))
-convertToNewPlutusScriptWitness eon (Old.PlutusScriptWitness _ v scriptOrRefInput datum scriptRedeemer execUnits) witnessable = do
+convertToNewScriptWitness eon (Old.PlutusScriptWitness _ v scriptOrRefInput datum scriptRedeemer execUnits) witnessable = do
   let d = createPlutusScriptDatum witnessable v datum
   newScriptWitness <-
     obtainConstraints v $
@@ -85,9 +86,9 @@ convertToNewPlutusScriptWitness eon (Old.PlutusScriptWitness _ v scriptOrRefInpu
         execUnits
         d
   return (witnessable, newScriptWitness)
-convertToNewPlutusScriptWitness eon (Old.SimpleScriptWitness _ scriptOrRefInput) witnessable =
+convertToNewScriptWitness eon (Old.SimpleScriptWitness _ scriptOrRefInput) witnessable =
   case scriptOrRefInput of
-    Old.SScript simpleScript -> do
+    Old.SScript simpleScript -> alonzoEraOnwardsConstraints eon $ do
       let timelock = convertTotimelock eon simpleScript
       return (witnessable, AnySimpleScriptWitness $ SScript $ SimpleScript timelock)
     Old.SReferenceScript txIn ->
@@ -194,7 +195,7 @@ legacyWitnessToScriptRequirements eon wits = do
 -- Misc helpers
 
 getVersion :: forall era. AlonzoEraOnwards era -> Version
-getVersion eon = alonzoEraOnwardsConstraints eon $ L.eraProtVerLow @(ShelleyLedgerEra era)
+getVersion eon = alonzoEraOnwardsConstraints eon $ L.eraProtVerHigh @(ShelleyLedgerEra era)
 
 obtainConstraints
   :: Old.PlutusScriptVersion lang

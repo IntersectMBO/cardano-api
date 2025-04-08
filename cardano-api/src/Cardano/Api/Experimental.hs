@@ -38,8 +38,13 @@ module Cardano.Api.Experimental
     -- ** Witness related
   , AnyWitness (..)
   , PlutusScriptWitness (..)
+  , TxScriptWitnessRequirements (..)
   , Witnessable (..)
   , WitnessableItem (..)
+
+    -- ** Simple script related
+  , SimpleScript (..)
+  , SimpleScriptOrReferenceInput (..)
 
     -- ** Plutus related
   , PlutusScriptInEra (..)
@@ -54,6 +59,7 @@ module Cardano.Api.Experimental
   , toPlutusScriptPurpose
 
     -- ** Legacy
+  , legacyWitnessConversion
   , toPlutusSLanguage
   )
 where
@@ -63,6 +69,8 @@ import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
 import Cardano.Api.Internal.Experimental.Plutus.Script
 import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
 import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
+import Cardano.Api.Internal.Experimental.Simple.Script
 import Cardano.Api.Internal.Experimental.Tx
 import Cardano.Api.Internal.Experimental.Witness.AnyWitness
+import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Fees (evaluateTransactionExecutionUnitsShelley)
