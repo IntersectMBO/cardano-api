@@ -76,17 +76,17 @@ prop_mockInteractionWithNode =
       Left Shelley.AFPointTooOld -> fail "Error, point queried in the chain is too old!"
       Left Shelley.AFPointNotOnChain -> fail "Error, point queried is not on chain!"
 
-    srcAddress <- case Api.deserialiseFromBech32
-      (Api.AsAddress Api.AsShelleyAddr)
-      "addr_test1qp69sr2cw5dwftdpycvqaqkf6vz4jmms226ywvqwc99zm5a0w93czr7h5djdpvlh7edpm77yk20gzqp8dt559a64r9dqyq4r9y" of
-      Right addr -> return addr
-      Left err -> fail $ "Error deserialising source address: " ++ show err
+    srcAddress <-
+      H.leftFail $
+        Api.deserialiseFromBech32
+          (Api.AsAddress Api.AsShelleyAddr)
+          "addr_test1qp69sr2cw5dwftdpycvqaqkf6vz4jmms226ywvqwc99zm5a0w93czr7h5djdpvlh7edpm77yk20gzqp8dt559a64r9dqyq4r9y"
 
-    destAddress <- case Api.deserialiseFromBech32
-      (Api.AsAddress Api.AsShelleyAddr)
-      "addr_test1qqc536zmzggkvkes4lf2jpjxw5g0488f656yqlwpuw0uu3fk9tjxma0kpssjkg2e9ltgrl0tvfqay0lr7k4qzdyqya3s6udgu7" of
-      Right addr -> return addr
-      Left err -> fail $ "Error deserialising destination address: " ++ show err
+    destAddress <-
+      H.leftFail $
+        Api.deserialiseFromBech32
+          (Api.AsAddress Api.AsShelleyAddr)
+          "addr_test1qqc536zmzggkvkes4lf2jpjxw5g0488f656yqlwpuw0uu3fk9tjxma0kpssjkg2e9ltgrl0tvfqay0lr7k4qzdyqya3s6udgu7"
 
     -- We make a query to obtain the UTxOs for the given address
     eUtxo <-
