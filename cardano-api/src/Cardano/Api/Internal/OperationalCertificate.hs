@@ -109,7 +109,7 @@ instance Error OperationalCertIssueError where
 issueOperationalCertificate
   :: VerificationKey KesKey
   -> Either
-       (SigningKey StakePoolKey)
+       AnyStakePoolSigningKey
        (SigningKey GenesisDelegateExtendedKey)
   -- TODO: this may be better with a type that
   -- captured the three (four?) choices, stake pool
@@ -134,8 +134,21 @@ issueOperationalCertificate
           , OperationalCertificateIssueCounter (succ counter) poolVKey
           )
    where
+    castAnyStakePoolSigningKeyToNormalVerificationKey
+      :: AnyStakePoolSigningKey
+      -> VerificationKey StakePoolKey
+    castAnyStakePoolSigningKeyToNormalVerificationKey anyStakePoolSKey =
+      case anyStakePoolSigningKeyToVerificationKey anyStakePoolSKey of
+        AnyStakePoolNormalVerificationKey normalStakePoolVKey -> normalStakePoolVKey
+        AnyStakePoolExtendedVerificationKey extendedStakePoolVKey ->
+          castVerificationKey extendedStakePoolVKey
+
     poolVKey' :: VerificationKey StakePoolKey
-    poolVKey' = either getVerificationKey (convert . getVerificationKey) skey
+    poolVKey' =
+      either
+        castAnyStakePoolSigningKeyToNormalVerificationKey
+        (convert . getVerificationKey)
+        skey
      where
       convert
         :: VerificationKey GenesisDelegateExtendedKey
@@ -164,8 +177,13 @@ issueOperationalCertificate
      where
       skey' :: ShelleySigningKey
       skey' = case skey of
-        Left (StakePoolSigningKey poolSKey) ->
+        Left (AnyStakePoolNormalSigningKey (StakePoolSigningKey poolSKey)) ->
           ShelleyNormalSigningKey poolSKey
+        Left
+          ( AnyStakePoolExtendedSigningKey
+              (StakePoolExtendedSigningKey poolExtendedSKey)
+            ) ->
+            ShelleyExtendedSigningKey poolExtendedSKey
         Right (GenesisDelegateExtendedSigningKey delegSKey) ->
           ShelleyExtendedSigningKey delegSKey
 
