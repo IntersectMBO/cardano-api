@@ -63,7 +63,7 @@ module Cardano.Api.Internal.IPC
     --    * __Network identifier__. When connecting to a testnet, the network identifier
     --      is also required. It can be obtained by looking for the @networkId@
     --      obtained by looking up the @networkMagic@ key in the @shelley-genesis.json@
-    --      file that the node is uses to connect to the network. For the preview
+    --      file that the node uses to connect to the network. For the preview
     --      network, the current identifier is @2@.
     --    * __Socket path__. The path to the node's socket file. It can be set using
     --      the @--socket-path@ parameter when starting the node. By default, it is
