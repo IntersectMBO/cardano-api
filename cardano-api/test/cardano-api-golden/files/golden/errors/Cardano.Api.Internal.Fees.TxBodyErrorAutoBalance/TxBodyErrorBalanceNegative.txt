@@ -1,0 +1,1 @@
+The transaction does not balance in its use of assets. The net balance of the transaction is negative: -1 Lovelace. The usual solution is to provide more inputs, or inputs with more assets.
