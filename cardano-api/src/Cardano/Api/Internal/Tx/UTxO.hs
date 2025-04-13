@@ -74,6 +74,10 @@ filterWithKey fn = UTxO . Map.filterWithKey fn . unUTxO
 inputSet :: UTxO era -> Set TxIn
 inputSet = Map.keysSet . unUTxO
 
+-- | Get the UTxO output set.
+txOutputs :: UTxO era -> [TxOut CtxUTxO era]
+txOutputs = Map.elems . unUTxO
+
 -- | Remove the right hand side from the left hand side.
 difference :: UTxO era -> UTxO era -> UTxO era
 difference a b = UTxO $ Map.difference (unUTxO a) (unUTxO b)

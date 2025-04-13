@@ -6,6 +6,7 @@ module Cardano.Api.Tx.UTxO
   , UTxO.filter
   , UTxO.filterWithKey
   , UTxO.inputSet
+  , UTxO.txOutputs
   , UTxO.difference
   , UTxO.fromList
   , UTxO.toList
