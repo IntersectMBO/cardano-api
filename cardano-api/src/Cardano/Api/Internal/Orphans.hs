@@ -29,6 +29,7 @@ import Cardano.Chain.Update.Validation.Endorsement qualified as L.Endorsement
 import Cardano.Chain.Update.Validation.Interface qualified as L.Interface
 import Cardano.Chain.Update.Validation.Registration qualified as L.Registration
 import Cardano.Chain.Update.Validation.Voting qualified as L.Voting
+import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Allegra.Rules qualified as L
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Alonzo.Rules qualified as L
@@ -49,6 +50,7 @@ import Cardano.Ledger.Core qualified as L hiding (KeyHash)
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes qualified as L hiding (KeyHash)
 import Cardano.Ledger.Keys qualified as L.Keys
+import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Shelley.API.Mempool qualified as L
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
 import Cardano.Ledger.Shelley.Rules qualified as L
@@ -89,12 +91,13 @@ import Data.Monoid
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (Typeable)
-import GHC.Exts (IsList (..))
+import GHC.Exts (IsList (..), IsString (..))
 import GHC.Generics
 import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import Lens.Micro
 import Network.Mux qualified as Mux
+import Prettyprinter (punctuate, viaShow)
 
 deriving instance Generic (L.ApplyTxError era)
 
@@ -256,6 +259,22 @@ deriving newtype instance Num L.Coin
 
 instance Pretty L.Coin where
   pretty (L.Coin n) = pretty n <+> "Lovelace"
+
+instance Pretty L.MultiAsset where
+  pretty (L.MultiAsset assetsMap) =
+    mconcat $
+      punctuate
+        ", "
+        [ pretty quantity <+> pretty pId <> "." <> pretty name
+        | (pId, assets) <- toList assetsMap
+        , (name, quantity) <- toList assets
+        ]
+
+instance Pretty L.PolicyID where
+  pretty (L.PolicyID (L.ScriptHash sh)) = pretty $ Crypto.hashToStringAsHex sh
+
+instance Pretty L.AssetName where
+  pretty = pretty . L.assetNameToTextAsHex
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
