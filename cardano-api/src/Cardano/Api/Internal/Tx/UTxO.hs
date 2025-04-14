@@ -6,12 +6,24 @@
 
 module Cardano.Api.Internal.Tx.UTxO where
 
-import Cardano.Api.Internal.Eon.ShelleyBasedEra (IsShelleyBasedEra)
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+  ( IsShelleyBasedEra
+  , ShelleyBasedEra
+  , ShelleyLedgerEra
+  )
 import Cardano.Api.Internal.Eras.Core (IsCardanoEra)
-import Cardano.Api.Internal.Tx.Body (CtxUTxO, TxOut (..))
+import Cardano.Api.Internal.Tx.Body
+  ( CtxUTxO
+  , TxOut (..)
+  , fromShelleyTxIn
+  , fromShelleyTxOut
+  , toShelleyTxIn
+  , toShelleyTxOut
+  )
 import Cardano.Api.Internal.TxIn (TxIn (..))
 
 import Cardano.Ledger.Babbage ()
+import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Aeson qualified as Aeson
@@ -89,3 +101,19 @@ fromList = UTxO . Map.fromList
 -- | Convert to a list of key/value pairs.
 toList :: UTxO era -> [(TxIn, TxOut CtxUTxO era)]
 toList (UTxO xs) = Map.toList xs
+
+-- | Convert from a `cardano-api` `UTxO` to a `cardano-ledger` UTxO.
+toShelleyUTxO :: ShelleyBasedEra era -> UTxO era -> Ledger.UTxO (ShelleyLedgerEra era)
+toShelleyUTxO sbe =
+  Ledger.UTxO . Map.foldMapWithKey f . unUTxO
+ where
+  f i o =
+    Map.singleton (toShelleyTxIn i) (toShelleyTxOut sbe o)
+
+-- | Convert from a `cardano-ledger` `UTxO` to a `cardano-api` UTxO.
+fromShelleyUTxO :: ShelleyBasedEra era -> Ledger.UTxO (ShelleyLedgerEra era) -> UTxO era
+fromShelleyUTxO sbe =
+  UTxO . Map.foldMapWithKey f . Ledger.unUTxO
+ where
+  f i o =
+    Map.singleton (fromShelleyTxIn i) (fromShelleyTxOut sbe o)
