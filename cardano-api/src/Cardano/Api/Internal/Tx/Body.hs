@@ -2599,7 +2599,7 @@ fromAlonzoTxOutDatum w txdatums = \case
   SNothing -> TxOutDatumNone
   SJust dh
     | Just d <- Map.lookup dh txdatums ->
-        TxOutSupplementalDatum w (fromAlonzoData d)
+        TxOutSupplementalDatum w (fromAlonzoData d) -- TODO
     | otherwise -> TxOutDatumHash w (ScriptDataHash dh)
 
 fromBabbageTxOut
@@ -2635,9 +2635,9 @@ fromBabbageTxOut w txdatums txout =
   resolveDatumInTx dh
     | Just d <- Map.lookup dh txdatums =
         TxOutSupplementalDatum
-          (babbageEraOnwardsToAlonzoEraOnwards w)
+          (convert w)
           (fromAlonzoData d)
-    | otherwise = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh)
+    | otherwise = TxOutDatumHash (convert w) (ScriptDataHash dh)
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
@@ -3004,7 +3004,7 @@ convScriptData sbe txOuts scriptWitnesses =
                        ) <-
                        scriptWitnesses
                    ]
-         in TxBodyScriptData w datums redeemers
+         in TxBodyScriptData w datums redeemers -- TODO
     )
     sbe
 
@@ -3261,7 +3261,7 @@ makeShelleyTransactionBody
         sbe
         txbody
         scripts
-        (TxBodyScriptData AlonzoEraOnwardsAlonzo datums redeemers)
+        (TxBodyScriptData AlonzoEraOnwardsAlonzo datums redeemers) -- TODO
         txAuxData
         txScriptValidity
    where
@@ -3378,7 +3378,7 @@ makeShelleyTransactionBody
         sbe
         txbody
         scripts
-        ( TxBodyScriptData
+        ( TxBodyScriptData -- TODO
             AlonzoEraOnwardsBabbage
             datums
             redeemers
@@ -3518,7 +3518,7 @@ makeShelleyTransactionBody
         sbe
         txbody
         scripts
-        ( TxBodyScriptData
+        ( TxBodyScriptData -- TODO
             AlonzoEraOnwardsConway
             datums
             redeemers
@@ -3904,7 +3904,7 @@ collectTxBodyScriptWitnessRequirements
     } =
     obtainAlonzoScriptPurposeConstraints aEon $ do
       let sbe = shelleyBasedEra @era
-          supplementaldatums = TxScriptWitnessRequirements mempty mempty (getSupplementalDatums aEon txOuts) mempty
+          supplementaldatums = TxScriptWitnessRequirements mempty mempty (getSupplementalDatums aEon txOuts) mempty -- TODO
       txInWits <-
         first TxBodyPlutusScriptDecodeError $
           legacyWitnessToScriptRequirements aEon $

@@ -150,6 +150,7 @@ caseShelleyToBabbageOrConwayEraOnwards l r = \case
   ShelleyBasedEraBabbage -> l ShelleyToBabbageEraBabbage
   ShelleyBasedEraConway -> r ConwayEraOnwardsConway
 
+{-# DEPRECATED shelleyToAlonzoEraToShelleyToBabbageEra "Use convert instead" #-}
 shelleyToAlonzoEraToShelleyToBabbageEra
   :: ()
   => ShelleyToAlonzoEra era
@@ -160,6 +161,7 @@ shelleyToAlonzoEraToShelleyToBabbageEra = \case
   ShelleyToAlonzoEraMary -> ShelleyToBabbageEraMary
   ShelleyToAlonzoEraAlonzo -> ShelleyToBabbageEraAlonzo
 
+{-# DEPRECATED alonzoEraOnwardsToMaryEraOnwards "Use convert instead" #-}
 alonzoEraOnwardsToMaryEraOnwards
   :: ()
   => AlonzoEraOnwards era
@@ -169,6 +171,7 @@ alonzoEraOnwardsToMaryEraOnwards = \case
   AlonzoEraOnwardsBabbage -> MaryEraOnwardsBabbage
   AlonzoEraOnwardsConway -> MaryEraOnwardsConway
 
+{-# DEPRECATED babbageEraOnwardsToMaryEraOnwards "Use convert instead" #-}
 babbageEraOnwardsToMaryEraOnwards
   :: ()
   => BabbageEraOnwards era
@@ -177,6 +180,7 @@ babbageEraOnwardsToMaryEraOnwards = \case
   BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
   BabbageEraOnwardsConway -> MaryEraOnwardsConway
 
+{-# DEPRECATED babbageEraOnwardsToAlonzoEraOnwards "Use convert instead" #-}
 babbageEraOnwardsToAlonzoEraOnwards
   :: ()
   => BabbageEraOnwards era
