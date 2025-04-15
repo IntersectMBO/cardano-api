@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -41,10 +42,14 @@ import GHC.Exts (IsList (..))
 import Text.Read
 
 -- | CIP129 is a typeclass that captures the serialisation requirements of https://cips.cardano.org/cip/CIP-0129
-class SerialiseAsRawBytes a => CIP129 a where
-  cip129Bech32PrefixFor :: a -> Text
+class (SerialiseAsRawBytes a, HasTypeProxy a) => CIP129 a where
+  cip129Bech32PrefixFor :: AsType a -> Text
+
   cip129HeaderHexByte :: a -> ByteString
+
   cip129Bech32PrefixesPermitted :: AsType a -> [Text]
+  default cip129Bech32PrefixesPermitted :: AsType a -> [Text]
+  cip129Bech32PrefixesPermitted = return . cip129Bech32PrefixFor
 
 instance CIP129 (Credential L.ColdCommitteeRole) where
   cip129Bech32PrefixFor _ = "cc_cold"
@@ -111,19 +116,19 @@ instance SerialiseAsRawBytes (Credential L.DRepRole) where
       )
       . CBOR.decodeFull'
 
-serialiseToBech32CIP129 :: CIP129 a => a -> Text
+serialiseToBech32CIP129 :: forall a. CIP129 a => a -> Text
 serialiseToBech32CIP129 a =
   Bech32.encodeLenient
     humanReadablePart
     (Bech32.dataPartFromBytes (cip129HeaderHexByte a <> serialiseToRawBytes a))
  where
-  prefix = cip129Bech32PrefixFor a
+  prefix = cip129Bech32PrefixFor (proxyToAsType (Proxy :: Proxy a))
   humanReadablePart =
     case Bech32.humanReadablePartFromText prefix of
       Right p -> p
       Left err ->
         error $
-          "serialiseToBech32: invalid prefix "
+          "serialiseToBech32CIP129: invalid prefix "
             ++ show prefix
             ++ ", "
             ++ show err
@@ -145,7 +150,7 @@ deserialiseFromBech32CIP129 asType bech32Str = do
     Bech32.dataPartToBytes dataPart
       ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
 
-  let (header, credential) = BS.splitAt 1 payload
+  let (header, credential) = BS.uncons payload
 
   value <- case deserialiseFromRawBytes asType credential of
     Right a -> Right a
@@ -156,7 +161,7 @@ deserialiseFromBech32CIP129 asType bech32Str = do
   guard (header == expectedHeader)
     ?! Bech32UnexpectedHeader (toBase16Text expectedHeader) (toBase16Text header)
 
-  let expectedPrefix = cip129Bech32PrefixFor value
+  let expectedPrefix = cip129Bech32PrefixFor asType
   guard (actualPrefix == expectedPrefix)
     ?! Bech32WrongPrefix actualPrefix expectedPrefix
 
@@ -182,7 +187,7 @@ serialiseGovActionIdToBech32CIP129 (Gov.GovActionId txid index) =
           Right p -> p
           Left err ->
             error $
-              "serialiseToBech32: invalid prefix "
+              "serialiseGovActionIdToBech32CIP129: invalid prefix "
                 ++ show prefix
                 ++ ", "
                 ++ show err
