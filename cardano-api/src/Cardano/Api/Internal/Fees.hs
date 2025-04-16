@@ -645,13 +645,16 @@ estimateBalancedTxBody
         balance =
           evaluateTransactionBalance sbe pparams poolids stakeDelegDeposits drepDelegDeposits fakeUTxO txbody2
         balanceTxOut = TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone
-    -- check if the balance is positive or negative
-    -- in one case we can produce change, in the other the inputs are insufficient
-    first TxFeeEstimationBalanceError $ balanceCheck sbe pparams balanceTxOut
 
     -- Step 6. Check all txouts have the min required UTxO value
     forM_ (txOuts txbodycontent1) $
-      \txout -> first TxFeeEstimationBalanceError $ checkMinUTxOValue sbe txout pparams
+      \txout -> first TxFeeEstimationBalanceError $ checkMinUTxOValue sbe pparams txout
+
+    -- check if the balance is positive or negative
+    -- in one case we can produce change, in the other the inputs are insufficient
+    finalTxOuts <-
+      first TxFeeEstimationBalanceError $
+        checkAndIncludeChange sbe pparams balanceTxOut (txOuts txbodycontent1)
 
     -- Step 7.
 
@@ -663,10 +666,7 @@ estimateBalancedTxBody
     let finalTxBodyContent =
           txbodycontent1
             { txFee = TxFeeExplicit sbe fee
-            , txOuts =
-                accountForNoChange
-                  balanceTxOut
-                  (txOuts txbodycontent)
+            , txOuts = finalTxOuts
             , txReturnCollateral = retColl
             , txTotalCollateral = reqCol
             }
@@ -1371,7 +1371,7 @@ makeTransactionBodyAutoBalance
               TxOutDatumNone
               ReferenceScriptNone
 
-      balanceCheck sbe pp initialChangeTxOut
+      _ <- balanceCheck sbe pp initialChangeTxOut
 
       -- Tx body used only for evaluating execution units. Because txout exact
       -- values do not matter much here, we are using an initial change value,
@@ -1473,11 +1473,10 @@ makeTransactionBodyAutoBalance
               }
       let balance = evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo txbody2
           balanceTxOut = TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone
-      forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue sbe txout pp
+      forM_ (txOuts txbodycontent1) $ \txout -> checkMinUTxOValue sbe pp txout
 
-      -- check if the balance is positive or negative
-      -- in one case we can produce change, in the other the inputs are insufficient
-      balanceCheck sbe pp balanceTxOut
+      -- check if change meets txout criteria, and include if non-zero
+      finalTxOuts <- checkAndIncludeChange sbe pp balanceTxOut (txOuts txbodycontent1)
 
       -- TODO: we could add the extra fee for the CBOR encoding of the change,
       -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
@@ -1489,10 +1488,7 @@ makeTransactionBodyAutoBalance
       let finalTxBodyContent =
             txbodycontent1
               { txFee = TxFeeExplicit sbe fee
-              , txOuts =
-                  accountForNoChange
-                    balanceTxOut
-                    (txOuts txbodycontent)
+              , txOuts = finalTxOuts
               , txReturnCollateral = retColl
               , txTotalCollateral = reqCol
               }
@@ -1512,47 +1508,63 @@ makeTransactionBodyAutoBalance
     era :: CardanoEra era
     era = toCardanoEra sbe
 
--- | In the event of spending the exact amount of lovelace in
+-- | In the event of spending the exact amount of lovelace and non-ada assets in
 -- the specified input(s), this function excludes the change
 -- output. Note that this does not save any fees because by default
 -- the fee calculation includes a change address for simplicity and
 -- we make no attempt to recalculate the tx fee without a change address.
-accountForNoChange :: TxOut CtxTx era -> [TxOut CtxTx era] -> [TxOut CtxTx era]
-accountForNoChange change@(TxOut _ balance _ _) rest =
-  case txOutValueToLovelace balance of
-    L.Coin 0 -> rest
-    -- We append change at the end so a client can predict the indexes
-    -- of the outputs
-    _ -> rest ++ [change]
+checkAndIncludeChange
+  :: ShelleyBasedEra era
+  -> Ledger.PParams (ShelleyLedgerEra era)
+  -> TxOut CtxTx era
+  -> [TxOut CtxTx era]
+  -> Either (TxBodyErrorAutoBalance era) [TxOut CtxTx era]
+checkAndIncludeChange sbe pp change rest = do
+  isChangeEmpty <- balanceCheck sbe pp change
+  if isChangeEmpty == Empty
+    then pure rest
+    else do
+      -- We append change at the end so a client can predict the indexes of the outputs.
+      -- Note that if this function will append change with 0 ADA, and non-ada assets in it.
+      pure $ rest <> [change]
 
 checkMinUTxOValue
   :: ShelleyBasedEra era
-  -> TxOut CtxTx era
   -> Ledger.PParams (ShelleyLedgerEra era)
+  -> TxOut CtxTx era
   -> Either (TxBodyErrorAutoBalance era) ()
-checkMinUTxOValue sbe txout@(TxOut _ v _ _) bpp = do
-  let minUTxO = calculateMinimumUTxO sbe txout bpp
+checkMinUTxOValue sbe bpp txout@(TxOut _ v _ _) = do
+  let minUTxO = calculateMinimumUTxO sbe bpp txout
   if txOutValueToLovelace v >= minUTxO
     then Right ()
     else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra (toCardanoEra sbe) txout) minUTxO
+
+data IsEmpty = Empty | NonEmpty
+  deriving (Eq, Show)
 
 balanceCheck
   :: ShelleyBasedEra era
   -> Ledger.PParams (ShelleyLedgerEra era)
   -> TxOut CtxTx era
-  -> Either (TxBodyErrorAutoBalance era) ()
+  -> Either (TxBodyErrorAutoBalance era) IsEmpty
 balanceCheck sbe bpparams txout@(TxOut _ balance _ _) = do
   let outValue@(L.MaryValue coin multiAsset) = toMaryValue $ txOutValueToValue balance
       isPositiveValue = L.pointwise (>) outValue mempty
   if
-    | L.isZero outValue -> pure () -- empty TxOut
+    | L.isZero outValue -> pure Empty -- empty TxOut - ok, it's removed at the end
+    | L.isZero coin -> -- no ADA, just non-ADA assets
+        Left $
+          TxBodyErrorAdaBalanceTooSmall
+            (TxOutInAnyEra (toCardanoEra sbe) txout)
+            (calculateMinimumUTxO sbe bpparams txout)
+            coin
     | not isPositiveValue -> Left $ TxBodyErrorBalanceNegative coin multiAsset
     | otherwise ->
-        case checkMinUTxOValue sbe txout bpparams of
+        case checkMinUTxOValue sbe bpparams txout of
           Left (TxBodyErrorMinUTxONotMet txOutAny minUTxO) ->
             Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO coin
           Left err -> Left err
-          Right _ -> Right ()
+          Right _ -> Right NonEmpty
 
 -- Calculation taken from validateInsufficientCollateral:
 -- https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
@@ -1893,10 +1905,10 @@ traverseScriptWitnesses =
 calculateMinimumUTxO
   :: HasCallStack
   => ShelleyBasedEra era
-  -> TxOut CtxTx era
   -> Ledger.PParams (ShelleyLedgerEra era)
+  -> TxOut CtxTx era
   -> L.Coin
-calculateMinimumUTxO sbe txout pp =
+calculateMinimumUTxO sbe pp txout =
   shelleyBasedEraConstraints sbe $
     let txOutWithMinCoin = L.setMinCoinTxOut pp (toShelleyTxOutAny sbe txout)
      in txOutWithMinCoin ^. L.coinTxOutL
