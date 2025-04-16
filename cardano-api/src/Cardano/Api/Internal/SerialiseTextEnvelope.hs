@@ -42,7 +42,7 @@ import Cardano.Api.Internal.Eras
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.IO
-import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Orphans.All ()
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.Utils (readFileBlocking)

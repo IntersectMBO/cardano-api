@@ -101,7 +101,7 @@ import Cardano.Api.Internal.Hash
 import Cardano.Api.Internal.Json (toRationalJSON)
 import Cardano.Api.Internal.Keys.Byron
 import Cardano.Api.Internal.Keys.Shelley
-import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Orphans.All ()
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.Serialise.Cbor

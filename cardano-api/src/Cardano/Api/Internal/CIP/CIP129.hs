@@ -17,13 +17,12 @@ where
 
 import Cardano.Api.Internal.Governance.Actions.ProposalProcedure
 import Cardano.Api.Internal.HasTypeProxy
-import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Orphans.All (AsType (..))
 import Cardano.Api.Internal.SerialiseBech32
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.TxIn
 import Cardano.Api.Internal.Utils
 
-import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Conway.Governance qualified as Gov
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Credential qualified as L
@@ -31,7 +30,6 @@ import Cardano.Ledger.Keys qualified as L
 
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Monad (guard)
-import Data.Bifunctor
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base16 qualified as Base16
@@ -39,9 +37,9 @@ import Data.ByteString.Char8 qualified as C8
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import GHC.Exts (IsList (..))
-import Text.Read
 
 -- | CIP129 is a typeclass that captures the serialisation requirements of https://cips.cardano.org/cip/CIP-0129
+-- which pertain to governance credentials and governance action ids.
 class (SerialiseAsRawBytes a, HasTypeProxy a) => CIP129 a where
   cip129Bech32PrefixFor :: AsType a -> Text
 
@@ -59,20 +57,6 @@ instance CIP129 (Credential L.ColdCommitteeRole) where
       L.KeyHashObj{} -> BS.singleton 0x12 -- 0001 0010
       L.ScriptHashObj{} -> BS.singleton 0x13 -- 0001 0011
 
-instance HasTypeProxy (Credential L.ColdCommitteeRole) where
-  data AsType (Credential L.ColdCommitteeRole) = AsColdCommitteeCredential
-  proxyToAsType _ = AsColdCommitteeCredential
-
-instance SerialiseAsRawBytes (Credential L.ColdCommitteeRole) where
-  serialiseToRawBytes = CBOR.serialize'
-  deserialiseFromRawBytes AsColdCommitteeCredential =
-    first
-      ( \e ->
-          SerialiseAsRawBytesError
-            ("Unable to deserialise Credential ColdCommitteeRole: " ++ show e)
-      )
-      . CBOR.decodeFull'
-
 instance CIP129 (Credential L.HotCommitteeRole) where
   cip129Bech32PrefixFor _ = "cc_hot"
   cip129Bech32PrefixesPermitted AsHotCommitteeCredential = ["cc_hot"]
@@ -81,20 +65,6 @@ instance CIP129 (Credential L.HotCommitteeRole) where
       L.KeyHashObj{} -> BS.singleton 0x02 -- 0000 0010
       L.ScriptHashObj{} -> BS.singleton 0x03 -- 0000 0011
 
-instance HasTypeProxy (Credential L.HotCommitteeRole) where
-  data AsType (Credential L.HotCommitteeRole) = AsHotCommitteeCredential
-  proxyToAsType _ = AsHotCommitteeCredential
-
-instance SerialiseAsRawBytes (Credential L.HotCommitteeRole) where
-  serialiseToRawBytes = CBOR.serialize'
-  deserialiseFromRawBytes AsHotCommitteeCredential =
-    first
-      ( \e ->
-          SerialiseAsRawBytesError
-            ("Unable to deserialise Credential HotCommitteeRole: " ++ show e)
-      )
-      . CBOR.decodeFull'
-
 instance CIP129 (Credential L.DRepRole) where
   cip129Bech32PrefixFor _ = "drep"
   cip129Bech32PrefixesPermitted AsDrepCredential = ["drep"]
@@ -102,19 +72,6 @@ instance CIP129 (Credential L.DRepRole) where
     case c of
       L.KeyHashObj{} -> BS.singleton 0x22 -- 0010 0010
       L.ScriptHashObj{} -> BS.singleton 0x23 -- 0010 0011
-
-instance HasTypeProxy (Credential L.DRepRole) where
-  data AsType (Credential L.DRepRole) = AsDrepCredential
-  proxyToAsType _ = AsDrepCredential
-
-instance SerialiseAsRawBytes (Credential L.DRepRole) where
-  serialiseToRawBytes = CBOR.serialize'
-  deserialiseFromRawBytes AsDrepCredential =
-    first
-      ( \e ->
-          SerialiseAsRawBytesError ("Unable to deserialise Credential DRepRole: " ++ show e)
-      )
-      . CBOR.decodeFull'
 
 serialiseToBech32CIP129 :: forall a. CIP129 a => a -> Text
 serialiseToBech32CIP129 a =
@@ -150,7 +107,10 @@ deserialiseFromBech32CIP129 asType bech32Str = do
     Bech32.dataPartToBytes dataPart
       ?! Bech32DataPartToBytesError (Bech32.dataPartToText dataPart)
 
-  let (header, credential) = BS.uncons payload
+  (header, credential) <-
+    case C8.uncons payload of
+      Just (header, credential) -> return (C8.singleton header, credential)
+      Nothing -> Left $ Bech32DeserialiseFromBytesError payload
 
   value <- case deserialiseFromRawBytes asType credential of
     Right a -> Right a
@@ -210,21 +170,3 @@ deserialiseGovActionIdFromBech32CIP129 bech32Str = do
   case deserialiseFromRawBytes AsGovActionId payload of
     Right a -> Right a
     Left _ -> Left $ Bech32DeserialiseFromBytesError payload
-
-instance HasTypeProxy Gov.GovActionId where
-  data AsType Gov.GovActionId = AsGovActionId
-  proxyToAsType _ = AsGovActionId
-
-instance SerialiseAsRawBytes Gov.GovActionId where
-  serialiseToRawBytes (Gov.GovActionId txid (Gov.GovActionIx ix)) =
-    let hex = Base16.encode $ C8.pack $ show ix
-     in mconcat [serialiseToRawBytes $ fromShelleyTxId txid, hex]
-  deserialiseFromRawBytes AsGovActionId bytes = do
-    let (txidBs, index) = BS.splitAt 32 bytes
-
-    txid <- deserialiseFromRawBytes AsTxId txidBs
-    let asciiIndex = C8.unpack $ Base16.decodeLenient index
-    case readMaybe asciiIndex of
-      Just ix -> return $ Gov.GovActionId (toShelleyTxId txid) (Gov.GovActionIx ix)
-      Nothing ->
-        Left $ SerialiseAsRawBytesError $ "Unable to deserialise GovActionId: invalid index: " <> asciiIndex

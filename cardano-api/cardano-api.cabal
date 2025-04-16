@@ -84,7 +84,9 @@ library
     Cardano.Api.Internal.IO
     Cardano.Api.Internal.LedgerState
     Cardano.Api.Internal.Modes
-    Cardano.Api.Internal.Orphans
+    Cardano.Api.Internal.Orphans.All
+    Cardano.Api.Internal.Orphans.Serialization
+    Cardano.Api.Internal.Orphans.Misc
     Cardano.Api.Internal.Plutus
     Cardano.Api.Internal.Pretty
     Cardano.Api.Internal.ProtocolParameters

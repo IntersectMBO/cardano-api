@@ -15,15 +15,15 @@ where
 
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
-import Cardano.Api.Internal.Orphans ()
-import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Orphans.Misc ()
+import Cardano.Api.Internal.Pretty (pshow)
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Utils
 
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Monad (guard)
 import Data.ByteString (ByteString)
-import Data.Data (Data)
+import Data.Data
 import Data.List qualified as List
 import Data.Set (Set)
 import Data.Text (Text)

@@ -1155,7 +1155,7 @@ import Cardano.Api.Internal.Modes
 import Cardano.Api.Internal.Monad.Error
 import Cardano.Api.Internal.NetworkId
 import Cardano.Api.Internal.OperationalCertificate
-import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Orphans.All ()
 import Cardano.Api.Internal.Plutus
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Protocol
