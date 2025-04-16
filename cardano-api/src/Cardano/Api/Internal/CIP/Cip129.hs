@@ -6,10 +6,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Api.Internal.CIP.CIP129
-  ( CIP129 (..)
+module Cardano.Api.Internal.CIP.Cip129
+  ( Cip129 (..)
   , deserialiseFromBech32CIP129
-  , serialiseToBech32CIP129
+  , serialiseToBech32Cip129
   , serialiseGovActionIdToBech32CIP129
   , deserialiseGovActionIdFromBech32CIP129
   )
@@ -38,9 +38,9 @@ import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import GHC.Exts (IsList (..))
 
--- | CIP129 is a typeclass that captures the serialisation requirements of https://cips.cardano.org/cip/CIP-0129
+-- | Cip129 is a typeclass that captures the serialisation requirements of https://cips.cardano.org/cip/CIP-0129
 -- which pertain to governance credentials and governance action ids.
-class (SerialiseAsRawBytes a, HasTypeProxy a) => CIP129 a where
+class (SerialiseAsRawBytes a, HasTypeProxy a) => Cip129 a where
   cip129Bech32PrefixFor :: AsType a -> Text
 
   cip129HeaderHexByte :: a -> ByteString
@@ -49,7 +49,7 @@ class (SerialiseAsRawBytes a, HasTypeProxy a) => CIP129 a where
   default cip129Bech32PrefixesPermitted :: AsType a -> [Text]
   cip129Bech32PrefixesPermitted = return . cip129Bech32PrefixFor
 
-instance CIP129 (Credential L.ColdCommitteeRole) where
+instance Cip129 (Credential L.ColdCommitteeRole) where
   cip129Bech32PrefixFor _ = "cc_cold"
   cip129Bech32PrefixesPermitted AsColdCommitteeCredential = ["cc_cold"]
   cip129HeaderHexByte c =
@@ -57,7 +57,7 @@ instance CIP129 (Credential L.ColdCommitteeRole) where
       L.KeyHashObj{} -> BS.singleton 0x12 -- 0001 0010
       L.ScriptHashObj{} -> BS.singleton 0x13 -- 0001 0011
 
-instance CIP129 (Credential L.HotCommitteeRole) where
+instance Cip129 (Credential L.HotCommitteeRole) where
   cip129Bech32PrefixFor _ = "cc_hot"
   cip129Bech32PrefixesPermitted AsHotCommitteeCredential = ["cc_hot"]
   cip129HeaderHexByte c =
@@ -65,7 +65,7 @@ instance CIP129 (Credential L.HotCommitteeRole) where
       L.KeyHashObj{} -> BS.singleton 0x02 -- 0000 0010
       L.ScriptHashObj{} -> BS.singleton 0x03 -- 0000 0011
 
-instance CIP129 (Credential L.DRepRole) where
+instance Cip129 (Credential L.DRepRole) where
   cip129Bech32PrefixFor _ = "drep"
   cip129Bech32PrefixesPermitted AsDrepCredential = ["drep"]
   cip129HeaderHexByte c =
@@ -73,8 +73,11 @@ instance CIP129 (Credential L.DRepRole) where
       L.KeyHashObj{} -> BS.singleton 0x22 -- 0010 0010
       L.ScriptHashObj{} -> BS.singleton 0x23 -- 0010 0011
 
-serialiseToBech32CIP129 :: forall a. CIP129 a => a -> Text
-serialiseToBech32CIP129 a =
+-- | Serialize a accoding to the serialisation requirements of https://cips.cardano.org/cip/CIP-0129
+-- which currently pertain to governance credentials. Governance action ids are dealt separately with 
+-- via 'serialiseGovActionIdToBech32CIP129'.
+serialiseToBech32Cip129 :: forall a. Cip129 a => a -> Text
+serialiseToBech32Cip129 a =
   Bech32.encodeLenient
     humanReadablePart
     (Bech32.dataPartFromBytes (cip129HeaderHexByte a <> serialiseToRawBytes a))
@@ -85,13 +88,13 @@ serialiseToBech32CIP129 a =
       Right p -> p
       Left err ->
         error $
-          "serialiseToBech32CIP129: invalid prefix "
+          "serialiseToBech32Cip129: invalid prefix "
             ++ show prefix
             ++ ", "
             ++ show err
 
 deserialiseFromBech32CIP129
-  :: CIP129 a
+  :: Cip129 a
   => AsType a -> Text -> Either Bech32DecodeError a
 deserialiseFromBech32CIP129 asType bech32Str = do
   (prefix, dataPart) <-
@@ -130,7 +133,7 @@ deserialiseFromBech32CIP129 asType bech32Str = do
   toBase16Text = Text.decodeUtf8 . Base16.encode
 
 -- | Governance Action ID
--- According to CIP129 there is no header byte for GovActionId.
+-- According to Cip129 there is no header byte for GovActionId.
 -- Instead they append the txid and index to form the payload.
 serialiseGovActionIdToBech32CIP129 :: Gov.GovActionId -> Text
 serialiseGovActionIdToBech32CIP129 (Gov.GovActionId txid index) =
