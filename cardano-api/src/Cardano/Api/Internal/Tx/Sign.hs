@@ -129,6 +129,8 @@ import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import Cardano.Ledger.Binary (Annotated (..))
+import Test.Cardano.Ledger.Binary.Annotator qualified as CBOR (decodeFullAnnotator)
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Binary.Plain qualified as Plain
 import Cardano.Ledger.Core qualified as Ledger
@@ -253,7 +255,7 @@ serialiseShelleyBasedTx = Plain.serialize'
 
 deserialiseShelleyBasedTx
   :: forall ledgerera tx'
-   . L.EraTx ledgerera
+   . (L.EraTx ledgerera, CBOR.DecCBOR (CBOR.Annotator (Ledger.Tx ledgerera)))
   => (L.Tx ledgerera -> tx')
   -> ByteString
   -> Either CBOR.DecoderError tx'
@@ -1050,7 +1052,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
     -- Byron era witnesses were weird. This reveals all that weirdness.
     Shelley.BootstrapWitness
       { Shelley.bwKey = vk
-      , Shelley.bwSig = signature
+      , Shelley.bwSignature = signature
       , Shelley.bwChainCode = chainCode
       , Shelley.bwAttributes = attributes
       }

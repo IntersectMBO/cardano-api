@@ -33,6 +33,10 @@ module Cardano.Api.Internal.SerialiseLedgerCddl
   )
 where
 
+import Test.Cardano.Ledger.Binary.Annotator qualified as CBOR (decodeFullAnnotatedBytes, decodeFullAnnotator)
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
+import Cardano.Ledger.Binary qualified as CBOR
+
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
@@ -54,7 +58,6 @@ import Cardano.Api.Internal.Utils
 
 import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.Binary qualified as CBOR
 
 import Control.Monad.Trans.Except.Extra
   ( firstExceptT

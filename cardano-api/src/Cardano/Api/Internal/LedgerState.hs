@@ -1264,7 +1264,7 @@ decodeLedgerState
   -> forall s
    . CBOR.Decoder s LedgerState
 decodeLedgerState ccfg =
-  LedgerState <$> decodeDisk @(Consensus.CardanoBlock Consensus.StandardCrypto) ccfg
+  LedgerState <$> decodeDisk @(Consensus.CardanoBlock Consensus.StandardCrypto) ccfg mempty
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
 

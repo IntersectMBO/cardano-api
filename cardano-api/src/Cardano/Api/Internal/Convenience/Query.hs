@@ -38,7 +38,7 @@ import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.UTxO (UTxO (..))
 import Cardano.Api.Internal.Utils
 
-import Cardano.Ledger.CertState (DRepState (..))
+import Cardano.Ledger.State (DRepState (..))
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Keys qualified as L

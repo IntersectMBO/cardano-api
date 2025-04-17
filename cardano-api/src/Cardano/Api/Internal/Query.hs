@@ -93,12 +93,11 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
-import Cardano.Ledger.CertState qualified as L
+import Cardano.Ledger.State qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as Shelley
 import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
-import Cardano.Ledger.Shelley.LedgerState qualified as L
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -636,11 +635,11 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era Consensus.GetFuturePParams))
       sbe
-  QueryDRepState creds ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
-      (const $ Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds)))
-      sbe
+  QueryDRepState _ -> undefined
+    -- caseShelleyToBabbageOrConwayEraOnwards
+    --   (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
+    --   (const $ Some (consensusQueryInEraInMode era (Consensus.GetDRepState creds)))
+    --   sbe
   QueryDRepStakeDistr dreps ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
@@ -655,16 +654,16 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era (Consensus.GetSPOStakeDistr spos)))
       sbe
-  QueryCommitteeMembersState coldCreds hotCreds statuses ->
-    caseShelleyToBabbageOrConwayEraOnwards
-      ( const $
-          error "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available in the Conway era"
-      )
-      ( const $
-          Some
-            (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
-      )
-      sbe
+  QueryCommitteeMembersState {} -> undefined
+    -- caseShelleyToBabbageOrConwayEraOnwards
+    --   ( const $
+    --       error "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available in the Conway era"
+    --   )
+    --   ( const $
+    --       Some
+    --         (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
+    --   )
+    --   sbe
   QueryStakeVoteDelegatees creds ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $

@@ -62,12 +62,11 @@ import Cardano.Api.Internal.Tx.UTxO
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
-import Cardano.Ledger.CertState qualified as L
+import Cardano.Ledger.State qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Hashes hiding (Hash)
 import Cardano.Ledger.Keys qualified as L
-import Cardano.Ledger.Shelley.LedgerState qualified as L
 import Cardano.Slotting.Slot
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus

@@ -36,6 +36,8 @@ module Cardano.Api.Internal.Eon.ShelleyBasedEra
   )
 where
 
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
+import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.Modes
@@ -230,6 +232,7 @@ type ShelleyBasedEraConstraints era =
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" (ShelleyLedgerEra era)))
   , Typeable era
+  , CBOR.DecCBOR (CBOR.Annotator (L.Tx (ShelleyLedgerEra era)))
   )
 
 shelleyBasedEraConstraints

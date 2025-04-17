@@ -145,7 +145,9 @@ import Cardano.Ledger.Allegra.Scripts qualified as Timelock
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Babbage.Scripts qualified as Babbage
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Binary qualified as Binary (decCBOR, decodeFullAnnotator)
+import Cardano.Ledger.Binary qualified as Binary (decCBOR)
+import Test.Cardano.Ledger.Binary.Annotator qualified as Binary (decodeFullAnnotator)
+import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
 import Cardano.Ledger.Conway.Scripts qualified as Conway
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Keys qualified as Shelley
