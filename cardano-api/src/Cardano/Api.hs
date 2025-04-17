@@ -850,6 +850,7 @@ module Cardano.Api
   , AnyNewEpochState (..)
   , foldEpochState
   , getAnyNewEpochState
+  , getLedgerTablesUTxOValues
 
     -- *** Errors
   , LedgerStateError (..)
