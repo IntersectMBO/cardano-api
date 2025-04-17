@@ -116,6 +116,19 @@
           shell.crossPlatforms = _: [];
           shell.shellHook = ''
             export PATH="$(git rev-parse --show-toplevel)/scripts/devshell:$PATH"
+            export LANG=en_US.UTF-8
+            export LC_ALL=en_US.UTF-8
+            export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
+            DEFAULT_PS1="\n\[\033[1;32m\][nix-shell:\w]\$\[\033[0m\] "
+            prompt() {
+              local EXIT="$?"
+              if [ $EXIT != 0 ]; then
+                PS1="$DEFAULT_PS1\[\033[1;31m\]($EXIT)\[\033[00m\] "
+              else
+                PS1="$DEFAULT_PS1"
+              fi
+            }
+            PROMPT_COMMAND=prompt
           '';
 
           # package customizations as needed. Where cabal.project is not
