@@ -83,15 +83,20 @@ setupLocalStateQueryExpr
 setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
   LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
     Net.Query.ClientStAcquiring
-      { Net.Query.recvMsgAcquired = runContT (runReaderT (runLocalStateQueryExpr f) ntcVersion) $ \result -> do
-          atomically $ putTMVar resultVar' (Right result)
-          void $ atomically waitDone -- Wait for all protocols to complete before exiting.
-          pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+      { Net.Query.recvMsgAcquired =
+          let allQueries = runReaderT (runLocalStateQueryExpr f) ntcVersion
+           in runContT allQueries finalContinuation
       , Net.Query.recvMsgFailure = \failure -> do
           atomically $ putTMVar resultVar' (Left (toAcquiringFailure failure))
           void $ atomically waitDone -- Wait for all protocols to complete before exiting.
           pure $ Net.Query.SendMsgDone ()
       }
+ where
+  -- We wait for all queries to finish before exiting.
+  finalContinuation result = do
+    atomically $ putTMVar resultVar' (Right result)
+    void $ atomically waitDone -- Wait for all protocols to complete before exiting.
+    pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
 
 -- | Get the node server's Node-to-Client version.
 getNtcVersion :: LocalStateQueryExpr block point QueryInMode r IO NodeToClientVersion
@@ -105,10 +110,39 @@ queryExpr q = do
   ntcVersion <- getNtcVersion
   case isQuerySupportedInNtcVersion (toConsensusQuery q) ntcVersion of
     Right () ->
-      fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> ContT $ \f ->
-        pure $
-          Net.Query.SendMsgQuery q $
-            Net.Query.ClientStQuerying
-              { Net.Query.recvMsgResult = f
-              }
+      fmap Right . LocalStateQueryExpr . ReaderT $ \_ -> constructQueryContinuation q
     Left err -> pure $ Left err
+
+{-  The client sends a query with the following data constructor:
+
+data ClientStAcquired block point query m a where
+  SendMsgQuery     :: query result
+                   -> ClientStQuerying block point query m a result
+                   -> ClientStAcquired block point query m a
+
+The client is then awaiting a result from the server which is represented by:
+
+data ClientStQuerying block point query m a result = ClientStQuerying {
+      recvMsgResult :: result -> m (ClientStAcquired block point query m a)
+    }
+
+When constructing the `ClientStQuerying` value we can send another query (`SendMsgQuery`) or
+release (`SendMsgRelease`) and this recursion is nicely modelled with the `ContT` monad transformer.
+
+The final continuation in our case is waiting for all the queries to be returned and then returning
+`SendMsgRelease`.
+-}
+constructQueryContinuation
+  :: Applicative m
+  => QueryInMode result
+  -> ContT
+       (Net.Query.ClientStAcquired block point QueryInMode m a)
+       m
+       result
+constructQueryContinuation q = do
+  ContT $ \final ->
+    pure $
+      Net.Query.SendMsgQuery q $
+        Net.Query.ClientStQuerying
+          { Net.Query.recvMsgResult = final
+          }
