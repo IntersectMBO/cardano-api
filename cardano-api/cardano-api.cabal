@@ -73,6 +73,7 @@ library
     Cardano.Api.Experimental
     Cardano.Api.Internal.Address
     Cardano.Api.Internal.Block
+    Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DRepMetadata
     Cardano.Api.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Internal.Eras
@@ -82,6 +83,7 @@ library
     Cardano.Api.Internal.GenesisParameters
     Cardano.Api.Internal.Governance.Metadata.Validation
     Cardano.Api.Internal.IO
+    Cardano.Api.Internal.IPC
     Cardano.Api.Internal.LedgerState
     Cardano.Api.Internal.Modes
     Cardano.Api.Internal.Orphans
@@ -190,7 +192,6 @@ library
     Cardano.Api.Internal.Certificate
     Cardano.Api.Internal.Compatible.Tx
     Cardano.Api.Internal.Convenience.Construction
-    Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DeserialiseAnyOf
     Cardano.Api.Internal.Eon.AllegraEraOnwards
     Cardano.Api.Internal.Eon.AlonzoEraOnwards
@@ -228,7 +229,6 @@ library
     Cardano.Api.Internal.IO.Compat
     Cardano.Api.Internal.IO.Compat.Posix
     Cardano.Api.Internal.IO.Compat.Win32
-    Cardano.Api.Internal.IPC
     Cardano.Api.Internal.IPC.Monad
     Cardano.Api.Internal.IPC.Version
     Cardano.Api.Internal.InMode
@@ -348,14 +348,18 @@ test-suite cardano-api-test
     hedgehog-extras,
     hedgehog-quickcheck,
     interpolatedstring-perl6,
+    lifted-base,
     microlens,
+    monad-control,
     mtl,
+    network,
     ouroboros-consensus,
     ouroboros-consensus-cardano,
     ouroboros-consensus-protocol,
     ouroboros-network-api,
     plutus-ledger-api,
     tasty,
+    tasty-expected-failure,
     tasty-hedgehog,
     tasty-quickcheck,
     text,
@@ -373,6 +377,7 @@ test-suite cardano-api-test
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO
+    Test.Cardano.Api.IPC
     Test.Cardano.Api.Json
     Test.Cardano.Api.KeysByron
     Test.Cardano.Api.Ledger
