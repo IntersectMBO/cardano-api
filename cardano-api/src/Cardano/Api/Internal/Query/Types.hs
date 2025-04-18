@@ -9,7 +9,7 @@ module Cardano.Api.Internal.Query.Types
 where
 
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
-import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Orphans.All ()
 
 import Cardano.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain

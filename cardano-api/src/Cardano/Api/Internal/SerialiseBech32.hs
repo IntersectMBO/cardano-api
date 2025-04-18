@@ -15,15 +15,15 @@ where
 
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
-import Cardano.Api.Internal.Orphans ()
-import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Orphans.Misc ()
+import Cardano.Api.Internal.Pretty (pshow)
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Utils
 
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Monad (guard)
 import Data.ByteString (ByteString)
-import Data.Data (Data)
+import Data.Data
 import Data.List qualified as List
 import Data.Set (Set)
 import Data.Text (Text)
@@ -141,6 +141,11 @@ data Bech32DecodeError
   | -- | The human-readable prefix in the Bech32-encoded string does not
     -- correspond to the prefix that should be used for the payload value.
     Bech32WrongPrefix !Text !Text
+  | Bech32UnexpectedHeader
+      !Text
+      -- ^ Expected header
+      !Text
+      -- ^ Unexpected header
   deriving (Eq, Show, Data)
 
 instance Error Bech32DecodeError where
@@ -167,4 +172,9 @@ instance Error Bech32DecodeError where
       mconcat
         [ "Mismatch in the Bech32 prefix: the actual prefix is " <> pshow actual
         , ", but the prefix for this payload value should be " <> pshow expected
+        ]
+    Bech32UnexpectedHeader expected actual ->
+      mconcat
+        [ "Unexpected CIP-129 Bech32 header: the actual header is " <> pshow actual
+        , ", but it was expected to be " <> pshow expected
         ]

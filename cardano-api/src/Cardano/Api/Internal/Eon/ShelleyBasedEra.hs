@@ -39,7 +39,7 @@ where
 import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.Modes
-import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Orphans.All ()
 import Cardano.Api.Internal.Pretty (Pretty)
 
 import Cardano.Crypto.Hash.Blake2b qualified as Blake2b
