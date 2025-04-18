@@ -196,6 +196,7 @@ import           Hedgehog (Gen, MonadGen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
+import Data.Bifunctor (first)
 
 
 
@@ -578,7 +579,7 @@ genOperationalCertificateWithCounter = do
   let stakePoolVer = either getVerificationKey (convert' . getVerificationKey) stkPoolOrGenDelExtSign
       iCounter = OperationalCertificateIssueCounter c stakePoolVer
 
-  case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
+  case issueOperationalCertificate kesVKey (first AnyStakePoolNormalSigningKey stkPoolOrGenDelExtSign) kesP iCounter of
     -- This case should be impossible as we clearly derive the verification
     -- key from the generated signing key.
     Left err -> error $ docToString $ prettyError err

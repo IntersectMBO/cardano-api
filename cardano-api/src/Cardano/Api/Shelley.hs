@@ -199,6 +199,10 @@ module Cardano.Api.Shelley
   , DRepMetadataReference (DRepMetadataReference)
 
     -- ** Stake pool operator's keys
+  , AnyStakePoolVerificationKey (..)
+  , anyStakePoolVerificationKeyHash
+  , AnyStakePoolSigningKey (..)
+  , anyStakePoolSigningKeyToVerificationKey
   , StakePoolExtendedKey
   , StakePoolKey
   , PoolId

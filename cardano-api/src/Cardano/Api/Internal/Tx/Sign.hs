@@ -790,6 +790,7 @@ data ShelleyWitnessSigningKey
   | WitnessStakeKey (SigningKey StakeKey)
   | WitnessStakeExtendedKey (SigningKey StakeExtendedKey)
   | WitnessStakePoolKey (SigningKey StakePoolKey)
+  | WitnessStakePoolExtendedKey (SigningKey StakePoolExtendedKey)
   | WitnessGenesisKey (SigningKey GenesisKey)
   | WitnessGenesisExtendedKey (SigningKey GenesisExtendedKey)
   | WitnessGenesisDelegateKey (SigningKey GenesisDelegateKey)
@@ -1163,6 +1164,7 @@ toShelleySigningKey key = case key of
   -- The cases for extended keys
   WitnessPaymentExtendedKey (PaymentExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
   WitnessStakeExtendedKey (StakeExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
+  WitnessStakePoolExtendedKey (StakePoolExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
   WitnessGenesisExtendedKey (GenesisExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
   WitnessGenesisDelegateExtendedKey (GenesisDelegateExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
   WitnessCommitteeColdExtendedKey (CommitteeColdExtendedSigningKey sk) -> ShelleyExtendedSigningKey sk
