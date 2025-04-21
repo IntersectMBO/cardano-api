@@ -338,6 +338,8 @@ module Cardano.Api.Internal.Fees
 
     -- ** Internal helpers
   , ResolvablePointers (..)
+  , substituteExecutionUnits
+  , handleExUnitsErrors
   )
 where
 
