@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## 10.14.1.0
+
+- Update consensus to 0.26
+  (feature, compatible)
+  [PR 821](https://github.com/IntersectMBO/cardano-api/pull/821)
+
 ## 10.14.0.0
 
 - Update to Plutus 1.45
