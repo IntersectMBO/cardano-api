@@ -196,9 +196,6 @@ import           Hedgehog (Gen, MonadGen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Gen.QuickCheck as Q
 import qualified Hedgehog.Range as Range
-import Data.Bifunctor (first)
-
-
 
 genAddressByron :: Gen (Address ByronAddr)
 genAddressByron =
@@ -573,18 +570,30 @@ genOperationalCertificateWithCounter
 genOperationalCertificateWithCounter = do
   kesVKey <- genVerificationKey AsKesKey
   stkPoolOrGenDelExtSign <-
-    Gen.either (genSigningKey AsStakePoolKey) (genSigningKey AsGenesisDelegateExtendedKey)
+    Gen.either (Gen.choice [ AnyStakePoolNormalSigningKey <$> genSigningKey AsStakePoolKey
+                           , AnyStakePoolExtendedSigningKey <$> genSigningKey AsStakePoolExtendedKey
+                           ])
+               (genSigningKey AsGenesisDelegateExtendedKey)
   kesP <- genKESPeriod
   c <- Gen.integral $ Range.linear 0 1000
-  let stakePoolVer = either getVerificationKey (convert' . getVerificationKey) stkPoolOrGenDelExtSign
+  let stakePoolVer = either castAnyStakePoolSigningKeyToNormalVerificationKey (convert' . getVerificationKey) stkPoolOrGenDelExtSign
       iCounter = OperationalCertificateIssueCounter c stakePoolVer
 
-  case issueOperationalCertificate kesVKey (first AnyStakePoolNormalSigningKey stkPoolOrGenDelExtSign) kesP iCounter of
+  case issueOperationalCertificate kesVKey stkPoolOrGenDelExtSign kesP iCounter of
     -- This case should be impossible as we clearly derive the verification
     -- key from the generated signing key.
     Left err -> error $ docToString $ prettyError err
     Right pair -> return pair
  where
+  castAnyStakePoolSigningKeyToNormalVerificationKey
+    :: AnyStakePoolSigningKey
+    -> VerificationKey StakePoolKey
+  castAnyStakePoolSigningKeyToNormalVerificationKey anyStakePoolSKey =
+    case anyStakePoolSigningKeyToVerificationKey anyStakePoolSKey of
+      AnyStakePoolNormalVerificationKey normalStakePoolVKey -> normalStakePoolVKey
+      AnyStakePoolExtendedVerificationKey extendedStakePoolVKey ->
+        castVerificationKey extendedStakePoolVKey
+
   convert'
     :: VerificationKey GenesisDelegateExtendedKey
     -> VerificationKey StakePoolKey
