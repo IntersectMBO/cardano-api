@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-04-08T10:52:25Z
-  , cardano-haskell-packages 2025-04-16T15:55:07Z
+  , cardano-haskell-packages 2025-04-22T08:40:01Z
 
 packages:
     cardano-api
@@ -64,3 +64,4 @@ if impl (ghc >= 9.12)
 
     -- https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
+

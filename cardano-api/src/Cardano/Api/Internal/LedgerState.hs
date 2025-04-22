@@ -1353,13 +1353,13 @@ pattern ConwayLedgerState
 pattern ConwayLedgerState x = S (S (S (S (S (S (Z x))))))
 
 encodeLedgerState :: LedgerState -> CBOR.Encoding
-encodeLedgerState (LedgerState (HFC.HardForkLedgerState st) tbs) =
+encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
   mconcat
     [ CBOR.encodeListLen 2
     , HFC.encodeTelescope
         (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
         st
-    , Ledger.valuesMKEncoder tbs
+    , Ledger.valuesMKEncoder hst tbs
     ]
  where
   byron = fn (K . Byron.encodeByronLedgerState . unFlip)
@@ -1373,9 +1373,11 @@ encodeLedgerState (LedgerState (HFC.HardForkLedgerState st) tbs) =
 decodeLedgerState :: forall s. CBOR.Decoder s LedgerState
 decodeLedgerState = do
   2 <- CBOR.decodeListLen
-  LedgerState . HFC.HardForkLedgerState
-    <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
-    <*> Ledger.valuesMKDecoder
+  hst <-
+    HFC.HardForkLedgerState
+      <$> HFC.decodeTelescope (byron :* shelley :* allegra :* mary :* alonzo :* babbage :* conway :* Nil)
+  tbs <- Ledger.valuesMKDecoder hst
+  pure (LedgerState hst tbs)
  where
   byron = Comp $ Flip <$> Byron.decodeByronLedgerState
   shelley = Comp $ Flip <$> Shelley.decodeShelleyLedgerState
