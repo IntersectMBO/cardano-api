@@ -112,6 +112,7 @@ type AlonzoEraOnwardsConstraints era =
   , FromCBOR (DebugLedgerState era)
   , IsCardanoEra era
   , IsShelleyBasedEra era
+  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (DebugLedgerState era)
   , Typeable era
   )

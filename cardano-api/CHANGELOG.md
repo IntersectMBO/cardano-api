@@ -1,5 +1,33 @@
 # Changelog for cardano-api
 
+## 10.14.0.0
+
+- Update to Plutus 1.45
+  (feature, compatible)
+  [PR 818](https://github.com/IntersectMBO/cardano-api/pull/818)
+
+- Implement the changes required for UTxO-HD. See the documentation https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/utxo-hd/Overview.
+  - Augment `Cardano.Api.Internal.LedgerState.LedgerState` with Cardano `LedgerTables`.
+  - Require `SingI` for `QueryFootprint`s in Consensus queries
+  (feature, breaking)
+  [PR 774](https://github.com/IntersectMBO/cardano-api/pull/774)
+
+- Better reporting of negative balance in transaction balancing. Remove redundant `Either` from `evaluateTransactionExecutionUnits` and `evaluateTransactionExecutionUnitsShelley` signatures.
+  (breaking, refactoring, bugfix)
+  [PR 799](https://github.com/IntersectMBO/cardano-api/pull/799)
+
+- Add `outputs`, `fromShelleyUTxO` and `toShelleyUTxO` functions to `Cardano.Api.Tx.UTxO`.
+  (compatible)
+  [PR 812](https://github.com/IntersectMBO/cardano-api/pull/812)
+
+- New `ToJSON (Consensus.ChainDepState (ConsensusProtocol era))` constraints for shelley based eons.
+  New constraints for `ShelleyBasedEra`:
+  * FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  * IsCardanoEra era
+  * IsShelleyBasedEra era
+  (feature)
+  [PR 806](https://github.com/IntersectMBO/cardano-api/pull/806)
+
 ## 10.13.1.0
 
 - Fix `toAnyWitness` to not ignore simple scripts

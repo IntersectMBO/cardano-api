@@ -211,6 +211,9 @@ type ShelleyBasedEraConstraints era =
   , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
   , Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era) ~ ConsensusBlockForEra era
   , Consensus.ShelleyCompatible (ConsensusProtocol era) (ShelleyLedgerEra era)
+  , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , IsCardanoEra era
+  , IsShelleyBasedEra era
   , L.ADDRHASH ~ Blake2b.Blake2b_224
   , L.Era (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
@@ -224,6 +227,7 @@ type ShelleyBasedEraConstraints era =
   , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
   , IsCardanoEra era
   , IsShelleyBasedEra era
+  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" (ShelleyLedgerEra era)))
   , Typeable era
   )

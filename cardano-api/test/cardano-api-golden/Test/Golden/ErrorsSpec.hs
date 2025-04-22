@@ -428,14 +428,10 @@ test_TxBodyErrorAutoBalance =
       , TxBodyScriptExecutionError [(ScriptWitnessIndexTxIn 1, ScriptErrorExecutionUnitsOverflow)]
       )
     , ("TxBodyScriptBadScriptValidity", TxBodyScriptBadScriptValidity)
-    , ("TxBodyErrorAdaBalanceNegative", TxBodyErrorAdaBalanceNegative 1)
+    , ("TxBodyErrorBalanceNegative", TxBodyErrorBalanceNegative (-1) mempty)
     , ("TxBodyErrorAdaBalanceTooSmall", TxBodyErrorAdaBalanceTooSmall txOutInAnyEra1 0 1)
     , ("TxBodyErrorByronEraNotSupported", TxBodyErrorByronEraNotSupported)
     , ("TxBodyErrorMissingParamMinUTxO", TxBodyErrorMissingParamMinUTxO)
-    ,
-      ( "TxBodyErrorValidityInterval"
-      , TxBodyErrorValidityInterval $ TransactionValidityCostModelError Map.empty string
-      )
     , ("TxBodyErrorMinUTxONotMet", TxBodyErrorMinUTxONotMet txOutInAnyEra1 1)
     ,
       ( "TxBodyErrorNonAdaAssetsUnbalanced"

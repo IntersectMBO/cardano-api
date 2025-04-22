@@ -134,6 +134,7 @@ import Data.SOP.Constraint (SListI)
 import Data.Sequence (Seq)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Singletons qualified as Singletons
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Word (Word64)
@@ -707,24 +708,25 @@ toConsensusQueryShelleyBased sbe = \case
   era = toCardanoEra sbe
 
 consensusQueryInEraInMode
-  :: forall era erablock modeblock result result' xs
+  :: forall era erablock modeblock result result' fp xs
    . ConsensusBlockForEra era ~ erablock
   => Consensus.CardanoBlock StandardCrypto ~ modeblock
   => modeblock ~ Consensus.HardForkBlock xs
   => Consensus.HardForkQueryResult xs result ~ result'
+  => Singletons.SingI fp
   => CardanoEra era
-  -> Consensus.BlockQuery erablock result
+  -> Consensus.BlockQuery erablock fp result
   -> Consensus.Query modeblock result'
-consensusQueryInEraInMode era =
-  Consensus.BlockQuery
-    . case era of
-      ByronEra -> Consensus.QueryIfCurrentByron
-      ShelleyEra -> Consensus.QueryIfCurrentShelley
-      AllegraEra -> Consensus.QueryIfCurrentAllegra
-      MaryEra -> Consensus.QueryIfCurrentMary
-      AlonzoEra -> Consensus.QueryIfCurrentAlonzo
-      BabbageEra -> Consensus.QueryIfCurrentBabbage
-      ConwayEra -> Consensus.QueryIfCurrentConway
+consensusQueryInEraInMode erainmode b =
+  Consensus.BlockQuery @fp $
+    case erainmode of
+      ByronEra -> Consensus.QueryIfCurrentByron b
+      ShelleyEra -> Consensus.QueryIfCurrentShelley b
+      AllegraEra -> Consensus.QueryIfCurrentAllegra b
+      MaryEra -> Consensus.QueryIfCurrentMary b
+      AlonzoEra -> Consensus.QueryIfCurrentAlonzo b
+      BabbageEra -> Consensus.QueryIfCurrentBabbage b
+      ConwayEra -> Consensus.QueryIfCurrentConway b
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
@@ -852,14 +854,14 @@ fromConsensusQueryResult (QueryInEra (QueryInShelleyBasedEra ShelleyBasedEraConw
 -- on the @QueryInShelleyBasedEra era result@ value. Don't change the top-level
 -- @case sbeQuery of ...@!
 fromConsensusQueryResultShelleyBased
-  :: forall era ledgerera protocol result result'
+  :: forall era ledgerera protocol result fp result'
    . HasCallStack
   => ShelleyLedgerEra era ~ ledgerera
   => ConsensusProtocol era ~ protocol
   => ProtoCrypto protocol ~ StandardCrypto
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
-  -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) result'
+  -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) fp result'
   -> result'
   -> result
 fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =

@@ -1,6 +1,6 @@
 cabal-version: 3.4
 name: cardano-api
-version: 10.13.1.0
+version: 10.14.0.0
 synopsis: The cardano API
 description: The cardano API.
 category:
@@ -155,16 +155,16 @@ library
     network-mux,
     nothunks,
     ordered-containers,
-    ouroboros-consensus ^>=0.24,
-    ouroboros-consensus-cardano ^>=0.23,
-    ouroboros-consensus-diffusion ^>=0.19 || ^>=0.21,
+    ouroboros-consensus ^>=0.25,
+    ouroboros-consensus-cardano ^>=0.24,
+    ouroboros-consensus-diffusion ^>=0.22,
     ouroboros-consensus-protocol ^>=0.11,
     ouroboros-network,
     ouroboros-network-api >=0.13,
     ouroboros-network-framework,
     ouroboros-network-protocols,
     parsec,
-    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.43,
+    plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib} ^>=1.45,
     prettyprinter,
     prettyprinter-ansi-terminal,
     prettyprinter-configurable ^>=1.36,
@@ -172,8 +172,10 @@ library
     safe-exceptions,
     scientific,
     serialise,
+    singletons,
     small-steps ^>=1.1,
     sop-core,
+    sop-extras,
     stm,
     strict-sop-core,
     time,
@@ -418,7 +420,7 @@ test-suite cardano-api-golden
     hedgehog-extras ^>=0.7,
     microlens,
     parsec,
-    plutus-core ^>=1.43,
+    plutus-core ^>=1.45,
     plutus-ledger-api,
     tasty,
     tasty-hedgehog,
