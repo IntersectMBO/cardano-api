@@ -1,12 +1,16 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
 -- not export any from this API. We also use them unticked as nature intended.
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -37,6 +41,10 @@ module Cardano.Api.Internal.Keys.Shelley
   , VerificationKey (..)
   , SigningKey (..)
   , Hash (..)
+  , AnyStakePoolVerificationKey (..)
+  , anyStakePoolVerificationKeyHash
+  , AnyStakePoolSigningKey (..)
+  , anyStakePoolSigningKeyToVerificationKey
   )
 where
 
@@ -60,7 +68,11 @@ import Cardano.Crypto.Wallet qualified as Crypto.HD
 import Cardano.Ledger.Keys (DSIGN)
 import Cardano.Ledger.Keys qualified as Shelley
 
-import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
+import Data.Aeson.Types
+  ( ToJSONKey (..)
+  , toJSONKeyText
+  , withText
+  )
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -1658,6 +1670,29 @@ instance CastSigningKeyRole GenesisUTxOKey PaymentKey where
 -- stake pool keys
 --
 
+-- | Wrapper that handles both normal and extended StakePoolKeys VerificationKeys
+data AnyStakePoolVerificationKey
+  = AnyStakePoolNormalVerificationKey (VerificationKey StakePoolKey)
+  | AnyStakePoolExtendedVerificationKey (VerificationKey StakePoolExtendedKey)
+  deriving (Show, Eq)
+
+anyStakePoolVerificationKeyHash :: AnyStakePoolVerificationKey -> Hash StakePoolKey
+anyStakePoolVerificationKeyHash (AnyStakePoolNormalVerificationKey vk) = verificationKeyHash vk
+anyStakePoolVerificationKeyHash (AnyStakePoolExtendedVerificationKey vk) =
+  let StakePoolExtendedKeyHash hash = verificationKeyHash vk in StakePoolKeyHash hash
+
+-- | Wrapper that handles both normal and extended StakePoolKeys SigningKeys
+data AnyStakePoolSigningKey
+  = AnyStakePoolNormalSigningKey (SigningKey StakePoolKey)
+  | AnyStakePoolExtendedSigningKey (SigningKey StakePoolExtendedKey)
+  deriving Show
+
+anyStakePoolSigningKeyToVerificationKey :: AnyStakePoolSigningKey -> AnyStakePoolVerificationKey
+anyStakePoolSigningKeyToVerificationKey (AnyStakePoolNormalSigningKey sk) =
+  AnyStakePoolNormalVerificationKey (getVerificationKey sk)
+anyStakePoolSigningKeyToVerificationKey (AnyStakePoolExtendedSigningKey vk) =
+  AnyStakePoolExtendedVerificationKey (getVerificationKey vk)
+
 data StakePoolKey
 
 instance HasTypeProxy StakePoolKey where
@@ -1892,6 +1927,10 @@ instance SerialiseAsRawBytes (Hash StakePoolExtendedKey) where
       (SerialiseAsRawBytesError "Unable to deserialise Hash StakePoolExtendedKey")
       (StakePoolExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
+instance SerialiseAsBech32 (Hash StakePoolExtendedKey) where
+  bech32PrefixFor _ = "pool_xvkh"
+  bech32PrefixesPermitted _ = ["pool_xvkh"]
+
 instance HasTextEnvelope (VerificationKey StakePoolExtendedKey) where
   textEnvelopeType _ = "StakePoolExtendedVerificationKey_ed25519_bip32"
 
@@ -1905,6 +1944,24 @@ instance SerialiseAsBech32 (VerificationKey StakePoolExtendedKey) where
 instance SerialiseAsBech32 (SigningKey StakePoolExtendedKey) where
   bech32PrefixFor _ = "pool_xsk"
   bech32PrefixesPermitted _ = ["pool_xsk"]
+
+instance ToJSON (Hash StakePoolExtendedKey) where
+  toJSON = toJSON . serialiseToBech32
+
+instance ToJSONKey (Hash StakePoolExtendedKey) where
+  toJSONKey = toJSONKeyText serialiseToBech32
+
+instance FromJSON (Hash StakePoolExtendedKey) where
+  parseJSON = withText "PoolId" $ \str ->
+    case deserialiseFromBech32 (AsHash AsStakePoolExtendedKey) str of
+      Left err ->
+        fail $
+          docToString $
+            mconcat
+              [ "Error deserialising Hash StakePoolKey: " <> pretty str
+              , " Error: " <> prettyError err
+              ]
+      Right h -> pure h
 
 instance CastVerificationKeyRole StakePoolExtendedKey StakePoolKey where
   castVerificationKey (StakePoolExtendedVerificationKey vk) =
