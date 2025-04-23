@@ -25,7 +25,6 @@ import Cardano.Binary qualified as CBOR
 import Cardano.Ledger.Address qualified as L
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Conway qualified as Conway
 import Cardano.Ledger.Conway.Governance qualified as Gov
 import Cardano.Ledger.Conway.Governance qualified as Ledger
 import Cardano.Ledger.Core qualified as Shelley
@@ -170,12 +169,12 @@ instance IsShelleyBasedEra era => Ord (Proposal era) where
     shelleyBasedEraConstraints (shelleyBasedEra @era) $ compare pp1 pp2
 
 instance IsShelleyBasedEra era => ToCBOR (Proposal era) where
-  toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @Conway.ConwayEra vp
+  toCBOR (Proposal vp) = shelleyBasedEraConstraints (shelleyBasedEra @era) $ Shelley.toEraCBOR @(ShelleyLedgerEra era) vp
 
 instance IsShelleyBasedEra era => FromCBOR (Proposal era) where
   fromCBOR =
     Proposal
-      <$> shelleyBasedEraConstraints (shelleyBasedEra @era) (Shelley.fromEraCBOR @Conway.ConwayEra)
+      <$> shelleyBasedEraConstraints (shelleyBasedEra @era) (Shelley.fromEraCBOR @(ShelleyLedgerEra era))
 
 instance IsShelleyBasedEra era => SerialiseAsCBOR (Proposal era) where
   serialiseToCBOR = shelleyBasedEraConstraints (shelleyBasedEra @era) CBOR.serialize'
