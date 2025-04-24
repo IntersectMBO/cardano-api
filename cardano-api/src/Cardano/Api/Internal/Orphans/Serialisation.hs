@@ -85,6 +85,7 @@ import Ouroboros.Consensus.Shelley.Eras qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import Ouroboros.Consensus.Shelley.Ledger.Query qualified as Consensus
 import Ouroboros.Network.Block (HeaderHash, Tip (..))
+import Ouroboros.Network.Protocol.LocalTxSubmission.Type qualified as Net.Tx
 import PlutusLedgerApi.Common qualified as P
 import PlutusLedgerApi.V2 qualified as V2
 
@@ -367,6 +368,8 @@ instance ToJSON PraosState where
       , "labNonce" .= Consensus.praosStateLabNonce s
       , "lastEpochBlockNonce" .= Consensus.praosStateLastEpochBlockNonce s
       ]
+
+deriving instance Show a => Show (Net.Tx.SubmitResult a)
 
 instance A.FromJSON V2.ParamName where
   parseJSON = A.withText "ParamName" parsePlutusParamName
