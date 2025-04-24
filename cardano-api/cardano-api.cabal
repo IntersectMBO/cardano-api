@@ -86,6 +86,7 @@ library
     Cardano.Api.Internal.Governance.Metadata.Validation
     Cardano.Api.Internal.IO
     Cardano.Api.Internal.IPC
+    Cardano.Api.Internal.IPC.Monad
     Cardano.Api.Internal.LedgerState
     Cardano.Api.Internal.Modes
     Cardano.Api.Internal.Orphans
@@ -220,7 +221,6 @@ library
     Cardano.Api.Internal.IO.Compat
     Cardano.Api.Internal.IO.Compat.Posix
     Cardano.Api.Internal.IO.Compat.Win32
-    Cardano.Api.Internal.IPC.Monad
     Cardano.Api.Internal.IPC.Version
     Cardano.Api.Internal.InMode
     Cardano.Api.Internal.Json

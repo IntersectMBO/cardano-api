@@ -166,6 +166,10 @@ module Cardano.Api.Internal.IPC
     --
     -- Alternatively, to avoid nested result types, you can use convenience
     -- functions and types from "Cardano.Api.Internal.Convenience.Query".
+    -- It is also posible to combine several queries into a single connection by using
+    -- the monadic interface that can be found in the "Cardano.Api.Internal.IPC.Monad"
+    -- documentation.
+    --
     -- The obtained @utxo@ variable is a standard @Map@ of type @Map TxIn (TxOut CtxUTxO era)@.
 
     -- ** Submitting a transaction
