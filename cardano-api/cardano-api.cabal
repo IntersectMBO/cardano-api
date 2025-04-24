@@ -337,18 +337,14 @@ test-suite cardano-api-test
     hedgehog-extras,
     hedgehog-quickcheck,
     interpolatedstring-perl6,
-    lifted-base,
     microlens,
-    monad-control,
     mtl,
-    network,
     ouroboros-consensus,
     ouroboros-consensus-cardano,
     ouroboros-consensus-protocol,
     ouroboros-network-api,
     plutus-ledger-api,
     tasty,
-    tasty-expected-failure,
     tasty-hedgehog,
     tasty-quickcheck,
     text,
@@ -366,7 +362,6 @@ test-suite cardano-api-test
     Test.Cardano.Api.Genesis
     Test.Cardano.Api.GovAnchorValidation
     Test.Cardano.Api.IO
-    Test.Cardano.Api.IPC
     Test.Cardano.Api.Json
     Test.Cardano.Api.KeysByron
     Test.Cardano.Api.Ledger
