@@ -2638,9 +2638,9 @@ fromBabbageTxOut w txdatums txout =
   resolveDatumInTx dh
     | Just d <- Map.lookup dh txdatums =
         TxOutSupplementalDatum
-          (babbageEraOnwardsToAlonzoEraOnwards w)
+          (convert w)
           (fromAlonzoData d)
-    | otherwise = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh)
+    | otherwise = TxOutDatumHash (convert w) (ScriptDataHash dh)
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
@@ -3599,7 +3599,7 @@ makeShelleyTransactionBody
     scriptdata :: [HashableScriptData]
     scriptdata =
       [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
-        ++ [ d
+        <> [ d
            | ( _
                , AnyScriptWitness
                    ( PlutusScriptWitness
