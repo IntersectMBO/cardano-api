@@ -38,6 +38,7 @@ import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 
 import Data.Aeson
+import Data.Type.Equality
 import Data.Typeable (Typeable)
 
 data ShelleyEraOnly era where
@@ -97,6 +98,7 @@ type ShelleyEraOnlyConstraints era =
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (DebugLedgerState era)
   , Typeable era
+  , (era == ByronEra) ~ False
   )
 
 shelleyEraOnlyConstraints

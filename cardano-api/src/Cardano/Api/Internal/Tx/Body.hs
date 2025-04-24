@@ -970,13 +970,8 @@ toShelleyTxOut
   => ShelleyBasedEra era
   -> TxOut CtxUTxO era
   -> Ledger.TxOut ledgerera
-toShelleyTxOut _ = \case
-  -- jky simplify
-  TxOut _ (TxOutValueByron _) _ _ ->
-    -- TODO: Temporary until we have basic tx
-    -- construction functionality
-    error "toShelleyTxOut: Expected a Shelley value"
-  TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
+toShelleyTxOut sbe = shelleyBasedEraConstraints sbe $ \case
+  TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     caseShelleyToMaryOrAlonzoEraOnwards
       (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
       ( \case
@@ -1165,7 +1160,7 @@ deriving instance Show (TxInsReference era)
 data TxOutValue era where
   TxOutValueByron
     :: L.Coin
-    -> TxOutValue era
+    -> TxOutValue ByronEra
   TxOutValueShelleyBased
     :: ( Eq (Ledger.Value (ShelleyLedgerEra era))
        , Show (Ledger.Value (ShelleyLedgerEra era))
@@ -3658,12 +3653,8 @@ toShelleyTxOutAny
   => ShelleyBasedEra era
   -> TxOut ctx era
   -> Ledger.TxOut ledgerera
-toShelleyTxOutAny _ = \case
-  TxOut _ (TxOutValueByron _) _ _ ->
-    -- TODO: Temporary until we have basic tx
-    -- construction functionality
-    error "toShelleyTxOutAny: Expected a Shelley value"
-  TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
+toShelleyTxOutAny sbe = shelleyBasedEraConstraints sbe $ \case
+  TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     caseShelleyToMaryOrAlonzoEraOnwards
       (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
       ( \case

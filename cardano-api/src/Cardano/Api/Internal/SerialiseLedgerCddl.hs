@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -160,12 +159,12 @@ deserialiseByronTxCddl tec =
 serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelope
 serialiseWitnessLedgerCddl sbe kw =
   shelleyBasedEraConstraints sbe $
-    serialiseToTextEnvelope (Just (TextEnvelopeDescr $ T.unpack $ genDesc kw)) kw
+    serialiseToTextEnvelope (Just $ TextEnvelopeDescr desc) kw
  where
-  genDesc :: KeyWitness era -> Text
-  genDesc ByronKeyWitness{} = case sbe of {}
-  genDesc ShelleyBootstrapWitness{} = "Key BootstrapWitness ShelleyEra"
-  genDesc ShelleyKeyWitness{} = "Key Witness ShelleyEra"
+  desc :: String
+  desc = shelleyBasedEraConstraints sbe $ case kw of
+    ShelleyBootstrapWitness{} -> "Key BootstrapWitness ShelleyEra"
+    ShelleyKeyWitness{} -> "Key Witness ShelleyEra"
 
 deserialiseWitnessLedgerCddl
   :: forall era
