@@ -106,7 +106,7 @@ module Cardano.Api.Internal.IPC
     -- Alternatively, 'ImmutableTip' can be used to obtain information from the most recent
     -- block considered as final by the consensus algorithm. While this data is stable and will
     -- not be rolled back, it is less recent – on mainnet, it is typically about 36 hours
-    -- begind the current time.
+    -- behind the current time.
     --
     -- 'QueryCurrentEra' is the constructor of the query that retrieves the node's current
     -- era.
