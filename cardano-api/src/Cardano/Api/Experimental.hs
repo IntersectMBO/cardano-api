@@ -31,7 +31,6 @@ module Cardano.Api.Experimental
   , LedgerEra
   , DeprecatedEra (..)
   , eraToSbe
-  , babbageEraOnwardsToEra
   , eraToBabbageEraOnwards
   , sbeToEra
 

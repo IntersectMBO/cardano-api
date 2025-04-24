@@ -26,7 +26,6 @@ module Cardano.Api.Internal.Experimental.Eras
   , EraCommonConstraints
   , obtainCommonConstraints
   , eraToSbe
-  , babbageEraOnwardsToEra
   , eraToBabbageEraOnwards
   , sbeToEra
   )
@@ -42,7 +41,6 @@ import Cardano.Api.Internal.ReexposeLedger qualified as L
 import Cardano.Api.Internal.Via.ShowOf
 
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Babbage qualified as Ledger
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
@@ -64,7 +62,6 @@ import Prettyprinter
 -- from the upcoming era. Therefore, protocol versions are limited to the current mainnet era
 -- and the next (upcoming) era.
 type family LedgerEra era = (r :: Type) | r -> era where
-  LedgerEra BabbageEra = Ledger.BabbageEra
   LedgerEra ConwayEra = Ledger.ConwayEra
 
 -- | An existential wrapper for types of kind @k -> Type@. It can hold any
@@ -93,8 +90,6 @@ data Some (f :: k -> Type) where
 -- codebase to the new mainnet era.
 data Era era where
   -- | The currently active era on the Cardano mainnet.
-  BabbageEra :: Era BabbageEra
-  -- | The upcoming era in development.
   ConwayEra :: Era ConwayEra
 
 deriving instance Show (Era era)
@@ -105,10 +100,7 @@ instance Pretty (Era era) where
   pretty = eraToStringLike
 
 instance TestEquality Era where
-  testEquality BabbageEra BabbageEra = Just Refl
-  testEquality BabbageEra _ = Nothing
   testEquality ConwayEra ConwayEra = Just Refl
-  testEquality ConwayEra _ = Nothing
 
 instance ToJSON (Era era) where
   toJSON = eraToStringLike
@@ -120,15 +112,13 @@ instance Eq (Some Era) where
   Some era1 == Some era2 = isJust $ testEquality era1 era2
 
 instance Bounded (Some Era) where
-  minBound = Some BabbageEra
+  minBound = Some ConwayEra
   maxBound = Some ConwayEra
 
 instance Enum (Some Era) where
-  toEnum 0 = Some BabbageEra
-  toEnum 1 = Some ConwayEra
+  toEnum 0 = Some ConwayEra
   toEnum i = error $ "Enum.toEnum: invalid argument " <> show i <> " - does not correspond to any era"
-  fromEnum (Some BabbageEra) = 0
-  fromEnum (Some ConwayEra) = 1
+  fromEnum (Some ConwayEra) = 0
 
 instance Ord (Some Era) where
   compare e1 e2 = compare (fromEnum e1) (fromEnum e2)
@@ -152,25 +142,21 @@ instance FromJSON (Some Era) where
 instance Eon Era where
   inEonForEra v f = \case
     Api.ConwayEra -> f ConwayEra
-    Api.BabbageEra -> f BabbageEra
     _ -> v
 
 -- | A temporary compatibility instance for easier conversion between the experimental and old APIs.
 instance Api.ToCardanoEra Era where
   toCardanoEra = \case
-    BabbageEra -> Api.BabbageEra
     ConwayEra -> Api.ConwayEra
 
 eraToStringLike :: IsString a => Era era -> a
 {-# INLINE eraToStringLike #-}
 eraToStringLike = \case
-  BabbageEra -> "Babbage"
   ConwayEra -> "Conway"
 
 eraFromStringLike :: (IsString a, Eq a) => a -> Either a (Some Era)
 {-# INLINE eraFromStringLike #-}
 eraFromStringLike = \case
-  "Babbage" -> pure $ Some BabbageEra
   "Conway" -> pure $ Some ConwayEra
   wrong -> Left wrong
 
@@ -211,28 +197,19 @@ eraToSbe = convert
 
 instance Convert Era Api.CardanoEra where
   convert = \case
-    BabbageEra -> Api.BabbageEra
     ConwayEra -> Api.ConwayEra
 
 instance Convert Era ShelleyBasedEra where
   convert = \case
-    BabbageEra -> ShelleyBasedEraBabbage
     ConwayEra -> ShelleyBasedEraConway
 
 instance Convert Era AlonzoEraOnwards where
   convert = \case
-    BabbageEra -> AlonzoEraOnwardsBabbage
     ConwayEra -> AlonzoEraOnwardsConway
 
 instance Convert Era BabbageEraOnwards where
   convert = \case
-    BabbageEra -> BabbageEraOnwardsBabbage
     ConwayEra -> BabbageEraOnwardsConway
-
-instance Convert BabbageEraOnwards Era where
-  convert = \case
-    BabbageEraOnwardsBabbage -> BabbageEra
-    BabbageEraOnwardsConway -> ConwayEra
 
 newtype DeprecatedEra era
   = DeprecatedEra (ShelleyBasedEra era)
@@ -245,15 +222,11 @@ sbeToEra
   => ShelleyBasedEra era
   -> m (Era era)
 sbeToEra ShelleyBasedEraConway = return ConwayEra
-sbeToEra ShelleyBasedEraBabbage = return BabbageEra
+sbeToEra e@ShelleyBasedEraBabbage = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraAlonzo = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraMary = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraAllegra = throwError $ DeprecatedEra e
 sbeToEra e@ShelleyBasedEraShelley = throwError $ DeprecatedEra e
-
-{-# DEPRECATED babbageEraOnwardsToEra "Use 'convert' instead." #-}
-babbageEraOnwardsToEra :: BabbageEraOnwards era -> Era era
-babbageEraOnwardsToEra = convert
 
 {-# DEPRECATED eraToBabbageEraOnwards "Use 'convert' instead." #-}
 eraToBabbageEraOnwards :: Era era -> BabbageEraOnwards era
@@ -265,9 +238,6 @@ eraToBabbageEraOnwards = convert
 class IsEra era where
   useEra :: Era era
 
-instance IsEra BabbageEra where
-  useEra = BabbageEra
-
 instance IsEra ConwayEra where
   useEra = ConwayEra
 
@@ -275,7 +245,6 @@ obtainCommonConstraints
   :: Era era
   -> (EraCommonConstraints era => a)
   -> a
-obtainCommonConstraints BabbageEra x = x
 obtainCommonConstraints ConwayEra x = x
 
 type EraCommonConstraints era =

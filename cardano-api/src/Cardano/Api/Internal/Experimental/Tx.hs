@@ -138,7 +138,6 @@ import Cardano.Api.Internal.Tx.Sign
 import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Babbage qualified as Ledger
 import Cardano.Ledger.Conway qualified as Ledger
 import Cardano.Ledger.Conway.TxBody qualified as L
 import Cardano.Ledger.Core qualified as Ledger
@@ -156,7 +155,6 @@ newtype UnsignedTx era
 
 instance IsEra era => Show (UnsignedTx era) where
   showsPrec p (UnsignedTx tx) = case useEra @era of
-    BabbageEra -> showsPrec p (tx :: Ledger.Tx Ledger.BabbageEra)
     ConwayEra -> showsPrec p (tx :: Ledger.Tx Ledger.ConwayEra)
 
 newtype UnsignedTxError
@@ -246,12 +244,6 @@ eraSpecificLedgerTxBody
   -> Ledger.TxBody (LedgerEra era)
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (Ledger.TxBody (LedgerEra era))
-eraSpecificLedgerTxBody BabbageEra ledgerbody bc = do
-  let sbe = convert BabbageEra
-
-  setUpdateProposal <- convTxUpdateProposal sbe (txUpdateProposal bc)
-
-  return $ ledgerbody & L.updateTxBodyL .~ setUpdateProposal
 eraSpecificLedgerTxBody ConwayEra ledgerbody bc =
   let propProcedures = txProposalProcedures bc
       voteProcedures = txVotingProcedures bc
