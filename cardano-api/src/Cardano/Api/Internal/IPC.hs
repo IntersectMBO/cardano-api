@@ -15,8 +15,9 @@
 --
 -- This module provides the client side of the node-to-client interprocess
 -- communication (IPC) for interacting with a local Cardano node. It supports
--- querying the node for information, submitting transactions, and retrieving
--- historical chain data using the @ChainSync@ protocol.
+-- querying the node for information, submitting transactions, monitoring
+-- the local mempool, and retrieving historical chain data using the
+-- @ChainSync@ protocol.
 module Cardano.Api.Internal.IPC
   ( -- * Examples
 
