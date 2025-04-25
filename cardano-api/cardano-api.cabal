@@ -73,6 +73,7 @@ library
     Cardano.Api.Experimental
     Cardano.Api.Internal.Address
     Cardano.Api.Internal.Block
+    Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DRepMetadata
     Cardano.Api.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Internal.Eras
@@ -82,6 +83,8 @@ library
     Cardano.Api.Internal.GenesisParameters
     Cardano.Api.Internal.Governance.Metadata.Validation
     Cardano.Api.Internal.IO
+    Cardano.Api.Internal.IPC
+    Cardano.Api.Internal.IPC.Monad
     Cardano.Api.Internal.LedgerState
     Cardano.Api.Internal.Modes
     Cardano.Api.Internal.Orphans
@@ -190,7 +193,6 @@ library
     Cardano.Api.Internal.Certificate
     Cardano.Api.Internal.Compatible.Tx
     Cardano.Api.Internal.Convenience.Construction
-    Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DeserialiseAnyOf
     Cardano.Api.Internal.Eon.AllegraEraOnwards
     Cardano.Api.Internal.Eon.AlonzoEraOnwards
@@ -228,8 +230,6 @@ library
     Cardano.Api.Internal.IO.Compat
     Cardano.Api.Internal.IO.Compat.Posix
     Cardano.Api.Internal.IO.Compat.Win32
-    Cardano.Api.Internal.IPC
-    Cardano.Api.Internal.IPC.Monad
     Cardano.Api.Internal.IPC.Version
     Cardano.Api.Internal.InMode
     Cardano.Api.Internal.Json
