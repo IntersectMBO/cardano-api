@@ -1,5 +1,28 @@
 # Changelog for cardano-api
 
+## 10.15.0.0
+
+- Removed Babbage era from `Experimental` API together with `babbageEraOnwardsToEra` function.
+  (breaking)
+  [PR 828](https://github.com/IntersectMBO/cardano-api/pull/828)
+
+- Improved autobalancing errors when change has no lovelace
+  `checkMinUTxOValue` has its arguments flipped.
+  (breaking, refactoring)
+  [PR 816](https://github.com/IntersectMBO/cardano-api/pull/816)
+
+- Added support for stake pool extended keys
+  (feature)
+  [PR 781](https://github.com/IntersectMBO/cardano-api/pull/781)
+
+- Exposed `substituteExecutionUnits` & `handleExUnitsErrors` from `Cardano.Api.Internal.Fees` module
+  (compatible)
+  [PR 820](https://github.com/IntersectMBO/cardano-api/pull/820)
+
+- Fixed CBOR codecs for Proposal
+  (compatible, maintenance)
+  [PR 823](https://github.com/IntersectMBO/cardano-api/pull/823)
+
 ## 10.14.1.0
 
 - Update consensus to 0.26
