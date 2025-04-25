@@ -129,7 +129,7 @@ module Cardano.Api.Internal.IPC
     --   Left Shelley.AFPointNotOnChain -> error "Error, point queried is not on chain!"
     -- @
     --
-    -- 'AFPointToolOld' and 'AFPointNotOnChain' errors should not occur when querying with
+    -- 'AFPointTooOld' and 'AFPointNotOnChain' errors should not occur when querying with
     -- either 'VolatileTip' or 'ImmutableTip'.
 
     -- *** Obtaining the UTXO set
