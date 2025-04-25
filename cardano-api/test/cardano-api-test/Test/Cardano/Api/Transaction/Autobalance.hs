@@ -35,7 +35,9 @@ import Cardano.Slotting.EpochInfo qualified as CS
 import Cardano.Slotting.Slot qualified as CS
 import Cardano.Slotting.Time qualified as CS
 
+import Control.Monad
 import Data.Aeson (eitherDecodeStrict)
+import Data.Bifunctor (first)
 import Data.ByteString qualified as B
 import Data.Default (def)
 import Data.Function
@@ -55,8 +57,184 @@ import Hedgehog (MonadTest, Property, forAll, (===))
 import Hedgehog qualified as H
 import Hedgehog.Extras qualified as H
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
+
+prop_make_transaction_body_autobalance_invariants :: Property
+prop_make_transaction_body_autobalance_invariants = H.property $ do
+  let ceo = ConwayEraOnwardsConway
+      sbe = convert ceo
+
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  pparams <-
+    LedgerProtocolParameters
+      <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  -- assume a value larger the one from protocol params to account for min utxo scaling with minted assets
+  let minUtxo = 2_000_000
+
+  -- generate utxos with random values
+  utxos <- fmap (UTxO . fromList) . forAll $ do
+    Gen.list (Range.constant 1 10) $ do
+      txIn <- genTxIn
+      addr <- genAddressInEra sbe
+      utxoValue <- L.Coin <$> Gen.integral (Range.linear minUtxo 20_000_000)
+      let mintValue = mempty -- TODO generate and check in invariants
+          txOut =
+            TxOut
+              addr
+              (TxOutValueShelleyBased sbe $ L.MaryValue utxoValue mintValue)
+              TxOutDatumNone
+              ReferenceScriptNone
+      pure (txIn, txOut)
+
+  let utxoSum =
+        mconcat
+          [ maryValue
+          | (_, TxOut _ (TxOutValueShelleyBased _ maryValue) _ _) <- toList utxos
+          ]
+  H.noteShowPretty_ utxoSum
+
+  -- split inputs into min utxo txouts
+  let nTxOuts = L.unCoin (L.coin utxoSum) `div` minUtxo - 1 -- leave one out for change
+  H.noteShow_ nTxOuts
+  txOut <- forAll $ forM ([1 .. nTxOuts] :: [Integer]) $ \_ -> do
+    addr <- genAddressInEra sbe
+    let mintValue = mempty -- TODO generate and check in invariants
+    pure $
+      TxOut
+        addr
+        (TxOutValueShelleyBased sbe $ L.MaryValue (L.Coin minUtxo) mintValue)
+        TxOutDatumNone
+        ReferenceScriptNone
+
+  changeAddress <- forAll $ genAddressInEra sbe
+
+  -- use all UTXOs as inputs
+  let txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
+
+  let content =
+        defaultTxBodyContent sbe
+          & setTxIns txInputs
+          & setTxOuts txOut
+          & setTxProtocolParams (pure $ pure pparams)
+
+  (BalancedTxBody balancedContent _ change fee) <-
+    H.leftFail . first prettyError $
+      makeTransactionBodyAutoBalance
+        sbe
+        systemStart
+        epochInfo
+        pparams
+        mempty
+        mempty
+        mempty
+        utxos
+        content
+        changeAddress
+        Nothing
+
+  H.note_ "Check that fee is greater than 0"
+  H.assertWith (L.unCoin fee) $ (<) 0
+
+  H.noteShow_ fee
+  H.noteShowPretty_ change
+  H.noteShowPretty_ $ txOuts balancedContent
+
+  let txOutSum =
+        mconcat
+          [ maryValue
+          | TxOut _ (TxOutValueShelleyBased _ maryValue) _ _ <- txOuts balancedContent
+          ]
+
+  H.note_ "Check that all inputs are spent"
+  utxoSum === (txOutSum <> inject fee)
+
+prop_make_transaction_body_autobalance_no_change :: Property
+prop_make_transaction_body_autobalance_no_change = H.propertyOnce $ do
+  let ceo = ConwayEraOnwardsConway
+      sbe = convert ceo
+
+  systemStart <- parseSystemStart "2021-09-01T00:00:00Z"
+  let epochInfo = LedgerEpochInfo $ CS.fixedEpochInfo (CS.EpochSize 100) (CS.mkSlotLength 1000)
+
+  pparams <-
+    LedgerProtocolParameters
+      <$> H.readJsonFileOk "test/cardano-api-test/files/input/protocol-parameters/conway.json"
+
+  let expectedFee = 170_077
+      utxoValue = 5_000_000
+
+  let address =
+        AddressInEra
+          (ShelleyAddressInEra sbe)
+          ( ShelleyAddress
+              L.Testnet
+              (L.KeyHashObj "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+              L.StakeRefNull
+          )
+  let utxos =
+        UTxO
+          [
+            ( TxIn
+                "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
+                (TxIx 0)
+            , TxOut
+                address
+                ( TxOutValueShelleyBased
+                    sbe
+                    (L.MaryValue utxoValue mempty)
+                )
+                TxOutDatumNone
+                ReferenceScriptNone
+            )
+          ]
+
+      txInputs = map (,BuildTxWith (KeyWitness KeyWitnessForSpending)) . toList . M.keys . unUTxO $ utxos
+
+      -- tx out fully spending the txin minus the fee
+      txOut =
+        [ TxOut
+            address
+            ( TxOutValueShelleyBased
+                sbe
+                (L.MaryValue (utxoValue - expectedFee) mempty)
+            )
+            TxOutDatumNone
+            ReferenceScriptNone
+        ]
+
+  let content =
+        defaultTxBodyContent sbe
+          & setTxIns txInputs
+          & setTxOuts txOut
+          & setTxProtocolParams (pure $ pure pparams)
+
+  (BalancedTxBody balancedContent _ (TxOut _ (TxOutValueShelleyBased _ change) _ _) fee) <-
+    H.leftFail . first prettyError $
+      makeTransactionBodyAutoBalance
+        sbe
+        systemStart
+        epochInfo
+        pparams
+        mempty
+        mempty
+        mempty
+        utxos
+        content
+        address
+        Nothing
+
+  H.noteShowPretty_ change
+  H.noteShowPretty_ $ txOuts balancedContent
+
+  expectedFee === fee
+
+  -- check that the txins were fully spent before autobalancing
+  H.assertWith change L.isZero
 
 -- | Test that the fee is the same when spending minted asset manually or when autobalancing it
 prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset :: Property
@@ -396,8 +574,7 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
           , L.pProcReturnAddr =
               L.RewardAccount
                 { L.raNetwork = L.Testnet
-                , L.raCredential =
-                    L.KeyHashObj (L.KeyHash{L.unKeyHash = "0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"})
+                , L.raCredential = L.KeyHashObj "0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"
                 }
           , L.pProcGovAction = L.InfoAction
           , L.pProcAnchor = anchor
@@ -452,9 +629,7 @@ mkSimpleUTxOs sbe =
               (ShelleyAddressInEra sbe)
               ( ShelleyAddress
                   L.Testnet
-                  ( L.KeyHashObj $
-                      L.KeyHash "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
-                  )
+                  (L.KeyHashObj "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
                   L.StakeRefNull
               )
           )
@@ -518,9 +693,7 @@ mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
               (ShelleyAddressInEra sbe)
               ( ShelleyAddress
                   L.Testnet
-                  ( L.KeyHashObj $
-                      L.KeyHash "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137"
-                  )
+                  (L.KeyHashObj "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
                   L.StakeRefNull
               )
           )
@@ -530,7 +703,7 @@ mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
                   (L.Coin 4_000_000)
                   ( L.MultiAsset $
                       fromList
-                        [(L.PolicyID scriptHash, [(L.AssetName "eeee", 1)]) | scriptHash <- maybeToList mScriptHash]
+                        [(L.PolicyID scriptHash, [("eeee", 1)]) | scriptHash <- maybeToList mScriptHash]
                   )
               )
           )
@@ -569,7 +742,7 @@ mkTxOutput beo address coin mScriptHash = babbageEraOnwardsConstraints beo $ do
               coin
               ( L.MultiAsset $
                   fromList
-                    [(L.PolicyID scriptHash, [(L.AssetName "eeee", 2)]) | scriptHash <- maybeToList mScriptHash]
+                    [(L.PolicyID scriptHash, [("eeee", 2)]) | scriptHash <- maybeToList mScriptHash]
               )
           )
       )
@@ -597,6 +770,12 @@ tests =
   testGroup
     "Test.Cardano.Api.Typed.TxBody"
     [ testProperty
+        "makeTransactionBodyAutoBalance invariants"
+        prop_make_transaction_body_autobalance_invariants
+    , testProperty
+        "makeTransactionBodyAutoBalance no change"
+        prop_make_transaction_body_autobalance_no_change
+    , testProperty
         "makeTransactionBodyAutoBalance test correct fees when mutli-asset tx"
         prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset
     , testProperty
