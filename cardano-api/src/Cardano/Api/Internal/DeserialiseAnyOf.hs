@@ -39,7 +39,7 @@ import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BSC
 import Data.Char (toLower)
-import Data.Data (Data)
+import Data.Data
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text

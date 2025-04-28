@@ -15,7 +15,7 @@ where
 
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
-import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Orphans.Misc ()
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Utils

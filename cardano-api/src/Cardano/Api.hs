@@ -1112,7 +1112,7 @@ where
 import Cardano.Api.Internal.Address
 import Cardano.Api.Internal.Anchor
 import Cardano.Api.Internal.Block
-import Cardano.Api.Internal.CIP.CIP129
+import Cardano.Api.Internal.CIP.Cip129
 import Cardano.Api.Internal.Certificate
 import Cardano.Api.Internal.Convenience.Construction
 import Cardano.Api.Internal.Convenience.Query
