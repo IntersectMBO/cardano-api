@@ -88,6 +88,8 @@ library
     Cardano.Api.Internal.LedgerState
     Cardano.Api.Internal.Modes
     Cardano.Api.Internal.Orphans
+    Cardano.Api.Internal.Orphans.Misc
+    Cardano.Api.Internal.Orphans.Serialisation
     Cardano.Api.Internal.Plutus
     Cardano.Api.Internal.Pretty
     Cardano.Api.Internal.ProtocolParameters
@@ -190,6 +192,7 @@ library
 
   other-modules:
     Cardano.Api.Internal.Anchor
+    Cardano.Api.Internal.CIP.Cip129
     Cardano.Api.Internal.Certificate
     Cardano.Api.Internal.Compatible.Tx
     Cardano.Api.Internal.Convenience.Construction
