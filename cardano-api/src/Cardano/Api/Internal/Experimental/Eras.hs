@@ -249,8 +249,11 @@ obtainCommonConstraints ConwayEra x = x
 
 type EraCommonConstraints era =
   ( L.AlonzoEraTx (LedgerEra era)
+  , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
+  , L.Era (LedgerEra era)
   , L.EraTx (LedgerEra era)
+  , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
   , ShelleyLedgerEra era ~ LedgerEra era
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
