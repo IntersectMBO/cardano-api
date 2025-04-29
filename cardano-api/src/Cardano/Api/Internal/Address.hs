@@ -384,10 +384,10 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
           addressAny <- runParsecParser parseAddressAny txt
           pure $ anyAddressInShelleyBasedEra sbe addressAny
 
-parseAddressAny :: Parsec.Parser AddressAny
+parseAddressAny :: SerialiseAddress addr => Parsec.Parser addr
 parseAddressAny = do
   str <- lexPlausibleAddressString
-  case deserialiseAddress AsAddressAny str of
+  case deserialiseAddress asType str of
     Nothing -> fail $ "invalid address: " <> Text.unpack str
     Just addr -> pure addr
 
