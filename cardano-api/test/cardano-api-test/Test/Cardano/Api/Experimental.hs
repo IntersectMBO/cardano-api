@@ -226,7 +226,6 @@ getExampleSrcTxId = do
   srcTxId <-
     H.evalEither $
       Api.deserialiseFromRawBytesHex
-        Api.AsTxId
         "be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978"
   let srcTxIx = Api.TxIx 0
   return $ Api.TxIn srcTxId srcTxIx
@@ -280,5 +279,4 @@ exampleSigningKey :: H.MonadTest m => m (Api.SigningKey Api.PaymentKey)
 exampleSigningKey =
   H.evalEither $
     Api.deserialiseFromBech32
-      (Api.AsSigningKey Api.AsPaymentKey)
       "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms"

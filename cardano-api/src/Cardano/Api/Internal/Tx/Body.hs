@@ -1317,11 +1317,11 @@ deriving instance Show (TxOutDatum ctx era)
 
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline #-}
 
-parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
-parseHash asType = do
+parseHash :: SerialiseAsRawBytes (Hash a) => Parsec.Parser (Hash a)
+parseHash = do
   str <- some Parsec.hexDigit <?> "hash"
   failEitherWith (\e -> "Failed to parse hash: " ++ displayError e) $
-    deserialiseFromRawBytesHex asType (BSC.pack str)
+    deserialiseFromRawBytesHex (BSC.pack str)
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees

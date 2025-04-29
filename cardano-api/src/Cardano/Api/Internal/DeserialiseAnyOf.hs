@@ -23,6 +23,7 @@ where
 
 import Cardano.Api.Internal.Address
 import Cardano.Api.Internal.Error
+import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Keys.Byron
 import Cardano.Api.Internal.Keys.Class
 import Cardano.Api.Internal.Keys.Praos
@@ -108,11 +109,10 @@ data DeserialiseInputResult a
 -- | Deserialise an input of some type that is formatted in some way.
 deserialiseInput
   :: forall a
-   . AsType a
-  -> NonEmpty (InputFormat a)
+   . NonEmpty (InputFormat a)
   -> ByteString
   -> Either InputDecodeError a
-deserialiseInput asType acceptedFormats inputBs =
+deserialiseInput acceptedFormats inputBs =
   go (toList acceptedFormats)
  where
   inputText :: Text
@@ -135,7 +135,7 @@ deserialiseInput asType acceptedFormats inputBs =
   deserialiseTextEnvelope = do
     let textEnvRes :: Either TextEnvelopeError a
         textEnvRes =
-          deserialiseFromTextEnvelope asType
+          deserialiseFromTextEnvelope
             =<< first TextEnvelopeAesonDecodeError (Aeson.eitherDecodeStrict' inputBs)
     case textEnvRes of
       Right res -> DeserialiseInputSuccess res
@@ -148,7 +148,7 @@ deserialiseInput asType acceptedFormats inputBs =
 
   deserialiseBech32 :: SerialiseAsBech32 a => DeserialiseInputResult a
   deserialiseBech32 =
-    case deserialiseFromBech32 asType inputText of
+    case deserialiseFromBech32 inputText of
       Right res -> DeserialiseInputSuccess res
       -- The input was not valid Bech32.
       Left (Bech32DecodingError _) -> DeserialiseInputErrorFormatMismatch
@@ -158,7 +158,7 @@ deserialiseInput asType acceptedFormats inputBs =
   deserialiseHex :: SerialiseAsRawBytes a => DeserialiseInputResult a
   deserialiseHex
     | isValidHex inputBs =
-        case deserialiseFromRawBytesHex asType inputBs of
+        case deserialiseFromRawBytesHex inputBs of
           Left _ -> DeserialiseInputError InputInvalidError
           Right x -> DeserialiseInputSuccess x
     | otherwise = DeserialiseInputErrorFormatMismatch

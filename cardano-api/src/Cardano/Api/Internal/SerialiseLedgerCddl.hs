@@ -34,7 +34,6 @@ where
 
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Error
-import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.IO
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Serialise.Cbor.Canonical
@@ -175,12 +174,9 @@ deserialiseWitnessLedgerCddl sbe te =
   shelleyBasedEraConstraints sbe $
     legacyDecoding te $
       mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
-        deserialiseFromTextEnvelope asType te
+        deserialiseFromTextEnvelope te
  where
-  asType :: AsType (KeyWitness era)
-  asType = shelleyBasedEraConstraints sbe $ proxyToAsType Proxy
-
-  -- \| This wrapper ensures that we can still decode the key witness
+  -- This wrapper ensures that we can still decode the key witness
   -- that were serialized before we migrated to using 'serialiseToTextEnvelope'
   legacyDecoding
     :: TextEnvelope
@@ -309,9 +305,7 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
      . ShelleyBasedEra era
     -> TextEnvelope
     -> Either TextEnvelopeError (Tx era)
-  deserialiseTxLedgerCddl era =
-    shelleyBasedEraConstraints era $
-      deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy)
+  deserialiseTxLedgerCddl era = shelleyBasedEraConstraints era deserialiseFromTextEnvelope
 
 -- Parse the text into types because this will increase code readability and
 -- will make it easier to keep track of the different Cddl descriptions via

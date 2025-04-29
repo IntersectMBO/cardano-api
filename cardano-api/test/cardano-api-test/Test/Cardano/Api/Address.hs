@@ -165,7 +165,7 @@ roundtrip_serialise_address
      , Show a
      )
   => AsType a -> H.Gen a -> Property
-roundtrip_serialise_address asType g =
+roundtrip_serialise_address _ g =
   H.property $ do
     v <- H.forAll g
     H.tripping v serialiseAddress (deserialiseAddress asType)

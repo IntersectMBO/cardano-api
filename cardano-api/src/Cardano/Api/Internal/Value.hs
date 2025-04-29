@@ -458,7 +458,7 @@ instance FromJSON ValueNestedRep where
       sHash <-
         failEitherWith
           (\e -> "Failure when deserialising PolicyId: " ++ displayError e)
-          $ deserialiseFromRawBytesHex AsScriptHash
+          $ deserialiseFromRawBytesHex
           $ Text.encodeUtf8 pid
       ValueNestedBundle (PolicyId sHash) <$> parseJSON quantityBundleJson
      where

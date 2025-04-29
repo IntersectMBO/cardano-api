@@ -270,7 +270,7 @@ instance SerialiseAddress (Address ShelleyAddr) where
 
   deserialiseAddress (AsAddress AsShelleyAddr) t =
     either (const Nothing) Just $
-      deserialiseFromBech32 (AsAddress AsShelleyAddr) t
+      deserialiseFromBech32 t
 
 instance ToJSON (Address ShelleyAddr) where
   toJSON = Aeson.String . serialiseAddress
@@ -590,7 +590,7 @@ instance SerialiseAddress StakeAddress where
 
   deserialiseAddress AsStakeAddress t =
     either (const Nothing) Just $
-      deserialiseFromBech32 AsStakeAddress t
+      deserialiseFromBech32 t
 
 instance ToJSON StakeAddress where
   toJSON s = Aeson.String $ serialiseAddress s

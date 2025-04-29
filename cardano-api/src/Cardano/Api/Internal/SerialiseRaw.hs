@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Raw binary serialisation
 module Cardano.Api.Internal.SerialiseRaw
@@ -66,18 +67,19 @@ instance Error RawBytesHexError where
         <> pretty (toText input)
         <> "; "
         <> pretty message
-    RawBytesHexErrorRawBytesDecodeFail input asType (SerialiseAsRawBytesError e) ->
-      "Failed to deserialise " <> pretty (toText input) <> " as " <> pshow asType <> ". " <> pretty e
+    RawBytesHexErrorRawBytesDecodeFail input typeRep' (SerialiseAsRawBytesError e) ->
+      "Failed to deserialise " <> pretty (toText input) <> " as " <> pshow typeRep' <> ". " <> pretty e
    where
     toText bs = case Text.decodeUtf8' bs of
       Right t -> Text.unpack t
       Left _ -> show bs
 
 deserialiseFromRawBytesHex
-  :: SerialiseAsRawBytes a
-  => AsType a -> ByteString -> Either RawBytesHexError a
-deserialiseFromRawBytesHex proxy hex = do
+  :: forall a
+   . SerialiseAsRawBytes a
+  => ByteString -> Either RawBytesHexError a
+deserialiseFromRawBytesHex hex = do
   raw <- first (RawBytesHexErrorBase16DecodeFail hex) $ Base16.decode hex
-  case deserialiseFromRawBytes proxy raw of
-    Left e -> Left $ RawBytesHexErrorRawBytesDecodeFail hex (typeRep proxy) e
+  case deserialiseFromRawBytes asType raw of
+    Left e -> Left $ RawBytesHexErrorRawBytesDecodeFail hex (typeRep $ asType @a) e
     Right a -> Right a

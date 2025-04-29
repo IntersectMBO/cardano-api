@@ -4,8 +4,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Api.Internal.CIP.Cip129
   ( Cip129 (..)
@@ -98,15 +98,17 @@ serialiseToBech32Cip129 a =
   humanReadablePart = cip129Bech32PrefixFor (proxyToAsType (Proxy :: Proxy a))
 
 deserialiseFromBech32Cip129
-  :: Cip129 a
-  => AsType a -> Text -> Either Bech32DecodeError a
-deserialiseFromBech32Cip129 asType bech32Str = do
+  :: forall a
+   . Cip129 a
+  => Text
+  -> Either Bech32DecodeError a
+deserialiseFromBech32Cip129 bech32Str = do
   (prefix, dataPart) <-
     Bech32.decodeLenient bech32Str
       ?!. Bech32DecodingError
 
   let actualPrefix = Bech32.humanReadablePartToText prefix
-      permittedPrefixes = cip129Bech32PrefixesPermitted asType
+      permittedPrefixes = cip129Bech32PrefixesPermitted (asType @a)
   guard (actualPrefix `elem` permittedPrefixes)
     ?! Bech32UnexpectedPrefix actualPrefix (fromList permittedPrefixes)
 
@@ -128,7 +130,7 @@ deserialiseFromBech32Cip129 asType bech32Str = do
   guard (header == expectedHeader)
     ?! Bech32UnexpectedHeader (toBase16Text expectedHeader) (toBase16Text header)
 
-  let expectedPrefix = Bech32.humanReadablePartToText $ cip129Bech32PrefixFor asType
+  let expectedPrefix = Bech32.humanReadablePartToText $ cip129Bech32PrefixFor (asType @a)
   guard (actualPrefix == expectedPrefix)
     ?! Bech32WrongPrefix actualPrefix expectedPrefix
 
