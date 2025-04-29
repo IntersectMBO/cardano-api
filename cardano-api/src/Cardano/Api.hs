@@ -160,6 +160,7 @@ module Cardano.Api
     -- * Type tags
   , HasTypeProxy (..)
   , AsType (..)
+  , asType
 
     -- * Cryptographic key interface
     -- $keys

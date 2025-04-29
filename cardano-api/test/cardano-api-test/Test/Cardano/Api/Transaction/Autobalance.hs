@@ -477,7 +477,7 @@ loadPlutusWitness
 loadPlutusWitness ceo = do
   envelope <-
     H.leftFailM $
-      fmap (deserialiseFromJSON AsTextEnvelope) . H.evalIO $
+      fmap (deserialiseFromJSON @TextEnvelope) . H.evalIO $
         B.readFile "test/cardano-api-test/files/input/plutus/v3.alwaysTrue.json"
   ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV3) s@(PlutusScript PlutusScriptV3 script) <-
     H.leftFail $ deserialiseFromTextEnvelopeAnyOf textEnvTypes envelope

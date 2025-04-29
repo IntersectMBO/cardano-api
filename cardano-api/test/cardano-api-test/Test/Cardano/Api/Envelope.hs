@@ -101,7 +101,7 @@ roundtrip_VerificationKey_envelope roletoken =
     H.tripping
       vkey
       (serialiseToTextEnvelope Nothing)
-      (deserialiseFromTextEnvelope (AsVerificationKey roletoken))
+      deserialiseFromTextEnvelope
 
 roundtrip_SigningKey_envelope
   :: ( Key keyrole
@@ -115,7 +115,7 @@ roundtrip_SigningKey_envelope roletoken =
     H.tripping
       vkey
       (serialiseToTextEnvelope Nothing)
-      (deserialiseFromTextEnvelope (AsSigningKey roletoken))
+      deserialiseFromTextEnvelope
 
 -- -----------------------------------------------------------------------------
 

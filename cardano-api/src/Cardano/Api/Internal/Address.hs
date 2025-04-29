@@ -270,7 +270,7 @@ instance SerialiseAddress (Address ShelleyAddr) where
 
   deserialiseAddress (AsAddress AsShelleyAddr) t =
     either (const Nothing) Just $
-      deserialiseFromBech32 (AsAddress AsShelleyAddr) t
+      deserialiseFromBech32 t
 
 instance ToJSON (Address ShelleyAddr) where
   toJSON = Aeson.String . serialiseAddress
@@ -384,10 +384,10 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
           addressAny <- runParsecParser parseAddressAny txt
           pure $ anyAddressInShelleyBasedEra sbe addressAny
 
-parseAddressAny :: Parsec.Parser AddressAny
+parseAddressAny :: SerialiseAddress addr => Parsec.Parser addr
 parseAddressAny = do
   str <- lexPlausibleAddressString
-  case deserialiseAddress AsAddressAny str of
+  case deserialiseAddress asType str of
     Nothing -> fail $ "invalid address: " <> Text.unpack str
     Just addr -> pure addr
 
@@ -478,7 +478,8 @@ shelleyAddressInEra
   -> Address ShelleyAddr
   -> AddressInEra era
 shelleyAddressInEra sbe =
-  AddressInEra (ShelleyAddressInEra sbe)
+  shelleyBasedEraConstraints sbe $
+    AddressInEra (ShelleyAddressInEra sbe)
 
 anyAddressInShelleyBasedEra
   :: ()
@@ -495,12 +496,12 @@ anyAddressInEra
   -> Either String (AddressInEra era)
 anyAddressInEra era = \case
   AddressByron addr ->
-    Right (AddressInEra ByronAddressInAnyEra addr)
-  AddressShelley addr ->
-    forEraInEon
-      era
-      (Left "Expected Byron based era address")
-      (\sbe -> Right (AddressInEra (ShelleyAddressInEra sbe) addr))
+    pure $ AddressInEra ByronAddressInAnyEra addr
+  AddressShelley addr -> do
+    sbe <- forEraMaybeEon era ?! "Expected Byron based era address"
+    shelleyBasedEraConstraints sbe $
+      pure $
+        AddressInEra (ShelleyAddressInEra sbe) addr
 
 toAddressAny :: Address addr -> AddressAny
 toAddressAny a@ShelleyAddress{} = AddressShelley a
@@ -589,7 +590,7 @@ instance SerialiseAddress StakeAddress where
 
   deserialiseAddress AsStakeAddress t =
     either (const Nothing) Just $
-      deserialiseFromBech32 AsStakeAddress t
+      deserialiseFromBech32 t
 
 instance ToJSON StakeAddress where
   toJSON s = Aeson.String $ serialiseAddress s
@@ -685,7 +686,8 @@ fromShelleyAddrIsSbe sbe = \case
   Shelley.AddrBootstrap (Shelley.BootstrapAddress addr) ->
     AddressInEra ByronAddressInAnyEra (ByronAddress addr)
   Shelley.Addr nw pc scr ->
-    AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress nw pc scr)
+    shelleyBasedEraConstraints sbe $
+      AddressInEra (ShelleyAddressInEra sbe) (ShelleyAddress nw pc scr)
 
 fromShelleyAddr
   :: ShelleyBasedEra era
@@ -693,10 +695,11 @@ fromShelleyAddr
   -> AddressInEra era
 fromShelleyAddr _ (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
   AddressInEra ByronAddressInAnyEra (ByronAddress addr)
-fromShelleyAddr sBasedEra (Shelley.Addr nw pc scr) =
-  AddressInEra
-    (ShelleyAddressInEra sBasedEra)
-    (ShelleyAddress nw pc scr)
+fromShelleyAddr sbe (Shelley.Addr nw pc scr) =
+  shelleyBasedEraConstraints sbe $
+    AddressInEra
+      (ShelleyAddressInEra sbe)
+      (ShelleyAddress nw pc scr)
 
 fromShelleyStakeAddr :: Shelley.RewardAccount -> StakeAddress
 fromShelleyStakeAddr (Shelley.RewardAccount nw sc) = StakeAddress nw sc

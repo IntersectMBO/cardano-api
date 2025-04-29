@@ -59,7 +59,7 @@ import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 import Control.DeepSeq
 import Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import Data.Text qualified as Text
-import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
+import Data.Type.Equality (TestEquality (..), (:~:) (Refl), type (==))
 import Data.Typeable (Typeable)
 import Text.Pretty (Pretty (..))
 
@@ -230,6 +230,7 @@ type ShelleyBasedEraConstraints era =
   , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
   , ToJSON (L.PredicateFailure (L.EraRule "LEDGER" (ShelleyLedgerEra era)))
   , Typeable era
+  , (era == ByronEra) ~ False
   )
 
 shelleyBasedEraConstraints

@@ -16,7 +16,6 @@ module Cardano.Api.Internal.SerialiseJSON
 where
 
 import Cardano.Api.Internal.Error
-import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Pretty
 
 import Control.Monad.Trans.Except (runExceptT)
@@ -44,24 +43,22 @@ prettyPrintJSON = LBS.toStrict . encodePretty
 
 deserialiseFromJSON
   :: FromJSON a
-  => AsType a
-  -> ByteString
+  => ByteString
   -> Either JsonDecodeError a
-deserialiseFromJSON _proxy =
+deserialiseFromJSON =
   either (Left . JsonDecodeError) Right
     . Aeson.eitherDecodeStrict'
 
 readFileJSON
   :: FromJSON a
-  => AsType a
-  -> FilePath
+  => FilePath
   -> IO (Either (FileError JsonDecodeError) a)
-readFileJSON ttoken path =
+readFileJSON path =
   runExceptT $ do
     content <- fileIOExceptT path BS.readFile
     firstExceptT (FileError path) $
       hoistEither $
-        deserialiseFromJSON ttoken content
+        deserialiseFromJSON content
 
 writeFileJSON
   :: ToJSON a

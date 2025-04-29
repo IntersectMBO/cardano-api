@@ -102,7 +102,7 @@ txid1 :: TxId
 txid1 =
   fromJust $
     hush $
-      deserialiseFromRawBytesHex AsTxId "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
+      deserialiseFromRawBytesHex "210c0a4bb6391baf606843e67863d1474cc462374ab12c42d55f78a0b55b56e0"
 
 txin1 :: TxIn
 txin1 = TxIn txid1 (TxIx 1)
@@ -146,7 +146,6 @@ poolId =
   fromJust $
     hush $
       deserialiseFromRawBytesHex
-        (AsHash AsStakePoolKey)
         "9e734b6c2263c0917bfc550e9c949f41afa3fe000377243bd29df399"
 
 test_Bech32DecodeError :: TestTree

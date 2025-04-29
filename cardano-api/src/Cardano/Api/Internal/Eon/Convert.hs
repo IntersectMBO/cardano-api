@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -14,3 +15,6 @@ import Data.Kind (Type)
 -- relationship between types.
 class Convert (f :: a -> Type) (g :: a -> Type) where
   convert :: forall era. f era -> g era
+
+instance Convert a a where
+  convert = id

@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Bech32 Serialisation
 module Cardano.Api.Internal.SerialiseBech32
@@ -53,15 +54,16 @@ serialiseToBech32 a =
             ++ show err
 
 deserialiseFromBech32
-  :: SerialiseAsBech32 a
-  => AsType a -> Text -> Either Bech32DecodeError a
-deserialiseFromBech32 asType bech32Str = do
+  :: forall a
+   . SerialiseAsBech32 a
+  => Text -> Either Bech32DecodeError a
+deserialiseFromBech32 bech32Str = do
   (prefix, dataPart) <-
     Bech32.decodeLenient bech32Str
       ?!. Bech32DecodingError
 
   let actualPrefix = Bech32.humanReadablePartToText prefix
-      permittedPrefixes = bech32PrefixesPermitted asType
+      permittedPrefixes = bech32PrefixesPermitted (asType @a)
   guard (actualPrefix `elem` permittedPrefixes)
     ?! Bech32UnexpectedPrefix actualPrefix (fromList permittedPrefixes)
 

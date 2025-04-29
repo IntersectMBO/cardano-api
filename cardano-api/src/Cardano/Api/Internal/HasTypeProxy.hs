@@ -4,6 +4,7 @@
 
 module Cardano.Api.Internal.HasTypeProxy
   ( HasTypeProxy (AsType, proxyToAsType)
+  , asType
   , Proxy (..)
   , FromSomeType (..)
   )
@@ -24,3 +25,7 @@ class Typeable t => HasTypeProxy t where
 
 data FromSomeType (c :: Type -> Constraint) b where
   FromSomeType :: c a => AsType a -> (a -> b) -> FromSomeType c b
+
+-- | Provide type proxy from the already existing 'HasTypeProxy' instance
+asType :: HasTypeProxy t => AsType t
+asType = proxyToAsType Proxy

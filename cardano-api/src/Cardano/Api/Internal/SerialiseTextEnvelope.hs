@@ -211,18 +211,19 @@ serialiseToTextEnvelope mbDescr a =
     , teRawCBOR = serialiseToCBOR a
     }
  where
-  ttoken :: AsType a
-  ttoken = proxyToAsType Proxy
+  ttoken = asType :: AsType a
 
 deserialiseFromTextEnvelope
-  :: HasTextEnvelope a
-  => AsType a
-  -> TextEnvelope
+  :: forall a
+   . HasTextEnvelope a
+  => TextEnvelope
   -> Either TextEnvelopeError a
-deserialiseFromTextEnvelope ttoken te = do
+deserialiseFromTextEnvelope te = do
   expectTextEnvelopeOfType (textEnvelopeType ttoken) te
   first TextEnvelopeDecodeError $
     deserialiseFromCBOR ttoken (teRawCBOR te) -- TODO: You have switched from CBOR to JSON
+ where
+  ttoken = asType :: AsType a
 
 deserialiseFromTextEnvelopeAnyOf
   :: [FromSomeType HasTextEnvelope b]
@@ -263,15 +264,14 @@ serialiseTextEnvelope te = encodePretty' textEnvelopeJsonConfig te <> "\n"
 
 readFileTextEnvelope
   :: HasTextEnvelope a
-  => AsType a
-  -> File content In
+  => File content In
   -> IO (Either (FileError TextEnvelopeError) a)
-readFileTextEnvelope ttoken path =
+readFileTextEnvelope path =
   runExceptT $ do
     content <- fileIOExceptT (unFile path) readFileBlocking
     firstExceptT (FileError (unFile path)) $ hoistEither $ do
       te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
-      deserialiseFromTextEnvelope ttoken te
+      deserialiseFromTextEnvelope te
 
 readFileTextEnvelopeAnyOf
   :: [FromSomeType HasTextEnvelope b]

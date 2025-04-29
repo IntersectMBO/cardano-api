@@ -1039,9 +1039,9 @@ instance HasTypeProxy lang => HasTypeProxy (PlutusScript lang) where
 -- do any additional transformation on Plutus script bytes.
 instance HasTypeProxy lang => SerialiseAsRawBytes (PlutusScript lang) where
   serialiseToRawBytes = serialiseToCBOR
-  deserialiseFromRawBytes asType bs =
+  deserialiseFromRawBytes asType' bs =
     first (SerialiseAsRawBytesError . show . B.sformat B.build) $
-      deserialiseFromCBOR asType bs
+      deserialiseFromCBOR asType' bs
 
 instance IsPlutusScriptLanguage lang => HasTextEnvelope (PlutusScript lang) where
   textEnvelopeType _ =
@@ -1492,7 +1492,7 @@ parsePaymentKeyHash :: Text -> Aeson.Parser (Hash PaymentKey)
 parsePaymentKeyHash =
   failEitherWith
     (\e -> "Error deserialising payment key hash: " ++ displayError e)
-    . deserialiseFromRawBytesHex (AsHash AsPaymentKey)
+    . deserialiseFromRawBytesHex
     . Text.encodeUtf8
 
 -- ----------------------------------------------------------------------------

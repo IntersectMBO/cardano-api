@@ -58,7 +58,7 @@ prop_txbody_backwards_compatibility = H.property $ do
     ( H.tripping
         x
         (serialiseTxLedgerCddl era)
-        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+        deserialiseFromTextEnvelope
     )
  where
   -- This is the old implementation of serialisation for txbodies, and it is
@@ -93,7 +93,7 @@ prop_text_envelope_roundtrip_txbody_CBOR = H.property $ do
     ( H.tripping
         x
         (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
-        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+        deserialiseFromTextEnvelope
     )
 
 prop_text_envelope_roundtrip_tx_CBOR :: Property
@@ -105,7 +105,7 @@ prop_text_envelope_roundtrip_tx_CBOR = H.property $ do
     ( H.tripping
         x
         (serialiseToTextEnvelope (Just (TextEnvelopeDescr "Ledger Cddl Format")))
-        (deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy))
+        deserialiseFromTextEnvelope
     )
 
 prop_roundtrip_tx_CBOR :: Property

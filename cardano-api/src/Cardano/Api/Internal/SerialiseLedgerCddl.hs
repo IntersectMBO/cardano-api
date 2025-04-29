@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -35,7 +34,6 @@ where
 
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Error
-import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.IO
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Serialise.Cbor.Canonical
@@ -160,12 +158,12 @@ deserialiseByronTxCddl tec =
 serialiseWitnessLedgerCddl :: forall era. ShelleyBasedEra era -> KeyWitness era -> TextEnvelope
 serialiseWitnessLedgerCddl sbe kw =
   shelleyBasedEraConstraints sbe $
-    serialiseToTextEnvelope (Just (TextEnvelopeDescr $ T.unpack $ genDesc kw)) kw
+    serialiseToTextEnvelope (Just $ TextEnvelopeDescr desc) kw
  where
-  genDesc :: KeyWitness era -> Text
-  genDesc ByronKeyWitness{} = case sbe of {}
-  genDesc ShelleyBootstrapWitness{} = "Key BootstrapWitness ShelleyEra"
-  genDesc ShelleyKeyWitness{} = "Key Witness ShelleyEra"
+  desc :: String
+  desc = shelleyBasedEraConstraints sbe $ case kw of
+    ShelleyBootstrapWitness{} -> "Key BootstrapWitness ShelleyEra"
+    ShelleyKeyWitness{} -> "Key Witness ShelleyEra"
 
 deserialiseWitnessLedgerCddl
   :: forall era
@@ -176,12 +174,9 @@ deserialiseWitnessLedgerCddl sbe te =
   shelleyBasedEraConstraints sbe $
     legacyDecoding te $
       mapLeft textEnvelopeErrorToTextEnvelopeCddlError $
-        deserialiseFromTextEnvelope asType te
+        deserialiseFromTextEnvelope te
  where
-  asType :: AsType (KeyWitness era)
-  asType = shelleyBasedEraConstraints sbe $ proxyToAsType Proxy
-
-  -- \| This wrapper ensures that we can still decode the key witness
+  -- This wrapper ensures that we can still decode the key witness
   -- that were serialized before we migrated to using 'serialiseToTextEnvelope'
   legacyDecoding
     :: TextEnvelope
@@ -310,9 +305,7 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
      . ShelleyBasedEra era
     -> TextEnvelope
     -> Either TextEnvelopeError (Tx era)
-  deserialiseTxLedgerCddl era =
-    shelleyBasedEraConstraints era $
-      deserialiseFromTextEnvelope (shelleyBasedEraConstraints era $ proxyToAsType Proxy)
+  deserialiseTxLedgerCddl era = shelleyBasedEraConstraints era deserialiseFromTextEnvelope
 
 -- Parse the text into types because this will increase code readability and
 -- will make it easier to keep track of the different Cddl descriptions via

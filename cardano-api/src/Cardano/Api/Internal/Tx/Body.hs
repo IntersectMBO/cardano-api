@@ -970,13 +970,8 @@ toShelleyTxOut
   => ShelleyBasedEra era
   -> TxOut CtxUTxO era
   -> Ledger.TxOut ledgerera
-toShelleyTxOut _ = \case
-  -- jky simplify
-  TxOut _ (TxOutValueByron _) _ _ ->
-    -- TODO: Temporary until we have basic tx
-    -- construction functionality
-    error "toShelleyTxOut: Expected a Shelley value"
-  TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
+toShelleyTxOut sbe = shelleyBasedEraConstraints sbe $ \case
+  TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     caseShelleyToMaryOrAlonzoEraOnwards
       (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
       ( \case
@@ -1165,7 +1160,7 @@ deriving instance Show (TxInsReference era)
 data TxOutValue era where
   TxOutValueByron
     :: L.Coin
-    -> TxOutValue era
+    -> TxOutValue ByronEra
   TxOutValueShelleyBased
     :: ( Eq (Ledger.Value (ShelleyLedgerEra era))
        , Show (Ledger.Value (ShelleyLedgerEra era))
@@ -1322,11 +1317,11 @@ deriving instance Show (TxOutDatum ctx era)
 
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline #-}
 
-parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
-parseHash asType = do
+parseHash :: SerialiseAsRawBytes (Hash a) => Parsec.Parser (Hash a)
+parseHash = do
   str <- some Parsec.hexDigit <?> "hash"
   failEitherWith (\e -> "Failed to parse hash: " ++ displayError e) $
-    deserialiseFromRawBytesHex asType (BSC.pack str)
+    deserialiseFromRawBytesHex (BSC.pack str)
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees
@@ -2643,9 +2638,9 @@ fromBabbageTxOut w txdatums txout =
   resolveDatumInTx dh
     | Just d <- Map.lookup dh txdatums =
         TxOutSupplementalDatum
-          (babbageEraOnwardsToAlonzoEraOnwards w)
+          (convert w)
           (fromAlonzoData d)
-    | otherwise = TxOutDatumHash (babbageEraOnwardsToAlonzoEraOnwards w) (ScriptDataHash dh)
+    | otherwise = TxOutDatumHash (convert w) (ScriptDataHash dh)
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
@@ -3604,7 +3599,7 @@ makeShelleyTransactionBody
     scriptdata :: [HashableScriptData]
     scriptdata =
       [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOuts]
-        ++ [ d
+        <> [ d
            | ( _
                , AnyScriptWitness
                    ( PlutusScriptWitness
@@ -3658,12 +3653,8 @@ toShelleyTxOutAny
   => ShelleyBasedEra era
   -> TxOut ctx era
   -> Ledger.TxOut ledgerera
-toShelleyTxOutAny _ = \case
-  TxOut _ (TxOutValueByron _) _ _ ->
-    -- TODO: Temporary until we have basic tx
-    -- construction functionality
-    error "toShelleyTxOutAny: Expected a Shelley value"
-  TxOut addr (TxOutValueShelleyBased sbe value) txoutdata refScript ->
+toShelleyTxOutAny sbe = shelleyBasedEraConstraints sbe $ \case
+  TxOut addr (TxOutValueShelleyBased _ value) txoutdata refScript ->
     caseShelleyToMaryOrAlonzoEraOnwards
       (const $ L.mkBasicTxOut (toShelleyAddr addr) value)
       ( \case

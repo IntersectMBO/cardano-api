@@ -3,8 +3,6 @@ module Test.Cardano.Api.Bech32
   )
 where
 
-import Cardano.Api (AsType (AsAddress, AsShelleyAddr, AsStakeAddress))
-
 import Test.Gen.Cardano.Api.Typed (genAddressShelley, genStakeAddress)
 
 import Hedgehog (Property)
@@ -13,10 +11,10 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
 prop_roundtrip_Address_Shelley :: Property
-prop_roundtrip_Address_Shelley = roundtrip_Bech32 (AsAddress AsShelleyAddr) genAddressShelley
+prop_roundtrip_Address_Shelley = roundtrip_Bech32 genAddressShelley
 
 prop_roundtrip_StakeAddress :: Property
-prop_roundtrip_StakeAddress = roundtrip_Bech32 AsStakeAddress genStakeAddress
+prop_roundtrip_StakeAddress = roundtrip_Bech32 genStakeAddress
 
 tests :: TestTree
 tests =

@@ -28,27 +28,25 @@ import Data.List.NonEmpty (NonEmpty)
 -- The contents of the file can either be Bech32-encoded, hex-encoded, or in
 -- the text envelope format.
 readKeyFile
-  :: AsType a
-  -> NonEmpty (InputFormat a)
+  :: NonEmpty (InputFormat a)
   -> FilePath
   -> IO (Either (FileError InputDecodeError) a)
-readKeyFile asType acceptedFormats path = do
+readKeyFile acceptedFormats path = do
   eContent <- runExceptT $ fileIOExceptT path readFileBlocking
   case eContent of
     Left e -> return $ Left e
     Right content ->
-      return . first (FileError path) $ deserialiseInput asType acceptedFormats content
+      return . first (FileError path) $ deserialiseInput acceptedFormats content
 
 -- | Read a cryptographic key from a file.
 --
 -- The contents of the file must be in the text envelope format.
 readKeyFileTextEnvelope
   :: HasTextEnvelope a
-  => AsType a
-  -> File content In
+  => File content In
   -> IO (Either (FileError InputDecodeError) a)
-readKeyFileTextEnvelope asType fp =
-  first (fmap InputTextEnvelopeError) <$> readFileTextEnvelope asType fp
+readKeyFileTextEnvelope fp =
+  first (fmap InputTextEnvelopeError) <$> readFileTextEnvelope fp
 
 -- | Read a cryptographic key from a file given that it is one of the provided
 -- types.

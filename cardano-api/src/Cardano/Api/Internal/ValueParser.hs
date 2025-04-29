@@ -167,7 +167,7 @@ parseAssetName = do
   hexText <- many hexDigit
   failEitherWith
     (\e -> "AssetName deserisalisation failed: " ++ displayError e)
-    $ deserialiseFromRawBytesHex AsAssetName
+    $ deserialiseFromRawBytesHex
     $ BSC.pack hexText
 
 -- | Policy ID parser.
@@ -186,7 +186,7 @@ parsePolicyId = do
  where
   textToPolicyId =
     fmap PolicyId
-      . deserialiseFromRawBytesHex AsScriptHash
+      . deserialiseFromRawBytesHex
       . Text.encodeUtf8
       . Text.pack
 

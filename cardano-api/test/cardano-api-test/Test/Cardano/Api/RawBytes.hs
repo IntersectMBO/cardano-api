@@ -81,7 +81,7 @@ roundtrip_raw_bytes
      , Show a
      )
   => AsType a -> H.Gen a -> Property
-roundtrip_raw_bytes asType g =
+roundtrip_raw_bytes _ g =
   H.property $ do
     v <- H.forAll g
     H.tripping v serialiseToRawBytes (deserialiseFromRawBytes asType)

@@ -1787,7 +1787,7 @@ instance ToJSONKey (Hash StakePoolKey) where
 
 instance FromJSON (Hash StakePoolKey) where
   parseJSON = withText "PoolId" $ \str ->
-    case deserialiseFromBech32 (AsHash AsStakePoolKey) str of
+    case deserialiseFromBech32 str of
       Left err ->
         fail $
           docToString $
@@ -1953,7 +1953,7 @@ instance ToJSONKey (Hash StakePoolExtendedKey) where
 
 instance FromJSON (Hash StakePoolExtendedKey) where
   parseJSON = withText "PoolId" $ \str ->
-    case deserialiseFromBech32 (AsHash AsStakePoolExtendedKey) str of
+    case deserialiseFromBech32 str of
       Left err ->
         fail $
           docToString $
@@ -2073,7 +2073,7 @@ instance ToJSONKey (Hash DRepKey) where
 
 instance FromJSON (Hash DRepKey) where
   parseJSON = withText "DRepId" $ \str ->
-    case deserialiseFromBech32 (AsHash AsDRepKey) str of
+    case deserialiseFromBech32 str of
       Left err ->
         fail $
           docToString $

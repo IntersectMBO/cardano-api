@@ -14,6 +14,8 @@
 module Cardano.Api.Internal.Utils
   ( (?!)
   , (?!.)
+  , (<<$>>)
+  , (<<<$>>>)
   , formatParsecError
   , failEither
   , failEitherWith
@@ -53,6 +55,15 @@ Just x ?! _ = Right x
 (?!.) :: Either e a -> (e -> e') -> Either e' a
 Left e ?!. f = Left (f e)
 Right x ?!. _ = Right x
+
+infixl 4 <<$>>
+(<<$>>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
+(<<$>>) = fmap . fmap
+
+infixl 4 <<<$>>>
+(<<<$>>>) :: (Functor f, Functor g, Functor h) => (a -> b) -> f (g (h a)) -> f (g (h b))
+(<<<$>>>) = fmap . fmap . fmap
+
 
 {-# NOINLINE noInlineMaybeToStrictMaybe #-}
 noInlineMaybeToStrictMaybe :: Maybe a -> StrictMaybe a
