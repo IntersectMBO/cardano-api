@@ -9,6 +9,7 @@ module Test.Cardano.Api.Orphans () where
 
 import Cardano.Api.Shelley
 
+import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 
 import Data.String (IsString (..))
@@ -36,3 +37,5 @@ deriving instance Eq (SigningKey KesKey)
 deriving instance Eq (SigningKey VrfKey)
 
 deriving instance IsString L.AssetName
+
+deriving instance IsString (L.KeyHash r)
