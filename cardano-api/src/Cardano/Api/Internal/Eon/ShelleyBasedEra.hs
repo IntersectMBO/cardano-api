@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
@@ -197,6 +198,7 @@ class IsCardanoEra era => IsShelleyBasedEra era where
   shelleyBasedEra :: ShelleyBasedEra era
 
 instance IsShelleyBasedEra ShelleyEra where
+  shelleyBasedEra :: ShelleyBasedEra ShelleyEra
   shelleyBasedEra = ShelleyBasedEraShelley
 
 instance IsShelleyBasedEra AllegraEra where

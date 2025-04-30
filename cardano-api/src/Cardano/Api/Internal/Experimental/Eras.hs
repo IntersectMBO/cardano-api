@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
@@ -35,7 +36,8 @@ import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
-  ( ShelleyBasedEra (..)
+  ( IsShelleyBasedEra
+  , ShelleyBasedEra (..)
   , ShelleyBasedEraWitness (..)
   , ShelleyLedgerEra
   )
@@ -262,4 +264,5 @@ type EraCommonConstraints era =
   , ShelleyLedgerEra era ~ LedgerEra era
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , IsEra era
+  , IsShelleyBasedEra era
   )
