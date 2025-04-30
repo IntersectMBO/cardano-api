@@ -33,6 +33,9 @@ module Cardano.Api.Internal.Eon.ShelleyBasedEra
   , eraProtVerLow
   , ShelleyBasedEraConstraints
   , shelleyBasedEraConstraints
+
+    -- * Transition abstraction
+  , ShelleyBasedEraWitness (..)
   )
 where
 
@@ -109,6 +112,12 @@ forShelleyBasedEraInEonMaybe
   -> Maybe a
 forShelleyBasedEraInEonMaybe era yes =
   forShelleyBasedEraInEon era Nothing (Just . yes)
+
+class ShelleyBasedEraWitness era shelleyBasedEra where
+  toShelleyBasedEra :: shelleyBasedEra era -> ShelleyBasedEra era
+
+instance ShelleyBasedEraWitness era ShelleyBasedEra where
+  toShelleyBasedEra sbe = sbe
 
 -- ----------------------------------------------------------------------------
 -- Shelley-based eras

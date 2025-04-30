@@ -34,7 +34,11 @@ where
 import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Internal.Eon.Convert
-import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
+import Cardano.Api.Internal.Eon.ShelleyBasedEra
+  ( ShelleyBasedEra (..)
+  , ShelleyBasedEraWitness (..)
+  , ShelleyLedgerEra
+  )
 import Cardano.Api.Internal.Eras qualified as Api
 import Cardano.Api.Internal.Eras.Core (BabbageEra, ConwayEra, Eon (..))
 import Cardano.Api.Internal.ReexposeLedger qualified as L
@@ -148,6 +152,9 @@ instance Eon Era where
 instance Api.ToCardanoEra Era where
   toCardanoEra = \case
     ConwayEra -> Api.ConwayEra
+
+instance ShelleyBasedEraWitness era Era where
+  toShelleyBasedEra ConwayEra = ShelleyBasedEraConway
 
 eraToStringLike :: IsString a => Era era -> a
 {-# INLINE eraToStringLike #-}

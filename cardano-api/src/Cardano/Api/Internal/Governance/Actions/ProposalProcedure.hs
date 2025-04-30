@@ -188,7 +188,8 @@ instance HasTypeProxy era => HasTypeProxy (Proposal era) where
   proxyToAsType _ = AsProposal
 
 createProposalProcedure
-  :: ShelleyBasedEra era
+  :: ShelleyBasedEraWitness era shelleyBasedEra
+  => shelleyBasedEra era
   -> Network
   -> L.Coin
   -- ^ Deposit
@@ -198,12 +199,12 @@ createProposalProcedure
   -> Ledger.Anchor
   -> Proposal era
 createProposalProcedure sbe nw dep cred govAct anchor =
-  shelleyBasedEraConstraints sbe $
+  shelleyBasedEraConstraints (toShelleyBasedEra sbe) $
     Proposal
       Gov.ProposalProcedure
         { Gov.pProcDeposit = dep
         , Gov.pProcReturnAddr = L.RewardAccount nw $ toShelleyStakeCredential cred
-        , Gov.pProcGovAction = toGovernanceAction sbe govAct
+        , Gov.pProcGovAction = toGovernanceAction (toShelleyBasedEra sbe) govAct
         , Gov.pProcAnchor = anchor
         }
 
