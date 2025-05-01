@@ -74,6 +74,10 @@ singleton i o = UTxO $ Map.singleton i o
 lookup :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
 lookup k = Map.lookup k . unUTxO
 
+-- | Synonym for `lookup`.
+resolveTxIn :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
+resolveTxIn = Cardano.Api.Internal.Tx.UTxO.lookup
+
 -- | Filter all `TxOut` that satisfy the predicate.
 filter :: (TxOut CtxUTxO era -> Bool) -> UTxO era -> UTxO era
 filter fn = UTxO . Map.filter fn . unUTxO

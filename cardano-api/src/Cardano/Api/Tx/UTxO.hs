@@ -3,6 +3,7 @@ module Cardano.Api.Tx.UTxO
   , UTxO.empty
   , UTxO.singleton
   , UTxO.lookup
+  , UTxO.resolveTxIn
   , UTxO.filter
   , UTxO.filterWithKey
   , UTxO.inputSet
