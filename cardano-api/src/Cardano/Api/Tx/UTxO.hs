@@ -10,6 +10,7 @@ module Cardano.Api.Tx.UTxO
   , UTxO.difference
   , UTxO.fromList
   , UTxO.toList
+  , UTxO.toMap
   , UTxO.fromShelleyUTxO
   , UTxO.toShelleyUTxO
   )

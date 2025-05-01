@@ -102,6 +102,10 @@ fromList = UTxO . Map.fromList
 toList :: UTxO era -> [(TxIn, TxOut CtxUTxO era)]
 toList (UTxO xs) = Map.toList xs
 
+-- | Convert to a Map of TxIn/TxOut.
+toMap :: UTxO era -> Map TxIn (TxOut CtxUTxO era)
+toMap = unUTxO
+
 -- | Convert from a `cardano-api` `UTxO` to a `cardano-ledger` UTxO.
 toShelleyUTxO :: ShelleyBasedEra era -> UTxO era -> Ledger.UTxO (ShelleyLedgerEra era)
 toShelleyUTxO sbe =
