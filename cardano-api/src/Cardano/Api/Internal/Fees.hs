@@ -596,6 +596,7 @@ estimateBalancedTxBody
       first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
         createTransactionBody
           sbe
+          mempty
           txbodycontent1
             { txFee = TxFeeExplicit sbe maxLovelaceFee
             , txOuts =
@@ -638,6 +639,7 @@ estimateBalancedTxBody
       first TxFeeEstimationxBodyError $ -- TODO: impossible to fail now
         createTransactionBody
           sbe
+          mempty
           txbodycontent1
             { txFee = TxFeeExplicit sbe fee
             , txReturnCollateral = retColl
@@ -678,7 +680,7 @@ estimateBalancedTxBody
       first TxFeeEstimationFinalConstructionError $ -- TODO: impossible to fail now. We need to implement a function
       -- that simply creates a transaction body because we have already
       -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-        createTransactionBody sbe finalTxBodyContent
+        createTransactionBody sbe mempty finalTxBodyContent
     return
       ( BalancedTxBody
           finalTxBodyContent
@@ -1365,7 +1367,7 @@ makeTransactionBodyAutoBalance
       -- 3. update tx with fees
       -- 4. balance the transaction and update tx change output
 
-      txbodyForChange <- first TxBodyError $ createTransactionBody sbe txbodycontent
+      txbodyForChange <- first TxBodyError $ createTransactionBody sbe utxo txbodycontent
       let initialChangeTxOutValue =
             evaluateTransactionBalance sbe pp poolids stakeDelegDeposits drepDelegDeposits utxo txbodyForChange
           initialChangeTxOut =
@@ -1387,6 +1389,7 @@ makeTransactionBodyAutoBalance
         first TxBodyError
           $ createTransactionBody
             sbe
+            utxo
           $ txbodycontent
             & modTxOuts
               (<> [initialChangeTxOut])
@@ -1425,6 +1428,7 @@ makeTransactionBodyAutoBalance
         first TxBodyError $ -- TODO: impossible to fail now
           createTransactionBody
             sbe
+            utxo
             txbodycontent1
               { txFee = TxFeeExplicit sbe maxLovelaceFee
               , txOuts =
@@ -1472,6 +1476,7 @@ makeTransactionBodyAutoBalance
         first TxBodyError $ -- TODO: impossible to fail now
           createTransactionBody
             sbe
+            utxo
             txbodycontent1
               { txFee = TxFeeExplicit sbe fee
               , txReturnCollateral = retColl
@@ -1504,7 +1509,7 @@ makeTransactionBodyAutoBalance
         first TxBodyError $ -- TODO: impossible to fail now. We need to implement a function
         -- that simply creates a transaction body because we have already
         -- validated the transaction body earlier within makeTransactionBodyAutoBalance
-          createTransactionBody sbe finalTxBodyContent
+          createTransactionBody sbe utxo finalTxBodyContent
       return
         ( BalancedTxBody
             finalTxBodyContent

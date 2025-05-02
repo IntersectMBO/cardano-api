@@ -40,6 +40,13 @@ instance Applicative (BuildTxWith BuildTx) where
   pure = BuildTxWith
   (BuildTxWith f) <*> (BuildTxWith a) = BuildTxWith (f a)
 
+instance Semigroup a => Semigroup (BuildTxWith build a) where
+  ViewTx <> ViewTx = ViewTx
+  (BuildTxWith a) <> (BuildTxWith b) = BuildTxWith (a <> b)
+
+instance (Applicative (BuildTxWith build), Monoid a) => Monoid (BuildTxWith build a) where
+  mempty = pure mempty
+
 buildTxWithToMaybe :: BuildTxWith build a -> Maybe a
 buildTxWithToMaybe ViewTx = Nothing
 buildTxWithToMaybe (BuildTxWith a) = Just a

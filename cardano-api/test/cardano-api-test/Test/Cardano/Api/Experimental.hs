@@ -61,20 +61,22 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   let era = Exp.ConwayEra
   let sbe = Api.convert era
 
-  signedTxTraditional <- exampleTransacitonTraditionalWay sbe
+  signedTxTraditional <- exampleTransactionTraditionalWay sbe
   signedTxExperimental <- exampleTransactionExperimentalWay era sbe
 
   let oldStyleTx :: Api.Tx Api.ConwayEra = ShelleyTx sbe signedTxExperimental
 
   oldStyleTx H.=== signedTxTraditional
  where
-  exampleTransacitonTraditionalWay
-    :: H.MonadTest m => Api.ShelleyBasedEra Exp.ConwayEra -> m (Tx Exp.ConwayEra)
-  exampleTransacitonTraditionalWay sbe = do
+  exampleTransactionTraditionalWay
+    :: H.MonadTest m
+    => Api.ShelleyBasedEra Exp.ConwayEra
+    -> m (Tx Exp.ConwayEra)
+  exampleTransactionTraditionalWay sbe = do
     txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
     signingKey <- exampleSigningKey
 
-    txBody <- H.evalEither $ Api.createTransactionBody sbe txBodyContent
+    txBody <- H.evalEither $ Api.createTransactionBody sbe mempty txBodyContent
 
     let signedTx :: Api.Tx Api.ConwayEra = Api.signShelleyTransaction sbe txBody [Api.WitnessPaymentKey signingKey]
 
@@ -89,7 +91,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
     txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
     signingKey <- exampleSigningKey
 
-    unsignedTx <- H.evalEither $ Exp.makeUnsignedTx era txBodyContent
+    unsignedTx <- H.evalEither $ Exp.makeUnsignedTx era mempty txBodyContent
     let witness = Exp.makeKeyWitness era unsignedTx (Api.WitnessPaymentKey signingKey)
 
     let bootstrapWitnesses = []
@@ -107,7 +109,7 @@ prop_balance_transaction_two_ways = H.propertyOnce $ do
   changeAddress <- getExampleChangeAddress sbe
 
   txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
-  txBody <- H.evalEither $ Api.createTransactionBody sbe txBodyContent
+  txBody <- H.evalEither $ Api.createTransactionBody sbe mempty txBodyContent
 
   -- Simple way (fee calculation)
   let fees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0

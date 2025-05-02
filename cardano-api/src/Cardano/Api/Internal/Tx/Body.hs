@@ -301,6 +301,8 @@ module Cardano.Api.Internal.Tx.Body
     -- ** Other transaction body types
   , TxInsCollateral (..)
   , TxInsReference (..)
+  , TxInsReferenceActualDatums
+  , getReferenceInputDatumMap
   , TxReturnCollateral (..)
   , TxTotalCollateral (..)
   , TxFee (..)
@@ -432,6 +434,8 @@ import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.Tx.BuildTxWith
 import Cardano.Api.Internal.Tx.Output
 import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Tx.UTxO (UTxO)
+import Cardano.Api.Internal.Tx.UTxO qualified as UTxO
 import Cardano.Api.Internal.TxIn
 import Cardano.Api.Internal.TxMetadata
 import Cardano.Api.Internal.Utils
@@ -570,16 +574,32 @@ deriving instance Eq (TxTotalCollateral era)
 
 deriving instance Show (TxTotalCollateral era)
 
-data TxInsReference era where
-  TxInsReferenceNone :: TxInsReference era
+data TxInsReference build era where
+  TxInsReferenceNone :: TxInsReference build era
   TxInsReference
     :: BabbageEraOnwards era
     -> [TxIn]
-    -> TxInsReference era
+    -- ^ A list of reference inputs
+    -> TxInsReferenceActualDatums build
+    -- ^ A set of datums, which hashes are referenced in UTXO of reference inputs. Those datums will be inserted
+    -- to the datum map available to the scripts.
+    -> TxInsReference build era
 
-deriving instance Eq (TxInsReference era)
+deriving instance Eq (TxInsReference build era)
 
-deriving instance Show (TxInsReference era)
+deriving instance Show (TxInsReference build era)
+
+-- | The actual datums, referenced by hash in the transaction reference inputs.
+--
+-- Only datums referenced by hashes in UTXOs of reference inputs, will be inserted into the transaction.
+type TxInsReferenceActualDatums build = BuildTxWith build (Set HashableScriptData)
+
+getReferenceInputDatumMap
+  :: TxInsReferenceActualDatums build
+  -> Map (Hash ScriptData) HashableScriptData
+getReferenceInputDatumMap = \case
+  ViewTx -> mempty
+  BuildTxWith datumSet -> fromList $ map (\h -> (hashScriptDataBytes h, h)) $ toList datumSet
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees
@@ -984,7 +1004,7 @@ data TxBodyContent build era
   = TxBodyContent
   { txIns :: TxIns build era
   , txInsCollateral :: TxInsCollateral era
-  , txInsReference :: TxInsReference era
+  , txInsReference :: TxInsReference build era
   , txOuts :: [TxOut CtxTx era]
   , txTotalCollateral :: TxTotalCollateral era
   , txReturnCollateral :: TxReturnCollateral CtxTx era
@@ -1075,25 +1095,35 @@ addTxInCollateral
   :: IsAlonzoBasedEra era => TxIn -> TxBodyContent build era -> TxBodyContent build era
 addTxInCollateral txInCollateral = addTxInsCollateral [txInCollateral]
 
-setTxInsReference :: TxInsReference era -> TxBodyContent build era -> TxBodyContent build era
+setTxInsReference :: TxInsReference build era -> TxBodyContent build era -> TxBodyContent build era
 setTxInsReference v txBodyContent = txBodyContent{txInsReference = v}
 
 modTxInsReference
-  :: (TxInsReference era -> TxInsReference era) -> TxBodyContent build era -> TxBodyContent build era
+  :: (TxInsReference build era -> TxInsReference build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
 modTxInsReference f txBodyContent = txBodyContent{txInsReference = f (txInsReference txBodyContent)}
 
 addTxInsReference
-  :: IsBabbageBasedEra era => [TxIn] -> TxBodyContent build era -> TxBodyContent build era
-addTxInsReference txInsReference =
-  modTxInsReference
-    ( \case
-        TxInsReferenceNone -> TxInsReference babbageBasedEra txInsReference
-        TxInsReference era xs -> TxInsReference era (xs <> txInsReference)
-    )
+  :: Applicative (BuildTxWith build)
+  => IsBabbageBasedEra era
+  => [TxIn]
+  -> Set HashableScriptData
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+addTxInsReference txInsReference scriptData =
+  modTxInsReference $
+    \case
+      TxInsReferenceNone -> TxInsReference babbageBasedEra txInsReference (pure scriptData)
+      TxInsReference era xs bScriptData' -> TxInsReference era (xs <> txInsReference) ((<> scriptData) <$> bScriptData')
 
 addTxInReference
-  :: IsBabbageBasedEra era => TxIn -> TxBodyContent build era -> TxBodyContent build era
-addTxInReference txInReference = addTxInsReference [txInReference]
+  :: Applicative (BuildTxWith build)
+  => IsBabbageBasedEra era
+  => TxIn
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+addTxInReference txInReference = addTxInsReference [txInReference] mempty
 
 setTxOuts :: [TxOut CtxTx era] -> TxBodyContent build era -> TxBodyContent build era
 setTxOuts v txBodyContent = txBodyContent{txOuts = v}
@@ -1370,9 +1400,11 @@ createTransactionBody
   :: forall era
    . HasCallStack
   => ShelleyBasedEra era
+  -> UTxO era
+  -- ^ UTXO for reference inputs
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
-createTransactionBody sbe bc =
+createTransactionBody sbe utxo bc =
   shelleyBasedEraConstraints sbe $ do
     (sData, mScriptIntegrityHash, scripts) <-
       caseShelleyToMaryOrAlonzoEraOnwards
@@ -1387,7 +1419,7 @@ createTransactionBody sbe bc =
         )
         ( \aeon -> do
             TxScriptWitnessRequirements languages scripts dats redeemers <-
-              collectTxBodyScriptWitnessRequirements aeon bc
+              collectTxBodyScriptWitnessRequirements aeon utxo bc
 
             let pparams = txProtocolParams bc
                 sData = TxBodyScriptData aeon dats redeemers
@@ -1742,11 +1774,11 @@ fromLedgerTxInsCollateral sbe body =
     sbe
 
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference era
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
 fromLedgerTxInsReference sbe txBody =
   caseShelleyToAlonzoOrBabbageEraOnwards
     (const TxInsReferenceNone)
-    (\w -> TxInsReference w $ map fromShelleyTxIn . toList $ txBody ^. L.referenceInputsTxBodyL)
+    (\w -> TxInsReference w (map fromShelleyTxIn . toList $ txBody ^. L.referenceInputsTxBodyL) ViewTx)
     sbe
 
 fromLedgerTxTotalCollateral
@@ -2108,11 +2140,11 @@ convPParamsToScriptIntegrityHash
   -> Alonzo.TxDats (ShelleyLedgerEra era)
   -> Set Plutus.Language
   -> StrictMaybe L.ScriptIntegrityHash
-convPParamsToScriptIntegrityHash w txProtocolParams redeemers datums languages =
+convPParamsToScriptIntegrityHash w (BuildTxWith mTxProtocolParams) redeemers datums languages =
   alonzoEraOnwardsConstraints w $
-    case txProtocolParams of
-      BuildTxWith Nothing -> SNothing
-      BuildTxWith (Just (LedgerProtocolParameters pp)) ->
+    case mTxProtocolParams of
+      Nothing -> SNothing
+      Just (LedgerProtocolParameters pp) ->
         Alonzo.hashScriptIntegrity (Set.map (L.getLanguageView pp) languages) redeemers datums
 
 convLanguages :: [(ScriptWitnessIndex, AnyScriptWitness era)] -> Set Plutus.Language
@@ -2122,11 +2154,11 @@ convLanguages witnesses =
     | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
     ]
 
-convReferenceInputs :: TxInsReference era -> Set Ledger.TxIn
+convReferenceInputs :: TxInsReference build era -> Set Ledger.TxIn
 convReferenceInputs txInsReference =
   case txInsReference of
     TxInsReferenceNone -> mempty
-    TxInsReference _ refTxins -> fromList $ map toShelleyTxIn refTxins
+    TxInsReference _ refTxins _ -> fromList $ map toShelleyTxIn refTxins
 
 -- | Returns an OSet of proposals from 'TxProposalProcedures'.
 convProposalProcedures
@@ -2986,18 +3018,27 @@ collectTxBodyScriptWitnessRequirements
   :: forall era
    . IsShelleyBasedEra era
   => AlonzoEraOnwards era
+  -> UTxO era
+  -- ^ UTXO for reference inputs
   -> TxBodyContent BuildTx era
   -> Either
        TxBodyError
        (TxScriptWitnessRequirements (ShelleyLedgerEra era))
 collectTxBodyScriptWitnessRequirements
   aEon
+  utxo
   bc@TxBodyContent
-    { txOuts
+    { txInsReference
+    , txOuts
     } =
     obtainAlonzoScriptPurposeConstraints aEon $ do
       let sbe = shelleyBasedEra @era
-          supplementaldatums = TxScriptWitnessRequirements mempty mempty (getSupplementalDatums aEon txOuts) mempty
+          supplementaldatums =
+            TxScriptWitnessRequirements
+              mempty
+              mempty
+              (getDatums aEon txInsReference utxo txOuts)
+              mempty
       txInWits <-
         first TxBodyPlutusScriptDecodeError $
           legacyWitnessToScriptRequirements aEon $
@@ -3051,19 +3092,35 @@ collectTxBodyScriptWitnessRequirements
             , txProposalWits
             ]
 
-getSupplementalDatums
+-- | Extract datum:
+-- 1. supplemental datums from transaction outputs
+-- 2. datums from reference inputs, whose hashes are present in UTXO (for those inputs)
+getDatums
   :: AlonzoEraOnwards era
+  -> TxInsReference BuildTx era
+  -- ^ reference inputs
+  -> UTxO era
+  -- ^ UTxO for reference inputs
   -> [TxOut CtxTx era]
   -> L.TxDats (ShelleyLedgerEra era)
-getSupplementalDatums eon [] = alonzoEraOnwardsConstraints eon mempty
-getSupplementalDatums eon txouts =
-  alonzoEraOnwardsConstraints eon $
-    L.TxDats $
-      fromList
-        [ (L.hashData ledgerData, ledgerData)
-        | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txouts
-        , let ledgerData = toAlonzoData d
+getDatums eon txInsRef utxo txOutsFromTx = alonzoEraOnwardsConstraints eon $ do
+  let refTxInsDats =
+        [ d
+        | TxInsReference _ txIns datumSet <- [txInsRef]
+        , let datumMap = getReferenceInputDatumMap datumSet
+        , txIn <- txIns
+        , -- resolve only hashes
+        TxOut _ _ (TxOutDatumHash _ datumHash) _ <- maybeToList $ UTxO.lookup txIn utxo
+        , d <- maybeToList $ Map.lookup datumHash datumMap
         ]
+      -- use only supplemental datum
+      txOutsDats = [d | TxOut _ _ (TxOutSupplementalDatum _ d) _ <- txOutsFromTx]
+  L.TxDats $
+    fromList $
+      [ (L.hashData ledgerData, ledgerData)
+      | d <- refTxInsDats <> txOutsDats
+      , let ledgerData = toAlonzoData d
+      ]
 
 extractWitnessableTxIns
   :: AlonzoEraOnwards era
