@@ -12,15 +12,8 @@ import Cardano.Api.Internal.Eon.ShelleyBasedEra
   , ShelleyLedgerEra
   )
 import Cardano.Api.Internal.Eras.Core (IsCardanoEra)
-import Cardano.Api.Internal.Tx.Body
-  ( CtxUTxO
-  , TxOut (..)
-  , fromShelleyTxIn
-  , fromShelleyTxOut
-  , toShelleyTxIn
-  , toShelleyTxOut
-  )
-import Cardano.Api.Internal.TxIn (TxIn (..))
+import Cardano.Api.Internal.Tx.Output (CtxUTxO, TxOut (..), fromShelleyTxOut, toShelleyTxOut)
+import Cardano.Api.Internal.TxIn (TxIn (..), fromShelleyTxIn, toShelleyTxIn)
 
 import Cardano.Ledger.Babbage ()
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
