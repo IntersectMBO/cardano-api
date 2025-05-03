@@ -99,6 +99,7 @@ module Cardano.Api.Internal.Tx.Sign
   , txScriptValidityToIsValid
   , txScriptValidityToScriptValidity
   , TxBodyScriptData (..)
+  , selectTxDatums
   )
 where
 
@@ -137,6 +138,7 @@ import Cardano.Ledger.Keys qualified as Shelley
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
@@ -558,6 +560,12 @@ data TxBodyScriptData era where
 deriving instance Eq (TxBodyScriptData era)
 
 deriving instance Show (TxBodyScriptData era)
+
+selectTxDatums
+  :: TxBodyScriptData era
+  -> Map L.DataHash (L.Data (ShelleyLedgerEra era))
+selectTxDatums TxBodyNoScriptData = Map.empty
+selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity

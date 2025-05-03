@@ -10,7 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
--- | Transaction bodies
+-- | Transaction inputs
 module Cardano.Api.Internal.TxIn
   ( -- * Transaction inputs
     TxIn (..)
@@ -64,9 +64,6 @@ import Text.Parsec qualified as Parsec
 import Text.Parsec.Language qualified as Parsec
 import Text.Parsec.String qualified as Parsec
 import Text.Parsec.Token qualified as Parsec
-
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Use section" -}
 
 -- ----------------------------------------------------------------------------
 -- Transaction Ids

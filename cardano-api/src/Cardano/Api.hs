@@ -371,6 +371,7 @@ module Cardano.Api
   , setTxCurrentTreasuryValue
   , setTxTreasuryDonation
   , TxBodyError (..)
+  , TxOutputError (..)
   , TxBodyScriptData (..)
 
     -- ** Transaction Ids
