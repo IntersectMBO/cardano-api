@@ -2172,6 +2172,7 @@ mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
         & L.auxDataHashTxBodyL
           .~ maybe SNothing (SJust . Ledger.hashTxAuxData) txAuxData
 
+{-# DEPRECATED makeShelleyTransactionBody "Use 'createTransactionBody' instead." #-}
 makeShelleyTransactionBody
   :: forall era
    . ()
