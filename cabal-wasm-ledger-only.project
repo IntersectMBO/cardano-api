@@ -89,6 +89,12 @@ allow-older: cborg
 -- TODO: Wait on aniket to release cardano-api. Then use that instead because it drops
 -- the cardano-crypto-class dependency that depends on cryptonite
 
+source-repository-package
+source-repository-package
+  type: git
+  location: https://github.com/palas/double-conversion.git
+  tag: b2030245727ee56de76507fe305e3741f6ce3260
+
 -- 1.45.0.0 Modified with "do-not-build-plutus-exec" flag to avoid building plutus executable
 source-repository-package
   type: git
