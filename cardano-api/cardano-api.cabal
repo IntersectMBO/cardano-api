@@ -37,9 +37,6 @@ common project-config
     -Wredundant-constraints
     -Wunused-packages
 
-  if impl(ghc < 9)
-    ghc-options: -Wno-incomplete-patterns
-
 common maybe-unix
   if !os(windows)
     build-depends: unix
@@ -49,7 +46,7 @@ common maybe-Win32
     build-depends: Win32
 
 common text
-  if impl(ghc == 8.10.7)&& os(osx)&& arch(aarch64)
+  if os(osx)&& arch(aarch64)
     build-depends: text >=1.2.5.0
   else
     build-depends: text >=2.0

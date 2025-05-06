@@ -1,14 +1,9 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
 
 -- | Internal utils for the other Api modules
 module Cardano.Api.Internal.Utils
@@ -32,21 +27,22 @@ where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley ()
+
 import Control.Exception (bracket)
-import qualified Data.Aeson.Types as Aeson
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Builder as Builder
-import qualified Data.ByteString.Lazy as LBS
+import Data.Aeson.Types qualified as Aeson
+import Data.ByteString qualified as BS
+import Data.ByteString.Builder qualified as Builder
+import Data.ByteString.Lazy qualified as LBS
 import Data.Maybe
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Typeable
 import GHC.IO.Handle.FD (openFileBlocking)
 import GHC.Stack
 import System.IO (IOMode (ReadMode), hClose)
-import qualified Text.Parsec as Parsec
-import qualified Text.Parsec.String as Parsec
-import qualified Text.ParserCombinators.Parsec.Error as Parsec
+import Text.Parsec qualified as Parsec
+import Text.Parsec.String qualified as Parsec
+import Text.ParserCombinators.Parsec.Error qualified as Parsec
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -57,13 +53,14 @@ Left e ?!. f = Left (f e)
 Right x ?!. _ = Right x
 
 infixl 4 <<$>>
+
 (<<$>>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 (<<$>>) = fmap . fmap
 
 infixl 4 <<<$>>>
+
 (<<<$>>>) :: (Functor f, Functor g, Functor h) => (a -> b) -> f (g (h a)) -> f (g (h b))
 (<<<$>>>) = fmap . fmap . fmap
-
 
 {-# NOINLINE noInlineMaybeToStrictMaybe #-}
 noInlineMaybeToStrictMaybe :: Maybe a -> StrictMaybe a
