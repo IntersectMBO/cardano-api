@@ -67,6 +67,10 @@ singleton i o = UTxO $ Map.singleton i o
 lookup :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
 lookup k = Map.lookup k . unUTxO
 
+-- | Synonym for `lookup`.
+resolveTxIn :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
+resolveTxIn = Cardano.Api.Internal.Tx.UTxO.lookup
+
 -- | Filter all `TxOut` that satisfy the predicate.
 filter :: (TxOut CtxUTxO era -> Bool) -> UTxO era -> UTxO era
 filter fn = UTxO . Map.filter fn . unUTxO
@@ -94,6 +98,10 @@ fromList = UTxO . Map.fromList
 -- | Convert to a list of key/value pairs.
 toList :: UTxO era -> [(TxIn, TxOut CtxUTxO era)]
 toList (UTxO xs) = Map.toList xs
+
+-- | Convert to a Map of TxIn/TxOut.
+toMap :: UTxO era -> Map TxIn (TxOut CtxUTxO era)
+toMap = unUTxO
 
 -- | Convert from a `cardano-api` `UTxO` to a `cardano-ledger` UTxO.
 toShelleyUTxO :: ShelleyBasedEra era -> UTxO era -> Ledger.UTxO (ShelleyLedgerEra era)
