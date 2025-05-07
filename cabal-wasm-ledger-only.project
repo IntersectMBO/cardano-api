@@ -91,6 +91,11 @@ allow-older: cborg
 
 source-repository-package
   type: git
+  location: https://github.com/palas/mempack.git
+  tag: 0211addbbbf51011e5348d3696566eb12ccbef07
+
+source-repository-package
+  type: git
   location: https://github.com/palas/network.git
   tag: 464281b2c00a09ca8a1a9ccc2e78a6da7ed51be0
 
