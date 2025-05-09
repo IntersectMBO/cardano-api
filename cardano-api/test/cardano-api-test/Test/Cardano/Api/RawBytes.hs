@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Api.RawBytes
@@ -6,16 +5,16 @@ module Test.Cardano.Api.RawBytes
   )
 where
 
-import           Cardano.Api
+import Cardano.Api
 
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Orphans ()
+import Test.Cardano.Api.Orphans ()
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property)
+import Hedgehog qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -88,10 +87,7 @@ roundtrip_raw_bytes _ g =
 
 roundtrip_verification_key_hash_raw
   :: ()
-#if MIN_VERSION_base(4,17,0)
-  -- GHC 9.2 and above needs an extra constraint.
   => HasTypeProxy keyrole
-#endif
   => Key keyrole
   => Eq (Hash keyrole)
   => Show (Hash keyrole)

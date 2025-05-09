@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,18 +12,18 @@ module Cardano.Api.Internal.Keys.Class
   )
 where
 
-import           Cardano.Api.Internal.Hash
-import           Cardano.Api.Internal.HasTypeProxy
-import           Cardano.Api.Internal.SerialiseRaw
-import           Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.SerialiseRaw
+import Cardano.Api.Internal.SerialiseTextEnvelope
 
-import qualified Cardano.Crypto.DSIGN.Class as Crypto
-import qualified Cardano.Crypto.Seed as Crypto
+import Cardano.Crypto.DSIGN.Class qualified as Crypto
+import Cardano.Crypto.Seed qualified as Crypto
 
-import           Control.Monad.IO.Class
-import           Data.Kind (Type)
-import qualified System.Random as Random
-import           System.Random (StdGen)
+import Control.Monad.IO.Class
+import Data.Kind (Type)
+import System.Random (StdGen)
+import System.Random qualified as Random
 
 -- | An interface for cryptographic keys used for signatures with a 'SigningKey'
 -- and a 'VerificationKey' key.
@@ -50,12 +49,7 @@ class
   -- | Get the corresponding verification key from a signing key.
   getVerificationKey
     :: ()
-#if MIN_VERSION_base(4,17,0)
-    -- GHC 8.10 considers this constraint redundant but ghc-9.6 complains if its not present.
-    -- More annoyingly, absence of this constraint does not manifest in this repo, but in
-    -- `cardano-cli` :facepalm:.
     => HasTypeProxy keyrole
-#endif
     => SigningKey keyrole
     -> VerificationKey keyrole
 
