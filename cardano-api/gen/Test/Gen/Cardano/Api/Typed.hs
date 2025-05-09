@@ -139,6 +139,11 @@ module Test.Gen.Cardano.Api.Typed
   , genMintWitnessable
   , genPlutusScriptWitness
   , genIndexedPlutusScriptWitness
+
+  , genBlockNo
+  , genBlockHeader
+  , genBlockHeaderAt
+  , genBlockHeaderHash
   )
 where
 
@@ -1468,3 +1473,30 @@ genScriptWitnessForMint sbe = do
         scriptRedeemer
         <$> genExecutionUnits
 
+genBlockNo :: Gen BlockNo
+genBlockNo = BlockNo <$> Gen.word64 Range.constantBounded
+
+-- | Fully arbitrary block header with completely random hash.
+genBlockHeader :: Gen BlockHeader
+genBlockHeader = genSlotNo >>= genBlockHeaderAt
+
+-- | Generate a random block header with completely random hash, but at a
+-- certain slot.
+genBlockHeaderAt :: SlotNo -> Gen BlockHeader
+genBlockHeaderAt slotNo = BlockHeader slotNo <$> genBlockHeaderHash <*> geBlockNo
+
+-- | Generate a random block header hash.
+-- | This will error if the hash size of block headers changes (currently 32 bytes).
+genBlockHeaderHash :: Gen (Hash BlockHeader)
+genBlockHeaderHash =
+  unsafeBlockHeaderHashFromBytes . BS.pack <$> Gen.list (Range.singleton 32) Q.arbitrary
+ where
+  unsafeBlockHeaderHashFromBytes bytes =
+    case deserialiseFromRawBytes (proxyToAsType Proxy) bytes of
+      Left e ->
+        error $
+          "unsafeBlockHeaderHashFromBytes: failed on bytes "
+            <> show bytes
+            <> " with error "
+            <> show e
+      Right h -> h
