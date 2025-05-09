@@ -58,7 +58,9 @@ library
   import: project-config, maybe-unix, maybe-Win32, text
   hs-source-dirs:
     src
-
+  ghc-options: 
+    -optl=-Wl,--strip-all   
+    
   -- Do not expose any additional modules. The correct way
   -- to expose new functionality is via Cardano.Api or
   -- Cardano.Api.Shelley
