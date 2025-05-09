@@ -294,7 +294,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         Nothing
 
   scriptWitReqsWithAsset <-
-    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo balancedContentWithTxoutAsset
+    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo utxos balancedContentWithTxoutAsset
 
   -- check if execution units have changed
   [ ExecutionUnits
@@ -324,7 +324,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
         Nothing
 
   scriptWitReqsBalanced <-
-    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo balancedContent
+    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo utxos balancedContent
 
   -- check if execution units have changed
   [ ExecutionUnits
@@ -453,7 +453,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
         Nothing
 
   scriptWitReqsBalanced <-
-    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo balancedContent
+    H.evalEither $ collectTxBodyScriptWitnessRequirements aeo utxos balancedContent
 
   -- check if execution units have changed
   [ ExecutionUnits

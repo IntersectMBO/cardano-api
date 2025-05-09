@@ -134,6 +134,7 @@ import Cardano.Api.Internal.ReexposeLedger (StrictMaybe (..), maybeToStrictMaybe
 import Cardano.Api.Internal.ReexposeLedger qualified as L
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
+import Cardano.Api.Internal.Tx.UTxO (UTxO)
 
 import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Alonzo.TxBody qualified as L
@@ -162,14 +163,16 @@ newtype UnsignedTxError
 
 makeUnsignedTx
   :: Era era
+  -> UTxO era
+  -- ^ UTXO for reference inputs
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (UnsignedTx era)
-makeUnsignedTx era bc = obtainCommonConstraints era $ do
+makeUnsignedTx era utxo bc = obtainCommonConstraints era $ do
   let sbe = convert era
       aeon = convert era
   TxScriptWitnessRequirements languages scripts datums redeemers <-
     shelleyBasedEraConstraints sbe $
-      collectTxBodyScriptWitnessRequirements (convert era) bc
+      collectTxBodyScriptWitnessRequirements (convert era) utxo bc
 
   -- cardano-api types
   let apiTxOuts = txOuts bc
