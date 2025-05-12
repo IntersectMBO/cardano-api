@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Api.Envelope
@@ -6,16 +5,16 @@ module Test.Cardano.Api.Envelope
   )
 where
 
-import           Cardano.Api
+import Cardano.Api
 
-import           Test.Gen.Cardano.Api.Typed
+import Test.Gen.Cardano.Api.Typed
 
-import           Test.Cardano.Api.Orphans ()
+import Test.Cardano.Api.Orphans ()
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
+import Hedgehog (Property)
+import Hedgehog qualified as H
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -87,11 +86,7 @@ prop_roundtrip_VrfSigningKey_envelope =
 
 roundtrip_VerificationKey_envelope
   :: ()
-#if MIN_VERSION_base(4,17,0)
-  -- GHC 8.10 considers the HasTypeProxy constraint redundant but ghc-9.2 and above complains if its
-  -- not present.
   => HasTypeProxy keyrole
-#endif
   => Key keyrole
   => AsType keyrole
   -> Property
