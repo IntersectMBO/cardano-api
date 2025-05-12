@@ -144,7 +144,7 @@ where
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp 
+import qualified Cardano.Api.Experimental as Exp
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import qualified Cardano.Api.Byron as Byron
@@ -965,11 +965,17 @@ genTxInsCollateral =
           ]
     )
 
-genTxInsReference :: CardanoEra era -> Gen (TxInsReference era)
+genTxInsReference
+  :: Applicative (BuildTxWith build)
+  => CardanoEra era
+  -> Gen (TxInsReference build era)
 genTxInsReference =
   caseByronToAlonzoOrBabbageEraOnwards
     (const (pure TxInsReferenceNone))
-    (\w -> TxInsReference w <$> Gen.list (Range.linear 0 10) genTxIn)
+    (\w -> do
+      txIns <- Gen.list (Range.linear 0 10) genTxIn
+      pure $ TxInsReference w txIns mempty
+    )
 
 genTxReturnCollateral :: ShelleyBasedEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
@@ -1022,7 +1028,7 @@ genWitnessesByron = Gen.list (Range.constant 1 10) genByronKeyWitness
 
 -- | This generator validates generated 'TxBodyContent' and backtracks when the generated body
 -- fails the validation. That also means that it is quite slow.
-genValidTxBody :: Typeable era 
+genValidTxBody :: Typeable era
                => ShelleyBasedEra era
                -> Gen (TxBody era, TxBodyContent BuildTx era) -- ^ validated 'TxBody' and 'TxBodyContent'
 genValidTxBody sbe =
@@ -1135,7 +1141,6 @@ genShelleyBootstrapWitness sbe =
     <*> (fst <$> genValidTxBody sbe)
     <*> genSigningKey AsByronKey
 
- 
 genShelleyKeyWitness
   :: ()
   => Typeable era
@@ -1385,39 +1390,39 @@ genTreasuryDonation :: ConwayEraOnwards era -> Gen L.Coin
 genTreasuryDonation _era = Q.arbitrary
 
 genWitnessable :: L.AlonzoEraScript era => Gen (Exp.Witnessable Exp.TxInItem era)
-genWitnessable = Exp.WitTxIn <$> genTxIn  
+genWitnessable = Exp.WitTxIn <$> genTxIn
 
 genMintWitnessable :: L.AlonzoEraScript era => Gen (Exp.Witnessable Exp.MintItem era)
-genMintWitnessable = Exp.WitMint <$> genPolicyId <*> genPolicyAssets 
+genMintWitnessable = Exp.WitMint <$> genPolicyId <*> genPolicyAssets
 
-genIndexedPlutusScriptWitness 
-  :: L.AlonzoEraScript (ShelleyLedgerEra era) 
+genIndexedPlutusScriptWitness
+  :: L.AlonzoEraScript (ShelleyLedgerEra era)
   => Gen (Exp.IndexedPlutusScriptWitness Exp.TxInItem L.PlutusV3 Exp.SpendingScript (ShelleyLedgerEra era))
 genIndexedPlutusScriptWitness =  do
     index <- Gen.word32 $ Range.linear 1 10
     witnessable <- genWitnessable
-    Exp.IndexedPlutusScriptWitness 
+    Exp.IndexedPlutusScriptWitness
        <$> genWitnessable
        <*> genPlutusPurpose index witnessable
-       <*> genPlutusScriptWitness 
+       <*> genPlutusScriptWitness
 
-genPlutusPurpose 
-  :: Word32 
-  -> Exp.Witnessable thing (ShelleyLedgerEra era) 
+genPlutusPurpose
+  :: Word32
+  -> Exp.Witnessable thing (ShelleyLedgerEra era)
   -> Gen (L.PlutusPurpose L.AsIx (ShelleyLedgerEra era))
 genPlutusPurpose index wit = return $ Exp.toPlutusScriptPurpose index wit
 
 genPlutusScriptWitness :: Gen (Exp.PlutusScriptWitness L.PlutusV3 purpose era)
-genPlutusScriptWitness = do 
+genPlutusScriptWitness = do
   let l = Exp.toPlutusSLanguage PlutusScriptV3
-  Exp.PlutusScriptWitness l . Exp.PReferenceScript 
+  Exp.PlutusScriptWitness l . Exp.PReferenceScript
     <$> genTxIn
     <*> genPlutusScriptDatum
     <*> genHashableScriptData
-    <*> genExecutionUnits 
+    <*> genExecutionUnits
 
 genPlutusScriptDatum :: Gen (Exp.PlutusScriptDatum lang purpose)
-genPlutusScriptDatum = return Exp.NoScriptDatum 
+genPlutusScriptDatum = return Exp.NoScriptDatum
 
 -- | This generator does not generate a valid witness - just a random one.
 genScriptWitnessForStake :: ShelleyBasedEra era -> Gen (Api.ScriptWitness WitCtxStake era)

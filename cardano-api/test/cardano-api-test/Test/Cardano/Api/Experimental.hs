@@ -61,16 +61,18 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
   let era = Exp.ConwayEra
   let sbe = Api.convert era
 
-  signedTxTraditional <- exampleTransacitonTraditionalWay sbe
+  signedTxTraditional <- exampleTransactionTraditionalWay sbe
   signedTxExperimental <- exampleTransactionExperimentalWay era sbe
 
   let oldStyleTx :: Api.Tx Api.ConwayEra = ShelleyTx sbe signedTxExperimental
 
   oldStyleTx H.=== signedTxTraditional
  where
-  exampleTransacitonTraditionalWay
-    :: H.MonadTest m => Api.ShelleyBasedEra Exp.ConwayEra -> m (Tx Exp.ConwayEra)
-  exampleTransacitonTraditionalWay sbe = do
+  exampleTransactionTraditionalWay
+    :: H.MonadTest m
+    => Api.ShelleyBasedEra Exp.ConwayEra
+    -> m (Tx Exp.ConwayEra)
+  exampleTransactionTraditionalWay sbe = do
     txBodyContent <- exampleTxBodyContent Api.AsConwayEra sbe
     signingKey <- exampleSigningKey
 
