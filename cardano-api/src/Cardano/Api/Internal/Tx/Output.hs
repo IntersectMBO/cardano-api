@@ -14,30 +14,43 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Internal.Tx.Output
-  ( -- ** Transaction outputs
-    CtxTx
+  ( -- * Transaction outputs
+    TxOut (..)
+
+    -- ** Transaction output contexts
+  , CtxTx
   , CtxUTxO
-  , TxOut (..)
-  , TxOutValue (..)
-  , TxOutDatum (TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline)
   , toCtxUTxOTxOut
   , fromCtxUTxOTxOut
-  , lovelaceToTxOutValue
-  , prettyRenderTxOut
-  , txOutValueToLovelace
-  , txOutValueToValue
-  , parseHash
-  , TxOutInAnyEra (..)
-  , txOutInAnyEra
+
+    -- ** Ledger conversion functions for outputs
   , fromShelleyTxOut
   , toShelleyTxOut
   , toShelleyTxOutAny
   , convTxOuts
   , fromLedgerTxOuts
   , toByronTxOut
+  --  ** An Output Value
+  , TxOutValue (..)
+  , lovelaceToTxOutValue
+  , txOutValueToLovelace
+  , txOutValueToValue
+
+    -- ** Datum
+  , TxOutDatum (..)
   , binaryDataToScriptData
   , scriptDataToInlineDatum
+
+    -- ** Existential type over an era
+  , TxOutInAnyEra (..)
+  , txOutInAnyEra
+
+    -- ** Utilities
   , validateTxOuts
+  , parseHash
+  , prettyRenderTxOut
+
+    -- ** Error types
   , TxOutputError (..)
   )
 where
@@ -959,8 +972,6 @@ data TxOutDatum ctx era where
 deriving instance Eq (TxOutDatum ctx era)
 
 deriving instance Show (TxOutDatum ctx era)
-
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutSupplementalDatum, TxOutDatumInline #-}
 
 toAlonzoTxOutDatumHash
   :: TxOutDatum ctx era -> StrictMaybe Plutus.DataHash
