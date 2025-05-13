@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Api.Internal.Pretty
   ( Ann
   , Doc
@@ -23,6 +25,8 @@ module Cardano.Api.Internal.Pretty
 where
 
 import Cardano.Api.Internal.Via.ShowOf
+
+import Cardano.Ledger.BaseTypes qualified as L
 
 import Control.Exception.Safe
 import Data.Text qualified as Text
@@ -74,3 +78,6 @@ pshow = viaShow
 -- | Short hand for @'pretty' . 'displayException'@
 prettyException :: Exception a => a -> Doc ann
 prettyException = pretty . displayException
+
+instance Pretty L.Url where
+  pretty url = pretty (L.urlToText url)
