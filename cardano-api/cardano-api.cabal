@@ -202,6 +202,7 @@ library
     Cardano.Api.Internal.Eon.Convert
     Cardano.Api.Internal.Eon.ConwayEraOnwards
     Cardano.Api.Internal.Eon.MaryEraOnwards
+    Cardano.Api.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Internal.Eon.ShelleyEraOnly
     Cardano.Api.Internal.Eon.ShelleyToAllegraEra
     Cardano.Api.Internal.Eon.ShelleyToAlonzoEra
