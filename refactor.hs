@@ -29,57 +29,121 @@ import Control.Monad.Trans.Maybe (runMaybeT)
 
 type ModuleName = Text
 
--- renames without prefix: [(new name, old name)]
+------------------------
+-- The refactor strategy
+------------------------
+
+-- renames without Cardano.Api prefix: [(new name, old name)]
 renames :: [(ModuleName, ModuleName)]
 renames = map (bimap prependModulePrefix prependModulePrefix)
   [ ("Byron.Internal.Key", "Internal.Keys.Byron")
-  ,("Address", "Internal.Address")
+
+  , ("Address", "Internal.Address")
+
   , ("Block", "Internal.Block")
 
-  -- TODO reexport through Cardano.Api.Tx
+  -- TODO reexport everything through Cardano.Api.Tx
+  , ("Tx.Internal.Body", "Internal.Tx.Body")
   , ("Tx.Internal.Convenience", "Internal.Convenience.Construction")
   , ("Tx.Internal.Fees", "Internal.Fees")
-  -- TODO reexport through Cardano.Api.Query
-  ,("Query.Internal.Convenience", "Internal.Convenience.Query")
+  , ("Tx.Internal.Sign", "Internal.Tx.Sign")
 
-  -- TODO reexport everything through Cardano.Api.Era
+  , ("Query", "Internal.Query")
+  , ("Query.Internal.Convenience", "Internal.Convenience.Query") -- TODO reexport through Query module
+
+  -- TODO reexport everything through Era
   , ("Era", "Internal.Eras")
   , ("Era.Internal.Case", "Internal.Eras.Case")
   , ("Era.Internal.Core", "Internal.Eras.Core")
-  , ("Era.Internal.Eon.AllegraEraOnwards" ,"Internal.Eon.AllegraEraOnwards")
-  , ("Era.Internal.Eon.AlonzoEraOnwards" ,"Internal.Eon.AlonzoEraOnwards")
-  , ("Era.Internal.Eon.BabbageEraOnwards" ,"Internal.Eon.BabbageEraOnwards")
-  , ("Era.Internal.Eon.ByronToAlonzoEra" ,"Internal.Eon.ByronToAlonzoEra")
-  , ("Era.Internal.Eon.Convert" ,"Internal.Eon.Convert")
-  , ("Era.Internal.Eon.ConwayEraOnwards" ,"Internal.Eon.ConwayEraOnwards")
-  , ("Era.Internal.Eon.MaryEraOnwards" ,"Internal.Eon.MaryEraOnwards")
-  , ("Era.Internal.Eon.ShelleyBasedEra" ,"Internal.Eon.ShelleyBasedEra")
-  , ("Era.Internal.Eon.ShelleyEraOnly" ,"Internal.Eon.ShelleyEraOnly")
-  , ("Era.Internal.Eon.ShelleyToAllegraEra" ,"Internal.Eon.ShelleyToAllegraEra")
-  , ("Era.Internal.Eon.ShelleyToAlonzoEra" ,"Internal.Eon.ShelleyToAlonzoEra")
-  , ("Era.Internal.Eon.ShelleyToBabbageEra" ,"Internal.Eon.ShelleyToBabbageEra")
-  , ("Era.Internal.Eon.ShelleyToMaryEra" ,"Internal.Eon.ShelleyToMaryEra")
+  , ("Era.Internal.Eon.AllegraEraOnwards", "Internal.Eon.AllegraEraOnwards")
+  , ("Era.Internal.Eon.AlonzoEraOnwards", "Internal.Eon.AlonzoEraOnwards")
+  , ("Era.Internal.Eon.BabbageEraOnwards", "Internal.Eon.BabbageEraOnwards")
+  , ("Era.Internal.Eon.ByronToAlonzoEra", "Internal.Eon.ByronToAlonzoEra")
+  , ("Era.Internal.Eon.Convert", "Internal.Eon.Convert")
+  , ("Era.Internal.Eon.ConwayEraOnwards", "Internal.Eon.ConwayEraOnwards")
+  , ("Era.Internal.Eon.MaryEraOnwards", "Internal.Eon.MaryEraOnwards")
+  , ("Era.Internal.Eon.ShelleyBasedEra", "Internal.Eon.ShelleyBasedEra")
+  , ("Era.Internal.Eon.ShelleyEraOnly", "Internal.Eon.ShelleyEraOnly")
+  , ("Era.Internal.Eon.ShelleyToAllegraEra", "Internal.Eon.ShelleyToAllegraEra")
+  , ("Era.Internal.Eon.ShelleyToAlonzoEra", "Internal.Eon.ShelleyToAlonzoEra")
+  , ("Era.Internal.Eon.ShelleyToBabbageEra", "Internal.Eon.ShelleyToBabbageEra")
+  , ("Era.Internal.Eon.ShelleyToMaryEra", "Internal.Eon.ShelleyToMaryEra")
 
   , ("Error", "Internal.Error")
 
   , ("Genesis", "Internal.Genesis")
-  -- TODO reexport through Genesis module
-  , ("Genesis.Internal.Parameters", "Internal.GenesisParameters")
+  , ("Genesis.Internal.Parameters", "Internal.GenesisParameters") -- TODO reexport through Genesis module
 
+  -- TODO export everything through Governance module
+  , ("Governance.Internal.Action.ProposalProcedure", "Internal.Governance.Actions.ProposalProcedure")
+  , ("Governance.Internal.Action.VotingProcedure", "Internal.Governance.Actions.VotingProcedure")
+  , ("Governance.Internal.Anchor", "Internal.Anchor")
+  , ("Governance.Internal.Metadata.DrepRegistration", "Internal.Governance.Metadata.DrepRegistration")
+  , ("Governance.Internal.Metadata.GovAction", "Internal.Governance.Metadata.GovAction")
+  , ("Governance.Internal.Metadata.Parsers", "Internal.Governance.Metadata.Parsers")
   , ("Governance.Internal.Metadata.Validation", "Internal.Governance.Metadata.Validation")
+  , ("Governance.Internal.Poll", "Internal.Governance.Poll")
 
+  -- TODO reexport everything through IO
   , ("IO", "Internal.IO")
+  , ("IO.Internal.Base", "Internal.IO.Base")
+  , ("IO.Internal.Compat", "Internal.IO.Compat")
+  , ("IO.Internal.Posix", "Internal.IO.Posix")
+  , ("IO.Internal.Win32", "Internal.IO.Win32")
 
   , ("IPC", "Internal.IPC")
-  -- TODO reexport through IPC module
-  , ("IPC.Internal.Monad", "Internal.IPC.Monad")
+  , ("IPC.Internal.Monad", "Internal.IPC.Monad") -- TODO reexport through IPC module
+  , ("IPC.Internal.Version", "Internal.IPC.Version") -- TODO reexport through IPC module
 
   , ("LedgerState", "Internal.LedgerState")
 
-  , ("Consensus", "Internal.LedgerState")
+  , ("Consensus.Internal.Mode", "Internal.Modes") -- TODO reexport through Consensus module
+  , ("Consensus.Internal.InMode", "Internal.InMode") -- TODO reexport through Consensus module -- should we get rid of this?
+
+  , ("Pretty", "Internal.Pretty")
+
+  , ("Plutus", "Internal.Plutus")
+  , ("Plutus.Script", "Internal.Script")
+  , ("Plutus.ScriptData", "Internal.ScriptData")
+
+  , ("ProtocolParameters", "Internal.ProtocolParameters")
+
+  , ("Serialise.Cbor.Canonical", "Internal.Serialise.Cbor.Canonical")
+  , ("Serialise.TextEnvelope", "Internal.SerialiseTextEnvelope")
+  , ("Serialise.Cip129", "Internal.CIP.Cip129"
+  , ("Serialise.DeserialiseAnyOf", "Internal.DeserialiseAnyOf")
+  , ("Serialise.Internal.Json", "Internal.Json")
+  -- TODO this module needs to be removed: the conversion functions need to go into their respective places
+  -- TODO remove references to CDDL
+  , ("Serialise.TextEnvelope.Internal", "Internal.SerialiseLedgerCddl")
+
+  , ("Ledger.Internal", "Internal.ReexposeLedger")
+
+  , ("Network.Internal", "Internal.ReexposeNetwork")
+
+  , ("Certificate", "Internal.Certificate")
+
+  , ("Compatible.Tx", "Internal.Compatible.Tx")
+
+  , ("Experimental.Era", "Internal.Experimental.Eras")
+  , ("Experimental.Plutus.IndexedPlutusScriptWitness", "Internal.Experimental.Plutus.IndexedPlutusScriptWitness")
+  , ("Experimental.Plutus.Script", "Internal.Experimental.Plutus.Script")
+  , ("Experimental.Plutus.ScriptWitness", "Internal.Experimental.Plutus.ScriptWitness")
+  , ("Experimental.Plutus.Shim.LegacyScripts", "Internal.Experimental.Plutus.Shim.LegacyScripts")
+  , ("Experimental.Simple.Script", "Internal.Experimental.Simple.Script")
+  , ("Experimental.Tx", "Internal.Experimental.Tx")
+  , ("Experimental.Witness.AnyWitness", "Internal.Experimental.Witness.AnyWitness")
+  , ("Experimental.Witness.TxScriptWitnessRequirements", "Internal.Experimental.Witness.TxScriptWitnessRequirements")
+
+  , ("Feature", "Internal.Feature")
+
+  , ("HasTypeProxy", "Internal.HasTypeProxy")
+
+  , ("Hash", "Hash")
   ]
 
-  -- TODO remove Cardano.Api.Shelley
+  -- TODO remove Cardano.Api.Shelley, and make sure that everything is exported from `Cardano.Api`
+  -- TODO move Cardano.Api.Internal.Tx.UTxO to Cardano.Api.Tx.UTxO - we don't need extra layer of redirection
     where
       prependModulePrefix t = modulePrefix <> "." <> t
       modulePrefix = "Cardano.Api"
@@ -87,9 +151,14 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
 -- TODO commits order:
 -- 1. Update refactor.hs
 -- 2. Adjust single function exports from modules, delete modules
--- 3. Move modules not being exported to other-modules in cardano-api.cabal
---    * caveat, some modules will still have to be exported
+-- 3. Move some modules not being exported to other-modules in cardano-api.cabal
+--    * caveat, some modules will still have to be exported, for e.g. for tests purposes
 -- 4. Run refactor.hs renaming modules
+
+
+-------------------------------------
+-- The internals of the refactor code
+-------------------------------------
 
 type MonadApp e m = (HasCallStack, MonadIO m, MonadReader e m, HasLogFunc e)
 
@@ -120,8 +189,7 @@ main = runSimpleApp $ do
   forM_ allFiles $ \file -> do
     if ".hs" `isSuffixOf` file
        then do
-        let shelley = ("Cardano.Api", "Cardano.Api.Shelley")
-        updateFile (shelley:renames) file
+        updateFile renames file
        else
         removeEmptyDirectory file
 
