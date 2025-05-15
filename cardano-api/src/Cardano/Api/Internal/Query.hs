@@ -541,7 +541,7 @@ toConsensusQuery (QueryInEra QueryByronUpdateState) =
         Consensus.GetUpdateInterfaceState
 toConsensusQuery (QueryInEra (QueryInShelleyBasedEra sbe q)) =
   shelleyBasedEraConstraints sbe $ toConsensusQueryShelleyBased sbe q
-toConsensusQuery QueryLedgerConfig = Some Consensus.GetLedgerConfig
+toConsensusQuery QueryLedgerConfig = Some Consensus.DebugLedgerConfig
 
 toConsensusQueryShelleyBased
   :: forall era protocol block result
@@ -768,7 +768,7 @@ fromConsensusQueryResult QueryCurrentEra q' r' =
     _ -> fromConsensusQueryResultMismatch
 fromConsensusQueryResult QueryLedgerConfig q' r' =
   case q' of
-    Consensus.GetLedgerConfig ->
+    Consensus.DebugLedgerConfig ->
       r'
     _ -> fromConsensusQueryResultMismatch
 fromConsensusQueryResult (QueryInEra QueryByronUpdateState) q' r' =
