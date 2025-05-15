@@ -1,5 +1,38 @@
 # Changelog for cardano-api
 
+## 10.16.0.0 
+
+- Allow providing of actual datum for reference inputs in `TxInsReference`.
+  (feature, breaking)
+  [PR 814](https://github.com/IntersectMBO/cardano-api/pull/814)
+
+- Add `toMap` synonym for `unUTxO`, `resolveTxIn` synonym for `lookup` functions to `Cardano.Api.Tx.UTxO`.
+  (compatible)
+  [PR 832](https://github.com/IntersectMBO/cardano-api/pull/832)
+
+- Deprecate `makeShelleyTransactionBody`
+  (breaking, refactoring)
+  [PR 835](https://github.com/IntersectMBO/cardano-api/pull/835)
+
+- Add constraints to EraCommonConstraints
+  (compatible, refactoring)
+  [PR 831](https://github.com/IntersectMBO/cardano-api/pull/831)
+
+- Fix an autobalancing error needlessly thrown when there is no change in the transaction. Add property test for autobalancing.
+  (bugfix, test)
+  [PR 829](https://github.com/IntersectMBO/cardano-api/pull/829)
+
+- - Deprecate `shelleyToAlonzoEraToShelleyToBabbageEra`, `alonzoEraOnwardsToMaryEraOnwards`, `babbageEraOnwardsToMaryEraOnwards`, `babbageEraOnwardsToAlonzoEraOnwards`.
+  - Add `asType` for easier obtaining of `HasTypeProxy` proxies
+  - Remove unneded `AsType a` functions' arguments
+  - Remove some `ByronEra`-related dead code.
+  (breaking, refactoring)
+  [PR 825](https://github.com/IntersectMBO/cardano-api/pull/825)
+
+- Implement Cip129 class. This type class captures the bech32 encoding modification that allows identification of various governance credentials and governance action ids.
+  (feature)
+  [PR 778](https://github.com/IntersectMBO/cardano-api/pull/778)
+
 ## 10.15.0.0
 
 - Removed Babbage era from `Experimental` API together with `babbageEraOnwardsToEra` function.
