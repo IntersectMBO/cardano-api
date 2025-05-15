@@ -944,7 +944,7 @@ pattern PlutusScriptBinary script = Plutus.Plutus (Plutus.PlutusBinary script)
 -- hash where we don't want things to be era-parametrised.
 newtype ScriptHash = ScriptHash Ledger.ScriptHash
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex ScriptHash
+  deriving Show via UsingRawBytesHex ScriptHash
   deriving (ToJSON, FromJSON) via UsingRawBytesHex ScriptHash
 
 instance HasTypeProxy ScriptHash where

@@ -97,6 +97,7 @@ import Cardano.Api.Internal.Hash
 import Cardano.Api.Internal.Keys.Byron
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.NetworkId
+import Cardano.Api.Internal.Parser.String qualified as P
 import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.SerialiseBech32
 import Cardano.Api.Internal.SerialiseRaw
@@ -248,8 +249,8 @@ instance SerialiseAsRawBytes (Address ShelleyAddr) where
       Just (Shelley.Addr nw pc scr) -> Right (ShelleyAddress nw pc scr)
 
 instance SerialiseAsBech32 (Address ShelleyAddr) where
-  bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = "addr"
-  bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = "addr_test"
+  bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = unsafeHumanReadablePartFromText "addr"
+  bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = unsafeHumanReadablePartFromText "addr_test"
 
   bech32PrefixesPermitted (AsAddress AsShelleyAddr) = ["addr", "addr_test"]
 
@@ -381,7 +382,7 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
   parseJSON =
     let sbe = shelleyBasedEra @era
      in withText "AddressInEra" $ \txt -> do
-          addressAny <- runParsecParser parseAddressAny txt
+          addressAny <- P.runParsecParserFail parseAddressAny txt
           pure $ anyAddressInShelleyBasedEra sbe addressAny
 
 parseAddressAny :: SerialiseAddress addr => Parsec.Parser addr
@@ -579,8 +580,8 @@ instance SerialiseAsRawBytes StakeAddress where
       Just (Shelley.RewardAccount nw sc) -> Right (StakeAddress nw sc)
 
 instance SerialiseAsBech32 StakeAddress where
-  bech32PrefixFor (StakeAddress Shelley.Mainnet _) = "stake"
-  bech32PrefixFor (StakeAddress Shelley.Testnet _) = "stake_test"
+  bech32PrefixFor (StakeAddress Shelley.Mainnet _) = unsafeHumanReadablePartFromText "stake"
+  bech32PrefixFor (StakeAddress Shelley.Testnet _) = unsafeHumanReadablePartFromText "stake_test"
 
   bech32PrefixesPermitted AsStakeAddress = ["stake", "stake_test"]
 

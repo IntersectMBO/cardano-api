@@ -236,7 +236,6 @@ data BlockHeader
 newtype instance Hash BlockHeader = HeaderHash SBS.ShortByteString
   deriving (Eq, Ord, Show)
   deriving (ToJSON, FromJSON) via UsingRawBytesHex (Hash BlockHeader)
-  deriving IsString via UsingRawBytesHex (Hash BlockHeader)
 
 instance SerialiseAsRawBytes (Hash BlockHeader) where
   serialiseToRawBytes (HeaderHash bs) = SBS.fromShort bs

@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Golden.Cardano.Api.Script
@@ -14,11 +17,13 @@ module Test.Golden.Cardano.Api.Script
 where
 
 import Cardano.Api
+import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Shelley
 
 import Cardano.Ledger.Api.Era qualified as L
 
 import Data.Aeson
+import Data.String
 import System.FilePath ((</>))
 
 import Test.Gen.Cardano.Api.Typed
@@ -138,3 +143,7 @@ test_roundtrip_HashableScriptData_JSON =
   testProperty "roundtrip HashableScriptData" . H.property $ do
     sData <- H.forAll genHashableScriptData
     H.tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
+
+deriving instance IsString (Hash PaymentKey)
+
+deriving instance IsString (L.KeyHash r)

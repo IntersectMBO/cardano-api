@@ -176,6 +176,7 @@ import Data.Int (Int64)
 import Data.Maybe
 import Data.Ratio (Ratio, (%))
 import Data.String
+import Data.Text qualified as T
 import Data.Typeable
 import Data.Word (Word16, Word32, Word64)
 import GHC.Exts (IsList (..))
@@ -451,7 +452,14 @@ genPolicyId :: Gen PolicyId
 genPolicyId =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
-    [ (9, Gen.element [fromString (x : replicate 55 '0') | x <- ['a' .. 'c']])
+    [
+      ( 9
+      , Gen.element
+          [ pid
+          | x <- ['a' .. 'c']
+          , pid <- runParsecParserFail parsePolicyId (fromString $ x : replicate 55 '0')
+          ]
+      )
     , -- and some from the full range of the type
       (1, PolicyId <$> genScriptHash)
     ]

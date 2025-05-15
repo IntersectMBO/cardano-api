@@ -84,7 +84,6 @@ import Data.Either.Combinators
 import Data.List qualified as List
 import Data.Maybe (fromMaybe)
 import Data.Scientific qualified as Scientific
-import Data.String (IsString)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -156,7 +155,7 @@ instance HasTypeProxy ScriptData where
 newtype instance Hash ScriptData
   = ScriptDataHash Plutus.DataHash
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash ScriptData)
+  deriving Show via UsingRawBytesHex (Hash ScriptData)
   deriving (ToJSON, FromJSON) via UsingRawBytesHex (Hash ScriptData)
   deriving (ToJSONKey, FromJSONKey) via UsingRawBytesHex (Hash ScriptData)
 

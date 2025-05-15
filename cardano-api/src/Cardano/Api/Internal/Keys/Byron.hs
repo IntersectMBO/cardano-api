@@ -95,13 +95,13 @@ instance Key ByronKey where
   newtype VerificationKey ByronKey
     = ByronVerificationKey Crypto.VerificationKey
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKey)
+    deriving Show via UsingRawBytesHex (VerificationKey ByronKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey ByronKey
     = ByronSigningKey Crypto.SigningKey
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKey)
+    deriving Show via UsingRawBytesHex (SigningKey ByronKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -147,7 +147,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKey) where
 
 newtype instance Hash ByronKey = ByronKeyHash Crypto.KeyHash
   deriving (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKey)
+  deriving Show via UsingRawBytesHex (Hash ByronKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -186,13 +186,13 @@ instance Key ByronKeyLegacy where
   newtype VerificationKey ByronKeyLegacy
     = ByronVerificationKeyLegacy Crypto.VerificationKey
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKeyLegacy)
+    deriving Show via UsingRawBytesHex (VerificationKey ByronKeyLegacy)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey ByronKeyLegacy
     = ByronSigningKeyLegacy Crypto.SigningKey
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKeyLegacy)
+    deriving Show via UsingRawBytesHex (SigningKey ByronKeyLegacy)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -222,7 +222,7 @@ instance HasTextEnvelope (SigningKey ByronKeyLegacy) where
 
 newtype instance Hash ByronKeyLegacy = ByronKeyHashLegacy Crypto.KeyHash
   deriving (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKeyLegacy)
+  deriving Show via UsingRawBytesHex (Hash ByronKeyLegacy)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKeyLegacy)
   deriving anyclass SerialiseAsCBOR
 

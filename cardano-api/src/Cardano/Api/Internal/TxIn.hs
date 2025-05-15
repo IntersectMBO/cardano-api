@@ -37,6 +37,8 @@ where
 
 import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.Internal.Parser.String ((<?>))
+import Cardano.Api.Internal.Parser.String qualified as P
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
@@ -51,19 +53,12 @@ import Cardano.Ledger.Hashes qualified as Hashes
 import Cardano.Ledger.Shelley.TxBody qualified as Shelley
 import Cardano.Ledger.TxIn qualified as Ledger
 
-import Control.Applicative (some)
 import Data.Aeson (withText)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import Data.ByteString.Char8 qualified as BSC
-import Data.String
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Text.Parsec ((<?>))
-import Text.Parsec qualified as Parsec
-import Text.Parsec.Language qualified as Parsec
-import Text.Parsec.String qualified as Parsec
-import Text.Parsec.Token qualified as Parsec
 
 -- ----------------------------------------------------------------------------
 -- Transaction Ids
@@ -72,7 +67,7 @@ import Text.Parsec.Token qualified as Parsec
 newtype TxId = TxId (Crypto.Hash Hashes.HASH Shelley.EraIndependentTxBody)
   -- We use the Shelley representation and convert to/from the Byron one
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex TxId
+  deriving Show via UsingRawBytesHex TxId
   deriving (ToJSON, FromJSON) via UsingRawBytesHex TxId
   deriving (ToJSONKey, FromJSONKey) via UsingRawBytesHex TxId
 
@@ -112,28 +107,25 @@ instance ToJSONKey TxIn where
   toJSONKey = toJSONKeyText renderTxIn
 
 instance FromJSON TxIn where
-  parseJSON = withText "TxIn" $ runParsecParser parseTxIn
+  parseJSON = withText "TxIn" $ P.runParsecParserFail parseTxIn
 
 instance FromJSONKey TxIn where
-  fromJSONKey = Aeson.FromJSONKeyTextParser $ runParsecParser parseTxIn
+  fromJSONKey = Aeson.FromJSONKeyTextParser $ P.runParsecParserFail parseTxIn
 
 deriving via (ShowOf TxIn) instance Pretty TxIn
 
-parseTxId :: Parsec.Parser TxId
+parseTxId :: P.Parser TxId
 parseTxId = do
-  str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
+  str <- P.some P.hexDigit <?> "transaction id (hexadecimal)"
   failEitherWith
     (\e -> docToString $ "Incorrect transaction id format: " <> prettyError e)
     (deserialiseFromRawBytesHex $ BSC.pack str)
 
-parseTxIn :: Parsec.Parser TxIn
-parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
+parseTxIn :: P.Parser TxIn
+parseTxIn = TxIn <$> parseTxId <*> (P.char '#' *> parseTxIx)
 
-parseTxIx :: Parsec.Parser TxIx
-parseTxIx = TxIx . fromIntegral <$> decimal
-
-decimal :: Parsec.Parser Integer
-Parsec.TokenParser{Parsec.decimal = decimal} = Parsec.haskell
+parseTxIx :: P.Parser TxIx
+parseTxIx = TxIx . fromIntegral <$> P.parseDecimal
 
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txId (TxIx ix)) =

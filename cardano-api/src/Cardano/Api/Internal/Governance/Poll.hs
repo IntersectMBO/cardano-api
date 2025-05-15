@@ -185,7 +185,7 @@ instance SerialiseAsCBOR GovernancePoll where
 newtype instance Hash GovernancePoll
   = GovernancePollHash {unGovernancePollHash :: Hash.Hash HASH GovernancePoll}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GovernancePoll)
+  deriving Show via UsingRawBytesHex (Hash GovernancePoll)
 
 instance SerialiseAsRawBytes (Hash GovernancePoll) where
   serialiseToRawBytes =

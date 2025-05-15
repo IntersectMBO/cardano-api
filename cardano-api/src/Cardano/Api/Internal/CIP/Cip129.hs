@@ -54,13 +54,6 @@ class (SerialiseAsRawBytes a, HasTypeProxy a) => Cip129 a where
   default cip129Bech32PrefixesPermitted :: AsType a -> [Text]
   cip129Bech32PrefixesPermitted = return . Bech32.humanReadablePartToText . cip129Bech32PrefixFor
 
--- | The human readable part of the Bech32 encoding for the credential. This will
--- error if the prefix is not valid.
-unsafeHumanReadablePartFromText :: Text -> Bech32.HumanReadablePart
-unsafeHumanReadablePartFromText =
-  either (error . ("Error while parsing Bech32: " <>) . show) id
-    . Bech32.humanReadablePartFromText
-
 instance Cip129 (Credential L.ColdCommitteeRole) where
   cip129Bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold"
   cip129Bech32PrefixesPermitted AsColdCommitteeCredential = ["cc_cold"]

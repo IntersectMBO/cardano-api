@@ -36,6 +36,18 @@ deriving instance Eq (SigningKey KesKey)
 
 deriving instance Eq (SigningKey VrfKey)
 
+-- TODO review those, as they may be incorrectly converting strings
+
+deriving instance IsString (AssetName)
+
 deriving instance IsString L.AssetName
 
 deriving instance IsString (L.KeyHash r)
+
+deriving instance IsString (L.ScriptHash)
+
+deriving instance IsString (PolicyId)
+
+deriving instance IsString (ScriptHash)
+
+deriving instance IsString (TxId)

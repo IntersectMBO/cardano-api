@@ -1,6 +1,6 @@
 cabal-version: 3.4
 name: cardano-api
-version: 10.15.0.0
+version: 10.16.0.0
 synopsis: The cardano API
 description: The cardano API.
 category:
@@ -257,6 +257,7 @@ library
     Cardano.Api.Internal.ReexposeNetwork
     Cardano.Api.Internal.Rewards
     Cardano.Api.Internal.ScriptData
+    Cardano.Api.Internal.Parser.String
     Cardano.Api.Internal.Serialise.Cbor
     Cardano.Api.Internal.SerialiseBech32
     Cardano.Api.Internal.SerialiseJSON

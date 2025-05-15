@@ -1,3 +1,6 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module Test.Golden.Cardano.Api.Value where
 
 import Cardano.Api
@@ -17,12 +20,16 @@ import Cardano.Api
   )
 import Cardano.Api qualified as Api
 import Cardano.Api.Internal.Eras
+import Cardano.Api.Ledger as L
+
+import Cardano.Ledger.Alonzo.Core qualified as L
 
 import Prelude
 
 import Data.Aeson (eitherDecode, encode)
 import Data.List (groupBy, sort)
 import Data.Map.Strict qualified as Map
+import Data.String
 import Data.Text qualified as Text
 import GHC.Exts (IsList (..))
 import Text.Parsec qualified as Parsec (parse)
@@ -157,3 +164,7 @@ hprop_roundtrip_AssetName_JSONKey =
   property $ do
     v <- forAll genAssetName
     tripping (Map.singleton v ()) encode eitherDecode
+
+deriving instance IsString Api.ScriptHash
+
+deriving instance IsString (L.ScriptHash)

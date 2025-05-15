@@ -5,33 +5,31 @@
 
 -- | Raw binary serialisation
 module Cardano.Api.Internal.SerialiseRaw
-  ( RawBytesHexError (..)
-  , SerialiseAsRawBytes (..)
-  , SerialiseAsRawBytesError (..)
+  ( SerialiseAsRawBytes (..)
   , serialiseToRawBytesHex
   , deserialiseFromRawBytesHex
   , serialiseToRawBytesHexText
+  , parseRawBytesHex
+  , RawBytesHexError (..)
+  , SerialiseAsRawBytesError (..)
   )
 where
 
-import Cardano.Api.Internal.Error (Error, prettyError)
+import Cardano.Api.Internal.Error (Error, failEitherError, prettyError)
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Pretty
 
 import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Char8 qualified as BSC
 import Data.Data (typeRep)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (TypeRep, Typeable)
-
-newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
-  -- TODO We can do better than use String to carry the error message
-  { unSerialiseAsRawBytesError :: String
-  }
-  deriving (Eq, Show)
+import Text.Parsec qualified as P
+import Text.Parsec.String (Parser)
 
 class (HasTypeProxy a, Typeable a) => SerialiseAsRawBytes a where
   serialiseToRawBytes :: a -> ByteString
@@ -60,6 +58,12 @@ data RawBytesHexError
       -- ^ error message
   deriving Show
 
+newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
+  -- TODO We can do better than use String to carry the error message
+  { unSerialiseAsRawBytesError :: String
+  }
+  deriving (Eq, Show)
+
 instance Error RawBytesHexError where
   prettyError = \case
     RawBytesHexErrorBase16DecodeFail input message ->
@@ -83,3 +87,8 @@ deserialiseFromRawBytesHex hex = do
   case deserialiseFromRawBytes asType raw of
     Left e -> Left $ RawBytesHexErrorRawBytesDecodeFail hex (typeRep $ asType @a) e
     Right a -> Right a
+
+-- | Parse String into Hex representation
+parseRawBytesHex :: SerialiseAsRawBytes a => Parser a
+parseRawBytesHex =
+  failEitherError . deserialiseFromRawBytesHex . BSC.pack =<< P.getInput

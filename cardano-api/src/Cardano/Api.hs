@@ -996,6 +996,7 @@ module Cardano.Api
   , toLedgerUTxO
   , fromLedgerUTxO
   , runParsecParser
+  , runParsecParserFail
   , SlotsInEpoch (..)
   , SlotsToEpochEnd (..)
   , slotToEpoch
@@ -1161,6 +1162,7 @@ import Cardano.Api.Internal.Monad.Error
 import Cardano.Api.Internal.NetworkId
 import Cardano.Api.Internal.OperationalCertificate
 import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Parser.String
 import Cardano.Api.Internal.Plutus
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Protocol

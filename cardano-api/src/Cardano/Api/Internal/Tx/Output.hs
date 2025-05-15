@@ -64,6 +64,7 @@ import Cardano.Api.Internal.Eras.Case
 import Cardano.Api.Internal.Eras.Core
 import Cardano.Api.Internal.Error (Error (..), displayError)
 import Cardano.Api.Internal.Hash
+import Cardano.Api.Internal.Parser.String qualified as P
 import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Script
@@ -74,7 +75,6 @@ import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.Utils
 import Cardano.Api.Internal.Value
-import Cardano.Api.Internal.ValueParser
 import Cardano.Api.Ledger.Lens qualified as A
 
 import Cardano.Chain.UTxO qualified as Byron
@@ -100,7 +100,6 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Scientific (toBoundedInteger)
 import Data.Sequence.Strict qualified as Seq
-import Data.String
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -881,7 +880,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
    where
     decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
     decodeAssetId (polid, Aeson.Object assetNameHm) = do
-      let polId = fromString . Text.unpack $ Aeson.toText polid
+      polId <- P.runParsecParserFail parsePolicyId $ Aeson.toText polid
       aNameQuantity <- decodeAssets assetNameHm
       pure . fromList $
         map (first $ AssetId polId) aNameQuantity
@@ -899,7 +898,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
        in mapM (\(aName, q) -> (,) <$> parseKeyAsAssetName aName <*> decodeQuantity q) l
 
     parseKeyAsAssetName :: Aeson.Key -> Aeson.Parser AssetName
-    parseKeyAsAssetName aName = runParsecParser parseAssetName (Aeson.toText aName)
+    parseKeyAsAssetName aName = P.runParsecParserFail parseAssetName (Aeson.toText aName)
 
     decodeQuantity :: Aeson.Value -> Aeson.Parser Quantity
     decodeQuantity (Aeson.Number sci) =
