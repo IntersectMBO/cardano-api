@@ -56,8 +56,8 @@ newtype UsingRawBytesHex a = UsingRawBytesHex a
 instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
   show (UsingRawBytesHex x) = show (serialiseToRawBytesHex x)
 
-instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
-  fromString = either error id . deserialiseFromRawBytesBase16 . BSC.pack
+-- instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
+--   fromString = either error id . deserialiseFromRawBytesBase16 . BSC.pack
 
 instance SerialiseAsRawBytes a => ToJSON (UsingRawBytesHex a) where
   toJSON (UsingRawBytesHex x) = toJSON (serialiseToRawBytesHexText x)
@@ -101,14 +101,14 @@ newtype UsingBech32 a = UsingBech32 a
 instance SerialiseAsBech32 a => Show (UsingBech32 a) where
   show (UsingBech32 x) = show (serialiseToBech32 x)
 
-instance SerialiseAsBech32 a => IsString (UsingBech32 a) where
-  fromString str =
-    case deserialiseFromBech32 (Text.pack str) of
-      Right x -> UsingBech32 x
-      Left e ->
-        error $
-          docToString $
-            "fromString: " <> pretty str <> ": " <> prettyError e
+-- instance SerialiseAsBech32 a => IsString (UsingBech32 a) where
+--   fromString str =
+--     case deserialiseFromBech32 (Text.pack str) of
+--       Right x -> UsingBech32 x
+--       Left e ->
+--         error $
+--           docToString $
+--             "fromString: " <> pretty str <> ": " <> prettyError e
 
 instance SerialiseAsBech32 a => ToJSON (UsingBech32 a) where
   toJSON (UsingBech32 x) = toJSON (serialiseToBech32 x)

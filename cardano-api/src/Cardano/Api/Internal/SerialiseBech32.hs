@@ -11,6 +11,7 @@ module Cardano.Api.Internal.SerialiseBech32
   , Bech32DecodeError (..)
   , deserialiseFromBech32
   , deserialiseAnyOfFromBech32
+  , unsafeHumanReadablePartFromText
   )
 where
 
@@ -29,29 +30,31 @@ import Data.List qualified as List
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Exts (IsList (..))
+import GHC.Stack
 
 class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
   -- | The human readable prefix to use when encoding this value to Bech32.
-  bech32PrefixFor :: a -> Text
+  bech32PrefixFor :: AsType a -> Bech32.HumanReadablePart
 
   -- | The set of human readable prefixes that can be used for this type.
   bech32PrefixesPermitted :: AsType a -> [Text]
 
-serialiseToBech32 :: SerialiseAsBech32 a => a -> Text
+serialiseToBech32 :: forall a. SerialiseAsBech32 a => a -> Text
 serialiseToBech32 a =
   Bech32.encodeLenient
-    humanReadablePart
+    (bech32PrefixFor (asType @a))
     (Bech32.dataPartFromBytes (serialiseToRawBytes a))
- where
-  humanReadablePart =
-    case Bech32.humanReadablePartFromText (bech32PrefixFor a) of
-      Right p -> p
-      Left err ->
-        error $
-          "serialiseToBech32: invalid prefix "
-            ++ show (bech32PrefixFor a)
-            ++ ", "
-            ++ show err
+
+--  where
+--   humanReadablePart =
+--     case Bech32.humanReadablePartFromText (bech32PrefixFor a) of
+--       Right p -> p
+--       Left err ->
+--         error $
+--           "serialiseToBech32: invalid prefix "
+--             ++ show (bech32PrefixFor a)
+--             ++ ", "
+--             ++ show err
 
 deserialiseFromBech32
   :: forall a
@@ -75,7 +78,7 @@ deserialiseFromBech32 bech32Str = do
     Right a -> Right a
     Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 
-  let expectedPrefix = bech32PrefixFor value
+  let expectedPrefix = Bech32.humanReadablePartToText $ bech32PrefixFor (asType @a)
   guard (actualPrefix == expectedPrefix)
     ?! Bech32WrongPrefix actualPrefix expectedPrefix
 
@@ -105,7 +108,7 @@ deserialiseAnyOfFromBech32 types bech32Str = do
     Right a -> Right a
     Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 
-  let expectedPrefix = bech32PrefixFor value
+  let expectedPrefix = Bech32.humanReadablePartToText $ bech32PrefixFor actualType
   guard (actualPrefix == expectedPrefix)
     ?! Bech32WrongPrefix actualPrefix expectedPrefix
 
@@ -126,6 +129,13 @@ deserialiseAnyOfFromBech32 types bech32Str = do
         [ bech32PrefixesPermitted ttoken
         | FromSomeType ttoken _f <- types
         ]
+
+-- | The human readable part of the Bech32 encoding for the credential. This will
+-- error if the prefix is not valid.
+unsafeHumanReadablePartFromText :: HasCallStack => Text -> Bech32.HumanReadablePart
+unsafeHumanReadablePartFromText =
+  either (error . ("unsafeHumanReadablePartFromText: Error while parsing Bech32: " <>) . show) id
+    . Bech32.humanReadablePartFromText
 
 -- | Bech32 decoding error.
 data Bech32DecodeError
