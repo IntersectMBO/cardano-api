@@ -148,11 +148,11 @@ instance SerialiseAsRawBytes (SigningKey PaymentKey) where
       (Crypto.rawDeserialiseSignKeyDSIGN bs)
 
 instance SerialiseAsBech32 (VerificationKey PaymentKey) where
-  bech32PrefixFor _ = "addr_vk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_vk"
   bech32PrefixesPermitted _ = ["addr_vk"]
 
 instance SerialiseAsBech32 (SigningKey PaymentKey) where
-  bech32PrefixFor _ = "addr_sk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_sk"
   bech32PrefixesPermitted _ = ["addr_sk"]
 
 newtype instance Hash PaymentKey
@@ -298,11 +298,11 @@ instance SerialiseAsRawBytes (SigningKey PaymentExtendedKey) where
       (PaymentExtendedSigningKey <$> Crypto.HD.xprv bs)
 
 instance SerialiseAsBech32 (VerificationKey PaymentExtendedKey) where
-  bech32PrefixFor _ = "addr_xvk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_xvk"
   bech32PrefixesPermitted _ = ["addr_xvk"]
 
 instance SerialiseAsBech32 (SigningKey PaymentExtendedKey) where
-  bech32PrefixFor _ = "addr_xsk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_xsk"
   bech32PrefixesPermitted _ = ["addr_xsk"]
 
 newtype instance Hash PaymentExtendedKey
@@ -401,11 +401,11 @@ instance SerialiseAsRawBytes (SigningKey StakeKey) where
       StakeSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
 instance SerialiseAsBech32 (VerificationKey StakeKey) where
-  bech32PrefixFor _ = "stake_vk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_vk"
   bech32PrefixesPermitted _ = ["stake_vk"]
 
 instance SerialiseAsBech32 (SigningKey StakeKey) where
-  bech32PrefixFor _ = "stake_sk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_sk"
   bech32PrefixesPermitted _ = ["stake_sk"]
 
 newtype instance Hash StakeKey
@@ -549,11 +549,11 @@ instance SerialiseAsRawBytes (SigningKey StakeExtendedKey) where
       $ StakeExtendedSigningKey <$> Crypto.HD.xprv bs
 
 instance SerialiseAsBech32 (VerificationKey StakeExtendedKey) where
-  bech32PrefixFor _ = "stake_xvk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_xvk"
   bech32PrefixesPermitted _ = ["stake_xvk"]
 
 instance SerialiseAsBech32 (SigningKey StakeExtendedKey) where
-  bech32PrefixFor _ = "stake_xsk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_xsk"
   bech32PrefixesPermitted _ = ["stake_xsk"]
 
 newtype instance Hash StakeExtendedKey
@@ -785,15 +785,15 @@ instance CastVerificationKeyRole CommitteeHotKey PaymentKey where
     PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeHotKey) where
-  bech32PrefixFor _ = "cc_hot"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot"
   bech32PrefixesPermitted _ = ["cc_hot"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeHotKey) where
-  bech32PrefixFor _ = "cc_hot_vk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_vk"
   bech32PrefixesPermitted _ = ["cc_hot_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeHotKey) where
-  bech32PrefixFor _ = "cc_hot_sk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_sk"
   bech32PrefixesPermitted _ = ["cc_hot_sk"]
 
 --
@@ -896,15 +896,15 @@ instance CastVerificationKeyRole CommitteeColdKey PaymentKey where
     PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeColdKey) where
-  bech32PrefixFor _ = "cc_cold"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold"
   bech32PrefixesPermitted _ = ["cc_cold"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdKey) where
-  bech32PrefixFor _ = "cc_cold_vk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_vk"
   bech32PrefixesPermitted _ = ["cc_cold_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeColdKey) where
-  bech32PrefixFor _ = "cc_cold_sk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_sk"
   bech32PrefixesPermitted _ = ["cc_cold_sk"]
 
 ---
@@ -1023,11 +1023,11 @@ instance HasTextEnvelope (SigningKey CommitteeColdExtendedKey) where
   textEnvelopeType _ = "ConstitutionalCommitteeColdExtendedSigningKey_ed25519_bip32"
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdExtendedKey) where
-  bech32PrefixFor _ = "cc_cold_xvk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_xvk"
   bech32PrefixesPermitted _ = ["cc_cold_xvk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeColdExtendedKey) where
-  bech32PrefixFor _ = "cc_cold_xsk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_xsk"
   bech32PrefixesPermitted _ = ["cc_cold_xsk"]
 
 instance CastVerificationKeyRole CommitteeColdExtendedKey CommitteeColdKey where
@@ -1158,11 +1158,11 @@ instance HasTextEnvelope (SigningKey CommitteeHotExtendedKey) where
   textEnvelopeType _ = "ConstitutionalCommitteeHotExtendedSigningKey_ed25519_bip32"
 
 instance SerialiseAsBech32 (VerificationKey CommitteeHotExtendedKey) where
-  bech32PrefixFor _ = "cc_hot_xvk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_xvk"
   bech32PrefixesPermitted _ = ["cc_hot_xvk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeHotExtendedKey) where
-  bech32PrefixFor _ = "cc_hot_xsk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_xsk"
   bech32PrefixesPermitted _ = ["cc_hot_xsk"]
 
 instance CastVerificationKeyRole CommitteeHotExtendedKey CommitteeHotKey where
@@ -1752,7 +1752,7 @@ instance SerialiseAsRawBytes (SigningKey StakePoolKey) where
       (Crypto.rawDeserialiseSignKeyDSIGN bs)
 
 instance SerialiseAsBech32 (VerificationKey StakePoolKey) where
-  bech32PrefixFor _ = "pool_vk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_vk"
   bech32PrefixesPermitted _ = ["pool_vk"]
 
 instance SerialiseAsBech32 (SigningKey StakePoolKey) where
@@ -1776,7 +1776,7 @@ instance SerialiseAsRawBytes (Hash StakePoolKey) where
       (StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash StakePoolKey) where
-  bech32PrefixFor _ = "pool"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool"
   bech32PrefixesPermitted _ = ["pool"]
 
 instance ToJSON (Hash StakePoolKey) where
@@ -1928,7 +1928,7 @@ instance SerialiseAsRawBytes (Hash StakePoolExtendedKey) where
       (StakePoolExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash StakePoolExtendedKey) where
-  bech32PrefixFor _ = "pool_xvkh"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_xvkh"
   bech32PrefixesPermitted _ = ["pool_xvkh"]
 
 instance HasTextEnvelope (VerificationKey StakePoolExtendedKey) where
@@ -1938,11 +1938,11 @@ instance HasTextEnvelope (SigningKey StakePoolExtendedKey) where
   textEnvelopeType _ = "StakePoolExtendedSigningKey_ed25519_bip32"
 
 instance SerialiseAsBech32 (VerificationKey StakePoolExtendedKey) where
-  bech32PrefixFor _ = "pool_xvk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_xvk"
   bech32PrefixesPermitted _ = ["pool_xvk"]
 
 instance SerialiseAsBech32 (SigningKey StakePoolExtendedKey) where
-  bech32PrefixFor _ = "pool_xsk"
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_xsk"
   bech32PrefixesPermitted _ = ["pool_xsk"]
 
 instance ToJSON (Hash StakePoolExtendedKey) where

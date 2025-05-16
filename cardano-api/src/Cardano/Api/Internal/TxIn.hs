@@ -72,7 +72,7 @@ import Text.Parsec.Token qualified as Parsec
 newtype TxId = TxId (Crypto.Hash Hashes.HASH Shelley.EraIndependentTxBody)
   -- We use the Shelley representation and convert to/from the Byron one
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex TxId
+  deriving Show via UsingRawBytesHex TxId
   deriving (ToJSON, FromJSON) via UsingRawBytesHex TxId
   deriving (ToJSONKey, FromJSONKey) via UsingRawBytesHex TxId
 
