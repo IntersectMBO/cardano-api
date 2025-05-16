@@ -89,7 +89,7 @@ exampleSimpleScriptV2_MofN =
     ]
 
 goldenPath :: FilePath
-goldenPath = "test/cardano-api-golden/files/golden/Script"
+goldenPath = "test/cardano-api-golden/files/Script"
 
 test_golden_SimpleScriptV1_All :: TestTree
 test_golden_SimpleScriptV1_All =

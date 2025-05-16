@@ -78,7 +78,7 @@ hprop_goldenValue_1_lovelace =
     let valueList = [(Api.AdaAssetId, 1)]
         value = Text.unpack $ Api.renderValuePretty $ fromList valueList
 
-    H.diffVsGoldenFile value "test/cardano-api-golden/files/golden/Cardano/Api/Value/value-ada-1.json"
+    H.diffVsGoldenFile value "test/cardano-api-golden/files/Cardano/Api/Value/value-ada-1.json"
 
 hprop_goldenValue1 :: Property
 hprop_goldenValue1 =
@@ -90,7 +90,7 @@ hprop_goldenValue1 =
 
     H.diffVsGoldenFile
       value
-      "test/cardano-api-golden/files/golden/Cardano/Api/Value/value-asset1-1.json"
+      "test/cardano-api-golden/files/Cardano/Api/Value/value-asset1-1.json"
 
 hprop_roundtrip_Value_JSON :: Property
 hprop_roundtrip_Value_JSON =

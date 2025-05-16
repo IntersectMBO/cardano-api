@@ -468,7 +468,7 @@ test_TxMetadataRangeError =
     ]
 
 goldenFilesPath :: FilePath
-goldenFilesPath = "test/cardano-api-golden/files/golden/errors"
+goldenFilesPath = "test/cardano-api-golden/files/errors"
 
 testAllErrorMessages :: forall a. (HasCallStack, Data a, Error a) => [a] -> TestTree
 testAllErrorMessages = ErrorMessage.testAllErrorMessages goldenFilesPath
