@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 10.16.1.0 
+
+- Bump network and consensus dependencies
+  (compatible, maintenance)
+  [PR 843](https://github.com/IntersectMBO/cardano-api/pull/843)
+
+- Added `Pretty` instance to `Url`.
+  (compatible)
+  [PR 839](https://github.com/IntersectMBO/cardano-api/pull/839)
+
 ## 10.16.0.0 
 
 - Allow providing of actual datum for reference inputs in `TxInsReference`.
