@@ -15,4 +15,4 @@ test_golden_ShelleyGenesis =
   testProperty "golden ShelleyGenesis" $
     H.goldenTestJsonValuePretty
       exampleShelleyGenesis
-      "test/cardano-api-golden/files/golden/ShelleyGenesis.json"
+      "test/cardano-api-golden/files/ShelleyGenesis.json"
