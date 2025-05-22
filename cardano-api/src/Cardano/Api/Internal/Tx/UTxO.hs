@@ -2,7 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Internal.Tx.UTxO where
 
@@ -24,22 +25,25 @@ import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.MonoTraversable
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Exts qualified as GHC
 
 newtype UTxO era = UTxO {unUTxO :: Map TxIn (TxOut CtxUTxO era)}
   deriving stock (Eq, Show)
-  deriving newtype (Semigroup, Monoid, GHC.IsList)
+  deriving newtype (Semigroup, Monoid)
+
+instance GHC.IsList (UTxO era) where
+  type Item (UTxO era) = (TxIn, TxOut CtxUTxO era)
+  fromList = UTxO . GHC.fromList
+  toList = GHC.toList . unUTxO
 
 instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
   toEncoding (UTxO m) = toEncoding m
 
-instance
-  IsShelleyBasedEra era
-  => FromJSON (UTxO era)
-  where
+instance IsShelleyBasedEra era => FromJSON (UTxO era) where
   parseJSON = Aeson.withObject "UTxO" $ \hm -> do
     let l = GHC.toList $ KeyMap.toHashMapText hm
     res <- mapM toTxIn l
@@ -50,6 +54,17 @@ instance
       (,)
         <$> parseJSON (Aeson.String txinText)
         <*> parseJSON txOutVal
+
+type instance Element (UTxO era) = TxOut CtxUTxO era
+
+instance MonoFunctor (UTxO era) where
+  omap f (UTxO utxos) = UTxO $ f <$> utxos
+
+deriving newtype instance MonoFoldable (UTxO era)
+
+instance MonoTraversable (UTxO era) where
+  otraverse = omapM
+  omapM f (UTxO utxos) = UTxO <$> omapM f utxos
 
 -- | Infix version of `difference`.
 (\\) :: UTxO era -> UTxO era -> UTxO era
