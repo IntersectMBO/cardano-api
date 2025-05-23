@@ -257,5 +257,6 @@ type EraCommonConstraints era =
   , L.EraUTxO (LedgerEra era)
   , ShelleyLedgerEra era ~ LedgerEra era
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
+  , Api.IsCardanoEra era
   , IsEra era
   )
