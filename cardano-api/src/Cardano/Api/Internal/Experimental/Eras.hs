@@ -31,11 +31,11 @@ module Cardano.Api.Internal.Experimental.Eras
   )
 where
 
+import Cardano.Api qualified as Api
 import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
-import Cardano.Api.Internal.Eras qualified as Api
 import Cardano.Api.Internal.Eras.Core (BabbageEra, ConwayEra, Eon (..))
 import Cardano.Api.Internal.ReexposeLedger qualified as L
 import Cardano.Api.Internal.Via.ShowOf
@@ -258,5 +258,6 @@ type EraCommonConstraints era =
   , ShelleyLedgerEra era ~ LedgerEra era
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era
+  , Api.IsShelleyBasedEra era
   , IsEra era
   )
