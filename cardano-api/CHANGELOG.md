@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 10.16.2.0 
+
+- Add `IsCardanoEra` constraint to `EraCommonConstraints`
+  (compatible)
+  [PR 846](https://github.com/IntersectMBO/cardano-api/pull/846)
+
+- Add MonoTraversable, MonoFoldable, MonoFunctor to the UTxO type
+  (compatible)
+  [PR 845](https://github.com/IntersectMBO/cardano-api/pull/845)
+
 ## 10.16.1.0 
 
 - Bump network and consensus dependencies
