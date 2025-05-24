@@ -23,6 +23,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
+import Data.List qualified
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.MonoTraversable
@@ -66,17 +67,17 @@ instance MonoTraversable (UTxO era) where
   otraverse = omapM
   omapM f (UTxO utxos) = UTxO <$> omapM f utxos
 
+{--------------------------------------------------------------------
+  Operators
+--------------------------------------------------------------------}
+
 -- | Infix version of `difference`.
 (\\) :: UTxO era -> UTxO era -> UTxO era
 a \\ b = difference a b
 
--- | Create an empty `UTxO`.
-empty :: UTxO era
-empty = UTxO Map.empty
-
--- | Create a `UTxO` from a single unspent transaction output.
-singleton :: TxIn -> TxOut CtxUTxO era -> UTxO era
-singleton i o = UTxO $ Map.singleton i o
+{--------------------------------------------------------------------
+  Query
+--------------------------------------------------------------------}
 
 -- | Find a 'TxOut' for a given 'TxIn'.
 lookup :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
@@ -86,37 +87,158 @@ lookup k = Map.lookup k . unUTxO
 resolveTxIn :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
 resolveTxIn = Cardano.Api.Internal.Tx.UTxO.lookup
 
+{--------------------------------------------------------------------
+  Construction
+--------------------------------------------------------------------}
+
+-- | Create an empty `UTxO`.
+empty :: UTxO era
+empty = UTxO Map.empty
+
+-- | Create a `UTxO` from a single unspent transaction output.
+singleton :: TxIn -> TxOut CtxUTxO era -> UTxO era
+singleton i o = UTxO $ Map.singleton i o
+
+{--------------------------------------------------------------------
+  Insertion
+--------------------------------------------------------------------}
+
+-- | Insert a new `TxIn` and `TxOut` into the `UTxO`. If the `TxIn` is
+-- already present in the `UTxO`, the associated `TxOut` is replaced with
+-- the supplied `TxOut`.
+insert :: TxIn -> TxOut CtxUTxO era -> UTxO era -> UTxO era
+insert k v = UTxO . Map.insert k v . toMap
+
+{--------------------------------------------------------------------
+  Delete/Update
+--------------------------------------------------------------------}
+
+-- | Delete a `TxIn` and `TxOut` from the `UTxO` if it exists. When the `TxIn` is not
+-- a member of the `UTxO`, the original `UTxO` is returned.
+delete :: TxIn -> UTxO era -> UTxO era
+delete k = UTxO . Map.delete k . toMap
+
+-- | Update a `TxOut` corresponding to a specific `TxIn` with the result of the
+-- provided function. When the `TxIn` is not a member of the `UTxO`, the
+-- original `UTxO` is returned.
+adjust :: (TxOut CtxUTxO era -> TxOut CtxUTxO era) -> TxIn -> UTxO era -> UTxO era
+adjust f k = UTxO . Map.adjust f k . toMap
+
+{--------------------------------------------------------------------
+  Union
+--------------------------------------------------------------------}
+
+-- | Left-biased union of two `UTxO`.
+union :: UTxO era -> UTxO era -> UTxO era
+union a b = UTxO $ Map.union (toMap a) (toMap b)
+
+-- | The union of a list of `UTxO`.
+unions :: [UTxO era] -> UTxO era
+unions = UTxO . Map.unions . fmap toMap
+
+{--------------------------------------------------------------------
+  Difference
+--------------------------------------------------------------------}
+
+-- | Difference of two `UTxO`. Returns elements of the first `UTxO` not existing
+-- in the second `UTxO`.
+difference :: UTxO era -> UTxO era -> UTxO era
+difference a b = UTxO $ Map.difference (toMap a) (toMap b)
+
+{--------------------------------------------------------------------
+  Intersection
+--------------------------------------------------------------------}
+
+intersection :: UTxO era -> UTxO era -> UTxO era
+intersection a b = UTxO $ Map.intersection (toMap a) (toMap b)
+
+{--------------------------------------------------------------------
+  Map
+--------------------------------------------------------------------}
+
+-- | Map a function over all `TxOut` in the `UTxO`.
+map :: (TxOut CtxUTxO era -> TxOut CtxUTxO era) -> UTxO era -> UTxO era
+map f = UTxO . Map.map f . toMap
+
+-- | Map a function over all `TxIn`/`TxOut` in the `UTxO`.
+mapWithKey :: (TxIn -> TxOut CtxUTxO era -> TxOut CtxUTxO era) -> UTxO era -> UTxO era
+mapWithKey f = UTxO . Map.mapWithKey f . toMap
+
+-- | Map a function over the `TxIn` keys in the `UTxO`.
+mapKeys :: (TxIn -> TxIn) -> UTxO era -> UTxO era
+mapKeys f = UTxO . Map.mapKeys f . toMap
+
+{--------------------------------------------------------------------
+   Filter
+--------------------------------------------------------------------}
+
 -- | Filter all `TxOut` that satisfy the predicate.
 filter :: (TxOut CtxUTxO era -> Bool) -> UTxO era -> UTxO era
-filter fn = UTxO . Map.filter fn . unUTxO
+filter fn = UTxO . Map.filter fn . toMap
 
 -- | Filter all UTxO to only include 'out's satisfying given predicate.
 filterWithKey :: (TxIn -> TxOut CtxUTxO era -> Bool) -> UTxO era -> UTxO era
-filterWithKey fn = UTxO . Map.filterWithKey fn . unUTxO
+filterWithKey fn = UTxO . Map.filterWithKey fn . toMap
 
--- | Get the 'UTxO domain input's set
+{--------------------------------------------------------------------
+   Fold
+--------------------------------------------------------------------}
+
+-- | Fold the `TxOut`s to a monoid and combine the results.
+foldMap :: Monoid m => (TxOut CtxUTxO era -> m) -> UTxO era -> m
+foldMap fn = Prelude.foldMap fn . toMap
+
+{--------------------------------------------------------------------
+   Find
+--------------------------------------------------------------------}
+
+-- | Find the first `TxIn`/`TxOut` pair in `UTxO` using the predicate.
+find :: (TxOut CtxUTxO era -> Bool) -> UTxO era -> Maybe (TxIn, TxOut CtxUTxO era)
+find f = findWithKey (const f)
+
+-- | Find the first `TxIn`/`TxOut` pair in `UTxO` using the predicate.
+findWithKey :: (TxIn -> TxOut CtxUTxO era -> Bool) -> UTxO era -> Maybe (TxIn, TxOut CtxUTxO era)
+findWithKey f = Data.List.find (uncurry f) . toList
+
+{--------------------------------------------------------------------
+   Conversion
+--------------------------------------------------------------------}
+
+-- | Get the `UTxO`'s `TxIn` `Set`.
 inputSet :: UTxO era -> Set TxIn
 inputSet = Map.keysSet . unUTxO
 
--- | Get the UTxO output set.
+-- | Get the `UTxO`'s `TxOut` `Set`.
 txOutputs :: UTxO era -> [TxOut CtxUTxO era]
 txOutputs = Map.elems . unUTxO
 
--- | Remove the right hand side from the left hand side.
-difference :: UTxO era -> UTxO era -> UTxO era
-difference a b = UTxO $ Map.difference (unUTxO a) (unUTxO b)
+{--------------------------------------------------------------------
+   Lists
+--------------------------------------------------------------------}
 
--- | Convert from a list of key/value pairs.
+-- | Convert to a `List` of `TxIn`/`TxOut` pairs.
 fromList :: [(TxIn, TxOut CtxUTxO era)] -> UTxO era
 fromList = UTxO . Map.fromList
 
--- | Convert to a list of key/value pairs.
+-- | Convert from a `List` of `TxIn`/`TxOut` pairs.
 toList :: UTxO era -> [(TxIn, TxOut CtxUTxO era)]
 toList (UTxO xs) = Map.toList xs
 
--- | Convert to a Map of TxIn/TxOut.
+{--------------------------------------------------------------------
+   Maps
+--------------------------------------------------------------------}
+
+-- | Convert to a `Map` of `TxIn`/`TxOut`.
 toMap :: UTxO era -> Map TxIn (TxOut CtxUTxO era)
 toMap = unUTxO
+
+-- | Convert from a `Map` of `TxIn`/`TxOut`.
+fromMap :: Map TxIn (TxOut CtxUTxO era) -> UTxO era
+fromMap = UTxO
+
+{--------------------------------------------------------------------
+   Shelley
+--------------------------------------------------------------------}
 
 -- | Convert from a `cardano-api` `UTxO` to a `cardano-ledger` UTxO.
 toShelleyUTxO :: ShelleyBasedEra era -> UTxO era -> Ledger.UTxO (ShelleyLedgerEra era)
