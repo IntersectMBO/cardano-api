@@ -34,6 +34,7 @@ where
 import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Internal.Eon.Convert
+import Cardano.Api.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
 import Cardano.Api.Internal.Eras qualified as Api
 import Cardano.Api.Internal.Eras.Core (BabbageEra, ConwayEra, Eon (..))
@@ -210,6 +211,10 @@ instance Convert Era AlonzoEraOnwards where
 instance Convert Era BabbageEraOnwards where
   convert = \case
     ConwayEra -> BabbageEraOnwardsConway
+
+instance Convert ConwayEraOnwards Era where
+  convert = \case
+    ConwayEraOnwardsConway -> ConwayEra
 
 newtype DeprecatedEra era
   = DeprecatedEra (ShelleyBasedEra era)
