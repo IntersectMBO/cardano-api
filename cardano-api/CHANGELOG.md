@@ -1,5 +1,15 @@
 # Changelog for cardano-api
 
+## 10.16.3.0
+
+- Add `IsShelleyBasedEra` constraint to `EraCommonConstraints`
+  (compatible)
+  [PR 849](https://github.com/IntersectMBO/cardano-api/pull/849)
+
+- Added an instance for `Convert ConwayEraOnwards Era`
+  (feature)
+  [PR 848](https://github.com/IntersectMBO/cardano-api/pull/848)
+
 ## 10.16.2.0 
 
 - Add `IsCardanoEra` constraint to `EraCommonConstraints`
