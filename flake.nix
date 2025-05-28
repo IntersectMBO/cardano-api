@@ -25,6 +25,10 @@
       url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
       flake = false;
     };
+
+    # wasm specific inputs
+    wasm-nixpkgs.follows = "ghc-wasm-meta/nixpkgs";
+    ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
   };
 
   outputs = inputs: let
@@ -169,12 +173,39 @@
             inherit hydraJobs;
           };
           devShells = let
+            # wasm shell
+            wasmShell = let wasm-pkgs = inputs.wasm-nixpkgs.legacyPackages.${system};
+                            wasi-sdk = inputs.ghc-wasm-meta.packages.${system}.wasi-sdk;
+                            wasm = {
+                              libsodium =
+                                wasm-pkgs.callPackage ./nix/libsodium.nix { inherit wasi-sdk; };
+                              secp256k1 =
+                                (wasm-pkgs.callPackage ./nix/secp256k1.nix { inherit wasi-sdk; }).overrideAttrs (_: {
+                                    src = inputs.iohkNix.inputs.secp256k1;
+                                });
+                              blst =
+                                (wasm-pkgs.callPackage ./nix/blst.nix { inherit wasi-sdk; }).overrideAttrs (_: {
+                                    src = inputs.iohkNix.inputs.blst;
+                                });
+                            };
+                        in {
+                             wasm = wasm-pkgs.mkShell {
+                               packages = [
+                                 inputs.ghc-wasm-meta.packages.${system}.all_9_10
+                                 wasm-pkgs.pkg-config
+                                 wasm.libsodium
+                                 wasm.secp256k1
+                                 wasm.blst
+                               ];
+                             };
+                           };
+            # profiling shell
             profilingShell = p: {
               # `nix develop .#profiling` (or `.#ghc927.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
             };
           in
-            profilingShell cabalProject;
+            profilingShell cabalProject // wasmShell;
           # formatter used by nix fmt
           formatter = nixpkgs.alejandra;
         }
