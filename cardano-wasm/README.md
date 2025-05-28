@@ -2,7 +2,7 @@
 
 Part of an effort at IOG (@Jimbo4350, @palas, and @amesgen) to build Cardano Haskell libraries to Wasm.
 
-Enter the Nix shell by writing in this `nix develop` on a shell in this folder, and then run
+Enter the Nix shell by writing in this `nix develop .#wasm` on a shell in this folder, and then run
 
 ```console
 wasm32-wasi-cabal update
