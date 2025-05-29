@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "./app/Main.hs"
+      component: "cardano-wasm:exe:cardano-wasm"
+
+    - path: "./app/Bridge.hs"
+      component: "cardano-wasm:exe:cardano-wasm"
