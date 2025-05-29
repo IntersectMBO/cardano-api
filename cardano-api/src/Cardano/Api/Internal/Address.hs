@@ -248,10 +248,10 @@ instance SerialiseAsRawBytes (Address ShelleyAddr) where
       Just (Shelley.Addr nw pc scr) -> Right (ShelleyAddress nw pc scr)
 
 instance SerialiseAsBech32 (Address ShelleyAddr) where
-  bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = "addr"
-  bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = "addr_test"
+  bech32PrefixFor (ShelleyAddress Shelley.Mainnet _ _) = unsafeHumanReadablePartFromText "addr"
+  bech32PrefixFor (ShelleyAddress Shelley.Testnet _ _) = unsafeHumanReadablePartFromText "addr_test"
 
-  bech32PrefixesPermitted (AsAddress AsShelleyAddr) = ["addr", "addr_test"]
+  bech32PrefixesPermitted (AsAddress AsShelleyAddr) = unsafeHumanReadablePartFromText <$> ["addr", "addr_test"]
 
 instance SerialiseAddress (Address ByronAddr) where
   serialiseAddress addr@ByronAddress{} =
@@ -579,10 +579,10 @@ instance SerialiseAsRawBytes StakeAddress where
       Just (Shelley.RewardAccount nw sc) -> Right (StakeAddress nw sc)
 
 instance SerialiseAsBech32 StakeAddress where
-  bech32PrefixFor (StakeAddress Shelley.Mainnet _) = "stake"
-  bech32PrefixFor (StakeAddress Shelley.Testnet _) = "stake_test"
+  bech32PrefixFor (StakeAddress Shelley.Mainnet _) = unsafeHumanReadablePartFromText "stake"
+  bech32PrefixFor (StakeAddress Shelley.Testnet _) = unsafeHumanReadablePartFromText "stake_test"
 
-  bech32PrefixesPermitted AsStakeAddress = ["stake", "stake_test"]
+  bech32PrefixesPermitted AsStakeAddress = unsafeHumanReadablePartFromText <$> ["stake", "stake_test"]
 
 instance SerialiseAddress StakeAddress where
   serialiseAddress addr@StakeAddress{} =

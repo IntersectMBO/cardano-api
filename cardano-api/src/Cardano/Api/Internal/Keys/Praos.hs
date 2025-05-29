@@ -106,12 +106,12 @@ instance SerialiseAsRawBytes (SigningKey KesKey) where
       KesSigningKey <$> Crypto.rawDeserialiseUnsoundPureSignKeyKES bs
 
 instance SerialiseAsBech32 (VerificationKey KesKey) where
-  bech32PrefixFor _ = "kes_vk"
-  bech32PrefixesPermitted _ = ["kes_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "kes_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["kes_vk"]
 
 instance SerialiseAsBech32 (SigningKey KesKey) where
-  bech32PrefixFor _ = "kes_sk"
-  bech32PrefixesPermitted _ = ["kes_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "kes_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["kes_sk"]
 
 newtype instance Hash KesKey
   = KesKeyHash
@@ -218,12 +218,12 @@ instance SerialiseAsRawBytes (SigningKey VrfKey) where
       VrfSigningKey <$> Crypto.rawDeserialiseSignKeyVRF bs
 
 instance SerialiseAsBech32 (VerificationKey VrfKey) where
-  bech32PrefixFor _ = "vrf_vk"
-  bech32PrefixesPermitted _ = ["vrf_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "vrf_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["vrf_vk"]
 
 instance SerialiseAsBech32 (SigningKey VrfKey) where
-  bech32PrefixFor _ = "vrf_sk"
-  bech32PrefixesPermitted _ = ["vrf_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "vrf_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["vrf_sk"]
 
 newtype instance Hash VrfKey
   = VrfKeyHash
