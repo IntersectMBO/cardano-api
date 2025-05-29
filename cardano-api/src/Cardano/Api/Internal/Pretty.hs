@@ -8,6 +8,7 @@ module Cardano.Api.Internal.Pretty
   , docToLazyText
   , docToText
   , docToString
+  , prettyShow
   , pshow
   , prettyException
   , hsep
@@ -40,6 +41,10 @@ type Ann = AnsiStyle
 
 docToString :: Doc AnsiStyle -> String
 docToString = show
+
+-- | Render a 'Pretty' to a 'String'
+prettyShow :: Pretty a => a -> String
+prettyShow = docToString . pretty
 
 docToLazyText :: Doc AnsiStyle -> TextLazy.Text
 docToLazyText = renderLazy . layoutPretty defaultLayoutOptions

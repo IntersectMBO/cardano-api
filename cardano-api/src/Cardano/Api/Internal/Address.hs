@@ -31,7 +31,6 @@ module Cardano.Api.Internal.Address
 
     -- ** Addresses in any era
   , AddressAny (..)
-  , lexPlausibleAddressString
   , parseAddressAny
 
     -- ** Addresses in specific eras
@@ -101,6 +100,7 @@ import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.SerialiseBech32
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Utils
+import Cardano.Api.Parser.Text qualified as P
 
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Address qualified as Shelley
@@ -120,8 +120,6 @@ import Data.Either.Combinators (rightToMaybe)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
-import Text.Parsec qualified as Parsec
-import Text.Parsec.String qualified as Parsec
 
 -- ----------------------------------------------------------------------------
 -- Address Serialisation
@@ -381,20 +379,20 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
   parseJSON =
     let sbe = shelleyBasedEra @era
      in withText "AddressInEra" $ \txt -> do
-          addressAny <- runParsecParser parseAddressAny txt
+          addressAny <- P.runParserFail parseAddressAny txt
           pure $ anyAddressInShelleyBasedEra sbe addressAny
 
-parseAddressAny :: SerialiseAddress addr => Parsec.Parser addr
+-- | Parser for any address, supports both bech32 and base58 encodings
+parseAddressAny :: SerialiseAddress addr => P.Parser addr
 parseAddressAny = do
   str <- lexPlausibleAddressString
   case deserialiseAddress asType str of
     Nothing -> fail $ "invalid address: " <> Text.unpack str
     Just addr -> pure addr
-
-lexPlausibleAddressString :: Parsec.Parser Text
-lexPlausibleAddressString =
-  Text.pack <$> Parsec.many1 (Parsec.satisfy isPlausibleAddressChar)
  where
+  lexPlausibleAddressString :: P.Parser Text
+  lexPlausibleAddressString =
+    Text.pack <$> P.many1 (P.satisfy isPlausibleAddressChar)
   -- Covers both base58 and bech32 (with constrained prefixes)
   isPlausibleAddressChar c =
     isAsciiLower c

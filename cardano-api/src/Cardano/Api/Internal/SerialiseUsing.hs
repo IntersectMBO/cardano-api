@@ -17,11 +17,6 @@ import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
 
 import Data.Aeson.Types qualified as Aeson
-import Data.ByteString (ByteString)
-import Data.ByteString.Base16 qualified as Base16
-import Data.ByteString.Char8 qualified as BSC
-import Data.String (IsString (..))
-import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Typeable (tyConName, typeRep, typeRepTyCon)
 
@@ -45,27 +40,28 @@ instance SerialiseAsRawBytes a => FromCBOR (UsingRawBytes a) where
     tname = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
 -- | For use with @deriving via@, to provide instances for any\/all of 'Show',
--- 'IsString', 'ToJSON', 'FromJSON', 'ToJSONKey', FromJSONKey' using a hex
+-- 'ToJSON', 'FromJSON', 'ToJSONKey', FromJSONKey' using a hex
 -- encoding, based on the 'SerialiseAsRawBytes' instance.
 --
--- > deriving (Show, IsString) via (UsingRawBytesHex Blah)
+-- > deriving (Show, Pretty) via (UsingRawBytesHex Blah)
 -- > deriving (ToJSON, FromJSON) via (UsingRawBytesHex Blah)
 -- > deriving (ToJSONKey, FromJSONKey) via (UsingRawBytesHex Blah)
 newtype UsingRawBytesHex a = UsingRawBytesHex a
 
+-- | Quotes the representation
 instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
-  show (UsingRawBytesHex x) = show (serialiseToRawBytesHex x)
+  show (UsingRawBytesHex x) = show $ serialiseToRawBytesHex x
 
-instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
-  fromString = either error id . deserialiseFromRawBytesBase16 . BSC.pack
+instance SerialiseAsRawBytes a => Pretty (UsingRawBytesHex a) where
+  pretty (UsingRawBytesHex a) = pretty $ serialiseToRawBytesHexText a
 
 instance SerialiseAsRawBytes a => ToJSON (UsingRawBytesHex a) where
   toJSON (UsingRawBytesHex x) = toJSON (serialiseToRawBytesHexText x)
 
 instance SerialiseAsRawBytes a => FromJSON (UsingRawBytesHex a) where
   parseJSON =
-    Aeson.withText tname $
-      either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
+    fmap (fmap UsingRawBytesHex) . Aeson.withText tname $
+      failEitherError . deserialiseFromRawBytesHex . Text.encodeUtf8
    where
     tname = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
@@ -75,40 +71,24 @@ instance SerialiseAsRawBytes a => ToJSONKey (UsingRawBytesHex a) where
 
 instance SerialiseAsRawBytes a => FromJSONKey (UsingRawBytesHex a) where
   fromJSONKey =
-    Aeson.FromJSONKeyTextParser $
-      either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
-
-deserialiseFromRawBytesBase16
-  :: SerialiseAsRawBytes a => ByteString -> Either String (UsingRawBytesHex a)
-deserialiseFromRawBytesBase16 str =
-  case Base16.decode str of
-    Right raw -> case deserialiseFromRawBytes ttoken raw of
-      Right x -> Right (UsingRawBytesHex x)
-      Left (SerialiseAsRawBytesError msg) -> Left ("cannot deserialise " ++ show str ++ ".  The error was: " <> msg)
-    Left msg -> Left ("invalid hex " ++ show str ++ ", " ++ msg)
- where
-  ttoken = proxyToAsType (Proxy :: Proxy a)
+    fmap UsingRawBytesHex . Aeson.FromJSONKeyTextParser $
+      failEitherError . deserialiseFromRawBytesHex . Text.encodeUtf8
 
 -- | For use with @deriving via@, to provide instances for any\/all of 'Show',
 -- 'IsString', 'ToJSON', 'FromJSON', 'ToJSONKey', FromJSONKey' using a bech32
 -- encoding, based on the 'SerialiseAsBech32' instance.
 --
--- > deriving (Show, IsString) via (UsingBech32 Blah)
+-- > deriving (Show, Pretty) via (UsingBech32 Blah)
 -- > deriving (ToJSON, FromJSON) via (UsingBech32 Blah)
 -- > deriving (ToJSONKey, FromJSONKey) via (UsingBech32 Blah)
 newtype UsingBech32 a = UsingBech32 a
 
+-- | Quotes the representation
 instance SerialiseAsBech32 a => Show (UsingBech32 a) where
-  show (UsingBech32 x) = show (serialiseToBech32 x)
+  show (UsingBech32 x) = show $ serialiseToBech32 x
 
-instance SerialiseAsBech32 a => IsString (UsingBech32 a) where
-  fromString str =
-    case deserialiseFromBech32 (Text.pack str) of
-      Right x -> UsingBech32 x
-      Left e ->
-        error $
-          docToString $
-            "fromString: " <> pretty str <> ": " <> prettyError e
+instance SerialiseAsBech32 a => Pretty (UsingBech32 a) where
+  pretty (UsingBech32 a) = pretty $ serialiseToBech32 a
 
 instance SerialiseAsBech32 a => ToJSON (UsingBech32 a) where
   toJSON (UsingBech32 x) = toJSON (serialiseToBech32 x)

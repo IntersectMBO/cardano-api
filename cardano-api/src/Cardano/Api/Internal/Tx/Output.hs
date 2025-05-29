@@ -47,7 +47,6 @@ module Cardano.Api.Internal.Tx.Output
 
     -- ** Utilities
   , validateTxOuts
-  , parseHash
   , prettyRenderTxOut
 
     -- ** Error types
@@ -70,12 +69,11 @@ import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.ScriptData
 import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseJSON
-import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.Utils
 import Cardano.Api.Internal.Value
-import Cardano.Api.Internal.ValueParser
 import Cardano.Api.Ledger.Lens qualified as A
+import Cardano.Api.Parser.Text qualified as P
 
 import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
@@ -88,30 +86,23 @@ import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Data qualified as Plutus
 
-import Control.Applicative
 import Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
 import Data.Bifunctor (Bifunctor (..))
 import Data.ByteString.Base16 qualified as Base16
-import Data.ByteString.Char8 qualified as BSC
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Scientific (toBoundedInteger)
 import Data.Sequence.Strict qualified as Seq
-import Data.String
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Type.Equality
 import Data.Word
 import GHC.Exts (IsList (..))
 import GHC.Stack
 import Lens.Micro hiding (ix)
-import Text.Parsec ((<?>))
-import Text.Parsec qualified as Parsec
-import Text.Parsec.String qualified as Parsec
 
 -- ----------------------------------------------------------------------------
 -- Transaction outputs
@@ -881,7 +872,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
    where
     decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
     decodeAssetId (polid, Aeson.Object assetNameHm) = do
-      let polId = fromString . Text.unpack $ Aeson.toText polid
+      polId <- P.runParserFail parsePolicyId $ Aeson.toText polid
       aNameQuantity <- decodeAssets assetNameHm
       pure . fromList $
         map (first $ AssetId polId) aNameQuantity
@@ -899,7 +890,7 @@ instance IsShelleyBasedEra era => FromJSON (TxOutValue era) where
        in mapM (\(aName, q) -> (,) <$> parseKeyAsAssetName aName <*> decodeQuantity q) l
 
     parseKeyAsAssetName :: Aeson.Key -> Aeson.Parser AssetName
-    parseKeyAsAssetName aName = runParsecParser parseAssetName (Aeson.toText aName)
+    parseKeyAsAssetName aName = P.runParserFail parseAssetName (Aeson.toText aName)
 
     decodeQuantity :: Aeson.Value -> Aeson.Parser Quantity
     decodeQuantity (Aeson.Number sci) =
@@ -935,12 +926,6 @@ prettyRenderTxOut (TxOutInAnyEra _ (TxOut (AddressInEra _ addr) txOutVal _ _)) =
   serialiseAddress (toAddressAny addr)
     <> " + "
     <> renderValue (txOutValueToValue txOutVal)
-
-parseHash :: SerialiseAsRawBytes (Hash a) => Parsec.Parser (Hash a)
-parseHash = do
-  str <- some Parsec.hexDigit <?> "hash"
-  failEitherWith (\e -> "Failed to parse hash: " ++ displayError e) $
-    deserialiseFromRawBytesHex (BSC.pack str)
 
 -- ----------------------------------------------------------------------------
 -- Transaction output datum (era-dependent)

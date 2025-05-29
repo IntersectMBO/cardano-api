@@ -8,6 +8,7 @@
 module Cardano.Api.Internal.Error
   ( Error (..)
   , throwErrorAsException
+  , failEitherError
   , ErrorAsException (..)
   , FileError (..)
   , fileIOExceptT
@@ -16,6 +17,7 @@ module Cardano.Api.Internal.Error
 where
 
 import Cardano.Api.Internal.Pretty
+import Cardano.Api.Internal.Utils
 
 import Control.Exception (Exception (..), IOException, throwIO)
 import Control.Monad.Except (throwError)
@@ -35,6 +37,9 @@ instance Error () where
 -- necessary use IO exceptions.
 throwErrorAsException :: Error e => e -> IO a
 throwErrorAsException e = throwIO (ErrorAsException e)
+
+failEitherError :: MonadFail m => Error e => Either e a -> m a
+failEitherError = failEitherWith displayError
 
 data ErrorAsException where
   ErrorAsException :: Error e => e -> ErrorAsException

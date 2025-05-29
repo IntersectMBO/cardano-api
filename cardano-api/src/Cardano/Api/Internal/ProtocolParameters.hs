@@ -151,7 +151,6 @@ import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.String (IsString)
 import Data.Text (Text)
 import Data.Word
 import GHC.Exts (IsList (..))
@@ -892,7 +891,7 @@ instance FromCBOR ProtocolParametersUpdate where
 
 newtype PraosNonce = PraosNonce {unPraosNonce :: Hash.Hash HASH ByteString}
   deriving stock (Eq, Ord, Generic)
-  deriving (Show, IsString) via UsingRawBytesHex PraosNonce
+  deriving (Show, Pretty) via UsingRawBytesHex PraosNonce
   deriving (ToJSON, FromJSON) via UsingRawBytesHex PraosNonce
   deriving (ToCBOR, FromCBOR) via UsingRawBytes PraosNonce
 
