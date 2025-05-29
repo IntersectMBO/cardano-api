@@ -1,1 +1,1 @@
-Expected Base16-encoded bytestring, but got <bytestring>; <string>
+Failed to deserialise TxId. Expected Base16-encoded bytestring, but got <bytestring>; <string>

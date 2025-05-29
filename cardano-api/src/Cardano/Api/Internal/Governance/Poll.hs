@@ -60,7 +60,6 @@ import Control.Monad (foldM, when)
 import Data.Either.Combinators (maybeToRight)
 import Data.Function ((&))
 import Data.Map.Strict qualified as Map
-import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as Text.Lazy
@@ -185,7 +184,7 @@ instance SerialiseAsCBOR GovernancePoll where
 newtype instance Hash GovernancePoll
   = GovernancePollHash {unGovernancePollHash :: Hash.Hash HASH GovernancePoll}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GovernancePoll)
+  deriving Show via UsingRawBytesHex (Hash GovernancePoll)
 
 instance SerialiseAsRawBytes (Hash GovernancePoll) where
   serialiseToRawBytes =

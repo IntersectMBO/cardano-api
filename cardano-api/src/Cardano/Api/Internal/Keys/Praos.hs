@@ -59,13 +59,13 @@ instance Key KesKey where
   newtype VerificationKey KesKey
     = KesVerificationKey (Crypto.VerKeyKES (KES StandardCrypto))
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey KesKey)
+    deriving Show via UsingRawBytesHex (VerificationKey KesKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey KesKey
     = KesSigningKey (Crypto.UnsoundPureSignKeyKES (KES StandardCrypto))
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey KesKey)
+    deriving Show via UsingRawBytesHex (SigningKey KesKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -120,7 +120,7 @@ newtype instance Hash KesKey
           (Crypto.VerKeyKES (KES StandardCrypto))
       )
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash KesKey)
+  deriving Show via UsingRawBytesHex (Hash KesKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash KesKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -172,13 +172,13 @@ instance Key VrfKey where
   newtype VerificationKey VrfKey
     = VrfVerificationKey (Crypto.VerKeyVRF (VRF StandardCrypto))
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey VrfKey)
+    deriving Show via UsingRawBytesHex (VerificationKey VrfKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey VrfKey
     = VrfSigningKey (Crypto.SignKeyVRF (VRF StandardCrypto))
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey VrfKey)
+    deriving Show via UsingRawBytesHex (SigningKey VrfKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -232,7 +232,7 @@ newtype instance Hash VrfKey
           (Crypto.VerKeyVRF (VRF StandardCrypto))
       )
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash VrfKey)
+  deriving Show via UsingRawBytesHex (Hash VrfKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash VrfKey)
   deriving anyclass SerialiseAsCBOR
 

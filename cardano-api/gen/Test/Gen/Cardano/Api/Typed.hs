@@ -156,6 +156,7 @@ import Cardano.Api.Internal.Error
 import Cardano.Api.Internal.Script (scriptInEraToRefScript)
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger.Lens qualified as A
+import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Shelley
 import Cardano.Api.Shelley qualified as ShelleyApi
 
@@ -446,16 +447,23 @@ genAssetName :: Gen AssetName
 genAssetName =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
-    [ (9, Gen.element ["", "a", "b", "c"])
-    , (1, AssetName <$> Gen.bytes (Range.singleton 32))
-    , (1, AssetName <$> Gen.bytes (Range.constant 1 31))
+    [ (9, UnsafeAssetName <$> Gen.element ["", "a", "b", "c"])
+    , (1, UnsafeAssetName <$> Gen.bytes (Range.singleton 32))
+    , (1, UnsafeAssetName <$> Gen.bytes (Range.constant 1 31))
     ]
 
 genPolicyId :: Gen PolicyId
 genPolicyId =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
-    [ (9, Gen.element [fromString (x : replicate 55 '0') | x <- ['a' .. 'c']])
+    [
+      ( 9
+      , Gen.element
+          [ pid
+          | x <- ['a' .. 'c']
+          , pid <- P.runParserFail parsePolicyId (fromString $ x : replicate 55 '0')
+          ]
+      )
     , -- and some from the full range of the type
       (1, PolicyId <$> genScriptHash)
     ]
