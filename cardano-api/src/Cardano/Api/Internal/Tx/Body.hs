@@ -193,10 +193,9 @@ module Cardano.Api.Internal.Tx.Body
     -- @
 
     -- * Contents
-    parseTxId
 
     -- ** Transaction bodies
-  , TxBody (.., TxBody)
+    TxBody (.., TxBody)
   , createTransactionBody
   , createAndValidateTransactionBody
   , TxBodyContent (..)
@@ -270,15 +269,18 @@ module Cardano.Api.Internal.Tx.Body
 
     -- ** Transaction Ids
   , TxId (..)
+  , parseTxId
   , getTxId
   , getTxIdByron
   , getTxIdShelley
 
     -- ** Transaction inputs
   , TxIn (..)
+  , parseTxIn
   , TxIns
   , indexTxIns
   , TxIx (..)
+  , parseTxIx
   , genesisUTxOPseudoTxIn
   , getReferenceInputsSizeForTxIds
 
@@ -294,7 +296,6 @@ module Cardano.Api.Internal.Tx.Body
   , prettyRenderTxOut
   , txOutValueToLovelace
   , txOutValueToValue
-  , parseHash
   , TxOutInAnyEra (..)
   , txOutInAnyEra
 

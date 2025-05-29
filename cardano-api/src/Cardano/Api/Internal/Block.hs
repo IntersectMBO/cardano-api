@@ -81,7 +81,6 @@ import Data.Aeson qualified as Aeson
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (Foldable (toList))
-import Data.String (IsString)
 import Data.Text (Text)
 
 {- HLINT ignore "Use lambda" -}
@@ -236,7 +235,6 @@ data BlockHeader
 newtype instance Hash BlockHeader = HeaderHash SBS.ShortByteString
   deriving (Eq, Ord, Show)
   deriving (ToJSON, FromJSON) via UsingRawBytesHex (Hash BlockHeader)
-  deriving IsString via UsingRawBytesHex (Hash BlockHeader)
 
 instance SerialiseAsRawBytes (Hash BlockHeader) where
   serialiseToRawBytes (HeaderHash bs) = SBS.fromShort bs

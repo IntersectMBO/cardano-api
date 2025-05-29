@@ -233,7 +233,10 @@ test_RawBytesHexError =
   testAllErrorMessages_
     "Cardano.Api.SerialiseRaw"
     "RawBytesHexError"
-    [ ("RawBytesHexErrorBase16DecodeFail", RawBytesHexErrorBase16DecodeFail bytestring string)
+    [
+      ( "RawBytesHexErrorBase16DecodeFail"
+      , RawBytesHexErrorBase16DecodeFail bytestring (typeRep AsTxId) string
+      )
     ,
       ( "RawBytesHexErrorRawBytesDecodeFail"
       , RawBytesHexErrorRawBytesDecodeFail

@@ -12,10 +12,14 @@ module Cardano.Api.Internal.Value
 
     -- * Multi-asset values
   , Quantity (..)
+  , parseQuantity
   , PolicyId (..)
+  , parsePolicyId
   , scriptPolicyId
   , AssetName (..)
+  , parseAssetName
   , AssetId (..)
+  , parseAssetId
   , Value
   , selectAsset
   , valueFromList
@@ -68,13 +72,13 @@ where
 import Cardano.Api.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Eras.Case
-import Cardano.Api.Internal.Error (displayError)
 import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Script
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.SerialiseUsing
-import Cardano.Api.Internal.Utils (failEitherWith)
 import Cardano.Api.Ledger.Lens qualified as A
+import Cardano.Api.Parser.Text (($>), (<?>), (<|>))
+import Cardano.Api.Parser.Text qualified as P
 
 import Cardano.Chain.Common qualified as Byron
 import Cardano.Ledger.Allegra.Core qualified as L
@@ -87,11 +91,11 @@ import Cardano.Ledger.Mary.Value qualified as Mary
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
-import Data.Aeson.Types (Parser, ToJSONKey)
+import Data.Aeson.Types (ToJSONKey)
+import Data.Aeson.Types qualified as Aeson
 import Data.Bifunctor (bimap, first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Short qualified as Short
 import Data.Data (Data)
 import Data.Function ((&))
@@ -101,10 +105,8 @@ import Data.Map.Merge.Strict qualified as Map
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.MonoTraversable
-import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
 import GHC.Exts (IsList (..))
 import Lens.Micro ((%~))
 
@@ -137,6 +139,10 @@ instance Semigroup Quantity where
 instance Monoid Quantity where
   mempty = Quantity 0
 
+-- | Quantity (word64) parser. Only accepts positive quantities.
+parseQuantity :: P.Parser Quantity
+parseQuantity = Quantity <$> P.parseWord64
+
 lovelaceToQuantity :: Lovelace -> Quantity
 lovelaceToQuantity (L.Coin x) = Quantity x
 
@@ -145,7 +151,7 @@ quantityToLovelace (Quantity x) = L.Coin x
 
 newtype PolicyId = PolicyId {unPolicyId :: ScriptHash}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString, ToJSON, FromJSON) via UsingRawBytesHex PolicyId
+  deriving (Show, ToJSON, FromJSON) via UsingRawBytesHex PolicyId
 
 instance HasTypeProxy PolicyId where
   data AsType PolicyId = AsPolicyId
@@ -156,31 +162,32 @@ instance SerialiseAsRawBytes PolicyId where
   deserialiseFromRawBytes AsPolicyId bs =
     PolicyId <$> deserialiseFromRawBytes AsScriptHash bs
 
+-- | Policy ID parser.
+parsePolicyId :: P.Parser PolicyId
+parsePolicyId = PolicyId <$> parseScriptHash
+
 scriptPolicyId :: Script lang -> PolicyId
 scriptPolicyId = PolicyId . hashScript
 
-newtype AssetName = AssetName ByteString
+newtype AssetName = UnsafeAssetName ByteString
   deriving stock (Eq, Ord)
   deriving newtype Show
   deriving
     (ToJSON, FromJSON, ToJSONKey, FromJSONKey)
     via UsingRawBytesHex AssetName
 
-instance IsString AssetName where
-  fromString s
-    | let bs = Text.encodeUtf8 (Text.pack s)
-    , BS.length bs <= 32 =
-        AssetName (BSC.pack s)
-    | otherwise = error "fromString: AssetName over 32 bytes"
+-- | Asset name parser.
+parseAssetName :: P.Parser AssetName
+parseAssetName = parseRawBytesHex
 
 instance HasTypeProxy AssetName where
   data AsType AssetName = AsAssetName
   proxyToAsType _ = AsAssetName
 
 instance SerialiseAsRawBytes AssetName where
-  serialiseToRawBytes (AssetName bs) = bs
+  serialiseToRawBytes (UnsafeAssetName bs) = bs
   deserialiseFromRawBytes AsAssetName bs
-    | BS.length bs <= 32 = Right (AssetName bs)
+    | BS.length bs <= 32 = Right (UnsafeAssetName bs)
     | otherwise =
         Left $
           SerialiseAsRawBytesError $
@@ -213,6 +220,35 @@ instance IsList Value where
       . Map.filter (/= 0)
       . Map.fromListWith (<>)
   toList (Value m) = toList m
+
+-- | Asset ID parser.
+parseAssetId :: P.Parser AssetId
+parseAssetId =
+  P.try parseAdaAssetId
+    <|> parseNonAdaAssetId
+    <?> "asset ID"
+ where
+  -- Parse the ADA asset ID.
+  parseAdaAssetId :: P.Parser AssetId
+  parseAdaAssetId = P.string "lovelace" $> AdaAssetId
+
+  -- Parse a multi-asset ID.
+  parseNonAdaAssetId :: P.Parser AssetId
+  parseNonAdaAssetId = do
+    polId <- parsePolicyId
+    parseFullAssetId polId <|> parseAssetIdNoAssetName polId
+
+  -- Parse a fully specified multi-asset ID with both a policy ID and asset
+  -- name.
+  parseFullAssetId :: PolicyId -> P.Parser AssetId
+  parseFullAssetId polId = do
+    _ <- P.char '.'
+    aName <- parseAssetName <?> "hexadecimal asset name"
+    pure (AssetId polId aName)
+
+  -- Parse a multi-asset ID that specifies a policy ID, but no asset name.
+  parseAssetIdNoAssetName :: PolicyId -> P.Parser AssetId
+  parseAssetIdNoAssetName polId = pure $ AssetId polId (UnsafeAssetName "")
 
 {-# NOINLINE mergeAssetMaps #-} -- as per advice in Data.Map.Merge docs
 mergeAssetMaps
@@ -299,7 +335,7 @@ toMaryValue v =
   toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
 
   toMaryAssetName :: AssetName -> Mary.AssetName
-  toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
+  toMaryAssetName (UnsafeAssetName n) = Mary.AssetName $ Short.toShort n
 
 toLedgerValue :: MaryEraOnwards era -> Value -> L.Value (ShelleyLedgerEra era)
 toLedgerValue w = maryEraOnwardsConstraints w toMaryValue
@@ -329,7 +365,7 @@ fromMaryPolicyID :: Mary.PolicyID -> PolicyId
 fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
 
 fromMaryAssetName :: Mary.AssetName -> AssetName
-fromMaryAssetName (Mary.AssetName n) = AssetName $ Short.fromShort n
+fromMaryAssetName (Mary.AssetName n) = UnsafeAssetName $ Short.fromShort n
 
 -- | Calculate cost of making a UTxO entry for a given 'Value' and
 -- mininimum UTxO value derived from the 'ProtocolParameters'
@@ -452,17 +488,11 @@ instance FromJSON ValueNestedRep where
           | keyValTuple <- toList obj
           ]
    where
-    parsePid :: (Aeson.Key, Aeson.Value) -> Parser ValueNestedBundle
+    parsePid :: (Aeson.Key, Aeson.Value) -> Aeson.Parser ValueNestedBundle
     parsePid ("lovelace", q) = ValueNestedBundleAda <$> parseJSON q
     parsePid (key, quantityBundleJson) = do
-      sHash <-
-        failEitherWith
-          (\e -> "Failure when deserialising PolicyId: " ++ displayError e)
-          $ deserialiseFromRawBytesHex
-          $ Text.encodeUtf8 pid
-      ValueNestedBundle (PolicyId sHash) <$> parseJSON quantityBundleJson
-     where
-      pid = Aeson.toText key
+      polId <- P.runParserFail parsePolicyId $ Aeson.toText key
+      ValueNestedBundle polId <$> parseJSON quantityBundleJson
 
 -- ----------------------------------------------------------------------------
 -- Printing and pretty-printing
@@ -494,7 +524,7 @@ renderPolicyId (PolicyId scriptHash) = serialiseToRawBytesHexText scriptHash
 
 renderAssetId :: AssetId -> Text
 renderAssetId AdaAssetId = "lovelace"
-renderAssetId (AssetId polId (AssetName "")) = renderPolicyId polId
+renderAssetId (AssetId polId (UnsafeAssetName "")) = renderPolicyId polId
 renderAssetId (AssetId polId assetName) =
   renderPolicyId polId <> "." <> serialiseToRawBytesHexText assetName
 

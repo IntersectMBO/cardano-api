@@ -100,6 +100,7 @@ library
     Cardano.Api.Ledger
     Cardano.Api.Ledger.Lens
     Cardano.Api.Network
+    Cardano.Api.Parser.Text
     Cardano.Api.Shelley
     Cardano.Api.Tx.UTxO
 
@@ -322,6 +323,7 @@ test-suite cardano-api-test
   main-is: cardano-api-test.hs
   type: exitcode-stdio-1.0
   build-depends:
+    FailT,
     QuickCheck,
     aeson >=1.5.6.0,
     base16-bytestring,
@@ -420,7 +422,6 @@ test-suite cardano-api-golden
     hedgehog >=1.1,
     hedgehog-extras ^>=0.7,
     microlens,
-    parsec,
     plutus-core ^>=1.45,
     plutus-ledger-api,
     tasty,
