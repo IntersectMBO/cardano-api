@@ -1,3 +1,8 @@
+{-# LANGUAGE CPP #-}
+
+#if !defined(wasm32_HOST_ARCH)
+module Bridge where
+#else
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -129,3 +134,5 @@ signTransaction txBody privKey = do
     let witness = Api.WitnessPaymentKey signingKey
     let oldApiSignedTx :: Api.Tx Api.ConwayEra = Api.signShelleyTransaction sbe unsignedTx [witness]
     return oldApiSignedTx
+
+#endif

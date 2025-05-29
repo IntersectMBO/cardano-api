@@ -28,18 +28,22 @@ executable cardano-wasm
   main-is: Main.hs
   hs-source-dirs: app
   default-language: Haskell2010
-  ghc-options:
-    -no-hs-main
-    -optl-mexec-model=reactor
-    "-optl-Wl,--strip-all,--export=mkTxIn,--export=mkTransaction,--export=signTransaction"
 
+  if arch(wasm32)
+    ghc-options:
+      -no-hs-main
+      -optl-mexec-model=reactor
+      "-optl-Wl,--strip-all,--export=mkTxIn,--export=mkTransaction,--export=signTransaction"
   other-modules:
     Bridge
 
   build-depends:
-    aeson,
-    base,
-    cardano-api ^>=10.14.0.0,
-    ghc-experimental,
-    text,
-    utf8-string,
+    base
+
+  if arch(wasm32)
+    build-depends:
+      aeson,
+      cardano-api ^>=10.14.0.0,
+      ghc-experimental,
+      text,
+      utf8-string,
