@@ -36,14 +36,15 @@ executable cardano-wasm
       "-optl-Wl,--strip-all,--export=mkTxIn,--export=mkTransaction,--export=signTransaction"
   other-modules:
     Bridge
+    WasmApi
 
   build-depends:
-    base
+    base,
+    cardano-api ^>=10.14.0.0,
+    text,
 
   if arch(wasm32)
     build-depends:
       aeson,
-      cardano-api ^>=10.14.0.0,
       ghc-experimental,
-      text,
       utf8-string,
