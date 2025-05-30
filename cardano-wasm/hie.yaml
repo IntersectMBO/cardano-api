@@ -5,3 +5,7 @@ cradle:
 
     - path: "./app/Bridge.hs"
       component: "cardano-wasm:exe:cardano-wasm"
+
+    - path: "./app/WasmApi.hs"
+      component: "cardano-wasm:exe:cardano-wasm"
+

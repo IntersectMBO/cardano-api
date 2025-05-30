@@ -3,6 +3,10 @@
 #if !defined(wasm32_HOST_ARCH)
 module Bridge where
 #else
+
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -17,8 +21,11 @@ import qualified Data.Aeson as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Function ((&))
 import Data.Proxy (Proxy (..))
+import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Wasm.Prim
+
+import qualified WasmApi as WasmApi
 
 -- JS helper functions
 
@@ -64,75 +71,78 @@ jsValToType asType val = do
     Left err -> error ("Error deserialising envelope in parameter: " ++ show err)
     Right type_ -> return type_
 
+-- Conversion functions between Haskell and JS
+
+class ToJSVal haskellType jsType where
+  toJSVal :: haskellType -> IO jsType
+
+instance ToJSVal (Api.TxBody Api.ConwayEra) JSVal where
+  toJSVal txBody = do
+    let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") txBody
+    jsonToJSVal envelope
+
+instance ToJSVal (Api.Tx Api.ConwayEra) JSVal where
+  toJSVal txBody = do
+    let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") txBody
+    jsonToJSVal envelope
+
+class FromJSVal jsType haskellType where
+  fromJSVal :: jsType -> IO haskellType
+
+instance FromJSVal JSVal Api.TxIn where
+  fromJSVal = jsValToJSON
+
+instance FromJSVal JSString Text where
+  fromJSVal = pure . Text.pack . fromJSString
+
+instance FromJSVal JSVal Integer where
+  fromJSVal = fromJSBigInt
+
+instance FromJSVal JSVal (Api.TxBody Api.ConwayEra) where
+  fromJSVal = jsValToType (Api.AsTxBody Api.AsConwayEra)
+
+instance FromJSVal JSVal (Api.Tx Api.ConwayEra) where
+  fromJSVal = jsValToType (Api.AsTx Api.AsConwayEra)
+
+instance FromJSVal JSString (Api.SigningKey Api.PaymentKey) where
+  fromJSVal jsString = do
+    let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) (Text.pack (fromJSString jsString))
+    return signingKey
+
+instance FromJSVal JSString Api.TxId where
+  fromJSVal jsString = do
+    let (Right txId) = Api.deserialiseFromRawBytesHex Api.AsTxId (fromString (fromJSString jsString))
+    return txId
+
+instance FromJSVal Int Api.TxIx where
+  fromJSVal = return . Api.TxIx . fromIntegral
+
 -- API functions
 
 foreign export javascript "mkTxIn"
   mkTxIn :: JSString -> Int -> IO JSVal
 
-mkTxIn txId txIx = do
-  let (Right srcTxId) = Api.deserialiseFromRawBytesHex Api.AsTxId (fromString (fromJSString txId))
-  let srcTxIx = Api.TxIx (fromIntegral txIx)
-  let txIn = Api.TxIn srcTxId srcTxIx
-  jsonToJSVal txIn
+mkTxIn txId txIx =
+  jsonToJSVal =<< Api.TxIn <$> fromJSVal txId <*> fromJSVal txIx
 
 foreign export javascript "mkTransaction"
   mkTransaction :: JSVal -> JSString -> JSVal -> JSVal -> IO JSVal
 
-mkTransaction txIn destAddr bigIntAmount bigIntFees = do
-  -- Convert JS params to Haskell types
-  srcTxIx <- jsValToJSON txIn
-  let destAddrText = Text.pack (fromJSString destAddr)
-  amount <- fromJSBigInt bigIntAmount
-  fees <- fromJSBigInt bigIntFees
-  -- Call the function
-  txBody <- mkTransactionImpl srcTxIx destAddrText amount fees
-  -- Convert Haskell type to JS
-  let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") txBody
-  jsonToJSVal envelope
- where
-  mkTransactionImpl :: Api.TxIn -> Text.Text -> Integer -> Integer -> IO (Api.TxBody Api.ConwayEra)
-  mkTransactionImpl srcTxIn destAddr amount fees = do
-    let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
-    let txIn =
-          ( srcTxIn
-          , Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending)
-          )
-    let (Just destAddress) = Api.deserialiseAddress (Api.AsAddressInEra Api.AsConwayEra) destAddr
-    let txOut =
-          Api.TxOut
-            destAddress
-            (Api.lovelaceToTxOutValue sbe (fromInteger amount))
-            Api.TxOutDatumNone
-            Script.ReferenceScriptNone
-    let txFee = Api.TxFeeExplicit sbe (fromInteger fees)
-
-    let txBodyContent =
-          Api.defaultTxBodyContent sbe
-            & Api.setTxIns [txIn]
-            & Api.setTxOuts [txOut]
-            & Api.setTxFee txFee
-    let (Right txBody) = Api.createTransactionBody sbe txBodyContent
-    return txBody
+mkTransaction txIn destAddr bigIntAmount bigIntFees =
+  toJSVal
+    =<< WasmApi.mkTransactionImpl
+      <$> fromJSVal txIn
+      <*> fromJSVal destAddr
+      <*> fromJSVal bigIntAmount
+      <*> fromJSVal bigIntFees
 
 foreign export javascript "signTransaction"
   signTransaction :: JSVal -> JSString -> IO JSVal
 
-signTransaction txBody privKey = do
-  -- Convert JS params to Haskell types
-  unsignedTx <- jsValToType (Api.AsTxBody Api.AsConwayEra) txBody
-  let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) (Text.pack (fromJSString privKey))
-  -- Call the function
-  oldApiSignedTx <- signTransactionImpl unsignedTx signingKey
-  -- Convert Haskell type to JS
-  let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") oldApiSignedTx
-  jsonToJSVal envelope
- where
-  signTransactionImpl
-    :: Api.TxBody Api.ConwayEra -> Api.SigningKey Api.PaymentKey -> IO (Api.Tx Api.ConwayEra)
-  signTransactionImpl unsignedTx signingKey = do
-    let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
-    let witness = Api.WitnessPaymentKey signingKey
-    let oldApiSignedTx :: Api.Tx Api.ConwayEra = Api.signShelleyTransaction sbe unsignedTx [witness]
-    return oldApiSignedTx
+signTransaction txBody privKey =
+  toJSVal
+    =<< WasmApi.signTransactionImpl
+      <$> fromJSVal txBody
+      <*> fromJSVal privKey
 
 #endif
