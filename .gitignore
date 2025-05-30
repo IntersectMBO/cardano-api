@@ -45,7 +45,7 @@ tags
 ./*.cert
 
 # For now require that users generate their own hie.yaml
-hie.yaml
+./hie.yaml
 
 # Ignore Visual Studio code configuration
 .vscode/tasks.json
