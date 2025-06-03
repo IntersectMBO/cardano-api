@@ -6,7 +6,6 @@ module Test.Cardano.Api.Address
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.Address (StakeCredential (StakeCredentialByKey))
 
 import Control.Monad (void)
 import Data.Aeson qualified as Aeson

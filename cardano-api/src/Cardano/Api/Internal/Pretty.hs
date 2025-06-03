@@ -9,6 +9,7 @@ module Cardano.Api.Internal.Pretty
   , docToText
   , docToString
   , prettyShow
+  , textShow
   , pshow
   , prettyException
   , hsep
@@ -30,6 +31,7 @@ import Cardano.Api.Internal.Via.ShowOf
 import Cardano.Ledger.BaseTypes qualified as L
 
 import Control.Exception.Safe
+import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as TextLazy
 import Prettyprinter
@@ -83,6 +85,9 @@ pshow = viaShow
 -- | Short hand for @'pretty' . 'displayException'@
 prettyException :: Exception a => a -> Doc ann
 prettyException = pretty . displayException
+
+textShow :: Show a => a -> Text
+textShow = Text.pack . show
 
 instance Pretty L.Url where
   pretty url = pretty (L.urlToText url)

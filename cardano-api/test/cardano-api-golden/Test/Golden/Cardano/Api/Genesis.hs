@@ -8,7 +8,7 @@ module Test.Golden.Cardano.Api.Genesis
   )
 where
 
-import Cardano.Api.Shelley (ShelleyGenesis (..))
+import Cardano.Api.Genesis
 
 import Cardano.Crypto.VRF (VerKeyVRF)
 import Cardano.Ledger.Address (Addr (..))
@@ -24,7 +24,6 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys (GenDelegPair (..))
 import Cardano.Ledger.Shelley.Genesis (emptyGenesisStaking)
 import Cardano.Protocol.Crypto (StandardCrypto)
-import Cardano.Slotting.Slot (EpochSize (..))
 
 import Data.ListMap (ListMap (ListMap))
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)

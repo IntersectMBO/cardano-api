@@ -4,8 +4,77 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
-module Cardano.Api.Internal.Tx.UTxO where
+module Cardano.Api.Internal.Tx.UTxO
+  ( -- * UTxO type
+    UTxO (..)
+
+    -- * Operators
+  , (\\)
+
+    -- * Query
+  , lookup
+  , resolveTxIn
+
+    -- * Construction
+  , empty
+  , singleton
+
+    -- ** Insertion
+  , insert
+
+    -- ** Delete/Update
+  , delete
+  , adjust
+
+    -- * Combine
+
+    -- ** Union
+  , union
+  , unions
+
+    -- ** Difference
+  , difference
+
+    -- ** Intersection
+  , intersection
+
+    -- * Traversal
+
+    -- ** Map
+  , map
+  , mapWithKey
+  , mapKeys
+
+    -- ** Fold
+  , foldMap
+
+    -- * Conversion
+  , inputSet
+  , txOutputs
+
+    -- ** Lists
+  , fromList
+  , toList
+
+    -- ** Maps
+  , toMap
+  , fromMap
+
+    -- ** Shelley
+  , fromShelleyUTxO
+  , toShelleyUTxO
+
+    -- * Filter
+  , Cardano.Api.Internal.Tx.UTxO.filter
+  , filterWithKey
+
+    -- * Find
+  , find
+  , findWithKey
+  )
+where
 
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
   ( IsShelleyBasedEra
@@ -19,17 +88,29 @@ import Cardano.Api.Internal.TxIn (TxIn (..), fromShelleyTxIn, toShelleyTxIn)
 import Cardano.Ledger.Babbage ()
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 
+import Prelude qualified
+
+import Control.Applicative hiding (empty)
+import Control.Monad
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
+import Data.Bool
+import Data.Eq
+import Data.Function
 import Data.List qualified
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe
 import Data.MonoTraversable
+import Data.Monoid
+import Data.Semigroup
 import Data.Set (Set)
 import Data.Text (Text)
+import Data.Tuple (uncurry)
 import GHC.Exts qualified as GHC
+import Text.Show
 
 newtype UTxO era = UTxO {unUTxO :: Map TxIn (TxOut CtxUTxO era)}
   deriving stock (Eq, Show)

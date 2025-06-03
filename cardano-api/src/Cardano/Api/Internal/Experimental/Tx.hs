@@ -120,6 +120,25 @@ module Cardano.Api.Internal.Experimental.Tx
   , signTx
   , convertTxBodyToUnsignedTx
   , hashTxBody
+
+    -- * Witness
+
+    -- ** Any witness (key, simple script, plutus script).
+  , AnyWitness (..)
+  , getAnyWitnessScript
+  , getAnyWitnessPlutusLanguage
+  , getAnyWitnessScriptData
+
+    -- ** All the parts that constitute a plutus script witness but also including simple scripts
+  , TxScriptWitnessRequirements (..)
+
+    -- ** Collecting plutus script witness related transaction requirements.
+  , getTxScriptWitnessesRequirements
+  , obtainMonoidConstraint
+
+    -- ** Internal functions
+  , extractExecutionUnits
+  , getTxScriptWitnessRequirements
   )
 where
 
@@ -127,6 +146,7 @@ import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Eras.Core (ToCardanoEra (toCardanoEra), forEraInEon)
 import Cardano.Api.Internal.Experimental.Eras
+import Cardano.Api.Internal.Experimental.Witness.AnyWitness
 import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Feature
 import Cardano.Api.Internal.Pretty (docToString, pretty)

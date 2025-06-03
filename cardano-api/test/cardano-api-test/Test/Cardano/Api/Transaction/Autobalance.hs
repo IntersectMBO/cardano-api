@@ -15,17 +15,10 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.Address (toShelleyStakeCredential)
-import Cardano.Api.Internal.Fees
-import Cardano.Api.Internal.Script
+import Cardano.Api.Internal.Experimental.Tx
 import Cardano.Api.Ledger qualified as L
 import Cardano.Api.Ledger.Lens qualified as L
 import Cardano.Api.Parser.Text qualified as P
-import Cardano.Api.Shelley
-  ( LedgerProtocolParameters (..)
-  , collectTxBodyScriptWitnessRequirements
-  , extractExecutionUnits
-  )
 
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Coin qualified as L

@@ -2,10 +2,17 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.Internal.Hash
-  ( Hash
+  ( -- * Hash
+    Hash
   , CastHash (..)
   , AsType (AsHash)
   , renderSafeHashAsHex
+
+    -- * HasTypeProxy
+  , HasTypeProxy (proxyToAsType)
+  , asType
+  , Proxy (..)
+  , FromSomeType (..)
   )
 where
 

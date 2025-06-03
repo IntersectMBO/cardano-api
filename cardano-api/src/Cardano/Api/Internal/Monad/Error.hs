@@ -13,6 +13,8 @@ module Cardano.Api.Internal.Monad.Error
   , handleIOExceptionsLiftWith
   , hoistIOEither
   , liftMaybe
+  , failEither
+  , failEitherWith
   , module Control.Monad.Except
   , module Control.Monad.IO.Class
   , module Control.Monad.Trans.Class
@@ -41,8 +43,6 @@ import Data.Bifunctor (first)
 
 -- | Convenience alias
 type MonadTransError e t m = (Monad m, MonadTrans t, MonadError e (t m))
-
---
 
 -- | Same as 'MonadTransError', but with also 'MonadIO' constraint
 type MonadIOTransError e t m =
@@ -117,3 +117,19 @@ liftMaybe
   -> Maybe a
   -> m a
 liftMaybe e = maybe (throwError e) pure
+
+-- | Lift 'Either' to `MonadFail`
+failEither
+  :: MonadFail m
+  => Either String a
+  -> m a
+failEither = either fail pure
+
+-- | Lift 'Either' to 'MonadFail'
+failEitherWith
+  :: MonadFail m
+  => (e -> String)
+  -- ^ convert 'Left' to 'String'
+  -> Either e a
+  -> m a
+failEitherWith f = either (fail . f) pure

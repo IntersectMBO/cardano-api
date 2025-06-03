@@ -2,7 +2,7 @@
 -- the complete API for Byron covering everything, including exposing
 -- constructors for the lower level types.
 module Cardano.Api.Byron
-  ( module Cardano.Api
+  ( module Api
   , AsType (..)
 
     -- * Cryptographic key interface
@@ -10,6 +10,7 @@ module Cardano.Api.Byron
   , VerificationKey (..)
   , SigningKey (..)
   , SomeByronSigningKey (..)
+  , ByronKey
 
     -- * Hashes
   , Hash (..)
@@ -27,21 +28,21 @@ module Cardano.Api.Byron
     )
 
     -- * Errors
-  , Error (..)
-  , FileError (..)
+  , Api.Error (..)
+  , Api.FileError (..)
 
     -- ** Low level protocol interaction with a Cardano node
-  , LocalNodeConnectInfo (LocalNodeConnectInfo)
-  , LocalNodeClientProtocols (LocalNodeClientProtocols)
+  , Api.LocalNodeConnectInfo (Api.LocalNodeConnectInfo)
+  , Api.LocalNodeClientProtocols (Api.LocalNodeClientProtocols)
 
     -- *** Chain sync protocol
-  , ChainSyncClient (..)
+  , Api.ChainSyncClient (..)
 
     -- *** Local tx submission
-  , LocalTxSubmissionClient (LocalTxSubmissionClient)
+  , Api.LocalTxSubmissionClient (Api.LocalTxSubmissionClient)
 
     -- *** Local state query
-  , LocalStateQueryClient (..)
+  , Api.LocalStateQueryClient (..)
 
     -- * Update Proposal
   , ByronUpdateProposal (..)
@@ -56,8 +57,6 @@ module Cardano.Api.Byron
   , toByronLedgertoByronVote
 
     -- ** Conversions
-  , fromByronTxIn
-  , toByronLovelace
   , toByronNetworkMagic
   , toByronProtocolMagicId
   , toByronRequiresNetworkMagic
@@ -66,10 +65,6 @@ module Cardano.Api.Byron
   , applicationName
   , applicationVersion
   , softwareVersion
-
-    -- * Serialization
-  , serializeByronTx
-  , writeByronTxFileTextEnvelopeCddl
 
     -- * Byron ledger re-exports
 
@@ -155,16 +150,7 @@ module Cardano.Api.Byron
   )
 where
 
-import Cardano.Api hiding
-  ( Address
-  , Certificate
-  , Lovelace
-  , NetworkMagic
-  , Tx (..)
-  , TxIn
-  , TxOut
-  , UTxO (..)
-  )
+import Cardano.Api qualified as Api
 import Cardano.Api.Internal.Keys.Byron
 import Cardano.Api.Internal.NetworkId hiding (NetworkMagic)
 import Cardano.Api.Internal.SerialiseLedgerCddl

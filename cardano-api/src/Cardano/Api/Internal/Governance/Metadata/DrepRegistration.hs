@@ -6,24 +6,17 @@
 
 module Cardano.Api.Internal.Governance.Metadata.DrepRegistration
   ( -- * DRep off-chain metadata
-
-    -- | This module implements validation of metadata for DRep registration and
-    -- update actions, as specified bt the CIP-119 (https://cips.cardano.org/cip/CIP-0119).
-    --
-    -- The constraints implemented in this module can be tested against a JSON
-    -- 'ByteString' by using the function 'validateGovActionAnchorData' in
-    -- "Cardano.Api.Internal.Governance.Metadata.Validation" with the parameter 'DrepRegistrationMetadata'.
     CIP119 (..)
   )
 where
 
-import Cardano.Api.Internal.Governance.Metadata.Parsers (textWithMaxLength)
 import Cardano.Api.Internal.Governance.Metadata.Validation
   ( Authors
   , Body
   , GovActionMetadata (..)
   , HashAlgorithm
   )
+import Cardano.Api.Internal.SerialiseJSON (textWithMaxLength)
 
 import Data.Aeson (FromJSON, withObject, (.:), (.:?))
 import Data.Aeson qualified as Aeson

@@ -8,9 +8,6 @@ module Test.Gen.Cardano.Api.Byron
 where
 
 import Cardano.Api hiding (txIns)
-import Cardano.Api.Byron
-
-import Data.Proxy
 
 import Test.Gen.Cardano.Api.Typed
 

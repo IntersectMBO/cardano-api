@@ -53,14 +53,13 @@ import Cardano.Api.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Eras
 import Cardano.Api.Internal.GenesisParameters
-import Cardano.Api.Internal.IPC
-import Cardano.Api.Internal.IPC.Monad
 import Cardano.Api.Internal.Keys.Shelley
 import Cardano.Api.Internal.NetworkId
 import Cardano.Api.Internal.Query
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.Tx.UTxO
 import Cardano.Api.Internal.Utils ((<<<$>>>))
+import Cardano.Api.Network.IPC
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L

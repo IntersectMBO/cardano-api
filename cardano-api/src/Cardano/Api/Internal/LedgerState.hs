@@ -104,8 +104,7 @@ import Cardano.Api.Internal.Error as Api
 import Cardano.Api.Internal.Genesis
 import Cardano.Api.Internal.IO
 import Cardano.Api.Internal.IPC
-  ( ConsensusModeParams (..)
-  , LocalChainSyncClient (LocalChainSyncClientPipelined)
+  ( LocalChainSyncClient (LocalChainSyncClientPipelined)
   , LocalNodeClientProtocols (..)
   , LocalNodeClientProtocolsInMode
   , LocalNodeConnectInfo (..)
@@ -114,7 +113,7 @@ import Cardano.Api.Internal.IPC
 import Cardano.Api.Internal.Keys.Praos
 import Cardano.Api.Internal.LedgerEvents.ConvertLedgerEvent
 import Cardano.Api.Internal.LedgerEvents.LedgerEvent
-import Cardano.Api.Internal.Modes (EpochSlots (..))
+import Cardano.Api.Internal.Modes
 import Cardano.Api.Internal.Modes qualified as Api
 import Cardano.Api.Internal.Monad.Error
 import Cardano.Api.Internal.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
@@ -132,7 +131,6 @@ import Cardano.Api.Internal.Query
 import Cardano.Api.Internal.ReexposeLedger qualified as Ledger
 import Cardano.Api.Internal.SpecialByron as Byron
 import Cardano.Api.Internal.Tx.Body
-import Cardano.Api.Internal.Utils (textShow)
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Chain.Genesis qualified

@@ -7,6 +7,7 @@ module Cardano.Api.Internal.IO
   ( readByteStringFile
   , readLazyByteStringFile
   , readTextFile
+  , readFileBlocking
   , writeByteStringFileWithOwnerPermissions
   , writeByteStringFile
   , writeByteStringOutput
@@ -32,16 +33,20 @@ import Cardano.Api.Internal.Error (FileError (..), fileIOExceptT)
 import Cardano.Api.Internal.IO.Base
 import Cardano.Api.Internal.IO.Compat
 
+import Control.Exception (bracket)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 qualified as BS
+import Data.ByteString qualified as BS
+import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Lazy qualified as LBSC
 import Data.Text (Text)
 import Data.Text.IO qualified as Text
+import GHC.IO.Handle.FD (openFileBlocking)
+import System.IO (IOMode (ReadMode), hClose)
 
 readByteStringFile
   :: ()
@@ -69,6 +74,23 @@ readTextFile
 readTextFile fp =
   runExceptT $
     fileIOExceptT (unFile fp) Text.readFile
+
+readFileBlocking :: FilePath -> IO BS.ByteString
+readFileBlocking path =
+  bracket
+    (openFileBlocking path ReadMode)
+    hClose
+    ( \fp -> do
+        -- An arbitrary block size.
+        let blockSize = 4096
+        let go acc = do
+              next <- BS.hGet fp blockSize
+              if BS.null next
+                then pure acc
+                else go (acc <> Builder.byteString next)
+        contents <- go mempty
+        pure $ LBS.toStrict $ Builder.toLazyByteString contents
+    )
 
 writeByteStringFile
   :: ()

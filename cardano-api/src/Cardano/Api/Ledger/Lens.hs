@@ -5,7 +5,7 @@
 
 module Cardano.Api.Ledger.Lens
   ( -- * Types
-    TxBody (..)
+    LedgerTxBody (..)
 
     -- * Constructors
   , mkAdaOnlyTxOut
@@ -68,7 +68,7 @@ import Data.Sequence.Strict qualified as L
 import Data.Set (Set)
 import Lens.Micro
 
-newtype TxBody era = TxBody
+newtype LedgerTxBody era = LedgerTxBody
   { unTxBody :: L.TxBody (ShelleyLedgerEra era)
   }
 
@@ -82,10 +82,10 @@ strictMaybeL = lens g s
   s :: StrictMaybe a -> Maybe a -> StrictMaybe a
   s _ = maybe SNothing SJust
 
-txBodyL :: Lens' (TxBody era) (L.TxBody (ShelleyLedgerEra era))
-txBodyL = lens unTxBody (\_ x -> TxBody x)
+txBodyL :: Lens' (LedgerTxBody era) (L.TxBody (ShelleyLedgerEra era))
+txBodyL = lens unTxBody (\_ x -> LedgerTxBody x)
 
-invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (TxBody era) (Maybe SlotNo)
+invalidBeforeTxBodyL :: AllegraEraOnwards era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
 invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBodyL . L.invalidBeforeL
 
 -- | Compatibility lens that provides a consistent interface over 'ttlTxBodyL' and
@@ -103,22 +103,22 @@ invalidBeforeTxBodyL w = allegraEraOnwardsConstraints w $ txBodyL . L.vldtTxBody
 --
 -- 'invalidHereAfterTxBodyL' lens over both with a 'Maybe SlotNo' type representation.  Withing the
 -- Shelley era, setting Nothing will set the ttl to 'maxBound' in the underlying ledger type.
-invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (TxBody era) (Maybe SlotNo)
+invalidHereAfterTxBodyL :: ShelleyBasedEra era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
 invalidHereAfterTxBodyL =
   caseShelleyEraOnlyOrAllegraEraOnwards
     ttlAsInvalidHereAfterTxBodyL
     (const $ txBodyL . L.vldtTxBodyL . L.invalidHereAfterL)
 
 -- | Compatibility lens over 'ttlTxBodyL' which represents 'maxBound' as Nothing and all other values as 'Just'.
-ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (TxBody era) (Maybe SlotNo)
+ttlAsInvalidHereAfterTxBodyL :: ShelleyEraOnly era -> Lens' (LedgerTxBody era) (Maybe SlotNo)
 ttlAsInvalidHereAfterTxBodyL w = lens (g w) (s w)
  where
-  g :: ShelleyEraOnly era -> TxBody era -> Maybe SlotNo
+  g :: ShelleyEraOnly era -> LedgerTxBody era -> Maybe SlotNo
   g w' txBody =
     shelleyEraOnlyConstraints w' $
       let ttl = txBody ^. txBodyL . L.ttlTxBodyL in if ttl == maxBound then Nothing else Just ttl
 
-  s :: ShelleyEraOnly era -> TxBody era -> Maybe SlotNo -> TxBody era
+  s :: ShelleyEraOnly era -> LedgerTxBody era -> Maybe SlotNo -> LedgerTxBody era
   s w' txBody mSlotNo =
     shelleyEraOnlyConstraints w' $
       case mSlotNo of
@@ -148,51 +148,52 @@ invalidHereAfterStrictL = lens g s
   s (L.ValidityInterval a _) b = L.ValidityInterval a b
 
 updateTxBodyL
-  :: ShelleyToBabbageEra era -> Lens' (TxBody era) (StrictMaybe (L.Update (ShelleyLedgerEra era)))
+  :: ShelleyToBabbageEra era -> Lens' (LedgerTxBody era) (StrictMaybe (L.Update (ShelleyLedgerEra era)))
 updateTxBodyL w = shelleyToBabbageEraConstraints w $ txBodyL . L.updateTxBodyL
 
-mintTxBodyL :: MaryEraOnwards era -> Lens' (TxBody era) L.MultiAsset
+mintTxBodyL :: MaryEraOnwards era -> Lens' (LedgerTxBody era) L.MultiAsset
 mintTxBodyL w = maryEraOnwardsConstraints w $ txBodyL . L.mintTxBodyL
 
 scriptIntegrityHashTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (TxBody era) (StrictMaybe L.ScriptIntegrityHash)
+  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe L.ScriptIntegrityHash)
 scriptIntegrityHashTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.scriptIntegrityHashTxBodyL
 
 collateralInputsTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (TxBody era) (Set L.TxIn)
+  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)
 collateralInputsTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.collateralInputsTxBodyL
 
 reqSignerHashesTxBodyL
-  :: AlonzoEraOnwards era -> Lens' (TxBody era) (Set (L.KeyHash L.Witness))
+  :: AlonzoEraOnwards era -> Lens' (LedgerTxBody era) (Set (L.KeyHash L.Witness))
 reqSignerHashesTxBodyL w = alonzoEraOnwardsConstraints w $ txBodyL . L.reqSignerHashesTxBodyL
 
 referenceInputsTxBodyL
-  :: BabbageEraOnwards era -> Lens' (TxBody era) (Set L.TxIn)
+  :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (Set L.TxIn)
 referenceInputsTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.referenceInputsTxBodyL
 
 collateralReturnTxBodyL
-  :: BabbageEraOnwards era -> Lens' (TxBody era) (StrictMaybe (L.TxOut (ShelleyLedgerEra era)))
+  :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe (L.TxOut (ShelleyLedgerEra era)))
 collateralReturnTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.collateralReturnTxBodyL
 
-totalCollateralTxBodyL :: BabbageEraOnwards era -> Lens' (TxBody era) (StrictMaybe L.Coin)
+totalCollateralTxBodyL :: BabbageEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe L.Coin)
 totalCollateralTxBodyL w = babbageEraOnwardsConstraints w $ txBodyL . L.totalCollateralTxBodyL
 
 certsTxBodyL
-  :: ShelleyBasedEra era -> Lens' (TxBody era) (L.StrictSeq (L.TxCert (ShelleyLedgerEra era)))
+  :: ShelleyBasedEra era -> Lens' (LedgerTxBody era) (L.StrictSeq (L.TxCert (ShelleyLedgerEra era)))
 certsTxBodyL w = shelleyBasedEraConstraints w $ txBodyL . L.certsTxBodyL
 
 votingProceduresTxBodyL
-  :: ConwayEraOnwards era -> Lens' (TxBody era) (L.VotingProcedures (ShelleyLedgerEra era))
+  :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) (L.VotingProcedures (ShelleyLedgerEra era))
 votingProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.votingProceduresTxBodyL
 
 proposalProceduresTxBodyL
-  :: ConwayEraOnwards era -> Lens' (TxBody era) (L.OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
+  :: ConwayEraOnwards era
+  -> Lens' (LedgerTxBody era) (L.OSet (L.ProposalProcedure (ShelleyLedgerEra era)))
 proposalProceduresTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.proposalProceduresTxBodyL
 
-currentTreasuryValueTxBodyL :: ConwayEraOnwards era -> Lens' (TxBody era) (StrictMaybe L.Coin)
+currentTreasuryValueTxBodyL :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) (StrictMaybe L.Coin)
 currentTreasuryValueTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.currentTreasuryValueTxBodyL
 
-treasuryDonationTxBodyL :: ConwayEraOnwards era -> Lens' (TxBody era) L.Coin
+treasuryDonationTxBodyL :: ConwayEraOnwards era -> Lens' (LedgerTxBody era) L.Coin
 treasuryDonationTxBodyL w = conwayEraOnwardsConstraints w $ txBodyL . L.treasuryDonationTxBodyL
 
 mkAdaOnlyTxOut

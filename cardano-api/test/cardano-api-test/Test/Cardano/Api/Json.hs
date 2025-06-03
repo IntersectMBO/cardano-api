@@ -7,8 +7,6 @@ module Test.Cardano.Api.Json
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.Orphans ()
-import Cardano.Api.Shelley
 
 import Data.Aeson (eitherDecode, encode)
 

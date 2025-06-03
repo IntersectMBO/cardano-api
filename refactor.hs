@@ -47,30 +47,25 @@ isDryRun = True
 renames :: [(ModuleName, ModuleName)]
 renames = map (bimap prependModulePrefix prependModulePrefix)
   [
-  -- TODO remove Cardano.Api.Shelley, and make sure that everything is exported from `Cardano.Api`
-
     ("Byron.Internal.Key", "Internal.Keys.Byron")
   , ("Byron.Internal.Proposal", "Internal.SpecialByron")
 
-  -- TODO reexport everything through 'Certificate'
   , ("Certificate.Internal", "Internal.Certificate")
   , ("Certificate.Internal.OperationalCertificate", "Internal.OperationalCertificate")
   , ("Certificate.Internal.StakePoolMetadata", "Internal.StakePoolMetadata")
   , ("Certificate.Internal.DRepMetadata", "Internal.DRepMetadata")
 
-  -- TODO reexport through 'Compatible' module
   , ("Compatible.Tx", "Internal.Compatible.Tx")
 
- -- TODO reexport everything through Consensus module
-  , ("Consensus.Internal", "Internal.ReexposeConsensus")
+  , ("Consensus.Internal.Reexport", "Internal.ReexposeConsensus")
   , ("Consensus.Internal.Mode", "Internal.Modes")
-  , ("Consensus.Internal.InMode", "Internal.InMode") -- TODO reexport through Consensus module -- should we get rid of this?
+  , ("Consensus.Internal.InMode", "Internal.InMode")
   , ("Consensus.Internal.Protocol", "Internal.Protocol")
 
-  -- TODO reexport everything through Era
   , ("Era", "Internal.Eras")
   , ("Era.Internal.Case", "Internal.Eras.Case")
   , ("Era.Internal.Core", "Internal.Eras.Core")
+  , ("Era.Internal.Feature", "Internal.Feature")
   , ("Era.Internal.Eon.AllegraEraOnwards", "Internal.Eon.AllegraEraOnwards")
   , ("Era.Internal.Eon.AlonzoEraOnwards", "Internal.Eon.AlonzoEraOnwards")
   , ("Era.Internal.Eon.BabbageEraOnwards", "Internal.Eon.BabbageEraOnwards")
@@ -85,9 +80,7 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("Era.Internal.Eon.ShelleyToBabbageEra", "Internal.Eon.ShelleyToBabbageEra")
   , ("Era.Internal.Eon.ShelleyToMaryEra", "Internal.Eon.ShelleyToMaryEra")
 
-
   , ("Experimental.Era", "Internal.Experimental.Eras")
-  -- TODO reexport everything through 'Experimental.Plutus'
   , ("Experimental.Plutus.Internal.IndexedPlutusScriptWitness", "Internal.Experimental.Plutus.IndexedPlutusScriptWitness")
   , ("Experimental.Plutus.Internal.Script", "Internal.Experimental.Plutus.Script")
   , ("Experimental.Plutus.Internal.ScriptWitness", "Internal.Experimental.Plutus.ScriptWitness")
@@ -95,43 +88,34 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
 
   , ("Experimental.Simple.Script", "Internal.Experimental.Simple.Script")
   , ("Experimental.Tx", "Internal.Experimental.Tx")
+  , ("Experimental.Tx.Internal.AnyWitness", "Internal.Experimental.Witness.AnyWitness")
+  , ("Experimental.Tx.Internal.TxScriptWitnessRequirements", "Internal.Experimental.Witness.TxScriptWitnessRequirements")
 
-  -- TODO reexport everything through 'Experimental.Witness'
-  , ("Experimental.Witness.AnyWitness", "Internal.Experimental.Witness.AnyWitness")
-  , ("Experimental.Witness.TxScriptWitnessRequirements", "Internal.Experimental.Witness.TxScriptWitnessRequirements")
-
-  -- TODO reexport everything through 'Genesis'
   , ("Genesis.Internal", "Internal.Genesis")
-  , ("Genesis.Internal.Parameters", "Internal.GenesisParameters") -- TODO reexport through Genesis module
+  , ("Genesis.Internal.Parameters", "Internal.GenesisParameters")
 
-  -- TODO export everything through 'Governance' module
   , ("Governance.Internal.Action.ProposalProcedure", "Internal.Governance.Actions.ProposalProcedure")
   , ("Governance.Internal.Action.VotingProcedure", "Internal.Governance.Actions.VotingProcedure")
-  , ("Governance.Internal.Anchor", "Internal.Anchor")
+  , ("Governance.Internal.Metadata.Anchor", "Internal.Anchor")
   , ("Governance.Internal.Metadata.DrepRegistration", "Internal.Governance.Metadata.DrepRegistration")
   , ("Governance.Internal.Metadata.GovAction", "Internal.Governance.Metadata.GovAction")
-  , ("Governance.Internal.Metadata.Parsers", "Internal.Governance.Metadata.Parsers")
   , ("Governance.Internal.Metadata.Validation", "Internal.Governance.Metadata.Validation")
   , ("Governance.Internal.Poll", "Internal.Governance.Poll")
 
-  -- TODO reexport everything through 'IO'
   , ("IO", "Internal.IO")
   , ("IO.Internal.Base", "Internal.IO.Base")
   , ("IO.Internal.Compat", "Internal.IO.Compat")
-  , ("IO.Internal.Posix", "Internal.IO.Compat.Posix")
-  , ("IO.Internal.Win32", "Internal.IO.Compat.Win32")
+  , ("IO.Internal.Compat.Posix", "Internal.IO.Compat.Posix")
+  , ("IO.Internal.Compat.Win32", "Internal.IO.Compat.Win32")
 
-  -- TODO reexport everything through 'Key'
   , ("Key.Internal", "Internal.Keys.Shelley")
   , ("Key.Internal.Class", "Internal.Keys.Class")
   , ("Key.Internal.Mnemonic", "Internal.Keys.Mnemonics")
   , ("Key.Internal.Praos", "Internal.Keys.Praos")
-  , ("Key.Internal.Read", "Internal.Keys.Read") -- TODO those functions aren't even specialised, module to remove
+  , ("Key.Internal.SomeAddressVerificationKey", "Internal.Keys.SomeAddressVerificationKey")
 
-  -- TODO reexport everything through 'Ledger'
-  , ("Ledger.Internal", "Internal.ReexposeLedger")
+  , ("Ledger.Internal.Reexport", "Internal.ReexposeLedger")
 
-  -- TODO reexport everything through 'LedgerState'
   , ("LedgerState", "Internal.LedgerState")
   , ("LedgerState.Internal.ConvertLedgerEvent", "Internal.LedgerEvents.ConvertLedgerEvent")
   , ("LedgerState.Internal.LedgerEvent", "Internal.LedgerEvents.LedgerEvent")
@@ -141,20 +125,16 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("LedgerState.Internal.Rule.TICK.RUPD", "Internal.LedgerEvents.Rule.TICK.RUPD")
   , ("LedgerState.Internal.Rule.TICK.NEWEPOCH", "Internal.LedgerEvents.Rule.TICK.NEWEPOCH")
 
-  -- TODO reexport everything through 'Network'
-  , ("Network.Internal", "Internal.ReexposeNetwork")
+  , ("Network.Internal.Reexport", "Internal.ReexposeNetwork")
   , ("Network.Internal.NetworkId", "Internal.NetworkId")
 
-  , ("Network.ChainSync.Client", "ChainSync.Client")
-  , ("Network.ChainSync.ClientPipelined", "ChainSync.ClientPipelined")
+  , ("Network.IPC.Internal", "Internal.IPC")
+  , ("Network.IPC.Internal.ChainSync.Client", "ChainSync.Client")
+  , ("Network.IPC.Internal.ChainSync.ClientPipelined", "ChainSync.ClientPipelined")
+  , ("Network.IPC.Internal.Monad", "Internal.IPC.Monad")
+  , ("Network.IPC.Internal.Version", "Internal.IPC.Version")
 
-  -- TODO Reexport everything through 'Network.IPC'
-  , ("Network.IPC.Internal", "Internal.IPC") -- TODO: chop down IPC into smaller modules: chainsync
-  , ("Network.IPC.Internal.Monad", "Internal.IPC.Monad") -- TODO reexport through IPC module
-  , ("Network.IPC.Internal.Version", "Internal.IPC.Version") -- TODO reexport through IPC module
-
-  -- TODO Reexport everything through 'Plutus'
-  , ("Plutus", "Internal.Plutus")
+  , ("Plutus.Internal", "Internal.Plutus")
   , ("Plutus.Internal.Script", "Internal.Script")
   , ("Plutus.Internal.ScriptData", "Internal.ScriptData")
 
@@ -164,47 +144,40 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("Serialise.Cbor.Canonical", "Internal.Serialise.Cbor.Canonical")
   , ("Serialise.DeserialiseAnyOf", "Internal.DeserialiseAnyOf")
   , ("Serialise.Json", "Internal.SerialiseJSON")
-  , ("Serialise.Internal.Json", "Internal.Json") -- TODO move content to Internal.SerialiseJSON and remove the module
   , ("Serialise.Raw", "Internal.SerialiseRaw")
   , ("Serialise.SerialiseUsing", "Internal.SerialiseUsing")
-  , ("Serialise.TextEnvelope", "Internal.SerialiseTextEnvelope")
-  -- TODO this module needs to be removed: the conversion functions need to go into their respective places
-  -- TODO remove references to CDDL
-  , ("Serialise.TextEnvelope.Internal", "Internal.SerialiseLedgerCddl")
 
- -- TODO reexport everything through Query module
+  , ("Serialise.TextEnvelope.Internal", "Internal.SerialiseTextEnvelope")
+  , ("Serialise.TextEnvelope.Internal.Cddl", "Internal.SerialiseLedgerCddl")
+
   , ("Query.Internal.Convenience", "Internal.Convenience.Query")
   , ("Query.Internal.Expr", "Internal.Query.Expr")
   , ("Query.Internal.Type.DebugLedgerState", "Internal.Query.Types")
   , ("Query.Internal.Type.DelegationsAndRewards", "Internal.Rewards")
   , ("Query.Internal.Type.QueryInMode", "Internal.Query")
 
-  -- TODO reexport everything through Cardano.Api.Tx
   , ("Tx.Internal.Body", "Internal.Tx.Body")
   , ("Tx.Internal.Body.Lens", "Ledger.Lens")
   , ("Tx.Internal.Convenience", "Internal.Convenience.Construction")
-  , ("Tx.Internal.Fees", "Internal.Fees")
+  , ("Tx.Internal.Fee", "Internal.Fees")
   , ("Tx.Internal.Sign", "Internal.Tx.Sign")
-  , ("Tx.Internal.ScriptData", "Internal.ScriptData")
   , ("Tx.Internal.BuildTxWith", "Internal.Tx.BuildTxWith")
   , ("Tx.Internal.Output", "Internal.Tx.Output")
+  , ("Tx.Internal.TxIn", "Internal.TxIn")
+  , ("Tx.Internal.TxMetadata", "Internal.TxMetadata")
 
-  , ("Type.Address", "Internal.Address")
-  , ("Type.Block", "Internal.Block")
-  , ("Type.Feature", "Internal.Feature")
-  , ("Type.ProtocolParameters", "Internal.ProtocolParameters")
-  , ("Type.TxIn", "Internal.TxIn")
-  , ("Type.TxMetadata", "Internal.TxMetadata")
-  , ("Type.UTxO", "Internal.Tx.UTxO") -- TODO: remove Cardano.Api.Tx.UTxO
-  , ("Type.Value", "Internal.Value")
-  , ("Type.Value.Internal.Parser", "Internal.ValueParser") -- TODO reexport through Type.Value
-
+  , ("Address", "Internal.Address")
+  , ("Block", "Internal.Block")
   , ("Error", "Internal.Error")
   , ("HasTypeProxy", "Internal.HasTypeProxy")
   , ("Hash", "Internal.Hash")
   , ("Monad.Error", "Internal.Monad.Error")
   , ("Pretty", "Internal.Pretty")
-  , ("Pretty.Internal.ShowOf", "Internal.Via.ShowOf") -- TODO reexport through Pretty
+  , ("Pretty.Internal.ShowOf", "Internal.Via.ShowOf")
+  , ("ProtocolParameters", "Internal.ProtocolParameters")
+  , ("UTxO", "Internal.Tx.UTxO")
+  , ("Value.Internal", "Internal.Value")
+  , ("Value.Internal.Parser", "Internal.ValueParser")
 
   ]
     where
