@@ -8,6 +8,7 @@ import qualified Cardano.Api.Shelley as Script
 import Data.Function ((&))
 import qualified Data.Text as Text
 
+-- |  Create a transaction body from a transaction input, destination address, amount, and fees.
 mkTransactionImpl :: Api.TxIn -> Text.Text -> Integer -> Integer -> Api.TxBody Api.ConwayEra
 mkTransactionImpl srcTxIn destAddr amount fees =
   let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
@@ -32,6 +33,7 @@ mkTransactionImpl srcTxIn destAddr amount fees =
       (Right txBody) = Api.createTransactionBody sbe txBodyContent
    in txBody
 
+-- | Sign a transaction body with a private key.
 signTransactionImpl
   :: Api.TxBody Api.ConwayEra -> Api.SigningKey Api.PaymentKey -> Api.Tx Api.ConwayEra
 signTransactionImpl unsignedTx signingKey =
