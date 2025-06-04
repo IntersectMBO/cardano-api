@@ -60,24 +60,24 @@ jsonToJSVal a = do
   js_parse (toJSString (toString (Api.serialiseToJSON a)))
 
 -- | Convert a JavaScript object (@JSVal@) to a Haskell value with @FromJSON@ instance.
-jsValToJSON :: Api.FromJSON a => JSVal -> IO a
-jsValToJSON val = do
+jsValToJSON :: Api.FromJSON a => String -> JSVal -> IO a
+jsValToJSON expectedType val = do
   jsString <- js_stringify val
   let jsonString = fromJSString jsString
   let asType = typeProxy
   case either (Left . Api.JsonDecodeError) Right $ Aeson.eitherDecodeStrict' (fromString jsonString) of
-    Left err -> error ("Wrong format for argument when deserialising: " ++ show err)
+    Left err -> error ("Wrong format for argument when decoding JSON for parameter of type " ++ expectedType ++ ": " ++ show err)
     Right a -> return a
  where
   typeProxy :: Proxy a
   typeProxy = Proxy
 
 -- | Convert a JavaScript object (@JSVal@) to a Haskell type that has a @TextEnvelope@ instance.
-jsValToType :: Api.HasTextEnvelope a => Api.AsType a -> JSVal -> IO a
-jsValToType _asType val = do
-  envelope <- jsValToJSON val
+jsValToType :: Api.HasTextEnvelope a => String -> JSVal -> IO a
+jsValToType expectedType val = do
+  envelope <- jsValToJSON expectedType val
   case Api.deserialiseFromTextEnvelope envelope of
-    Left err -> error ("Error deserialising envelope in parameter: " ++ show err)
+    Left err -> error ("Error deserialising text envelope for parameter of type " ++ expectedType ++ ": " ++ show err)
     Right type_ -> return type_
 
 -- * High-level definitions for conversion between Haskell and JS
@@ -101,7 +101,7 @@ class FromJSVal jsType haskellType where
   fromJSVal :: jsType -> IO haskellType
 
 instance FromJSVal JSVal Api.TxIn where
-  fromJSVal = jsValToJSON
+  fromJSVal = jsValToJSON "TxIn"
 
 instance FromJSVal JSString Text where
   fromJSVal = pure . Text.pack . fromJSString
@@ -110,10 +110,10 @@ instance FromJSVal JSVal Integer where
   fromJSVal = fromJSBigInt
 
 instance FromJSVal JSVal (Api.TxBody Api.ConwayEra) where
-  fromJSVal = jsValToType (Api.AsTxBody Api.AsConwayEra)
+  fromJSVal = jsValToType "TxBody ConwayEra"
 
 instance FromJSVal JSVal (Api.Tx Api.ConwayEra) where
-  fromJSVal = jsValToType (Api.AsTx Api.AsConwayEra)
+  fromJSVal = jsValToType "Tx ConwayEra"
 
 instance FromJSVal JSString (Api.SigningKey Api.PaymentKey) where
   fromJSVal jsString = do
