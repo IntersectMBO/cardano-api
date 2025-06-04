@@ -579,16 +579,16 @@ data TxInsReference build era where
     -> [TxIn]
     -- ^ A list of reference inputs
     -> TxInsReferenceDatums build
-    -- ^ A set of datums, whose hashes are referenced in UTXO of reference inputs. Those datums will be inserted
-    -- to the datum map available to the scripts. Note that inserting a datum with hash not present in the reference
-    -- input will result in an error on transaction submission.
+    -- ^ A set of public key inputs resolved datums, whose hashes are referenced in UTXO of reference inputs. Those
+    -- datums will be inserted to the datum map available to the scripts. Note that inserting a datum with hash not
+    -- present in the reference input will result in an error on transaction submission.
     -> TxInsReference build era
 
 deriving instance Eq (TxInsReference build era)
 
 deriving instance Show (TxInsReference build era)
 
--- | The actual datums, referenced by hash in the transaction reference inputs.
+-- | The public key inputs' resolved datums, referenced by hash in the transaction reference inputs.
 type TxInsReferenceDatums build = BuildTxWith build (Set HashableScriptData)
 
 getReferenceInputDatumMap
@@ -3090,8 +3090,8 @@ collectTxBodyScriptWitnessRequirements
 -- 1. supplemental datums from transaction outputs
 -- 2. datums from reference inputs
 --
--- Note that this function does not check whose datum datum hashes are present in the reference inputs. This means
--- if there are redundant datums in 'TxInsReference', a submission of such transaction will fail.
+-- Note that this function does not check whose datum hashes are present in the reference inputs. This means if there
+-- are redundant datums in 'TxInsReference', a submission of such transaction will fail.
 getDatums
   :: AlonzoEraOnwards era
   -> TxInsReference BuildTx era
