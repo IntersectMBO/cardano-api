@@ -41,6 +41,7 @@ import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), Shell
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty.Internal.ShowOf
 
+import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway qualified as Ledger
@@ -253,13 +254,19 @@ obtainCommonConstraints
 obtainCommonConstraints ConwayEra x = x
 
 type EraCommonConstraints era =
-  ( L.AlonzoEraTx (LedgerEra era)
+  ( L.AllegraEraScript (LedgerEra era)
+  , L.AlonzoEraTx (LedgerEra era)
   , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
+  , L.ConwayEraTxCert (LedgerEra era)
   , L.Era (LedgerEra era)
+  , L.EraScript (LedgerEra era)
   , L.EraTx (LedgerEra era)
+  , L.EraTxCert (LedgerEra era)
   , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
+  , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
+  , L.ShelleyEraTxCert (LedgerEra era)
   , ShelleyLedgerEra era ~ LedgerEra era
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era
