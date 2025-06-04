@@ -44,7 +44,7 @@ executable cardano-wasm
     base,
     base16-bytestring,
     bytestring,
-    cardano-api ^>=10.14.0.0,
+    cardano-api,
     cardano-ledger-conway,
     cardano-ledger-core,
     containers,
