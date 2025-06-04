@@ -65,9 +65,9 @@ jsValToJSON val = do
   typeProxy = Proxy
 
 jsValToType :: Api.HasTextEnvelope a => Api.AsType a -> JSVal -> IO a
-jsValToType asType val = do
+jsValToType _asType val = do
   envelope <- jsValToJSON val
-  case Api.deserialiseFromTextEnvelope asType envelope of
+  case Api.deserialiseFromTextEnvelope envelope of
     Left err -> error ("Error deserialising envelope in parameter: " ++ show err)
     Right type_ -> return type_
 
@@ -106,12 +106,12 @@ instance FromJSVal JSVal (Api.Tx Api.ConwayEra) where
 
 instance FromJSVal JSString (Api.SigningKey Api.PaymentKey) where
   fromJSVal jsString = do
-    let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) (Text.pack (fromJSString jsString))
+    let (Right signingKey) = Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
     return signingKey
 
 instance FromJSVal JSString Api.TxId where
   fromJSVal jsString = do
-    let (Right txId) = Api.deserialiseFromRawBytesHex Api.AsTxId (fromString (fromJSString jsString))
+    let (Right txId) = Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
     return txId
 
 instance FromJSVal Int Api.TxIx where
