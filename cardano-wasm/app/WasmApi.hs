@@ -3,13 +3,14 @@
 module WasmApi where
 
 import qualified Cardano.Api as Api
+import qualified Cardano.Api.Ledger as Ledger
 import qualified Cardano.Api.Shelley as Script
 
 import Data.Function ((&))
 import qualified Data.Text as Text
 
 -- |  Create a transaction body from a transaction input, destination address, amount, and fees.
-mkTransactionImpl :: Api.TxIn -> Text.Text -> Integer -> Integer -> Api.TxBody Api.ConwayEra
+mkTransactionImpl :: Api.TxIn -> Text.Text -> Ledger.Coin -> Ledger.Coin -> Api.TxBody Api.ConwayEra
 mkTransactionImpl srcTxIn destAddr amount fees =
   let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
       txIn =
@@ -20,10 +21,10 @@ mkTransactionImpl srcTxIn destAddr amount fees =
       txOut =
         Api.TxOut
           destAddress
-          (Api.lovelaceToTxOutValue sbe (fromInteger amount))
+          (Api.lovelaceToTxOutValue sbe amount)
           Api.TxOutDatumNone
           Script.ReferenceScriptNone
-      txFee = Api.TxFeeExplicit sbe (fromInteger fees)
+      txFee = Api.TxFeeExplicit sbe fees
 
       txBodyContent =
         Api.defaultTxBodyContent sbe
