@@ -3,35 +3,46 @@
 module WasmApi where
 
 import qualified Cardano.Api as Api
+import qualified Cardano.Api.Ledger as Ledger
 import qualified Cardano.Api.Shelley as Script
 
 import Data.Function ((&))
 import qualified Data.Text as Text
+import GHC.Stack (HasCallStack)
 
-mkTransactionImpl :: Api.TxIn -> Text.Text -> Integer -> Integer -> Api.TxBody Api.ConwayEra
+import ExceptionHandling (justOrError, rightOrError)
+
+-- |  Create a transaction body from a transaction input, destination address, amount, and fees.
+mkTransactionImpl
+  :: HasCallStack => Api.TxIn -> Text.Text -> Ledger.Coin -> Ledger.Coin -> Api.TxBody Api.ConwayEra
 mkTransactionImpl srcTxIn destAddr amount fees =
   let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
       txIn =
         ( srcTxIn
         , Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending)
         )
-      (Just destAddress) = Api.deserialiseAddress (Api.AsAddressInEra Api.AsConwayEra) destAddr
+      destAddress =
+        justOrError
+          "Couldn't deserialise destination address"
+          $ Api.deserialiseAddress
+            (Api.AsAddressInEra Api.AsConwayEra)
+            destAddr
       txOut =
         Api.TxOut
           destAddress
-          (Api.lovelaceToTxOutValue sbe (fromInteger amount))
+          (Api.lovelaceToTxOutValue sbe amount)
           Api.TxOutDatumNone
           Script.ReferenceScriptNone
-      txFee = Api.TxFeeExplicit sbe (fromInteger fees)
+      txFee = Api.TxFeeExplicit sbe fees
 
       txBodyContent =
         Api.defaultTxBodyContent sbe
           & Api.setTxIns [txIn]
           & Api.setTxOuts [txOut]
           & Api.setTxFee txFee
-      (Right txBody) = Api.createTransactionBody sbe txBodyContent
-   in txBody
+   in rightOrError $ Api.createTransactionBody sbe txBodyContent
 
+-- | Sign a transaction body with a private key.
 signTransactionImpl
   :: Api.TxBody Api.ConwayEra -> Api.SigningKey Api.PaymentKey -> Api.Tx Api.ConwayEra
 signTransactionImpl unsignedTx signingKey =

@@ -54,6 +54,7 @@ import Data.Foldable (toList)
 import Data.Functor.Identity
 import Data.Map (Map)
 import Data.Map.Ordered (OMap, fromList)
+import Data.Set (Set)
 import qualified Data.Text as Text
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -65,10 +66,6 @@ deriving instance FromJSON TxBodyContentWrapper
 deriving instance Generic TxBodyContentWrapper
 
 deriving instance Generic (TxBodyContent BuildTx ConwayEra)
-
-deriving instance FromJSON (TxInsReference ConwayEra)
-
-deriving instance Generic (TxInsReference ConwayEra)
 
 instance FromJSON (BabbageEraOnwards ConwayEra) where
   parseJSON = withObject "BabbageEraOnwards ConwayEra" $ \o -> do
@@ -82,6 +79,19 @@ deriving instance FromJSON (TxTotalCollateral ConwayEra)
 deriving instance Generic (TxTotalCollateral ConwayEra)
 
 deriving instance FromJSON (TxBodyContent BuildTx ConwayEra)
+
+deriving instance FromJSON (TxInsReference BuildTx ConwayEra)
+
+deriving instance Generic (TxInsReference BuildTx ConwayEra)
+
+instance FromJSON (BuildTxWith BuildTx (Set HashableScriptData)) where
+  parseJSON = withObject "BuildTxWith BuildTx (Set HashableScriptData)" $ \v -> do
+    mHashableScriptData <- v .: "hashableScriptData"
+    case mHashableScriptData of
+      Aeson.Null -> return $ BuildTxWith mempty
+      _ -> do
+        hashableScriptData <- parseJSON mHashableScriptData
+        return $ BuildTxWith hashableScriptData
 
 deriving instance
   FromJSON
@@ -349,7 +359,7 @@ deriving instance FromJSON (TxCertificates BuildTx ConwayEra)
 instance FromJSON (Certificate ConwayEra) where
   parseJSON o = do
     textEnvelope <- parseJSON o
-    case deserialiseFromTextEnvelope (AsCertificate :: AsType (Certificate ConwayEra)) textEnvelope of
+    case deserialiseFromTextEnvelope textEnvelope of
       Left err -> fail $ "Failed to parse (Certificate ConwayEra): " ++ show err
       Right cert -> return cert
 

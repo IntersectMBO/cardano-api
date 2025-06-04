@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 
 index-state:
   , hackage.haskell.org 2025-04-08T10:52:25Z
-  , cardano-haskell-packages 2025-04-22T08:40:01Z
+  , cardano-haskell-packages 2025-05-15T11:03:46Z
 
 if arch(wasm32)
   source-repository-package
