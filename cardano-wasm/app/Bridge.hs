@@ -109,6 +109,9 @@ instance FromJSVal JSString Text where
 instance FromJSVal JSVal Integer where
   fromJSVal = fromJSBigInt
 
+instance FromJSVal JSVal Ledger.Coin where
+  fromJSVal = fmap fromInteger . fromJSBigInt
+
 instance FromJSVal JSVal (Api.TxBody Api.ConwayEra) where
   fromJSVal = jsValToType "TxBody ConwayEra"
 
