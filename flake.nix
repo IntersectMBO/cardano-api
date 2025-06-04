@@ -153,15 +153,42 @@
             });
           }
         );
+        # wasm shell
+        wasmShell = let wasm-pkgs = inputs.wasm-nixpkgs.legacyPackages.${system};
+                        wasi-sdk = inputs.ghc-wasm-meta.packages.${system}.wasi-sdk;
+                        wasm = {
+                          libsodium =
+                            wasm-pkgs.callPackage ./nix/libsodium.nix { inherit wasi-sdk; };
+                          secp256k1 =
+                            (wasm-pkgs.callPackage ./nix/secp256k1.nix { inherit wasi-sdk; }).overrideAttrs (_: {
+                                src = inputs.iohkNix.inputs.secp256k1;
+                            });
+                          blst =
+                            (wasm-pkgs.callPackage ./nix/blst.nix { inherit wasi-sdk; }).overrideAttrs (_: {
+                                src = inputs.iohkNix.inputs.blst;
+                            });
+                        };
+                    in lib.optionalAttrs (system != "x86_64-darwin") {
+                         wasm = wasm-pkgs.mkShell {
+                           packages = [
+                             inputs.ghc-wasm-meta.packages.${system}.all_9_10
+                             wasm-pkgs.pkg-config
+                             wasm.libsodium
+                             wasm.secp256k1
+                             wasm.blst
+                           ];
+                         };
+                       };
+        flakeWithWasmShell = nixpkgs.lib.recursiveUpdate flake { devShells = wasmShell; hydraJobs = { devShells = wasmShell; }; };
       in
-        nixpkgs.lib.recursiveUpdate flake rec {
+        nixpkgs.lib.recursiveUpdate flakeWithWasmShell rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
             {
               ciJobs =
-                flake.hydraJobs
+                flakeWithWasmShell.hydraJobs
                 // {
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
@@ -173,39 +200,13 @@
             inherit hydraJobs;
           };
           devShells = let
-            # wasm shell
-            wasmShell = let wasm-pkgs = inputs.wasm-nixpkgs.legacyPackages.${system};
-                            wasi-sdk = inputs.ghc-wasm-meta.packages.${system}.wasi-sdk;
-                            wasm = {
-                              libsodium =
-                                wasm-pkgs.callPackage ./nix/libsodium.nix { inherit wasi-sdk; };
-                              secp256k1 =
-                                (wasm-pkgs.callPackage ./nix/secp256k1.nix { inherit wasi-sdk; }).overrideAttrs (_: {
-                                    src = inputs.iohkNix.inputs.secp256k1;
-                                });
-                              blst =
-                                (wasm-pkgs.callPackage ./nix/blst.nix { inherit wasi-sdk; }).overrideAttrs (_: {
-                                    src = inputs.iohkNix.inputs.blst;
-                                });
-                            };
-                        in {
-                             wasm = wasm-pkgs.mkShell {
-                               packages = [
-                                 inputs.ghc-wasm-meta.packages.${system}.all_9_10
-                                 wasm-pkgs.pkg-config
-                                 wasm.libsodium
-                                 wasm.secp256k1
-                                 wasm.blst
-                               ];
-                             };
-                           };
             # profiling shell
             profilingShell = p: {
               # `nix develop .#profiling` (or `.#ghc927.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
             };
           in
-            profilingShell cabalProject // wasmShell;
+            profilingShell cabalProject;
           # formatter used by nix fmt
           formatter = nixpkgs.alejandra;
         }

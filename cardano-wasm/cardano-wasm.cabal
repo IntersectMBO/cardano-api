@@ -36,6 +36,7 @@ executable cardano-wasm
       "-optl-Wl,--strip-all,--export=mkTxIn,--export=mkTransaction,--export=signTransaction"
   other-modules:
     Bridge
+    ExceptionHandling
     TxBodyWrapper
     WasmApi
 
@@ -44,10 +45,11 @@ executable cardano-wasm
     base,
     base16-bytestring,
     bytestring,
-    cardano-api ^>=10.14.0.0,
+    cardano-api,
     cardano-ledger-conway,
     cardano-ledger-core,
     containers,
+    extra,
     ordered-containers,
     text,
 
