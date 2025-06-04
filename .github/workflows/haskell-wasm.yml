@@ -120,6 +120,7 @@ jobs:
     # Always store the cabal cache.
     - name: Cache Cabal store
       uses: actions/cache/save@v4
+      if: always()
       with:
         path: |
           ${{ env.STORE }}
