@@ -95,12 +95,16 @@ jsValToType expectedType val = do
 class ToJSVal haskellType jsType where
   toJSVal :: haskellType -> IO jsType
 
-instance ToJSVal (Api.TxBody Api.ConwayEra) JSVal where
+type JSTxBody = JSVal
+
+instance ToJSVal (Api.TxBody Api.ConwayEra) JSTxBody where
   toJSVal txBody = do
     let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") txBody
     jsonToJSVal envelope
 
-instance ToJSVal (Api.Tx Api.ConwayEra) JSVal where
+type JSTx = JSVal
+
+instance ToJSVal (Api.Tx Api.ConwayEra) JSTx where
   toJSVal txBody = do
     let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") txBody
     jsonToJSVal envelope
@@ -109,47 +113,61 @@ instance ToJSVal (Api.Tx Api.ConwayEra) JSVal where
 class FromJSVal jsType haskellType where
   fromJSVal :: jsType -> IO haskellType
 
-instance FromJSVal JSVal Api.TxIn where
+type JSTxIn = JSVal
+
+instance FromJSVal JSTxIn Api.TxIn where
   fromJSVal = jsValToJSON "TxIn"
 
-instance FromJSVal JSString Text where
+type JSText = JSString
+
+instance FromJSVal JSText Text where
   fromJSVal = pure . Text.pack . fromJSString
 
-instance FromJSVal JSVal Integer where
+type JSBigInt = JSVal
+
+instance FromJSVal JSBigInt Integer where
   fromJSVal = fromJSBigInt
 
-instance FromJSVal JSVal Ledger.Coin where
+type JSCoin = JSVal
+
+instance FromJSVal JSCoin Ledger.Coin where
   fromJSVal = fmap fromInteger . fromJSBigInt
 
-instance FromJSVal JSVal (Api.TxBody Api.ConwayEra) where
+instance FromJSVal JSTxBody (Api.TxBody Api.ConwayEra) where
   fromJSVal = jsValToType "TxBody ConwayEra"
 
-instance FromJSVal JSVal (Api.Tx Api.ConwayEra) where
+instance FromJSVal JSTx (Api.Tx Api.ConwayEra) where
   fromJSVal = jsValToType "Tx ConwayEra"
 
-instance FromJSVal JSString (Api.SigningKey Api.PaymentKey) where
+type JSSigningKey = JSString
+
+instance FromJSVal JSSigningKey (Api.SigningKey Api.PaymentKey) where
   fromJSVal jsString = do
     return $ rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
 
-instance FromJSVal JSString Api.TxId where
+type JSTxId = JSString
+
+instance FromJSVal JSTxId Api.TxId where
   fromJSVal jsString = do
     return $ rightOrError $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
 
-instance FromJSVal Int Api.TxIx where
+type JSTxIx = Int
+
+instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal = return . Api.TxIx . fromIntegral
 
 -- * API functions to expose to JavaScript
 
 -- | Combine a transaction ID and index into a transaction input.
 foreign export javascript "mkTxIn"
-  mkTxIn :: JSString -> Int -> IO JSVal
+  mkTxIn :: JSTxId -> JSTxIx -> IO JSTxIn
 
 mkTxIn txId txIx =
   jsonToJSVal =<< Api.TxIn <$> fromJSVal txId <*> fromJSVal txIx
 
 -- | Create a transaction body from a transaction input, destination address, amount, and fees.
 foreign export javascript "mkTransaction"
-  mkTransaction :: JSVal -> JSString -> JSVal -> JSVal -> IO JSVal
+  mkTransaction :: JSTxIn -> JSText -> JSCoin -> JSCoin -> IO JSTxBody
 
 mkTransaction txIn destAddr bigIntAmount bigIntFees =
   toJSVal
@@ -161,7 +179,7 @@ mkTransaction txIn destAddr bigIntAmount bigIntFees =
 
 -- | Sign a transaction body with a private key.
 foreign export javascript "signTransaction"
-  signTransaction :: JSVal -> JSString -> IO JSVal
+  signTransaction :: JSTxBody -> JSSigningKey -> IO JSTx
 
 signTransaction txBody privKey =
   toJSVal
