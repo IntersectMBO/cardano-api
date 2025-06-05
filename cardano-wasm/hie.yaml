@@ -6,6 +6,9 @@ cradle:
     - path: "./app/Bridge.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
+    - path: "./app/ExceptionHandling.hs"
+      component: "cardano-wasm:exe:cardano-wasm"
+
     - path: "./app/TxBodyWrapper.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
