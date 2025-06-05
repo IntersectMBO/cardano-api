@@ -32,6 +32,7 @@ import Cardano.Api.Internal.HasTypeProxy
 import Cardano.Api.Internal.Hash
 import Cardano.Api.Internal.Keys.Class
 import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Serialise.Cbor
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.SerialiseTextEnvelope
@@ -52,7 +53,6 @@ import Control.Monad
 import Data.Bifunctor
 import Data.ByteString.Lazy qualified as LB
 import Data.Either.Combinators
-import Data.String (IsString)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Formatting (build, formatToString)
@@ -95,13 +95,13 @@ instance Key ByronKey where
   newtype VerificationKey ByronKey
     = ByronVerificationKey Crypto.VerificationKey
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey ByronKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey ByronKey
     = ByronSigningKey Crypto.SigningKey
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey ByronKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -147,7 +147,7 @@ instance SerialiseAsRawBytes (SigningKey ByronKey) where
 
 newtype instance Hash ByronKey = ByronKeyHash Crypto.KeyHash
   deriving (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash ByronKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -186,13 +186,13 @@ instance Key ByronKeyLegacy where
   newtype VerificationKey ByronKeyLegacy
     = ByronVerificationKeyLegacy Crypto.VerificationKey
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey ByronKeyLegacy)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey ByronKeyLegacy)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey ByronKeyLegacy
     = ByronSigningKeyLegacy Crypto.SigningKey
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey ByronKeyLegacy)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey ByronKeyLegacy)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -222,7 +222,7 @@ instance HasTextEnvelope (SigningKey ByronKeyLegacy) where
 
 newtype instance Hash ByronKeyLegacy = ByronKeyHashLegacy Crypto.KeyHash
   deriving (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash ByronKeyLegacy)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash ByronKeyLegacy)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash ByronKeyLegacy)
   deriving anyclass SerialiseAsCBOR
 

@@ -45,6 +45,7 @@ module Cardano.Api.Internal.Keys.Shelley
   , anyStakePoolVerificationKeyHash
   , AnyStakePoolSigningKey (..)
   , anyStakePoolSigningKeyToVerificationKey
+  , parseHexHash
   )
 where
 
@@ -59,6 +60,7 @@ import Cardano.Api.Internal.SerialiseJSON
 import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.SerialiseUsing
+import Cardano.Api.Parser.Text qualified as P
 
 import Cardano.Crypto.DSIGN qualified as DSIGN
 import Cardano.Crypto.DSIGN.Class qualified as Crypto
@@ -98,13 +100,13 @@ instance Key PaymentKey where
   newtype VerificationKey PaymentKey
     = PaymentVerificationKey (Shelley.VKey Shelley.Payment)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey PaymentKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey PaymentKey
     = PaymentSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey PaymentKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -148,17 +150,17 @@ instance SerialiseAsRawBytes (SigningKey PaymentKey) where
       (Crypto.rawDeserialiseSignKeyDSIGN bs)
 
 instance SerialiseAsBech32 (VerificationKey PaymentKey) where
-  bech32PrefixFor _ = "addr_vk"
-  bech32PrefixesPermitted _ = ["addr_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["addr_vk"]
 
 instance SerialiseAsBech32 (SigningKey PaymentKey) where
-  bech32PrefixFor _ = "addr_sk"
-  bech32PrefixesPermitted _ = ["addr_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["addr_sk"]
 
 newtype instance Hash PaymentKey
   = PaymentKeyHash {unPaymentKeyHash :: Shelley.KeyHash Shelley.Payment}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash PaymentKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash PaymentKey)
   deriving (ToJSONKey, ToJSON, FromJSON) via UsingRawBytesHex (Hash PaymentKey)
   deriving anyclass SerialiseAsCBOR
@@ -218,12 +220,12 @@ instance Key PaymentExtendedKey where
     = PaymentExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey PaymentExtendedKey
     = PaymentExtendedSigningKey Crypto.HD.XPrv
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
     :: AsType PaymentExtendedKey
@@ -298,18 +300,18 @@ instance SerialiseAsRawBytes (SigningKey PaymentExtendedKey) where
       (PaymentExtendedSigningKey <$> Crypto.HD.xprv bs)
 
 instance SerialiseAsBech32 (VerificationKey PaymentExtendedKey) where
-  bech32PrefixFor _ = "addr_xvk"
-  bech32PrefixesPermitted _ = ["addr_xvk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_xvk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["addr_xvk"]
 
 instance SerialiseAsBech32 (SigningKey PaymentExtendedKey) where
-  bech32PrefixFor _ = "addr_xsk"
-  bech32PrefixesPermitted _ = ["addr_xsk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "addr_xsk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["addr_xsk"]
 
 newtype instance Hash PaymentExtendedKey
   = PaymentExtendedKeyHash
   {unPaymentExtendedKeyHash :: Shelley.KeyHash Shelley.Payment}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash PaymentExtendedKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash PaymentExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash PaymentExtendedKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -356,13 +358,13 @@ instance Key StakeKey where
     deriving stock Eq
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakeKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey StakeKey)
 
   newtype SigningKey StakeKey
     = StakeSigningKey (DSIGN.SignKeyDSIGN DSIGN)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakeKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey StakeKey)
 
   deterministicSigningKey :: AsType StakeKey -> Crypto.Seed -> SigningKey StakeKey
   deterministicSigningKey AsStakeKey seed =
@@ -401,17 +403,17 @@ instance SerialiseAsRawBytes (SigningKey StakeKey) where
       StakeSigningKey <$> Crypto.rawDeserialiseSignKeyDSIGN bs
 
 instance SerialiseAsBech32 (VerificationKey StakeKey) where
-  bech32PrefixFor _ = "stake_vk"
-  bech32PrefixesPermitted _ = ["stake_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["stake_vk"]
 
 instance SerialiseAsBech32 (SigningKey StakeKey) where
-  bech32PrefixFor _ = "stake_sk"
-  bech32PrefixesPermitted _ = ["stake_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["stake_sk"]
 
 newtype instance Hash StakeKey
   = StakeKeyHash {unStakeKeyHash :: Shelley.KeyHash Shelley.Staking}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash StakeKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash StakeKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakeKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -469,12 +471,12 @@ instance Key StakeExtendedKey where
     = StakeExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakeExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey StakeExtendedKey)
 
   newtype SigningKey StakeExtendedKey
     = StakeExtendedSigningKey Crypto.HD.XPrv
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakeExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey StakeExtendedKey)
 
   deterministicSigningKey
     :: AsType StakeExtendedKey
@@ -549,17 +551,17 @@ instance SerialiseAsRawBytes (SigningKey StakeExtendedKey) where
       $ StakeExtendedSigningKey <$> Crypto.HD.xprv bs
 
 instance SerialiseAsBech32 (VerificationKey StakeExtendedKey) where
-  bech32PrefixFor _ = "stake_xvk"
-  bech32PrefixesPermitted _ = ["stake_xvk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_xvk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["stake_xvk"]
 
 instance SerialiseAsBech32 (SigningKey StakeExtendedKey) where
-  bech32PrefixFor _ = "stake_xsk"
-  bech32PrefixesPermitted _ = ["stake_xsk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "stake_xsk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["stake_xsk"]
 
 newtype instance Hash StakeExtendedKey
   = StakeExtendedKeyHash {unStakeExtendedKeyHash :: Shelley.KeyHash Shelley.Staking}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash StakeExtendedKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash StakeExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakeExtendedKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -603,13 +605,13 @@ instance Key GenesisKey where
   newtype VerificationKey GenesisKey
     = GenesisVerificationKey (Shelley.VKey Shelley.Genesis)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey GenesisKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey GenesisKey
     = GenesisSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey GenesisKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -652,7 +654,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisKey) where
 newtype instance Hash GenesisKey
   = GenesisKeyHash {unGenesisKeyHash :: Shelley.KeyHash Shelley.Genesis}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash GenesisKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisKey)
   deriving (ToJSONKey, ToJSON, FromJSON) via UsingRawBytesHex (Hash GenesisKey)
   deriving anyclass SerialiseAsCBOR
@@ -699,13 +701,13 @@ instance Key CommitteeHotKey where
   newtype VerificationKey CommitteeHotKey
     = CommitteeHotVerificationKey (Shelley.VKey Shelley.HotCommitteeRole)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeHotKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey CommitteeHotKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey CommitteeHotKey
     = CommitteeHotSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey CommitteeHotKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey CommitteeHotKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -751,7 +753,7 @@ newtype instance Hash CommitteeHotKey
   = CommitteeHotKeyHash
   {unCommitteeHotKeyHash :: Shelley.KeyHash Shelley.HotCommitteeRole}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeHotKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash CommitteeHotKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeHotKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -785,16 +787,16 @@ instance CastVerificationKeyRole CommitteeHotKey PaymentKey where
     PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeHotKey) where
-  bech32PrefixFor _ = "cc_hot"
-  bech32PrefixesPermitted _ = ["cc_hot"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_hot"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeHotKey) where
-  bech32PrefixFor _ = "cc_hot_vk"
-  bech32PrefixesPermitted _ = ["cc_hot_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_hot_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeHotKey) where
-  bech32PrefixFor _ = "cc_hot_sk"
-  bech32PrefixesPermitted _ = ["cc_hot_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_hot_sk"]
 
 --
 -- Constitutional Committee Cold Keys
@@ -810,13 +812,13 @@ instance Key CommitteeColdKey where
   newtype VerificationKey CommitteeColdKey
     = CommitteeColdVerificationKey (Shelley.VKey Shelley.ColdCommitteeRole)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey CommitteeColdKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey CommitteeColdKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey CommitteeColdKey
     = CommitteeColdSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey CommitteeColdKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey CommitteeColdKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -862,7 +864,7 @@ newtype instance Hash CommitteeColdKey
   = CommitteeColdKeyHash
   {unCommitteeColdKeyHash :: Shelley.KeyHash Shelley.ColdCommitteeRole}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeColdKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash CommitteeColdKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeColdKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -896,16 +898,16 @@ instance CastVerificationKeyRole CommitteeColdKey PaymentKey where
     PaymentVerificationKey (Shelley.VKey vk)
 
 instance SerialiseAsBech32 (Hash CommitteeColdKey) where
-  bech32PrefixFor _ = "cc_cold"
-  bech32PrefixesPermitted _ = ["cc_cold"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_cold"]
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdKey) where
-  bech32PrefixFor _ = "cc_cold_vk"
-  bech32PrefixesPermitted _ = ["cc_cold_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_cold_vk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeColdKey) where
-  bech32PrefixFor _ = "cc_cold_sk"
-  bech32PrefixesPermitted _ = ["cc_cold_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_cold_sk"]
 
 ---
 --- Committee cold extended keys
@@ -921,12 +923,12 @@ instance Key CommitteeColdExtendedKey where
     = CommitteeColdExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey CommitteeColdExtendedKey
     = CommitteeColdExtendedSigningKey Crypto.HD.XPrv
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
     :: AsType CommitteeColdExtendedKey
@@ -962,7 +964,7 @@ newtype instance Hash CommitteeColdExtendedKey
   = CommitteeColdExtendedKeyHash
   {unCommitteeColdExtendedKeyHash :: Shelley.KeyHash Shelley.ColdCommitteeRole}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeColdKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash CommitteeColdKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeColdKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -1023,12 +1025,12 @@ instance HasTextEnvelope (SigningKey CommitteeColdExtendedKey) where
   textEnvelopeType _ = "ConstitutionalCommitteeColdExtendedSigningKey_ed25519_bip32"
 
 instance SerialiseAsBech32 (VerificationKey CommitteeColdExtendedKey) where
-  bech32PrefixFor _ = "cc_cold_xvk"
-  bech32PrefixesPermitted _ = ["cc_cold_xvk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_xvk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_cold_xvk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeColdExtendedKey) where
-  bech32PrefixFor _ = "cc_cold_xsk"
-  bech32PrefixesPermitted _ = ["cc_cold_xsk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_cold_xsk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_cold_xsk"]
 
 instance CastVerificationKeyRole CommitteeColdExtendedKey CommitteeColdKey where
   castVerificationKey (CommitteeColdExtendedVerificationKey vk) =
@@ -1056,12 +1058,12 @@ instance Key CommitteeHotExtendedKey where
     = CommitteeHotExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey CommitteeHotExtendedKey
     = CommitteeHotExtendedSigningKey Crypto.HD.XPrv
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
     :: AsType CommitteeHotExtendedKey
@@ -1097,7 +1099,7 @@ newtype instance Hash CommitteeHotExtendedKey
   = CommitteeHotExtendedKeyHash
   {unCommitteeHotExtendedKeyHash :: Shelley.KeyHash Shelley.HotCommitteeRole}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash CommitteeHotKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash CommitteeHotKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash CommitteeHotKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -1158,12 +1160,12 @@ instance HasTextEnvelope (SigningKey CommitteeHotExtendedKey) where
   textEnvelopeType _ = "ConstitutionalCommitteeHotExtendedSigningKey_ed25519_bip32"
 
 instance SerialiseAsBech32 (VerificationKey CommitteeHotExtendedKey) where
-  bech32PrefixFor _ = "cc_hot_xvk"
-  bech32PrefixesPermitted _ = ["cc_hot_xvk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_xvk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_hot_xvk"]
 
 instance SerialiseAsBech32 (SigningKey CommitteeHotExtendedKey) where
-  bech32PrefixFor _ = "cc_hot_xsk"
-  bech32PrefixesPermitted _ = ["cc_hot_xsk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "cc_hot_xsk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["cc_hot_xsk"]
 
 instance CastVerificationKeyRole CommitteeHotExtendedKey CommitteeHotKey where
   castVerificationKey (CommitteeHotExtendedVerificationKey vk) =
@@ -1204,12 +1206,12 @@ instance Key GenesisExtendedKey where
     = GenesisExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey GenesisExtendedKey)
 
   newtype SigningKey GenesisExtendedKey
     = GenesisExtendedSigningKey Crypto.HD.XPrv
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey GenesisExtendedKey)
 
   deterministicSigningKey
     :: AsType GenesisExtendedKey
@@ -1286,7 +1288,7 @@ newtype instance Hash GenesisExtendedKey
   = GenesisExtendedKeyHash
   {unGenesisExtendedKeyHash :: Shelley.KeyHash Shelley.Staking}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisExtendedKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash GenesisExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisExtendedKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -1330,13 +1332,13 @@ instance Key GenesisDelegateKey where
   newtype VerificationKey GenesisDelegateKey
     = GenesisDelegateVerificationKey (Shelley.VKey Shelley.GenesisDelegate)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisDelegateKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey GenesisDelegateKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey GenesisDelegateKey
     = GenesisDelegateSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisDelegateKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey GenesisDelegateKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -1380,7 +1382,7 @@ newtype instance Hash GenesisDelegateKey
   = GenesisDelegateKeyHash
   {unGenesisDelegateKeyHash :: Shelley.KeyHash Shelley.GenesisDelegate}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisDelegateKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash GenesisDelegateKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisDelegateKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -1447,12 +1449,12 @@ instance Key GenesisDelegateExtendedKey where
     = GenesisDelegateExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisDelegateExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey GenesisDelegateExtendedKey)
 
   newtype SigningKey GenesisDelegateExtendedKey
     = GenesisDelegateExtendedSigningKey Crypto.HD.XPrv
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisDelegateExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey GenesisDelegateExtendedKey)
 
   deterministicSigningKey
     :: AsType GenesisDelegateExtendedKey
@@ -1535,7 +1537,7 @@ newtype instance Hash GenesisDelegateExtendedKey
   = GenesisDelegateExtendedKeyHash
   {unGenesisDelegateExtendedKeyHash :: Shelley.KeyHash Shelley.Staking}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisDelegateExtendedKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash GenesisDelegateExtendedKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisDelegateExtendedKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -1579,13 +1581,13 @@ instance Key GenesisUTxOKey where
   newtype VerificationKey GenesisUTxOKey
     = GenesisUTxOVerificationKey (Shelley.VKey Shelley.Payment)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey GenesisUTxOKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey GenesisUTxOKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey GenesisUTxOKey
     = GenesisUTxOSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey GenesisUTxOKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey GenesisUTxOKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -1627,7 +1629,7 @@ instance SerialiseAsRawBytes (SigningKey GenesisUTxOKey) where
 newtype instance Hash GenesisUTxOKey
   = GenesisUTxOKeyHash {unGenesisUTxOKeyHash :: Shelley.KeyHash Shelley.Payment}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash GenesisUTxOKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash GenesisUTxOKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash GenesisUTxOKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -1703,13 +1705,13 @@ instance Key StakePoolKey where
   newtype VerificationKey StakePoolKey
     = StakePoolVerificationKey (Shelley.VKey Shelley.StakePool)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakePoolKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey StakePoolKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey StakePoolKey
     = StakePoolSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakePoolKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey StakePoolKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -1752,17 +1754,17 @@ instance SerialiseAsRawBytes (SigningKey StakePoolKey) where
       (Crypto.rawDeserialiseSignKeyDSIGN bs)
 
 instance SerialiseAsBech32 (VerificationKey StakePoolKey) where
-  bech32PrefixFor _ = "pool_vk"
-  bech32PrefixesPermitted _ = ["pool_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["pool_vk"]
 
 instance SerialiseAsBech32 (SigningKey StakePoolKey) where
-  bech32PrefixFor _ = "pool_sk"
-  bech32PrefixesPermitted _ = ["pool_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["pool_sk"]
 
 newtype instance Hash StakePoolKey
   = StakePoolKeyHash {unStakePoolKeyHash :: Shelley.KeyHash Shelley.StakePool}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash StakePoolKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash StakePoolKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash StakePoolKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -1776,8 +1778,8 @@ instance SerialiseAsRawBytes (Hash StakePoolKey) where
       (StakePoolKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash StakePoolKey) where
-  bech32PrefixFor _ = "pool"
-  bech32PrefixesPermitted _ = ["pool"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["pool"]
 
 instance ToJSON (Hash StakePoolKey) where
   toJSON = toJSON . serialiseToBech32
@@ -1827,12 +1829,12 @@ instance Key StakePoolExtendedKey where
   newtype VerificationKey StakePoolExtendedKey
     = StakePoolExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey StakePoolExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey StakePoolExtendedKey)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey StakePoolExtendedKey
     = StakePoolExtendedSigningKey Crypto.HD.XPrv
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey StakePoolExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey StakePoolExtendedKey)
     deriving anyclass SerialiseAsCBOR
 
   deterministicSigningKey
@@ -1928,8 +1930,8 @@ instance SerialiseAsRawBytes (Hash StakePoolExtendedKey) where
       (StakePoolExtendedKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash StakePoolExtendedKey) where
-  bech32PrefixFor _ = "pool_xvkh"
-  bech32PrefixesPermitted _ = ["pool_xvkh"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_xvkh"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["pool_xvkh"]
 
 instance HasTextEnvelope (VerificationKey StakePoolExtendedKey) where
   textEnvelopeType _ = "StakePoolExtendedVerificationKey_ed25519_bip32"
@@ -1938,12 +1940,12 @@ instance HasTextEnvelope (SigningKey StakePoolExtendedKey) where
   textEnvelopeType _ = "StakePoolExtendedSigningKey_ed25519_bip32"
 
 instance SerialiseAsBech32 (VerificationKey StakePoolExtendedKey) where
-  bech32PrefixFor _ = "pool_xvk"
-  bech32PrefixesPermitted _ = ["pool_xvk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_xvk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["pool_xvk"]
 
 instance SerialiseAsBech32 (SigningKey StakePoolExtendedKey) where
-  bech32PrefixFor _ = "pool_xsk"
-  bech32PrefixesPermitted _ = ["pool_xsk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "pool_xsk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["pool_xsk"]
 
 instance ToJSON (Hash StakePoolExtendedKey) where
   toJSON = toJSON . serialiseToBech32
@@ -1989,13 +1991,13 @@ instance Key DRepKey where
   newtype VerificationKey DRepKey
     = DRepVerificationKey (Shelley.VKey Shelley.DRepRole)
     deriving stock Eq
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey DRepKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey DRepKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
   newtype SigningKey DRepKey
     = DRepSigningKey (DSIGN.SignKeyDSIGN DSIGN)
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey DRepKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey DRepKey)
     deriving newtype (ToCBOR, FromCBOR)
     deriving anyclass SerialiseAsCBOR
 
@@ -2038,17 +2040,17 @@ instance SerialiseAsRawBytes (SigningKey DRepKey) where
       (Crypto.rawDeserialiseSignKeyDSIGN bs)
 
 instance SerialiseAsBech32 (VerificationKey DRepKey) where
-  bech32PrefixFor _ = "drep_vk"
-  bech32PrefixesPermitted _ = ["drep_vk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "drep_vk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["drep_vk"]
 
 instance SerialiseAsBech32 (SigningKey DRepKey) where
-  bech32PrefixFor _ = "drep_sk"
-  bech32PrefixesPermitted _ = ["drep_sk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "drep_sk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["drep_sk"]
 
 newtype instance Hash DRepKey
   = DRepKeyHash {unDRepKeyHash :: Shelley.KeyHash Shelley.DRepRole}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash DRepKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -2062,8 +2064,8 @@ instance SerialiseAsRawBytes (Hash DRepKey) where
       (DRepKeyHash . Shelley.KeyHash <$> Crypto.hashFromBytes bs)
 
 instance SerialiseAsBech32 (Hash DRepKey) where
-  bech32PrefixFor _ = "drep"
-  bech32PrefixesPermitted _ = ["drep"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "drep"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["drep"]
 
 instance ToJSON (Hash DRepKey) where
   toJSON = toJSON . serialiseToBech32
@@ -2114,12 +2116,12 @@ instance Key DRepExtendedKey where
     = DRepExtendedVerificationKey Crypto.HD.XPub
     deriving stock Eq
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (VerificationKey PaymentExtendedKey)
 
   newtype SigningKey DRepExtendedKey
     = DRepExtendedSigningKey Crypto.HD.XPrv
     deriving anyclass SerialiseAsCBOR
-    deriving (Show, IsString) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
+    deriving (Show, Pretty) via UsingRawBytesHex (SigningKey PaymentExtendedKey)
 
   deterministicSigningKey
     :: AsType DRepExtendedKey
@@ -2154,7 +2156,7 @@ instance Key DRepExtendedKey where
 newtype instance Hash DRepExtendedKey
   = DRepExtendedKeyHash {unDRepExtendedKeyHash :: Shelley.KeyHash Shelley.DRepRole}
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex (Hash DRepKey)
+  deriving (Show, Pretty) via UsingRawBytesHex (Hash DRepKey)
   deriving (ToCBOR, FromCBOR) via UsingRawBytes (Hash DRepKey)
   deriving anyclass SerialiseAsCBOR
 
@@ -2215,12 +2217,12 @@ instance HasTextEnvelope (SigningKey DRepExtendedKey) where
   textEnvelopeType _ = "DRepExtendedSigningKey_ed25519_bip32"
 
 instance SerialiseAsBech32 (VerificationKey DRepExtendedKey) where
-  bech32PrefixFor _ = "drep_xvk"
-  bech32PrefixesPermitted _ = ["drep_xvk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "drep_xvk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["drep_xvk"]
 
 instance SerialiseAsBech32 (SigningKey DRepExtendedKey) where
-  bech32PrefixFor _ = "drep_xsk"
-  bech32PrefixesPermitted _ = ["drep_xsk"]
+  bech32PrefixFor _ = unsafeHumanReadablePartFromText "drep_xsk"
+  bech32PrefixesPermitted _ = unsafeHumanReadablePartFromText <$> ["drep_xsk"]
 
 instance CastVerificationKeyRole DRepExtendedKey DRepKey where
   castVerificationKey (DRepExtendedVerificationKey vk) =
@@ -2233,3 +2235,7 @@ instance CastVerificationKeyRole DRepExtendedKey DRepKey where
    where
     impossible =
       error "castVerificationKey (DRep): byron and shelley key sizes do not match!"
+
+-- | Parse hex representation of any 'Hash'
+parseHexHash :: SerialiseAsRawBytes (Hash a) => P.Parser (Hash a)
+parseHexHash = parseRawBytesHex

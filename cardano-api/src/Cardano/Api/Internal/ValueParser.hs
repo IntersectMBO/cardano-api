@@ -10,27 +10,28 @@ module Cardano.Api.Internal.ValueParser
 where
 
 import Cardano.Api.Internal.Eon.MaryEraOnwards
-import Cardano.Api.Internal.Error (displayError)
-import Cardano.Api.Internal.SerialiseRaw
-import Cardano.Api.Internal.Utils (failEitherWith)
 import Cardano.Api.Internal.Value
+import Cardano.Api.Parser.Text
 
 import Cardano.Ledger.Mary.Value qualified as L
 
-import Control.Applicative (many, some, (<|>))
 import Control.Monad (unless, when)
-import Data.ByteString.Char8 qualified as BSC
-import Data.Char qualified as Char
-import Data.Functor (void, ($>))
-import Data.List as List (foldl')
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
-import Data.Word (Word64)
-import Text.Parsec as Parsec (notFollowedBy, try, (<?>))
-import Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
-import Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
-import Text.Parsec.String (Parser)
-import Text.ParserCombinators.Parsec.Combinator (many1)
+
+-- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
+-- to succeed.
+parseTxOutMultiAssetValue :: Parser Value
+parseTxOutMultiAssetValue = parseValue RoleUTxO
+
+-- | Parse a 'MintValue' from its string representation. The string representation cannot contain ADA.
+parseMintingMultiAssetValue :: MaryEraOnwards era -> Parser L.MultiAsset
+parseMintingMultiAssetValue w = maryEraOnwardsConstraints w $ do
+  L.MaryValue 0 result <- toLedgerValue w <$> parseValue RoleMint
+  pure result
+
+-- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
+-- to succeed.
+parseUTxOValue :: Parser Value
+parseUTxOValue = parseValue RoleUTxO
 
 -- | The role for which a 'Value' is being parsed.
 data ParserValueRole
@@ -62,22 +63,6 @@ parseValue role = do
         fail $
           "Lovelace must be zero in minting value: " <> show value
       return value
-
--- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
--- to succeed.
-parseTxOutMultiAssetValue :: Parser Value
-parseTxOutMultiAssetValue = parseValue RoleUTxO
-
--- | Parse a 'MintValue' from its string representation. The string representation cannot contain ADA.
-parseMintingMultiAssetValue :: MaryEraOnwards era -> Parser L.MultiAsset
-parseMintingMultiAssetValue w = maryEraOnwardsConstraints w $ do
-  L.MaryValue 0 result <- toLedgerValue w <$> parseValue RoleMint
-  pure result
-
--- | Parse a 'Value' from its string representation. The resulting amounts must be positive for the parser
--- to succeed.
-parseUTxOValue :: Parser Value
-parseUTxOValue = parseValue RoleUTxO
 
 -- | Evaluate a 'ValueExpr' and construct a 'Value'.
 evalValueExpr :: ValueExpr -> Value
@@ -130,7 +115,7 @@ parseValueExprTerm = do
   parseAssetIdUnspecified =
     spaces
       *> notFollowedBy alphaNum
-      $> AdaAssetId
+        $> AdaAssetId
 
 ------------------------------------------------------------------------------
 -- Primitive parsers
@@ -141,84 +126,3 @@ parsePlusOp = (char '+' *> spaces) $> ValueExprAdd
 
 parseNegateOp :: Parser (ValueExpr -> ValueExpr)
 parseNegateOp = (char '-' *> spaces) $> ValueExprNegate
-
--- | Period (\".\") parser.
-parsePeriod :: Parser ()
-parsePeriod = void $ char '.'
-
--- | Word64 parser.
-parseWord64 :: Parser Integer
-parseWord64 = do
-  i <- parseDecimal
-  if i > fromIntegral (maxBound :: Word64)
-    then
-      fail $
-        "expecting word64, but the number exceeds the max bound: " <> show i
-    else return i
-
-parseDecimal :: Parser Integer
-parseDecimal = do
-  digits <- many1 digit
-  return $! List.foldl' (\x d -> 10 * x + toInteger (Char.digitToInt d)) 0 digits
-
--- | Asset name parser.
-parseAssetName :: Parser AssetName
-parseAssetName = do
-  hexText <- many hexDigit
-  failEitherWith
-    (\e -> "AssetName deserisalisation failed: " ++ displayError e)
-    $ deserialiseFromRawBytesHex
-    $ BSC.pack hexText
-
--- | Policy ID parser.
-parsePolicyId :: Parser PolicyId
-parsePolicyId = do
-  hexText <- many1 hexDigit
-  failEitherWith
-    ( \e ->
-        fail $
-          "expecting a 56-hex-digit policy ID, but found "
-            ++ show (length hexText)
-            ++ " hex digits; "
-            ++ displayError e
-    )
-    (textToPolicyId hexText)
- where
-  textToPolicyId =
-    fmap PolicyId
-      . deserialiseFromRawBytesHex
-      . Text.encodeUtf8
-      . Text.pack
-
--- | Asset ID parser.
-parseAssetId :: Parser AssetId
-parseAssetId =
-  try parseAdaAssetId
-    <|> parseNonAdaAssetId
-    <?> "asset ID"
- where
-  -- Parse the ADA asset ID.
-  parseAdaAssetId :: Parser AssetId
-  parseAdaAssetId = string "lovelace" $> AdaAssetId
-
-  -- Parse a multi-asset ID.
-  parseNonAdaAssetId :: Parser AssetId
-  parseNonAdaAssetId = do
-    polId <- parsePolicyId
-    parseFullAssetId polId <|> parseAssetIdNoAssetName polId
-
-  -- Parse a fully specified multi-asset ID with both a policy ID and asset
-  -- name.
-  parseFullAssetId :: PolicyId -> Parser AssetId
-  parseFullAssetId polId = do
-    _ <- parsePeriod
-    aName <- parseAssetName <?> "hexadecimal asset name"
-    pure (AssetId polId aName)
-
-  -- Parse a multi-asset ID that specifies a policy ID, but no asset name.
-  parseAssetIdNoAssetName :: PolicyId -> Parser AssetId
-  parseAssetIdNoAssetName polId = pure (AssetId polId "")
-
--- | Quantity (word64) parser. Only accepts positive quantities.
-parseQuantity :: Parser Quantity
-parseQuantity = fmap Quantity parseWord64

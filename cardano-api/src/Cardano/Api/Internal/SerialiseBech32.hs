@@ -11,6 +11,7 @@ module Cardano.Api.Internal.SerialiseBech32
   , Bech32DecodeError (..)
   , deserialiseFromBech32
   , deserialiseAnyOfFromBech32
+  , unsafeHumanReadablePartFromText
   )
 where
 
@@ -29,29 +30,20 @@ import Data.List qualified as List
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Exts (IsList (..))
+import GHC.Stack
 
 class (HasTypeProxy a, SerialiseAsRawBytes a) => SerialiseAsBech32 a where
   -- | The human readable prefix to use when encoding this value to Bech32.
-  bech32PrefixFor :: a -> Text
+  bech32PrefixFor :: a -> Bech32.HumanReadablePart
 
   -- | The set of human readable prefixes that can be used for this type.
-  bech32PrefixesPermitted :: AsType a -> [Text]
+  bech32PrefixesPermitted :: AsType a -> [Bech32.HumanReadablePart]
 
 serialiseToBech32 :: SerialiseAsBech32 a => a -> Text
 serialiseToBech32 a =
   Bech32.encodeLenient
-    humanReadablePart
+    (bech32PrefixFor a)
     (Bech32.dataPartFromBytes (serialiseToRawBytes a))
- where
-  humanReadablePart =
-    case Bech32.humanReadablePartFromText (bech32PrefixFor a) of
-      Right p -> p
-      Left err ->
-        error $
-          "serialiseToBech32: invalid prefix "
-            ++ show (bech32PrefixFor a)
-            ++ ", "
-            ++ show err
 
 deserialiseFromBech32
   :: forall a
@@ -64,8 +56,10 @@ deserialiseFromBech32 bech32Str = do
 
   let actualPrefix = Bech32.humanReadablePartToText prefix
       permittedPrefixes = bech32PrefixesPermitted (asType @a)
-  guard (actualPrefix `elem` permittedPrefixes)
-    ?! Bech32UnexpectedPrefix actualPrefix (fromList permittedPrefixes)
+  guard (prefix `elem` permittedPrefixes)
+    ?! Bech32UnexpectedPrefix
+      actualPrefix
+      (fromList $ Bech32.humanReadablePartToText <$> permittedPrefixes)
 
   payload <-
     Bech32.dataPartToBytes dataPart
@@ -75,7 +69,7 @@ deserialiseFromBech32 bech32Str = do
     Right a -> Right a
     Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 
-  let expectedPrefix = bech32PrefixFor value
+  let expectedPrefix = Bech32.humanReadablePartToText $ bech32PrefixFor value
   guard (actualPrefix == expectedPrefix)
     ?! Bech32WrongPrefix actualPrefix expectedPrefix
 
@@ -94,8 +88,10 @@ deserialiseAnyOfFromBech32 types bech32Str = do
   let actualPrefix = Bech32.humanReadablePartToText prefix
 
   FromSomeType actualType fromType <-
-    findForPrefix actualPrefix
-      ?! Bech32UnexpectedPrefix actualPrefix permittedPrefixes
+    findForPrefix prefix
+      ?! Bech32UnexpectedPrefix
+        actualPrefix
+        (fromList $ Bech32.humanReadablePartToText <$> permittedPrefixes)
 
   payload <-
     Bech32.dataPartToBytes dataPart
@@ -105,27 +101,33 @@ deserialiseAnyOfFromBech32 types bech32Str = do
     Right a -> Right a
     Left _ -> Left $ Bech32DeserialiseFromBytesError payload
 
-  let expectedPrefix = bech32PrefixFor value
+  let expectedPrefix = Bech32.humanReadablePartToText $ bech32PrefixFor value
   guard (actualPrefix == expectedPrefix)
     ?! Bech32WrongPrefix actualPrefix expectedPrefix
 
   return (fromType value)
  where
   findForPrefix
-    :: Text
+    :: Bech32.HumanReadablePart
     -> Maybe (FromSomeType SerialiseAsBech32 b)
   findForPrefix prefix =
     List.find
       (\(FromSomeType t _) -> prefix `elem` bech32PrefixesPermitted t)
       types
 
-  permittedPrefixes :: Set Text
+  permittedPrefixes :: [Bech32.HumanReadablePart]
   permittedPrefixes =
-    fromList $
-      concat
-        [ bech32PrefixesPermitted ttoken
-        | FromSomeType ttoken _f <- types
-        ]
+    concat
+      [ bech32PrefixesPermitted ttoken
+      | FromSomeType ttoken _f <- types
+      ]
+
+-- | The human readable part of the Bech32 encoding for the credential. This will
+-- error if the prefix is not valid.
+unsafeHumanReadablePartFromText :: HasCallStack => Text -> Bech32.HumanReadablePart
+unsafeHumanReadablePartFromText =
+  either (error . ("unsafeHumanReadablePartFromText: Error while parsing Bech32: " <>) . show) id
+    . Bech32.humanReadablePartFromText
 
 -- | Bech32 decoding error.
 data Bech32DecodeError

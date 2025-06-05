@@ -11,13 +11,10 @@ module Cardano.Api.Internal.Utils
   , (?!.)
   , (<<$>>)
   , (<<<$>>>)
-  , formatParsecError
   , failEither
   , failEitherWith
   , noInlineMaybeToStrictMaybe
-  , note
   , readFileBlocking
-  , runParsecParser
   , textShow
 
     -- ** CLI option parsing
@@ -29,7 +26,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley ()
 
 import Control.Exception (bracket)
-import Data.Aeson.Types qualified as Aeson
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy qualified as LBS
@@ -40,9 +36,6 @@ import Data.Typeable
 import GHC.IO.Handle.FD (openFileBlocking)
 import GHC.Stack
 import System.IO (IOMode (ReadMode), hClose)
-import Text.Parsec qualified as Parsec
-import Text.Parsec.String qualified as Parsec
-import Text.ParserCombinators.Parsec.Error qualified as Parsec
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -67,32 +60,11 @@ noInlineMaybeToStrictMaybe :: Maybe a -> StrictMaybe a
 noInlineMaybeToStrictMaybe Nothing = SNothing
 noInlineMaybeToStrictMaybe (Just x) = SJust x
 
-formatParsecError :: Parsec.ParseError -> String
-formatParsecError err =
-  Parsec.showErrorMessages
-    "or"
-    "unknown parse error"
-    "expecting"
-    "unexpected"
-    "end of input"
-    $ Parsec.errorMessages err
-
-runParsecParser :: Parsec.Parser a -> Text -> Aeson.Parser a
-runParsecParser parser input =
-  case Parsec.parse (parser <* Parsec.eof) "" (Text.unpack input) of
-    Right txin -> pure txin
-    Left parseError -> fail $ formatParsecError parseError
-
 failEither :: MonadFail m => Either String a -> m a
 failEither = either fail pure
 
 failEitherWith :: MonadFail m => (e -> String) -> Either e a -> m a
 failEitherWith f = either (fail . f) pure
-
-note :: MonadFail m => String -> Maybe a -> m a
-note msg = \case
-  Nothing -> fail msg
-  Just a -> pure a
 
 readFileBlocking :: FilePath -> IO BS.ByteString
 readFileBlocking path =

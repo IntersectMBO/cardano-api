@@ -216,10 +216,10 @@ module Cardano.Api
   , StakeAddressReference (..)
   , PaymentKey
   , PaymentExtendedKey
+  , parseHexHash
 
     -- ** Addresses in any era
   , AddressAny (..)
-  , lexPlausibleAddressString
   , parseAddressAny
 
     -- ** Addresses in specific eras
@@ -376,13 +376,16 @@ module Cardano.Api
 
     -- ** Transaction Ids
   , TxId (..)
+  , parseTxId
   , getTxId
   , getTxIdByron
 
     -- ** Transaction inputs
   , TxIn (TxIn)
+  , parseTxIn
   , TxIns
   , TxIx (TxIx)
+  , parseTxIx
   , renderTxIn
   , getReferenceInputsSizeForTxIds
 
@@ -397,7 +400,6 @@ module Cardano.Api
   , txOutValueToValue
   , lovelaceToTxOutValue
   , TxOutDatum (..)
-  , parseHash
 
     -- ** Other transaction body types
   , TxInsCollateral (..)
@@ -643,6 +645,7 @@ module Cardano.Api
   , getScriptData
   , unsafeHashableScriptData
   , ScriptData (..)
+  , parseScriptDataHash
 
     -- ** Validation
   , ScriptDataRangeError (..)
@@ -669,6 +672,7 @@ module Cardano.Api
 
     -- | Making addresses from scripts.
   , ScriptHash (..)
+  , parseScriptHash
   , hashScript
 
     -- * Serialisation
@@ -735,6 +739,7 @@ module Cardano.Api
   , serialiseToRawBytesHex
   , deserialiseFromRawBytesHex
   , serialiseToRawBytesHexText
+  , parseRawBytesHex
   , RawBytesHexError (..)
   , UsingRawBytes (..)
   , UsingRawBytesHex (..)
@@ -995,7 +1000,6 @@ module Cardano.Api
   , fromLedgerTxOuts
   , toLedgerUTxO
   , fromLedgerUTxO
-  , runParsecParser
   , SlotsInEpoch (..)
   , SlotsToEpochEnd (..)
   , slotToEpoch

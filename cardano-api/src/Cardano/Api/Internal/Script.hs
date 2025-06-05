@@ -93,6 +93,7 @@ module Cardano.Api.Internal.Script
 
     -- * Script hashes
   , ScriptHash (..)
+  , parseScriptHash
   , hashScript
 
     -- * Internal conversion functions
@@ -136,7 +137,7 @@ import Cardano.Api.Internal.SerialiseRaw
 import Cardano.Api.Internal.SerialiseTextEnvelope
 import Cardano.Api.Internal.SerialiseUsing
 import Cardano.Api.Internal.TxIn
-import Cardano.Api.Internal.Utils (failEitherWith)
+import Cardano.Api.Parser.Text qualified as P
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash.Class qualified as Crypto
@@ -167,10 +168,8 @@ import Data.ByteString.Short qualified as SBS
 import Data.Either.Combinators (maybeToRight)
 import Data.Functor
 import Data.Scientific (toBoundedInteger)
-import Data.String (IsString)
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
 import Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import Data.Vector (Vector)
 import Formatting qualified as B
@@ -944,7 +943,7 @@ pattern PlutusScriptBinary script = Plutus.Plutus (Plutus.PlutusBinary script)
 -- hash where we don't want things to be era-parametrised.
 newtype ScriptHash = ScriptHash Ledger.ScriptHash
   deriving stock (Eq, Ord)
-  deriving (Show, IsString) via UsingRawBytesHex ScriptHash
+  deriving (Show, Pretty) via UsingRawBytesHex ScriptHash
   deriving (ToJSON, FromJSON) via UsingRawBytesHex ScriptHash
 
 instance HasTypeProxy ScriptHash where
@@ -958,6 +957,24 @@ instance SerialiseAsRawBytes ScriptHash where
   deserialiseFromRawBytes AsScriptHash bs =
     maybeToRight (SerialiseAsRawBytesError "Unable to deserialise ScriptHash") $
       ScriptHash . Ledger.ScriptHash <$> Crypto.hashFromBytes bs
+
+-- | Parser for hex rerepsentation of 'ScriptHash'
+parseScriptHash :: P.Parser ScriptHash
+parseScriptHash = do
+  hexStr <- P.lookAhead $ P.many1 P.hexDigit
+  unless (length hexStr == expectedHashLength) $
+    fail $
+      mconcat
+        [ "Error while parsing ScriptHash: Expected 56-hex-digit hash, but found "
+        , show (length hexStr)
+        , " hex digits. Supplied hash: "
+        , hexStr
+        ]
+  parseRawBytesHex
+ where
+  -- ADDRHASH = Blake2b_224
+  -- 2*(HashDigestSize ADDRHASH), because each octet is 2 hex digits
+  expectedHashLength = 56
 
 hashScript :: Script lang -> ScriptHash
 hashScript (SimpleScript s) =
@@ -1467,9 +1484,7 @@ parseScriptSig =
   Aeson.withObject "sig" $ \obj -> do
     v <- obj .: "type"
     case v :: Text of
-      "sig" -> do
-        k <- obj .: "keyHash"
-        RequireSignature <$> parsePaymentKeyHash k
+      "sig" -> RequireSignature <$> obj .: "keyHash"
       _ -> fail "\"sig\" script value not found"
 
 parseScriptBefore :: Value -> Aeson.Parser SimpleScript
@@ -1487,13 +1502,6 @@ parseScriptAfter =
     case v :: Text of
       "after" -> RequireTimeAfter <$> obj .: "slot"
       _ -> fail "\"after\" script value not found"
-
-parsePaymentKeyHash :: Text -> Aeson.Parser (Hash PaymentKey)
-parsePaymentKeyHash =
-  failEitherWith
-    (\e -> "Error deserialising payment key hash: " ++ displayError e)
-    . deserialiseFromRawBytesHex
-    . Text.encodeUtf8
 
 -- ----------------------------------------------------------------------------
 -- Reference scripts
