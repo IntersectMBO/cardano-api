@@ -25,11 +25,12 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Wasm.Prim
 
+import ExceptionHandling (rightOrError)
 import qualified WasmApi as WasmApi
 
 -- * JS helper functions
 
--- | Parse the JSON stored in a JavaScript string (@JSString@)
+-- | Parse the JSON stored in a JavaScript string (@JSString@)
 -- and return it as a JavaScript object (@JSVal@).
 foreign import javascript unsafe "JSON.parse($1)"
   js_parse :: JSString -> IO JSVal
@@ -38,14 +39,14 @@ foreign import javascript unsafe "JSON.parse($1)"
 foreign import javascript unsafe "JSON.stringify($1)"
   js_stringify :: JSVal -> IO JSString
 
--- | Call the @toString@ method on a JavaScript object and return it as a @JSString@.
+-- | Call the @toString@ method on a JavaScript object and return it as a @JSString@.
 -- This can be used to convert a @BigInt@ to its string representation.
 foreign import javascript unsafe "($1).toString()"
   js_toString :: JSVal -> IO JSString
 
 -- * Primitive Haskell JS conversion functions.
 
--- | Convert a @BigInt@ (@JSVal@) to a Haskell @Integer@ without loss of precision.
+-- | Convert a @BigInt@ (@JSVal@) to a Haskell @Integer@ without loss of precision.
 fromJSBigInt :: JSVal -> IO Integer
 fromJSBigInt val = do
   jsString <- js_toString val
@@ -66,7 +67,13 @@ jsValToJSON expectedType val = do
   let jsonString = fromJSString jsString
   let asType = typeProxy
   case either (Left . Api.JsonDecodeError) Right $ Aeson.eitherDecodeStrict' (fromString jsonString) of
-    Left err -> error ("Wrong format for argument when decoding JSON for parameter of type " ++ expectedType ++ ": " ++ show err)
+    Left err ->
+      error
+        ( "Wrong format for argument when decoding JSON for parameter of type "
+            ++ expectedType
+            ++ ": "
+            ++ show err
+        )
     Right a -> return a
  where
   typeProxy :: Proxy a
@@ -77,12 +84,14 @@ jsValToType :: Api.HasTextEnvelope a => String -> JSVal -> IO a
 jsValToType expectedType val = do
   envelope <- jsValToJSON expectedType val
   case Api.deserialiseFromTextEnvelope envelope of
-    Left err -> error ("Error deserialising text envelope for parameter of type " ++ expectedType ++ ": " ++ show err)
+    Left err ->
+      error
+        ("Error deserialising text envelope for parameter of type " ++ expectedType ++ ": " ++ show err)
     Right type_ -> return type_
 
 -- * High-level definitions for conversion between Haskell and JS
 
--- | Type class that provides functions to convert values from Haskell to JavaScript.
+-- | Type class that provides functions to convert values from Haskell to JavaScript.
 class ToJSVal haskellType jsType where
   toJSVal :: haskellType -> IO jsType
 
@@ -120,27 +129,25 @@ instance FromJSVal JSVal (Api.Tx Api.ConwayEra) where
 
 instance FromJSVal JSString (Api.SigningKey Api.PaymentKey) where
   fromJSVal jsString = do
-    let (Right signingKey) = Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
-    return signingKey
+    return $ rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
 
 instance FromJSVal JSString Api.TxId where
   fromJSVal jsString = do
-    let (Right txId) = Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
-    return txId
+    return $ rightOrError $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
 
 instance FromJSVal Int Api.TxIx where
   fromJSVal = return . Api.TxIx . fromIntegral
 
 -- * API functions to expose to JavaScript
 
--- | Combine a transaction ID and index into a transaction input.
+-- | Combine a transaction ID and index into a transaction input.
 foreign export javascript "mkTxIn"
   mkTxIn :: JSString -> Int -> IO JSVal
 
 mkTxIn txId txIx =
   jsonToJSVal =<< Api.TxIn <$> fromJSVal txId <*> fromJSVal txIx
 
--- | Create a transaction body from a transaction input, destination address, amount, and fees.
+-- | Create a transaction body from a transaction input, destination address, amount, and fees.
 foreign export javascript "mkTransaction"
   mkTransaction :: JSVal -> JSString -> JSVal -> JSVal -> IO JSVal
 
