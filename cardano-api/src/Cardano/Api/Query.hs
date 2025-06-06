@@ -99,8 +99,8 @@ module Cardano.Api.Query
   )
 where
 
-import Cardano.Api.Internal.Convenience.Query
-import Cardano.Api.Internal.Query
-import Cardano.Api.Internal.Query.Expr
-import Cardano.Api.Internal.Query.Types
-import Cardano.Api.Internal.Rewards
+import Cardano.Api.Query.Internal.Convenience
+import Cardano.Api.Query.Internal.Expr
+import Cardano.Api.Query.Internal.Type.DebugLedgerState
+import Cardano.Api.Query.Internal.Type.DelegationsAndRewards
+import Cardano.Api.Query.Internal.Type.QueryInMode

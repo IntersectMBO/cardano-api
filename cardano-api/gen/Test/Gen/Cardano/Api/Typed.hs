@@ -149,8 +149,8 @@ import Cardano.Api qualified as Api
 import Cardano.Api.Byron qualified as Byron
 import Cardano.Api.Experimental qualified as Exp
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Ledger.Lens qualified as A
 import Cardano.Api.Parser.Text qualified as P
+import Cardano.Api.Tx qualified as A
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto

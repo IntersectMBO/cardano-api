@@ -11,6 +11,7 @@ module Cardano.Api.Byron
   , SigningKey (..)
   , SomeByronSigningKey (..)
   , ByronKey
+  , ByronKeyLegacy
 
     -- * Hashes
   , Hash (..)
@@ -55,11 +56,6 @@ module Cardano.Api.Byron
   , ByronVote (..)
   , makeByronVote
   , toByronLedgertoByronVote
-
-    -- ** Conversions
-  , toByronNetworkMagic
-  , toByronProtocolMagicId
-  , toByronRequiresNetworkMagic
 
     -- * Hardcoded configuration parameters
   , applicationName
@@ -151,13 +147,13 @@ module Cardano.Api.Byron
 where
 
 import Cardano.Api qualified as Api
-import Cardano.Api.Internal.Keys.Byron
-import Cardano.Api.Internal.NetworkId hiding (NetworkMagic)
-import Cardano.Api.Internal.SerialiseLedgerCddl
-import Cardano.Api.Internal.SpecialByron
-import Cardano.Api.Internal.Tx.Body hiding (TxIn, TxOut)
-import Cardano.Api.Internal.Tx.Sign hiding (ATxAux (..), Tx (..))
-import Cardano.Api.Internal.Value hiding (Lovelace)
+import Cardano.Api.Byron.Internal.Key
+import Cardano.Api.Byron.Internal.Proposal
+import Cardano.Api.Network.Internal.NetworkId hiding (NetworkMagic)
+import Cardano.Api.Serialise.TextEnvelope.Internal.Cddl
+import Cardano.Api.Tx.Internal.Body hiding (TxIn, TxOut)
+import Cardano.Api.Tx.Internal.Sign hiding (ATxAux (..), Tx (..))
+import Cardano.Api.Value.Internal hiding (Lovelace)
 
 import Cardano.Chain.Block (decCBORABlockOrBoundary)
 import Cardano.Chain.Common

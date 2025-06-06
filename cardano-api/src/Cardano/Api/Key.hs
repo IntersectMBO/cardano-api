@@ -49,6 +49,14 @@ module Cardano.Api.Key
   , AnyStakePoolSigningKey (..)
   , anyStakePoolSigningKeyToVerificationKey
 
+    -- * Verification key sum type
+  , SomeAddressVerificationKey (..)
+  , deserialiseAnyVerificationKey
+  , deserialiseAnyVerificationKeyBech32
+  , deserialiseAnyVerificationKeyTextEnvelope
+  , renderSomeAddressVerificationKey
+  , mapSomeAddressVerificationKey
+
     -- * Praos consensus
 
     -- | Praos consensus key types and their 'Key' class instances
@@ -68,8 +76,9 @@ module Cardano.Api.Key
   )
 where
 
-import Cardano.Api.Internal.Hash
-import Cardano.Api.Internal.Keys.Class
-import Cardano.Api.Internal.Keys.Mnemonics
-import Cardano.Api.Internal.Keys.Praos
-import Cardano.Api.Internal.Keys.Shelley
+import Cardano.Api.Hash
+import Cardano.Api.Key.Internal
+import Cardano.Api.Key.Internal.Class
+import Cardano.Api.Key.Internal.Mnemonic
+import Cardano.Api.Key.Internal.Praos
+import Cardano.Api.Key.Internal.SomeAddressVerificationKey

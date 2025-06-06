@@ -2,7 +2,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | Internal utils for the other Api modules
 module Cardano.Api.Internal.Utils
@@ -11,18 +10,11 @@ module Cardano.Api.Internal.Utils
   , (<<$>>)
   , (<<<$>>>)
   , noInlineMaybeToStrictMaybe
-
-    -- ** CLI option parsing
-  , unsafeBoundedRational
   )
 where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley ()
-
-import Data.Maybe
-import Data.Typeable
-import GHC.Stack
 
 (?!) :: Maybe a -> e -> Either e a
 Nothing ?! e = Left e
@@ -46,13 +38,3 @@ infixl 4 <<<$>>>
 noInlineMaybeToStrictMaybe :: Maybe a -> StrictMaybe a
 noInlineMaybeToStrictMaybe Nothing = SNothing
 noInlineMaybeToStrictMaybe (Just x) = SJust x
-
--- | Convert Rational to a bounded rational. Throw an exception when the rational is out of bounds.
-unsafeBoundedRational
-  :: forall r
-   . (HasCallStack, Typeable r, BoundedRational r)
-  => Rational
-  -> r
-unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
- where
-  errMessage = show (typeRep (Proxy @r)) <> " is out of bounds: " <> show x

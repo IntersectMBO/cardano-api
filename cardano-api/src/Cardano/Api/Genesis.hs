@@ -25,8 +25,11 @@ module Cardano.Api.Genesis
     -- ** Protocol parameters fixed in the genesis file
   , GenesisParameters (..)
   , EpochSize (..)
+
+    -- * Utilities
+  , unsafeBoundedRational
   )
 where
 
-import Cardano.Api.Internal.Genesis
-import Cardano.Api.Internal.GenesisParameters
+import Cardano.Api.Genesis.Internal
+import Cardano.Api.Genesis.Internal.Parameters

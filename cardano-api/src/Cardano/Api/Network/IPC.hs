@@ -14,7 +14,7 @@ module Cardano.Api.Network.IPC
     --    2. Submitting a transaction to the node.
     --
     -- For details on how to create a transaction, see the
-    -- "Cardano.Api.Internal.Tx.Body" documentation.
+    -- "Cardano.Api.Tx.Internal.Body" documentation.
     --
     -- The following qualified imports from @cardano-api@ are
     -- used in the examples below:
@@ -23,7 +23,6 @@ module Cardano.Api.Network.IPC
     -- import qualified Cardano.Api as Api
     -- import qualified Cardano.Api.Consensus as Consensus
     -- import qualified Cardano.Api.Network as Network
-    -- import qualified Cardano.Api.Shelley as Shelley
     -- @
     --
     -- The following explicit import from @base@ is also required:
@@ -152,9 +151,9 @@ module Cardano.Api.Network.IPC
     -- @
     --
     -- Alternatively, to avoid nested result types, you can use convenience
-    -- functions and types from "Cardano.Api.Internal.Convenience.Query".
+    -- functions and types from "Cardano.Api.Query.Internal.Convenience".
     -- It is also posible to combine several queries into a single connection by using
-    -- the monadic interface that can be found in the "Cardano.Api.Internal.IPC.Monad"
+    -- the monadic interface that can be found in the "Cardano.Api.Network.IPC.Internal.Monad"
     -- documentation.
     --
     -- The obtained @utxo@ variable is a standard @Map@ of type @Map TxIn (TxOut CtxUTxO era)@.
@@ -164,7 +163,7 @@ module Cardano.Api.Network.IPC
     -- | Assume there is a signed transaction in the latest era that you would like to submit
     -- to the node. Assume it is stored in the variable @signedTx@ of type @Tx era@.
     --
-    -- For details on how to create such a transaction, see the "Cardano.Api.Internal.Tx.Body"
+    -- For details on how to create such a transaction, see the "Cardano.Api.Tx.Internal.Body"
     -- documentation.
     --
     -- To submit the transaction to the node, use the 'submitTxToNodeLocal' function as follows:
@@ -246,6 +245,6 @@ module Cardano.Api.Network.IPC
   )
 where
 
-import Cardano.Api.Internal.IPC
-import Cardano.Api.Internal.IPC.Monad
-import Cardano.Api.Internal.IPC.Version
+import Cardano.Api.Network.IPC.Internal
+import Cardano.Api.Network.IPC.Internal.Monad
+import Cardano.Api.Network.IPC.Internal.Version

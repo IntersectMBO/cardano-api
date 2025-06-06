@@ -14,8 +14,8 @@ import Cardano.Api
   , FileError
   , readByteStringFile
   )
-import Cardano.Api.Internal.DRepMetadata (DRepMetadata (..))
-import Cardano.Api.Internal.Governance.Metadata.Validation (validateGovActionAnchorData)
+import Cardano.Api.Certificate (DRepMetadata (..))
+import Cardano.Api.Governance (validateGovActionAnchorData)
 
 import Data.ByteString (ByteString)
 import Data.Monoid (Any)

@@ -47,6 +47,12 @@ module Cardano.Api.Certificate
   , AnchorDataFromCertificateError (..)
   , getAnchorDataFromCertificate
 
+    -- * Internal conversion functions
+  , toShelleyCertificate
+  , fromShelleyCertificate
+  , toShelleyPoolParams
+  , fromShelleyPoolParams
+
     -- * Data family instances
   , AsType (..)
   , Hash (..)
@@ -72,7 +78,7 @@ module Cardano.Api.Certificate
   )
 where
 
-import Cardano.Api.Internal.Certificate
-import Cardano.Api.Internal.DRepMetadata
-import Cardano.Api.Internal.OperationalCertificate
-import Cardano.Api.Internal.StakePoolMetadata
+import Cardano.Api.Certificate.Internal
+import Cardano.Api.Certificate.Internal.DRepMetadata
+import Cardano.Api.Certificate.Internal.OperationalCertificate
+import Cardano.Api.Certificate.Internal.StakePoolMetadata

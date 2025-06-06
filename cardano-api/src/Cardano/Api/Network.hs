@@ -11,8 +11,15 @@ module Cardano.Api.Network
   , Target (..)
   , Serialised (..)
   , SubmitResult (..)
+
+    -- * Internal conversion functions
+  , toByronProtocolMagicId
+  , toByronNetworkMagic
+  , toByronRequiresNetworkMagic
+  , toShelleyNetwork
+  , fromShelleyNetwork
   )
 where
 
-import Cardano.Api.Internal.NetworkId
-import Cardano.Api.Internal.ReexposeNetwork
+import Cardano.Api.Network.Internal.NetworkId
+import Cardano.Api.Network.Internal.Reexport

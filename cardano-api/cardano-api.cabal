@@ -60,56 +60,49 @@ library
   -- to expose new functionality is via Cardano.Api
   exposed-modules:
     Cardano.Api
+    Cardano.Api.Address
+    Cardano.Api.Block
     Cardano.Api.Byron
     Cardano.Api.Certificate
     Cardano.Api.Compatible
+    Cardano.Api.Compatible.Tx
     Cardano.Api.Consensus
     Cardano.Api.Crypto.Ed25519Bip32
+    Cardano.Api.Era
+    Cardano.Api.Error
     Cardano.Api.Experimental
+    Cardano.Api.Experimental.Era
     Cardano.Api.Experimental.Plutus
+    Cardano.Api.Experimental.Simple.Script
+    Cardano.Api.Experimental.Tx
     Cardano.Api.Genesis
     Cardano.Api.Governance
-    Cardano.Api.Internal.Address
-    Cardano.Api.Internal.Block
-    Cardano.Api.Internal.Convenience.Query
-    Cardano.Api.Internal.DRepMetadata
-    Cardano.Api.Internal.Eras
-    Cardano.Api.Internal.Error
-    Cardano.Api.Internal.Experimental.Tx
-    Cardano.Api.Internal.Fees
-    Cardano.Api.Internal.Genesis
-    Cardano.Api.Internal.GenesisParameters
-    Cardano.Api.Internal.Governance.Metadata.Validation
-    Cardano.Api.Internal.IO
-    Cardano.Api.Internal.IPC
-    Cardano.Api.Internal.LedgerState
-    Cardano.Api.Internal.Modes
-    Cardano.Api.Internal.Orphans
-    Cardano.Api.Internal.Orphans.Misc
-    Cardano.Api.Internal.Orphans.Serialisation
-    Cardano.Api.Internal.Plutus
-    Cardano.Api.Internal.Pretty
-    Cardano.Api.Internal.ProtocolParameters
-    Cardano.Api.Internal.Query
-    Cardano.Api.Internal.Script
-    Cardano.Api.Internal.Serialise.Cbor.Canonical
-    Cardano.Api.Internal.SerialiseLedgerCddl
-    Cardano.Api.Internal.SerialiseTextEnvelope
-    Cardano.Api.Internal.Tx.Body
-    Cardano.Api.Internal.Tx.Sign
-    Cardano.Api.Internal.Tx.UTxO
-    Cardano.Api.Internal.TxMetadata
+    Cardano.Api.HasTypeProxy
+    Cardano.Api.Hash
+    Cardano.Api.IO
     Cardano.Api.Key
     Cardano.Api.Ledger
-    Cardano.Api.Ledger.Lens
+    Cardano.Api.LedgerState
+    Cardano.Api.Monad.Error
     Cardano.Api.Network
     Cardano.Api.Network.IPC
     Cardano.Api.Parser.Text
     Cardano.Api.Plutus
+    Cardano.Api.Pretty
+    Cardano.Api.ProtocolParameters
     Cardano.Api.Query
+    Cardano.Api.Serialise.Bech32
+    Cardano.Api.Serialise.Cbor
+    Cardano.Api.Serialise.Cbor.Canonical
+    Cardano.Api.Serialise.Cip129
+    Cardano.Api.Serialise.DeserialiseAnyOf
+    Cardano.Api.Serialise.Json
+    Cardano.Api.Serialise.Raw
+    Cardano.Api.Serialise.SerialiseUsing
     Cardano.Api.Serialise.TextEnvelope
     Cardano.Api.Tx
-    Cardano.Api.Type.Value
+    Cardano.Api.UTxO
+    Cardano.Api.Value
 
   build-depends:
     FailT,
@@ -196,90 +189,97 @@ library
     yaml,
 
   other-modules:
-    Cardano.Api.ChainSync.Client
-    Cardano.Api.ChainSync.ClientPipelined
-    Cardano.Api.Internal.Anchor
-    Cardano.Api.Internal.CIP.Cip129
-    Cardano.Api.Internal.Certificate
-    Cardano.Api.Internal.Compatible.Tx
-    Cardano.Api.Internal.Convenience.Construction
-    Cardano.Api.Internal.DeserialiseAnyOf
-    Cardano.Api.Internal.Eon.AllegraEraOnwards
-    Cardano.Api.Internal.Eon.AlonzoEraOnwards
-    Cardano.Api.Internal.Eon.BabbageEraOnwards
-    Cardano.Api.Internal.Eon.ByronToAlonzoEra
-    Cardano.Api.Internal.Eon.Convert
-    Cardano.Api.Internal.Eon.ConwayEraOnwards
-    Cardano.Api.Internal.Eon.MaryEraOnwards
-    Cardano.Api.Internal.Eon.ShelleyBasedEra
-    Cardano.Api.Internal.Eon.ShelleyEraOnly
-    Cardano.Api.Internal.Eon.ShelleyToAllegraEra
-    Cardano.Api.Internal.Eon.ShelleyToAlonzoEra
-    Cardano.Api.Internal.Eon.ShelleyToBabbageEra
-    Cardano.Api.Internal.Eon.ShelleyToMaryEra
-    Cardano.Api.Internal.Eras.Case
-    Cardano.Api.Internal.Eras.Core
-    Cardano.Api.Internal.Experimental.Eras
-    Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
-    Cardano.Api.Internal.Experimental.Plutus.Script
-    Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
-    Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
-    Cardano.Api.Internal.Experimental.Simple.Script
-    Cardano.Api.Internal.Experimental.Witness.AnyWitness
-    Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
-    Cardano.Api.Internal.Feature
-    Cardano.Api.Internal.Governance.Actions.ProposalProcedure
-    Cardano.Api.Internal.Governance.Actions.VotingProcedure
-    Cardano.Api.Internal.Governance.Metadata.DrepRegistration
-    Cardano.Api.Internal.Governance.Metadata.GovAction
-    Cardano.Api.Internal.Governance.Poll
-    Cardano.Api.Internal.HasTypeProxy
-    Cardano.Api.Internal.Hash
-    Cardano.Api.Internal.IO.Base
-    Cardano.Api.Internal.IO.Compat
-    Cardano.Api.Internal.IO.Compat.Posix
-    Cardano.Api.Internal.IO.Compat.Win32
-    Cardano.Api.Internal.IPC.Monad
-    Cardano.Api.Internal.IPC.Version
-    Cardano.Api.Internal.InMode
-    Cardano.Api.Internal.Keys.Byron
-    Cardano.Api.Internal.Keys.Class
-    Cardano.Api.Internal.Keys.Mnemonics
-    Cardano.Api.Internal.Keys.Praos
-    Cardano.Api.Internal.Keys.Shelley
-    Cardano.Api.Internal.Keys.SomeAddressVerificationKey
-    Cardano.Api.Internal.LedgerEvents.ConvertLedgerEvent
-    Cardano.Api.Internal.LedgerEvents.LedgerEvent
-    Cardano.Api.Internal.LedgerEvents.Rule.BBODY.DELEGS
-    Cardano.Api.Internal.LedgerEvents.Rule.BBODY.LEDGER
-    Cardano.Api.Internal.LedgerEvents.Rule.BBODY.UTXOW
-    Cardano.Api.Internal.LedgerEvents.Rule.TICK.NEWEPOCH
-    Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
-    Cardano.Api.Internal.Monad.Error
-    Cardano.Api.Internal.NetworkId
-    Cardano.Api.Internal.OperationalCertificate
-    Cardano.Api.Internal.Protocol
-    Cardano.Api.Internal.Query.Expr
-    Cardano.Api.Internal.Query.Types
-    Cardano.Api.Internal.ReexposeConsensus
-    Cardano.Api.Internal.ReexposeLedger
-    Cardano.Api.Internal.ReexposeNetwork
-    Cardano.Api.Internal.Rewards
-    Cardano.Api.Internal.ScriptData
-    Cardano.Api.Internal.Serialise.Cbor
-    Cardano.Api.Internal.SerialiseBech32
-    Cardano.Api.Internal.SerialiseJSON
-    Cardano.Api.Internal.SerialiseRaw
-    Cardano.Api.Internal.SerialiseUsing
-    Cardano.Api.Internal.SpecialByron
-    Cardano.Api.Internal.StakePoolMetadata
-    Cardano.Api.Internal.Tx.BuildTxWith
-    Cardano.Api.Internal.Tx.Output
-    Cardano.Api.Internal.TxIn
+    Cardano.Api.Byron.Internal.Key
+    Cardano.Api.Byron.Internal.Proposal
+    Cardano.Api.Certificate.Internal
+    Cardano.Api.Certificate.Internal.DRepMetadata
+    Cardano.Api.Certificate.Internal.OperationalCertificate
+    Cardano.Api.Certificate.Internal.StakePoolMetadata
+    Cardano.Api.Consensus.Internal.InMode
+    Cardano.Api.Consensus.Internal.Mode
+    Cardano.Api.Consensus.Internal.Protocol
+    Cardano.Api.Consensus.Internal.Reexport
+    Cardano.Api.Era.Internal.Case
+    Cardano.Api.Era.Internal.Core
+    Cardano.Api.Era.Internal.Eon.AllegraEraOnwards
+    Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
+    Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
+    Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra
+    Cardano.Api.Era.Internal.Eon.Convert
+    Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
+    Cardano.Api.Era.Internal.Eon.MaryEraOnwards
+    Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+    Cardano.Api.Era.Internal.Eon.ShelleyEraOnly
+    Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra
+    Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra
+    Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra
+    Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra
+    Cardano.Api.Era.Internal.Feature
+    Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
+    Cardano.Api.Experimental.Plutus.Internal.Script
+    Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
+    Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
+    Cardano.Api.Experimental.Tx.Internal.AnyWitness
+    Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
+    Cardano.Api.Genesis.Internal
+    Cardano.Api.Genesis.Internal.Parameters
+    Cardano.Api.Governance.Internal.Action.ProposalProcedure
+    Cardano.Api.Governance.Internal.Action.VotingProcedure
+    Cardano.Api.Governance.Internal.Metadata.Anchor
+    Cardano.Api.Governance.Internal.Metadata.DrepRegistration
+    Cardano.Api.Governance.Internal.Metadata.GovAction
+    Cardano.Api.Governance.Internal.Metadata.Validation
+    Cardano.Api.Governance.Internal.Poll
+    Cardano.Api.IO.Internal.Base
+    Cardano.Api.IO.Internal.Compat
+    Cardano.Api.IO.Internal.Compat.Posix
+    Cardano.Api.IO.Internal.Compat.Win32
+    Cardano.Api.Internal.Orphans
+    Cardano.Api.Internal.Orphans.Misc
+    Cardano.Api.Internal.Orphans.Serialisation
     Cardano.Api.Internal.Utils
-    Cardano.Api.Internal.Value
-    Cardano.Api.Internal.ValueParser
-    Cardano.Api.Internal.Via.ShowOf
+    Cardano.Api.Key.Internal
+    Cardano.Api.Key.Internal.Class
+    Cardano.Api.Key.Internal.Mnemonic
+    Cardano.Api.Key.Internal.Praos
+    Cardano.Api.Key.Internal.SomeAddressVerificationKey
+    Cardano.Api.Ledger.Internal.Reexport
+    Cardano.Api.LedgerState.Internal.ConvertLedgerEvent
+    Cardano.Api.LedgerState.Internal.LedgerEvent
+    Cardano.Api.LedgerState.Internal.Rule.BBODY.DELEGS
+    Cardano.Api.LedgerState.Internal.Rule.BBODY.LEDGER
+    Cardano.Api.LedgerState.Internal.Rule.BBODY.UTXOW
+    Cardano.Api.LedgerState.Internal.Rule.TICK.NEWEPOCH
+    Cardano.Api.LedgerState.Internal.Rule.TICK.RUPD
+    Cardano.Api.Network.IPC.Internal
+    Cardano.Api.Network.IPC.Internal.ChainSync.Client
+    Cardano.Api.Network.IPC.Internal.ChainSync.ClientPipelined
+    Cardano.Api.Network.IPC.Internal.Monad
+    Cardano.Api.Network.IPC.Internal.Version
+    Cardano.Api.Network.Internal.NetworkId
+    Cardano.Api.Network.Internal.Reexport
+    Cardano.Api.Plutus.Internal
+    Cardano.Api.Plutus.Internal.Script
+    Cardano.Api.Plutus.Internal.ScriptData
+    Cardano.Api.Pretty.Internal.ShowOf
+    Cardano.Api.Query.Internal.Convenience
+    Cardano.Api.Query.Internal.Expr
+    Cardano.Api.Query.Internal.Type.DebugLedgerState
+    Cardano.Api.Query.Internal.Type.DelegationsAndRewards
+    Cardano.Api.Query.Internal.Type.QueryInMode
+    Cardano.Api.Serialise.TextEnvelope.Internal
+    Cardano.Api.Serialise.TextEnvelope.Internal.Cddl
+    Cardano.Api.Tx.Internal.Body
+    Cardano.Api.Tx.Internal.Body.Lens
+    Cardano.Api.Tx.Internal.BuildTxWith
+    Cardano.Api.Tx.Internal.Convenience
+    Cardano.Api.Tx.Internal.Fee
+    Cardano.Api.Tx.Internal.Output
+    Cardano.Api.Tx.Internal.Sign
+    Cardano.Api.Tx.Internal.TxIn
+    Cardano.Api.Tx.Internal.TxMetadata
+    Cardano.Api.Value.Internal
+    Cardano.Api.Value.Internal.Parser
 
 library gen
   import: project-config

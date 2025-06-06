@@ -14,7 +14,7 @@ import Cardano.Api
   , valueToNestedRep
   )
 import Cardano.Api qualified as Api
-import Cardano.Api.Internal.Eras
+import Cardano.Api.Era
 import Cardano.Api.Parser.Text qualified as P
 
 import Prelude

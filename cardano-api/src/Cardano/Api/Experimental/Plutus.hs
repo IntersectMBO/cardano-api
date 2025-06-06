@@ -38,7 +38,7 @@ module Cardano.Api.Experimental.Plutus
   )
 where
 
-import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
-import Cardano.Api.Internal.Experimental.Plutus.Script as X
-import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
-import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
+import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
+import Cardano.Api.Experimental.Plutus.Internal.Script as X
+import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
+import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
