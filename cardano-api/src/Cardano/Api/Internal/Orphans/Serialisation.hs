@@ -22,13 +22,13 @@ module Cardano.Api.Internal.Orphans.Serialisation
   )
 where
 
-import Cardano.Api.Internal.HasTypeProxy
+import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Orphans.Misc
-import Cardano.Api.Internal.Pretty (Pretty (..), prettyException, (<+>))
-import Cardano.Api.Internal.SerialiseRaw
-import Cardano.Api.Internal.TxIn
-import Cardano.Api.Internal.Via.ShowOf
 import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Pretty (Pretty (..), prettyException, (<+>))
+import Cardano.Api.Pretty.Internal.ShowOf
+import Cardano.Api.Serialise.Raw
+import Cardano.Api.Tx.Internal.TxIn
 
 import Cardano.Binary (DecoderError (..))
 import Cardano.Binary qualified as CBOR

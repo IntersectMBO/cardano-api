@@ -2,10 +2,10 @@ module Cardano.Api.Governance
   ( -- * Actions
 
     -- ** Proposal Procedure
-    module Cardano.Api.Internal.Governance.Actions.ProposalProcedure
+    module Cardano.Api.Governance.Internal.Action.ProposalProcedure
 
     -- ** Voting Procedure
-  , module Cardano.Api.Internal.Governance.Actions.VotingProcedure
+  , module Cardano.Api.Governance.Internal.Action.VotingProcedure
 
     -- * Metadata
 
@@ -16,7 +16,7 @@ module Cardano.Api.Governance
     --
     -- The constraints implemented in this module can be tested against a JSON
     -- 'ByteString' by using the function 'validateGovActionAnchorData' in
-    -- "Cardano.Api.Internal.Governance.Metadata.Validation" with the parameter 'DrepRegistrationMetadata'.
+    -- "Cardano.Api.Governance.Internal.Metadata.Validation" with the parameter 'DrepRegistrationMetadata'.
   , CIP119 (..)
 
     -- ** Government action metadata
@@ -27,7 +27,7 @@ module Cardano.Api.Governance
     --
     -- The constraints implemented in this module can be tested against a JSON
     -- 'ByteString' by using the function 'validateGovActionAnchorData' in
-    -- "Cardano.Api.Internal.Governance.Metadata.Validation" with the parameter 'BaseGovActionMetadata'.
+    -- "Cardano.Api.Governance.Internal.Metadata.Validation" with the parameter 'BaseGovActionMetadata'.
   , CIP108 (..)
 
     -- ** Metadata anchor
@@ -35,7 +35,7 @@ module Cardano.Api.Governance
   , AnchorDataHash (..)
 
     -- ** Metadata validation
-  , module Cardano.Api.Internal.Governance.Metadata.Validation
+  , module Cardano.Api.Governance.Internal.Metadata.Validation
 
     -- * Poll
 
@@ -55,10 +55,10 @@ module Cardano.Api.Governance
   )
 where
 
-import Cardano.Api.Internal.Anchor
-import Cardano.Api.Internal.Governance.Actions.ProposalProcedure
-import Cardano.Api.Internal.Governance.Actions.VotingProcedure
-import Cardano.Api.Internal.Governance.Metadata.DrepRegistration
-import Cardano.Api.Internal.Governance.Metadata.GovAction
-import Cardano.Api.Internal.Governance.Metadata.Validation
-import Cardano.Api.Internal.Governance.Poll
+import Cardano.Api.Governance.Internal.Action.ProposalProcedure
+import Cardano.Api.Governance.Internal.Action.VotingProcedure
+import Cardano.Api.Governance.Internal.Metadata.Anchor
+import Cardano.Api.Governance.Internal.Metadata.DrepRegistration
+import Cardano.Api.Governance.Internal.Metadata.GovAction
+import Cardano.Api.Governance.Internal.Metadata.Validation
+import Cardano.Api.Governance.Internal.Poll

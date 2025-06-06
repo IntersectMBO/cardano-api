@@ -14,7 +14,7 @@ module Cardano.Api.Tx
     -- This process remains unchanged.
     --
     -- To learn how to create a transaction using the new API, refer to
-    -- "Cardano.Api.Internal.Experimental.Tx" documentation.
+    -- "Cardano.Api.Experimental.Tx" documentation.
     --
     -- The next examples use the following qualified modules:
     --
@@ -122,14 +122,14 @@ module Cardano.Api.Tx
     -- For these reasons, it is recommended that you balance the transaction before proceeding with
     -- signing and submitting.
     --
-    -- See how to balance a transaction in the "Cardano.Api.Internal.Fees" documentation.
+    -- See how to balance a transaction in the "Cardano.Api.Tx.Internal.Fee" documentation.
 
     -- ** Creating a 'ShelleyWitnessSigningKey'
 
     -- |
     -- Signing a transaction requires a witness, for example, a 'ShelleyWitnessSigningKey'.
     --
-    -- Learn how to create a 'ShelleyWitnessSigningKey' in the "Cardano.Api.Internal.Tx.Sign" documentation.
+    -- Learn how to create a 'ShelleyWitnessSigningKey' in the "Cardano.Api.Tx.Internal.Sign" documentation.
 
     -- ** Creating a transaction using the old API
 
@@ -151,7 +151,7 @@ module Cardano.Api.Tx
     -- @
     --
     -- We now have a signed transaction. Learn how to submit it to the node by using the IPC protocol in
-    -- the "Cardano.Api.Internal.IPC".
+    -- the "Cardano.Api.Network.IPC.Internal".
 
     -- ** Inspecting transactions
 
@@ -428,7 +428,7 @@ module Cardano.Api.Tx
     -- * Fees calculation
 
     -- |
-    -- The "Cardano.Api.Internal.Tx.Body" documentation demonstrates how to create a 'TxBodyContent' for a
+    -- The "Cardano.Api.Tx.Internal.Body" documentation demonstrates how to create a 'TxBodyContent' for a
     -- transaction that takes 12 ada and sends 10 ada to an address, and spends 2 ada for fees. If a
     -- UTXO with exactly 12 ada is available, this would be a valid transaction, because it is balanced, and has
     -- sufficient fees, as 2 ada is more than enough to cover the fees for such a simple transaction on mainnet
@@ -483,11 +483,11 @@ module Cardano.Api.Tx
     -- @
     --
     -- 2. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'
-    -- query defined in "Cardano.Api.Internal.Query". "Cardano.Api.Internal.IPC" documentation illustrates how
+    -- query defined in "Cardano.Api.Query.Internal.Type.QueryInMode". "Cardano.Api.Network.IPC.Internal" documentation illustrates how
     -- to make a query using IPC protocol.
     -- Let's assume they are stored in the @exampleProtocolParams@ variable.
     --
-    -- 3. The draft transaction body, which can be created using 'createTransactionBody' defined in "Cardano.Api.Internal.Tx.Body":
+    -- 3. The draft transaction body, which can be created using 'createTransactionBody' defined in "Cardano.Api.Tx.Internal.Body":
     --
     -- @
     -- let (Right txBody) = Api.createTransactionBody sbe txBodyContent
@@ -520,7 +520,7 @@ module Cardano.Api.Tx
     -- * 0.2 ada in fees (calculated fees, in this case, an overestimation).
     --
     -- We would then have to update the 'TxBodyContent' accordingly and continue building
-    -- the transaction as demonstrated in "Cardano.Api.Internal.Experimental.Tx".
+    -- the transaction as demonstrated in "Cardano.Api.Experimental.Tx".
 
     -- ** Example 2: Automated balancing without chain information (no UTXO, no ledger state)
 
@@ -539,10 +539,10 @@ module Cardano.Api.Tx
     -- @
     --
     -- 2. The draft 'TxBodyContent' for the transaction we want to balance. See how to create one
-    -- in "Cardano.Api.Internal.Tx.Body". It is assumed to be stored in the @txBodyContent@ variable.
+    -- in "Cardano.Api.Tx.Internal.Body". It is assumed to be stored in the @txBodyContent@ variable.
     --
     -- 3. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'
-    -- query defined in "Cardano.Api.Internal.Query". "Cardano.Api.Internal.IPC" documentation illustrates how
+    -- query defined in "Cardano.Api.Query.Internal.Type.QueryInMode". "Cardano.Api.Network.IPC.Internal" documentation illustrates how
     -- to make a query using IPC protocol. Let's assume they are stored in the @exampleProtocolParams@ variable.
     --
     -- 4. For stake pool and governance actions, we will also need:
@@ -566,7 +566,7 @@ module Cardano.Api.Tx
     --     * Size of all reference scripts (in bytes): since no reference scripts are used, this value is @0@.
     --
     -- 6. The address for sending the change. We can deserialize it from its bech32 representation
-    -- using the 'deserialiseAddress' function defined in "Cardano.Api.Internal.Address":
+    -- using the 'deserialiseAddress' function defined in "Cardano.Api.Address":
     --
     -- @
     -- let Just exampleChangeAddress =
@@ -640,15 +640,15 @@ module Cardano.Api.Tx
     -- @
     --
     -- 2. Network start time, obtainable using the 'QuerySystemStart' query defined in
-    -- "Cardano.Api.Internal.Query". "Cardano.Api.Internal.IPC" documentation illustrates how
+    -- "Cardano.Api.Query.Internal.Type.QueryInMode". "Cardano.Api.Network.IPC.Internal" documentation illustrates how
     -- to make a query using IPC protocol. Assume we have it in the @exampleSystemStart@ variable.
     --
     -- 3. Ledger epoch information, derivable by applying 'toLedgerEpochInfo' to the
     -- 'EraHistory', which can be retrieved using the 'QueryEraHistory' query defined in
-    -- "Cardano.Api.Internal.Query". Assume this is stored in the @exampleLedgerEpochInfo@ variable.
+    -- "Cardano.Api.Query.Internal.Type.QueryInMode". Assume this is stored in the @exampleLedgerEpochInfo@ variable.
     --
     -- 4. Protocol parameters for the current era, accessible through the 'QueryProtocolParameters'
-    -- query defined in "Cardano.Api.Internal.Query". Assume this is stored in the @exampleProtocolParams@ variable.
+    -- query defined in "Cardano.Api.Query.Internal.Type.QueryInMode". Assume this is stored in the @exampleProtocolParams@ variable.
     --
     -- 5. For stake pool and gov actions, additional data is requried:
     --
@@ -660,14 +660,14 @@ module Cardano.Api.Tx
     --    for the corresponding parameters.
     --
     -- 6. UTXO set being spent -- the full UTXO set can be obtained using the 'QueryUTxO' query
-    -- from "Cardano.Api.Internal.Query". Assume this is stored in the @utxoToUse@ variable.
+    -- from "Cardano.Api.Query.Internal.Type.QueryInMode". Assume this is stored in the @utxoToUse@ variable.
     --
     -- 7. Draft transaction body content -- the 'TxBodyContent' for the transaction that requires balancing.
-    -- The process for creating this structure is demonstrated in "Cardano.Api.Internal.Tx.Body".
+    -- The process for creating this structure is demonstrated in "Cardano.Api.Tx.Internal.Body".
     --
     -- 8. Change address -- the address where any remaining balance should be returned. This can be
     -- deserialized from its Bech32 representation using the 'deserialiseAddress' function from
-    -- "Cardano.Api.Internal.Address":
+    -- "Cardano.Api.Address":
     --
     -- @
     -- let (Just exampleChangeAddress) =
@@ -852,10 +852,10 @@ module Cardano.Api.Tx
   )
 where
 
-import Cardano.Api.Internal.Convenience.Construction
-import Cardano.Api.Internal.Fees
-import Cardano.Api.Internal.Tx.Body
-import Cardano.Api.Internal.Tx.Sign
-import Cardano.Api.Internal.Tx.UTxO
-import Cardano.Api.Internal.TxMetadata
-import Cardano.Api.Ledger.Lens
+import Cardano.Api.Tx.Internal.Body
+import Cardano.Api.Tx.Internal.Body.Lens
+import Cardano.Api.Tx.Internal.Convenience
+import Cardano.Api.Tx.Internal.Fee
+import Cardano.Api.Tx.Internal.Sign
+import Cardano.Api.Tx.Internal.TxMetadata
+import Cardano.Api.UTxO

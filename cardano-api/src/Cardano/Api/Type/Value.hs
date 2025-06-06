@@ -64,5 +64,5 @@ module Cardano.Api.Type.Value
   )
 where
 
-import Cardano.Api.Internal.Value
-import Cardano.Api.Internal.ValueParser
+import Cardano.Api.Value.Internal
+import Cardano.Api.Value.Internal.Parser

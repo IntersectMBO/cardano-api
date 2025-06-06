@@ -28,5 +28,5 @@ module Cardano.Api.Genesis
   )
 where
 
-import Cardano.Api.Internal.Genesis
-import Cardano.Api.Internal.GenesisParameters
+import Cardano.Api.Genesis.Internal
+import Cardano.Api.Genesis.Internal.Parameters

@@ -127,6 +127,6 @@ module Cardano.Api.Plutus
   )
 where
 
-import Cardano.Api.Internal.Plutus
-import Cardano.Api.Internal.Script
-import Cardano.Api.Internal.ScriptData
+import Cardano.Api.Plutus.Internal
+import Cardano.Api.Plutus.Internal.Script
+import Cardano.Api.Plutus.Internal.ScriptData

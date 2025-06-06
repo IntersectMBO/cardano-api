@@ -47,5 +47,5 @@ module Cardano.Api.Serialise.TextEnvelope
   )
 where
 
-import Cardano.Api.Internal.SerialiseLedgerCddl
-import Cardano.Api.Internal.SerialiseTextEnvelope
+import Cardano.Api.Serialise.TextEnvelope.Internal
+import Cardano.Api.Serialise.TextEnvelope.Internal.Cddl

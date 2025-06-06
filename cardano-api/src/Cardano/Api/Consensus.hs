@@ -64,7 +64,7 @@ module Cardano.Api.Consensus
   )
 where
 
-import Cardano.Api.Internal.InMode
-import Cardano.Api.Internal.Modes
-import Cardano.Api.Internal.Protocol
-import Cardano.Api.Internal.ReexposeConsensus
+import Cardano.Api.Consensus.Internal.InMode
+import Cardano.Api.Consensus.Internal.Mode
+import Cardano.Api.Consensus.Internal.Protocol
+import Cardano.Api.Consensus.Internal.Reexport

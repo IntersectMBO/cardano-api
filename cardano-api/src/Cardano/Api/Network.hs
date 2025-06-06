@@ -14,5 +14,5 @@ module Cardano.Api.Network
   )
 where
 
-import Cardano.Api.Internal.NetworkId
-import Cardano.Api.Internal.ReexposeNetwork
+import Cardano.Api.Network.Internal.NetworkId
+import Cardano.Api.Network.Internal.Reexport

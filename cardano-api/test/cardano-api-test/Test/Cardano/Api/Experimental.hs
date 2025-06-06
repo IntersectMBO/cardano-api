@@ -11,10 +11,10 @@ where
 
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
-import Cardano.Api.Internal.Genesis qualified as Genesis
-import Cardano.Api.Internal.Script qualified as Script
-import Cardano.Api.Internal.Tx.Sign (Tx (ShelleyTx))
+import Cardano.Api.Genesis.Internal qualified as Genesis
 import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Plutus.Internal.Script qualified as Script
+import Cardano.Api.Tx.Internal.Sign (Tx (ShelleyTx))
 
 import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
