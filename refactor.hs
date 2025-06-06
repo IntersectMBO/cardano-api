@@ -40,7 +40,7 @@ type ModuleName = Text
 ------------------------
 
 isDryRun :: Bool
-isDryRun = True
+isDryRun = False
 
 -- The proposed changes. Renames of modules in this list are without 'Cardano.Api' prefix: [(new module name, old module name)]
 -- The TODOs have to be performed manually
@@ -57,12 +57,13 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
 
   , ("Compatible.Tx", "Internal.Compatible.Tx")
 
+  , ("ProtocolParameters", "Internal.ProtocolParameters")
+
   , ("Consensus.Internal.Reexport", "Internal.ReexposeConsensus")
   , ("Consensus.Internal.Mode", "Internal.Modes")
   , ("Consensus.Internal.InMode", "Internal.InMode")
   , ("Consensus.Internal.Protocol", "Internal.Protocol")
 
-  , ("Era", "Internal.Eras")
   , ("Era.Internal.Case", "Internal.Eras.Case")
   , ("Era.Internal.Core", "Internal.Eras.Core")
   , ("Era.Internal.Feature", "Internal.Feature")
@@ -79,11 +80,12 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("Era.Internal.Eon.ShelleyToAlonzoEra", "Internal.Eon.ShelleyToAlonzoEra")
   , ("Era.Internal.Eon.ShelleyToBabbageEra", "Internal.Eon.ShelleyToBabbageEra")
   , ("Era.Internal.Eon.ShelleyToMaryEra", "Internal.Eon.ShelleyToMaryEra")
+  , ("Era", "Internal.Eras")
 
   , ("Experimental.Era", "Internal.Experimental.Eras")
   , ("Experimental.Plutus.Internal.IndexedPlutusScriptWitness", "Internal.Experimental.Plutus.IndexedPlutusScriptWitness")
-  , ("Experimental.Plutus.Internal.Script", "Internal.Experimental.Plutus.Script")
   , ("Experimental.Plutus.Internal.ScriptWitness", "Internal.Experimental.Plutus.ScriptWitness")
+  , ("Experimental.Plutus.Internal.Script", "Internal.Experimental.Plutus.Script")
   , ("Experimental.Plutus.Internal.Shim.LegacyScripts", "Internal.Experimental.Plutus.Shim.LegacyScripts")
 
   , ("Experimental.Simple.Script", "Internal.Experimental.Simple.Script")
@@ -91,8 +93,8 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("Experimental.Tx.Internal.AnyWitness", "Internal.Experimental.Witness.AnyWitness")
   , ("Experimental.Tx.Internal.TxScriptWitnessRequirements", "Internal.Experimental.Witness.TxScriptWitnessRequirements")
 
-  , ("Genesis.Internal", "Internal.Genesis")
   , ("Genesis.Internal.Parameters", "Internal.GenesisParameters")
+  , ("Genesis.Internal", "Internal.Genesis")
 
   , ("Governance.Internal.Action.ProposalProcedure", "Internal.Governance.Actions.ProposalProcedure")
   , ("Governance.Internal.Action.VotingProcedure", "Internal.Governance.Actions.VotingProcedure")
@@ -102,11 +104,11 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("Governance.Internal.Metadata.Validation", "Internal.Governance.Metadata.Validation")
   , ("Governance.Internal.Poll", "Internal.Governance.Poll")
 
-  , ("IO", "Internal.IO")
-  , ("IO.Internal.Base", "Internal.IO.Base")
-  , ("IO.Internal.Compat", "Internal.IO.Compat")
   , ("IO.Internal.Compat.Posix", "Internal.IO.Compat.Posix")
   , ("IO.Internal.Compat.Win32", "Internal.IO.Compat.Win32")
+  , ("IO.Internal.Compat", "Internal.IO.Compat")
+  , ("IO.Internal.Base", "Internal.IO.Base")
+  , ("IO", "Internal.IO")
 
   , ("Key.Internal", "Internal.Keys.Shelley")
   , ("Key.Internal.Class", "Internal.Keys.Class")
@@ -128,20 +130,20 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("Network.Internal.Reexport", "Internal.ReexposeNetwork")
   , ("Network.Internal.NetworkId", "Internal.NetworkId")
 
-  , ("Network.IPC.Internal", "Internal.IPC")
-  , ("Network.IPC.Internal.ChainSync.Client", "ChainSync.Client")
   , ("Network.IPC.Internal.ChainSync.ClientPipelined", "ChainSync.ClientPipelined")
+  , ("Network.IPC.Internal.ChainSync.Client", "ChainSync.Client")
   , ("Network.IPC.Internal.Monad", "Internal.IPC.Monad")
   , ("Network.IPC.Internal.Version", "Internal.IPC.Version")
+  , ("Network.IPC.Internal", "Internal.IPC")
 
   , ("Plutus.Internal", "Internal.Plutus")
-  , ("Plutus.Internal.Script", "Internal.Script")
   , ("Plutus.Internal.ScriptData", "Internal.ScriptData")
+  , ("Plutus.Internal.Script", "Internal.Script")
 
   , ("Serialise.Bech32", "Internal.SerialiseBech32")
   , ("Serialise.Cip129", "Internal.CIP.Cip129")
-  , ("Serialise.Cbor", "Internal.Serialise.Cbor")
   , ("Serialise.Cbor.Canonical", "Internal.Serialise.Cbor.Canonical")
+  , ("Serialise.Cbor", "Internal.Serialise.Cbor")
   , ("Serialise.DeserialiseAnyOf", "Internal.DeserialiseAnyOf")
   , ("Serialise.Json", "Internal.SerialiseJSON")
   , ("Serialise.Raw", "Internal.SerialiseRaw")
@@ -174,10 +176,9 @@ renames = map (bimap prependModulePrefix prependModulePrefix)
   , ("Monad.Error", "Internal.Monad.Error")
   , ("Pretty", "Internal.Pretty")
   , ("Pretty.Internal.ShowOf", "Internal.Via.ShowOf")
-  , ("ProtocolParameters", "Internal.ProtocolParameters")
   , ("UTxO", "Internal.Tx.UTxO")
-  , ("Value.Internal", "Internal.Value")
   , ("Value.Internal.Parser", "Internal.ValueParser")
+  , ("Value.Internal", "Internal.Value")
 
   ]
     where
