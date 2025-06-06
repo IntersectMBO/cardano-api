@@ -19,6 +19,9 @@ dist/
 result*
 /launch-*
 stack.yaml.lock
+*.hi
+*.o
+Main
 
 /.cache
 /db
@@ -40,12 +43,12 @@ supervisord.pid
 tags
 /config
 /data
-./*.skey
-./*.vkey
-./*.cert
+/*.skey
+/*.vkey
+/*.cert
 
 # For now require that users generate their own hie.yaml
-hie.yaml
+/hie.yaml
 
 # Ignore Visual Studio code configuration
 .vscode/tasks.json
