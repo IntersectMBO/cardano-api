@@ -7,7 +7,6 @@ module Test.Cardano.Api.Ledger
 where
 
 import Cardano.Api
-import Cardano.Api.Shelley
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.Tx.Address

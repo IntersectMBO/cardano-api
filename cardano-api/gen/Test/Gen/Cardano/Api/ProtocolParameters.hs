@@ -1,7 +1,6 @@
 module Test.Gen.Cardano.Api.ProtocolParameters where
 
 import Cardano.Api
-import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Ledger
 
 import Test.Gen.Cardano.Api.Typed (genCostModels)

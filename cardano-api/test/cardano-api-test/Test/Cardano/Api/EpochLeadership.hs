@@ -9,24 +9,9 @@ module Test.Cardano.Api.EpochLeadership
 where
 
 import Cardano.Api
-  ( Key (verificationKeyHash)
-  , deterministicSigningKey
-  , getVerificationKey
-  )
-import Cardano.Api.Internal.Block (EpochNo (..), Hash (StakePoolKeyHash), SlotNo (..))
-import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..))
-import Cardano.Api.Internal.Genesis (shelleyGenesisDefaults)
-import Cardano.Api.Internal.GenesisParameters (EpochSize (..))
-import Cardano.Api.Internal.LedgerState (currentEpochEligibleLeadershipSlots)
-import Cardano.Api.Internal.Modes (ConsensusProtocol)
-import Cardano.Api.Internal.Query
-  ( ProtocolState (..)
-  , SerialisedPoolDistribution (SerialisedPoolDistribution)
-  )
-import Cardano.Api.Ledger (KeyHash (..), StandardCrypto, toCBOR)
-import Cardano.Api.Shelley (Hash (VrfKeyHash), VrfKey, proxyToAsType, unStakePoolKeyHash)
+import Cardano.Api.Ledger (KeyHash (..), StandardCrypto)
 
-import Cardano.Binary (ToCBOR, serialize)
+import Cardano.Binary (serialize)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Ledger.Api.PParams (emptyPParams)
 import Cardano.Ledger.BaseTypes (Nonce (..), WithOrigin (..))
@@ -40,10 +25,8 @@ import Ouroboros.Consensus.Shelley.Ledger.Query.Types
   ( IndividualPoolStake (..)
   , PoolDistr (..)
   )
-import Ouroboros.Network.Block (Serialised (..))
 
 import Data.Map qualified as Map
-import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Time.Clock (secondsToNominalDiffTime)
 import GHC.Exts (IsList (..))

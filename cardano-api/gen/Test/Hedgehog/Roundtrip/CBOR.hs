@@ -11,15 +11,12 @@ module Test.Hedgehog.Roundtrip.CBOR
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.Eon.ShelleyBasedEra
-import Cardano.Api.Internal.Script
 
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Short qualified as SBS
-import Data.Proxy
 import GHC.Stack (HasCallStack)
 import GHC.Stack qualified as GHC
 

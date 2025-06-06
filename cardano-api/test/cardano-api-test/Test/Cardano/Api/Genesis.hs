@@ -8,11 +8,8 @@ module Test.Cardano.Api.Genesis
   )
 where
 
-import Cardano.Api.Internal.Eon.ShelleyBasedEra
-import Cardano.Api.Internal.Eras
-import Cardano.Api.Internal.Genesis
+import Cardano.Api
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Shelley
 
 import Cardano.Binary qualified as CB
 import Cardano.Ledger.Alonzo.Genesis qualified as L

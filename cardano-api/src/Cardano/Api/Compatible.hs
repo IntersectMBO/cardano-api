@@ -1,6 +1,6 @@
 module Cardano.Api.Compatible
-  ( module Cardano.Api.Internal.Compatible.Tx
+  ( module Cardano.Api.Compatible.Tx
   )
 where
 
-import Cardano.Api.Internal.Compatible.Tx
+import Cardano.Api.Compatible.Tx
