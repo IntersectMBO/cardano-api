@@ -565,7 +565,7 @@ selectTxDatums
   :: TxBodyScriptData era
   -> Map L.DataHash (L.Data (ShelleyLedgerEra era))
 selectTxDatums TxBodyNoScriptData = Map.empty
-selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
+selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats datums) _) = datums
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
@@ -1059,7 +1059,7 @@ makeShelleyBasedBootstrapWitness sbe nwOrAddr txbody (ByronSigningKey sk) =
     -- Byron era witnesses were weird. This reveals all that weirdness.
     Shelley.BootstrapWitness
       { Shelley.bwKey = vk
-      , Shelley.bwSig = signature
+      , Shelley.bwSignature = signature
       , Shelley.bwChainCode = chainCode
       , Shelley.bwAttributes = attributes
       }

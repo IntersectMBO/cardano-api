@@ -38,11 +38,10 @@ import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.UTxO (UTxO (..))
 import Cardano.Api.Internal.Utils
 
-import Cardano.Ledger.CertState (DRepState (..))
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Keys qualified as L
-import Cardano.Ledger.Shelley.LedgerState qualified as L
+import Cardano.Ledger.State (ChainAccountState (..), DRepState (..))
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
@@ -167,11 +166,11 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ pure Nothing)
       ( \cOnwards -> do
-          L.AccountState{L.asTreasury} <-
+          ChainAccountState{casTreasury} <-
             lift (queryAccountState cOnwards)
               & onLeft (left . QceUnsupportedNtcVersion)
               & onLeft (left . QueryEraMismatch)
-          let txCurrentTreasuryValue = TxCurrentTreasuryValue asTreasury
+          let txCurrentTreasuryValue = TxCurrentTreasuryValue casTreasury
           return $ Just $ Featured cOnwards txCurrentTreasuryValue
       )
       sbe

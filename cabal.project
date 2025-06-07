@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 source-repository-package
    type: git
    location: https://github.com/IntersectMBO/ouroboros-consensus
-   tag: 96b81adeb364541735a74ec47e6d2036a9aea78c
-   --sha256: sha256-EZdgYpLOlgQyZEztWuqbZCaYTjIU2ZDZSNGDFRd/U3A=
+   tag: 576e8a6a8822d518af872f3cf8db0388afa65c78
+   --sha256: sha256-N82KhFUNVo6ZHfTEyXO+6L9ayhr9Cg4jvWR4BhZD38U=
    subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -27,15 +27,15 @@ source-repository-package
    type: git
    location: https://github.com/IntersectMBO/ouroboros-network
    tag: 3e8d3b4b8c87ead794876c62d7fe25f32efb5142
-   -- sha256: sha256-uKrxpHhcNGzKUSeA4zIdkslfDFIJjkCsHUg+FUef1yE=
+   --sha256: sha256-uKrxpHhcNGzKUSeA4zIdkslfDFIJjkCsHUg+FUef1yE=
    subdir:
      ouroboros-network-api
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-ledger
-  tag: 0208ba0767c5e0143a20aaa58e6bb4e6ec8f9207
-  --sha256: sha256-453fLUKdzgK5lSPTAfmwIKBRV1GdDwKKaOTlD6Q2sQM=
+  tag: fdfa80fad362fa07c82f7b8a6837a66a6701940b
+  --sha256: sha256-nxWk4qNutbir3uXa1Fm9yrgtnw8STe0KUjYMJjdmRXs=
   subdir:
     eras/allegra/impl
     eras/alonzo/impl

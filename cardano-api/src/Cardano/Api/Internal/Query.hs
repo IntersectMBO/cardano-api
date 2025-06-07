@@ -93,12 +93,12 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
-import Cardano.Ledger.CertState qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as Shelley
 import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.LedgerState qualified as L
+import Cardano.Ledger.State qualified as L
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -286,7 +286,7 @@ data QueryInShelleyBasedEra era result where
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
   QueryAccountState
-    :: QueryInShelleyBasedEra era L.AccountState
+    :: QueryInShelleyBasedEra era L.ChainAccountState
   QueryConstitution
     :: QueryInShelleyBasedEra era (L.Constitution (ShelleyLedgerEra era))
   QueryGovState
