@@ -3,15 +3,15 @@ cradle:
     - path: "./app/Main.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
-    - path: "./app/Bridge.hs"
+    - path: "./src/JavaScript/Bridge.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
-    - path: "./app/ExceptionHandling.hs"
+    - path: "./src/General/ExceptionHandling.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
-    - path: "./app/TxBodyWrapper.hs"
+    - path: "./src/WasmApi/WasmApi.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
-    - path: "./app/WasmApi.hs"
+    - path: "./src/WasmApi/Tx.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 

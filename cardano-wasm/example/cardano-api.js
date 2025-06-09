@@ -9,9 +9,25 @@ async function initialize() {
   })
   Object.assign(__exports, instance.exports);
   wasi.initialize(instance);
-  return { mkTransaction: instance.exports.mkTransaction
-         , signTransaction: instance.exports.signTransaction
-         , mkTxIn: instance.exports.mkTxIn
+  var makeSignedTxObject = async function (asyncValue) {
+    let value = await asyncValue;
+    return { objectType: "SignedTx"
+           , txToCbor: async function () { return instance.exports.txToCbor(value); }
+           };
+  }
+  var makeUnsignedTxObject = async function (asyncValue) {
+    let value = await asyncValue;
+    return { objectType: "UnsignedTx"
+           , addTxInput: function (txId, txIx) { return makeUnsignedTxObject(instance.exports.addTxInput(value, txId, txIx)); }
+           , addSimpleTxOut: function (destAddr, amount) { return makeUnsignedTxObject(instance.exports.addSimpleTxOut(value, destAddr, amount)); }
+           , setFee: function (amount) { return makeUnsignedTxObject(instance.exports.setFee(value, amount)); }
+           , addSigningKey: function (signingKey) { return makeUnsignedTxObject(instance.exports.addSigningKey(value, signingKey)); }
+           , signTx: function () { return makeSignedTxObject(instance.exports.signTx(value)); }
+           };
+  };
+  return { objectType: "cardano-api"
+         , newConwayTx: async function () { return makeUnsignedTxObject(instance.exports.newConwayTx()); }
          };
+
 }
 export default initialize;
