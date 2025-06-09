@@ -1,7 +1,5 @@
 module ExceptionHandling where
 
-import Cardano.Api (liftEither)
-
 import GHC.Stack (HasCallStack, withFrozenCallStack)
 
 justOrError :: HasCallStack => String -> Maybe a -> a
