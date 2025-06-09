@@ -26,19 +26,22 @@ common project-config
 
 executable cardano-wasm
   main-is: Main.hs
-  hs-source-dirs: app
+  hs-source-dirs:
+    app
+    src
+
   default-language: Haskell2010
 
   if arch(wasm32)
     ghc-options:
       -no-hs-main
       -optl-mexec-model=reactor
-      "-optl-Wl,--strip-all,--export=mkTxIn,--export=mkTransaction,--export=signTransaction"
+      "-optl-Wl,--strip-all,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=addSigningKey,--export=signTx,--export=txToCbor"
   other-modules:
-    Bridge
-    ExceptionHandling
-    TxBodyWrapper
-    WasmApi
+    General.ExceptionHandling
+    JavaScript.Bridge
+    WasmApi.Tx
+    WasmApi.WasmApi
 
   build-depends:
     aeson,
@@ -46,10 +49,15 @@ executable cardano-wasm
     base16-bytestring,
     bytestring,
     cardano-api,
+    cardano-ledger-api,
+    cardano-ledger-binary,
     cardano-ledger-conway,
     cardano-ledger-core,
+    cardano-strict-containers,
+    cborg,
     containers,
     extra,
+    microlens,
     ordered-containers,
     text,
 

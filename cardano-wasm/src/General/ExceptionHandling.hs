@@ -1,6 +1,4 @@
-module ExceptionHandling where
-
-import Cardano.Api (liftEither)
+module General.ExceptionHandling where
 
 import GHC.Stack (HasCallStack, withFrozenCallStack)
 
