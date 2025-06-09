@@ -12,12 +12,15 @@ module Cardano.Api.Internal.Experimental.TxBody.Certificate
   )
 where
 
-import Cardano.Api.Experimental
 import Cardano.Api.Internal.Address qualified as Api
 import Cardano.Api.Internal.Certificate qualified as Api
 import Cardano.Api.Internal.Eon.ConwayEraOnwards qualified as Api
 import Cardano.Api.Internal.Eon.ShelleyToBabbageEra qualified as Api
-import Cardano.Api.Internal.Experimental.Eras ()
+import Cardano.Api.Internal.Experimental.Eras
+import Cardano.Api.Internal.Experimental.Plutus.Script
+import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
+import Cardano.Api.Internal.Experimental.Simple.Script
+import Cardano.Api.Internal.Experimental.Witness.AnyWitness
 import Cardano.Api.Internal.Script qualified as Api
 import Cardano.Api.Internal.Tx.Body qualified as Api
 import Cardano.Api.Ledger qualified as L
@@ -35,13 +38,13 @@ import Cardano.Ledger.Plutus.Language qualified as Plutus
 import GHC.IsList
 
 data Certificate era where
-  Certificate :: L.TxCert (LedgerEra era) -> Certificate era
+  Certificate :: L.TxCert era -> Certificate era
 
-convertToOldApiCertificate :: Era era -> Certificate era -> Api.Certificate era
+convertToOldApiCertificate :: Era era -> Certificate (LedgerEra era) -> Api.Certificate era
 convertToOldApiCertificate ConwayEra (Certificate cert) =
   Api.ConwayCertificate Api.ConwayEraOnwardsConway cert
 
-convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate era
+convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (LedgerEra era)
 convertToNewCertificate ConwayEra (Api.ConwayCertificate _ cert) = Certificate cert
 convertToNewCertificate ConwayEra (Api.ShelleyRelatedCertificate sToBab _) =
   case sToBab :: Api.ShelleyToBabbageEra ConwayEra of {}
@@ -49,7 +52,7 @@ convertToNewCertificate ConwayEra (Api.ShelleyRelatedCertificate sToBab _) =
 mkTxCertificates
   :: forall era
    . IsEra era
-  => [(Certificate era, AnyWitness (LedgerEra era))]
+  => [(Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
   -> Api.TxCertificates Api.BuildTx era
 mkTxCertificates [] = TxCertificatesNone
 mkTxCertificates certs =
@@ -57,7 +60,7 @@ mkTxCertificates certs =
  where
   getStakeCred
     :: Era era
-    -> (Certificate era, AnyWitness (LedgerEra era))
+    -> (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
     -> ( Api.Certificate era
        , Api.BuildTxWith
            Api.BuildTx

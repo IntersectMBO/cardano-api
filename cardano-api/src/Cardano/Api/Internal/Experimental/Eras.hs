@@ -36,6 +36,7 @@ import Cardano.Api.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Internal.Eon.Convert
 import Cardano.Api.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
 import Cardano.Api.Internal.Eras.Core (BabbageEra, ConwayEra, Eon (..))
 import Cardano.Api.Internal.ReexposeLedger qualified as L
@@ -212,6 +213,10 @@ instance Convert Era AlonzoEraOnwards where
 instance Convert Era BabbageEraOnwards where
   convert = \case
     ConwayEra -> BabbageEraOnwardsConway
+
+instance Convert Era MaryEraOnwards where
+  convert = \case
+    ConwayEra -> MaryEraOnwardsConway
 
 instance Convert Era ConwayEraOnwards where
   convert = \case
