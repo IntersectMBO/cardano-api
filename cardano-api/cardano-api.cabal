@@ -215,6 +215,7 @@ library
     Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
     Cardano.Api.Internal.Experimental.Simple.Script
     Cardano.Api.Internal.Experimental.Tx
+    Cardano.Api.Internal.Experimental.TxBody.Certificate
     Cardano.Api.Internal.Experimental.Witness.AnyWitness
     Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
     Cardano.Api.Internal.Feature

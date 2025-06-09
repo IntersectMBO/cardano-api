@@ -213,6 +213,10 @@ instance Convert Era BabbageEraOnwards where
   convert = \case
     ConwayEra -> BabbageEraOnwardsConway
 
+instance Convert Era ConwayEraOnwards where
+  convert = \case
+    ConwayEra -> ConwayEraOnwardsConway
+
 instance Convert ConwayEraOnwards Era where
   convert = \case
     ConwayEraOnwardsConway -> ConwayEra
