@@ -6,6 +6,7 @@ module Bridge where
 
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,6 +25,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Wasm.Prim
+import GHC.Stack (HasCallStack)
 
 import ExceptionHandling (rightOrError)
 import qualified WasmApi as WasmApi
@@ -47,7 +49,7 @@ foreign import javascript unsafe "($1).toString()"
 -- * Primitive Haskell JS conversion functions.
 
 -- | Convert a @BigInt@ (@JSVal@) to a Haskell @Integer@ without loss of precision.
-fromJSBigInt :: JSVal -> IO Integer
+fromJSBigInt :: HasCallStack => JSVal -> IO Integer
 fromJSBigInt val = do
   jsString <- js_toString val
   let str = fromJSString jsString
@@ -56,12 +58,12 @@ fromJSBigInt val = do
     _ -> error ("Wrong format for argument when deserialising, expected integer: " ++ show str)
 
 -- | Convert a Haskell value with @ToJSON@ instance to a JavaScript object (@JSVal)
-jsonToJSVal :: Api.ToJSON a => a -> IO JSVal
+jsonToJSVal :: (HasCallStack, Api.ToJSON a) => a -> IO JSVal
 jsonToJSVal a = do
   js_parse (toJSString (toString (Api.serialiseToJSON a)))
 
 -- | Convert a JavaScript object (@JSVal@) to a Haskell value with @FromJSON@ instance.
-jsValToJSON :: Api.FromJSON a => String -> JSVal -> IO a
+jsValToJSON :: (HasCallStack, Api.FromJSON a) => String -> JSVal -> IO a
 jsValToJSON expectedType val = do
   jsString <- js_stringify val
   let jsonString = fromJSString jsString
@@ -80,7 +82,7 @@ jsValToJSON expectedType val = do
   typeProxy = Proxy
 
 -- | Convert a JavaScript object (@JSVal@) to a Haskell type that has a @TextEnvelope@ instance.
-jsValToType :: Api.HasTextEnvelope a => String -> JSVal -> IO a
+jsValToType :: (HasCallStack, Api.HasTextEnvelope a) => String -> JSVal -> IO a
 jsValToType expectedType val = do
   envelope <- jsValToJSON expectedType val
   case Api.deserialiseFromTextEnvelope envelope of
@@ -142,12 +144,14 @@ instance FromJSVal JSTx (Api.Tx Api.ConwayEra) where
 type JSSigningKey = JSString
 
 instance FromJSVal JSSigningKey (Api.SigningKey Api.PaymentKey) where
+  fromJSVal :: HasCallStack => JSSigningKey -> IO (Api.SigningKey Api.PaymentKey)
   fromJSVal jsString = do
     return $ rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
 
 type JSTxId = JSString
 
 instance FromJSVal JSTxId Api.TxId where
+  fromJSVal :: HasCallStack => JSTxId -> IO Api.TxId
   fromJSVal jsString = do
     return $ rightOrError $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
 
@@ -168,7 +172,6 @@ mkTxIn txId txIx =
 -- | Create a transaction body from a transaction input, destination address, amount, and fees.
 foreign export javascript "mkTransaction"
   mkTransaction :: JSTxIn -> JSText -> JSCoin -> JSCoin -> IO JSTxBody
-
 mkTransaction txIn destAddr bigIntAmount bigIntFees =
   toJSVal
     =<< WasmApi.mkTransactionImpl
@@ -180,7 +183,6 @@ mkTransaction txIn destAddr bigIntAmount bigIntFees =
 -- | Sign a transaction body with a private key.
 foreign export javascript "signTransaction"
   signTransaction :: JSTxBody -> JSSigningKey -> IO JSTx
-
 signTransaction txBody privKey =
   toJSVal
     =<< WasmApi.signTransactionImpl
