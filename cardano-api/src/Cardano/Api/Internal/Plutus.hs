@@ -17,7 +17,6 @@ import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyLedgerEra)
 import Cardano.Api.Internal.Pretty (Pretty (pretty), docToText)
 import Cardano.Api.Internal.Query (toLedgerUTxO)
 import Cardano.Api.Internal.ReexposeLedger qualified as L
-import Cardano.Api.Internal.Script (ScriptHash, fromShelleyScriptHash)
 import Cardano.Api.Internal.Script qualified as Api
 import Cardano.Api.Internal.Tx.Body (ScriptWitnessIndex (..), toScriptIndex)
 import Cardano.Api.Internal.Tx.Sign (Tx (..))
@@ -109,7 +108,7 @@ collectPlutusScriptHashes
   :: AlonzoEraOnwards era
   -> Tx era
   -> UTxO era
-  -> Map ScriptWitnessIndex ScriptHash
+  -> Map ScriptWitnessIndex Api.ScriptHash
 collectPlutusScriptHashes aeo tx utxo =
   alonzoEraOnwardsConstraints aeo $
     let ShelleyTx _ ledgerTx' = tx
@@ -124,7 +123,7 @@ collectPlutusScriptHashes aeo tx utxo =
     alonzoEraOnwardsConstraints aeo $
       Map.fromList $
         Prelude.map
-          (bimap (toScriptIndex aeo' . purposeAsIxItemToAsIx aeo') fromShelleyScriptHash)
+          (bimap (toScriptIndex aeo' . purposeAsIxItemToAsIx aeo') Api.fromShelleyScriptHash)
           purposes
 
   purposeAsIxItemToAsIx

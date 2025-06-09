@@ -11,7 +11,7 @@ module Cardano.Api.Parser.Text
   )
 where
 
-import Cardano.Api.Internal.Utils
+import Cardano.Api.Internal.Monad.Error
 
 import Control.Applicative
 import Data.Bifunctor (first)

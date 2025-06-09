@@ -1,5 +1,4 @@
--- |
--- This module provides an experimental library interface intended to replace the existing API.
+-- | This module provides an experimental library interface intended to replace the existing API.
 -- It is subject to significant changes. Please, use it with caution.
 module Cardano.Api.Experimental
   ( -- * Creating transactions
@@ -70,6 +69,4 @@ import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
 import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
 import Cardano.Api.Internal.Experimental.Simple.Script
 import Cardano.Api.Internal.Experimental.Tx
-import Cardano.Api.Internal.Experimental.Witness.AnyWitness
-import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
 import Cardano.Api.Internal.Fees (evaluateTransactionExecutionUnitsShelley)

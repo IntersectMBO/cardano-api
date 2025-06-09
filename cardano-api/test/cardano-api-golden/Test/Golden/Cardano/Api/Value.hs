@@ -1,9 +1,7 @@
 module Test.Golden.Cardano.Api.Value where
 
 import Cardano.Api
-  ( MaryEraOnwards (..)
-  , ShelleyBasedEra (..)
-  , ValueNestedBundle (..)
+  ( ValueNestedBundle (..)
   , ValueNestedRep (..)
   , fromLedgerValue
   , parseMintingMultiAssetValue

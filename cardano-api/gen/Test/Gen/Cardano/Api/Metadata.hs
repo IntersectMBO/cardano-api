@@ -9,7 +9,6 @@ where
 
 import Cardano.Api
 
-import Data.Aeson (ToJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Aeson
 import Data.ByteString (ByteString)

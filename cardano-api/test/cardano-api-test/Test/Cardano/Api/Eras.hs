@@ -8,7 +8,7 @@ where
 import Cardano.Api
 import Cardano.Api.Internal.Orphans ()
 
-import Data.Aeson (ToJSON (..), decode, encode)
+import Data.Aeson (decode, encode)
 
 import Hedgehog (Property, forAll, property, (===))
 import Hedgehog qualified as H

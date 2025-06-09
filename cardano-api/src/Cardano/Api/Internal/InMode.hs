@@ -31,9 +31,9 @@ import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Eras
 import Cardano.Api.Internal.Modes
 import Cardano.Api.Internal.Orphans ()
+import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
-import Cardano.Api.Internal.Utils (textShow)
 
 import Cardano.Protocol.Crypto (StandardCrypto)
 import Ouroboros.Consensus.Byron.Ledger qualified as Consensus

@@ -8,6 +8,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Ledger CDDL Serialisation
+--
+-- TODO: remove references to CDDL as it's meaningless now - everything is aligning with CDDL currently
 module Cardano.Api.Internal.SerialiseLedgerCddl
   ( TextEnvelopeCddlError (..)
   , FromSomeTypeCDDL (..)
@@ -48,7 +50,6 @@ import Cardano.Api.Internal.SerialiseTextEnvelope
   , serialiseToTextEnvelope
   )
 import Cardano.Api.Internal.Tx.Sign
-import Cardano.Api.Internal.Utils
 
 import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Ledger.Binary (DecoderError)

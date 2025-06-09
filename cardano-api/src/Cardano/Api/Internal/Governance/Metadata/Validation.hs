@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE NoFieldSelectors #-}
 
 module Cardano.Api.Internal.Governance.Metadata.Validation (GovActionMetadata (..), Authors, Body, HashAlgorithm, validateGovActionAnchorData) where
 

@@ -18,12 +18,12 @@ import Cardano.Api.Internal.Address
 import Cardano.Api.Internal.Certificate
 import Cardano.Api.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Internal.Fees
+import Cardano.Api.Internal.Pretty
 import Cardano.Api.Internal.ProtocolParameters
 import Cardano.Api.Internal.Query
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.Tx.UTxO (UTxO (..))
-import Cardano.Api.Internal.Utils
 
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as L

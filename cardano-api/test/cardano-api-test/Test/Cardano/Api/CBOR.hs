@@ -11,11 +11,6 @@ module Test.Cardano.Api.CBOR
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.Script
-import Cardano.Api.Internal.Serialise.Cbor.Canonical (canonicaliseCborBs)
-import Cardano.Api.Internal.SerialiseLedgerCddl (cddlTypeToEra)
-import Cardano.Api.Internal.SerialiseTextEnvelope (TextEnvelopeDescr (TextEnvelopeDescr))
-import Cardano.Api.Shelley (AsType (..))
 
 import Cardano.Binary qualified as CBOR
 
@@ -27,7 +22,6 @@ import Data.ByteString.Builder qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as SBS
 import Data.List (sortOn)
-import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 

@@ -1,5 +1,6 @@
 module Cardano.Api.Internal.IPC.Version
   ( isQuerySupportedInNtcVersion
+  , NodeToClientVersion (..)
 
     -- *** Error types
   , UnsupportedNtcVersionError (..)

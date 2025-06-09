@@ -17,182 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Api.Internal.Tx.Body
-  ( -- * Creating transactions using the old API
-
-    -- |
-    -- Both the old and new APIs support transaction creation. Transactions can be
-    -- converted between formats, as they share the same underlying representation.
-    -- @cardano-api@ will be moving towards using the new API and deprecating
-    -- the old way to ensure simplicity, closer alignment with the ledger, and
-    -- easier maintenance.
-    --
-    -- In both the new and old APIs, to construct a transaction, you need
-    -- to construct a 'TxBodyContent', and you will need at least a
-    -- witness (for example, a 'ShelleyWitnessSigningKey'), to sign the transaction.
-    -- This process remains unchanged.
-    --
-    -- To learn how to create a transaction using the new API, refer to
-    -- "Cardano.Api.Internal.Experimental.Tx" documentation.
-    --
-    -- The next examples use the following qualified modules:
-    --
-    -- @
-    -- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)
-    -- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)
-    -- import qualified Cardano.Api.Ledger as Ledger      -- cardano-ledger re-exports
-    -- @
-
-    -- ** Creating a 'TxBodyContent'
-
-    -- |
-    --
-    -- To create a transaction, you first need to define the contents of its body. This section
-    -- will show how to use the API to create a 'TxBodyContent' for a simple transaction.
-    --
-    -- 'TxBodyContent' datatype provides several fields because transactions can serve multiple
-    -- purposes, but the function 'defaultTxBodyContent' (exported from "Cardano.Api") already provides
-    -- a base 'TxBodyContent' with all fields set to their default values that you can use as a starting point
-    -- so as not to have to set all fields manually.
-    --
-    -- The 'defaultTxBodyContent' takes, as the only parameter, the 'ShelleyBasedEra' witness for the era
-    -- you are working with. For example, if you are working with the 'ConwayEra', use 'shelleyBasedEra'
-    -- available in "Cardano.Api", as follows:
-    --
-    -- @
-    -- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra
-    -- @
-    --
-    -- This is what creating a simple 'TxBodyContent' would look like.
-    --
-    -- First, choose a transaction output to spend (a UTXO). Specify which UTXO to spend by
-    -- providing the transaction ID and the index of the output in that transaction that you want
-    -- to spend.
-    --
-    -- To specify the transaction ID, you can use the 'deserialiseFromRawBytesHex' function on the
-    -- hexadecimal representation of the transaction hash. For example:
-    --
-    -- @
-    -- let (Right srcTxId) = Api.deserialiseFromRawBytesHex Api.AsTxId "be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978"
-    -- @
-    --
-    -- In real implementations, failure cases should be handled appropriately.
-    --
-    -- To specify the transaction index, use the 'TxIx' constructor. For example:
-    --
-    -- @
-    -- let srcTxIx = Api.TxIx 0
-    -- @
-    --
-    -- Now, combine both to create a 'TxIn' value and pair it with a witness requirement using 'BuildTxWith' :
-    --
-    -- @
-    -- let txIn = ( Api.TxIn srcTxId srcTxIx
-    --            , Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending)
-    --            )
-    -- @
-    --
-    -- Next, specify the address of the recipient of the transaction. If you have the bech32 representation,
-    -- you can use the 'deserialiseAddress' function to get the 'AddressInEra' type. For example:
-    --
-    -- @
-    -- let (Just destAddress) = Api.deserialiseAddress (Api.AsAddressInEra eraAsType) "addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v"
-    -- @
-    --
-    -- Now, you can create a 'TxOut' value. For simplicity, assume the output is a simple payment output
-    -- of 10 ada, with no datum or reference script attached to it:
-    --
-    -- @
-    -- let txOut = Api.TxOut
-    --               destAddress
-    --               (Api.lovelaceToTxOutValue sbe 10_000_000)
-    --               Api.TxOutDatumNone
-    --               Script.ReferenceScriptNone
-    -- @
-    --
-    -- Note to set the transaction fee. For example, set it to 2 ada:
-    --
-    -- @
-    -- let txFee = Api.TxFeeExplicit sbe 2_000_000
-    -- @
-    --
-    -- Finally, you can create the 'TxBodyContent' by using the 'defaultTxBodyContent' function and
-    -- putting everything together:
-    --
-    -- @
-    -- let txBodyContent = Api.defaultTxBodyContent sbe
-    --                      & Api.setTxIns [txIn]
-    --                      & Api.setTxOuts [txOut]
-    --                      & Api.setTxFee txFee
-    -- @
-    --
-    -- The 'txBodyContent' can now be used to create a transaction using the old or the new API.
-
-    -- ** Balancing a transaction
-
-    -- |
-    -- If you have a UTXO with exactly 12 ada, you could just construct the transaction as in the
-    -- previous section directly, and it would be a valid transaction, but:
-    --
-    --   * It is probably wasting ADA
-    --   * There may not be exactly one UTXO of 12 ada
-    --   * The transaciton may not be this simple.
-    --
-    -- For these reasons, it is recommended that you balance the transaction before proceeding with
-    -- signing and submitting.
-    --
-    -- See how to balance a transaction in the "Cardano.Api.Internal.Fees" documentation.
-
-    -- ** Creating a 'ShelleyWitnessSigningKey'
-
-    -- |
-    -- Signing a transaction requires a witness, for example, a 'ShelleyWitnessSigningKey'.
-    --
-    -- Learn how to create a 'ShelleyWitnessSigningKey' in the "Cardano.Api.Internal.Tx.Sign" documentation.
-
-    -- ** Creating a transaction using the old API
-
-    -- |
-    -- Now that you have a 'TxBodyContent' and a 'ShelleyWitnessSigningKey', you can easily create a transaction using the old API.
-    -- First, create a transaction body using the 'createTransactionBody' function and the 'ShelleyBasedEra' witness
-    -- defined earlier.
-    --
-    -- Create the transaction body using the 'TransactionBodyContent' created earlier:
-    --
-    -- @
-    -- let (Right txBody) = Api.createTransactionBody sbe txBodyContent
-    -- @
-    --
-    -- Then, sign the transaction using the 'signShelleyTransaction' function and the witness:
-    --
-    -- @
-    -- let oldApiSignedTx :: Api.Tx Api.ConwayEra = Api.signShelleyTransaction sbe txBody [witness]
-    -- @
-    --
-    -- We now have a signed transaction. Learn how to submit it to the node by using the IPC protocol in
-    -- the "Cardano.Api.Internal.IPC".
-
-    -- ** Inspecting transactions
-
-    -- |
-    -- To deconstruct an old-style 'TxBody' into a 'TxBodyContent', you can also use the
-    -- 'TxBody' pattern. Note that this cannot be used for constructing. For that, use 'ShelleyTxBody'
-    -- or 'createTransactionBody', as in the example.
-    --
-    -- To extract the 'TxBody' and the 'KeyWitness'es from an old-style 'Tx', use
-    -- the functions 'getTxBody' and 'getTxWitnesses' respectively, from "Cardano.Api".
-
-    -- ** Appendix: Getting Shelley-based era witness from the new API
-
-    -- |
-    -- If you are using the new API, you can also derive the 'ShelleyBasedEra' of it from 'ConwayEra'
-    -- from "Cardano.Api.Internal.Experimental" using the 'convert' function:
-    --
-    -- @
-    -- let era = Exp.ConwayEra
-    -- let sbe = Api.convert era
-    -- @
-
-    -- * Contents
+  ( -- * Contents
 
     -- ** Transaction bodies
     TxBody (.., TxBody)
@@ -1675,8 +1500,8 @@ fromLedgerTxBody sbe scriptValidity body scriptdata mAux =
     , txTotalCollateral = fromLedgerTxTotalCollateral sbe body
     , txReturnCollateral = fromLedgerTxReturnCollateral sbe body
     , txFee = fromLedgerTxFee sbe body
-    , txValidityLowerBound = fromLedgerTxValidityLowerBound sbe (A.TxBody body)
-    , txValidityUpperBound = fromLedgerTxValidityUpperBound sbe (A.TxBody body)
+    , txValidityLowerBound = fromLedgerTxValidityLowerBound sbe (A.LedgerTxBody body)
+    , txValidityUpperBound = fromLedgerTxValidityUpperBound sbe (A.LedgerTxBody body)
     , txWithdrawals = fromLedgerTxWithdrawals sbe body
     , txCertificates = fromLedgerTxCertificates sbe body
     , txUpdateProposal = maybeFromLedgerTxUpdateProposal sbe body
@@ -1815,7 +1640,7 @@ fromLedgerTxFee sbe body =
 
 fromLedgerTxValidityLowerBound
   :: ShelleyBasedEra era
-  -> A.TxBody era
+  -> A.LedgerTxBody era
   -> TxValidityLowerBound era
 fromLedgerTxValidityLowerBound sbe body =
   caseShelleyEraOnlyOrAllegraEraOnwards
@@ -1830,7 +1655,7 @@ fromLedgerTxValidityLowerBound sbe body =
 
 fromLedgerTxValidityUpperBound
   :: ShelleyBasedEra era
-  -> A.TxBody era
+  -> A.LedgerTxBody era
   -> TxValidityUpperBound era
 fromLedgerTxValidityUpperBound sbe body =
   TxValidityUpperBound sbe $ body ^. A.invalidHereAfterTxBodyL sbe
@@ -2185,10 +2010,10 @@ mkCommonTxBody
   -> TxFee era
   -> TxWithdrawals build era
   -> Maybe (L.TxAuxData (ShelleyLedgerEra era))
-  -> A.TxBody era
+  -> A.LedgerTxBody era
 mkCommonTxBody sbe txIns txOuts txFee txWithdrawals txAuxData =
   shelleyBasedEraConstraints sbe $
-    A.TxBody $
+    A.LedgerTxBody $
       L.mkBasicTxBody
         & L.inputsTxBodyL
           .~ convTxIns txIns

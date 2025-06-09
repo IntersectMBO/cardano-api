@@ -57,31 +57,31 @@ library
     src
 
   -- Do not expose any additional modules. The correct way
-  -- to expose new functionality is via Cardano.Api or
-  -- Cardano.Api.Shelley
+  -- to expose new functionality is via Cardano.Api
   exposed-modules:
     Cardano.Api
     Cardano.Api.Byron
-    Cardano.Api.ChainSync.Client
-    Cardano.Api.ChainSync.ClientPipelined
+    Cardano.Api.Certificate
     Cardano.Api.Compatible
     Cardano.Api.Consensus
     Cardano.Api.Crypto.Ed25519Bip32
     Cardano.Api.Experimental
+    Cardano.Api.Experimental.Plutus
+    Cardano.Api.Genesis
+    Cardano.Api.Governance
     Cardano.Api.Internal.Address
     Cardano.Api.Internal.Block
     Cardano.Api.Internal.Convenience.Query
     Cardano.Api.Internal.DRepMetadata
-    Cardano.Api.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Internal.Eras
     Cardano.Api.Internal.Error
+    Cardano.Api.Internal.Experimental.Tx
     Cardano.Api.Internal.Fees
     Cardano.Api.Internal.Genesis
     Cardano.Api.Internal.GenesisParameters
     Cardano.Api.Internal.Governance.Metadata.Validation
     Cardano.Api.Internal.IO
     Cardano.Api.Internal.IPC
-    Cardano.Api.Internal.IPC.Monad
     Cardano.Api.Internal.LedgerState
     Cardano.Api.Internal.Modes
     Cardano.Api.Internal.Orphans
@@ -97,12 +97,19 @@ library
     Cardano.Api.Internal.SerialiseTextEnvelope
     Cardano.Api.Internal.Tx.Body
     Cardano.Api.Internal.Tx.Sign
+    Cardano.Api.Internal.Tx.UTxO
+    Cardano.Api.Internal.TxMetadata
+    Cardano.Api.Key
     Cardano.Api.Ledger
     Cardano.Api.Ledger.Lens
     Cardano.Api.Network
+    Cardano.Api.Network.IPC
     Cardano.Api.Parser.Text
-    Cardano.Api.Shelley
-    Cardano.Api.Tx.UTxO
+    Cardano.Api.Plutus
+    Cardano.Api.Query
+    Cardano.Api.Serialise.TextEnvelope
+    Cardano.Api.Tx
+    Cardano.Api.Type.Value
 
   build-depends:
     FailT,
@@ -189,6 +196,8 @@ library
     yaml,
 
   other-modules:
+    Cardano.Api.ChainSync.Client
+    Cardano.Api.ChainSync.ClientPipelined
     Cardano.Api.Internal.Anchor
     Cardano.Api.Internal.CIP.Cip129
     Cardano.Api.Internal.Certificate
@@ -202,6 +211,7 @@ library
     Cardano.Api.Internal.Eon.Convert
     Cardano.Api.Internal.Eon.ConwayEraOnwards
     Cardano.Api.Internal.Eon.MaryEraOnwards
+    Cardano.Api.Internal.Eon.ShelleyBasedEra
     Cardano.Api.Internal.Eon.ShelleyEraOnly
     Cardano.Api.Internal.Eon.ShelleyToAllegraEra
     Cardano.Api.Internal.Eon.ShelleyToAlonzoEra
@@ -215,7 +225,6 @@ library
     Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
     Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
     Cardano.Api.Internal.Experimental.Simple.Script
-    Cardano.Api.Internal.Experimental.Tx
     Cardano.Api.Internal.Experimental.Witness.AnyWitness
     Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
     Cardano.Api.Internal.Feature
@@ -223,7 +232,6 @@ library
     Cardano.Api.Internal.Governance.Actions.VotingProcedure
     Cardano.Api.Internal.Governance.Metadata.DrepRegistration
     Cardano.Api.Internal.Governance.Metadata.GovAction
-    Cardano.Api.Internal.Governance.Metadata.Parsers
     Cardano.Api.Internal.Governance.Poll
     Cardano.Api.Internal.HasTypeProxy
     Cardano.Api.Internal.Hash
@@ -231,15 +239,15 @@ library
     Cardano.Api.Internal.IO.Compat
     Cardano.Api.Internal.IO.Compat.Posix
     Cardano.Api.Internal.IO.Compat.Win32
+    Cardano.Api.Internal.IPC.Monad
     Cardano.Api.Internal.IPC.Version
     Cardano.Api.Internal.InMode
-    Cardano.Api.Internal.Json
     Cardano.Api.Internal.Keys.Byron
     Cardano.Api.Internal.Keys.Class
     Cardano.Api.Internal.Keys.Mnemonics
     Cardano.Api.Internal.Keys.Praos
-    Cardano.Api.Internal.Keys.Read
     Cardano.Api.Internal.Keys.Shelley
+    Cardano.Api.Internal.Keys.SomeAddressVerificationKey
     Cardano.Api.Internal.LedgerEvents.ConvertLedgerEvent
     Cardano.Api.Internal.LedgerEvents.LedgerEvent
     Cardano.Api.Internal.LedgerEvents.Rule.BBODY.DELEGS
@@ -267,9 +275,7 @@ library
     Cardano.Api.Internal.StakePoolMetadata
     Cardano.Api.Internal.Tx.BuildTxWith
     Cardano.Api.Internal.Tx.Output
-    Cardano.Api.Internal.Tx.UTxO
     Cardano.Api.Internal.TxIn
-    Cardano.Api.Internal.TxMetadata
     Cardano.Api.Internal.Utils
     Cardano.Api.Internal.Value
     Cardano.Api.Internal.ValueParser
@@ -356,7 +362,6 @@ test-suite cardano-api-test
     ouroboros-consensus,
     ouroboros-consensus-cardano,
     ouroboros-consensus-protocol,
-    ouroboros-network-api,
     plutus-ledger-api,
     tasty,
     tasty-hedgehog,
@@ -415,7 +420,6 @@ test-suite cardano-api-golden
     cardano-ledger-shelley,
     cardano-ledger-shelley-test >=1.2.0.1,
     cardano-protocol-tpraos,
-    cardano-slotting ^>=0.2.0.0,
     containers,
     errors,
     filepath,

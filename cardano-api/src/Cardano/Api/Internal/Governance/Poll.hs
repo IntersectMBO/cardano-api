@@ -49,7 +49,6 @@ import Cardano.Api.Internal.SerialiseUsing
 import Cardano.Api.Internal.Tx.Body
 import Cardano.Api.Internal.Tx.Sign
 import Cardano.Api.Internal.TxMetadata
-import Cardano.Api.Internal.Utils
 
 import Cardano.Binary (DecoderError (..))
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes, hashWith)
