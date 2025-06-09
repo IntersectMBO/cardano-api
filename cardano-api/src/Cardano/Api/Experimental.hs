@@ -20,6 +20,10 @@ module Cardano.Api.Experimental
   , obtainCommonConstraints
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley
+  , Certificate (..)
+  , convertToNewCertificate
+  , convertToOldApiCertificate
+  , mkTxCertificates
 
     -- ** Era-related
   , BabbageEra
