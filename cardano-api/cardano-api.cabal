@@ -234,6 +234,7 @@ library
     Cardano.Api.IO.Internal.Compat
     Cardano.Api.IO.Internal.Compat.Posix
     Cardano.Api.IO.Internal.Compat.Win32
+    Cardano.Api.Internal.Experimental.TxBody.Certificate
     Cardano.Api.Internal.Orphans
     Cardano.Api.Internal.Orphans.Misc
     Cardano.Api.Internal.Orphans.Serialisation

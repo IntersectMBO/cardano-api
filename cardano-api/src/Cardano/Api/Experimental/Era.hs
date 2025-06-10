@@ -37,6 +37,7 @@ import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
 import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty.Internal.ShowOf

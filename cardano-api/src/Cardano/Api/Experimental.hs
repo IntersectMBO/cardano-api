@@ -73,4 +73,5 @@ import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx
+import Cardano.Api.Internal.Experimental.TxBody.Certificate
 import Cardano.Api.Tx.Internal.Fee (evaluateTransactionExecutionUnitsShelley)

@@ -12,24 +12,21 @@ module Cardano.Api.Internal.Experimental.TxBody.Certificate
   )
 where
 
-import Cardano.Api.Internal.Address qualified as Api
-import Cardano.Api.Internal.Certificate qualified as Api
-import Cardano.Api.Internal.Eon.ConwayEraOnwards qualified as Api
-import Cardano.Api.Internal.Eon.ShelleyToBabbageEra qualified as Api
-import Cardano.Api.Internal.Experimental.Eras
-import Cardano.Api.Internal.Experimental.Plutus.Script
-import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
-import Cardano.Api.Internal.Experimental.Simple.Script
-import Cardano.Api.Internal.Experimental.Witness.AnyWitness
-import Cardano.Api.Internal.Script qualified as Api
-import Cardano.Api.Internal.Tx.Body qualified as Api
+import Cardano.Api.Address qualified as Api
+import Cardano.Api.Certificate.Internal qualified as Api
+import Cardano.Api.Era.Internal.Eon.Convert
+import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
+import Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra qualified as Api
+import Cardano.Api.Experimental.Era
+import Cardano.Api.Experimental.Plutus.Internal.Script qualified as Exp
+import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness qualified as Exp
+import Cardano.Api.Experimental.Simple.Script qualified as Exp
+import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Shelley
-  ( Convert (..)
-  , TxCertificates (..)
-  , fromAllegraTimelock
-  , sbeToSimpleScriptLanguageInEra
-  )
+import Cardano.Api.Plutus.Internal.Script
+import Cardano.Api.Plutus.Internal.Script qualified as Api
+import Cardano.Api.Tx.Internal.Body (TxCertificates (..))
+import Cardano.Api.Tx.Internal.Body qualified as Api
 
 import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
@@ -42,7 +39,7 @@ data Certificate era where
 
 convertToOldApiCertificate :: Era era -> Certificate (LedgerEra era) -> Api.Certificate era
 convertToOldApiCertificate ConwayEra (Certificate cert) =
-  Api.ConwayCertificate Api.ConwayEraOnwardsConway cert
+  Api.ConwayCertificate ConwayEraOnwardsConway cert
 
 convertToNewCertificate :: Era era -> Api.Certificate era -> Certificate (LedgerEra era)
 convertToNewCertificate ConwayEra (Api.ConwayCertificate _ cert) = Certificate cert
@@ -87,21 +84,23 @@ mkTxCertificates certs =
 
 newToOldSimpleScriptWitness
   :: L.AllegraEraScript (LedgerEra era)
-  => Era era -> SimpleScriptOrReferenceInput (LedgerEra era) -> Api.ScriptWitness Api.WitCtxStake era
+  => Era era -> Exp.SimpleScriptOrReferenceInput (LedgerEra era) -> Api.ScriptWitness Api.WitCtxStake era
 newToOldSimpleScriptWitness era simple =
   case simple of
-    SScript (SimpleScript script) ->
+    Exp.SScript (Exp.SimpleScript script) ->
       Api.SimpleScriptWitness
         (sbeToSimpleScriptLanguageInEra $ convert era)
         (Api.SScript $ fromAllegraTimelock script)
-    SReferenceScript inp ->
+    Exp.SReferenceScript inp ->
       Api.SimpleScriptWitness
         (sbeToSimpleScriptLanguageInEra $ convert era)
         (Api.SReferenceScript inp)
 
 newToOldPlutusCertificateScriptWitness
-  :: Era era -> PlutusScriptWitness lang purpose (LedgerEra era) -> Api.ScriptWitness Api.WitCtxStake era
-newToOldPlutusCertificateScriptWitness ConwayEra (PlutusScriptWitness Plutus.SPlutusV1 scriptOrRef _ redeemer execUnits) =
+  :: Era era
+  -> Exp.PlutusScriptWitness lang purpose (LedgerEra era)
+  -> Api.ScriptWitness Api.WitCtxStake era
+newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV1 scriptOrRef _ redeemer execUnits) =
   Api.PlutusScriptWitness
     Api.PlutusScriptV1InConway
     Api.PlutusScriptV1
@@ -109,7 +108,7 @@ newToOldPlutusCertificateScriptWitness ConwayEra (PlutusScriptWitness Plutus.SPl
     Api.NoScriptDatumForStake
     redeemer
     execUnits
-newToOldPlutusCertificateScriptWitness ConwayEra (PlutusScriptWitness Plutus.SPlutusV2 scriptOrRef _ redeemer execUnits) =
+newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV2 scriptOrRef _ redeemer execUnits) =
   Api.PlutusScriptWitness
     Api.PlutusScriptV2InConway
     Api.PlutusScriptV2
@@ -117,7 +116,7 @@ newToOldPlutusCertificateScriptWitness ConwayEra (PlutusScriptWitness Plutus.SPl
     Api.NoScriptDatumForStake
     redeemer
     execUnits
-newToOldPlutusCertificateScriptWitness ConwayEra (PlutusScriptWitness Plutus.SPlutusV3 scriptOrRef _ redeemer execUnits) =
+newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus.SPlutusV3 scriptOrRef _ redeemer execUnits) =
   Api.PlutusScriptWitness
     Api.PlutusScriptV3InConway
     Api.PlutusScriptV3
@@ -128,9 +127,9 @@ newToOldPlutusCertificateScriptWitness ConwayEra (PlutusScriptWitness Plutus.SPl
 
 newToOldPlutusScriptOrReferenceInput
   :: Era era
-  -> PlutusScriptOrReferenceInput lang (LedgerEra era)
+  -> Exp.PlutusScriptOrReferenceInput lang (LedgerEra era)
   -> Api.PlutusScriptOrReferenceInput oldlang
-newToOldPlutusScriptOrReferenceInput ConwayEra (PReferenceScript txin) = Api.PReferenceScript txin
-newToOldPlutusScriptOrReferenceInput ConwayEra (PScript (PlutusScriptInEra plutusRunnable)) =
+newToOldPlutusScriptOrReferenceInput ConwayEra (Exp.PReferenceScript txin) = Api.PReferenceScript txin
+newToOldPlutusScriptOrReferenceInput ConwayEra (Exp.PScript (Exp.PlutusScriptInEra plutusRunnable)) =
   let oldScript = L.unPlutusBinary . L.plutusBinary $ L.plutusFromRunnable plutusRunnable
    in Api.PScript $ Api.PlutusScriptSerialised oldScript
