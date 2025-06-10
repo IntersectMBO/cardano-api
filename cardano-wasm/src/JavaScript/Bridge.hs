@@ -14,14 +14,10 @@ module JavaScript.Bridge where
 module JavaScript.Bridge where
 
 import qualified Cardano.Api as Api
-import qualified Cardano.Api.Experimental as Exp
-import qualified Cardano.Api.Internal.Script as Script
 import qualified Cardano.Api.Ledger as Ledger
 
 import qualified Data.Aeson as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
-import Data.Function ((&))
-import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Wasm.Prim
@@ -67,7 +63,6 @@ jsValToJSON :: (HasCallStack, Api.FromJSON a) => String -> JSVal -> IO a
 jsValToJSON expectedType val = do
   jsString <- js_stringify val
   let jsonString = fromJSString jsString
-  let asType = typeProxy
   case either (Left . Api.JsonDecodeError) Right $ Aeson.eitherDecodeStrict' (fromString jsonString) of
     Left err ->
       error
@@ -77,9 +72,6 @@ jsValToJSON expectedType val = do
             ++ show err
         )
     Right a -> return a
- where
-  typeProxy :: Proxy a
-  typeProxy = Proxy
 
 -- | Convert a JavaScript object (@JSVal@) to a Haskell type that has a @TextEnvelope@ instance.
 jsValToType :: (HasCallStack, Api.HasTextEnvelope a) => String -> JSVal -> IO a
@@ -165,7 +157,6 @@ instance FromJSVal JSTxIx Api.TxIx where
 -- | Combine a transaction ID and index into a transaction input.
 foreign export javascript "mkTxIn"
   mkTxIn :: JSTxId -> JSTxIx -> IO JSTxIn
-
 mkTxIn txId txIx =
   jsonToJSVal =<< Api.TxIn <$> fromJSVal txId <*> fromJSVal txIx
 
