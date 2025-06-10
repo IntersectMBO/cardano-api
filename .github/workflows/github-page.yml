@@ -1,5 +1,5 @@
 name: "Haddock documentation"
-Romeo Rosete
+
 on:
   push:
     branches:
