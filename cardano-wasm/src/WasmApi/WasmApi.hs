@@ -1,7 +1,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module WasmApi where
+module WasmApi.WasmApi where
 
 import Cardano.Api (ConwayEraOnwards (ConwayEraOnwardsConway))
 import qualified Cardano.Api as Api
@@ -22,7 +22,7 @@ import qualified Data.Text.Encoding as Text
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((%~), (.~))
 
-import ExceptionHandling (justOrError, rightOrError)
+import General.ExceptionHandling (justOrError, rightOrError)
 
 -- | Create a transaction body from a transaction input, destination address, amount, and fees.
 mkTransactionImpl
