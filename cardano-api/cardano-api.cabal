@@ -220,6 +220,7 @@ library
     Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
     Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
     Cardano.Api.Experimental.Tx.Internal.AnyWitness
+    Cardano.Api.Experimental.Tx.Internal.Certificate
     Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
     Cardano.Api.Genesis.Internal
     Cardano.Api.Genesis.Internal.Parameters
@@ -234,7 +235,6 @@ library
     Cardano.Api.IO.Internal.Compat
     Cardano.Api.IO.Internal.Compat.Posix
     Cardano.Api.IO.Internal.Compat.Win32
-    Cardano.Api.Internal.Experimental.TxBody.Certificate
     Cardano.Api.Internal.Orphans
     Cardano.Api.Internal.Orphans.Misc
     Cardano.Api.Internal.Orphans.Serialisation

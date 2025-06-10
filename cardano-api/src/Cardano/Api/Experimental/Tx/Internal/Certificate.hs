@@ -4,7 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 
-module Cardano.Api.Internal.Experimental.TxBody.Certificate
+module Cardano.Api.Experimental.Tx.Internal.Certificate
   ( Certificate (..)
   , mkTxCertificates
   , convertToOldApiCertificate
