@@ -15,20 +15,22 @@ module Cardano.Api.Internal.Orphans.Misc
   )
 where
 
-import Cardano.Api.Internal.Pretty (Pretty (..), prettyException, (<+>))
+import Cardano.Api.Error
+import Cardano.Api.Pretty
 
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
+import PlutusLedgerApi.Common qualified as P
 
 import Codec.Binary.Bech32 qualified as Bech32
-import Codec.CBOR.Read qualified as CBOR
 import Data.Data (Data)
 import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
@@ -262,3 +264,9 @@ instance IsList (ListMap k a) where
   type Item (ListMap k a) = (k, a)
   fromList = ListMap.fromList
   toList = ListMap.toList
+
+instance Error CBOR.DecoderError where
+  prettyError = pshow
+
+instance Error P.ScriptDecodeError where
+  prettyError = pshow

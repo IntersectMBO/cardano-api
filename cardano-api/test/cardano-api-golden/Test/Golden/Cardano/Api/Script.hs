@@ -16,7 +16,6 @@ where
 
 import Cardano.Api
 import Cardano.Api.Parser.Text qualified as P
-import Cardano.Api.Shelley
 
 import Cardano.Ledger.Api.Era qualified as L
 

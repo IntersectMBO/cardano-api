@@ -2,7 +2,7 @@
 -- the complete API for Byron covering everything, including exposing
 -- constructors for the lower level types.
 module Cardano.Api.Byron
-  ( module Cardano.Api
+  ( module Api
   , AsType (..)
 
     -- * Cryptographic key interface
@@ -10,6 +10,8 @@ module Cardano.Api.Byron
   , VerificationKey (..)
   , SigningKey (..)
   , SomeByronSigningKey (..)
+  , ByronKey
+  , ByronKeyLegacy
 
     -- * Hashes
   , Hash (..)
@@ -27,21 +29,21 @@ module Cardano.Api.Byron
     )
 
     -- * Errors
-  , Error (..)
-  , FileError (..)
+  , Api.Error (..)
+  , Api.FileError (..)
 
     -- ** Low level protocol interaction with a Cardano node
-  , LocalNodeConnectInfo (LocalNodeConnectInfo)
-  , LocalNodeClientProtocols (LocalNodeClientProtocols)
+  , Api.LocalNodeConnectInfo (Api.LocalNodeConnectInfo)
+  , Api.LocalNodeClientProtocols (Api.LocalNodeClientProtocols)
 
     -- *** Chain sync protocol
-  , ChainSyncClient (..)
+  , Api.ChainSyncClient (..)
 
     -- *** Local tx submission
-  , LocalTxSubmissionClient (LocalTxSubmissionClient)
+  , Api.LocalTxSubmissionClient (Api.LocalTxSubmissionClient)
 
     -- *** Local state query
-  , LocalStateQueryClient (..)
+  , Api.LocalStateQueryClient (..)
 
     -- * Update Proposal
   , ByronUpdateProposal (..)
@@ -55,21 +57,10 @@ module Cardano.Api.Byron
   , makeByronVote
   , toByronLedgertoByronVote
 
-    -- ** Conversions
-  , fromByronTxIn
-  , toByronLovelace
-  , toByronNetworkMagic
-  , toByronProtocolMagicId
-  , toByronRequiresNetworkMagic
-
     -- * Hardcoded configuration parameters
   , applicationName
   , applicationVersion
   , softwareVersion
-
-    -- * Serialization
-  , serializeByronTx
-  , writeByronTxFileTextEnvelopeCddl
 
     -- * Byron ledger re-exports
 
@@ -155,23 +146,14 @@ module Cardano.Api.Byron
   )
 where
 
-import Cardano.Api hiding
-  ( Address
-  , Certificate
-  , Lovelace
-  , NetworkMagic
-  , Tx (..)
-  , TxIn
-  , TxOut
-  , UTxO (..)
-  )
-import Cardano.Api.Internal.Keys.Byron
-import Cardano.Api.Internal.NetworkId hiding (NetworkMagic)
-import Cardano.Api.Internal.SerialiseLedgerCddl
-import Cardano.Api.Internal.SpecialByron
-import Cardano.Api.Internal.Tx.Body hiding (TxIn, TxOut)
-import Cardano.Api.Internal.Tx.Sign hiding (ATxAux (..), Tx (..))
-import Cardano.Api.Internal.Value hiding (Lovelace)
+import Cardano.Api qualified as Api
+import Cardano.Api.Byron.Internal.Key
+import Cardano.Api.Byron.Internal.Proposal
+import Cardano.Api.Network.Internal.NetworkId hiding (NetworkMagic)
+import Cardano.Api.Serialise.TextEnvelope.Internal.Cddl
+import Cardano.Api.Tx.Internal.Body hiding (TxIn, TxOut)
+import Cardano.Api.Tx.Internal.Sign hiding (ATxAux (..), Tx (..))
+import Cardano.Api.Value.Internal hiding (Lovelace)
 
 import Cardano.Chain.Block (decCBORABlockOrBoundary)
 import Cardano.Chain.Common
