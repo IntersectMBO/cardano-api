@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module TxBodyWrapper where
+module General.TxBodyWrapper where
 
 import Cardano.Api
 import Cardano.Api.Ledger

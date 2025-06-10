@@ -26,7 +26,10 @@ common project-config
 
 executable cardano-wasm
   main-is: Main.hs
-  hs-source-dirs: app
+  hs-source-dirs:
+    app
+    src
+
   default-language: Haskell2010
 
   if arch(wasm32)
@@ -35,10 +38,10 @@ executable cardano-wasm
       -optl-mexec-model=reactor
       "-optl-Wl,--strip-all,--export=mkTxIn,--export=mkTransaction,--export=signTransaction"
   other-modules:
-    Bridge
-    ExceptionHandling
-    TxBodyWrapper
-    WasmApi
+    General.ExceptionHandling
+    General.TxBodyWrapper
+    JavaScript.Bridge
+    WasmApi.WasmApi
 
   build-depends:
     aeson,

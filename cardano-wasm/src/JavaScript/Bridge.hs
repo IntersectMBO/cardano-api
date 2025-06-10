@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 
 #if !defined(wasm32_HOST_ARCH)
-module Bridge where
+module JavaScript.Bridge where
 #else
 
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,7 +11,7 @@ module Bridge where
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Bridge where
+module JavaScript.Bridge where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Exp
@@ -27,8 +27,8 @@ import qualified Data.Text as Text
 import GHC.Wasm.Prim
 import GHC.Stack (HasCallStack)
 
-import ExceptionHandling (rightOrError)
-import qualified WasmApi as WasmApi
+import General.ExceptionHandling (rightOrError)
+import qualified WasmApi.WasmApi as WasmApi
 
 -- * JS helper functions
 

@@ -1,4 +1,4 @@
-module ExceptionHandling where
+module General.ExceptionHandling where
 
 import GHC.Stack (HasCallStack, withFrozenCallStack)
 
