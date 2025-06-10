@@ -1,5 +1,6 @@
 active-repositories: hackage.haskell.org, cardano-haskell-packages
 packages: .
+          ../cardano-api
 
 repository cardano-haskell-packages
   url: https://chap.intersectmbo.org/
@@ -37,7 +38,7 @@ if arch(wasm32)
   source-repository-package
     type: git
     location: https://github.com/palas/ouroboros-network.git
-    tag: cd409cc3f5dcf6fdfb0ab80eec718ff4515cf76b
+    tag: ef3e30603e4e45dac336a085114ee22b7aa8c9ed
     subdir:
       ouroboros-network
       ouroboros-network-framework
@@ -85,6 +86,9 @@ if arch(wasm32)
 
   package cardano-crypto-praos
     flags: -external-libsodium-vrf
+
+  package atomic-counter
+    flags: +no-cmm
 
   constraints: time installed
   allow-newer: time
