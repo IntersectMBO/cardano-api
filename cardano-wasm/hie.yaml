@@ -9,9 +9,9 @@ cradle:
     - path: "./src/General/ExceptionHandling.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
-    - path: "./src/General/TxBodyWrapper.hs"
+    - path: "./src/WasmApi/WasmApi.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 
-    - path: "./src/WasmApi/WasmApi.hs"
+    - path: "./src/WasmApi/Tx.hs"
       component: "cardano-wasm:exe:cardano-wasm"
 

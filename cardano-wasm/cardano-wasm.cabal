@@ -39,8 +39,8 @@ executable cardano-wasm
       "-optl-Wl,--strip-all,--export=mkTxIn,--export=mkTransaction,--export=signTransaction"
   other-modules:
     General.ExceptionHandling
-    General.TxBodyWrapper
     JavaScript.Bridge
+    WasmApi.Tx
     WasmApi.WasmApi
 
   build-depends:
