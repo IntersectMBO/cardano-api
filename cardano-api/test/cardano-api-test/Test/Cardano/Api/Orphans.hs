@@ -6,7 +6,8 @@
 
 module Test.Cardano.Api.Orphans () where
 
-import Cardano.Api.Shelley
+import Cardano.Api.Byron
+import Cardano.Api.Key
 
 import Test.Cardano.Crypto.Orphans ()
 

@@ -146,19 +146,11 @@ where
 
 import Cardano.Api hiding (txIns)
 import Cardano.Api qualified as Api
-import Cardano.Api.Byron
-  ( KeyWitness (ByronKeyWitness)
-  , WitnessNetworkIdOrByronAddress (..)
-  )
 import Cardano.Api.Byron qualified as Byron
 import Cardano.Api.Experimental qualified as Exp
-import Cardano.Api.Internal.Error
-import Cardano.Api.Internal.Script (scriptInEraToRefScript)
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Ledger.Lens qualified as A
 import Cardano.Api.Parser.Text qualified as P
-import Cardano.Api.Shelley
-import Cardano.Api.Shelley qualified as ShelleyApi
+import Cardano.Api.Tx qualified as A
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
@@ -631,7 +623,7 @@ genPaymentCredential = do
   vKey <- genVerificationKey AsPaymentKey
   return . PaymentCredentialByKey $ verificationKeyHash vKey
 
-genSigningKey :: Key keyrole => ShelleyApi.AsType keyrole -> Gen (SigningKey keyrole)
+genSigningKey :: Key keyrole => AsType keyrole -> Gen (SigningKey keyrole)
 genSigningKey roletoken = do
   seed <- genSeed (fromIntegral seedSize)
   let sk = deterministicSigningKey roletoken seed
@@ -1126,7 +1118,7 @@ genVerificationKey
   :: ()
   => HasTypeProxy keyrole
   => Key keyrole
-  => ShelleyApi.AsType keyrole
+  => AsType keyrole
   -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
@@ -1134,7 +1126,7 @@ genVerificationKeyHash
   :: ()
   => HasTypeProxy keyrole
   => Key keyrole
-  => ShelleyApi.AsType keyrole
+  => AsType keyrole
   -> Gen (Hash keyrole)
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken

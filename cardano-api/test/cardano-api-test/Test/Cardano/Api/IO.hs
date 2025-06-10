@@ -6,7 +6,6 @@ module Test.Cardano.Api.IO
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.IO
 
 import System.Directory (removeFile)
 

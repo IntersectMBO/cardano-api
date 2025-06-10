@@ -1,12 +1,11 @@
--- |
--- This module provides an experimental library interface intended to replace the existing API.
+-- | This module provides an experimental library interface intended to replace the existing API.
 -- It is subject to significant changes. Please, use it with caution.
 module Cardano.Api.Experimental
   ( -- * Creating transactions
 
     -- |
     -- For details and an example of creating a transaction using the experimental API,
-    -- see the "Cardano.Api.Internal.Experimental.Tx" documentation.
+    -- see the "Cardano.Api.Experimental.Tx" documentation.
 
     -- * Contents
 
@@ -63,13 +62,11 @@ module Cardano.Api.Experimental
   )
 where
 
-import Cardano.Api.Internal.Experimental.Eras
-import Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
-import Cardano.Api.Internal.Experimental.Plutus.Script
-import Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
-import Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
-import Cardano.Api.Internal.Experimental.Simple.Script
-import Cardano.Api.Internal.Experimental.Tx
-import Cardano.Api.Internal.Experimental.Witness.AnyWitness
-import Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
-import Cardano.Api.Internal.Fees (evaluateTransactionExecutionUnitsShelley)
+import Cardano.Api.Experimental.Era
+import Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness
+import Cardano.Api.Experimental.Plutus.Internal.Script
+import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
+import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
+import Cardano.Api.Experimental.Simple.Script
+import Cardano.Api.Experimental.Tx
+import Cardano.Api.Tx.Internal.Fee (evaluateTransactionExecutionUnitsShelley)
