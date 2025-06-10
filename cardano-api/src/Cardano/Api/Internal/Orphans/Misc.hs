@@ -15,7 +15,7 @@ module Cardano.Api.Internal.Orphans.Misc
   )
 where
 
-import Cardano.Api.Internal.Pretty (Pretty (..), prettyException, (<+>))
+import Cardano.Api.Pretty (Pretty (..), prettyException, (<+>))
 
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.PParams qualified as Ledger

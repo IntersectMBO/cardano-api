@@ -11,12 +11,10 @@ where
 
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental qualified as Exp
-import Cardano.Api.Internal.Eon.ShelleyBasedEra (ShelleyBasedEraConstraints)
-import Cardano.Api.Internal.Genesis qualified as Genesis
-import Cardano.Api.Internal.ProtocolParameters qualified as Api
-import Cardano.Api.Internal.Script qualified as Script
-import Cardano.Api.Internal.Tx.Sign (Tx (ShelleyTx))
+import Cardano.Api.Genesis qualified as Genesis
 import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Plutus qualified as Script
+import Cardano.Api.Tx (Tx (ShelleyTx))
 
 import Cardano.Ledger.Alonzo.Scripts qualified as UnexportedLedger
 import Cardano.Ledger.Api qualified as UnexportedLedger
@@ -251,7 +249,7 @@ getExampleChangeAddress sbe = do
         Api.NoStakeAddress
 
 exampleTxBodyContent
-  :: (ShelleyBasedEraConstraints era, H.MonadTest m)
+  :: (Api.ShelleyBasedEraConstraints era, H.MonadTest m)
   => Api.AsType era
   -> Api.ShelleyBasedEra era
   -> m (Api.TxBodyContent Api.BuildTx era)

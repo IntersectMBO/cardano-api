@@ -1,6 +1,6 @@
 module Cardano.Api.Ledger
-  ( module Cardano.Api.Internal.ReexposeLedger
+  ( module Cardano.Api.Ledger.Internal.Reexport
   )
 where
 
-import Cardano.Api.Internal.ReexposeLedger
+import Cardano.Api.Ledger.Internal.Reexport
