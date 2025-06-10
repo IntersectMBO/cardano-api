@@ -20,6 +20,10 @@ module Cardano.Api.Experimental
   , obtainCommonConstraints
   , hashTxBody
   , evaluateTransactionExecutionUnitsShelley
+  , Certificate (..)
+  , convertToNewCertificate
+  , convertToOldApiCertificate
+  , mkTxCertificates
 
     -- ** Era-related
   , BabbageEra
@@ -69,4 +73,5 @@ import Cardano.Api.Experimental.Plutus.Internal.ScriptWitness
 import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Simple.Script
 import Cardano.Api.Experimental.Tx
+import Cardano.Api.Experimental.Tx.Internal.Certificate
 import Cardano.Api.Tx.Internal.Fee (evaluateTransactionExecutionUnitsShelley)
