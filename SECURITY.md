@@ -1,7 +1,7 @@
 # Security Policy
 
 ## Reporting a Vulnerability
-
+Romeo Rosete
 Please report (suspected) security vulnerabilities to security@intersectmbo.org. You will receive a
 response from us within 48 hours. If the issue is confirmed, we will release a patch as soon
 as possible.
