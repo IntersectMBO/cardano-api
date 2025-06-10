@@ -156,6 +156,7 @@ module Cardano.Api.Ledger.Internal.Reexport
   , textToDns
   , Url
   , urlToText
+  , Version
   , textToUrl
   , portToWord16
   , ProtVer (..)
@@ -240,6 +241,7 @@ import Cardano.Ledger.BaseTypes
   , StrictMaybe (..)
   , UnitInterval
   , Url
+  , Version
   , boundRational
   , dnsToText
   , hashAnchorData
