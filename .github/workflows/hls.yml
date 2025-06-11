@@ -14,7 +14,7 @@ jobs:
   test-hls-works:
     env:
       # Modify this value to "invalidate" the cache.
-      HLS_CACHE_VERSION: "2024-07-24"
+      HLS_CACHE_VERSION: "2025-06-11"
 
     runs-on: ubuntu-latest
     timeout-minutes: 60
