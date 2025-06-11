@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-04-08T10:52:25Z
-  , cardano-haskell-packages 2025-05-15T11:03:46Z
+  , hackage.haskell.org 2025-06-09T12:19:05Z
+  , cardano-haskell-packages 2025-06-07T03:18:32Z
 
 packages:
     cardano-api
@@ -24,6 +24,8 @@ extra-packages: Cabal, process
 
 if impl(ghc < 9.8)
   constraints: interpolatedstring-perl6:setup.time source
+
+constraints: process >= 1.6.26.1
 
 program-options
   ghc-options: -Werror
