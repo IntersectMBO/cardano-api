@@ -97,17 +97,25 @@ jobs:
     # From the dependency list we restore the cached dependencies.
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
     # until the `index-state` values in the `cabal.project` file changes.
-    - name: Restore cached dependencies
-      uses: actions/cache/restore@v4
-      id: cache
-      with:
-        path: |
-          ${{ env.STORE }}
-          cardano-wasm/dist-newstyle
-        key:
-          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('cardano-wasm/dependencies.txt') }}
-        restore-keys: |
-          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-
+#    - name: Restore cached dependencies
+#      uses: actions/cache/restore@v4
+#      id: cache
+#      with:
+#        path: |
+#          ${{ env.STORE }}
+#          cardano-wasm/dist-newstyle
+#        key:
+#          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('cardano-wasm/dependencies.txt') }}
+#        restore-keys: |
+#          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-
+
+    - name: Restore cached deps
+      run: |
+        cd cardano-wasm
+        wget "https://agrius.feralhosting.com/palas/wasm-cache/4c200033737be4736cd2a363d64c49a385937d5ea57d8e52773f65d08bbd1342.tar.bz2"
+        tar -jxf 4c200033737be4736cd2a363d64c49a385937d5ea57d8e52773f65d08bbd1342.tar.bz2
+        rm -fr ~/.ghc-wasm/.cabal/store/
+        mv store ~/.ghc-wasm/.cabal/
 
     # Now we install the dependencies. If the cache was found and restored in the previous step,
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
@@ -118,15 +126,15 @@ jobs:
         wasm32-wasi-cabal build all --only-dependencies --no-semaphore -j1 --ghc-options="-j1"
 
     # Always store the cabal cache.
-    - name: Cache Cabal store
-      uses: actions/cache/save@v4
-      if: always()
-      with:
-        path: |
-          ${{ env.STORE }}
-          cardano-wasm/dist-newstyle
-        key:
-          ${{ steps.cache.outputs.cache-primary-key }}
+#    - name: Cache Cabal store
+#      uses: actions/cache/save@v4
+#      if: always()
+#      with:
+#        path: |
+#          ${{ env.STORE }}
+#          cardano-wasm/dist-newstyle
+#        key:
+#          ${{ steps.cache.outputs.cache-primary-key }}
 
     # Now we build.
     - name: Build all
