@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Gen.Cardano.Api.Era</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Era.html#shelleyBasedEraTestConstraints"><span class="hs-identifier">shelleyBasedEraTestConstraints</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Era.html#shelleyToBabbageEraTestConstraints"><span class="hs-identifier">shelleyToBabbageEraTestConstraints</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Era.html#conwayEraOnwardsTestConstraints"><span class="hs-identifier">conwayEraOnwardsTestConstraints</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#txIns"><span class="hs-identifier">txIns</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.Identity.html"><span class="hs-identifier">Data.Functor.Identity</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Cardano.Ledger.Core.Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.QuickCheck</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span id="local-6989586621679467568"><span id="local-6989586621679467576"><span class="annot"><a href="Test.Gen.Cardano.Api.Era.html#shelleyBasedEraTestConstraints"><span class="hs-identifier hs-type">shelleyBasedEraTestConstraints</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467568"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#Era"><span class="hs-identifier hs-type">Ledger.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467568"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">Ledger.PParamsHKD</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">Ledger.StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467568"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">Ledger.PParamsHKD</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Ledger.Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467568"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>       </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679467576"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-33"></span><span>     </span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679467576"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-35"></span><span id="shelleyBasedEraTestConstraints"><span class="annot"><span class="annottext">shelleyBasedEraTestConstraints :: forall era a.
+ShelleyBasedEra era
+-&gt; ((Era (ShelleyLedgerEra era),
+     Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+     Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+    a)
+-&gt; a
+</span><a href="Test.Gen.Cardano.Api.Era.html#shelleyBasedEraTestConstraints"><span class="hs-identifier hs-var hs-var">shelleyBasedEraTestConstraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span id="local-6989586621679467604"><span id="local-6989586621679467606"><span class="annot"><a href="Test.Gen.Cardano.Api.Era.html#shelleyToBabbageEraTestConstraints"><span class="hs-identifier hs-type">shelleyToBabbageEraTestConstraints</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEra"><span class="hs-identifier hs-type">ShelleyToBabbageEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467604"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#Era"><span class="hs-identifier hs-type">Ledger.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467604"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">Ledger.PParamsHKD</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">Ledger.StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467604"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">Ledger.PParamsHKD</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Ledger.Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467604"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>       </span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679467606"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-51"></span><span>     </span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679467606"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-53"></span><span id="shelleyToBabbageEraTestConstraints"><span class="annot"><span class="annottext">shelleyToBabbageEraTestConstraints :: forall era a.
+ShelleyToBabbageEra era
+-&gt; ((Era (ShelleyLedgerEra era),
+     Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+     Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+    a)
+-&gt; a
+</span><a href="Test.Gen.Cardano.Api.Era.html#shelleyToBabbageEraTestConstraints"><span class="hs-identifier hs-var hs-var">shelleyToBabbageEraTestConstraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraShelley"><span class="hs-identifier hs-var">ShelleyToBabbageEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraAllegra"><span class="hs-identifier hs-var">ShelleyToBabbageEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraMary"><span class="hs-identifier hs-var">ShelleyToBabbageEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraAlonzo"><span class="hs-identifier hs-var">ShelleyToBabbageEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraBabbage"><span class="hs-identifier hs-var">ShelleyToBabbageEraBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679467609"><span id="local-6989586621679467611"><span class="annot"><a href="Test.Gen.Cardano.Api.Era.html#conwayEraOnwardsTestConstraints"><span class="hs-identifier hs-type">conwayEraOnwardsTestConstraints</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467609"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#Era"><span class="hs-identifier hs-type">Ledger.Era</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467609"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">Ledger.PParamsHKD</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">Ledger.StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467609"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.PParams.html#PParamsHKD"><span class="hs-identifier hs-type">Ledger.PParamsHKD</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.Identity.html#Identity"><span class="hs-identifier hs-type">Ledger.Identity</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679467609"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>       </span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>       </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679467611"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-68"></span><span>     </span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679467611"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-70"></span><span id="conwayEraOnwardsTestConstraints"><span class="annot"><span class="annottext">conwayEraOnwardsTestConstraints :: forall era a.
+ConwayEraOnwards era
+-&gt; ((Era (ShelleyLedgerEra era),
+     Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+     Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+    a)
+-&gt; a
+</span><a href="Test.Gen.Cardano.Api.Era.html#conwayEraOnwardsTestConstraints"><span class="hs-identifier hs-var hs-var">conwayEraOnwardsTestConstraints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwardsConway"><span class="hs-identifier hs-var">ConwayEraOnwardsConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; a
+((Era (ShelleyLedgerEra era),
+  Arbitrary (PParamsHKD StrictMaybe (ShelleyLedgerEra era)),
+  Arbitrary (PParamsHKD Identity (ShelleyLedgerEra era))) =&gt;
+ a)
+-&gt; a
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-72"></span></pre></body></html>

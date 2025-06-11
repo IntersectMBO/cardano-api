@@ -1,0 +1,1191 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Gen.Cardano.Api.ProtocolParameters</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Typed.html"><span class="hs-identifier">Test.Gen.Cardano.Api.Typed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Gen.Cardano.Api.Typed.html#genCostModels"><span class="hs-identifier">genCostModels</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Cardano.Ledger.Alonzo.Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Arbitrary</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadGen</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog.Gen</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gen</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog.Gen.QuickCheck</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Q</span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span id="local-6989586621679471129"><span id="local-6989586621679471131"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-type">genStrictMaybe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471129"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471129"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471131"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471129"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#StrictMaybe"><span class="hs-identifier hs-type">StrictMaybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471131"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-16"></span><span id="genStrictMaybe"><span class="annot"><span class="annottext">genStrictMaybe :: forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var hs-var">genStrictMaybe</span></a></span></span><span> </span><span id="local-6989586621679471252"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679471252"><span class="hs-identifier hs-var">gen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><span class="annottext">(Size -&gt; m (StrictMaybe a)) -&gt; m (StrictMaybe a)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; (Size -&gt; m a) -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.sized</span></span><span> </span><span class="annot"><span class="annottext">((Size -&gt; m (StrictMaybe a)) -&gt; m (StrictMaybe a))
+-&gt; (Size -&gt; m (StrictMaybe a)) -&gt; m (StrictMaybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679471254"><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679471254"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="annottext">[(Int, m (StrictMaybe a))] -&gt; m (StrictMaybe a)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; [(Int, m a)] -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.frequency</span></span><span>
+</span><span id="line-19"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StrictMaybe a -&gt; m (StrictMaybe a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe a
+forall a. StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#SNothing"><span class="hs-identifier hs-var">SNothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Size -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Size
+</span><a href="#local-6989586621679471254"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a -&gt; StrictMaybe a
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; StrictMaybe a) -&gt; m a -&gt; m (StrictMaybe a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679471252"><span class="hs-identifier hs-var">gen</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span id="local-6989586621679471155"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-type">genCommonProtocolParametersUpdate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471155"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471155"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#CommonProtocolParametersUpdate"><span class="hs-identifier hs-type">CommonProtocolParametersUpdate</span></a></span></span><span>
+</span><span id="line-24"></span><span id="genCommonProtocolParametersUpdate"><span class="annot"><span class="annottext">genCommonProtocolParametersUpdate :: forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m CommonProtocolParametersUpdate
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">genCommonProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><span class="annottext">StrictMaybe Coin
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe Word32
+-&gt; StrictMaybe Word32
+-&gt; StrictMaybe Word16
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe Word16
+-&gt; StrictMaybe NonNegativeInterval
+-&gt; StrictMaybe UnitInterval
+-&gt; StrictMaybe UnitInterval
+-&gt; StrictMaybe Coin
+-&gt; CommonProtocolParametersUpdate
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#CommonProtocolParametersUpdate"><span class="hs-identifier hs-var">CommonProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="annottext">(StrictMaybe Coin
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe Word32
+ -&gt; StrictMaybe Word32
+ -&gt; StrictMaybe Word16
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe EpochInterval
+ -&gt; StrictMaybe Word16
+ -&gt; StrictMaybe NonNegativeInterval
+ -&gt; StrictMaybe UnitInterval
+ -&gt; StrictMaybe UnitInterval
+ -&gt; StrictMaybe Coin
+ -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Coin)
+-&gt; m (StrictMaybe Coin
+      -&gt; StrictMaybe Word32
+      -&gt; StrictMaybe Word32
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Coin
+   -&gt; StrictMaybe Word32
+   -&gt; StrictMaybe Word32
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Coin)
+-&gt; m (StrictMaybe Word32
+      -&gt; StrictMaybe Word32
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Word32
+   -&gt; StrictMaybe Word32
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Word32)
+-&gt; m (StrictMaybe Word32
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Word32 -&gt; m (StrictMaybe Word32)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Word32
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Word32
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Word32)
+-&gt; m (StrictMaybe Word16
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Word32 -&gt; m (StrictMaybe Word32)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Word32
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Word16
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Word16)
+-&gt; m (StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Word16 -&gt; m (StrictMaybe Word16)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Word16
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Coin)
+-&gt; m (StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Coin)
+-&gt; m (StrictMaybe EpochInterval
+      -&gt; StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe EpochInterval
+   -&gt; StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe EpochInterval)
+-&gt; m (StrictMaybe Word16
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval -&gt; m (StrictMaybe EpochInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Word16
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Word16)
+-&gt; m (StrictMaybe NonNegativeInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Word16 -&gt; m (StrictMaybe Word16)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Word16
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe NonNegativeInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe NonNegativeInterval)
+-&gt; m (StrictMaybe UnitInterval
+      -&gt; StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin
+      -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m NonNegativeInterval -&gt; m (StrictMaybe NonNegativeInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m NonNegativeInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe UnitInterval
+   -&gt; StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin
+   -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe UnitInterval)
+-&gt; m (StrictMaybe UnitInterval
+      -&gt; StrictMaybe Coin -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m UnitInterval -&gt; m (StrictMaybe UnitInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m UnitInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe UnitInterval
+   -&gt; StrictMaybe Coin -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe UnitInterval)
+-&gt; m (StrictMaybe Coin -&gt; CommonProtocolParametersUpdate)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m UnitInterval -&gt; m (StrictMaybe UnitInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m UnitInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Coin -&gt; CommonProtocolParametersUpdate)
+-&gt; m (StrictMaybe Coin) -&gt; m CommonProtocolParametersUpdate
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span id="local-6989586621679471167"><span id="local-6989586621679471168"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterMaryPParams"><span class="hs-identifier hs-type">genDeprecatedAfterMaryPParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471167"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471167"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#DeprecatedAfterMaryPParams"><span class="hs-identifier hs-type">DeprecatedAfterMaryPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471168"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-41"></span><span id="genDeprecatedAfterMaryPParams"><span class="annot"><span class="annottext">genDeprecatedAfterMaryPParams :: forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterMaryPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterMaryPParams"><span class="hs-identifier hs-var hs-var">genDeprecatedAfterMaryPParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictMaybe Coin -&gt; DeprecatedAfterMaryPParams era
+forall ledgerera.
+StrictMaybe Coin -&gt; DeprecatedAfterMaryPParams ledgerera
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#DeprecatedAfterMaryPParams"><span class="hs-identifier hs-var">DeprecatedAfterMaryPParams</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe Coin -&gt; DeprecatedAfterMaryPParams era)
+-&gt; m (StrictMaybe Coin) -&gt; m (DeprecatedAfterMaryPParams era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span id="local-6989586621679471173"><span id="local-6989586621679471174"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterBabbagePParams"><span class="hs-identifier hs-type">genDeprecatedAfterBabbagePParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471173"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471173"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#DeprecatedAfterBabbagePParams"><span class="hs-identifier hs-type">DeprecatedAfterBabbagePParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471174"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-44"></span><span id="genDeprecatedAfterBabbagePParams"><span class="annot"><span class="annottext">genDeprecatedAfterBabbagePParams :: forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterBabbagePParams"><span class="hs-identifier hs-var hs-var">genDeprecatedAfterBabbagePParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictMaybe ProtVer -&gt; DeprecatedAfterBabbagePParams era
+forall ledgerera.
+StrictMaybe ProtVer -&gt; DeprecatedAfterBabbagePParams ledgerera
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#DeprecatedAfterBabbagePParams"><span class="hs-identifier hs-var">DeprecatedAfterBabbagePParams</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe ProtVer -&gt; DeprecatedAfterBabbagePParams era)
+-&gt; m (StrictMaybe ProtVer) -&gt; m (DeprecatedAfterBabbagePParams era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m ProtVer -&gt; m (StrictMaybe ProtVer)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m ProtVer
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span id="local-6989586621679471180"><span id="local-6989586621679471181"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyToAlonzoPParams"><span class="hs-identifier hs-type">genShelleyToAlonzoPParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471180"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471180"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#ShelleyToAlonzoPParams"><span class="hs-identifier hs-type">ShelleyToAlonzoPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471181"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-47"></span><span id="genShelleyToAlonzoPParams"><span class="annot"><span class="annottext">genShelleyToAlonzoPParams :: forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (ShelleyToAlonzoPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyToAlonzoPParams"><span class="hs-identifier hs-var hs-var">genShelleyToAlonzoPParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">StrictMaybe Nonce
+-&gt; StrictMaybe UnitInterval -&gt; ShelleyToAlonzoPParams era
+forall ledgerera.
+StrictMaybe Nonce
+-&gt; StrictMaybe UnitInterval -&gt; ShelleyToAlonzoPParams ledgerera
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#ShelleyToAlonzoPParams"><span class="hs-identifier hs-var">ShelleyToAlonzoPParams</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">(StrictMaybe Nonce
+ -&gt; StrictMaybe UnitInterval -&gt; ShelleyToAlonzoPParams era)
+-&gt; m (StrictMaybe Nonce)
+-&gt; m (StrictMaybe UnitInterval -&gt; ShelleyToAlonzoPParams era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Nonce -&gt; m (StrictMaybe Nonce)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Nonce
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe UnitInterval -&gt; ShelleyToAlonzoPParams era)
+-&gt; m (StrictMaybe UnitInterval) -&gt; m (ShelleyToAlonzoPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m UnitInterval -&gt; m (StrictMaybe UnitInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m UnitInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span id="local-6989586621679471187"><span id="local-6989586621679471188"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAlonzoOnwardsPParams"><span class="hs-identifier hs-type">genAlonzoOnwardsPParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471187"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471187"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#AlonzoOnwardsPParams"><span class="hs-identifier hs-type">AlonzoOnwardsPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471188"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-53"></span><span id="genAlonzoOnwardsPParams"><span class="annot"><span class="annottext">genAlonzoOnwardsPParams :: forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (AlonzoOnwardsPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAlonzoOnwardsPParams"><span class="hs-identifier hs-var hs-var">genAlonzoOnwardsPParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">StrictMaybe CostModels
+-&gt; StrictMaybe Prices
+-&gt; StrictMaybe ExUnits
+-&gt; StrictMaybe ExUnits
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe Natural
+-&gt; AlonzoOnwardsPParams era
+forall ledgerera.
+StrictMaybe CostModels
+-&gt; StrictMaybe Prices
+-&gt; StrictMaybe ExUnits
+-&gt; StrictMaybe ExUnits
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe Natural
+-&gt; AlonzoOnwardsPParams ledgerera
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#AlonzoOnwardsPParams"><span class="hs-identifier hs-var">AlonzoOnwardsPParams</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">(StrictMaybe CostModels
+ -&gt; StrictMaybe Prices
+ -&gt; StrictMaybe ExUnits
+ -&gt; StrictMaybe ExUnits
+ -&gt; StrictMaybe Natural
+ -&gt; StrictMaybe Natural
+ -&gt; StrictMaybe Natural
+ -&gt; AlonzoOnwardsPParams era)
+-&gt; m (StrictMaybe CostModels)
+-&gt; m (StrictMaybe Prices
+      -&gt; StrictMaybe ExUnits
+      -&gt; StrictMaybe ExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; AlonzoOnwardsPParams era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CostModels -&gt; m (StrictMaybe CostModels)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m CostModels
+forall (m :: * -&gt; *). MonadGen m =&gt; m CostModels
+</span><a href="Test.Gen.Cardano.Api.Typed.html#genCostModels"><span class="hs-identifier hs-var">genCostModels</span></a></span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Prices
+   -&gt; StrictMaybe ExUnits
+   -&gt; StrictMaybe ExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; AlonzoOnwardsPParams era)
+-&gt; m (StrictMaybe Prices)
+-&gt; m (StrictMaybe ExUnits
+      -&gt; StrictMaybe ExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; AlonzoOnwardsPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Prices -&gt; m (StrictMaybe Prices)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Prices
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe ExUnits
+   -&gt; StrictMaybe ExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; AlonzoOnwardsPParams era)
+-&gt; m (StrictMaybe ExUnits)
+-&gt; m (StrictMaybe ExUnits
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; AlonzoOnwardsPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m ExUnits -&gt; m (StrictMaybe ExUnits)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m ExUnits
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe ExUnits
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; AlonzoOnwardsPParams era)
+-&gt; m (StrictMaybe ExUnits)
+-&gt; m (StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe Natural
+      -&gt; AlonzoOnwardsPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m ExUnits -&gt; m (StrictMaybe ExUnits)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m ExUnits
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe Natural
+   -&gt; AlonzoOnwardsPParams era)
+-&gt; m (StrictMaybe Natural)
+-&gt; m (StrictMaybe Natural
+      -&gt; StrictMaybe Natural -&gt; AlonzoOnwardsPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural -&gt; m (StrictMaybe Natural)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Natural
+   -&gt; StrictMaybe Natural -&gt; AlonzoOnwardsPParams era)
+-&gt; m (StrictMaybe Natural)
+-&gt; m (StrictMaybe Natural -&gt; AlonzoOnwardsPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural -&gt; m (StrictMaybe Natural)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Natural -&gt; AlonzoOnwardsPParams era)
+-&gt; m (StrictMaybe Natural) -&gt; m (AlonzoOnwardsPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural -&gt; m (StrictMaybe Natural)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679471197"><span id="local-6989586621679471198"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genIntroducedInBabbagePParams"><span class="hs-identifier hs-type">genIntroducedInBabbagePParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471197"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471197"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#IntroducedInBabbagePParams"><span class="hs-identifier hs-type">IntroducedInBabbagePParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471198"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-64"></span><span id="genIntroducedInBabbagePParams"><span class="annot"><span class="annottext">genIntroducedInBabbagePParams :: forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (IntroducedInBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genIntroducedInBabbagePParams"><span class="hs-identifier hs-var hs-var">genIntroducedInBabbagePParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StrictMaybe CoinPerByte -&gt; IntroducedInBabbagePParams era
+forall era.
+StrictMaybe CoinPerByte -&gt; IntroducedInBabbagePParams era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#IntroducedInBabbagePParams"><span class="hs-identifier hs-var">IntroducedInBabbagePParams</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe CoinPerByte -&gt; IntroducedInBabbagePParams era)
+-&gt; m (StrictMaybe CoinPerByte)
+-&gt; m (IntroducedInBabbagePParams era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CoinPerByte -&gt; m (StrictMaybe CoinPerByte)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m CoinPerByte
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span id="local-6989586621679471204"><span id="local-6989586621679471205"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genIntroducedInConwayPParams"><span class="hs-identifier hs-type">genIntroducedInConwayPParams</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471204"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471204"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#IntroducedInConwayPParams"><span class="hs-identifier hs-type">IntroducedInConwayPParams</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471205"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-67"></span><span id="genIntroducedInConwayPParams"><span class="annot"><span class="annottext">genIntroducedInConwayPParams :: forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (IntroducedInConwayPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genIntroducedInConwayPParams"><span class="hs-identifier hs-var hs-var">genIntroducedInConwayPParams</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">StrictMaybe PoolVotingThresholds
+-&gt; StrictMaybe DRepVotingThresholds
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe NonNegativeInterval
+-&gt; IntroducedInConwayPParams era
+forall era.
+StrictMaybe PoolVotingThresholds
+-&gt; StrictMaybe DRepVotingThresholds
+-&gt; StrictMaybe Natural
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe Coin
+-&gt; StrictMaybe EpochInterval
+-&gt; StrictMaybe NonNegativeInterval
+-&gt; IntroducedInConwayPParams era
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#IntroducedInConwayPParams"><span class="hs-identifier hs-var">IntroducedInConwayPParams</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">(StrictMaybe PoolVotingThresholds
+ -&gt; StrictMaybe DRepVotingThresholds
+ -&gt; StrictMaybe Natural
+ -&gt; StrictMaybe EpochInterval
+ -&gt; StrictMaybe EpochInterval
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe Coin
+ -&gt; StrictMaybe EpochInterval
+ -&gt; StrictMaybe NonNegativeInterval
+ -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe PoolVotingThresholds)
+-&gt; m (StrictMaybe DRepVotingThresholds
+      -&gt; StrictMaybe Natural
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m PoolVotingThresholds -&gt; m (StrictMaybe PoolVotingThresholds)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m PoolVotingThresholds
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe DRepVotingThresholds
+   -&gt; StrictMaybe Natural
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe DRepVotingThresholds)
+-&gt; m (StrictMaybe Natural
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m DRepVotingThresholds -&gt; m (StrictMaybe DRepVotingThresholds)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m DRepVotingThresholds
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Natural
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe Natural)
+-&gt; m (StrictMaybe EpochInterval
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural -&gt; m (StrictMaybe Natural)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Natural
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe EpochInterval
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe EpochInterval)
+-&gt; m (StrictMaybe EpochInterval
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval -&gt; m (StrictMaybe EpochInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe EpochInterval
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe EpochInterval)
+-&gt; m (StrictMaybe Coin
+      -&gt; StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval -&gt; m (StrictMaybe EpochInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Coin
+   -&gt; StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe Coin)
+-&gt; m (StrictMaybe Coin
+      -&gt; StrictMaybe EpochInterval
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe Coin
+   -&gt; StrictMaybe EpochInterval
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe Coin)
+-&gt; m (StrictMaybe EpochInterval
+      -&gt; StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin -&gt; m (StrictMaybe Coin)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m Coin
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe EpochInterval
+   -&gt; StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe EpochInterval)
+-&gt; m (StrictMaybe NonNegativeInterval
+      -&gt; IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval -&gt; m (StrictMaybe EpochInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m EpochInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">m (StrictMaybe NonNegativeInterval
+   -&gt; IntroducedInConwayPParams era)
+-&gt; m (StrictMaybe NonNegativeInterval)
+-&gt; m (IntroducedInConwayPParams era)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m NonNegativeInterval -&gt; m (StrictMaybe NonNegativeInterval)
+forall (m :: * -&gt; *) a. MonadGen m =&gt; m a -&gt; m (StrictMaybe a)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genStrictMaybe"><span class="hs-identifier hs-var">genStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">m NonNegativeInterval
+forall a (m :: * -&gt; *). (Arbitrary a, MonadGen m) =&gt; m a
+</span><span class="hs-identifier hs-var">Q.arbitrary</span></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span id="local-6989586621679471212"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">genShelleyEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471212"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471212"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#EraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">EraBasedProtocolParametersUpdate</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#ShelleyEra"><span class="hs-identifier hs-type">ShelleyEra</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-81"></span><span id="genShelleyEraBasedProtocolParametersUpdate"><span class="annot"><span class="annottext">genShelleyEraBasedProtocolParametersUpdate :: forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m (EraBasedProtocolParametersUpdate ShelleyEra)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">genShelleyEraBasedProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="annottext">CommonProtocolParametersUpdate
+-&gt; DeprecatedAfterMaryPParams ShelleyEra
+-&gt; DeprecatedAfterBabbagePParams ShelleyEra
+-&gt; ShelleyToAlonzoPParams ShelleyEra
+-&gt; EraBasedProtocolParametersUpdate ShelleyEra
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#ShelleyEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var">ShelleyEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">(CommonProtocolParametersUpdate
+ -&gt; DeprecatedAfterMaryPParams ShelleyEra
+ -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+ -&gt; ShelleyToAlonzoPParams ShelleyEra
+ -&gt; EraBasedProtocolParametersUpdate ShelleyEra)
+-&gt; m CommonProtocolParametersUpdate
+-&gt; m (DeprecatedAfterMaryPParams ShelleyEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; ShelleyToAlonzoPParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate ShelleyEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CommonProtocolParametersUpdate
+forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m CommonProtocolParametersUpdate
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-var">genCommonProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterMaryPParams ShelleyEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; ShelleyToAlonzoPParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate ShelleyEra)
+-&gt; m (DeprecatedAfterMaryPParams ShelleyEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; ShelleyToAlonzoPParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate ShelleyEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterMaryPParams ShelleyEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterMaryPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterMaryPParams"><span class="hs-identifier hs-var">genDeprecatedAfterMaryPParams</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; ShelleyToAlonzoPParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate ShelleyEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra)
+-&gt; m (ShelleyToAlonzoPParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate ShelleyEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterBabbagePParams"><span class="hs-identifier hs-var">genDeprecatedAfterBabbagePParams</span></a></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate ShelleyEra)
+-&gt; m (ShelleyToAlonzoPParams ShelleyEra)
+-&gt; m (EraBasedProtocolParametersUpdate ShelleyEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams ShelleyEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (ShelleyToAlonzoPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyToAlonzoPParams"><span class="hs-identifier hs-var">genShelleyToAlonzoPParams</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span id="local-6989586621679471216"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAllegraEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">genAllegraEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471216"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471216"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#EraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">EraBasedProtocolParametersUpdate</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#AllegraEra"><span class="hs-identifier hs-type">AllegraEra</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-90"></span><span id="genAllegraEraBasedProtocolParametersUpdate"><span class="annot"><span class="annottext">genAllegraEraBasedProtocolParametersUpdate :: forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m (EraBasedProtocolParametersUpdate AllegraEra)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAllegraEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">genAllegraEraBasedProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><span class="annottext">CommonProtocolParametersUpdate
+-&gt; DeprecatedAfterMaryPParams AllegraEra
+-&gt; ShelleyToAlonzoPParams AllegraEra
+-&gt; DeprecatedAfterBabbagePParams ShelleyEra
+-&gt; EraBasedProtocolParametersUpdate AllegraEra
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#AllegraEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var">AllegraEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="annottext">(CommonProtocolParametersUpdate
+ -&gt; DeprecatedAfterMaryPParams AllegraEra
+ -&gt; ShelleyToAlonzoPParams AllegraEra
+ -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+ -&gt; EraBasedProtocolParametersUpdate AllegraEra)
+-&gt; m CommonProtocolParametersUpdate
+-&gt; m (DeprecatedAfterMaryPParams AllegraEra
+      -&gt; ShelleyToAlonzoPParams AllegraEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate AllegraEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CommonProtocolParametersUpdate
+forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m CommonProtocolParametersUpdate
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-var">genCommonProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterMaryPParams AllegraEra
+   -&gt; ShelleyToAlonzoPParams AllegraEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate AllegraEra)
+-&gt; m (DeprecatedAfterMaryPParams AllegraEra)
+-&gt; m (ShelleyToAlonzoPParams AllegraEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate AllegraEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterMaryPParams AllegraEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterMaryPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterMaryPParams"><span class="hs-identifier hs-var">genDeprecatedAfterMaryPParams</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams AllegraEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate AllegraEra)
+-&gt; m (ShelleyToAlonzoPParams AllegraEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate AllegraEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams AllegraEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (ShelleyToAlonzoPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyToAlonzoPParams"><span class="hs-identifier hs-var">genShelleyToAlonzoPParams</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate AllegraEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra)
+-&gt; m (EraBasedProtocolParametersUpdate AllegraEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterBabbagePParams"><span class="hs-identifier hs-var">genDeprecatedAfterBabbagePParams</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span id="local-6989586621679471219"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genMaryEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">genMaryEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471219"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471219"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#EraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">EraBasedProtocolParametersUpdate</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#MaryEra"><span class="hs-identifier hs-type">MaryEra</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-99"></span><span id="genMaryEraBasedProtocolParametersUpdate"><span class="annot"><span class="annottext">genMaryEraBasedProtocolParametersUpdate :: forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m (EraBasedProtocolParametersUpdate MaryEra)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genMaryEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">genMaryEraBasedProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">CommonProtocolParametersUpdate
+-&gt; DeprecatedAfterMaryPParams MaryEra
+-&gt; ShelleyToAlonzoPParams MaryEra
+-&gt; DeprecatedAfterBabbagePParams ShelleyEra
+-&gt; EraBasedProtocolParametersUpdate MaryEra
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#MaryEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var">MaryEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">(CommonProtocolParametersUpdate
+ -&gt; DeprecatedAfterMaryPParams MaryEra
+ -&gt; ShelleyToAlonzoPParams MaryEra
+ -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+ -&gt; EraBasedProtocolParametersUpdate MaryEra)
+-&gt; m CommonProtocolParametersUpdate
+-&gt; m (DeprecatedAfterMaryPParams MaryEra
+      -&gt; ShelleyToAlonzoPParams MaryEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate MaryEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CommonProtocolParametersUpdate
+forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m CommonProtocolParametersUpdate
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-var">genCommonProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterMaryPParams MaryEra
+   -&gt; ShelleyToAlonzoPParams MaryEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate MaryEra)
+-&gt; m (DeprecatedAfterMaryPParams MaryEra)
+-&gt; m (ShelleyToAlonzoPParams MaryEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate MaryEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterMaryPParams MaryEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterMaryPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterMaryPParams"><span class="hs-identifier hs-var">genDeprecatedAfterMaryPParams</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams MaryEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate MaryEra)
+-&gt; m (ShelleyToAlonzoPParams MaryEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate MaryEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams MaryEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (ShelleyToAlonzoPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyToAlonzoPParams"><span class="hs-identifier hs-var">genShelleyToAlonzoPParams</span></a></span><span>
+</span><span id="line-104"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate MaryEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra)
+-&gt; m (EraBasedProtocolParametersUpdate MaryEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterBabbagePParams"><span class="hs-identifier hs-var">genDeprecatedAfterBabbagePParams</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span id="local-6989586621679471222"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAlonzoEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">genAlonzoEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471222"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471222"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#EraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">EraBasedProtocolParametersUpdate</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#AlonzoEra"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-108"></span><span id="genAlonzoEraBasedProtocolParametersUpdate"><span class="annot"><span class="annottext">genAlonzoEraBasedProtocolParametersUpdate :: forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m (EraBasedProtocolParametersUpdate AlonzoEra)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAlonzoEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">genAlonzoEraBasedProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><span class="annottext">CommonProtocolParametersUpdate
+-&gt; ShelleyToAlonzoPParams AlonzoEra
+-&gt; AlonzoOnwardsPParams AlonzoEra
+-&gt; DeprecatedAfterBabbagePParams ShelleyEra
+-&gt; EraBasedProtocolParametersUpdate AlonzoEra
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#AlonzoEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var">AlonzoEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">(CommonProtocolParametersUpdate
+ -&gt; ShelleyToAlonzoPParams AlonzoEra
+ -&gt; AlonzoOnwardsPParams AlonzoEra
+ -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+ -&gt; EraBasedProtocolParametersUpdate AlonzoEra)
+-&gt; m CommonProtocolParametersUpdate
+-&gt; m (ShelleyToAlonzoPParams AlonzoEra
+      -&gt; AlonzoOnwardsPParams AlonzoEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate AlonzoEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CommonProtocolParametersUpdate
+forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m CommonProtocolParametersUpdate
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-var">genCommonProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams AlonzoEra
+   -&gt; AlonzoOnwardsPParams AlonzoEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate AlonzoEra)
+-&gt; m (ShelleyToAlonzoPParams AlonzoEra)
+-&gt; m (AlonzoOnwardsPParams AlonzoEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate AlonzoEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (ShelleyToAlonzoPParams AlonzoEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (ShelleyToAlonzoPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genShelleyToAlonzoPParams"><span class="hs-identifier hs-var">genShelleyToAlonzoPParams</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">m (AlonzoOnwardsPParams AlonzoEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate AlonzoEra)
+-&gt; m (AlonzoOnwardsPParams AlonzoEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; EraBasedProtocolParametersUpdate AlonzoEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (AlonzoOnwardsPParams AlonzoEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (AlonzoOnwardsPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAlonzoOnwardsPParams"><span class="hs-identifier hs-var">genAlonzoOnwardsPParams</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; EraBasedProtocolParametersUpdate AlonzoEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra)
+-&gt; m (EraBasedProtocolParametersUpdate AlonzoEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterBabbagePParams"><span class="hs-identifier hs-var">genDeprecatedAfterBabbagePParams</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span id="local-6989586621679471225"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genBabbageEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">genBabbageEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471225"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471225"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#EraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">EraBasedProtocolParametersUpdate</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-117"></span><span id="genBabbageEraBasedProtocolParametersUpdate"><span class="annot"><span class="annottext">genBabbageEraBasedProtocolParametersUpdate :: forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m (EraBasedProtocolParametersUpdate BabbageEra)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genBabbageEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">genBabbageEraBasedProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">CommonProtocolParametersUpdate
+-&gt; AlonzoOnwardsPParams BabbageEra
+-&gt; DeprecatedAfterBabbagePParams ShelleyEra
+-&gt; IntroducedInBabbagePParams BabbageEra
+-&gt; EraBasedProtocolParametersUpdate BabbageEra
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#BabbageEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var">BabbageEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">(CommonProtocolParametersUpdate
+ -&gt; AlonzoOnwardsPParams BabbageEra
+ -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+ -&gt; IntroducedInBabbagePParams BabbageEra
+ -&gt; EraBasedProtocolParametersUpdate BabbageEra)
+-&gt; m CommonProtocolParametersUpdate
+-&gt; m (AlonzoOnwardsPParams BabbageEra
+      -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; IntroducedInBabbagePParams BabbageEra
+      -&gt; EraBasedProtocolParametersUpdate BabbageEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CommonProtocolParametersUpdate
+forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m CommonProtocolParametersUpdate
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-var">genCommonProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><span class="annottext">m (AlonzoOnwardsPParams BabbageEra
+   -&gt; DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; IntroducedInBabbagePParams BabbageEra
+   -&gt; EraBasedProtocolParametersUpdate BabbageEra)
+-&gt; m (AlonzoOnwardsPParams BabbageEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra
+      -&gt; IntroducedInBabbagePParams BabbageEra
+      -&gt; EraBasedProtocolParametersUpdate BabbageEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (AlonzoOnwardsPParams BabbageEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (AlonzoOnwardsPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAlonzoOnwardsPParams"><span class="hs-identifier hs-var">genAlonzoOnwardsPParams</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra
+   -&gt; IntroducedInBabbagePParams BabbageEra
+   -&gt; EraBasedProtocolParametersUpdate BabbageEra)
+-&gt; m (DeprecatedAfterBabbagePParams ShelleyEra)
+-&gt; m (IntroducedInBabbagePParams BabbageEra
+      -&gt; EraBasedProtocolParametersUpdate BabbageEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (DeprecatedAfterBabbagePParams ShelleyEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (DeprecatedAfterBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genDeprecatedAfterBabbagePParams"><span class="hs-identifier hs-var">genDeprecatedAfterBabbagePParams</span></a></span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="annottext">m (IntroducedInBabbagePParams BabbageEra
+   -&gt; EraBasedProtocolParametersUpdate BabbageEra)
+-&gt; m (IntroducedInBabbagePParams BabbageEra)
+-&gt; m (EraBasedProtocolParametersUpdate BabbageEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (IntroducedInBabbagePParams BabbageEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (IntroducedInBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genIntroducedInBabbagePParams"><span class="hs-identifier hs-var">genIntroducedInBabbagePParams</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span id="local-6989586621679471228"><span class="annot"><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genConwayEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">genConwayEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadGen</span></span><span> </span><span class="annot"><a href="#local-6989586621679471228"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679471228"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#EraBasedProtocolParametersUpdate"><span class="hs-identifier hs-type">EraBasedProtocolParametersUpdate</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-126"></span><span id="genConwayEraBasedProtocolParametersUpdate"><span class="annot"><span class="annottext">genConwayEraBasedProtocolParametersUpdate :: forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m (EraBasedProtocolParametersUpdate ConwayEra)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genConwayEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var hs-var">genConwayEraBasedProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><span class="annottext">CommonProtocolParametersUpdate
+-&gt; AlonzoOnwardsPParams ConwayEra
+-&gt; IntroducedInBabbagePParams ConwayEra
+-&gt; IntroducedInConwayPParams (ShelleyLedgerEra ConwayEra)
+-&gt; EraBasedProtocolParametersUpdate ConwayEra
+CommonProtocolParametersUpdate
+-&gt; AlonzoOnwardsPParams ConwayEra
+-&gt; IntroducedInBabbagePParams ConwayEra
+-&gt; IntroducedInConwayPParams ConwayEra
+-&gt; EraBasedProtocolParametersUpdate ConwayEra
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.ProtocolParameters.html#ConwayEraBasedProtocolParametersUpdate"><span class="hs-identifier hs-var">ConwayEraBasedProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-128"></span><span>    </span><span class="annot"><span class="annottext">(CommonProtocolParametersUpdate
+ -&gt; AlonzoOnwardsPParams ConwayEra
+ -&gt; IntroducedInBabbagePParams ConwayEra
+ -&gt; IntroducedInConwayPParams ConwayEra
+ -&gt; EraBasedProtocolParametersUpdate ConwayEra)
+-&gt; m CommonProtocolParametersUpdate
+-&gt; m (AlonzoOnwardsPParams ConwayEra
+      -&gt; IntroducedInBabbagePParams ConwayEra
+      -&gt; IntroducedInConwayPParams ConwayEra
+      -&gt; EraBasedProtocolParametersUpdate ConwayEra)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m CommonProtocolParametersUpdate
+forall (m :: * -&gt; *).
+MonadGen m =&gt;
+m CommonProtocolParametersUpdate
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genCommonProtocolParametersUpdate"><span class="hs-identifier hs-var">genCommonProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span class="annot"><span class="annottext">m (AlonzoOnwardsPParams ConwayEra
+   -&gt; IntroducedInBabbagePParams ConwayEra
+   -&gt; IntroducedInConwayPParams ConwayEra
+   -&gt; EraBasedProtocolParametersUpdate ConwayEra)
+-&gt; m (AlonzoOnwardsPParams ConwayEra)
+-&gt; m (IntroducedInBabbagePParams ConwayEra
+      -&gt; IntroducedInConwayPParams ConwayEra
+      -&gt; EraBasedProtocolParametersUpdate ConwayEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (AlonzoOnwardsPParams ConwayEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (AlonzoOnwardsPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genAlonzoOnwardsPParams"><span class="hs-identifier hs-var">genAlonzoOnwardsPParams</span></a></span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><span class="annottext">m (IntroducedInBabbagePParams ConwayEra
+   -&gt; IntroducedInConwayPParams ConwayEra
+   -&gt; EraBasedProtocolParametersUpdate ConwayEra)
+-&gt; m (IntroducedInBabbagePParams ConwayEra)
+-&gt; m (IntroducedInConwayPParams ConwayEra
+      -&gt; EraBasedProtocolParametersUpdate ConwayEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (IntroducedInBabbagePParams ConwayEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (IntroducedInBabbagePParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genIntroducedInBabbagePParams"><span class="hs-identifier hs-var">genIntroducedInBabbagePParams</span></a></span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">m (IntroducedInConwayPParams ConwayEra
+   -&gt; EraBasedProtocolParametersUpdate ConwayEra)
+-&gt; m (IntroducedInConwayPParams ConwayEra)
+-&gt; m (EraBasedProtocolParametersUpdate ConwayEra)
+forall a b. m (a -&gt; b) -&gt; m a -&gt; m b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m (IntroducedInConwayPParams ConwayEra)
+forall (m :: * -&gt; *) era.
+MonadGen m =&gt;
+m (IntroducedInConwayPParams era)
+</span><a href="Test.Gen.Cardano.Api.ProtocolParameters.html#genIntroducedInConwayPParams"><span class="hs-identifier hs-var">genIntroducedInConwayPParams</span></a></span><span>
+</span><span id="line-132"></span></pre></body></html>

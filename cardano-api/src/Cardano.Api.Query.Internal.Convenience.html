@@ -1,0 +1,1901 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PartialTypeSignatures #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="annot"><span class="hs-comment">-- | Convenience query functions</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Query.Internal.Convenience</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryConvenienceError"><span class="hs-identifier">QueryConvenienceError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#TxCurrentTreasuryValue"><span class="hs-identifier">TxCurrentTreasuryValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#determineEra"><span class="hs-identifier">determineEra</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Simplest query related</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#executeQueryCardanoMode"><span class="hs-identifier">executeQueryCardanoMode</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#executeQueryAnyMode"><span class="hs-identifier">executeQueryAnyMode</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#queryStateForBalancedTx"><span class="hs-identifier">queryStateForBalancedTx</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#renderQueryConvenienceError"><span class="hs-identifier">renderQueryConvenienceError</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html"><span class="hs-identifier">Cardano.Api.Certificate.Internal</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Consensus.Internal.Mode.html"><span class="hs-identifier">Cardano.Api.Consensus.Internal.Mode</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.IO.html"><span class="hs-identifier">Cardano.Api.IO</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Monad.Error.html"><span class="hs-identifier">Cardano.Api.Monad.Error</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.html"><span class="hs-identifier">Cardano.Api.Network.IPC</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Network.Internal.NetworkId.html"><span class="hs-identifier">Cardano.Api.Network.Internal.NetworkId</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html"><span class="hs-identifier">Cardano.Api.ProtocolParameters</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Expr.html"><span class="hs-identifier">Cardano.Api.Query.Internal.Expr</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html"><span class="hs-identifier">Cardano.Api.Query.Internal.Type.QueryInMode</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html"><span class="hs-identifier">Cardano.Api.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier">UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.CertState.html"><span class="hs-identifier">Cardano.Ledger.CertState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.DRep.html#DRepState"><span class="hs-identifier">DRepState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.html"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html"><span class="hs-identifier">Ouroboros.Consensus.HardFork.Combinator.AcrossEras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#EraMismatch"><span class="hs-identifier">EraMismatch</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Type.html"><span class="hs-identifier">Ouroboros.Network.Protocol.LocalStateQuery.Type</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Type.html#Target"><span class="hs-identifier">Target</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Exception.Safe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier">SomeException</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exception.Type.html#displayException"><span class="hs-identifier">displayException</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier">first</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier">mapMaybe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">data</span><span> </span><span id="QueryConvenienceError"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryConvenienceError"><span class="hs-identifier hs-var">QueryConvenienceError</span></a></span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="AcqFailure"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#AcqFailure"><span class="hs-identifier hs-var">AcqFailure</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#AcquiringFailure"><span class="hs-identifier hs-type">AcquiringFailure</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="QueryEraMismatch"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#EraMismatch"><span class="hs-identifier hs-type">EraMismatch</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ByronEraNotSupported"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#ByronEraNotSupported"><span class="hs-identifier hs-var">ByronEraNotSupported</span></a></span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="QceUnsupportedNtcVersion"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier hs-type">UnsupportedNtcVersionError</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="QceUnexpectedException"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnexpectedException"><span class="hs-identifier hs-var">QceUnexpectedException</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">SomeException</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681181563"><span id="local-6989586621681181577"><span id="local-6989586621681181581"><span class="annot"><span class="annottext">Int -&gt; QueryConvenienceError -&gt; ShowS
+[QueryConvenienceError] -&gt; ShowS
+QueryConvenienceError -&gt; String
+(Int -&gt; QueryConvenienceError -&gt; ShowS)
+-&gt; (QueryConvenienceError -&gt; String)
+-&gt; ([QueryConvenienceError] -&gt; ShowS)
+-&gt; Show QueryConvenienceError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; QueryConvenienceError -&gt; ShowS
+showsPrec :: Int -&gt; QueryConvenienceError -&gt; ShowS
+$cshow :: QueryConvenienceError -&gt; String
+show :: QueryConvenienceError -&gt; String
+$cshowList :: [QueryConvenienceError] -&gt; ShowS
+showList :: [QueryConvenienceError] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#renderQueryConvenienceError"><span class="hs-identifier hs-type">renderQueryConvenienceError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryConvenienceError"><span class="hs-identifier hs-type">QueryConvenienceError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-66"></span><span id="renderQueryConvenienceError"><span class="annot"><span class="annottext">renderQueryConvenienceError :: QueryConvenienceError -&gt; Text
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#renderQueryConvenienceError"><span class="hs-identifier hs-var hs-var">renderQueryConvenienceError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#AcqFailure"><span class="hs-identifier hs-type">AcqFailure</span></a></span><span> </span><span id="local-6989586621681181584"><span class="annot"><span class="annottext">AcquiringFailure
+</span><a href="#local-6989586621681181584"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Acquiring failure: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">AcquiringFailure -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Api.Pretty.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">AcquiringFailure
+</span><a href="#local-6989586621681181584"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#renderQueryConvenienceError"><span class="hs-identifier hs-var">renderQueryConvenienceError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-type">QueryEraMismatch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#EraMismatch"><span class="hs-identifier hs-type">EraMismatch</span></a></span><span> </span><span id="local-6989586621681181587"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681181587"><span class="hs-identifier hs-var">ledgerEraName'</span></a></span></span><span> </span><span id="local-6989586621681181588"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681181588"><span class="hs-identifier hs-var">otherEraName'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The era of the node and the tx do not match. &quot;</span></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The node is running in the &quot;</span></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681181587"><span class="hs-identifier hs-var">ledgerEraName'</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; era, but the transaction is for the &quot;</span></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681181588"><span class="hs-identifier hs-var">otherEraName'</span></a></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; era.&quot;</span></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#renderQueryConvenienceError"><span class="hs-identifier hs-var">renderQueryConvenienceError</span></a></span><span> </span><span class="annot"><span class="annottext">QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#ByronEraNotSupported"><span class="hs-identifier hs-var">ByronEraNotSupported</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Byron era not supported&quot;</span></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#renderQueryConvenienceError"><span class="hs-identifier hs-var">renderQueryConvenienceError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-type">QceUnsupportedNtcVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier hs-type">UnsupportedNtcVersionError</span></a></span><span> </span><span id="local-6989586621681181590"><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681181590"><span class="hs-identifier hs-var">ntcVersion</span></a></span></span><span> </span><span id="local-6989586621681181591"><span class="annot"><span class="annottext">[NodeToClientVersion]
+</span><a href="#local-6989586621681181591"><span class="hs-identifier hs-var">supportedVersions</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unsupported feature for the node-to-client protocol version.\n&quot;</span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The negotiated version is &quot;</span></span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Api.Pretty.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681181590"><span class="hs-identifier hs-var">ntcVersion</span></a></span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; but this query is only supported in &quot;</span></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeToClientVersion] -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Api.Pretty.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="annot"><span class="annottext">[NodeToClientVersion]
+</span><a href="#local-6989586621681181591"><span class="hs-identifier hs-var">supportedVersions</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.\n&quot;</span></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Probably either the client or the node is out-of-date.\n&quot;</span></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Later node versions support later node-to-client protocol versions (but development protocol versions are not enabled in the node by default).&quot;</span></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#renderQueryConvenienceError"><span class="hs-identifier hs-var">renderQueryConvenienceError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnexpectedException"><span class="hs-identifier hs-type">QceUnexpectedException</span></a></span><span> </span><span id="local-6989586621681181592"><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621681181592"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unexpected exception while processing query:\n&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+forall a. IsString a =&gt; String -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.String.html#fromString"><span class="hs-identifier hs-var">fromString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SomeException -&gt; String
+forall e. Exception e =&gt; e -&gt; String
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exception.Type.html#displayException"><span class="hs-identifier hs-var">displayException</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><a href="#local-6989586621681181592"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">newtype</span><span> </span><span id="TxCurrentTreasuryValue"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#TxCurrentTreasuryValue"><span class="hs-identifier hs-var">TxCurrentTreasuryValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxCurrentTreasuryValue"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#TxCurrentTreasuryValue"><span class="hs-identifier hs-var">TxCurrentTreasuryValue</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unTxCurrentTreasuryValue"><span class="annot"><span class="annottext">TxCurrentTreasuryValue -&gt; Coin
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#unTxCurrentTreasuryValue"><span class="hs-identifier hs-var hs-var">unTxCurrentTreasuryValue</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span id="local-6989586621681181596"><span id="local-6989586621681181601"><span id="local-6989586621681181605"><span class="annot"><span class="annottext">Int -&gt; TxCurrentTreasuryValue -&gt; ShowS
+[TxCurrentTreasuryValue] -&gt; ShowS
+TxCurrentTreasuryValue -&gt; String
+(Int -&gt; TxCurrentTreasuryValue -&gt; ShowS)
+-&gt; (TxCurrentTreasuryValue -&gt; String)
+-&gt; ([TxCurrentTreasuryValue] -&gt; ShowS)
+-&gt; Show TxCurrentTreasuryValue
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxCurrentTreasuryValue -&gt; ShowS
+showsPrec :: Int -&gt; TxCurrentTreasuryValue -&gt; ShowS
+$cshow :: TxCurrentTreasuryValue -&gt; String
+show :: TxCurrentTreasuryValue -&gt; String
+$cshowList :: [TxCurrentTreasuryValue] -&gt; ShowS
+showList :: [TxCurrentTreasuryValue] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- | A convenience function to query the relevant information, from</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- the local node, for Cardano.Api.Tx.Internal.Convenience.constructBalancedTx</span><span>
+</span><span id="line-94"></span><span id="local-6989586621681181318"><span id="local-6989586621681181322"><span id="local-6989586621681181323"><span id="local-6989586621681181325"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#queryStateForBalancedTx"><span class="hs-identifier hs-type">queryStateForBalancedTx</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#CardanoEra"><span class="hs-identifier hs-type">CardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181318"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181318"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-type">LocalStateQueryExpr</span></a></span><span>
+</span><span id="line-100"></span><span>       </span><span class="annot"><a href="#local-6989586621681181322"><span class="hs-identifier hs-type">block</span></a></span><span>
+</span><span id="line-101"></span><span>       </span><span class="annot"><a href="#local-6989586621681181323"><span class="hs-identifier hs-type">point</span></a></span><span>
+</span><span id="line-102"></span><span>       </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span>
+</span><span id="line-103"></span><span>       </span><span class="annot"><a href="#local-6989586621681181325"><span class="hs-identifier hs-type">r</span></a></span><span>
+</span><span id="line-104"></span><span>       </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-105"></span><span>       </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span>
+</span><span id="line-106"></span><span>           </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryConvenienceError"><span class="hs-identifier hs-type">QueryConvenienceError</span></a></span><span>
+</span><span id="line-107"></span><span>           </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181318"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-108"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html#LedgerProtocolParameters"><span class="hs-identifier hs-type">LedgerProtocolParameters</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181318"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-109"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#EraHistory"><span class="hs-identifier hs-type">EraHistory</span></a></span><span>
+</span><span id="line-110"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-slotting-0.2.0.0-1062762da5e24b3256026b7bf7ed7ea570deea61ae8ec963e4334bb658f0121b/share/doc/html/src/Cardano.Slotting.Time.html#SystemStart"><span class="hs-identifier hs-type">SystemStart</span></a></span><span>
+</span><span id="line-111"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span>
+</span><span id="line-112"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-113"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">L.DRepRole</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-114"></span><span>           </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Feature.html#Featured"><span class="hs-identifier hs-type">Featured</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181318"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#TxCurrentTreasuryValue"><span class="hs-identifier hs-type">TxCurrentTreasuryValue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>       </span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-117"></span><span id="queryStateForBalancedTx"><span class="annot"><span class="annottext">queryStateForBalancedTx :: forall era block point r.
+CardanoEra era
+-&gt; [TxIn]
+-&gt; [Certificate era]
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        QueryConvenienceError
+        (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+         Set PoolId, Map StakeCredential Coin,
+         Map (Credential 'DRepRole) Coin,
+         Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)))
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#queryStateForBalancedTx"><span class="hs-identifier hs-var hs-var">queryStateForBalancedTx</span></a></span></span><span> </span><span id="local-6989586621681181688"><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621681181688"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span id="local-6989586621681181689"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681181689"><span class="hs-identifier hs-var">allTxIns</span></a></span></span><span> </span><span id="local-6989586621681181690"><span class="annot"><span class="annottext">[Certificate era]
+</span><a href="#local-6989586621681181690"><span class="hs-identifier hs-var">certs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+   Set PoolId, Map StakeCredential Coin,
+   Map (Credential 'DRepRole) Coin,
+   Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        QueryConvenienceError
+        (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+         Set PoolId, Map StakeCredential Coin,
+         Map (Credential 'DRepRole) Coin,
+         Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)))
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT
+   QueryConvenienceError
+   (LocalStateQueryExpr block point QueryInMode r IO)
+   (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+    Set PoolId, Map StakeCredential Coin,
+    Map (Credential 'DRepRole) Coin,
+    Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+ -&gt; LocalStateQueryExpr
+      block
+      point
+      QueryInMode
+      r
+      IO
+      (Either
+         QueryConvenienceError
+         (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+          Set PoolId, Map StakeCredential Coin,
+          Map (Credential 'DRepRole) Coin,
+          Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+      Set PoolId, Map StakeCredential Coin,
+      Map (Credential 'DRepRole) Coin,
+      Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        QueryConvenienceError
+        (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+         Set PoolId, Map StakeCredential Coin,
+         Map (Credential 'DRepRole) Coin,
+         Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-118"></span><span>  </span><span id="local-6989586621681181692"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681181692"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">CardanoEra era
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (ShelleyBasedEra era))
+forall (m :: * -&gt; *) era.
+Applicative m =&gt;
+CardanoEra era -&gt; m (Maybe (ShelleyBasedEra era))
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#requireShelleyBasedEra"><span class="hs-identifier hs-var">requireShelleyBasedEra</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621681181688"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Maybe (ShelleyBasedEra era))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Maybe (ShelleyBasedEra era))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (ShelleyBasedEra era))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (ShelleyBasedEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (ShelleyBasedEra era)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (ShelleyBasedEra era))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (ShelleyBasedEra era)
+forall x (m :: * -&gt; *) a.
+Monad m =&gt;
+ExceptT x m a -&gt; ExceptT x m (Maybe a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onNothing</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (ShelleyBasedEra era)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#ByronEraNotSupported"><span class="hs-identifier hs-var">ByronEraNotSupported</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681181696"><span class="annot"><span class="annottext">stakeCreds :: Set StakeCredential
+</span><a href="#local-6989586621681181696"><span class="hs-identifier hs-var hs-var">stakeCreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Item (Set StakeCredential)] -&gt; Set StakeCredential
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Item (Set StakeCredential)] -&gt; Set StakeCredential)
+-&gt; [Item (Set StakeCredential)] -&gt; Set StakeCredential
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Certificate era -&gt; Maybe StakeCredential)
+-&gt; [Certificate era] -&gt; [StakeCredential]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Certificate era -&gt; Maybe StakeCredential
+forall era. Certificate era -&gt; Maybe StakeCredential
+</span><a href="Cardano.Api.Certificate.Internal.html#filterUnRegCreds"><span class="hs-identifier hs-var">filterUnRegCreds</span></a></span><span> </span><span class="annot"><span class="annottext">[Certificate era]
+</span><a href="#local-6989586621681181690"><span class="hs-identifier hs-var">certs</span></a></span><span>
+</span><span id="line-123"></span><span>      </span><span id="local-6989586621681181698"><span class="annot"><span class="annottext">drepCreds :: Set (Credential 'DRepRole)
+</span><a href="#local-6989586621681181698"><span class="hs-identifier hs-var hs-var">drepCreds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Item (Set (Credential 'DRepRole))] -&gt; Set (Credential 'DRepRole)
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Item (Set (Credential 'DRepRole))] -&gt; Set (Credential 'DRepRole))
+-&gt; [Item (Set (Credential 'DRepRole))]
+-&gt; Set (Credential 'DRepRole)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Certificate era -&gt; Maybe (Credential 'DRepRole))
+-&gt; [Certificate era] -&gt; [Credential 'DRepRole]
+forall a b. (a -&gt; Maybe b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html#mapMaybe"><span class="hs-identifier hs-var">mapMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">Certificate era -&gt; Maybe (Credential 'DRepRole)
+forall era. Certificate era -&gt; Maybe (Credential 'DRepRole)
+</span><a href="Cardano.Api.Certificate.Internal.html#filterUnRegDRepCreds"><span class="hs-identifier hs-var">filterUnRegDRepCreds</span></a></span><span> </span><span class="annot"><span class="annottext">[Certificate era]
+</span><a href="#local-6989586621681181690"><span class="hs-identifier hs-var">certs</span></a></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-comment">-- Query execution</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621681181700"><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621681181700"><span class="hs-identifier hs-var">utxo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; QueryUTxOFilter
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+forall era block point r.
+ShelleyBasedEra era
+-&gt; QueryUTxOFilter
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+</span><a href="Cardano.Api.Query.Internal.Expr.html#queryUtxo"><span class="hs-identifier hs-var">queryUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681181692"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set TxIn -&gt; QueryUTxOFilter
+</span><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryUTxOByTxIn"><span class="hs-identifier hs-var">QueryUTxOByTxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Item (Set TxIn)] -&gt; Set TxIn
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)]
+[TxIn]
+</span><a href="#local-6989586621681181689"><span class="hs-identifier hs-var">allTxIns</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Either EraMismatch (UTxO era)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (UTxO era))
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (UTxO era)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either UnsupportedNtcVersionError (Either EraMismatch (UTxO era)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (UTxO era))
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (UTxO era))
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (UTxO era)))
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (UTxO era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either EraMismatch (UTxO era))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (UTxO era))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (UTxO era))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (UTxO era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(EraMismatch
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (UTxO era))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (UTxO era))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (UTxO era)
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (UTxO era)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (UTxO era))
+-&gt; (EraMismatch -&gt; QueryConvenienceError)
+-&gt; EraMismatch
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (UTxO era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EraMismatch -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621681181706"><span class="annot"><span class="annottext">PParams (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681181706"><span class="hs-identifier hs-var">pparams</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either
+     UnsupportedNtcVersionError
+     (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+forall era block point r.
+ShelleyBasedEra era
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+</span><a href="Cardano.Api.Query.Internal.Expr.html#queryProtocolParameters"><span class="hs-identifier hs-var">queryProtocolParameters</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681181692"><span class="hs-identifier hs-var">sbe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either
+     UnsupportedNtcVersionError
+     (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either
+         UnsupportedNtcVersionError
+         (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (PParams (ShelleyLedgerEra era)))
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (PParams (ShelleyLedgerEra era)))
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (PParams (ShelleyLedgerEra era)))
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (PParams (ShelleyLedgerEra era))))
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (PParams (ShelleyLedgerEra era)))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either EraMismatch (PParams (ShelleyLedgerEra era)))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (PParams (ShelleyLedgerEra era)))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (PParams (ShelleyLedgerEra era)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (PParams (ShelleyLedgerEra era))
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(EraMismatch
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (PParams (ShelleyLedgerEra era)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (PParams (ShelleyLedgerEra era)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (PParams (ShelleyLedgerEra era))
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (PParams (ShelleyLedgerEra era))
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (PParams (ShelleyLedgerEra era)))
+-&gt; (EraMismatch -&gt; QueryConvenienceError)
+-&gt; EraMismatch
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (PParams (ShelleyLedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EraMismatch -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>  </span><span id="local-6989586621681181708"><span class="annot"><span class="annottext">EraHistory
+</span><a href="#local-6989586621681181708"><span class="hs-identifier hs-var">eraHistory</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either UnsupportedNtcVersionError EraHistory)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either UnsupportedNtcVersionError EraHistory)
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either UnsupportedNtcVersionError EraHistory)
+forall block point r.
+LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either UnsupportedNtcVersionError EraHistory)
+</span><a href="Cardano.Api.Query.Internal.Expr.html#queryEraHistory"><span class="hs-identifier hs-var">queryEraHistory</span></a></span><span>
+</span><span id="line-138"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either UnsupportedNtcVersionError EraHistory)
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either UnsupportedNtcVersionError EraHistory)
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         EraHistory)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     EraHistory
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      EraHistory)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either UnsupportedNtcVersionError EraHistory)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     EraHistory
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     EraHistory
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      EraHistory)
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     EraHistory
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span>  </span><span id="local-6989586621681181710"><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621681181710"><span class="hs-identifier hs-var">systemStart</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either UnsupportedNtcVersionError SystemStart)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either UnsupportedNtcVersionError SystemStart)
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either UnsupportedNtcVersionError SystemStart)
+forall block point r.
+LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either UnsupportedNtcVersionError SystemStart)
+</span><a href="Cardano.Api.Query.Internal.Expr.html#querySystemStart"><span class="hs-identifier hs-var">querySystemStart</span></a></span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either UnsupportedNtcVersionError SystemStart)
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either UnsupportedNtcVersionError SystemStart)
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         SystemStart)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     SystemStart
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      SystemStart)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either UnsupportedNtcVersionError SystemStart)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     SystemStart
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     SystemStart
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      SystemStart)
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     SystemStart
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621681181712"><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621681181712"><span class="hs-identifier hs-var">stakePools</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either
+     UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+forall era block point r.
+ShelleyBasedEra era
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+</span><a href="Cardano.Api.Query.Internal.Expr.html#queryStakePools"><span class="hs-identifier hs-var">queryStakePools</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681181692"><span class="hs-identifier hs-var">sbe</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either
+     UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either
+         UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Either EraMismatch (Set PoolId)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Set PoolId))
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Set PoolId)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch (Set PoolId)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Set PoolId))
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Set PoolId))
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Set PoolId)))
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Set PoolId))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either EraMismatch (Set PoolId))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Set PoolId))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Set PoolId))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Set PoolId)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(EraMismatch
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Set PoolId))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Set PoolId))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Set PoolId)
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Set PoolId)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Set PoolId))
+-&gt; (EraMismatch -&gt; QueryConvenienceError)
+-&gt; EraMismatch
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Set PoolId)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EraMismatch -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span>  </span><span id="local-6989586621681181714"><span class="annot"><span class="annottext">Map StakeCredential Coin
+</span><a href="#local-6989586621681181714"><span class="hs-identifier hs-var">stakeDelegDeposits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-150"></span><span>    </span><span class="annot"><span class="annottext">CardanoEra era
+-&gt; (BabbageEraOnwards era
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Map StakeCredential Coin))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map StakeCredential Coin)
+forall (eon :: * -&gt; *) (f :: * -&gt; *) a era.
+(Eon eon, Applicative f, Monoid a) =&gt;
+CardanoEra era -&gt; (eon era -&gt; f a) -&gt; f a
+</span><a href="Cardano.Api.Era.Internal.Core.html#monoidForEraInEonA"><span class="hs-identifier hs-var">monoidForEraInEonA</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621681181688"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((BabbageEraOnwards era
+  -&gt; ExceptT
+       QueryConvenienceError
+       (LocalStateQueryExpr block point QueryInMode r IO)
+       (Map StakeCredential Coin))
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Map StakeCredential Coin))
+-&gt; (BabbageEraOnwards era
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Map StakeCredential Coin))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map StakeCredential Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681181716"><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="#local-6989586621681181716"><span class="hs-identifier hs-var">beo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either
+     UnsupportedNtcVersionError
+     (Either EraMismatch (Map StakeCredential Coin)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map StakeCredential Coin)))
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BabbageEraOnwards era
+-&gt; Set StakeCredential
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map StakeCredential Coin)))
+forall era block point r.
+BabbageEraOnwards era
+-&gt; Set StakeCredential
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map StakeCredential Coin)))
+</span><a href="Cardano.Api.Query.Internal.Expr.html#queryStakeDelegDeposits"><span class="hs-identifier hs-var">queryStakeDelegDeposits</span></a></span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="#local-6989586621681181716"><span class="hs-identifier hs-var">beo</span></a></span><span> </span><span class="annot"><span class="annottext">Set StakeCredential
+</span><a href="#local-6989586621681181696"><span class="hs-identifier hs-var">stakeCreds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>        </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either
+     UnsupportedNtcVersionError
+     (Either EraMismatch (Map StakeCredential Coin)))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either
+         UnsupportedNtcVersionError
+         (Either EraMismatch (Map StakeCredential Coin)))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Either EraMismatch (Map StakeCredential Coin)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map StakeCredential Coin))
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Map StakeCredential Coin)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map StakeCredential Coin)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map StakeCredential Coin))
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map StakeCredential Coin))
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Map StakeCredential Coin)))
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map StakeCredential Coin))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either EraMismatch (Map StakeCredential Coin))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Map StakeCredential Coin))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Map StakeCredential Coin))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map StakeCredential Coin)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(EraMismatch
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Map StakeCredential Coin))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map StakeCredential Coin))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map StakeCredential Coin)
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map StakeCredential Coin)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Map StakeCredential Coin))
+-&gt; (EraMismatch -&gt; QueryConvenienceError)
+-&gt; EraMismatch
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map StakeCredential Coin)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EraMismatch -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span>  </span><span id="local-6989586621681181718"><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Coin
+</span><a href="#local-6989586621681181718"><span class="hs-identifier hs-var">drepDelegDeposits</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="annottext">CardanoEra era
+-&gt; (ConwayEraOnwards era
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Map (Credential 'DRepRole) Coin))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) Coin)
+forall (eon :: * -&gt; *) (f :: * -&gt; *) a era.
+(Eon eon, Applicative f, Monoid a) =&gt;
+CardanoEra era -&gt; (eon era -&gt; f a) -&gt; f a
+</span><a href="Cardano.Api.Era.Internal.Core.html#monoidForEraInEonA"><span class="hs-identifier hs-var">monoidForEraInEonA</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621681181688"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayEraOnwards era
+  -&gt; ExceptT
+       QueryConvenienceError
+       (LocalStateQueryExpr block point QueryInMode r IO)
+       (Map (Credential 'DRepRole) Coin))
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Map (Credential 'DRepRole) Coin))
+-&gt; (ConwayEraOnwards era
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Map (Credential 'DRepRole) Coin))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) Coin)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681181719"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681181719"><span class="hs-identifier hs-var">con</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-157"></span><span>      </span><span class="annot"><span class="annottext">(DRepState -&gt; Coin)
+-&gt; Map (Credential 'DRepRole) DRepState
+-&gt; Map (Credential 'DRepRole) Coin
+forall a b k. (a -&gt; b) -&gt; Map k a -&gt; Map k b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#map"><span class="hs-identifier hs-var">Map.map</span></a></span><span> </span><span class="annot"><span class="annottext">DRepState -&gt; Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.DRep.html#drepDeposit"><span class="hs-identifier hs-var">drepDeposit</span></a></span><span>
+</span><span id="line-158"></span><span>        </span><span class="annot"><span class="annottext">(Map (Credential 'DRepRole) DRepState
+ -&gt; Map (Credential 'DRepRole) Coin)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) DRepState)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) Coin)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either
+     UnsupportedNtcVersionError
+     (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; Set (Credential 'DRepRole)
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+forall era block point r.
+ConwayEraOnwards era
+-&gt; Set (Credential 'DRepRole)
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+</span><a href="Cardano.Api.Query.Internal.Expr.html#queryDRepState"><span class="hs-identifier hs-var">queryDRepState</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681181719"><span class="hs-identifier hs-var">con</span></a></span><span> </span><span class="annot"><span class="annottext">Set (Credential 'DRepRole)
+</span><a href="#local-6989586621681181698"><span class="hs-identifier hs-var">drepCreds</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>                </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either
+     UnsupportedNtcVersionError
+     (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either
+         UnsupportedNtcVersionError
+         (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map (Credential 'DRepRole) DRepState))
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError
+        (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map (Credential 'DRepRole) DRepState))
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map (Credential 'DRepRole) DRepState))
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Map (Credential 'DRepRole) DRepState)))
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map (Credential 'DRepRole) DRepState))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>                </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either EraMismatch (Map (Credential 'DRepRole) DRepState))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch (Map (Credential 'DRepRole) DRepState))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Map (Credential 'DRepRole) DRepState))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) DRepState)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(EraMismatch
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Map (Credential 'DRepRole) DRepState))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch (Map (Credential 'DRepRole) DRepState))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) DRepState)
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) DRepState)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Map (Credential 'DRepRole) DRepState))
+-&gt; (EraMismatch -&gt; QueryConvenienceError)
+-&gt; EraMismatch
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Map (Credential 'DRepRole) DRepState)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EraMismatch -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621681181724"><span class="annot"><span class="annottext">Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+</span><a href="#local-6989586621681181724"><span class="hs-identifier hs-var">featuredTxTreasuryValueM</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)))
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    ConwayEraOnwards era
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)))
+-&gt; ShelleyBasedEra era
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+forall era a.
+(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; a)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier hs-var">caseShelleyToBabbageOrConwayEraOnwards</span></a></span><span>
+</span><span id="line-165"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+-&gt; ShelleyToBabbageEra era
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT
+   QueryConvenienceError
+   (LocalStateQueryExpr block point QueryInMode r IO)
+   (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+ -&gt; ShelleyToBabbageEra era
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+-&gt; ShelleyToBabbageEra era
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+forall a.
+a
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681181738"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681181738"><span class="hs-identifier hs-var">cOnwards</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-167"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.State.AccountState.html#AccountState"><span class="hs-identifier hs-type">L.AccountState</span></a></span><span class="hs-special">{</span><span id="local-6989586621681181740"><span class="annot"><span class="annottext">Coin
+asTreasury :: Coin
+asTreasury :: AccountState -&gt; Coin
+</span><a href="#local-6989586621681181740"><span class="hs-identifier hs-var hs-var">L.asTreasury</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-168"></span><span>            </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block
+  point
+  QueryInMode
+  r
+  IO
+  (Either
+     UnsupportedNtcVersionError (Either EraMismatch AccountState))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch AccountState))
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m a -&gt; ExceptT QueryConvenienceError m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch AccountState))
+forall era block point r.
+ConwayEraOnwards era
+-&gt; LocalStateQueryExpr
+     block
+     point
+     QueryInMode
+     r
+     IO
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch AccountState))
+</span><a href="Cardano.Api.Query.Internal.Expr.html#queryAccountState"><span class="hs-identifier hs-var">queryAccountState</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681181738"><span class="hs-identifier hs-var">cOnwards</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>              </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either
+     UnsupportedNtcVersionError (Either EraMismatch AccountState))
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either
+         UnsupportedNtcVersionError (Either EraMismatch AccountState))
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         (Either EraMismatch AccountState))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch AccountState)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch AccountState))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either
+        UnsupportedNtcVersionError (Either EraMismatch AccountState))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch AccountState)
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch AccountState)
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch AccountState))
+-&gt; (UnsupportedNtcVersionError -&gt; QueryConvenienceError)
+-&gt; UnsupportedNtcVersionError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch AccountState)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnsupportedNtcVersion"><span class="hs-identifier hs-var">QceUnsupportedNtcVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>              </span><span class="annot"><span class="annottext">ExceptT
+  QueryConvenienceError
+  (LocalStateQueryExpr block point QueryInMode r IO)
+  (Either EraMismatch AccountState)
+-&gt; (ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Either EraMismatch AccountState)
+    -&gt; ExceptT
+         QueryConvenienceError
+         (LocalStateQueryExpr block point QueryInMode r IO)
+         AccountState)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     AccountState
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(EraMismatch
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      AccountState)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Either EraMismatch AccountState)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     AccountState
+forall e x (m :: * -&gt; *) a.
+Monad m =&gt;
+(e -&gt; ExceptT x m a) -&gt; ExceptT x m (Either e a) -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">onLeft</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryConvenienceError
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     AccountState
+forall (m :: * -&gt; *) x a. Monad m =&gt; x -&gt; ExceptT x m a
+</span><span class="hs-identifier hs-var">left</span></span><span> </span><span class="annot"><span class="annottext">(QueryConvenienceError
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      AccountState)
+-&gt; (EraMismatch -&gt; QueryConvenienceError)
+-&gt; EraMismatch
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     AccountState
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EraMismatch -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681181743"><span class="annot"><span class="annottext">txCurrentTreasuryValue :: TxCurrentTreasuryValue
+</span><a href="#local-6989586621681181743"><span class="hs-identifier hs-var hs-var">txCurrentTreasuryValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; TxCurrentTreasuryValue
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#TxCurrentTreasuryValue"><span class="hs-identifier hs-var">TxCurrentTreasuryValue</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681181740"><span class="hs-identifier hs-var">asTreasury</span></a></span><span>
+</span><span id="line-172"></span><span>          </span><span class="annot"><span class="annottext">Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+forall a.
+a
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+ -&gt; ExceptT
+      QueryConvenienceError
+      (LocalStateQueryExpr block point QueryInMode r IO)
+      (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)))
+-&gt; Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Featured ConwayEraOnwards era TxCurrentTreasuryValue
+-&gt; Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(Featured ConwayEraOnwards era TxCurrentTreasuryValue
+ -&gt; Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+-&gt; Featured ConwayEraOnwards era TxCurrentTreasuryValue
+-&gt; Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; TxCurrentTreasuryValue
+-&gt; Featured ConwayEraOnwards era TxCurrentTreasuryValue
+forall (eon :: * -&gt; *) era a. eon era -&gt; a -&gt; Featured eon era a
+</span><a href="Cardano.Api.Era.Internal.Feature.html#Featured"><span class="hs-identifier hs-var">Featured</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681181738"><span class="hs-identifier hs-var">cOnwards</span></a></span><span> </span><span class="annot"><span class="annottext">TxCurrentTreasuryValue
+</span><a href="#local-6989586621681181743"><span class="hs-identifier hs-var">txCurrentTreasuryValue</span></a></span><span>
+</span><span id="line-173"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span>      </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681181692"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span>  </span><span class="annot"><span class="annottext">(UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+ Set PoolId, Map StakeCredential Coin,
+ Map (Credential 'DRepRole) Coin,
+ Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     (UTxO era, LedgerProtocolParameters era, EraHistory, SystemStart,
+      Set PoolId, Map StakeCredential Coin,
+      Map (Credential 'DRepRole) Coin,
+      Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue))
+forall a.
+a
+-&gt; ExceptT
+     QueryConvenienceError
+     (LocalStateQueryExpr block point QueryInMode r IO)
+     a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621681181700"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PParams (ShelleyLedgerEra era) -&gt; LedgerProtocolParameters era
+forall era.
+PParams (ShelleyLedgerEra era) -&gt; LedgerProtocolParameters era
+</span><a href="Cardano.Api.ProtocolParameters.html#LedgerProtocolParameters"><span class="hs-identifier hs-var">LedgerProtocolParameters</span></a></span><span> </span><span class="annot"><span class="annottext">PParams (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681181706"><span class="hs-identifier hs-var">pparams</span></a></span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">EraHistory
+</span><a href="#local-6989586621681181708"><span class="hs-identifier hs-var">eraHistory</span></a></span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621681181710"><span class="hs-identifier hs-var">systemStart</span></a></span><span>
+</span><span id="line-181"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621681181712"><span class="hs-identifier hs-var">stakePools</span></a></span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map StakeCredential Coin
+</span><a href="#local-6989586621681181714"><span class="hs-identifier hs-var">stakeDelegDeposits</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Coin
+</span><a href="#local-6989586621681181718"><span class="hs-identifier hs-var">drepDelegDeposits</span></a></span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (Featured ConwayEraOnwards era TxCurrentTreasuryValue)
+</span><a href="#local-6989586621681181724"><span class="hs-identifier hs-var">featuredTxTreasuryValueM</span></a></span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="annot"><span class="hs-comment">-- | Query the node to determine which era it is in.</span></span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#determineEra"><span class="hs-identifier hs-type">determineEra</span></a></span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeConnectInfo"><span class="hs-identifier hs-type">LocalNodeConnectInfo</span></a></span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#AcquiringFailure"><span class="hs-identifier hs-type">AcquiringFailure</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#AnyCardanoEra"><span class="hs-identifier hs-type">AnyCardanoEra</span></a></span><span>
+</span><span id="line-192"></span><span id="determineEra"><span class="annot"><span class="annottext">determineEra :: LocalNodeConnectInfo -&gt; ExceptT AcquiringFailure IO AnyCardanoEra
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#determineEra"><span class="hs-identifier hs-var hs-var">determineEra</span></a></span></span><span> </span><span id="local-6989586621681181746"><span class="annot"><span class="annottext">LocalNodeConnectInfo
+</span><a href="#local-6989586621681181746"><span class="hs-identifier hs-var">localNodeConnInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+-&gt; Target ChainPoint
+-&gt; QueryInMode AnyCardanoEra
+-&gt; ExceptT AcquiringFailure IO AnyCardanoEra
+forall result.
+LocalNodeConnectInfo
+-&gt; Target ChainPoint
+-&gt; QueryInMode result
+-&gt; ExceptT AcquiringFailure IO result
+</span><a href="Cardano.Api.Network.IPC.Internal.html#queryNodeLocalState"><span class="hs-identifier hs-var">queryNodeLocalState</span></a></span><span> </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+</span><a href="#local-6989586621681181746"><span class="hs-identifier hs-var">localNodeConnInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Target ChainPoint
+forall point. Target point
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Type.html#VolatileTip"><span class="hs-identifier hs-var">VolatileTip</span></a></span><span> </span><span class="annot"><span class="annottext">QueryInMode AnyCardanoEra
+</span><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryCurrentEra"><span class="hs-identifier hs-var">QueryCurrentEra</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- | Execute a query against the local node. The local</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- node must be in CardanoMode.</span><span>
+</span><span id="line-197"></span><span id="local-6989586621681181472"><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#executeQueryCardanoMode"><span class="hs-identifier hs-type">executeQueryCardanoMode</span></a></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#SocketPath"><span class="hs-identifier hs-type">SocketPath</span></a></span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.Internal.NetworkId.html#NetworkId"><span class="hs-identifier hs-type">NetworkId</span></a></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#EraMismatch"><span class="hs-identifier hs-type">EraMismatch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181472"><span class="hs-identifier hs-type">result</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryConvenienceError"><span class="hs-identifier hs-type">QueryConvenienceError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181472"><span class="hs-identifier hs-type">result</span></a></span></span><span>
+</span><span id="line-203"></span><span id="executeQueryCardanoMode"><span class="annot"><span class="annottext">executeQueryCardanoMode :: forall result.
+SocketPath
+-&gt; NetworkId
+-&gt; QueryInMode (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO result
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#executeQueryCardanoMode"><span class="hs-identifier hs-var hs-var">executeQueryCardanoMode</span></a></span></span><span> </span><span id="local-6989586621681181752"><span class="annot"><span class="annottext">SocketPath
+</span><a href="#local-6989586621681181752"><span class="hs-identifier hs-var">socketPath</span></a></span></span><span> </span><span id="local-6989586621681181753"><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621681181753"><span class="hs-identifier hs-var">nid</span></a></span></span><span> </span><span id="local-6989586621681181754"><span class="annot"><span class="annottext">QueryInMode (Either EraMismatch result)
+</span><a href="#local-6989586621681181754"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681181755"><span class="annot"><span class="annottext">localNodeConnInfo :: LocalNodeConnectInfo
+</span><a href="#local-6989586621681181755"><span class="hs-identifier hs-var hs-var">localNodeConnInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-205"></span><span>        </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeConnectInfo"><span class="hs-identifier hs-type">LocalNodeConnectInfo</span></a></span><span>
+</span><span id="line-206"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">localConsensusModeParams :: ConsensusModeParams
+</span><a href="Cardano.Api.Network.IPC.Internal.html#localConsensusModeParams"><span class="hs-identifier hs-var">localConsensusModeParams</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochSlots -&gt; ConsensusModeParams
+</span><a href="Cardano.Api.Consensus.Internal.Mode.html#CardanoModeParams"><span class="hs-identifier hs-var">CardanoModeParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; EpochSlots
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-7fb551a04b7ebd202180a636c363fd4c69d431c37908920ba820fedd2c0d0ade/share/doc/html/src/Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-var">EpochSlots</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">21600</span></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">localNodeNetworkId :: NetworkId
+</span><a href="Cardano.Api.Network.IPC.Internal.html#localNodeNetworkId"><span class="hs-identifier hs-var">localNodeNetworkId</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkId
+</span><a href="#local-6989586621681181753"><span class="hs-identifier hs-var">nid</span></a></span><span>
+</span><span id="line-208"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">localNodeSocketPath :: SocketPath
+</span><a href="Cardano.Api.Network.IPC.Internal.html#localNodeSocketPath"><span class="hs-identifier hs-var">localNodeSocketPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SocketPath
+</span><a href="#local-6989586621681181752"><span class="hs-identifier hs-var">socketPath</span></a></span><span>
+</span><span id="line-209"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span>  </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+-&gt; QueryInMode (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO result
+forall result.
+LocalNodeConnectInfo
+-&gt; QueryInMode (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO result
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#executeQueryAnyMode"><span class="hs-identifier hs-var">executeQueryAnyMode</span></a></span><span> </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+</span><a href="#local-6989586621681181755"><span class="hs-identifier hs-var">localNodeConnInfo</span></a></span><span> </span><span class="annot"><span class="annottext">QueryInMode (Either EraMismatch result)
+</span><a href="#local-6989586621681181754"><span class="hs-identifier hs-var">q</span></a></span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span class="annot"><span class="hs-comment">-- | Execute a query against the local node in any mode.</span></span><span>
+</span><span id="line-214"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#executeQueryAnyMode"><span class="hs-identifier hs-type">executeQueryAnyMode</span></a></span><span>
+</span><span id="line-215"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681181476"><span class="annot"><a href="#local-6989586621681181476"><span class="hs-identifier hs-type">result</span></a></span></span><span>
+</span><span id="line-216"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeConnectInfo"><span class="hs-identifier hs-type">LocalNodeConnectInfo</span></a></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.HardFork.Combinator.AcrossEras.html#EraMismatch"><span class="hs-identifier hs-type">EraMismatch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181476"><span class="hs-identifier hs-type">result</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Convenience.html#QueryConvenienceError"><span class="hs-identifier hs-type">QueryConvenienceError</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681181476"><span class="hs-identifier hs-type">result</span></a></span><span>
+</span><span id="line-220"></span><span id="executeQueryAnyMode"><span class="annot"><span class="annottext">executeQueryAnyMode :: forall result.
+LocalNodeConnectInfo
+-&gt; QueryInMode (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO result
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#executeQueryAnyMode"><span class="hs-identifier hs-var hs-var">executeQueryAnyMode</span></a></span></span><span> </span><span id="local-6989586621681181780"><span class="annot"><span class="annottext">LocalNodeConnectInfo
+</span><a href="#local-6989586621681181780"><span class="hs-identifier hs-var">localNodeConnInfo</span></a></span></span><span> </span><span id="local-6989586621681181781"><span class="annot"><span class="annottext">QueryInMode (Either EraMismatch result)
+</span><a href="#local-6989586621681181781"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-221"></span><span>  </span><span class="annot"><span class="annottext">Either QueryConvenienceError result
+-&gt; ExceptT QueryConvenienceError IO result
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; Either e a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Error.Class.html#liftEither"><span class="hs-identifier hs-var">liftEither</span></a></span><span>
+</span><span id="line-222"></span><span>    </span><span class="annot"><span class="annottext">(Either QueryConvenienceError result
+ -&gt; ExceptT QueryConvenienceError IO result)
+-&gt; (ExceptT AcquiringFailure IO (Either EraMismatch result)
+    -&gt; ExceptT
+         QueryConvenienceError IO (Either QueryConvenienceError result))
+-&gt; ExceptT AcquiringFailure IO (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO result
+forall (m :: * -&gt; *) b c a.
+Monad m =&gt;
+(b -&gt; m c) -&gt; (a -&gt; m b) -&gt; a -&gt; m c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.html#%3C%3D%3C"><span class="hs-operator hs-var">&lt;=&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Either EraMismatch result -&gt; Either QueryConvenienceError result)
+-&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result)
+-&gt; ExceptT
+     QueryConvenienceError IO (Either QueryConvenienceError result)
+forall a b.
+(a -&gt; b)
+-&gt; ExceptT QueryConvenienceError IO a
+-&gt; ExceptT QueryConvenienceError IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(EraMismatch -&gt; QueryConvenienceError)
+-&gt; Either EraMismatch result -&gt; Either QueryConvenienceError result
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">EraMismatch -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QueryEraMismatch"><span class="hs-identifier hs-var">QueryEraMismatch</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-223"></span><span>      </span><span class="annot"><span class="annottext">(ExceptT QueryConvenienceError IO (Either EraMismatch result)
+ -&gt; ExceptT
+      QueryConvenienceError IO (Either QueryConvenienceError result))
+-&gt; (ExceptT AcquiringFailure IO (Either EraMismatch result)
+    -&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result))
+-&gt; ExceptT AcquiringFailure IO (Either EraMismatch result)
+-&gt; ExceptT
+     QueryConvenienceError IO (Either QueryConvenienceError result)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeException -&gt; QueryConvenienceError)
+-&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result)
+forall e' (m :: * -&gt; *) e a.
+(MonadError e' m, MonadCatch m, Exception e) =&gt;
+(e -&gt; e') -&gt; m a -&gt; m a
+</span><a href="Cardano.Api.Monad.Error.html#handleIOExceptionsWith"><span class="hs-identifier hs-var">handleIOExceptionsWith</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#QceUnexpectedException"><span class="hs-identifier hs-var">QceUnexpectedException</span></a></span><span>
+</span><span id="line-224"></span><span>      </span><span class="annot"><span class="annottext">(ExceptT QueryConvenienceError IO (Either EraMismatch result)
+ -&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result))
+-&gt; (ExceptT AcquiringFailure IO (Either EraMismatch result)
+    -&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result))
+-&gt; ExceptT AcquiringFailure IO (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(AcquiringFailure -&gt; QueryConvenienceError)
+-&gt; ExceptT AcquiringFailure IO (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO (Either EraMismatch result)
+forall e' (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) e a.
+MonadTransError e' t m =&gt;
+(e -&gt; e') -&gt; ExceptT e m a -&gt; t m a
+</span><a href="Cardano.Api.Monad.Error.html#modifyError"><span class="hs-identifier hs-var">modifyError</span></a></span><span> </span><span class="annot"><span class="annottext">AcquiringFailure -&gt; QueryConvenienceError
+</span><a href="Cardano.Api.Query.Internal.Convenience.html#AcqFailure"><span class="hs-identifier hs-var">AcqFailure</span></a></span><span>
+</span><span id="line-225"></span><span>    </span><span class="annot"><span class="annottext">(ExceptT AcquiringFailure IO (Either EraMismatch result)
+ -&gt; ExceptT QueryConvenienceError IO result)
+-&gt; ExceptT AcquiringFailure IO (Either EraMismatch result)
+-&gt; ExceptT QueryConvenienceError IO result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+-&gt; Target ChainPoint
+-&gt; QueryInMode (Either EraMismatch result)
+-&gt; ExceptT AcquiringFailure IO (Either EraMismatch result)
+forall result.
+LocalNodeConnectInfo
+-&gt; Target ChainPoint
+-&gt; QueryInMode result
+-&gt; ExceptT AcquiringFailure IO result
+</span><a href="Cardano.Api.Network.IPC.Internal.html#queryNodeLocalState"><span class="hs-identifier hs-var">queryNodeLocalState</span></a></span><span> </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+</span><a href="#local-6989586621681181780"><span class="hs-identifier hs-var">localNodeConnInfo</span></a></span><span> </span><span class="annot"><span class="annottext">Target ChainPoint
+forall point. Target point
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Type.html#VolatileTip"><span class="hs-identifier hs-var">VolatileTip</span></a></span><span> </span><span class="annot"><span class="annottext">QueryInMode (Either EraMismatch result)
+</span><a href="#local-6989586621681181781"><span class="hs-identifier hs-var">q</span></a></span><span>
+</span><span id="line-226"></span></pre></body></html>

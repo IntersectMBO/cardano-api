@@ -1,0 +1,1154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeOperators #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- | This module provides a way to construct a simple transaction over all eras.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- It is exposed for testing purposes only.</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Compatible.Tx</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyProtocolUpdate"><span class="hs-identifier">AnyProtocolUpdate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyVote"><span class="hs-identifier">AnyVote</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#createCompatibleTx"><span class="hs-identifier">createCompatibleTx</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#addWitnesses"><span class="hs-identifier">addWitnesses</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier">StakeCredential</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html"><span class="hs-identifier">Cardano.Api.Certificate.Internal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#Certificate"><span class="hs-identifier">Certificate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.html"><span class="hs-identifier">Cardano.Api.Era</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html"><span class="hs-identifier">Cardano.Api.ProtocolParameters</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Sign</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Value.Internal.html"><span class="hs-identifier">Cardano.Api.Value.Internal</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-api-1.11.0.0-9852118f7dfe14ab1340be707d67c9317fb07912c1725cb4a7204d287e446e2f/share/doc/html/src/Cardano.Ledger.Api.html"><span class="hs-identifier">Cardano.Ledger.Api</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html"><span class="hs-identifier">Data.Maybe</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html"><span class="hs-identifier">Data.Maybe.Strict</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Monoid.html"><span class="hs-identifier">Data.Monoid</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Sequence.Strict.html"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Seq</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Lens.Micro</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ix</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">data</span><span> </span><span id="AnyProtocolUpdate"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyProtocolUpdate"><span class="hs-identifier hs-var">AnyProtocolUpdate</span></a></span></span><span> </span><span id="local-6989586621681214537"><span class="annot"><a href="#local-6989586621681214537"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621681214538"><span id="ProtocolUpdate"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#ProtocolUpdate"><span class="hs-identifier hs-var">ProtocolUpdate</span></a></span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEra"><span class="hs-identifier hs-type">ShelleyToBabbageEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214538"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html#UpdateProposal"><span class="hs-identifier hs-type">UpdateProposal</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyProtocolUpdate"><span class="hs-identifier hs-type">AnyProtocolUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214538"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621681214540"><span id="ProposalProcedures"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#ProposalProcedures"><span class="hs-identifier hs-var">ProposalProcedures</span></a></span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214540"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxProposalProcedures"><span class="hs-identifier hs-type">TxProposalProcedures</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214540"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyProtocolUpdate"><span class="hs-identifier hs-type">AnyProtocolUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214540"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621681214542"><span id="NoPParamsUpdate"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#NoPParamsUpdate"><span class="hs-identifier hs-var">NoPParamsUpdate</span></a></span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214542"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyProtocolUpdate"><span class="hs-identifier hs-type">AnyProtocolUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214542"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">data</span><span> </span><span id="AnyVote"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyVote"><span class="hs-identifier hs-var">AnyVote</span></a></span></span><span> </span><span id="local-6989586621681214544"><span class="annot"><a href="#local-6989586621681214544"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621681214545"><span id="VotingProcedures"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214545"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxVotingProcedures"><span class="hs-identifier hs-type">TxVotingProcedures</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214545"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyVote"><span class="hs-identifier hs-type">AnyVote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214545"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621681214547"><span id="NoVotes"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#NoVotes"><span class="hs-identifier hs-var">NoVotes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyVote"><span class="hs-identifier hs-type">AnyVote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214547"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><span class="hs-comment">-- | Create a transaction in any shelley based era</span></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#createCompatibleTx"><span class="hs-identifier hs-type">createCompatibleTx</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681214258"><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-61"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#CtxTx"><span class="hs-identifier hs-type">CtxTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Value.Internal.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Fee</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyProtocolUpdate"><span class="hs-identifier hs-type">AnyProtocolUpdate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#AnyVote"><span class="hs-identifier hs-type">AnyVote</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxCertificates"><span class="hs-identifier hs-type">TxCertificates</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html#ProtocolParametersConversionError"><span class="hs-identifier hs-type">ProtocolParametersConversionError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span id="createCompatibleTx"><span class="annot"><span class="annottext">createCompatibleTx :: forall era.
+ShelleyBasedEra era
+-&gt; [TxIn]
+-&gt; [TxOut CtxTx era]
+-&gt; Lovelace
+-&gt; AnyProtocolUpdate era
+-&gt; AnyVote era
+-&gt; TxCertificates BuildTx era
+-&gt; Either ProtocolParametersConversionError (Tx era)
+</span><a href="Cardano.Api.Compatible.Tx.html#createCompatibleTx"><span class="hs-identifier hs-var hs-var">createCompatibleTx</span></a></span></span><span> </span><span id="local-6989586621681214561"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621681214562"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681214562"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span id="local-6989586621681214563"><span class="annot"><span class="annottext">[TxOut CtxTx era]
+</span><a href="#local-6989586621681214563"><span class="hs-identifier hs-var">outs</span></a></span></span><span> </span><span id="local-6989586621681214564"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621681214564"><span class="hs-identifier hs-var">txFee'</span></a></span></span><span> </span><span id="local-6989586621681214565"><span class="annot"><span class="annottext">AnyProtocolUpdate era
+</span><a href="#local-6989586621681214565"><span class="hs-identifier hs-var">anyProtocolUpdate</span></a></span></span><span> </span><span id="local-6989586621681214566"><span class="annot"><span class="annottext">AnyVote era
+</span><a href="#local-6989586621681214566"><span class="hs-identifier hs-var">anyVote</span></a></span></span><span> </span><span id="local-6989586621681214567"><span class="annot"><span class="annottext">TxCertificates BuildTx era
+</span><a href="#local-6989586621681214567"><span class="hs-identifier hs-var">txCertificates'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Either ProtocolParametersConversionError (Tx era))
+-&gt; Either ProtocolParametersConversionError (Tx era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt;
+  Either ProtocolParametersConversionError (Tx era))
+ -&gt; Either ProtocolParametersConversionError (Tx era))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Either ProtocolParametersConversionError (Tx era))
+-&gt; Either ProtocolParametersConversionError (Tx era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621681214596"><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214596"><span class="hs-identifier hs-var">updateTxBody</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681214597"><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214597"><span class="hs-identifier hs-var">extraScriptWitnesses</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AnyProtocolUpdate era
+</span><a href="#local-6989586621681214565"><span class="hs-identifier hs-var">anyProtocolUpdate</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-74"></span><span>        </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#ProtocolUpdate"><span class="hs-identifier hs-type">ProtocolUpdate</span></a></span><span> </span><span id="local-6989586621681214598"><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="#local-6989586621681214598"><span class="hs-identifier hs-var">shelleyToBabbageEra</span></a></span></span><span> </span><span id="local-6989586621681214599"><span class="annot"><span class="annottext">UpdateProposal
+</span><a href="#local-6989586621681214599"><span class="hs-identifier hs-var">updateProposal</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-75"></span><span>          </span><span id="local-6989586621681214600"><span class="annot"><span class="annottext">Update (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214600"><span class="hs-identifier hs-var">ledgerPParamsUpdate</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; UpdateProposal
+-&gt; Either
+     ProtocolParametersConversionError (Update (ShelleyLedgerEra era))
+forall era.
+ShelleyBasedEra era
+-&gt; UpdateProposal
+-&gt; Either
+     ProtocolParametersConversionError (Update (ShelleyLedgerEra era))
+</span><a href="Cardano.Api.ProtocolParameters.html#toLedgerUpdate"><span class="hs-identifier hs-var">toLedgerUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">UpdateProposal
+</span><a href="#local-6989586621681214599"><span class="hs-identifier hs-var">updateProposal</span></a></span><span>
+</span><span id="line-76"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681214602"><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214602"><span class="hs-identifier hs-var">updateTxBody</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-type">Endo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">L.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>                </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+-&gt; (ShelleyToBabbageEraConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall era a.
+ShelleyToBabbageEra era
+-&gt; (ShelleyToBabbageEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#shelleyToBabbageEraConstraints"><span class="hs-identifier hs-var">shelleyToBabbageEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="#local-6989586621681214598"><span class="hs-identifier hs-var">shelleyToBabbageEra</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyToBabbageEraConstraints era =&gt;
+  Endo (TxBody (ShelleyLedgerEra era)))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (ShelleyToBabbageEraConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-78"></span><span>                  </span><span class="annot"><span class="annottext">(TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a. (a -&gt; a) -&gt; Endo a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-var">Endo</span></a></span><span> </span><span class="annot"><span class="annottext">((TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681214610"><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214610"><span class="hs-identifier hs-var">txb</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>                    </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214610"><span class="hs-identifier hs-var">txb</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictMaybe (Update (ShelleyLedgerEra era))
+ -&gt; Identity (StrictMaybe (Update (ShelleyLedgerEra era))))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era.
+ShelleyEraTxBody era =&gt;
+Lens' (TxBody era) (StrictMaybe (Update era))
+Lens'
+  (TxBody (ShelleyLedgerEra era))
+  (StrictMaybe (Update (ShelleyLedgerEra era)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.TxBody.html#updateTxBodyL"><span class="hs-identifier hs-var">L.updateTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictMaybe (Update (ShelleyLedgerEra era))
+  -&gt; Identity (StrictMaybe (Update (ShelleyLedgerEra era))))
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; StrictMaybe (Update (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Update (ShelleyLedgerEra era)
+-&gt; StrictMaybe (Update (ShelleyLedgerEra era))
+forall a. a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#SJust"><span class="hs-identifier hs-var">SJust</span></a></span><span> </span><span class="annot"><span class="annottext">Update (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214600"><span class="hs-identifier hs-var">ledgerPParamsUpdate</span></a></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span>          </span><span class="annot"><span class="annottext">(Endo (TxBody (ShelleyLedgerEra era)),
+ [(ScriptWitnessIndex, AnyScriptWitness era)])
+-&gt; Either
+     ProtocolParametersConversionError
+     (Endo (TxBody (ShelleyLedgerEra era)),
+      [(ScriptWitnessIndex, AnyScriptWitness era)])
+forall a. a -&gt; Either ProtocolParametersConversionError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214602"><span class="hs-identifier hs-var">updateTxBody</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#NoPParamsUpdate"><span class="hs-identifier hs-type">NoPParamsUpdate</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-83"></span><span>          </span><span class="annot"><span class="annottext">(Endo (TxBody (ShelleyLedgerEra era)),
+ [(ScriptWitnessIndex, AnyScriptWitness era)])
+-&gt; Either
+     ProtocolParametersConversionError
+     (Endo (TxBody (ShelleyLedgerEra era)),
+      [(ScriptWitnessIndex, AnyScriptWitness era)])
+forall a. a -&gt; Either ProtocolParametersConversionError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#ProposalProcedures"><span class="hs-identifier hs-type">ProposalProcedures</span></a></span><span> </span><span id="local-6989586621681214615"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681214615"><span class="hs-identifier hs-var">conwayOnwards</span></a></span></span><span> </span><span id="local-6989586621681214616"><span class="annot"><span class="annottext">TxProposalProcedures BuildTx era
+</span><a href="#local-6989586621681214616"><span class="hs-identifier hs-var">proposalProcedures</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681214617"><span class="annot"><span class="annottext">proposals :: OSet (ProposalProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214617"><span class="hs-identifier hs-var hs-var">proposals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxProposalProcedures BuildTx era
+-&gt; OSet (ProposalProcedure (ShelleyLedgerEra era))
+forall build era.
+TxProposalProcedures build era
+-&gt; OSet (ProposalProcedure (ShelleyLedgerEra era))
+</span><a href="Cardano.Api.Tx.Internal.Body.html#convProposalProcedures"><span class="hs-identifier hs-var">convProposalProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">TxProposalProcedures BuildTx era
+</span><a href="#local-6989586621681214616"><span class="hs-identifier hs-var">proposalProcedures</span></a></span><span>
+</span><span id="line-86"></span><span>              </span><span id="local-6989586621681214619"><span class="annot"><span class="annottext">proposalWitnesses :: [(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214619"><span class="hs-identifier hs-var hs-var">proposalWitnesses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621681214620"><span class="hs-identifier hs-var">ix</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era -&gt; AnyScriptWitness era
+forall witctx era.
+Typeable witctx =&gt;
+ScriptWitness witctx era -&gt; AnyScriptWitness era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#AnyScriptWitness"><span class="hs-identifier hs-var">AnyScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era
+</span><a href="#local-6989586621681214622"><span class="hs-identifier hs-var">witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681214620"><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621681214620"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ProposalProcedure (ShelleyLedgerEra era)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681214622"><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era
+</span><a href="#local-6989586621681214622"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TxProposalProcedures BuildTx era
+-&gt; [(ScriptWitnessIndex, ProposalProcedure (ShelleyLedgerEra era),
+     ScriptWitness WitCtxStake era)]
+forall era.
+TxProposalProcedures BuildTx era
+-&gt; [(ScriptWitnessIndex, ProposalProcedure (ShelleyLedgerEra era),
+     ScriptWitness WitCtxStake era)]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#indexTxProposalProcedures"><span class="hs-identifier hs-var">indexTxProposalProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">TxProposalProcedures BuildTx era
+</span><a href="#local-6989586621681214616"><span class="hs-identifier hs-var">proposalProcedures</span></a></span><span>
+</span><span id="line-89"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-90"></span><span>              </span><span id="local-6989586621681214624"><span class="annot"><span class="annottext">referenceInputs :: [TxIn]
+</span><a href="#local-6989586621681214624"><span class="hs-identifier hs-var hs-var">referenceInputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxIn"><span class="hs-identifier hs-var">toShelleyTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681214626"><span class="hs-identifier hs-var">txIn</span></a></span><span>
+</span><span id="line-92"></span><span>                </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#AnyScriptWitness"><span class="hs-identifier hs-type">AnyScriptWitness</span></a></span><span> </span><span id="local-6989586621681214628"><span class="annot"><span class="annottext">ScriptWitness witctx era
+</span><a href="#local-6989586621681214628"><span class="hs-identifier hs-var">sWit</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214619"><span class="hs-identifier hs-var">proposalWitnesses</span></a></span><span>
+</span><span id="line-93"></span><span>                </span><span class="hs-special">,</span><span> </span><span id="local-6989586621681214626"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681214626"><span class="hs-identifier hs-var">txIn</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe TxIn -&gt; [TxIn]
+forall a. Maybe a -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html#maybeToList"><span class="hs-identifier hs-var">maybeToList</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe TxIn -&gt; [TxIn]) -&gt; Maybe TxIn -&gt; [TxIn]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitness witctx era -&gt; Maybe TxIn
+forall witctx era. ScriptWitness witctx era -&gt; Maybe TxIn
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#getScriptWitnessReferenceInput"><span class="hs-identifier hs-var">getScriptWitnessReferenceInput</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitness witctx era
+</span><a href="#local-6989586621681214628"><span class="hs-identifier hs-var">sWit</span></a></span><span>
+</span><span id="line-94"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-95"></span><span>              </span><span class="hs-comment">-- append proposal reference inputs &amp; set proposal procedures</span><span>
+</span><span id="line-96"></span><span>              </span><span id="local-6989586621681214631"><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214631"><span class="hs-identifier hs-var">updateTxBody</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-type">Endo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">L.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>                </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall era a.
+ConwayEraOnwards era -&gt; (ConwayEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#conwayEraOnwardsConstraints"><span class="hs-identifier hs-var">conwayEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681214615"><span class="hs-identifier hs-var">conwayOnwards</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayEraOnwardsConstraints era =&gt;
+  Endo (TxBody (ShelleyLedgerEra era)))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-98"></span><span>                  </span><span class="annot"><span class="annottext">(TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a. (a -&gt; a) -&gt; Endo a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-var">Endo</span></a></span><span> </span><span class="annot"><span class="annottext">((TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-99"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Set TxIn -&gt; Identity (Set TxIn))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era. BabbageEraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody (ShelleyLedgerEra era)) (Set TxIn)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-babbage-1.11.0.0-f7bc1f22764552224a1c465b1646b5ec2346608cc94bb07a345f30ab692b06af/share/doc/html/src/Cardano.Ledger.Babbage.TxBody.Internal.html#referenceInputsTxBodyL"><span class="hs-identifier hs-var">L.referenceInputsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((Set TxIn -&gt; Identity (Set TxIn))
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; (Set TxIn -&gt; Set TxIn)
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">%~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set TxIn -&gt; Set TxIn -&gt; Set TxIn
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)] -&gt; Set TxIn
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)]
+[TxIn]
+</span><a href="#local-6989586621681214624"><span class="hs-identifier hs-var">referenceInputs</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>                      </span><span class="annot"><span class="annottext">(TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(OSet (ProposalProcedure (ShelleyLedgerEra era))
+ -&gt; Identity (OSet (ProposalProcedure (ShelleyLedgerEra era))))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era.
+ConwayEraTxBody era =&gt;
+Lens' (TxBody era) (OSet (ProposalProcedure era))
+Lens'
+  (TxBody (ShelleyLedgerEra era))
+  (OSet (ProposalProcedure (ShelleyLedgerEra era)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.TxBody.Internal.html#proposalProceduresTxBodyL"><span class="hs-identifier hs-var">L.proposalProceduresTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((OSet (ProposalProcedure (ShelleyLedgerEra era))
+  -&gt; Identity (OSet (ProposalProcedure (ShelleyLedgerEra era))))
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; OSet (ProposalProcedure (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">OSet (ProposalProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214617"><span class="hs-identifier hs-var">proposals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>          </span><span class="annot"><span class="annottext">(Endo (TxBody (ShelleyLedgerEra era)),
+ [(ScriptWitnessIndex, AnyScriptWitness era)])
+-&gt; Either
+     ProtocolParametersConversionError
+     (Endo (TxBody (ShelleyLedgerEra era)),
+      [(ScriptWitnessIndex, AnyScriptWitness era)])
+forall a. a -&gt; Either ProtocolParametersConversionError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214631"><span class="hs-identifier hs-var">updateTxBody</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214619"><span class="hs-identifier hs-var">proposalWitnesses</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681214651"><span class="annot"><span class="annottext">txbody :: TxBody (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214651"><span class="hs-identifier hs-var hs-var">txbody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>          </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; [TxIn]
+-&gt; [TxOut CtxTx era]
+-&gt; Lovelace
+-&gt; TxBody (ShelleyLedgerEra era)
+forall era ctx.
+HasCallStack =&gt;
+ShelleyBasedEra era
+-&gt; [TxIn]
+-&gt; [TxOut ctx era]
+-&gt; Lovelace
+-&gt; TxBody (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Compatible.Tx.html#createCommonTxBody"><span class="hs-identifier hs-var">createCommonTxBody</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681214562"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">[TxOut CtxTx era]
+</span><a href="#local-6989586621681214563"><span class="hs-identifier hs-var">outs</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621681214564"><span class="hs-identifier hs-var">txFee'</span></a></span><span>
+</span><span id="line-106"></span><span>            </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">[Endo (TxBody (ShelleyLedgerEra era))]
+-&gt; TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era)
+forall {a}. [Endo a] -&gt; a -&gt; a
+</span><a href="#local-6989586621681214653"><span class="hs-identifier hs-var">appEndos</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214654"><span class="hs-identifier hs-var">setCerts</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214655"><span class="hs-identifier hs-var">setRefInputs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214596"><span class="hs-identifier hs-var">updateTxBody</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>        </span><span id="local-6989586621681214656"><span class="annot"><span class="annottext">updateVotingProcedures :: Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214656"><span class="hs-identifier hs-var hs-var">updateVotingProcedures</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AnyVote era
+</span><a href="#local-6989586621681214566"><span class="hs-identifier hs-var">anyVote</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-110"></span><span>            </span><span class="annot"><span class="annottext">AnyVote era
+</span><a href="Cardano.Api.Compatible.Tx.html#NoVotes"><span class="hs-identifier hs-var">NoVotes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era)
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span>
+</span><span id="line-111"></span><span>            </span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span id="local-6989586621681214658"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681214658"><span class="hs-identifier hs-var">conwayOnwards</span></a></span></span><span> </span><span id="local-6989586621681214659"><span class="annot"><span class="annottext">TxVotingProcedures BuildTx era
+</span><a href="#local-6989586621681214659"><span class="hs-identifier hs-var">procedures</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-112"></span><span>              </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214660"><span class="hs-identifier hs-var">overwriteVotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681214658"><span class="hs-identifier hs-var">conwayOnwards</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxVotingProcedures BuildTx era
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+forall build era.
+TxVotingProcedures build era
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Tx.Internal.Body.html#convVotingProcedures"><span class="hs-identifier hs-var">convVotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">TxVotingProcedures BuildTx era
+</span><a href="#local-6989586621681214659"><span class="hs-identifier hs-var">procedures</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span>        </span><span id="local-6989586621681214662"><span class="annot"><span class="annottext">apiScriptWitnesses :: [(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214662"><span class="hs-identifier hs-var hs-var">apiScriptWitnesses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621681214663"><span class="hs-identifier hs-var">ix</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era -&gt; AnyScriptWitness era
+forall witctx era.
+Typeable witctx =&gt;
+ScriptWitness witctx era -&gt; AnyScriptWitness era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#AnyScriptWitness"><span class="hs-identifier hs-var">AnyScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era
+</span><a href="#local-6989586621681214664"><span class="hs-identifier hs-var">witness</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681214663"><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><a href="#local-6989586621681214663"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Certificate era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitness"><span class="hs-identifier hs-type">ScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessInCtx WitCtxStake
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681214664"><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era
+</span><a href="#local-6989586621681214664"><span class="hs-identifier hs-var">witness</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, Certificate era, StakeCredential,
+  Witness WitCtxStake era)]
+</span><a href="#local-6989586621681214666"><span class="hs-identifier hs-var">indexedTxCerts</span></a></span><span>
+</span><span id="line-117"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">Tx era -&gt; Either ProtocolParametersConversionError (Tx era)
+forall a. a -&gt; Either ProtocolParametersConversionError a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">(Tx era -&gt; Either ProtocolParametersConversionError (Tx era))
+-&gt; (Tx (ShelleyLedgerEra era) -&gt; Tx era)
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Either ProtocolParametersConversionError (Tx era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Tx (ShelleyLedgerEra era) -&gt; Tx era
+forall era.
+ShelleyBasedEra era -&gt; Tx (ShelleyLedgerEra era) -&gt; Tx era
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyTx"><span class="hs-identifier hs-var">ShelleyTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">(Tx (ShelleyLedgerEra era)
+ -&gt; Either ProtocolParametersConversionError (Tx era))
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Either ProtocolParametersConversionError (Tx era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era)
+forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#mkBasicTx"><span class="hs-identifier hs-var">L.mkBasicTx</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214651"><span class="hs-identifier hs-var">txbody</span></a></span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era)
+-&gt; (Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era))
+-&gt; Tx (ShelleyLedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits (ShelleyLedgerEra era)
+ -&gt; Identity (TxWits (ShelleyLedgerEra era)))
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Identity (Tx (ShelleyLedgerEra era))
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx (ShelleyLedgerEra era)) (TxWits (ShelleyLedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">L.witsTxL</span></a></span><span>
+</span><span id="line-123"></span><span>          </span><span class="annot"><span class="annottext">((TxWits (ShelleyLedgerEra era)
+  -&gt; Identity (TxWits (ShelleyLedgerEra era)))
+ -&gt; Tx (ShelleyLedgerEra era)
+ -&gt; Identity (Tx (ShelleyLedgerEra era)))
+-&gt; (TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">%~</span></span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+-&gt; TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214670"><span class="hs-identifier hs-var">setScriptWitnesses</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214662"><span class="hs-identifier hs-var">apiScriptWitnesses</span></a></span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+-&gt; [(ScriptWitnessIndex, AnyScriptWitness era)]
+-&gt; [(ScriptWitnessIndex, AnyScriptWitness era)]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214597"><span class="hs-identifier hs-var">extraScriptWitnesses</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>        </span><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era)
+-&gt; (Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era))
+-&gt; Tx (ShelleyLedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214656"><span class="hs-identifier hs-var">updateVotingProcedures</span></a></span><span>
+</span><span id="line-125"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-126"></span><span>  </span><span id="local-6989586621681214671"><span class="annot"><span class="annottext">era :: CardanoEra era
+</span><a href="#local-6989586621681214671"><span class="hs-identifier hs-var hs-var">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; CardanoEra era
+forall era. ShelleyBasedEra era -&gt; CardanoEra era
+forall (eon :: * -&gt; *) era.
+ToCardanoEra eon =&gt;
+eon era -&gt; CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#toCardanoEra"><span class="hs-identifier hs-var">toCardanoEra</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621681214653"><span class="annot"><span class="annottext">appEndos :: [Endo a] -&gt; a -&gt; a
+</span><a href="#local-6989586621681214653"><span class="hs-identifier hs-var hs-var">appEndos</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Endo a -&gt; a -&gt; a
+forall a. Endo a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#appEndo"><span class="hs-identifier hs-var">appEndo</span></a></span><span> </span><span class="annot"><span class="annottext">(Endo a -&gt; a -&gt; a) -&gt; ([Endo a] -&gt; Endo a) -&gt; [Endo a] -&gt; a -&gt; a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Endo a] -&gt; Endo a
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="#local-6989586621681214654"><span class="hs-identifier hs-type">setCerts</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-type">Endo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">L.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621681214654"><span class="annot"><span class="annottext">setCerts :: Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214654"><span class="hs-identifier hs-var hs-var">setCerts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt;
+  Endo (TxBody (ShelleyLedgerEra era)))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-132"></span><span>      </span><span class="annot"><span class="annottext">(TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a. (a -&gt; a) -&gt; Endo a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-var">Endo</span></a></span><span> </span><span class="annot"><span class="annottext">((TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><span class="annottext">(StrictSeq (TxCert (ShelleyLedgerEra era))
+ -&gt; Identity (StrictSeq (TxCert (ShelleyLedgerEra era))))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxCert era))
+Lens'
+  (TxBody (ShelleyLedgerEra era))
+  (StrictSeq (TxCert (ShelleyLedgerEra era)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#certsTxBodyL"><span class="hs-identifier hs-var">L.certsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((StrictSeq (TxCert (ShelleyLedgerEra era))
+  -&gt; Identity (StrictSeq (TxCert (ShelleyLedgerEra era))))
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; StrictSeq (TxCert (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; TxCertificates BuildTx era
+-&gt; StrictSeq (TxCert (ShelleyLedgerEra era))
+forall era build.
+ShelleyBasedEra era
+-&gt; TxCertificates build era
+-&gt; StrictSeq (TxCert (ShelleyLedgerEra era))
+</span><a href="Cardano.Api.Tx.Internal.Body.html#convCertificates"><span class="hs-identifier hs-var">convCertificates</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">TxCertificates BuildTx era
+</span><a href="#local-6989586621681214567"><span class="hs-identifier hs-var">txCertificates'</span></a></span><span>
+</span><span id="line-134"></span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="#local-6989586621681214655"><span class="hs-identifier hs-type">setRefInputs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-type">Endo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">L.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>  </span><span id="local-6989586621681214655"><span class="annot"><span class="annottext">setRefInputs :: Endo (TxBody (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681214655"><span class="hs-identifier hs-var hs-var">setRefInputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681214682"><span class="annot"><span class="annottext">refInputs :: [TxIn]
+</span><a href="#local-6989586621681214682"><span class="hs-identifier hs-var hs-var">refInputs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-138"></span><span>          </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxIn"><span class="hs-identifier hs-var">toShelleyTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681214683"><span class="hs-identifier hs-var">refInput</span></a></span><span>
+</span><span id="line-139"></span><span>          </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScriptWitnessIndex
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Certificate era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeCredential
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitness"><span class="hs-identifier hs-type">ScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessInCtx WitCtxStake
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681214684"><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era
+</span><a href="#local-6989586621681214684"><span class="hs-identifier hs-var">wit</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, Certificate era, StakeCredential,
+  Witness WitCtxStake era)]
+</span><a href="#local-6989586621681214666"><span class="hs-identifier hs-var">indexedTxCerts</span></a></span><span>
+</span><span id="line-140"></span><span>          </span><span class="hs-special">,</span><span> </span><span id="local-6989586621681214683"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681214683"><span class="hs-identifier hs-var">refInput</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe TxIn -&gt; [TxIn]
+forall a. Maybe a -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html#maybeToList"><span class="hs-identifier hs-var">maybeToList</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe TxIn -&gt; [TxIn]) -&gt; Maybe TxIn -&gt; [TxIn]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era -&gt; Maybe TxIn
+forall witctx era. ScriptWitness witctx era -&gt; Maybe TxIn
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#getScriptWitnessReferenceInput"><span class="hs-identifier hs-var">getScriptWitnessReferenceInput</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitness WitCtxStake era
+</span><a href="#local-6989586621681214684"><span class="hs-identifier hs-var">wit</span></a></span><span>
+</span><span id="line-141"></span><span>          </span><span class="hs-special">]</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span>    </span><span class="annot"><span class="annottext">CardanoEra era
+-&gt; (BabbageEraOnwards era -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall (eon :: * -&gt; *) a era.
+(Eon eon, Monoid a) =&gt;
+CardanoEra era -&gt; (eon era -&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Core.html#monoidForEraInEon"><span class="hs-identifier hs-var">monoidForEraInEon</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621681214671"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((BabbageEraOnwards era -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (BabbageEraOnwards era -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681214686"><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="#local-6989586621681214686"><span class="hs-identifier hs-var">beo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+-&gt; (BabbageEraOnwardsConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall era a.
+BabbageEraOnwards era
+-&gt; (BabbageEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#babbageEraOnwardsConstraints"><span class="hs-identifier hs-var">babbageEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="#local-6989586621681214686"><span class="hs-identifier hs-var">beo</span></a></span><span> </span><span class="annot"><span class="annottext">((BabbageEraOnwardsConstraints era =&gt;
+  Endo (TxBody (ShelleyLedgerEra era)))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (BabbageEraOnwardsConstraints era =&gt;
+    Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-145"></span><span>        </span><span class="annot"><span class="annottext">(TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a. (a -&gt; a) -&gt; Endo a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-var">Endo</span></a></span><span> </span><span class="annot"><span class="annottext">((TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+ -&gt; Endo (TxBody (ShelleyLedgerEra era)))
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; Endo (TxBody (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-146"></span><span>          </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Identity (Set TxIn))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era. BabbageEraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody (ShelleyLedgerEra era)) (Set TxIn)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-babbage-1.11.0.0-f7bc1f22764552224a1c465b1646b5ec2346608cc94bb07a345f30ab692b06af/share/doc/html/src/Cardano.Ledger.Babbage.TxBody.Internal.html#referenceInputsTxBodyL"><span class="hs-identifier hs-var">L.referenceInputsTxBodyL</span></a></span><span> </span><span class="annot"><span class="annottext">((Set TxIn -&gt; Identity (Set TxIn))
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; Set TxIn
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)] -&gt; Set TxIn
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)]
+[TxIn]
+</span><a href="#local-6989586621681214682"><span class="hs-identifier hs-var">refInputs</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><a href="#local-6989586621681214660"><span class="hs-identifier hs-type">overwriteVotingProcedures</span></a></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-type">L.VotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">L.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">L.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>  </span><span id="local-6989586621681214660"><span class="annot"><span class="annottext">overwriteVotingProcedures :: ConwayEraOnwards era
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214660"><span class="hs-identifier hs-var hs-var">overwriteVotingProcedures</span></a></span></span><span> </span><span id="local-6989586621681214695"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681214695"><span class="hs-identifier hs-var">conwayOnwards</span></a></span></span><span> </span><span id="local-6989586621681214696"><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214696"><span class="hs-identifier hs-var">votingProcedures</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era))
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+forall era a.
+ConwayEraOnwards era -&gt; (ConwayEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#conwayEraOnwardsConstraints"><span class="hs-identifier hs-var">conwayEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681214695"><span class="hs-identifier hs-var">conwayOnwards</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayEraOnwardsConstraints era =&gt;
+  Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era))
+ -&gt; Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era))
+-&gt; (ConwayEraOnwardsConstraints era =&gt;
+    Tx (ShelleyLedgerEra era) -&gt; Tx (ShelleyLedgerEra era))
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-155"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Identity (Tx (ShelleyLedgerEra era))
+forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+Lens' (Tx (ShelleyLedgerEra era)) (TxBody (ShelleyLedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#bodyTxL"><span class="hs-identifier hs-var">L.bodyTxL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxBody (ShelleyLedgerEra era)
+  -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+ -&gt; Tx (ShelleyLedgerEra era)
+ -&gt; Identity (Tx (ShelleyLedgerEra era)))
+-&gt; ((VotingProcedures (ShelleyLedgerEra era)
+     -&gt; Identity (VotingProcedures (ShelleyLedgerEra era)))
+    -&gt; TxBody (ShelleyLedgerEra era)
+    -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; (VotingProcedures (ShelleyLedgerEra era)
+    -&gt; Identity (VotingProcedures (ShelleyLedgerEra era)))
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Identity (Tx (ShelleyLedgerEra era))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedures (ShelleyLedgerEra era)
+ -&gt; Identity (VotingProcedures (ShelleyLedgerEra era)))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era.
+ConwayEraTxBody era =&gt;
+Lens' (TxBody era) (VotingProcedures era)
+Lens'
+  (TxBody (ShelleyLedgerEra era))
+  (VotingProcedures (ShelleyLedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.TxBody.Internal.html#votingProceduresTxBodyL"><span class="hs-identifier hs-var">L.votingProceduresTxBodyL</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((VotingProcedures (ShelleyLedgerEra era)
+  -&gt; Identity (VotingProcedures (ShelleyLedgerEra era)))
+ -&gt; Tx (ShelleyLedgerEra era)
+ -&gt; Identity (Tx (ShelleyLedgerEra era)))
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+-&gt; Tx (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214696"><span class="hs-identifier hs-var">votingProcedures</span></a></span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><a href="#local-6989586621681214666"><span class="hs-identifier hs-type">indexedTxCerts</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">ScriptWitnessIndex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#WitCtxStake"><span class="hs-identifier hs-type">WitCtxStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621681214666"><span class="annot"><span class="annottext">indexedTxCerts :: [(ScriptWitnessIndex, Certificate era, StakeCredential,
+  Witness WitCtxStake era)]
+</span><a href="#local-6989586621681214666"><span class="hs-identifier hs-var hs-var">indexedTxCerts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxCertificates BuildTx era
+-&gt; [(ScriptWitnessIndex, Certificate era, StakeCredential,
+     Witness WitCtxStake era)]
+forall era.
+TxCertificates BuildTx era
+-&gt; [(ScriptWitnessIndex, Certificate era, StakeCredential,
+     Witness WitCtxStake era)]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#indexTxCertificates"><span class="hs-identifier hs-var">indexTxCertificates</span></a></span><span> </span><span class="annot"><span class="annottext">TxCertificates BuildTx era
+</span><a href="#local-6989586621681214567"><span class="hs-identifier hs-var">txCertificates'</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><a href="#local-6989586621681214670"><span class="hs-identifier hs-type">setScriptWitnesses</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier hs-type">ScriptWitnessIndex</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#AnyScriptWitness"><span class="hs-identifier hs-type">AnyScriptWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">L.TxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#TxWits"><span class="hs-identifier hs-type">L.TxWits</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214258"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621681214670"><span class="annot"><span class="annottext">setScriptWitnesses :: [(ScriptWitnessIndex, AnyScriptWitness era)]
+-&gt; TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214670"><span class="hs-identifier hs-var hs-var">setScriptWitnesses</span></a></span></span><span> </span><span id="local-6989586621681214708"><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214708"><span class="hs-identifier hs-var">scriptWitnesses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><span class="annottext">[Endo (TxWits (ShelleyLedgerEra era))]
+-&gt; TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era)
+forall {a}. [Endo a] -&gt; a -&gt; a
+</span><a href="#local-6989586621681214653"><span class="hs-identifier hs-var">appEndos</span></a></span><span>
+</span><span id="line-167"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+-&gt; (AlonzoEraOnwards era -&gt; Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall (eon :: * -&gt; *) a era.
+(Eon eon, Monoid a) =&gt;
+CardanoEra era -&gt; (eon era -&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Core.html#monoidForEraInEon"><span class="hs-identifier hs-var">monoidForEraInEon</span></a></span><span>
+</span><span id="line-168"></span><span>          </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621681214671"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-169"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681214709"><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681214709"><span class="hs-identifier hs-var">aeo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall era a.
+AlonzoEraOnwards era -&gt; (AlonzoEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#alonzoEraOnwardsConstraints"><span class="hs-identifier hs-var">alonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="#local-6989586621681214709"><span class="hs-identifier hs-var">aeo</span></a></span><span> </span><span class="annot"><span class="annottext">((AlonzoEraOnwardsConstraints era =&gt;
+  Endo (TxWits (ShelleyLedgerEra era)))
+ -&gt; Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; (AlonzoEraOnwardsConstraints era =&gt;
+    Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall a. (a -&gt; a) -&gt; Endo a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-var">Endo</span></a></span><span> </span><span class="annot"><span class="annottext">((TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+ -&gt; Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; (TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-170"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681214731"><span class="annot"><span class="annottext">sData :: TxBodyScriptData era
+</span><a href="#local-6989586621681214731"><span class="hs-identifier hs-var hs-var">sData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; [TxOut CtxTx era]
+-&gt; [(ScriptWitnessIndex, AnyScriptWitness era)]
+-&gt; TxBodyScriptData era
+forall era.
+ShelleyBasedEra era
+-&gt; [TxOut CtxTx era]
+-&gt; [(ScriptWitnessIndex, AnyScriptWitness era)]
+-&gt; TxBodyScriptData era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#convScriptData"><span class="hs-identifier hs-var">convScriptData</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214561"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">[TxOut CtxTx era]
+</span><a href="#local-6989586621681214563"><span class="hs-identifier hs-var">outs</span></a></span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214708"><span class="hs-identifier hs-var">scriptWitnesses</span></a></span><span>
+</span><span id="line-171"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681214733"><span class="annot"><span class="annottext">TxDats (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214733"><span class="hs-identifier hs-var">datums</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681214734"><span class="annot"><span class="annottext">Redeemers (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214734"><span class="hs-identifier hs-var">redeemers</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TxBodyScriptData era
+</span><a href="#local-6989586621681214731"><span class="hs-identifier hs-var">sData</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-172"></span><span>                    </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#TxBodyScriptData"><span class="hs-identifier hs-type">TxBodyScriptData</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681214737"><span class="annot"><span class="annottext">TxDats (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214737"><span class="hs-identifier hs-var">ds</span></a></span></span><span> </span><span id="local-6989586621681214738"><span class="annot"><span class="annottext">Redeemers (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214738"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxDats (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214737"><span class="hs-identifier hs-var">ds</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Redeemers (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214738"><span class="hs-identifier hs-var">rs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-173"></span><span>                    </span><span class="annot"><span class="annottext">TxBodyScriptData era
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#TxBodyNoScriptData"><span class="hs-identifier hs-var">TxBodyNoScriptData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxDats (ShelleyLedgerEra era)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map
+  (PlutusPurpose AsIx (ShelleyLedgerEra era))
+  (Data (ShelleyLedgerEra era), ExUnits)
+-&gt; Redeemers (ShelleyLedgerEra era)
+forall era.
+AlonzoEraScript era =&gt;
+Map (PlutusPurpose AsIx era) (Data era, ExUnits) -&gt; Redeemers era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#Redeemers"><span class="hs-identifier hs-var">L.Redeemers</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  (PlutusPurpose AsIx (ShelleyLedgerEra era))
+  (Data (ShelleyLedgerEra era), ExUnits)
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxDats (ShelleyLedgerEra era)
+ -&gt; Identity (TxDats (ShelleyLedgerEra era)))
+-&gt; TxWits (ShelleyLedgerEra era)
+-&gt; Identity (TxWits (ShelleyLedgerEra era))
+forall era. AlonzoEraTxWits era =&gt; Lens' (TxWits era) (TxDats era)
+Lens'
+  (TxWits (ShelleyLedgerEra era)) (TxDats (ShelleyLedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#datsTxWitsL"><span class="hs-identifier hs-var">L.datsTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((TxDats (ShelleyLedgerEra era)
+  -&gt; Identity (TxDats (ShelleyLedgerEra era)))
+ -&gt; TxWits (ShelleyLedgerEra era)
+ -&gt; Identity (TxWits (ShelleyLedgerEra era)))
+-&gt; TxDats (ShelleyLedgerEra era)
+-&gt; TxWits (ShelleyLedgerEra era)
+-&gt; TxWits (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">TxDats (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214733"><span class="hs-identifier hs-var">datums</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+-&gt; (TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+-&gt; TxWits (ShelleyLedgerEra era)
+-&gt; TxWits (ShelleyLedgerEra era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Redeemers (ShelleyLedgerEra era)
+ -&gt; Identity (Redeemers (ShelleyLedgerEra era)))
+-&gt; TxWits (ShelleyLedgerEra era)
+-&gt; Identity (TxWits (ShelleyLedgerEra era))
+forall era.
+AlonzoEraTxWits era =&gt;
+Lens' (TxWits era) (Redeemers era)
+Lens'
+  (TxWits (ShelleyLedgerEra era)) (Redeemers (ShelleyLedgerEra era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.TxWits.html#rdmrsTxWitsL"><span class="hs-identifier hs-var">L.rdmrsTxWitsL</span></a></span><span> </span><span class="annot"><span class="annottext">((Redeemers (ShelleyLedgerEra era)
+  -&gt; Identity (Redeemers (ShelleyLedgerEra era)))
+ -&gt; TxWits (ShelleyLedgerEra era)
+ -&gt; Identity (TxWits (ShelleyLedgerEra era)))
+-&gt; (Redeemers (ShelleyLedgerEra era)
+    -&gt; Redeemers (ShelleyLedgerEra era))
+-&gt; TxWits (ShelleyLedgerEra era)
+-&gt; TxWits (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">%~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Redeemers (ShelleyLedgerEra era)
+-&gt; Redeemers (ShelleyLedgerEra era)
+-&gt; Redeemers (ShelleyLedgerEra era)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Redeemers (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214734"><span class="hs-identifier hs-var">redeemers</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+-&gt; (AllegraEraOnwards era -&gt; Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall (eon :: * -&gt; *) a era.
+(Eon eon, Monoid a) =&gt;
+CardanoEra era -&gt; (eon era -&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Core.html#monoidForEraInEon"><span class="hs-identifier hs-var">monoidForEraInEon</span></a></span><span>
+</span><span id="line-177"></span><span>          </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621681214671"><span class="hs-identifier hs-var">era</span></a></span><span>
+</span><span id="line-178"></span><span>          </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681214743"><span class="annot"><span class="annottext">AllegraEraOnwards era
+</span><a href="#local-6989586621681214743"><span class="hs-identifier hs-var">aeo</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwards era
+-&gt; (AllegraEraOnwardsConstraints era =&gt;
+    Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall era a.
+AllegraEraOnwards era
+-&gt; (AllegraEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#allegraEraOnwardsConstraints"><span class="hs-identifier hs-var">allegraEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwards era
+</span><a href="#local-6989586621681214743"><span class="hs-identifier hs-var">aeo</span></a></span><span> </span><span class="annot"><span class="annottext">((AllegraEraOnwardsConstraints era =&gt;
+  Endo (TxWits (ShelleyLedgerEra era)))
+ -&gt; Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; (AllegraEraOnwardsConstraints era =&gt;
+    Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall a. (a -&gt; a) -&gt; Endo a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Semigroup.Internal.html#Endo"><span class="hs-identifier hs-var">Endo</span></a></span><span> </span><span class="annot"><span class="annottext">((TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+ -&gt; Endo (TxWits (ShelleyLedgerEra era)))
+-&gt; (TxWits (ShelleyLedgerEra era) -&gt; TxWits (ShelleyLedgerEra era))
+-&gt; Endo (TxWits (ShelleyLedgerEra era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-179"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681214758"><span class="annot"><span class="annottext">ledgerScripts :: [Script (ShelleyLedgerEra era)]
+</span><a href="#local-6989586621681214758"><span class="hs-identifier hs-var hs-var">ledgerScripts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+-&gt; [Script (ShelleyLedgerEra era)]
+forall era ledgerera.
+(ShelleyLedgerEra era ~ ledgerera) =&gt;
+[(ScriptWitnessIndex, AnyScriptWitness era)] -&gt; [Script ledgerera]
+</span><a href="Cardano.Api.Tx.Internal.Body.html#convScripts"><span class="hs-identifier hs-var">convScripts</span></a></span><span> </span><span class="annot"><span class="annottext">[(ScriptWitnessIndex, AnyScriptWitness era)]
+</span><a href="#local-6989586621681214708"><span class="hs-identifier hs-var">scriptWitnesses</span></a></span><span>
+</span><span id="line-180"></span><span>              </span><span class="annot"><span class="annottext">(Map ScriptHash (Script (ShelleyLedgerEra era))
+ -&gt; Identity (Map ScriptHash (Script (ShelleyLedgerEra era))))
+-&gt; TxWits (ShelleyLedgerEra era)
+-&gt; Identity (TxWits (ShelleyLedgerEra era))
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Map ScriptHash (Script era))
+Lens'
+  (TxWits (ShelleyLedgerEra era))
+  (Map ScriptHash (Script (ShelleyLedgerEra era)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#scriptTxWitsL"><span class="hs-identifier hs-var">L.scriptTxWitsL</span></a></span><span>
+</span><span id="line-181"></span><span>                </span><span class="annot"><span class="annottext">((Map ScriptHash (Script (ShelleyLedgerEra era))
+  -&gt; Identity (Map ScriptHash (Script (ShelleyLedgerEra era))))
+ -&gt; TxWits (ShelleyLedgerEra era)
+ -&gt; Identity (TxWits (ShelleyLedgerEra era)))
+-&gt; Map ScriptHash (Script (ShelleyLedgerEra era))
+-&gt; TxWits (ShelleyLedgerEra era)
+-&gt; TxWits (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[(ScriptHash, Script (ShelleyLedgerEra era))]
+-&gt; Map ScriptHash (Script (ShelleyLedgerEra era))
+forall k a. Ord k =&gt; [(k, a)] -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.Internal.html#fromList"><span class="hs-identifier hs-var">Map.fromList</span></a></span><span>
+</span><span id="line-182"></span><span>                  </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Script (ShelleyLedgerEra era) -&gt; ScriptHash
+forall era. EraScript era =&gt; Script era -&gt; ScriptHash
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#hashScript"><span class="hs-identifier hs-var">L.hashScript</span></a></span><span> </span><span class="annot"><span class="annottext">Script (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214763"><span class="hs-identifier hs-var">sw</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Script (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214763"><span class="hs-identifier hs-var">sw</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621681214763"><span class="annot"><span class="annottext">Script (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214763"><span class="hs-identifier hs-var">sw</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Script (ShelleyLedgerEra era)]
+</span><a href="#local-6989586621681214758"><span class="hs-identifier hs-var">ledgerScripts</span></a></span><span>
+</span><span id="line-184"></span><span>                  </span><span class="hs-special">]</span><span>
+</span><span id="line-185"></span><span>          </span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span id="local-6989586621681214443"><span id="local-6989586621681214444"><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#createCommonTxBody"><span class="hs-identifier hs-type">createCommonTxBody</span></a></span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214443"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214444"><span class="hs-identifier hs-type">ctx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214443"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Value.Internal.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#TxBody"><span class="hs-identifier hs-type">L.TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214443"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-195"></span><span id="createCommonTxBody"><span class="annot"><span class="annottext">createCommonTxBody :: forall era ctx.
+HasCallStack =&gt;
+ShelleyBasedEra era
+-&gt; [TxIn]
+-&gt; [TxOut ctx era]
+-&gt; Lovelace
+-&gt; TxBody (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Compatible.Tx.html#createCommonTxBody"><span class="hs-identifier hs-var hs-var">createCommonTxBody</span></a></span></span><span> </span><span id="local-6989586621681214768"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214768"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span id="local-6989586621681214769"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681214769"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span id="local-6989586621681214770"><span class="annot"><span class="annottext">[TxOut ctx era]
+</span><a href="#local-6989586621681214770"><span class="hs-identifier hs-var">outs</span></a></span></span><span> </span><span id="local-6989586621681214771"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621681214771"><span class="hs-identifier hs-var">txFee'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681214772"><span class="annot"><span class="annottext">txIns' :: [TxIn]
+</span><a href="#local-6989586621681214772"><span class="hs-identifier hs-var hs-var">txIns'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxIn -&gt; TxIn) -&gt; [TxIn] -&gt; [TxIn]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxIn"><span class="hs-identifier hs-var">toShelleyTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681214769"><span class="hs-identifier hs-var">ins</span></a></span><span>
+</span><span id="line-197"></span><span>      </span><span id="local-6989586621681214773"><span class="annot"><span class="annottext">txOuts' :: [TxOut (ShelleyLedgerEra era)]
+</span><a href="#local-6989586621681214773"><span class="hs-identifier hs-var hs-var">txOuts'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxOut ctx era -&gt; TxOut (ShelleyLedgerEra era))
+-&gt; [TxOut ctx era] -&gt; [TxOut (ShelleyLedgerEra era)]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; TxOut ctx era -&gt; TxOut (ShelleyLedgerEra era)
+forall ctx era ledgerera.
+(HasCallStack, ShelleyLedgerEra era ~ ledgerera) =&gt;
+ShelleyBasedEra era -&gt; TxOut ctx era -&gt; TxOut ledgerera
+</span><a href="Cardano.Api.Tx.Internal.Output.html#toShelleyTxOutAny"><span class="hs-identifier hs-var">toShelleyTxOutAny</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214768"><span class="hs-identifier hs-var">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[TxOut ctx era]
+</span><a href="#local-6989586621681214770"><span class="hs-identifier hs-var">outs</span></a></span><span>
+</span><span id="line-198"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214768"><span class="hs-identifier hs-var">era</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt; TxBody (ShelleyLedgerEra era))
+ -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-199"></span><span>        </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+forall era. EraTxBody era =&gt; TxBody era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#mkBasicTxBody"><span class="hs-identifier hs-var">L.mkBasicTxBody</span></a></span><span>
+</span><span id="line-200"></span><span>          </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Identity (Set TxIn))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era. EraTxBody era =&gt; Lens' (TxBody era) (Set TxIn)
+Lens' (TxBody (ShelleyLedgerEra era)) (Set TxIn)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#inputsTxBodyL"><span class="hs-identifier hs-var">L.inputsTxBodyL</span></a></span><span>
+</span><span id="line-201"></span><span>            </span><span class="annot"><span class="annottext">((Set TxIn -&gt; Identity (Set TxIn))
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; Set TxIn
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)] -&gt; Set TxIn
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)]
+[TxIn]
+</span><a href="#local-6989586621681214772"><span class="hs-identifier hs-var">txIns'</span></a></span><span>
+</span><span id="line-202"></span><span>          </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(StrictSeq (TxOut (ShelleyLedgerEra era))
+ -&gt; Identity (StrictSeq (TxOut (ShelleyLedgerEra era))))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxOut era))
+Lens'
+  (TxBody (ShelleyLedgerEra era))
+  (StrictSeq (TxOut (ShelleyLedgerEra era)))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#outputsTxBodyL"><span class="hs-identifier hs-var">L.outputsTxBodyL</span></a></span><span>
+</span><span id="line-203"></span><span>            </span><span class="annot"><span class="annottext">((StrictSeq (TxOut (ShelleyLedgerEra era))
+  -&gt; Identity (StrictSeq (TxOut (ShelleyLedgerEra era))))
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; StrictSeq (TxOut (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">[TxOut (ShelleyLedgerEra era)]
+-&gt; StrictSeq (TxOut (ShelleyLedgerEra era))
+forall a. [a] -&gt; StrictSeq a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Sequence.Strict.html#fromList"><span class="hs-identifier hs-var">Seq.fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[TxOut (ShelleyLedgerEra era)]
+</span><a href="#local-6989586621681214773"><span class="hs-identifier hs-var">txOuts'</span></a></span><span>
+</span><span id="line-204"></span><span>          </span><span class="annot"><span class="annottext">TxBody (ShelleyLedgerEra era)
+-&gt; (TxBody (ShelleyLedgerEra era) -&gt; TxBody (ShelleyLedgerEra era))
+-&gt; TxBody (ShelleyLedgerEra era)
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(Lovelace -&gt; Identity Lovelace)
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; Identity (TxBody (ShelleyLedgerEra era))
+forall era. EraTxBody era =&gt; Lens' (TxBody era) Lovelace
+Lens' (TxBody (ShelleyLedgerEra era)) Lovelace
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#feeTxBodyL"><span class="hs-identifier hs-var">L.feeTxBodyL</span></a></span><span>
+</span><span id="line-205"></span><span>            </span><span class="annot"><span class="annottext">((Lovelace -&gt; Identity Lovelace)
+ -&gt; TxBody (ShelleyLedgerEra era)
+ -&gt; Identity (TxBody (ShelleyLedgerEra era)))
+-&gt; Lovelace
+-&gt; TxBody (ShelleyLedgerEra era)
+-&gt; TxBody (ShelleyLedgerEra era)
+forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">.~</span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621681214771"><span class="hs-identifier hs-var">txFee'</span></a></span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span class="annot"><span class="hs-comment">-- | Add provided witnesses to the transaction</span></span><span>
+</span><span id="line-208"></span><span class="annot"><a href="Cardano.Api.Compatible.Tx.html#addWitnesses"><span class="hs-identifier hs-type">addWitnesses</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681214524"><span class="annot"><a href="#local-6989586621681214524"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-210"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#KeyWitness"><span class="hs-identifier hs-type">KeyWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214524"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214524"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214524"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-213"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ a signed transaction</span></span><span>
+</span><span id="line-214"></span><span id="addWitnesses"><span class="annot"><span class="annottext">addWitnesses :: forall era. [KeyWitness era] -&gt; Tx era -&gt; Tx era
+</span><a href="Cardano.Api.Compatible.Tx.html#addWitnesses"><span class="hs-identifier hs-var hs-var">addWitnesses</span></a></span></span><span> </span><span id="local-6989586621681214792"><span class="annot"><span class="annottext">[KeyWitness era]
+</span><a href="#local-6989586621681214792"><span class="hs-identifier hs-var">witnesses</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyTx"><span class="hs-identifier hs-type">ShelleyTx</span></a></span><span> </span><span id="local-6989586621681214793"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214793"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span id="local-6989586621681214794"><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214794"><span class="hs-identifier hs-var">tx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-215"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt; Tx era) -&gt; Tx era
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214793"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt; Tx era) -&gt; Tx era)
+-&gt; (ShelleyBasedEraConstraints era =&gt; Tx era) -&gt; Tx era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; Tx (ShelleyLedgerEra era) -&gt; Tx era
+forall era.
+ShelleyBasedEra era -&gt; Tx (ShelleyLedgerEra era) -&gt; Tx era
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyTx"><span class="hs-identifier hs-var">ShelleyTx</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681214793"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">Tx (ShelleyLedgerEra era)
+forall ledgerera.
+(ShelleyLedgerEra era ~ ledgerera, EraTx ledgerera) =&gt;
+Tx ledgerera
+</span><a href="#local-6989586621681214800"><span class="hs-identifier hs-var">txCommon</span></a></span><span>
+</span><span id="line-217"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-218"></span><span>  </span><span class="annot"><a href="#local-6989586621681214800"><span class="hs-identifier hs-type">txCommon</span></a></span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681214527"><span class="annot"><a href="#local-6989586621681214527"><span class="hs-identifier hs-type">ledgerera</span></a></span></span><span>
+</span><span id="line-220"></span><span>     </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214524"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#~"><span class="hs-operator hs-type">~</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214527"><span class="hs-identifier hs-type">ledgerera</span></a></span><span>
+</span><span id="line-221"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#EraTx"><span class="hs-identifier hs-type">L.EraTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214527"><span class="hs-identifier hs-type">ledgerera</span></a></span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#Tx"><span class="hs-identifier hs-type">L.Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681214527"><span class="hs-identifier hs-type">ledgerera</span></a></span><span>
+</span><span id="line-223"></span><span>  </span><span id="local-6989586621681214800"><span class="annot"><span class="annottext">txCommon :: forall ledgerera.
+(ShelleyLedgerEra era ~ ledgerera, EraTx ledgerera) =&gt;
+Tx ledgerera
+</span><a href="#local-6989586621681214800"><span class="hs-identifier hs-var hs-var">txCommon</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-224"></span><span>    </span><span class="annot"><span class="annottext">Tx ledgerera
+Tx (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681214794"><span class="hs-identifier hs-var">tx</span></a></span><span>
+</span><span id="line-225"></span><span>      </span><span class="annot"><span class="annottext">Tx ledgerera -&gt; (Tx ledgerera -&gt; Tx ledgerera) -&gt; Tx ledgerera
+forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Function.html#%26"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">(TxWits ledgerera -&gt; Identity (TxWits ledgerera))
+-&gt; Tx ledgerera -&gt; Identity (Tx ledgerera)
+forall era. EraTx era =&gt; Lens' (Tx era) (TxWits era)
+Lens' (Tx ledgerera) (TxWits ledgerera)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#witsTxL"><span class="hs-identifier hs-var">L.witsTxL</span></a></span><span>
+</span><span id="line-226"></span><span>        </span><span class="annot"><span class="annottext">((TxWits ledgerera -&gt; Identity (TxWits ledgerera))
+ -&gt; Tx ledgerera -&gt; Identity (Tx ledgerera))
+-&gt; (TxWits ledgerera -&gt; TxWits ledgerera)
+-&gt; Tx ledgerera
+-&gt; Tx ledgerera
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">%~</span></span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(Set (WitVKey 'Witness) -&gt; Identity (Set (WitVKey 'Witness)))
+-&gt; TxWits ledgerera -&gt; Identity (TxWits ledgerera)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set (WitVKey 'Witness))
+Lens' (TxWits ledgerera) (Set (WitVKey 'Witness))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#addrTxWitsL"><span class="hs-identifier hs-var">L.addrTxWitsL</span></a></span><span>
+</span><span id="line-227"></span><span>                 </span><span class="annot"><span class="annottext">((Set (WitVKey 'Witness) -&gt; Identity (Set (WitVKey 'Witness)))
+ -&gt; TxWits ledgerera -&gt; Identity (TxWits ledgerera))
+-&gt; (Set (WitVKey 'Witness) -&gt; Set (WitVKey 'Witness))
+-&gt; TxWits ledgerera
+-&gt; TxWits ledgerera
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">%~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set (WitVKey 'Witness)
+-&gt; Set (WitVKey 'Witness) -&gt; Set (WitVKey 'Witness)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set (WitVKey 'Witness))] -&gt; Set (WitVKey 'Witness)
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (Set (WitVKey 'Witness))
+WitVKey 'Witness
+</span><a href="#local-6989586621681214821"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyKeyWitness"><span class="hs-identifier hs-type">ShelleyKeyWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681214821"><span class="annot"><span class="annottext">WitVKey 'Witness
+</span><a href="#local-6989586621681214821"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[KeyWitness era]
+</span><a href="#local-6989586621681214792"><span class="hs-identifier hs-var">witnesses</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>             </span><span class="hs-special">)</span><span>
+</span><span id="line-229"></span><span>               </span><span class="annot"><span class="annottext">(TxWits ledgerera -&gt; TxWits ledgerera)
+-&gt; (TxWits ledgerera -&gt; TxWits ledgerera)
+-&gt; TxWits ledgerera
+-&gt; TxWits ledgerera
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">(Set BootstrapWitness -&gt; Identity (Set BootstrapWitness))
+-&gt; TxWits ledgerera -&gt; Identity (TxWits ledgerera)
+forall era.
+EraTxWits era =&gt;
+Lens' (TxWits era) (Set BootstrapWitness)
+Lens' (TxWits ledgerera) (Set BootstrapWitness)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html#bootAddrTxWitsL"><span class="hs-identifier hs-var">L.bootAddrTxWitsL</span></a></span><span>
+</span><span id="line-230"></span><span>                     </span><span class="annot"><span class="annottext">((Set BootstrapWitness -&gt; Identity (Set BootstrapWitness))
+ -&gt; TxWits ledgerera -&gt; Identity (TxWits ledgerera))
+-&gt; (Set BootstrapWitness -&gt; Set BootstrapWitness)
+-&gt; TxWits ledgerera
+-&gt; TxWits ledgerera
+forall s t a b. ASetter s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><span class="hs-operator hs-var">%~</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Set BootstrapWitness
+-&gt; Set BootstrapWitness -&gt; Set BootstrapWitness
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set BootstrapWitness)] -&gt; Set BootstrapWitness
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item (Set BootstrapWitness)
+BootstrapWitness
+</span><a href="#local-6989586621681214824"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyBootstrapWitness"><span class="hs-identifier hs-type">ShelleyBootstrapWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681214824"><span class="annot"><span class="annottext">BootstrapWitness
+</span><a href="#local-6989586621681214824"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[KeyWitness era]
+</span><a href="#local-6989586621681214792"><span class="hs-identifier hs-var">witnesses</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-231"></span><span>                 </span><span class="hs-special">)</span><span>
+</span><span id="line-232"></span><span>           </span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span></pre></body></html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Era.Internal.Case</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="hs-comment">-- Case on CardanoEra</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseByronOrShelleyBasedEra"><span class="hs-identifier">caseByronOrShelleyBasedEra</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseByronToAlonzoOrBabbageEraOnwards"><span class="hs-identifier">caseByronToAlonzoOrBabbageEraOnwards</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-comment">-- Case on ShelleyBasedEra</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyEraOnlyOrAllegraEraOnwards"><span class="hs-identifier">caseShelleyEraOnlyOrAllegraEraOnwards</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToAllegraOrMaryEraOnwards"><span class="hs-identifier">caseShelleyToAllegraOrMaryEraOnwards</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToMaryOrAlonzoEraOnwards"><span class="hs-identifier">caseShelleyToMaryOrAlonzoEraOnwards</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToAlonzoOrBabbageEraOnwards"><span class="hs-identifier">caseShelleyToAlonzoOrBabbageEraOnwards</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier">caseShelleyToBabbageOrConwayEraOnwards</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-comment">-- Conversions</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#shelleyToAlonzoEraToShelleyToBabbageEra"><span class="hs-identifier">shelleyToAlonzoEraToShelleyToBabbageEra</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#alonzoEraOnwardsToMaryEraOnwards"><span class="hs-identifier">alonzoEraOnwardsToMaryEraOnwards</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#babbageEraOnwardsToMaryEraOnwards"><span class="hs-identifier">babbageEraOnwardsToMaryEraOnwards</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#babbageEraOnwardsToAlonzoEraOnwards"><span class="hs-identifier">babbageEraOnwardsToAlonzoEraOnwards</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Core</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.AllegraEraOnwards</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.BabbageEraOnwards</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ConwayEraOnwards</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.MaryEraOnwards</span></a></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyBasedEra</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyEraOnly.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyEraOnly</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><span class="hs-comment">-- | @caseByronOrShelleyBasedEra f g era@ returns @f@ in Byron and applies @g@ to Shelley-based eras.</span></span><span>
+</span><span id="line-39"></span><span id="local-6989586621681121332"><span id="local-6989586621681121333"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseByronOrShelleyBasedEra"><span class="hs-identifier hs-type">caseByronOrShelleyBasedEra</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121332"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConstraints"><span class="hs-identifier hs-type">ShelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121333"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121333"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121332"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#CardanoEra"><span class="hs-identifier hs-type">CardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121333"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121332"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-45"></span><span id="caseByronOrShelleyBasedEra"><span class="annot"><span class="annottext">caseByronOrShelleyBasedEra :: forall a era.
+a
+-&gt; (ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a)
+-&gt; CardanoEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseByronOrShelleyBasedEra"><span class="hs-identifier hs-var hs-var">caseByronOrShelleyBasedEra</span></a></span></span><span> </span><span id="local-6989586621681121653"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681121653"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681121654"><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a
+</span><a href="#local-6989586621681121654"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#ByronEra"><span class="hs-identifier hs-var">ByronEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681121653"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-comment">-- We no longer provide the witness because Byron is isolated.</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-comment">-- This function will be deleted shortly after build-raw --byron-era is</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-comment">-- deprecated in cardano-cli</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#ShelleyEra"><span class="hs-identifier hs-var">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a
+ShelleyBasedEra era -&gt; a
+</span><a href="#local-6989586621681121654"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+ShelleyBasedEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#AllegraEra"><span class="hs-identifier hs-var">AllegraEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a
+ShelleyBasedEra era -&gt; a
+</span><a href="#local-6989586621681121654"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+ShelleyBasedEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#MaryEra"><span class="hs-identifier hs-var">MaryEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a
+ShelleyBasedEra era -&gt; a
+</span><a href="#local-6989586621681121654"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+ShelleyBasedEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#AlonzoEra"><span class="hs-identifier hs-var">AlonzoEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a
+ShelleyBasedEra era -&gt; a
+</span><a href="#local-6989586621681121654"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+ShelleyBasedEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-var">BabbageEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a
+ShelleyBasedEra era -&gt; a
+</span><a href="#local-6989586621681121654"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+ShelleyBasedEra BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; ShelleyBasedEra era -&gt; a
+ShelleyBasedEra era -&gt; a
+</span><a href="#local-6989586621681121654"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+ShelleyBasedEra ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- | @caseByronToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to byron, shelley, allegra, mary, and alonzo;</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- and @g@ to babbage and later eras.</span><span>
+</span><span id="line-58"></span><span id="local-6989586621681121555"><span id="local-6989586621681121558"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseByronToAlonzoOrBabbageEraOnwards"><span class="hs-identifier hs-type">caseByronToAlonzoOrBabbageEraOnwards</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html#ByronToAlonzoEraConstraints"><span class="hs-identifier hs-type">ByronToAlonzoEraConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121555"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html#ByronToAlonzoEra"><span class="hs-identifier hs-type">ByronToAlonzoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121555"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121558"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsConstraints"><span class="hs-identifier hs-type">BabbageEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121555"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwards"><span class="hs-identifier hs-type">BabbageEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121555"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121558"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#CardanoEra"><span class="hs-identifier hs-type">CardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121555"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121558"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-64"></span><span id="caseByronToAlonzoOrBabbageEraOnwards"><span class="annot"><span class="annottext">caseByronToAlonzoOrBabbageEraOnwards :: forall era a.
+(ByronToAlonzoEraConstraints era =&gt; ByronToAlonzoEra era -&gt; a)
+-&gt; (BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a)
+-&gt; CardanoEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseByronToAlonzoOrBabbageEraOnwards"><span class="hs-identifier hs-var hs-var">caseByronToAlonzoOrBabbageEraOnwards</span></a></span></span><span> </span><span id="local-6989586621681122230"><span class="annot"><span class="annottext">ByronToAlonzoEraConstraints era =&gt; ByronToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122230"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681122231"><span class="annot"><span class="annottext">BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122231"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#ByronEra"><span class="hs-identifier hs-var">ByronEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEraConstraints era =&gt; ByronToAlonzoEra era -&gt; a
+ByronToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122230"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEra era
+ByronToAlonzoEra ByronEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html#ByronToAlonzoEraByron"><span class="hs-identifier hs-var">ByronToAlonzoEraByron</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#ShelleyEra"><span class="hs-identifier hs-var">ShelleyEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEraConstraints era =&gt; ByronToAlonzoEra era -&gt; a
+ByronToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122230"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEra era
+ByronToAlonzoEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html#ByronToAlonzoEraShelley"><span class="hs-identifier hs-var">ByronToAlonzoEraShelley</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#AllegraEra"><span class="hs-identifier hs-var">AllegraEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEraConstraints era =&gt; ByronToAlonzoEra era -&gt; a
+ByronToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122230"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEra era
+ByronToAlonzoEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html#ByronToAlonzoEraAllegra"><span class="hs-identifier hs-var">ByronToAlonzoEraAllegra</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#MaryEra"><span class="hs-identifier hs-var">MaryEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEraConstraints era =&gt; ByronToAlonzoEra era -&gt; a
+ByronToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122230"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEra era
+ByronToAlonzoEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html#ByronToAlonzoEraMary"><span class="hs-identifier hs-var">ByronToAlonzoEraMary</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#AlonzoEra"><span class="hs-identifier hs-var">AlonzoEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEraConstraints era =&gt; ByronToAlonzoEra era -&gt; a
+ByronToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122230"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ByronToAlonzoEra era
+ByronToAlonzoEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra.html#ByronToAlonzoEraAlonzo"><span class="hs-identifier hs-var">ByronToAlonzoEraAlonzo</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#BabbageEra"><span class="hs-identifier hs-var">BabbageEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a
+BabbageEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122231"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+BabbageEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsBabbage"><span class="hs-identifier hs-var">BabbageEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="Cardano.Api.Era.Internal.Core.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a
+BabbageEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122231"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+BabbageEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsConway"><span class="hs-identifier hs-var">BabbageEraOnwardsConway</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | @caseShelleyEraOnlyOrAllegraEraOnwards f g era@ applies @f@ to shelley;</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- and applies @g@ to allegra and later eras.</span><span>
+</span><span id="line-75"></span><span id="local-6989586621681121578"><span id="local-6989586621681121581"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyEraOnlyOrAllegraEraOnwards"><span class="hs-identifier hs-type">caseShelleyEraOnlyOrAllegraEraOnwards</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyEraOnly.html#ShelleyEraOnlyConstraints"><span class="hs-identifier hs-type">ShelleyEraOnlyConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121578"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyEraOnly.html#ShelleyEraOnly"><span class="hs-identifier hs-type">ShelleyEraOnly</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121578"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121581"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#AllegraEraOnwardsConstraints"><span class="hs-identifier hs-type">AllegraEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121578"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#AllegraEraOnwards"><span class="hs-identifier hs-type">AllegraEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121578"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121581"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121578"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121581"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-81"></span><span id="caseShelleyEraOnlyOrAllegraEraOnwards"><span class="annot"><span class="annottext">caseShelleyEraOnlyOrAllegraEraOnwards :: forall era a.
+(ShelleyEraOnlyConstraints era =&gt; ShelleyEraOnly era -&gt; a)
+-&gt; (AllegraEraOnwardsConstraints era =&gt; AllegraEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyEraOnlyOrAllegraEraOnwards"><span class="hs-identifier hs-var hs-var">caseShelleyEraOnlyOrAllegraEraOnwards</span></a></span></span><span> </span><span id="local-6989586621681122349"><span class="annot"><span class="annottext">ShelleyEraOnlyConstraints era =&gt; ShelleyEraOnly era -&gt; a
+</span><a href="#local-6989586621681122349"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681122350"><span class="annot"><span class="annottext">AllegraEraOnwardsConstraints era =&gt; AllegraEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122350"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyEraOnlyConstraints era =&gt; ShelleyEraOnly era -&gt; a
+ShelleyEraOnly era -&gt; a
+</span><a href="#local-6989586621681122349"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyEraOnly era
+ShelleyEraOnly ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyEraOnly.html#ShelleyEraOnlyShelley"><span class="hs-identifier hs-var">ShelleyEraOnlyShelley</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwardsConstraints era =&gt; AllegraEraOnwards era -&gt; a
+AllegraEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122350"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwards era
+AllegraEraOnwards AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#AllegraEraOnwardsAllegra"><span class="hs-identifier hs-var">AllegraEraOnwardsAllegra</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwardsConstraints era =&gt; AllegraEraOnwards era -&gt; a
+AllegraEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122350"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwards era
+AllegraEraOnwards MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#AllegraEraOnwardsMary"><span class="hs-identifier hs-var">AllegraEraOnwardsMary</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwardsConstraints era =&gt; AllegraEraOnwards era -&gt; a
+AllegraEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122350"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwards era
+AllegraEraOnwards AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#AllegraEraOnwardsAlonzo"><span class="hs-identifier hs-var">AllegraEraOnwardsAlonzo</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwardsConstraints era =&gt; AllegraEraOnwards era -&gt; a
+AllegraEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122350"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwards era
+AllegraEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#AllegraEraOnwardsBabbage"><span class="hs-identifier hs-var">AllegraEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwardsConstraints era =&gt; AllegraEraOnwards era -&gt; a
+AllegraEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122350"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AllegraEraOnwards era
+AllegraEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AllegraEraOnwards.html#AllegraEraOnwardsConway"><span class="hs-identifier hs-var">AllegraEraOnwardsConway</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- | @caseShelleyToAllegraOrMaryEraOnwards f g era@ applies @f@ to shelley and allegra;</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- and applies @g@ to mary and later eras.</span><span>
+</span><span id="line-91"></span><span id="local-6989586621681121588"><span id="local-6989586621681121591"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToAllegraOrMaryEraOnwards"><span class="hs-identifier hs-type">caseShelleyToAllegraOrMaryEraOnwards</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra.html#ShelleyToAllegraEraConstraints"><span class="hs-identifier hs-type">ShelleyToAllegraEraConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121588"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra.html#ShelleyToAllegraEra"><span class="hs-identifier hs-type">ShelleyToAllegraEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121588"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121591"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsConstraints"><span class="hs-identifier hs-type">MaryEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121588"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwards"><span class="hs-identifier hs-type">MaryEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121588"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121591"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121588"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121591"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-97"></span><span id="caseShelleyToAllegraOrMaryEraOnwards"><span class="annot"><span class="annottext">caseShelleyToAllegraOrMaryEraOnwards :: forall era a.
+(ShelleyToAllegraEraConstraints era =&gt;
+ ShelleyToAllegraEra era -&gt; a)
+-&gt; (MaryEraOnwardsConstraints era =&gt; MaryEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToAllegraOrMaryEraOnwards"><span class="hs-identifier hs-var hs-var">caseShelleyToAllegraOrMaryEraOnwards</span></a></span></span><span> </span><span id="local-6989586621681122534"><span class="annot"><span class="annottext">ShelleyToAllegraEraConstraints era =&gt; ShelleyToAllegraEra era -&gt; a
+</span><a href="#local-6989586621681122534"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681122535"><span class="annot"><span class="annottext">MaryEraOnwardsConstraints era =&gt; MaryEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122535"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToAllegraEraConstraints era =&gt; ShelleyToAllegraEra era -&gt; a
+ShelleyToAllegraEra era -&gt; a
+</span><a href="#local-6989586621681122534"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToAllegraEra era
+ShelleyToAllegraEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra.html#ShelleyToAllegraEraShelley"><span class="hs-identifier hs-var">ShelleyToAllegraEraShelley</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToAllegraEraConstraints era =&gt; ShelleyToAllegraEra era -&gt; a
+ShelleyToAllegraEra era -&gt; a
+</span><a href="#local-6989586621681122534"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToAllegraEra era
+ShelleyToAllegraEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra.html#ShelleyToAllegraEraAllegra"><span class="hs-identifier hs-var">ShelleyToAllegraEraAllegra</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwardsConstraints era =&gt; MaryEraOnwards era -&gt; a
+MaryEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122535"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsMary"><span class="hs-identifier hs-var">MaryEraOnwardsMary</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwardsConstraints era =&gt; MaryEraOnwards era -&gt; a
+MaryEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122535"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsAlonzo"><span class="hs-identifier hs-var">MaryEraOnwardsAlonzo</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwardsConstraints era =&gt; MaryEraOnwards era -&gt; a
+MaryEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122535"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsBabbage"><span class="hs-identifier hs-var">MaryEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwardsConstraints era =&gt; MaryEraOnwards era -&gt; a
+MaryEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122535"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsConway"><span class="hs-identifier hs-var">MaryEraOnwardsConway</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- | @caseShelleyToMaryOrAlonzoEraOnwards f g era@ applies @f@ to shelley, allegra, and mary;</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- and applies @g@ to alonzo and later eras.</span><span>
+</span><span id="line-107"></span><span id="local-6989586621681121596"><span id="local-6989586621681121599"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToMaryOrAlonzoEraOnwards"><span class="hs-identifier hs-type">caseShelleyToMaryOrAlonzoEraOnwards</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra.html#ShelleyToMaryEraConstraints"><span class="hs-identifier hs-type">ShelleyToMaryEraConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121596"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra.html#ShelleyToMaryEra"><span class="hs-identifier hs-type">ShelleyToMaryEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121596"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121599"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsConstraints"><span class="hs-identifier hs-type">AlonzoEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121596"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwards"><span class="hs-identifier hs-type">AlonzoEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121596"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121599"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121596"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121599"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-113"></span><span id="caseShelleyToMaryOrAlonzoEraOnwards"><span class="annot"><span class="annottext">caseShelleyToMaryOrAlonzoEraOnwards :: forall era a.
+(ShelleyToMaryEraConstraints era =&gt; ShelleyToMaryEra era -&gt; a)
+-&gt; (AlonzoEraOnwardsConstraints era =&gt; AlonzoEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToMaryOrAlonzoEraOnwards"><span class="hs-identifier hs-var hs-var">caseShelleyToMaryOrAlonzoEraOnwards</span></a></span></span><span> </span><span id="local-6989586621681122727"><span class="annot"><span class="annottext">ShelleyToMaryEraConstraints era =&gt; ShelleyToMaryEra era -&gt; a
+</span><a href="#local-6989586621681122727"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681122728"><span class="annot"><span class="annottext">AlonzoEraOnwardsConstraints era =&gt; AlonzoEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122728"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToMaryEraConstraints era =&gt; ShelleyToMaryEra era -&gt; a
+ShelleyToMaryEra era -&gt; a
+</span><a href="#local-6989586621681122727"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToMaryEra era
+ShelleyToMaryEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra.html#ShelleyToMaryEraShelley"><span class="hs-identifier hs-var">ShelleyToMaryEraShelley</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToMaryEraConstraints era =&gt; ShelleyToMaryEra era -&gt; a
+ShelleyToMaryEra era -&gt; a
+</span><a href="#local-6989586621681122727"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToMaryEra era
+ShelleyToMaryEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra.html#ShelleyToMaryEraAllegra"><span class="hs-identifier hs-var">ShelleyToMaryEraAllegra</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToMaryEraConstraints era =&gt; ShelleyToMaryEra era -&gt; a
+ShelleyToMaryEra era -&gt; a
+</span><a href="#local-6989586621681122727"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToMaryEra era
+ShelleyToMaryEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra.html#ShelleyToMaryEraMary"><span class="hs-identifier hs-var">ShelleyToMaryEraMary</span></a></span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwardsConstraints era =&gt; AlonzoEraOnwards era -&gt; a
+AlonzoEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122728"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+AlonzoEraOnwards AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsAlonzo"><span class="hs-identifier hs-var">AlonzoEraOnwardsAlonzo</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwardsConstraints era =&gt; AlonzoEraOnwards era -&gt; a
+AlonzoEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122728"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+AlonzoEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsBabbage"><span class="hs-identifier hs-var">AlonzoEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwardsConstraints era =&gt; AlonzoEraOnwards era -&gt; a
+AlonzoEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122728"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+AlonzoEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsConway"><span class="hs-identifier hs-var">AlonzoEraOnwardsConway</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- | @caseShelleyToAlonzoOrBabbageEraOnwards f g era@ applies @f@ to shelley, allegra, mary, and alonzo;</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- and applies @g@ to babbage and later eras.</span><span>
+</span><span id="line-123"></span><span id="local-6989586621681121612"><span id="local-6989586621681121615"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToAlonzoOrBabbageEraOnwards"><span class="hs-identifier hs-type">caseShelleyToAlonzoOrBabbageEraOnwards</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraConstraints"><span class="hs-identifier hs-type">ShelleyToAlonzoEraConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121612"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEra"><span class="hs-identifier hs-type">ShelleyToAlonzoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121612"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121615"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsConstraints"><span class="hs-identifier hs-type">BabbageEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121612"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwards"><span class="hs-identifier hs-type">BabbageEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121612"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121615"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121612"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121615"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-129"></span><span id="caseShelleyToAlonzoOrBabbageEraOnwards"><span class="annot"><span class="annottext">caseShelleyToAlonzoOrBabbageEraOnwards :: forall era a.
+(ShelleyToAlonzoEraConstraints era =&gt; ShelleyToAlonzoEra era -&gt; a)
+-&gt; (BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToAlonzoOrBabbageEraOnwards"><span class="hs-identifier hs-var hs-var">caseShelleyToAlonzoOrBabbageEraOnwards</span></a></span></span><span> </span><span id="local-6989586621681122960"><span class="annot"><span class="annottext">ShelleyToAlonzoEraConstraints era =&gt; ShelleyToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122960"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681122961"><span class="annot"><span class="annottext">BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122961"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEraConstraints era =&gt; ShelleyToAlonzoEra era -&gt; a
+ShelleyToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122960"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+ShelleyToAlonzoEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraShelley"><span class="hs-identifier hs-var">ShelleyToAlonzoEraShelley</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEraConstraints era =&gt; ShelleyToAlonzoEra era -&gt; a
+ShelleyToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122960"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+ShelleyToAlonzoEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraAllegra"><span class="hs-identifier hs-var">ShelleyToAlonzoEraAllegra</span></a></span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEraConstraints era =&gt; ShelleyToAlonzoEra era -&gt; a
+ShelleyToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122960"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+ShelleyToAlonzoEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraMary"><span class="hs-identifier hs-var">ShelleyToAlonzoEraMary</span></a></span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEraConstraints era =&gt; ShelleyToAlonzoEra era -&gt; a
+ShelleyToAlonzoEra era -&gt; a
+</span><a href="#local-6989586621681122960"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+ShelleyToAlonzoEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraAlonzo"><span class="hs-identifier hs-var">ShelleyToAlonzoEraAlonzo</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a
+BabbageEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122961"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+BabbageEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsBabbage"><span class="hs-identifier hs-var">BabbageEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwardsConstraints era =&gt; BabbageEraOnwards era -&gt; a
+BabbageEraOnwards era -&gt; a
+</span><a href="#local-6989586621681122961"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+BabbageEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsConway"><span class="hs-identifier hs-var">BabbageEraOnwardsConway</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- | @caseShelleyToBabbageOrConwayEraOnwards f g era@ applies @f@ to eras before conway;</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- and applies @g@ to conway and later eras.</span><span>
+</span><span id="line-139"></span><span id="local-6989586621681121618"><span id="local-6989586621681121621"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier hs-type">caseShelleyToBabbageOrConwayEraOnwards</span></a></span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraConstraints"><span class="hs-identifier hs-type">ShelleyToBabbageEraConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121618"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEra"><span class="hs-identifier hs-type">ShelleyToBabbageEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121618"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121621"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwardsConstraints"><span class="hs-identifier hs-type">ConwayEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121618"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121618"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121621"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121618"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621681121621"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-145"></span><span id="caseShelleyToBabbageOrConwayEraOnwards"><span class="annot"><span class="annottext">caseShelleyToBabbageOrConwayEraOnwards :: forall era a.
+(ShelleyToBabbageEraConstraints era =&gt;
+ ShelleyToBabbageEra era -&gt; a)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a)
+-&gt; ShelleyBasedEra era
+-&gt; a
+</span><a href="Cardano.Api.Era.Internal.Case.html#caseShelleyToBabbageOrConwayEraOnwards"><span class="hs-identifier hs-var hs-var">caseShelleyToBabbageOrConwayEraOnwards</span></a></span></span><span> </span><span id="local-6989586621681123159"><span class="annot"><span class="annottext">ShelleyToBabbageEraConstraints era =&gt; ShelleyToBabbageEra era -&gt; a
+</span><a href="#local-6989586621681123159"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621681123160"><span class="annot"><span class="annottext">ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a
+</span><a href="#local-6989586621681123160"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-146"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraShelley"><span class="hs-identifier hs-var">ShelleyBasedEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEraConstraints era =&gt; ShelleyToBabbageEra era -&gt; a
+ShelleyToBabbageEra era -&gt; a
+</span><a href="#local-6989586621681123159"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraShelley"><span class="hs-identifier hs-var">ShelleyToBabbageEraShelley</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAllegra"><span class="hs-identifier hs-var">ShelleyBasedEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEraConstraints era =&gt; ShelleyToBabbageEra era -&gt; a
+ShelleyToBabbageEra era -&gt; a
+</span><a href="#local-6989586621681123159"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraAllegra"><span class="hs-identifier hs-var">ShelleyToBabbageEraAllegra</span></a></span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraMary"><span class="hs-identifier hs-var">ShelleyBasedEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEraConstraints era =&gt; ShelleyToBabbageEra era -&gt; a
+ShelleyToBabbageEra era -&gt; a
+</span><a href="#local-6989586621681123159"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraMary"><span class="hs-identifier hs-var">ShelleyToBabbageEraMary</span></a></span><span>
+</span><span id="line-149"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraAlonzo"><span class="hs-identifier hs-var">ShelleyBasedEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEraConstraints era =&gt; ShelleyToBabbageEra era -&gt; a
+ShelleyToBabbageEra era -&gt; a
+</span><a href="#local-6989586621681123159"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraAlonzo"><span class="hs-identifier hs-var">ShelleyToBabbageEraAlonzo</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraBabbage"><span class="hs-identifier hs-var">ShelleyBasedEraBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEraConstraints era =&gt; ShelleyToBabbageEra era -&gt; a
+ShelleyToBabbageEra era -&gt; a
+</span><a href="#local-6989586621681123159"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraBabbage"><span class="hs-identifier hs-var">ShelleyToBabbageEraBabbage</span></a></span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEraConway"><span class="hs-identifier hs-var">ShelleyBasedEraConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwardsConstraints era =&gt; ConwayEraOnwards era -&gt; a
+ConwayEraOnwards era -&gt; a
+</span><a href="#local-6989586621681123160"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+ConwayEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwardsConway"><span class="hs-identifier hs-var">ConwayEraOnwardsConway</span></a></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">shelleyToAlonzoEraToShelleyToBabbageEra</span><span> </span><span class="hs-pragma">&quot;Use convert instead&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-154"></span><span id="local-6989586621681121634"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#shelleyToAlonzoEraToShelleyToBabbageEra"><span class="hs-identifier hs-type">shelleyToAlonzoEraToShelleyToBabbageEra</span></a></span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEra"><span class="hs-identifier hs-type">ShelleyToAlonzoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121634"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEra"><span class="hs-identifier hs-type">ShelleyToBabbageEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121634"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-158"></span><span id="shelleyToAlonzoEraToShelleyToBabbageEra"><span class="annot"><span class="annottext">shelleyToAlonzoEraToShelleyToBabbageEra :: forall era. ShelleyToAlonzoEra era -&gt; ShelleyToBabbageEra era
+</span><a href="Cardano.Api.Era.Internal.Case.html#shelleyToAlonzoEraToShelleyToBabbageEra"><span class="hs-identifier hs-var hs-var">shelleyToAlonzoEraToShelleyToBabbageEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraShelley"><span class="hs-identifier hs-var">ShelleyToAlonzoEraShelley</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra ShelleyEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraShelley"><span class="hs-identifier hs-var">ShelleyToBabbageEraShelley</span></a></span><span>
+</span><span id="line-160"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraAllegra"><span class="hs-identifier hs-var">ShelleyToAlonzoEraAllegra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra AllegraEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraAllegra"><span class="hs-identifier hs-var">ShelleyToBabbageEraAllegra</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraMary"><span class="hs-identifier hs-var">ShelleyToAlonzoEraMary</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra MaryEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraMary"><span class="hs-identifier hs-var">ShelleyToBabbageEraMary</span></a></span><span>
+</span><span id="line-162"></span><span>  </span><span class="annot"><span class="annottext">ShelleyToAlonzoEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra.html#ShelleyToAlonzoEraAlonzo"><span class="hs-identifier hs-var">ShelleyToAlonzoEraAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEraAlonzo"><span class="hs-identifier hs-var">ShelleyToBabbageEraAlonzo</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">alonzoEraOnwardsToMaryEraOnwards</span><span> </span><span class="hs-pragma">&quot;Use convert instead&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-165"></span><span id="local-6989586621681121636"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#alonzoEraOnwardsToMaryEraOnwards"><span class="hs-identifier hs-type">alonzoEraOnwardsToMaryEraOnwards</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwards"><span class="hs-identifier hs-type">AlonzoEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121636"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwards"><span class="hs-identifier hs-type">MaryEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121636"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-169"></span><span id="alonzoEraOnwardsToMaryEraOnwards"><span class="annot"><span class="annottext">alonzoEraOnwardsToMaryEraOnwards :: forall era. AlonzoEraOnwards era -&gt; MaryEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Case.html#alonzoEraOnwardsToMaryEraOnwards"><span class="hs-identifier hs-var hs-var">alonzoEraOnwardsToMaryEraOnwards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-170"></span><span>  </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsAlonzo"><span class="hs-identifier hs-var">AlonzoEraOnwardsAlonzo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards AlonzoEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsAlonzo"><span class="hs-identifier hs-var">MaryEraOnwardsAlonzo</span></a></span><span>
+</span><span id="line-171"></span><span>  </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsBabbage"><span class="hs-identifier hs-var">AlonzoEraOnwardsBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsBabbage"><span class="hs-identifier hs-var">MaryEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-172"></span><span>  </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsConway"><span class="hs-identifier hs-var">AlonzoEraOnwardsConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsConway"><span class="hs-identifier hs-var">MaryEraOnwardsConway</span></a></span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">babbageEraOnwardsToMaryEraOnwards</span><span> </span><span class="hs-pragma">&quot;Use convert instead&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-175"></span><span id="local-6989586621681121638"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#babbageEraOnwardsToMaryEraOnwards"><span class="hs-identifier hs-type">babbageEraOnwardsToMaryEraOnwards</span></a></span><span>
+</span><span id="line-176"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwards"><span class="hs-identifier hs-type">BabbageEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121638"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwards"><span class="hs-identifier hs-type">MaryEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121638"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-179"></span><span id="babbageEraOnwardsToMaryEraOnwards"><span class="annot"><span class="annottext">babbageEraOnwardsToMaryEraOnwards :: forall era. BabbageEraOnwards era -&gt; MaryEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Case.html#babbageEraOnwardsToMaryEraOnwards"><span class="hs-identifier hs-var hs-var">babbageEraOnwardsToMaryEraOnwards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsBabbage"><span class="hs-identifier hs-var">BabbageEraOnwardsBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsBabbage"><span class="hs-identifier hs-var">MaryEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-181"></span><span>  </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsConway"><span class="hs-identifier hs-var">BabbageEraOnwardsConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MaryEraOnwards era
+MaryEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.MaryEraOnwards.html#MaryEraOnwardsConway"><span class="hs-identifier hs-var">MaryEraOnwardsConway</span></a></span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span class="hs-pragma">{-# DEPRECATED</span><span> </span><span class="hs-pragma">babbageEraOnwardsToAlonzoEraOnwards</span><span> </span><span class="hs-pragma">&quot;Use convert instead&quot;</span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-184"></span><span id="local-6989586621681121640"><span class="annot"><a href="Cardano.Api.Era.Internal.Case.html#babbageEraOnwardsToAlonzoEraOnwards"><span class="hs-identifier hs-type">babbageEraOnwardsToAlonzoEraOnwards</span></a></span><span>
+</span><span id="line-185"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwards"><span class="hs-identifier hs-type">BabbageEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121640"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwards"><span class="hs-identifier hs-type">AlonzoEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681121640"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-188"></span><span id="babbageEraOnwardsToAlonzoEraOnwards"><span class="annot"><span class="annottext">babbageEraOnwardsToAlonzoEraOnwards :: forall era. BabbageEraOnwards era -&gt; AlonzoEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Case.html#babbageEraOnwardsToAlonzoEraOnwards"><span class="hs-identifier hs-var hs-var">babbageEraOnwardsToAlonzoEraOnwards</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsBabbage"><span class="hs-identifier hs-var">BabbageEraOnwardsBabbage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+AlonzoEraOnwards BabbageEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsBabbage"><span class="hs-identifier hs-var">AlonzoEraOnwardsBabbage</span></a></span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><span class="annottext">BabbageEraOnwards era
+</span><a href="Cardano.Api.Era.Internal.Eon.BabbageEraOnwards.html#BabbageEraOnwardsConway"><span class="hs-identifier hs-var">BabbageEraOnwardsConway</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">AlonzoEraOnwards era
+AlonzoEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards.html#AlonzoEraOnwardsConway"><span class="hs-identifier hs-var">AlonzoEraOnwardsConway</span></a></span><span>
+</span><span id="line-191"></span></pre></body></html>

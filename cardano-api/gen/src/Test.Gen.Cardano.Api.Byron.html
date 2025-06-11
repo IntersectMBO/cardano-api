@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Gen.Cardano.Api.Byron</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Byron.html#tests"><span class="hs-identifier">tests</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Body.html#txIns"><span class="hs-identifier">txIns</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Typed.html"><span class="hs-identifier">Test.Gen.Cardano.Api.Typed</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Hedgehog.Roundtrip.CBOR.html"><span class="hs-identifier">Test.Hedgehog.Roundtrip.CBOR</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Tasty</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Test.Tasty.Hedgehog</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="annot"><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_txbody_CBOR"><span class="hs-identifier hs-type">prop_byron_roundtrip_txbody_CBOR</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-20"></span><span id="prop_byron_roundtrip_txbody_CBOR"><span class="annot"><span class="annottext">prop_byron_roundtrip_txbody_CBOR :: Property
+</span><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_txbody_CBOR"><span class="hs-identifier hs-var hs-var">prop_byron_roundtrip_txbody_CBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><span class="hs-identifier hs-var">property</span></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621679472742"><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679472742"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (ATxAux ByteString) -&gt; PropertyT IO (ATxAux ByteString)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><span class="hs-identifier hs-var">forAll</span></span><span> </span><span class="annot"><span class="annottext">(Gen (ATxAux ByteString) -&gt; PropertyT IO (ATxAux ByteString))
+-&gt; Gen (ATxAux ByteString) -&gt; PropertyT IO (ATxAux ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[KeyWitness Any] -&gt; Annotated Tx ByteString -&gt; ATxAux ByteString
+forall era.
+[KeyWitness era] -&gt; Annotated Tx ByteString -&gt; ATxAux ByteString
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#makeSignedByronTransaction"><span class="hs-identifier hs-var">makeSignedByronTransaction</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">(Annotated Tx ByteString -&gt; ATxAux ByteString)
+-&gt; GenT Identity (Annotated Tx ByteString)
+-&gt; Gen (ATxAux ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">GenT Identity (Annotated Tx ByteString)
+HasCallStack =&gt; GenT Identity (Annotated Tx ByteString)
+</span><a href="Test.Gen.Cardano.Api.Typed.html#genTxBodyByron"><span class="hs-identifier hs-var">genTxBodyByron</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><span class="annottext">ATxAux ByteString
+-&gt; (ATxAux ByteString -&gt; TextEnvelope)
+-&gt; (TextEnvelope
+    -&gt; Either TextEnvelopeCddlError (ATxAux ByteString))
+-&gt; PropertyT IO ()
+forall (m :: * -&gt; *) (f :: * -&gt; *) b a.
+(MonadTest m, Applicative f, Show b, Show (f a), Eq (f a),
+ HasCallStack) =&gt;
+a -&gt; (a -&gt; b) -&gt; (b -&gt; f a) -&gt; m ()
+</span><span class="hs-identifier hs-var">tripping</span></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679472742"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString -&gt; TextEnvelope
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.TextEnvelope.Internal.Cddl.html#serializeByronTx"><span class="hs-identifier hs-var">serializeByronTx</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelope -&gt; Either TextEnvelopeCddlError (ATxAux ByteString)
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.TextEnvelope.Internal.Cddl.html#deserialiseByronTxCddl"><span class="hs-identifier hs-var">deserialiseByronTxCddl</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_witness_CBOR"><span class="hs-identifier hs-type">prop_byron_roundtrip_witness_CBOR</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-25"></span><span id="prop_byron_roundtrip_witness_CBOR"><span class="annot"><span class="annottext">prop_byron_roundtrip_witness_CBOR :: Property
+</span><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_witness_CBOR"><span class="hs-identifier hs-var hs-var">prop_byron_roundtrip_witness_CBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><span class="hs-identifier hs-var">property</span></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679472751"><span class="annot"><span class="annottext">byron :: CardanoEra ByronEra
+</span><a href="#local-6989586621679472751"><span class="hs-identifier hs-var hs-var">byron</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoEra ByronEra
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#ByronEra"><span class="hs-identifier hs-var">ByronEra</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679472753"><span class="annot"><span class="annottext">KeyWitness ByronEra
+</span><a href="#local-6989586621679472753"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (KeyWitness ByronEra) -&gt; PropertyT IO (KeyWitness ByronEra)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><span class="hs-identifier hs-var">forAll</span></span><span> </span><span class="annot"><span class="annottext">Gen (KeyWitness ByronEra)
+</span><a href="Test.Gen.Cardano.Api.Typed.html#genByronKeyWitness"><span class="hs-identifier hs-var">genByronKeyWitness</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><span class="annottext">CardanoEra ByronEra
+-&gt; (CardanoEraConstraints ByronEra =&gt; PropertyT IO ())
+-&gt; PropertyT IO ()
+forall era a.
+CardanoEra era -&gt; (CardanoEraConstraints era =&gt; a) -&gt; a
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Era.Internal.Core.html#cardanoEraConstraints"><span class="hs-identifier hs-var">cardanoEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra ByronEra
+</span><a href="#local-6989586621679472751"><span class="hs-identifier hs-var">byron</span></a></span><span> </span><span class="annot"><span class="annottext">((CardanoEraConstraints ByronEra =&gt; PropertyT IO ())
+ -&gt; PropertyT IO ())
+-&gt; (CardanoEraConstraints ByronEra =&gt; PropertyT IO ())
+-&gt; PropertyT IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AsType (KeyWitness ByronEra)
+-&gt; KeyWitness ByronEra -&gt; PropertyT IO ()
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadTest m, Show a, Eq a, SerialiseAsCBOR a) =&gt;
+AsType a -&gt; a -&gt; m ()
+</span><a href="Test.Hedgehog.Roundtrip.CBOR.html#trippingCbor"><span class="hs-identifier hs-var">trippingCbor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AsType ByronEra -&gt; AsType (KeyWitness ByronEra)
+forall era. AsType era -&gt; AsType (KeyWitness era)
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Tx.Internal.Sign.html#AsKeyWitness"><span class="hs-identifier hs-var">AsKeyWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy ByronEra -&gt; AsType ByronEra
+forall t. HasTypeProxy t =&gt; Proxy t -&gt; AsType t
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.HasTypeProxy.html#proxyToAsType"><span class="hs-identifier hs-var">proxyToAsType</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy ByronEra
+forall {k} (t :: k). Proxy t
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-var">Proxy</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">KeyWitness ByronEra
+</span><a href="#local-6989586621679472753"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_Tx_Cddl"><span class="hs-identifier hs-type">prop_byron_roundtrip_Tx_Cddl</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Property</span></span><span>
+</span><span id="line-31"></span><span id="prop_byron_roundtrip_Tx_Cddl"><span class="annot"><span class="annottext">prop_byron_roundtrip_Tx_Cddl :: Property
+</span><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_Tx_Cddl"><span class="hs-identifier hs-var hs-var">prop_byron_roundtrip_Tx_Cddl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+PropertyT IO () -&gt; Property
+</span><span class="hs-identifier hs-var">property</span></span><span> </span><span class="annot"><span class="annottext">(PropertyT IO () -&gt; Property) -&gt; PropertyT IO () -&gt; Property
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679472774"><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679472774"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen (ATxAux ByteString) -&gt; PropertyT IO (ATxAux ByteString)
+forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><span class="hs-identifier hs-var">forAll</span></span><span> </span><span class="annot"><span class="annottext">Gen (ATxAux ByteString)
+</span><a href="Test.Gen.Cardano.Api.Typed.html#genTxByron"><span class="hs-identifier hs-var">genTxByron</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">ATxAux ByteString
+-&gt; (ATxAux ByteString -&gt; TextEnvelope)
+-&gt; (TextEnvelope
+    -&gt; Either TextEnvelopeCddlError (ATxAux ByteString))
+-&gt; PropertyT IO ()
+forall (m :: * -&gt; *) (f :: * -&gt; *) b a.
+(MonadTest m, Applicative f, Show b, Show (f a), Eq (f a),
+ HasCallStack) =&gt;
+a -&gt; (a -&gt; b) -&gt; (b -&gt; f a) -&gt; m ()
+</span><span class="hs-identifier hs-var">tripping</span></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString
+</span><a href="#local-6989586621679472774"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">ATxAux ByteString -&gt; TextEnvelope
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.TextEnvelope.Internal.Cddl.html#serializeByronTx"><span class="hs-identifier hs-var">serializeByronTx</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelope -&gt; Either TextEnvelopeCddlError (ATxAux ByteString)
+</span><a href="file:///home/runner/work/cardano-api/cardano-api/dist-newstyle/build/x86_64-linux/ghc-9.8.2/cardano-api-10.17.0.0/doc/html/cardano-api/src/Cardano.Api.Serialise.TextEnvelope.Internal.Cddl.html#deserialiseByronTxCddl"><span class="hs-identifier hs-var">deserialiseByronTxCddl</span></a></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Test.Gen.Cardano.Api.Byron.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TestTree</span></span><span>
+</span><span id="line-36"></span><span id="tests"><span class="annot"><span class="annottext">tests :: TestTree
+</span><a href="Test.Gen.Cardano.Api.Byron.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><span class="hs-identifier hs-var">testGroup</span></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Test.Gen.Cardano.Api.Byron&quot;</span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Property -&gt; TestTree
+</span><span class="hs-identifier hs-var">testProperty</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Byron roundtrip txbody CBOR&quot;</span></span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_txbody_CBOR"><span class="hs-identifier hs-var">prop_byron_roundtrip_txbody_CBOR</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Property -&gt; TestTree
+</span><span class="hs-identifier hs-var">testProperty</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Byron roundtrip witness CBOR&quot;</span></span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_witness_CBOR"><span class="hs-identifier hs-var">prop_byron_roundtrip_witness_CBOR</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; Property -&gt; TestTree
+</span><span class="hs-identifier hs-var">testProperty</span></span><span> </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Byron roundtrip tx CBOR&quot;</span></span><span> </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Gen.Cardano.Api.Byron.html#prop_byron_roundtrip_Tx_Cddl"><span class="hs-identifier hs-var">prop_byron_roundtrip_Tx_Cddl</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-43"></span></pre></body></html>

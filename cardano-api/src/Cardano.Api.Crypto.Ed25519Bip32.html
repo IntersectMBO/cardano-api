@@ -1,0 +1,716 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="annot"><span class="hs-comment">-- | BIP32-Ed25519 digital signatures.</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Crypto.Ed25519Bip32</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier">Ed25519Bip32DSIGN</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SigDSIGN"><span class="hs-identifier">SigDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignKeyDSIGN"><span class="hs-identifier">SignKeyDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#VerKeyDSIGN"><span class="hs-identifier">VerKeyDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Serialisation</span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvToBytes"><span class="hs-identifier">xPrvToBytes</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvFromBytes"><span class="hs-identifier">xPrvFromBytes</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.html"><span class="hs-identifier">Cardano.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html"><span class="hs-identifier">Cardano.Crypto.DSIGN.Class</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Seed.html"><span class="hs-identifier">Cardano.Crypto.Seed</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Util.html"><span class="hs-identifier">Cardano.Crypto.Util</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Util.html#SignableRepresentation"><span class="hs-identifier">SignableRepresentation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Cardano.Crypto.Wallet</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CC</span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/deepseq-1.5.0.0-inplace/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/deepseq-1.5.0.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.ByteArray</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BA</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ByteArrayAccess</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ScrubbedBytes</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">convert</span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Crypto.ECC.Edwards25519</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ed25519</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Crypto.Error</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">eitherCryptoError</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">NoThunks.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">InspectHeap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">NoThunks</span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="Ed25519Bip32DSIGN"><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-var">Ed25519Bip32DSIGN</span></a></span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100380"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#DSIGNAlgorithm"><span class="hs-identifier hs-type">DSIGNAlgorithm</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SeedSizeDSIGN"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SeedSizeDSIGN"><span class="hs-identifier hs-var">SeedSizeDSIGN</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">32</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-comment">-- \| BIP32-Ed25519 extended verification key size is 64 octets.</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SizeVerKeyDSIGN"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SizeVerKeyDSIGN"><span class="hs-identifier hs-var">SizeVerKeyDSIGN</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">64</span></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-comment">-- \| BIP32-Ed25519 extended signing key size is 96 octets.</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SizeSignKeyDSIGN"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SizeSignKeyDSIGN"><span class="hs-identifier hs-var">SizeSignKeyDSIGN</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">96</span></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-comment">-- \| BIP32-Ed25519 extended signature size is 64 octets.</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="SizeSigDSIGN"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SizeSigDSIGN"><span class="hs-identifier hs-var">SizeSigDSIGN</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">64</span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-comment">-- Key and signature types</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="VerKeyDSIGN"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#VerKeyDSIGN"><span class="hs-identifier hs-var">VerKeyDSIGN</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VerKeyEd25519Bip32DSIGN"><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#VerKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-var">VerKeyEd25519Bip32DSIGN</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XPub</span></span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681100397"><span id="local-6989586621681100403"><span id="local-6989586621681100406"><span class="annot"><span class="annottext">Int -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ShowS
+[VerKeyDSIGN Ed25519Bip32DSIGN] -&gt; ShowS
+VerKeyDSIGN Ed25519Bip32DSIGN -&gt; String
+(Int -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ShowS)
+-&gt; (VerKeyDSIGN Ed25519Bip32DSIGN -&gt; String)
+-&gt; ([VerKeyDSIGN Ed25519Bip32DSIGN] -&gt; ShowS)
+-&gt; Show (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ShowS
+showsPrec :: Int -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ShowS
+$cshow :: VerKeyDSIGN Ed25519Bip32DSIGN -&gt; String
+show :: VerKeyDSIGN Ed25519Bip32DSIGN -&gt; String
+$cshowList :: [VerKeyDSIGN Ed25519Bip32DSIGN] -&gt; ShowS
+showList :: [VerKeyDSIGN Ed25519Bip32DSIGN] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681100410"><span id="local-6989586621681100415"><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Bool
+(VerKeyDSIGN Ed25519Bip32DSIGN
+ -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Bool)
+-&gt; (VerKeyDSIGN Ed25519Bip32DSIGN
+    -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Bool)
+-&gt; Eq (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Bool
+== :: VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Bool
+$c/= :: VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Bool
+/= :: VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681100420"><span id="local-6989586621681100422"><span class="annot"><span class="annottext">(forall x.
+ VerKeyDSIGN Ed25519Bip32DSIGN
+ -&gt; Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x)
+-&gt; (forall x.
+    Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x
+    -&gt; VerKeyDSIGN Ed25519Bip32DSIGN)
+-&gt; Generic (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall x.
+Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+forall x.
+VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x
+from :: forall x.
+VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x
+$cto :: forall x.
+Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+to :: forall x.
+Rep (VerKeyDSIGN Ed25519Bip32DSIGN) x
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span id="local-6989586621681100426"><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ()
+(VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ())
+-&gt; NFData (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ()
+rnf :: VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ()
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/deepseq-1.5.0.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681100433"><span id="local-6989586621681100439"><span id="local-6989586621681100444"><span class="annot"><span class="annottext">Context -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+Proxy (VerKeyDSIGN Ed25519Bip32DSIGN) -&gt; String
+(Context -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context
+    -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (VerKeyDSIGN Ed25519Bip32DSIGN) -&gt; String)
+-&gt; NoThunks (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; VerKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (VerKeyDSIGN Ed25519Bip32DSIGN) -&gt; String
+showTypeOf :: Proxy (VerKeyDSIGN Ed25519Bip32DSIGN) -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></span></span></span></span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><span class="hs-identifier hs-type">InspectHeap</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XPub</span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="SignKeyDSIGN"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignKeyDSIGN"><span class="hs-identifier hs-var">SignKeyDSIGN</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SignKeyEd25519Bip32DSIGN"><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SignKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-var">SignKeyEd25519Bip32DSIGN</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XPrv</span></span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681100451"><span id="local-6989586621681100453"><span class="annot"><span class="annottext">(forall x.
+ SignKeyDSIGN Ed25519Bip32DSIGN
+ -&gt; Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x)
+-&gt; (forall x.
+    Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x
+    -&gt; SignKeyDSIGN Ed25519Bip32DSIGN)
+-&gt; Generic (SignKeyDSIGN Ed25519Bip32DSIGN)
+forall x.
+Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x
+-&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+forall x.
+SignKeyDSIGN Ed25519Bip32DSIGN
+-&gt; Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+SignKeyDSIGN Ed25519Bip32DSIGN
+-&gt; Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x
+from :: forall x.
+SignKeyDSIGN Ed25519Bip32DSIGN
+-&gt; Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x
+$cto :: forall x.
+Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x
+-&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+to :: forall x.
+Rep (SignKeyDSIGN Ed25519Bip32DSIGN) x
+-&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681100456"><span id="local-6989586621681100461"><span id="local-6989586621681100465"><span class="annot"><span class="annottext">SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Int
+(SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Int)
+-&gt; (forall p a.
+    SignKeyDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a)
+-&gt; (forall p. SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ())
+-&gt; ByteArrayAccess (SignKeyDSIGN Ed25519Bip32DSIGN)
+forall p. SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ()
+forall ba.
+(ba -&gt; Int)
+-&gt; (forall p a. ba -&gt; (Ptr p -&gt; IO a) -&gt; IO a)
+-&gt; (forall p. ba -&gt; Ptr p -&gt; IO ())
+-&gt; ByteArrayAccess ba
+forall p a.
+SignKeyDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+$clength :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Int
+length :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Int
+$cwithByteArray :: forall p a.
+SignKeyDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+withByteArray :: forall p a.
+SignKeyDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+$ccopyByteArrayToPtr :: forall p. SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ()
+copyByteArrayToPtr :: forall p. SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ByteArrayAccess</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span id="local-6989586621681100471"><span class="annot"><span class="annottext">SignKeyDSIGN Ed25519Bip32DSIGN -&gt; ()
+(SignKeyDSIGN Ed25519Bip32DSIGN -&gt; ())
+-&gt; NFData (SignKeyDSIGN Ed25519Bip32DSIGN)
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; ()
+rnf :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; ()
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/deepseq-1.5.0.0-inplace/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681100477"><span id="local-6989586621681100482"><span id="local-6989586621681100487"><span class="annot"><span class="annottext">Context -&gt; SignKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+Proxy (SignKeyDSIGN Ed25519Bip32DSIGN) -&gt; String
+(Context -&gt; SignKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context
+    -&gt; SignKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (SignKeyDSIGN Ed25519Bip32DSIGN) -&gt; String)
+-&gt; NoThunks (SignKeyDSIGN Ed25519Bip32DSIGN)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; SignKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; SignKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; SignKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; SignKeyDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (SignKeyDSIGN Ed25519Bip32DSIGN) -&gt; String
+showTypeOf :: Proxy (SignKeyDSIGN Ed25519Bip32DSIGN) -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></span></span></span></span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><span class="hs-identifier hs-type">InspectHeap</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XPrv</span></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="SigDSIGN"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SigDSIGN"><span class="hs-identifier hs-var">SigDSIGN</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SigEd25519Bip32DSIGN"><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SigEd25519Bip32DSIGN"><span class="hs-identifier hs-var">SigEd25519Bip32DSIGN</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XSignature</span></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681100493"><span id="local-6989586621681100498"><span id="local-6989586621681100501"><span class="annot"><span class="annottext">Int -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; ShowS
+[SigDSIGN Ed25519Bip32DSIGN] -&gt; ShowS
+SigDSIGN Ed25519Bip32DSIGN -&gt; String
+(Int -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; ShowS)
+-&gt; (SigDSIGN Ed25519Bip32DSIGN -&gt; String)
+-&gt; ([SigDSIGN Ed25519Bip32DSIGN] -&gt; ShowS)
+-&gt; Show (SigDSIGN Ed25519Bip32DSIGN)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; ShowS
+showsPrec :: Int -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; ShowS
+$cshow :: SigDSIGN Ed25519Bip32DSIGN -&gt; String
+show :: SigDSIGN Ed25519Bip32DSIGN -&gt; String
+$cshowList :: [SigDSIGN Ed25519Bip32DSIGN] -&gt; ShowS
+showList :: [SigDSIGN Ed25519Bip32DSIGN] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681100504"><span id="local-6989586621681100509"><span class="annot"><span class="annottext">SigDSIGN Ed25519Bip32DSIGN -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; Bool
+(SigDSIGN Ed25519Bip32DSIGN -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; Bool)
+-&gt; (SigDSIGN Ed25519Bip32DSIGN
+    -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; Bool)
+-&gt; Eq (SigDSIGN Ed25519Bip32DSIGN)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: SigDSIGN Ed25519Bip32DSIGN -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; Bool
+== :: SigDSIGN Ed25519Bip32DSIGN -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; Bool
+$c/= :: SigDSIGN Ed25519Bip32DSIGN -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; Bool
+/= :: SigDSIGN Ed25519Bip32DSIGN -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681100513"><span id="local-6989586621681100515"><span class="annot"><span class="annottext">(forall x.
+ SigDSIGN Ed25519Bip32DSIGN -&gt; Rep (SigDSIGN Ed25519Bip32DSIGN) x)
+-&gt; (forall x.
+    Rep (SigDSIGN Ed25519Bip32DSIGN) x -&gt; SigDSIGN Ed25519Bip32DSIGN)
+-&gt; Generic (SigDSIGN Ed25519Bip32DSIGN)
+forall x.
+Rep (SigDSIGN Ed25519Bip32DSIGN) x -&gt; SigDSIGN Ed25519Bip32DSIGN
+forall x.
+SigDSIGN Ed25519Bip32DSIGN -&gt; Rep (SigDSIGN Ed25519Bip32DSIGN) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x.
+SigDSIGN Ed25519Bip32DSIGN -&gt; Rep (SigDSIGN Ed25519Bip32DSIGN) x
+from :: forall x.
+SigDSIGN Ed25519Bip32DSIGN -&gt; Rep (SigDSIGN Ed25519Bip32DSIGN) x
+$cto :: forall x.
+Rep (SigDSIGN Ed25519Bip32DSIGN) x -&gt; SigDSIGN Ed25519Bip32DSIGN
+to :: forall x.
+Rep (SigDSIGN Ed25519Bip32DSIGN) x -&gt; SigDSIGN Ed25519Bip32DSIGN
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681100518"><span id="local-6989586621681100523"><span id="local-6989586621681100527"><span class="annot"><span class="annottext">SigDSIGN Ed25519Bip32DSIGN -&gt; Int
+(SigDSIGN Ed25519Bip32DSIGN -&gt; Int)
+-&gt; (forall p a.
+    SigDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a)
+-&gt; (forall p. SigDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ())
+-&gt; ByteArrayAccess (SigDSIGN Ed25519Bip32DSIGN)
+forall p. SigDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ()
+forall ba.
+(ba -&gt; Int)
+-&gt; (forall p a. ba -&gt; (Ptr p -&gt; IO a) -&gt; IO a)
+-&gt; (forall p. ba -&gt; Ptr p -&gt; IO ())
+-&gt; ByteArrayAccess ba
+forall p a. SigDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+$clength :: SigDSIGN Ed25519Bip32DSIGN -&gt; Int
+length :: SigDSIGN Ed25519Bip32DSIGN -&gt; Int
+$cwithByteArray :: forall p a. SigDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+withByteArray :: forall p a. SigDSIGN Ed25519Bip32DSIGN -&gt; (Ptr p -&gt; IO a) -&gt; IO a
+$ccopyByteArrayToPtr :: forall p. SigDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ()
+copyByteArrayToPtr :: forall p. SigDSIGN Ed25519Bip32DSIGN -&gt; Ptr p -&gt; IO ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ByteArrayAccess</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681100532"><span id="local-6989586621681100537"><span id="local-6989586621681100542"><span class="annot"><span class="annottext">Context -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+Proxy (SigDSIGN Ed25519Bip32DSIGN) -&gt; String
+(Context -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy (SigDSIGN Ed25519Bip32DSIGN) -&gt; String)
+-&gt; NoThunks (SigDSIGN Ed25519Bip32DSIGN)
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; SigDSIGN Ed25519Bip32DSIGN -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy (SigDSIGN Ed25519Bip32DSIGN) -&gt; String
+showTypeOf :: Proxy (SigDSIGN Ed25519Bip32DSIGN) -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></span></span></span></span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><span class="hs-identifier hs-type">InspectHeap</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XSignature</span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-comment">-- Metadata and basic key operations</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621681100546"><span class="annot"><span class="annottext">algorithmNameDSIGN :: forall (proxy :: * -&gt; *). proxy Ed25519Bip32DSIGN -&gt; String
+</span><a href="#local-6989586621681100546"><span class="hs-identifier hs-var hs-var hs-var hs-var">algorithmNameDSIGN</span></a></span></span><span> </span><span class="annot"><span class="annottext">proxy Ed25519Bip32DSIGN
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ed25519_bip32&quot;</span></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621681100550"><span class="annot"><span class="annottext">deriveVerKeyDSIGN :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="#local-6989586621681100550"><span class="hs-identifier hs-var hs-var hs-var hs-var">deriveVerKeyDSIGN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SignKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-type">SignKeyEd25519Bip32DSIGN</span></a></span><span> </span><span id="local-6989586621681100552"><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100552"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><span class="annottext">XPub -&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#VerKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-var">VerKeyEd25519Bip32DSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">(XPub -&gt; VerKeyDSIGN Ed25519Bip32DSIGN)
+-&gt; XPub -&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; XPrv -&gt; XPub
+XPrv -&gt; XPub
+</span><span class="hs-identifier hs-var">CC.toXPub</span></span><span> </span><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100552"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-comment">-- Core algorithm operations</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="Signable"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#Signable"><span class="hs-identifier hs-var">Signable</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Util.html#SignableRepresentation"><span class="hs-identifier hs-type">SignableRepresentation</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621681100563"><span class="annot"><span class="annottext">signDSIGN :: forall a.
+(Signable Ed25519Bip32DSIGN a, HasCallStack) =&gt;
+ContextDSIGN Ed25519Bip32DSIGN
+-&gt; a
+-&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+-&gt; SigDSIGN Ed25519Bip32DSIGN
+</span><a href="#local-6989586621681100563"><span class="hs-identifier hs-var hs-var hs-var hs-var">signDSIGN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span id="local-6989586621681100565"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681100565"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SignKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-type">SignKeyEd25519Bip32DSIGN</span></a></span><span> </span><span id="local-6989586621681100566"><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100566"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">XSignature -&gt; SigDSIGN Ed25519Bip32DSIGN
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SigEd25519Bip32DSIGN"><span class="hs-identifier hs-var">SigEd25519Bip32DSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">(XSignature -&gt; SigDSIGN Ed25519Bip32DSIGN)
+-&gt; XSignature -&gt; SigDSIGN Ed25519Bip32DSIGN
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">ScrubbedBytes -&gt; XPrv -&gt; ByteString -&gt; XSignature
+forall passPhrase msg.
+(ByteArrayAccess passPhrase, ByteArrayAccess msg) =&gt;
+passPhrase -&gt; XPrv -&gt; msg -&gt; XSignature
+</span><span class="hs-identifier hs-var">CC.sign</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScrubbedBytes
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ScrubbedBytes</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100566"><span class="hs-identifier hs-var">sk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
+forall a. SignableRepresentation a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Util.html#getSignableRepresentation"><span class="hs-identifier hs-var">getSignableRepresentation</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681100565"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621681100577"><span class="annot"><span class="annottext">verifyDSIGN :: forall a.
+(Signable Ed25519Bip32DSIGN a, HasCallStack) =&gt;
+ContextDSIGN Ed25519Bip32DSIGN
+-&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; a
+-&gt; SigDSIGN Ed25519Bip32DSIGN
+-&gt; Either String ()
+</span><a href="#local-6989586621681100577"><span class="hs-identifier hs-var hs-var hs-var hs-var">verifyDSIGN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#VerKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-type">VerKeyEd25519Bip32DSIGN</span></a></span><span> </span><span id="local-6989586621681100579"><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621681100579"><span class="hs-identifier hs-var">vk</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681100580"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681100580"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SigEd25519Bip32DSIGN"><span class="hs-identifier hs-type">SigEd25519Bip32DSIGN</span></a></span><span> </span><span id="local-6989586621681100581"><span class="annot"><span class="annottext">XSignature
+</span><a href="#local-6989586621681100581"><span class="hs-identifier hs-var">sig</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">XPub -&gt; ByteString -&gt; XSignature -&gt; Bool
+forall msg.
+ByteArrayAccess msg =&gt;
+XPub -&gt; msg -&gt; XSignature -&gt; Bool
+</span><span class="hs-identifier hs-var">CC.verify</span></span><span> </span><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621681100579"><span class="hs-identifier hs-var">vk</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; ByteString
+forall a. SignableRepresentation a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Util.html#getSignableRepresentation"><span class="hs-identifier hs-var">getSignableRepresentation</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681100580"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">XSignature
+</span><a href="#local-6989586621681100581"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either String ()
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Verification failed&quot;</span></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-comment">-- Key generation</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621681100588"><span class="annot"><span class="annottext">genKeyDSIGN :: Seed -&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="#local-6989586621681100588"><span class="hs-identifier hs-var hs-var hs-var hs-var">genKeyDSIGN</span></a></span></span><span> </span><span id="local-6989586621681100590"><span class="annot"><span class="annottext">Seed
+</span><a href="#local-6989586621681100590"><span class="hs-identifier hs-var">seed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">XPrv -&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SignKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-var">SignKeyEd25519Bip32DSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">(XPrv -&gt; SignKeyDSIGN Ed25519Bip32DSIGN)
+-&gt; XPrv -&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">ByteString -&gt; ScrubbedBytes -&gt; ScrubbedBytes -&gt; XPrv
+forall keyPassPhrase generationPassPhrase seed.
+(ByteArrayAccess keyPassPhrase,
+ ByteArrayAccess generationPassPhrase, ByteArrayAccess seed) =&gt;
+seed -&gt; generationPassPhrase -&gt; keyPassPhrase -&gt; XPrv
+</span><span class="hs-identifier hs-var">CC.generateNew</span></span><span>
+</span><span id="line-100"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seed -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Seed.html#getSeedBytes"><span class="hs-identifier hs-var">getSeedBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Seed
+</span><a href="#local-6989586621681100590"><span class="hs-identifier hs-var">seed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScrubbedBytes
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ScrubbedBytes</span></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ScrubbedBytes
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ScrubbedBytes</span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-comment">-- raw serialise/deserialise</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621681100593"><span class="annot"><span class="annottext">rawSerialiseVerKeyDSIGN :: VerKeyDSIGN Ed25519Bip32DSIGN -&gt; ByteString
+</span><a href="#local-6989586621681100593"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawSerialiseVerKeyDSIGN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#VerKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-type">VerKeyEd25519Bip32DSIGN</span></a></span><span> </span><span id="local-6989586621681100595"><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621681100595"><span class="hs-identifier hs-var">vk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">XPub -&gt; ByteString
+</span><span class="hs-identifier hs-var">CC.unXPub</span></span><span> </span><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621681100595"><span class="hs-identifier hs-var">vk</span></a></span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621681100597"><span class="annot"><span class="annottext">rawSerialiseSignKeyDSIGN :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; ByteString
+</span><a href="#local-6989586621681100597"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawSerialiseSignKeyDSIGN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SignKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-type">SignKeyEd25519Bip32DSIGN</span></a></span><span> </span><span id="local-6989586621681100599"><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100599"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">XPrv -&gt; ByteString
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvToBytes"><span class="hs-identifier hs-var">xPrvToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100599"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621681100602"><span class="annot"><span class="annottext">rawSerialiseSigDSIGN :: SigDSIGN Ed25519Bip32DSIGN -&gt; ByteString
+</span><a href="#local-6989586621681100602"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawSerialiseSigDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SigDSIGN Ed25519Bip32DSIGN -&gt; ByteString
+forall bin bout.
+(ByteArrayAccess bin, ByteArray bout) =&gt;
+bin -&gt; bout
+</span><span class="hs-identifier hs-var">BA.convert</span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621681100604"><span class="annot"><span class="annottext">rawDeserialiseVerKeyDSIGN :: ByteString -&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+</span><a href="#local-6989586621681100604"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawDeserialiseVerKeyDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">(String -&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN))
+-&gt; (XPub -&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN))
+-&gt; Either String XPub
+-&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+-&gt; String -&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519Bip32DSIGN
+-&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(VerKeyDSIGN Ed25519Bip32DSIGN
+ -&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN))
+-&gt; (XPub -&gt; VerKeyDSIGN Ed25519Bip32DSIGN)
+-&gt; XPub
+-&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">XPub -&gt; VerKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#VerKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-var">VerKeyEd25519Bip32DSIGN</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either String XPub -&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN))
+-&gt; (ByteString -&gt; Either String XPub)
+-&gt; ByteString
+-&gt; Maybe (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String XPub
+</span><span class="hs-identifier hs-var">CC.xpub</span></span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621681100612"><span class="annot"><span class="annottext">rawDeserialiseSignKeyDSIGN :: ByteString -&gt; Maybe (SignKeyDSIGN Ed25519Bip32DSIGN)
+</span><a href="#local-6989586621681100612"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawDeserialiseSignKeyDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">(XPrv -&gt; SignKeyDSIGN Ed25519Bip32DSIGN)
+-&gt; Maybe XPrv -&gt; Maybe (SignKeyDSIGN Ed25519Bip32DSIGN)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">XPrv -&gt; SignKeyDSIGN Ed25519Bip32DSIGN
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SignKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-var">SignKeyEd25519Bip32DSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe XPrv -&gt; Maybe (SignKeyDSIGN Ed25519Bip32DSIGN))
+-&gt; (ByteString -&gt; Maybe XPrv)
+-&gt; ByteString
+-&gt; Maybe (SignKeyDSIGN Ed25519Bip32DSIGN)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe XPrv
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvFromBytes"><span class="hs-identifier hs-var">xPrvFromBytes</span></a></span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621681100614"><span class="annot"><span class="annottext">rawDeserialiseSigDSIGN :: ByteString -&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN)
+</span><a href="#local-6989586621681100614"><span class="hs-identifier hs-var hs-var hs-var hs-var">rawDeserialiseSigDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">(String -&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN))
+-&gt; (XSignature -&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN))
+-&gt; Either String XSignature
+-&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN)
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (SigDSIGN Ed25519Bip32DSIGN)
+-&gt; String -&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN)
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (SigDSIGN Ed25519Bip32DSIGN)
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SigDSIGN Ed25519Bip32DSIGN -&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN)
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(SigDSIGN Ed25519Bip32DSIGN -&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN))
+-&gt; (XSignature -&gt; SigDSIGN Ed25519Bip32DSIGN)
+-&gt; XSignature
+-&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">XSignature -&gt; SigDSIGN Ed25519Bip32DSIGN
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SigEd25519Bip32DSIGN"><span class="hs-identifier hs-var">SigEd25519Bip32DSIGN</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either String XSignature -&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN))
+-&gt; (ByteString -&gt; Either String XSignature)
+-&gt; ByteString
+-&gt; Maybe (SigDSIGN Ed25519Bip32DSIGN)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String XSignature
+</span><span class="hs-identifier hs-var">CC.xsignature</span></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100618"><span id="local-6989586621681100622"><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignKeyDSIGN"><span class="hs-identifier hs-type">SignKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-120"></span><span>  </span><span id="local-6989586621681100626"><span class="annot"><span class="annottext">show :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; String
+</span><a href="#local-6989586621681100626"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#SignKeyEd25519Bip32DSIGN"><span class="hs-identifier hs-type">SignKeyEd25519Bip32DSIGN</span></a></span><span> </span><span id="local-6989586621681100628"><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100628"><span class="hs-identifier hs-var">sk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; String) -&gt; ByteString -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">XPrv -&gt; ByteString
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvToBytes"><span class="hs-identifier hs-var">xPrvToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100628"><span class="hs-identifier hs-var">sk</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100636"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#VerKeyDSIGN"><span class="hs-identifier hs-type">VerKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621681100641"><span class="annot"><span class="annottext">toCBOR :: VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Encoding
+</span><a href="#local-6989586621681100641"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN Ed25519Bip32DSIGN -&gt; Encoding
+forall v. DSIGNAlgorithm v =&gt; VerKeyDSIGN v -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeVerKeyDSIGN"><span class="hs-identifier hs-var">encodeVerKeyDSIGN</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621681100645"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VerKeyDSIGN Ed25519Bip32DSIGN) -&gt; Size
+</span><a href="#local-6989586621681100645"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span class="annot"><span class="annottext">forall t. ToCBOR t =&gt; Proxy t -&gt; Size
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy (VerKeyDSIGN Ed25519Bip32DSIGN) -&gt; Size
+forall v. DSIGNAlgorithm v =&gt; Proxy (VerKeyDSIGN v) -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodedVerKeyDSIGNSizeExpr"><span class="hs-identifier hs-var">encodedVerKeyDSIGNSizeExpr</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100654"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#VerKeyDSIGN"><span class="hs-identifier hs-type">VerKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621681100659"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (VerKeyDSIGN Ed25519Bip32DSIGN)
+</span><a href="#local-6989586621681100659"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s (VerKeyDSIGN Ed25519Bip32DSIGN)
+forall v s. DSIGNAlgorithm v =&gt; Decoder s (VerKeyDSIGN v)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeVerKeyDSIGN"><span class="hs-identifier hs-var">decodeVerKeyDSIGN</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100669"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignKeyDSIGN"><span class="hs-identifier hs-type">SignKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621681100673"><span class="annot"><span class="annottext">toCBOR :: SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SignKeyDSIGN Ed25519Bip32DSIGN -&gt; Encoding
+forall v. DSIGNAlgorithm v =&gt; SignKeyDSIGN v -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeSignKeyDSIGN"><span class="hs-identifier hs-var">encodeSignKeyDSIGN</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span id="local-6989586621681100676"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (SignKeyDSIGN Ed25519Bip32DSIGN) -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span class="annot"><span class="annottext">forall t. ToCBOR t =&gt; Proxy t -&gt; Size
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy (SignKeyDSIGN Ed25519Bip32DSIGN) -&gt; Size
+forall v. DSIGNAlgorithm v =&gt; Proxy (SignKeyDSIGN v) -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodedSignKeyDSIGNSizeExpr"><span class="hs-identifier hs-var">encodedSignKeyDSIGNSizeExpr</span></a></span><span>
+</span><span id="line-132"></span><span>
+</span><span id="line-133"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100684"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SignKeyDSIGN"><span class="hs-identifier hs-type">SignKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621681100688"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (SignKeyDSIGN Ed25519Bip32DSIGN)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s (SignKeyDSIGN Ed25519Bip32DSIGN)
+forall v s. DSIGNAlgorithm v =&gt; Decoder s (SignKeyDSIGN v)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeSignKeyDSIGN"><span class="hs-identifier hs-var">decodeSignKeyDSIGN</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100697"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SigDSIGN"><span class="hs-identifier hs-type">SigDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621681100701"><span class="annot"><span class="annottext">toCBOR :: SigDSIGN Ed25519Bip32DSIGN -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SigDSIGN Ed25519Bip32DSIGN -&gt; Encoding
+forall v. DSIGNAlgorithm v =&gt; SigDSIGN v -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodeSigDSIGN"><span class="hs-identifier hs-var">encodeSigDSIGN</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span id="local-6989586621681100704"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (SigDSIGN Ed25519Bip32DSIGN) -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#encodedSizeExpr"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span class="annot"><span class="annottext">forall t. ToCBOR t =&gt; Proxy t -&gt; Size
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Proxy (SigDSIGN Ed25519Bip32DSIGN) -&gt; Size
+forall v. DSIGNAlgorithm v =&gt; Proxy (SigDSIGN v) -&gt; Size
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#encodedSigDSIGNSizeExpr"><span class="hs-identifier hs-var">encodedSigDSIGNSizeExpr</span></a></span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681100712"><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#SigDSIGN"><span class="hs-identifier hs-type">SigDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#Ed25519Bip32DSIGN"><span class="hs-identifier hs-type">Ed25519Bip32DSIGN</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-141"></span><span>  </span><span id="local-6989586621681100716"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (SigDSIGN Ed25519Bip32DSIGN)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder s (SigDSIGN Ed25519Bip32DSIGN)
+forall v s. DSIGNAlgorithm v =&gt; Decoder s (SigDSIGN v)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.DSIGN.Class.html#decodeSigDSIGN"><span class="hs-identifier hs-var">decodeSigDSIGN</span></a></span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- | Serialise an 'CC.XPrv' to a 'ByteString' (96 bytes).</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- In @cardano-crypto@, an 'CC.XPrv' was originally serialised using the</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- following 128-byte binary format:</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- +---------------------------------+-----------------------+-----------------------+</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- | Extended Private Key (64 bytes) | Public Key (32 bytes) | Chain Code (32 bytes) |</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- +---------------------------------+-----------------------+-----------------------+</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- However, this function serialises an 'CC.XPrv' using a more compact 96-byte</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- binary format:</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- +---------------------------------+-----------------------+</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- | Extended Private Key (64 bytes) | Chain Code (32 bytes) |</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- +---------------------------------+-----------------------+</span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvToBytes"><span class="hs-identifier hs-type">xPrvToBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XPrv</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-159"></span><span id="xPrvToBytes"><span class="annot"><span class="annottext">xPrvToBytes :: XPrv -&gt; ByteString
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvToBytes"><span class="hs-identifier hs-var hs-var">xPrvToBytes</span></a></span></span><span> </span><span id="local-6989586621681100718"><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100718"><span class="hs-identifier hs-var">xPrv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100719"><span class="hs-identifier hs-var">privateKeyBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100720"><span class="hs-identifier hs-var">chainCodeBytes</span></a></span><span>
+</span><span id="line-160"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><a href="#local-6989586621681100719"><span class="hs-identifier hs-type">privateKeyBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-162"></span><span>  </span><span id="local-6989586621681100719"><span class="annot"><span class="annottext">privateKeyBytes :: ByteString
+</span><a href="#local-6989586621681100719"><span class="hs-identifier hs-var hs-var">privateKeyBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ByteString -&gt; ByteString
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#take"><span class="hs-identifier hs-var">BS.take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XPrv -&gt; ByteString
+</span><span class="hs-identifier hs-var">CC.unXPrv</span></span><span> </span><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100718"><span class="hs-identifier hs-var">xPrv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span>  </span><span class="annot"><a href="#local-6989586621681100720"><span class="hs-identifier hs-type">chainCodeBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span id="local-6989586621681100720"><span class="annot"><span class="annottext">chainCodeBytes :: ByteString
+</span><a href="#local-6989586621681100720"><span class="hs-identifier hs-var hs-var">chainCodeBytes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ByteString -&gt; ByteString
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#drop"><span class="hs-identifier hs-var">BS.drop</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">96</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">XPrv -&gt; ByteString
+</span><span class="hs-identifier hs-var">CC.unXPrv</span></span><span> </span><span class="annot"><span class="annottext">XPrv
+</span><a href="#local-6989586621681100718"><span class="hs-identifier hs-var">xPrv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- | Deserialise an 'CC.XPrv' from a 'ByteString' (96 bytes).</span><span>
+</span><span id="line-168"></span><span class="hs-comment">--</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- In @cardano-crypto@, an 'CC.XPrv' was originally deserialised using the</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- following 128-byte binary format:</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- +---------------------------------+-----------------------+-----------------------+</span><span>
+</span><span id="line-173"></span><span class="hs-comment">-- | Extended Private Key (64 bytes) | Public Key (32 bytes) | Chain Code (32 bytes) |</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- +---------------------------------+-----------------------+-----------------------+</span><span>
+</span><span id="line-175"></span><span class="hs-comment">--</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- However, this function deserialises an 'CC.XPrv' using a more compact</span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- 96-byte binary format:</span><span>
+</span><span id="line-178"></span><span class="hs-comment">--</span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- +---------------------------------+-----------------------+</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- | Extended Private Key (64 bytes) | Chain Code (32 bytes) |</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- +---------------------------------+-----------------------+</span><span>
+</span><span id="line-182"></span><span class="annot"><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvFromBytes"><span class="hs-identifier hs-type">xPrvFromBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">CC.XPrv</span></span><span>
+</span><span id="line-183"></span><span id="xPrvFromBytes"><span class="annot"><span class="annottext">xPrvFromBytes :: ByteString -&gt; Maybe XPrv
+</span><a href="Cardano.Api.Crypto.Ed25519Bip32.html#xPrvFromBytes"><span class="hs-identifier hs-var hs-var">xPrvFromBytes</span></a></span></span><span> </span><span id="local-6989586621681100724"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100724"><span class="hs-identifier hs-var">bytes</span></a></span></span><span>
+</span><span id="line-184"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100724"><span class="hs-identifier hs-var">bytes</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">96</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe XPrv
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-185"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-186"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681100727"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100727"><span class="hs-identifier hs-var">prv</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681100728"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100728"><span class="hs-identifier hs-var">cc</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ByteString -&gt; (ByteString, ByteString)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#splitAt"><span class="hs-identifier hs-var">BS.splitAt</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100724"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-187"></span><span>      </span><span id="local-6989586621681100730"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100730"><span class="hs-identifier hs-var">pub</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+</span><a href="#local-6989586621681100731"><span class="hs-identifier hs-var">ed25519ScalarMult</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; ByteString -&gt; ByteString
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#take"><span class="hs-identifier hs-var">BS.take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">32</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100727"><span class="hs-identifier hs-var">prv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-188"></span><span>      </span><span class="annot"><span class="annottext">Either String XPrv -&gt; Maybe XPrv
+forall a b. Either a b -&gt; Maybe b
+</span><a href="#local-6989586621681100732"><span class="hs-identifier hs-var">eitherToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String XPrv -&gt; Maybe XPrv)
+-&gt; Either String XPrv -&gt; Maybe XPrv
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either String XPrv
+forall bin. ByteArrayAccess bin =&gt; bin -&gt; Either String XPrv
+</span><span class="hs-identifier hs-var">CC.xprv</span></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Either String XPrv)
+-&gt; ByteString -&gt; Either String XPrv
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100727"><span class="hs-identifier hs-var">prv</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100730"><span class="hs-identifier hs-var">pub</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100728"><span class="hs-identifier hs-var">cc</span></a></span><span>
+</span><span id="line-189"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-190"></span><span>  </span><span id="local-6989586621681100297"><span id="local-6989586621681100298"><span class="annot"><a href="#local-6989586621681100732"><span class="hs-identifier hs-type">eitherToMaybe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681100297"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681100298"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681100298"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-191"></span><span>  </span><span id="local-6989586621681100732"><span class="annot"><span class="annottext">eitherToMaybe :: forall a b. Either a b -&gt; Maybe b
+</span><a href="#local-6989586621681100732"><span class="hs-identifier hs-var hs-var">eitherToMaybe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe b) -&gt; (b -&gt; Maybe b) -&gt; Either a b -&gt; Maybe b
+forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#either"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe b -&gt; a -&gt; Maybe b
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe b
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">b -&gt; Maybe b
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><a href="#local-6989586621681100731"><span class="hs-identifier hs-type">ed25519ScalarMult</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-194"></span><span>  </span><span id="local-6989586621681100731"><span class="annot"><span class="annottext">ed25519ScalarMult :: ByteString -&gt; Maybe ByteString
+</span><a href="#local-6989586621681100731"><span class="hs-identifier hs-var hs-var">ed25519ScalarMult</span></a></span></span><span> </span><span id="local-6989586621681100734"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100734"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-195"></span><span>    </span><span id="local-6989586621681100735"><span class="annot"><span class="annottext">Scalar
+</span><a href="#local-6989586621681100735"><span class="hs-identifier hs-var">scalar</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Either CryptoError Scalar -&gt; Maybe Scalar
+forall a b. Either a b -&gt; Maybe b
+</span><a href="#local-6989586621681100732"><span class="hs-identifier hs-var">eitherToMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">(Either CryptoError Scalar -&gt; Maybe Scalar)
+-&gt; (CryptoFailable Scalar -&gt; Either CryptoError Scalar)
+-&gt; CryptoFailable Scalar
+-&gt; Maybe Scalar
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">CryptoFailable Scalar -&gt; Either CryptoError Scalar
+forall a. CryptoFailable a -&gt; Either CryptoError a
+</span><span class="hs-identifier hs-var">eitherCryptoError</span></span><span> </span><span class="annot"><span class="annottext">(CryptoFailable Scalar -&gt; Maybe Scalar)
+-&gt; CryptoFailable Scalar -&gt; Maybe Scalar
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; CryptoFailable Scalar
+forall bs. ByteArrayAccess bs =&gt; bs -&gt; CryptoFailable Scalar
+</span><span class="hs-identifier hs-var">Ed25519.scalarDecodeLong</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681100734"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-196"></span><span>    </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe ByteString
+forall a. a -&gt; Maybe a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe ByteString) -&gt; ByteString -&gt; Maybe ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Point -&gt; ByteString
+forall bs. ByteArray bs =&gt; Point -&gt; bs
+</span><span class="hs-identifier hs-var">Ed25519.pointEncode</span></span><span> </span><span class="annot"><span class="annottext">(Point -&gt; ByteString) -&gt; Point -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Scalar -&gt; Point
+</span><span class="hs-identifier hs-var">Ed25519.toPoint</span></span><span> </span><span class="annot"><span class="annottext">Scalar
+</span><a href="#local-6989586621681100735"><span class="hs-identifier hs-var">scalar</span></a></span><span>
+</span><span id="line-197"></span></pre></body></html>

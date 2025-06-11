@@ -1,0 +1,698 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DisambiguateRecordFields #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="annot"><span class="hs-comment">-- | Transaction inputs</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Tx.Internal.TxIn</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Transaction inputs</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIn"><span class="hs-identifier">parseTxIn</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier">TxIx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIx"><span class="hs-identifier">parseTxIx</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Transaction Ids</span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxId"><span class="hs-identifier">parseTxId</span></a></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Data family instances</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#AsTxId"><span class="hs-identifier">AsTxId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Internal conversion functions</span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxId"><span class="hs-identifier">toByronTxId</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxId"><span class="hs-identifier">toShelleyTxId</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier">fromShelleyTxId</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxIn"><span class="hs-identifier">toByronTxIn</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromByronTxIn"><span class="hs-identifier">fromByronTxIn</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxIn"><span class="hs-identifier">toShelleyTxIn</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxIn"><span class="hs-identifier">fromShelleyTxIn</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier">renderTxIn</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Parser.Text.html"><span class="hs-identifier">Cardano.Api.Parser.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">P</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Json.html"><span class="hs-identifier">Cardano.Api.Serialise.Json</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.SerialiseUsing.html"><span class="hs-identifier">Cardano.Api.Serialise.SerialiseUsing</span></a></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-7fb551a04b7ebd202180a636c363fd4c69d431c37908920ba820fedd2c0d0ade/share/doc/html/src/Cardano.Chain.UTxO.html"><span class="hs-identifier">Cardano.Chain.UTxO</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Crypto</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-wrapper-1.6.0.0-6775486798e1077dc85f71e8ff4a9ca4bed46af58de38c608f0408173cfd0883/share/doc/html/src/Cardano.Crypto.Hashing.html"><span class="hs-identifier">Cardano.Crypto.Hashing</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hashes</span></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.TxBody.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxBody</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Shelley</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html"><span class="hs-identifier">Cardano.Ledger.TxIn</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">withText</span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSONKey</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">toJSONKeyText</span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- ----------------------------------------------------------------------------</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- Transaction Ids</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">newtype</span><span> </span><span id="TxId"><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxId"><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Crypto.Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">Hashes.HASH</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-type">Shelley.EraIndependentTxBody</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-comment">-- We use the Shelley representation and convert to/from the Byron one</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681109603"><span id="local-6989586621681109607"><span class="annot"><span class="annottext">TxId -&gt; TxId -&gt; Bool
+(TxId -&gt; TxId -&gt; Bool) -&gt; (TxId -&gt; TxId -&gt; Bool) -&gt; Eq TxId
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxId -&gt; TxId -&gt; Bool
+== :: TxId -&gt; TxId -&gt; Bool
+$c/= :: TxId -&gt; TxId -&gt; Bool
+/= :: TxId -&gt; TxId -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109614"><span id="local-6989586621681109618"><span id="local-6989586621681109621"><span id="local-6989586621681109625"><span id="local-6989586621681109628"><span id="local-6989586621681109631"><span id="local-6989586621681109634"><span class="annot"><span class="annottext">Eq TxId
+Eq TxId =&gt;
+(TxId -&gt; TxId -&gt; Ordering)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; Bool)
+-&gt; (TxId -&gt; TxId -&gt; TxId)
+-&gt; (TxId -&gt; TxId -&gt; TxId)
+-&gt; Ord TxId
+TxId -&gt; TxId -&gt; Bool
+TxId -&gt; TxId -&gt; Ordering
+TxId -&gt; TxId -&gt; TxId
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxId -&gt; TxId -&gt; Ordering
+compare :: TxId -&gt; TxId -&gt; Ordering
+$c&lt; :: TxId -&gt; TxId -&gt; Bool
+&lt; :: TxId -&gt; TxId -&gt; Bool
+$c&lt;= :: TxId -&gt; TxId -&gt; Bool
+&lt;= :: TxId -&gt; TxId -&gt; Bool
+$c&gt; :: TxId -&gt; TxId -&gt; Bool
+&gt; :: TxId -&gt; TxId -&gt; Bool
+$c&gt;= :: TxId -&gt; TxId -&gt; Bool
+&gt;= :: TxId -&gt; TxId -&gt; Bool
+$cmax :: TxId -&gt; TxId -&gt; TxId
+max :: TxId -&gt; TxId -&gt; TxId
+$cmin :: TxId -&gt; TxId -&gt; TxId
+min :: TxId -&gt; TxId -&gt; TxId
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681109638"><span id="local-6989586621681109643"><span id="local-6989586621681109647"><span class="annot"><span class="annottext">Int -&gt; TxId -&gt; ShowS
+[TxId] -&gt; ShowS
+TxId -&gt; [Char]
+(Int -&gt; TxId -&gt; ShowS)
+-&gt; (TxId -&gt; [Char]) -&gt; ([TxId] -&gt; ShowS) -&gt; Show TxId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxId -&gt; ShowS
+showsPrec :: Int -&gt; TxId -&gt; ShowS
+$cshow :: TxId -&gt; [Char]
+show :: TxId -&gt; [Char]
+$cshowList :: [TxId] -&gt; ShowS
+showList :: [TxId] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109653"><span id="local-6989586621681109658"><span class="annot"><span class="annottext">(forall ann. TxId -&gt; Doc ann)
+-&gt; (forall ann. [TxId] -&gt; Doc ann) -&gt; Pretty TxId
+forall ann. [TxId] -&gt; Doc ann
+forall ann. TxId -&gt; Doc ann
+forall a.
+(forall ann. a -&gt; Doc ann)
+-&gt; (forall ann. [a] -&gt; Doc ann) -&gt; Pretty a
+$cpretty :: forall ann. TxId -&gt; Doc ann
+pretty :: forall ann. TxId -&gt; Doc ann
+$cprettyList :: forall ann. [TxId] -&gt; Doc ann
+prettyList :: forall ann. [TxId] -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Pretty</span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.SerialiseUsing.html#UsingRawBytesHex"><span class="hs-identifier hs-type">UsingRawBytesHex</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681109664"><span id="local-6989586621681109669"><span id="local-6989586621681109673"><span id="local-6989586621681109677"><span id="local-6989586621681109681"><span class="annot"><span class="annottext">[TxId] -&gt; Value
+[TxId] -&gt; Encoding
+TxId -&gt; Bool
+TxId -&gt; Value
+TxId -&gt; Encoding
+(TxId -&gt; Value)
+-&gt; (TxId -&gt; Encoding)
+-&gt; ([TxId] -&gt; Value)
+-&gt; ([TxId] -&gt; Encoding)
+-&gt; (TxId -&gt; Bool)
+-&gt; ToJSON TxId
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: TxId -&gt; Value
+toJSON :: TxId -&gt; Value
+$ctoEncoding :: TxId -&gt; Encoding
+toEncoding :: TxId -&gt; Encoding
+$ctoJSONList :: [TxId] -&gt; Value
+toJSONList :: [TxId] -&gt; Value
+$ctoEncodingList :: [TxId] -&gt; Encoding
+toEncodingList :: [TxId] -&gt; Encoding
+$comitField :: TxId -&gt; Bool
+omitField :: TxId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109687"><span id="local-6989586621681109692"><span id="local-6989586621681109696"><span class="annot"><span class="annottext">Maybe TxId
+Value -&gt; Parser [TxId]
+Value -&gt; Parser TxId
+(Value -&gt; Parser TxId)
+-&gt; (Value -&gt; Parser [TxId]) -&gt; Maybe TxId -&gt; FromJSON TxId
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser TxId
+parseJSON :: Value -&gt; Parser TxId
+$cparseJSONList :: Value -&gt; Parser [TxId]
+parseJSONList :: Value -&gt; Parser [TxId]
+$comittedField :: Maybe TxId
+omittedField :: Maybe TxId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.SerialiseUsing.html#UsingRawBytesHex"><span class="hs-identifier hs-type">UsingRawBytesHex</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681109702"><span id="local-6989586621681109707"><span class="annot"><span class="annottext">ToJSONKeyFunction [TxId]
+ToJSONKeyFunction TxId
+ToJSONKeyFunction TxId
+-&gt; ToJSONKeyFunction [TxId] -&gt; ToJSONKey TxId
+forall a.
+ToJSONKeyFunction a -&gt; ToJSONKeyFunction [a] -&gt; ToJSONKey a
+$ctoJSONKey :: ToJSONKeyFunction TxId
+toJSONKey :: ToJSONKeyFunction TxId
+$ctoJSONKeyList :: ToJSONKeyFunction [TxId]
+toJSONKeyList :: ToJSONKeyFunction [TxId]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">ToJSONKey</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109713"><span id="local-6989586621681109718"><span class="annot"><span class="annottext">FromJSONKeyFunction [TxId]
+FromJSONKeyFunction TxId
+FromJSONKeyFunction TxId
+-&gt; FromJSONKeyFunction [TxId] -&gt; FromJSONKey TxId
+forall a.
+FromJSONKeyFunction a -&gt; FromJSONKeyFunction [a] -&gt; FromJSONKey a
+$cfromJSONKey :: FromJSONKeyFunction TxId
+fromJSONKey :: FromJSONKeyFunction TxId
+$cfromJSONKeyList :: FromJSONKeyFunction [TxId]
+fromJSONKeyList :: FromJSONKeyFunction [TxId]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSONKey</span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.SerialiseUsing.html#UsingRawBytesHex"><span class="hs-identifier hs-type">UsingRawBytesHex</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsTxId"><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#AsTxId"><span class="hs-identifier hs-var">AsTxId</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621681109728"><span class="annot"><span class="annottext">proxyToAsType :: Proxy TxId -&gt; AsType TxId
+</span><a href="#local-6989586621681109728"><span class="hs-identifier hs-var hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy TxId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#AsTxId"><span class="hs-identifier hs-var">AsTxId</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytes"><span class="hs-identifier hs-type">SerialiseAsRawBytes</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621681109737"><span class="annot"><span class="annottext">serialiseToRawBytes :: TxId -&gt; ByteString
+</span><a href="#local-6989586621681109737"><span class="hs-identifier hs-var hs-var hs-var hs-var">serialiseToRawBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span id="local-6989586621681109739"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109739"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; ByteString
+forall h a. Hash h a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytes"><span class="hs-identifier hs-var">Crypto.hashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109739"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621681109742"><span class="annot"><span class="annottext">deserialiseFromRawBytes :: AsType TxId -&gt; ByteString -&gt; Either SerialiseAsRawBytesError TxId
+</span><a href="#local-6989586621681109742"><span class="hs-identifier hs-var hs-var hs-var hs-var">deserialiseFromRawBytes</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType TxId
+R:AsTypeTxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#AsTxId"><span class="hs-identifier hs-var">AsTxId</span></a></span><span> </span><span id="local-6989586621681109744"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681109744"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (Hash HASH EraIndependentTxBody)
+forall h a. HashAlgorithm h =&gt; ByteString -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytes"><span class="hs-identifier hs-var">Crypto.hashFromBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681109744"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681109746"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109746"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Either SerialiseAsRawBytesError TxId
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109746"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">Maybe (Hash HASH EraIndependentTxBody)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SerialiseAsRawBytesError -&gt; Either SerialiseAsRawBytesError TxId
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(SerialiseAsRawBytesError -&gt; Either SerialiseAsRawBytesError TxId)
+-&gt; SerialiseAsRawBytesError -&gt; Either SerialiseAsRawBytesError TxId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; SerialiseAsRawBytesError
+</span><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier hs-var">SerialiseAsRawBytesError</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Unable to deserialise TxId&quot;</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxId"><span class="hs-identifier hs-type">parseTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/parsec-3.1.17.0-inplace/src/Text.Parsec.Text.html#Parser"><span class="hs-identifier hs-type">P.Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-81"></span><span id="parseTxId"><span class="annot"><span class="annottext">parseTxId :: Parser TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxId"><span class="hs-identifier hs-var hs-var">parseTxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Parser TxId
+forall a. SerialiseAsRawBytes a =&gt; Parser a
+</span><a href="Cardano.Api.Serialise.Raw.html#parseRawBytesHex"><span class="hs-identifier hs-var">parseRawBytesHex</span></a></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxId"><span class="hs-identifier hs-type">toByronTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-7fb551a04b7ebd202180a636c363fd4c69d431c37908920ba820fedd2c0d0ade/share/doc/html/src/Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier hs-type">Byron.TxId</span></a></span><span>
+</span><span id="line-84"></span><span id="toByronTxId"><span class="annot"><span class="annottext">toByronTxId :: TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxId"><span class="hs-identifier hs-var hs-var">toByronTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span id="local-6989586621681109749"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109749"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><span class="annottext">ByteString -&gt; TxId
+forall a. ByteString -&gt; Hash a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-wrapper-1.6.0.0-6775486798e1077dc85f71e8ff4a9ca4bed46af58de38c608f0408173cfd0883/share/doc/html/src/Cardano.Crypto.Hashing.html#unsafeHashFromBytes"><span class="hs-identifier hs-var">Byron.unsafeHashFromBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; ByteString
+forall h a. Hash h a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytes"><span class="hs-identifier hs-var">Crypto.hashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109749"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxId"><span class="hs-identifier hs-type">toShelleyTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">Ledger.TxId</span></a></span><span>
+</span><span id="line-88"></span><span id="toShelleyTxId"><span class="annot"><span class="annottext">toShelleyTxId :: TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxId"><span class="hs-identifier hs-var hs-var">toShelleyTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span id="local-6989586621681109751"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109751"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody -&gt; TxId
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-var">Ledger.TxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; SafeHash EraIndependentTxBody
+forall i. Hash HASH i -&gt; SafeHash i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#unsafeMakeSafeHash"><span class="hs-identifier hs-var">Hashes.unsafeMakeSafeHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall h a b. Hash h a -&gt; Hash h b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#castHash"><span class="hs-identifier hs-var">Crypto.castHash</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681109751"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-type">fromShelleyTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">Ledger.TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-92"></span><span id="fromShelleyTxId"><span class="annot"><span class="annottext">fromShelleyTxId :: TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-var hs-var">fromShelleyTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxId"><span class="hs-identifier hs-type">Ledger.TxId</span></a></span><span> </span><span id="local-6989586621681109755"><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621681109755"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall h a b. Hash h a -&gt; Hash h b
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#castHash"><span class="hs-identifier hs-var">Crypto.castHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody -&gt; Hash HASH EraIndependentTxBody
+forall i. SafeHash i -&gt; Hash HASH i
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#extractHash"><span class="hs-identifier hs-var">Hashes.extractHash</span></a></span><span> </span><span class="annot"><span class="annottext">SafeHash EraIndependentTxBody
+</span><a href="#local-6989586621681109755"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- ----------------------------------------------------------------------------</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- Transaction inputs</span><span>
+</span><span id="line-97"></span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">data</span><span> </span><span id="TxIn"><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxIn"><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681109759"><span id="local-6989586621681109764"><span class="annot"><span class="annottext">TxIn -&gt; TxIn -&gt; Bool
+(TxIn -&gt; TxIn -&gt; Bool) -&gt; (TxIn -&gt; TxIn -&gt; Bool) -&gt; Eq TxIn
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxIn -&gt; TxIn -&gt; Bool
+== :: TxIn -&gt; TxIn -&gt; Bool
+$c/= :: TxIn -&gt; TxIn -&gt; Bool
+/= :: TxIn -&gt; TxIn -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109770"><span id="local-6989586621681109775"><span id="local-6989586621681109779"><span id="local-6989586621681109783"><span id="local-6989586621681109786"><span id="local-6989586621681109789"><span id="local-6989586621681109792"><span class="annot"><span class="annottext">Eq TxIn
+Eq TxIn =&gt;
+(TxIn -&gt; TxIn -&gt; Ordering)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; Bool)
+-&gt; (TxIn -&gt; TxIn -&gt; TxIn)
+-&gt; (TxIn -&gt; TxIn -&gt; TxIn)
+-&gt; Ord TxIn
+TxIn -&gt; TxIn -&gt; Bool
+TxIn -&gt; TxIn -&gt; Ordering
+TxIn -&gt; TxIn -&gt; TxIn
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxIn -&gt; TxIn -&gt; Ordering
+compare :: TxIn -&gt; TxIn -&gt; Ordering
+$c&lt; :: TxIn -&gt; TxIn -&gt; Bool
+&lt; :: TxIn -&gt; TxIn -&gt; Bool
+$c&lt;= :: TxIn -&gt; TxIn -&gt; Bool
+&lt;= :: TxIn -&gt; TxIn -&gt; Bool
+$c&gt; :: TxIn -&gt; TxIn -&gt; Bool
+&gt; :: TxIn -&gt; TxIn -&gt; Bool
+$c&gt;= :: TxIn -&gt; TxIn -&gt; Bool
+&gt;= :: TxIn -&gt; TxIn -&gt; Bool
+$cmax :: TxIn -&gt; TxIn -&gt; TxIn
+max :: TxIn -&gt; TxIn -&gt; TxIn
+$cmin :: TxIn -&gt; TxIn -&gt; TxIn
+min :: TxIn -&gt; TxIn -&gt; TxIn
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109795"><span id="local-6989586621681109802"><span id="local-6989586621681109806"><span class="annot"><span class="annottext">Int -&gt; TxIn -&gt; ShowS
+[TxIn] -&gt; ShowS
+TxIn -&gt; [Char]
+(Int -&gt; TxIn -&gt; ShowS)
+-&gt; (TxIn -&gt; [Char]) -&gt; ([TxIn] -&gt; ShowS) -&gt; Show TxIn
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxIn -&gt; ShowS
+showsPrec :: Int -&gt; TxIn -&gt; ShowS
+$cshow :: TxIn -&gt; [Char]
+show :: TxIn -&gt; [Char]
+$cshowList :: [TxIn] -&gt; ShowS
+showList :: [TxIn] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681109810"><span id="local-6989586621681109814"><span id="local-6989586621681109817"><span id="local-6989586621681109820"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621681109822"><span class="annot"><span class="annottext">toJSON :: TxIn -&gt; Value
+</span><a href="#local-6989586621681109822"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span id="local-6989586621681109824"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681109824"><span class="hs-identifier hs-var">txIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.String</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Value) -&gt; Text -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Text
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier hs-var">renderTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681109824"><span class="hs-identifier hs-var">txIn</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681109828"><span class="annot"><span class="hs-identifier hs-type">ToJSONKey</span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621681109832"><span class="annot"><span class="annottext">toJSONKey :: ToJSONKeyFunction TxIn
+</span><a href="#local-6989586621681109832"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSONKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TxIn -&gt; Text) -&gt; ToJSONKeyFunction TxIn
+forall a. (a -&gt; Text) -&gt; ToJSONKeyFunction a
+</span><span class="hs-identifier hs-var">toJSONKeyText</span></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Text
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier hs-var">renderTxIn</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681109836"><span id="local-6989586621681109840"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-109"></span><span>  </span><span id="local-6989586621681109844"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser TxIn
+</span><a href="#local-6989586621681109844"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; (Text -&gt; Parser TxIn) -&gt; Value -&gt; Parser TxIn
+forall a. [Char] -&gt; (Text -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withText</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;TxIn&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Parser TxIn) -&gt; Value -&gt; Parser TxIn)
+-&gt; (Text -&gt; Parser TxIn) -&gt; Value -&gt; Parser TxIn
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TxIn -&gt; Text -&gt; Parser TxIn
+forall (m :: * -&gt; *) a. MonadFail m =&gt; Parser a -&gt; Text -&gt; m a
+</span><a href="Cardano.Api.Parser.Text.html#runParserFail"><span class="hs-identifier hs-var">P.runParserFail</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIn"><span class="hs-identifier hs-var">parseTxIn</span></a></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681109849"><span class="annot"><span class="hs-identifier hs-type">FromJSONKey</span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>  </span><span id="local-6989586621681109854"><span class="annot"><span class="annottext">fromJSONKey :: FromJSONKeyFunction TxIn
+</span><a href="#local-6989586621681109854"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromJSONKey</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Parser TxIn) -&gt; FromJSONKeyFunction TxIn
+forall a. (Text -&gt; Parser a) -&gt; FromJSONKeyFunction a
+</span><span class="hs-identifier hs-var">Aeson.FromJSONKeyTextParser</span></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Parser TxIn) -&gt; FromJSONKeyFunction TxIn)
+-&gt; (Text -&gt; Parser TxIn) -&gt; FromJSONKeyFunction TxIn
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TxIn -&gt; Text -&gt; Parser TxIn
+forall (m :: * -&gt; *) a. MonadFail m =&gt; Parser a -&gt; Text -&gt; m a
+</span><a href="Cardano.Api.Parser.Text.html#runParserFail"><span class="hs-identifier hs-var">P.runParserFail</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIn"><span class="hs-identifier hs-var">parseTxIn</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681109859"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621681109869"><span class="annot"><span class="annottext">pretty :: forall ann. TxIn -&gt; Doc ann
+</span><a href="#local-6989586621681109869"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span id="local-6989586621681109871"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681109871"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621681109872"><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621681109872"><span class="hs-identifier hs-var">txIx</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. TxId -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681109871"><span class="hs-identifier hs-var">txId</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;#&quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxIx -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. TxIx -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">TxIx
+</span><a href="#local-6989586621681109872"><span class="hs-identifier hs-var">txIx</span></a></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIn"><span class="hs-identifier hs-type">parseTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/parsec-3.1.17.0-inplace/src/Text.Parsec.Text.html#Parser"><span class="hs-identifier hs-type">P.Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span>
+</span><span id="line-118"></span><span id="parseTxIn"><span class="annot"><span class="annottext">parseTxIn :: Parser TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIn"><span class="hs-identifier hs-var hs-var">parseTxIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="annot"><span class="annottext">(TxId -&gt; TxIx -&gt; TxIn)
+-&gt; Parser TxId -&gt; ParsecT Text () Identity (TxIx -&gt; TxIn)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxId"><span class="hs-identifier hs-var">parseTxId</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT Text () Identity (TxIx -&gt; TxIn)
+-&gt; ParsecT Text () Identity TxIx -&gt; Parser TxIn
+forall a b.
+ParsecT Text () Identity (a -&gt; b)
+-&gt; ParsecT Text () Identity a -&gt; ParsecT Text () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; ParsecT Text () Identity Char
+forall s (m :: * -&gt; *) u.
+Stream s m Char =&gt;
+Char -&gt; ParsecT s u m Char
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/parsec-3.1.17.0-inplace/src/Text.Parsec.Char.html#char"><span class="hs-identifier hs-var">P.char</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'#'</span></span><span> </span><span class="annot"><span class="annottext">ParsecT Text () Identity Char
+-&gt; ParsecT Text () Identity TxIx -&gt; ParsecT Text () Identity TxIx
+forall a b.
+ParsecT Text () Identity a
+-&gt; ParsecT Text () Identity b -&gt; ParsecT Text () Identity b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT Text () Identity TxIx
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIx"><span class="hs-identifier hs-var">parseTxIx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier hs-type">renderTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-121"></span><span id="renderTxIn"><span class="annot"><span class="annottext">renderTxIn :: TxIn -&gt; Text
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier hs-var hs-var">renderTxIn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; Text
+</span><a href="Cardano.Api.Pretty.html#docToText"><span class="hs-identifier hs-var">docToText</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; Text) -&gt; (TxIn -&gt; Doc AnsiStyle) -&gt; TxIn -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Doc AnsiStyle
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. TxIn -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">newtype</span><span> </span><span id="TxIx"><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-var">TxIx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TxIx"><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-var">TxIx</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681109879"><span id="local-6989586621681109883"><span class="annot"><span class="annottext">TxIx -&gt; TxIx -&gt; Bool
+(TxIx -&gt; TxIx -&gt; Bool) -&gt; (TxIx -&gt; TxIx -&gt; Bool) -&gt; Eq TxIx
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TxIx -&gt; TxIx -&gt; Bool
+== :: TxIx -&gt; TxIx -&gt; Bool
+$c/= :: TxIx -&gt; TxIx -&gt; Bool
+/= :: TxIx -&gt; TxIx -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109888"><span id="local-6989586621681109892"><span id="local-6989586621681109895"><span id="local-6989586621681109898"><span id="local-6989586621681109901"><span id="local-6989586621681109904"><span id="local-6989586621681109907"><span class="annot"><span class="annottext">Eq TxIx
+Eq TxIx =&gt;
+(TxIx -&gt; TxIx -&gt; Ordering)
+-&gt; (TxIx -&gt; TxIx -&gt; Bool)
+-&gt; (TxIx -&gt; TxIx -&gt; Bool)
+-&gt; (TxIx -&gt; TxIx -&gt; Bool)
+-&gt; (TxIx -&gt; TxIx -&gt; Bool)
+-&gt; (TxIx -&gt; TxIx -&gt; TxIx)
+-&gt; (TxIx -&gt; TxIx -&gt; TxIx)
+-&gt; Ord TxIx
+TxIx -&gt; TxIx -&gt; Bool
+TxIx -&gt; TxIx -&gt; Ordering
+TxIx -&gt; TxIx -&gt; TxIx
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TxIx -&gt; TxIx -&gt; Ordering
+compare :: TxIx -&gt; TxIx -&gt; Ordering
+$c&lt; :: TxIx -&gt; TxIx -&gt; Bool
+&lt; :: TxIx -&gt; TxIx -&gt; Bool
+$c&lt;= :: TxIx -&gt; TxIx -&gt; Bool
+&lt;= :: TxIx -&gt; TxIx -&gt; Bool
+$c&gt; :: TxIx -&gt; TxIx -&gt; Bool
+&gt; :: TxIx -&gt; TxIx -&gt; Bool
+$c&gt;= :: TxIx -&gt; TxIx -&gt; Bool
+&gt;= :: TxIx -&gt; TxIx -&gt; Bool
+$cmax :: TxIx -&gt; TxIx -&gt; TxIx
+max :: TxIx -&gt; TxIx -&gt; TxIx
+$cmin :: TxIx -&gt; TxIx -&gt; TxIx
+min :: TxIx -&gt; TxIx -&gt; TxIx
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109910"><span id="local-6989586621681109915"><span id="local-6989586621681109918"><span class="annot"><span class="annottext">Int -&gt; TxIx -&gt; ShowS
+[TxIx] -&gt; ShowS
+TxIx -&gt; [Char]
+(Int -&gt; TxIx -&gt; ShowS)
+-&gt; (TxIx -&gt; [Char]) -&gt; ([TxIx] -&gt; ShowS) -&gt; Show TxIx
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TxIx -&gt; ShowS
+showsPrec :: Int -&gt; TxIx -&gt; ShowS
+$cshow :: TxIx -&gt; [Char]
+show :: TxIx -&gt; [Char]
+$cshowList :: [TxIx] -&gt; ShowS
+showList :: [TxIx] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span id="local-6989586621681109921"><span id="local-6989586621681109926"><span id="local-6989586621681109930"><span id="local-6989586621681109934"><span id="local-6989586621681109938"><span id="local-6989586621681109942"><span id="local-6989586621681109946"><span id="local-6989586621681109950"><span class="annot"><span class="annottext">Int -&gt; TxIx
+TxIx -&gt; Int
+TxIx -&gt; [TxIx]
+TxIx -&gt; TxIx
+TxIx -&gt; TxIx -&gt; [TxIx]
+TxIx -&gt; TxIx -&gt; TxIx -&gt; [TxIx]
+(TxIx -&gt; TxIx)
+-&gt; (TxIx -&gt; TxIx)
+-&gt; (Int -&gt; TxIx)
+-&gt; (TxIx -&gt; Int)
+-&gt; (TxIx -&gt; [TxIx])
+-&gt; (TxIx -&gt; TxIx -&gt; [TxIx])
+-&gt; (TxIx -&gt; TxIx -&gt; [TxIx])
+-&gt; (TxIx -&gt; TxIx -&gt; TxIx -&gt; [TxIx])
+-&gt; Enum TxIx
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: TxIx -&gt; TxIx
+succ :: TxIx -&gt; TxIx
+$cpred :: TxIx -&gt; TxIx
+pred :: TxIx -&gt; TxIx
+$ctoEnum :: Int -&gt; TxIx
+toEnum :: Int -&gt; TxIx
+$cfromEnum :: TxIx -&gt; Int
+fromEnum :: TxIx -&gt; Int
+$cenumFrom :: TxIx -&gt; [TxIx]
+enumFrom :: TxIx -&gt; [TxIx]
+$cenumFromThen :: TxIx -&gt; TxIx -&gt; [TxIx]
+enumFromThen :: TxIx -&gt; TxIx -&gt; [TxIx]
+$cenumFromTo :: TxIx -&gt; TxIx -&gt; [TxIx]
+enumFromTo :: TxIx -&gt; TxIx -&gt; [TxIx]
+$cenumFromThenTo :: TxIx -&gt; TxIx -&gt; TxIx -&gt; [TxIx]
+enumFromThenTo :: TxIx -&gt; TxIx -&gt; TxIx -&gt; [TxIx]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681109956"><span id="local-6989586621681109961"><span id="local-6989586621681109965"><span id="local-6989586621681109969"><span id="local-6989586621681109973"><span class="annot"><span class="annottext">[TxIx] -&gt; Value
+[TxIx] -&gt; Encoding
+TxIx -&gt; Bool
+TxIx -&gt; Value
+TxIx -&gt; Encoding
+(TxIx -&gt; Value)
+-&gt; (TxIx -&gt; Encoding)
+-&gt; ([TxIx] -&gt; Value)
+-&gt; ([TxIx] -&gt; Encoding)
+-&gt; (TxIx -&gt; Bool)
+-&gt; ToJSON TxIx
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: TxIx -&gt; Value
+toJSON :: TxIx -&gt; Value
+$ctoEncoding :: TxIx -&gt; Encoding
+toEncoding :: TxIx -&gt; Encoding
+$ctoJSONList :: [TxIx] -&gt; Value
+toJSONList :: [TxIx] -&gt; Value
+$ctoEncodingList :: [TxIx] -&gt; Encoding
+toEncodingList :: [TxIx] -&gt; Encoding
+$comitField :: TxIx -&gt; Bool
+omitField :: TxIx -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681109978"><span id="local-6989586621681109983"><span id="local-6989586621681109987"><span class="annot"><span class="annottext">Maybe TxIx
+Value -&gt; Parser [TxIx]
+Value -&gt; Parser TxIx
+(Value -&gt; Parser TxIx)
+-&gt; (Value -&gt; Parser [TxIx]) -&gt; Maybe TxIx -&gt; FromJSON TxIx
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser TxIx
+parseJSON :: Value -&gt; Parser TxIx
+$cparseJSONList :: Value -&gt; Parser [TxIx]
+parseJSONList :: Value -&gt; Parser [TxIx]
+$comittedField :: Maybe TxIx
+omittedField :: Maybe TxIx
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681109993"><span class="annot"><span class="hs-identifier hs-type">Pretty</span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621681109997"><span class="annot"><span class="annottext">pretty :: forall ann. TxIx -&gt; Doc ann
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span><span> </span><span id="local-6989586621681109998"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621681109998"><span class="hs-identifier hs-var">ix'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Doc ann
+forall ann. Word -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621681109998"><span class="hs-identifier hs-var">ix'</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIx"><span class="hs-identifier hs-type">parseTxIx</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/parsec-3.1.17.0-inplace/src/Text.Parsec.Text.html#Parser"><span class="hs-identifier hs-type">P.Parser</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span><span>
+</span><span id="line-132"></span><span id="parseTxIx"><span class="annot"><span class="annottext">parseTxIx :: ParsecT Text () Identity TxIx
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIx"><span class="hs-identifier hs-var hs-var">parseTxIx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; TxIx
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-var">TxIx</span></a></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; TxIx) -&gt; (Integer -&gt; Word) -&gt; Integer -&gt; TxIx
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; TxIx)
+-&gt; ParsecT Text () Identity Integer
+-&gt; ParsecT Text () Identity TxIx
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ParsecT Text () Identity Integer
+</span><a href="Cardano.Api.Parser.Text.html#parseDecimal"><span class="hs-identifier hs-var">P.parseDecimal</span></a></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromByronTxIn"><span class="hs-identifier hs-type">fromByronTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-7fb551a04b7ebd202180a636c363fd4c69d431c37908920ba820fedd2c0d0ade/share/doc/html/src/Cardano.Chain.UTxO.Tx.html#TxIn"><span class="hs-identifier hs-type">Byron.TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span>
+</span><span id="line-135"></span><span id="fromByronTxIn"><span class="annot"><span class="annottext">fromByronTxIn :: TxIn -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#fromByronTxIn"><span class="hs-identifier hs-var hs-var">fromByronTxIn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-7fb551a04b7ebd202180a636c363fd4c69d431c37908920ba820fedd2c0d0ade/share/doc/html/src/Cardano.Chain.UTxO.Tx.html#TxInUtxo"><span class="hs-identifier hs-type">Byron.TxInUtxo</span></a></span><span> </span><span id="local-6989586621681110001"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110001"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621681110002"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681110002"><span class="hs-identifier hs-var">index</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681110003"><span class="annot"><span class="annottext">shortBs :: ShortByteString
+</span><a href="#local-6989586621681110003"><span class="hs-identifier hs-var hs-var">shortBs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; ShortByteString
+forall algo a. AbstractHash algo a -&gt; ShortByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-wrapper-1.6.0.0-6775486798e1077dc85f71e8ff4a9ca4bed46af58de38c608f0408173cfd0883/share/doc/html/src/Cardano.Crypto.Hashing.html#abstractHashToShort"><span class="hs-identifier hs-var">Byron.abstractHashToShort</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110001"><span class="hs-identifier hs-var">txId</span></a></span><span>
+</span><span id="line-137"></span><span>      </span><span id="local-6989586621681110005"><span class="annot"><span class="annottext">mApiHash :: Maybe (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621681110005"><span class="hs-identifier hs-var hs-var">mApiHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; Maybe (Hash HASH EraIndependentTxBody)
+forall h a. HashAlgorithm h =&gt; ShortByteString -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytesShort"><span class="hs-identifier hs-var">Crypto.hashFromBytesShort</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621681110003"><span class="hs-identifier hs-var">shortBs</span></a></span><span>
+</span><span id="line-138"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (Hash HASH EraIndependentTxBody)
+</span><a href="#local-6989586621681110005"><span class="hs-identifier hs-var">mApiHash</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-139"></span><span>        </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681110007"><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681110007"><span class="hs-identifier hs-var">apiHash</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier hs-var">TxId</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH EraIndependentTxBody
+</span><a href="#local-6989586621681110007"><span class="hs-identifier hs-var">apiHash</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; TxIx
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-var">TxIx</span></a></span><span> </span><span class="annot"><span class="annottext">(Word -&gt; TxIx) -&gt; (Integer -&gt; Word) -&gt; Integer -&gt; TxIx
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; TxIx) -&gt; Integer -&gt; TxIx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#toInteger"><span class="hs-identifier hs-var">toInteger</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681110002"><span class="hs-identifier hs-var">index</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><span class="annottext">Maybe (Hash HASH EraIndependentTxBody)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; TxIn
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; TxIn) -&gt; [Char] -&gt; TxIn
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Error converting Byron era TxId: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">TxId -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110001"><span class="hs-identifier hs-var">txId</span></a></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxIn"><span class="hs-identifier hs-type">toByronTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-7fb551a04b7ebd202180a636c363fd4c69d431c37908920ba820fedd2c0d0ade/share/doc/html/src/Cardano.Chain.UTxO.Tx.html#TxIn"><span class="hs-identifier hs-type">Byron.TxIn</span></a></span><span>
+</span><span id="line-143"></span><span id="toByronTxIn"><span class="annot"><span class="annottext">toByronTxIn :: TxIn -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxIn"><span class="hs-identifier hs-var hs-var">toByronTxIn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span id="local-6989586621681110010"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110010"><span class="hs-identifier hs-var">txid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span><span> </span><span id="local-6989586621681110011"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621681110011"><span class="hs-identifier hs-var">txix</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><span class="annottext">TxId -&gt; Word16 -&gt; TxIn
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-7fb551a04b7ebd202180a636c363fd4c69d431c37908920ba820fedd2c0d0ade/share/doc/html/src/Cardano.Chain.UTxO.Tx.html#TxInUtxo"><span class="hs-identifier hs-var">Byron.TxInUtxo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxId"><span class="hs-identifier hs-var">toByronTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110010"><span class="hs-identifier hs-var">txid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621681110011"><span class="hs-identifier hs-var">txix</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- | This function may overflow on the transaction index. Call sites must ensure</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- that all uses of this function are appropriately guarded.</span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxIn"><span class="hs-identifier hs-type">toShelleyTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">Ledger.TxIn</span></a></span><span>
+</span><span id="line-149"></span><span id="toShelleyTxIn"><span class="annot"><span class="annottext">toShelleyTxIn :: TxIn -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxIn"><span class="hs-identifier hs-var hs-var">toShelleyTxIn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span id="local-6989586621681110012"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110012"><span class="hs-identifier hs-var">txid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-type">TxIx</span></a></span><span> </span><span id="local-6989586621681110013"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621681110013"><span class="hs-identifier hs-var">txix</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-var">Ledger.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxId"><span class="hs-identifier hs-var">toShelleyTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110012"><span class="hs-identifier hs-var">txid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16 -&gt; TxIx
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html#TxIx"><span class="hs-identifier hs-var">Ledger.TxIx</span></a></span><span> </span><span class="annot"><span class="annottext">(Word16 -&gt; TxIx) -&gt; Word16 -&gt; TxIx
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621681110013"><span class="hs-identifier hs-var">txix</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>
+</span><span id="line-152"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxIn"><span class="hs-identifier hs-type">fromShelleyTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">Ledger.TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span>
+</span><span id="line-153"></span><span id="fromShelleyTxIn"><span class="annot"><span class="annottext">fromShelleyTxIn :: TxIn -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxIn"><span class="hs-identifier hs-var hs-var">fromShelleyTxIn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.TxIn.html#TxIn"><span class="hs-identifier hs-type">Ledger.TxIn</span></a></span><span> </span><span id="local-6989586621681110016"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110016"><span class="hs-identifier hs-var">txid</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html#TxIx"><span class="hs-identifier hs-type">Ledger.TxIx</span></a></span><span> </span><span id="local-6989586621681110017"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681110017"><span class="hs-identifier hs-var">txix</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-154"></span><span>  </span><span class="annot"><span class="annottext">TxId -&gt; TxIx -&gt; TxIn
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-var">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; TxId
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier hs-var">fromShelleyTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621681110016"><span class="hs-identifier hs-var">txid</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word -&gt; TxIx
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier hs-var">TxIx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16 -&gt; Word
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621681110017"><span class="hs-identifier hs-var">txix</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span></pre></body></html>

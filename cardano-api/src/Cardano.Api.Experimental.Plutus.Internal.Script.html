@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE KindSignatures #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Experimental.Plutus.Internal.Script</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptInEra"><span class="hs-identifier">PlutusScriptInEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptOrReferenceInput"><span class="hs-identifier">PlutusScriptOrReferenceInput</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#PlutusRunnable"><span class="hs-identifier">PlutusRunnable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- | A Plutus script in a particular era.</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- Why PlutusRunnable? Mainly for deserialization benefits.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- The deserialization of this type looks at the</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- major protocol version and the script language to determine if</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- indeed the script is runnable. This is a dramatic improvement over the old api</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- which essentially read a 'ByteString' and hoped for the best.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- Any failures due to malformed/invalid scripts were caught upon transaction</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- submission or running the script when attempting to predict the necessary execution units.</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- Where do we get the major protocol version from?</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- In order to access the major protocol version we pass in an 'era` type parameter which</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- can be translated to the major protocol version.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Where do we get the script language from?</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- The serialized version of 'PlutusRunnable' encodes the script language.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- See `DecCBOR (PlutusRunnable l)` in cardano-ledger for more details.</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">data</span><span> </span><span id="PlutusScriptInEra"><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptInEra"><span class="hs-identifier hs-var">PlutusScriptInEra</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681138212"><span class="annot"><a href="#local-6989586621681138212"><span class="hs-identifier hs-type">lang</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">L.Language</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681138213"><span class="annot"><a href="#local-6989586621681138213"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621681138214"><span id="local-6989586621681138215"><span id="PlutusScriptInEra"><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptInEra"><span class="hs-identifier hs-var">PlutusScriptInEra</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#PlutusRunnable"><span class="hs-identifier hs-type">PlutusRunnable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681138214"><span class="hs-identifier hs-type">lang</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptInEra"><span class="hs-identifier hs-type">PlutusScriptInEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681138214"><span class="hs-identifier hs-type">lang</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681138215"><span class="hs-identifier hs-type">era</span></a></span></span></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span id="local-6989586621681138204"><span id="local-6989586621681138205"><span id="local-6989586621681138218"><span id="local-6989586621681138224"><span id="local-6989586621681138228"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptInEra"><span class="hs-identifier hs-type">PlutusScriptInEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681138204"><span class="hs-identifier hs-type">lang</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681138205"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | You can provide the plutus script directly in the transaction</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- or a reference input that points to the script in the UTxO.</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- Using a reference script saves space in your transaction.</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">data</span><span> </span><span id="PlutusScriptOrReferenceInput"><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptOrReferenceInput"><span class="hs-identifier hs-var">PlutusScriptOrReferenceInput</span></a></span></span><span> </span><span id="local-6989586621681138231"><span class="annot"><a href="#local-6989586621681138231"><span class="hs-identifier hs-type">lang</span></a></span></span><span> </span><span id="local-6989586621681138232"><span class="annot"><a href="#local-6989586621681138232"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="PScript"><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PScript"><span class="hs-identifier hs-var">PScript</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptInEra"><span class="hs-identifier hs-type">PlutusScriptInEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681138231"><span class="hs-identifier hs-type">lang</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681138232"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="PReferenceScript"><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PReferenceScript"><span class="hs-identifier hs-var">PReferenceScript</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681138236"><span id="local-6989586621681138243"><span id="local-6989586621681138247"><span class="annot"><span class="annottext">Int -&gt; PlutusScriptOrReferenceInput lang era -&gt; ShowS
+[PlutusScriptOrReferenceInput lang era] -&gt; ShowS
+PlutusScriptOrReferenceInput lang era -&gt; String
+(Int -&gt; PlutusScriptOrReferenceInput lang era -&gt; ShowS)
+-&gt; (PlutusScriptOrReferenceInput lang era -&gt; String)
+-&gt; ([PlutusScriptOrReferenceInput lang era] -&gt; ShowS)
+-&gt; Show (PlutusScriptOrReferenceInput lang era)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall (lang :: Language) era.
+Int -&gt; PlutusScriptOrReferenceInput lang era -&gt; ShowS
+forall (lang :: Language) era.
+[PlutusScriptOrReferenceInput lang era] -&gt; ShowS
+forall (lang :: Language) era.
+PlutusScriptOrReferenceInput lang era -&gt; String
+$cshowsPrec :: forall (lang :: Language) era.
+Int -&gt; PlutusScriptOrReferenceInput lang era -&gt; ShowS
+showsPrec :: Int -&gt; PlutusScriptOrReferenceInput lang era -&gt; ShowS
+$cshow :: forall (lang :: Language) era.
+PlutusScriptOrReferenceInput lang era -&gt; String
+show :: PlutusScriptOrReferenceInput lang era -&gt; String
+$cshowList :: forall (lang :: Language) era.
+[PlutusScriptOrReferenceInput lang era] -&gt; ShowS
+showList :: [PlutusScriptOrReferenceInput lang era] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-46"></span></pre></body></html>

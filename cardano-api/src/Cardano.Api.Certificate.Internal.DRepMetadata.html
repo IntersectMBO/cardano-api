@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE InstanceSigs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="annot"><span class="hs-comment">-- | DRep off-chain metadata</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Certificate.Internal.DRepMetadata</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * DRep off-chain metadata</span></span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier">DRepMetadata</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#hashDRepMetadata"><span class="hs-identifier">hashDRepMetadata</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Data family instances</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier">Hash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Byron.Internal.Key.html"><span class="hs-identifier">Cardano.Api.Byron.Internal.Key</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Key.Internal.Praos.html"><span class="hs-identifier">Cardano.Api.Key.Internal.Praos</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Crypto</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier">HASH</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Either.Combinators</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">maybeToRight</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- ----------------------------------------------------------------------------</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- DRep metadata</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | A representation of the required fields for off-chain drep metadata.</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">newtype</span><span> </span><span id="DRepMetadata"><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-var">DRepMetadata</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DRepMetadata"><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-var">DRepMetadata</span></a></span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unDRepMetadata"><span class="annot"><span class="annottext">DRepMetadata -&gt; ByteString
+</span><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#unDRepMetadata"><span class="hs-identifier hs-var hs-var">unDRepMetadata</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681145373"><span id="local-6989586621681145378"><span class="annot"><span class="annottext">DRepMetadata -&gt; DRepMetadata -&gt; Bool
+(DRepMetadata -&gt; DRepMetadata -&gt; Bool)
+-&gt; (DRepMetadata -&gt; DRepMetadata -&gt; Bool) -&gt; Eq DRepMetadata
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DRepMetadata -&gt; DRepMetadata -&gt; Bool
+== :: DRepMetadata -&gt; DRepMetadata -&gt; Bool
+$c/= :: DRepMetadata -&gt; DRepMetadata -&gt; Bool
+/= :: DRepMetadata -&gt; DRepMetadata -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681145384"><span id="local-6989586621681145390"><span id="local-6989586621681145394"><span class="annot"><span class="annottext">Int -&gt; DRepMetadata -&gt; ShowS
+[DRepMetadata] -&gt; ShowS
+DRepMetadata -&gt; String
+(Int -&gt; DRepMetadata -&gt; ShowS)
+-&gt; (DRepMetadata -&gt; String)
+-&gt; ([DRepMetadata] -&gt; ShowS)
+-&gt; Show DRepMetadata
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DRepMetadata -&gt; ShowS
+showsPrec :: Int -&gt; DRepMetadata -&gt; ShowS
+$cshow :: DRepMetadata -&gt; String
+show :: DRepMetadata -&gt; String
+$cshowList :: [DRepMetadata] -&gt; ShowS
+showList :: [DRepMetadata] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">newtype</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="Hash"><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-var">Hash</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DRepMetadataHash"><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadataHash"><span class="hs-identifier hs-var">DRepMetadataHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Crypto.Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681145399"><span id="local-6989586621681145404"><span class="annot"><span class="annottext">Hash DRepMetadata -&gt; Hash DRepMetadata -&gt; Bool
+(Hash DRepMetadata -&gt; Hash DRepMetadata -&gt; Bool)
+-&gt; (Hash DRepMetadata -&gt; Hash DRepMetadata -&gt; Bool)
+-&gt; Eq (Hash DRepMetadata)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Hash DRepMetadata -&gt; Hash DRepMetadata -&gt; Bool
+== :: Hash DRepMetadata -&gt; Hash DRepMetadata -&gt; Bool
+$c/= :: Hash DRepMetadata -&gt; Hash DRepMetadata -&gt; Bool
+/= :: Hash DRepMetadata -&gt; Hash DRepMetadata -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681145409"><span id="local-6989586621681145414"><span id="local-6989586621681145418"><span class="annot"><span class="annottext">Int -&gt; Hash DRepMetadata -&gt; ShowS
+[Hash DRepMetadata] -&gt; ShowS
+Hash DRepMetadata -&gt; String
+(Int -&gt; Hash DRepMetadata -&gt; ShowS)
+-&gt; (Hash DRepMetadata -&gt; String)
+-&gt; ([Hash DRepMetadata] -&gt; ShowS)
+-&gt; Show (Hash DRepMetadata)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Hash DRepMetadata -&gt; ShowS
+showsPrec :: Int -&gt; Hash DRepMetadata -&gt; ShowS
+$cshow :: Hash DRepMetadata -&gt; String
+show :: Hash DRepMetadata -&gt; String
+$cshowList :: [Hash DRepMetadata] -&gt; ShowS
+showList :: [Hash DRepMetadata] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsDRepMetadata"><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#AsDRepMetadata"><span class="hs-identifier hs-var">AsDRepMetadata</span></a></span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#proxyToAsType"><span class="hs-identifier hs-type">proxyToAsType</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Proxy.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621681145427"><span class="annot"><span class="annottext">proxyToAsType :: Proxy DRepMetadata -&gt; AsType DRepMetadata
+</span><a href="Cardano.Api.HasTypeProxy.html#proxyToAsType"><span class="hs-identifier hs-var hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy DRepMetadata
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType DRepMetadata
+</span><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#AsDRepMetadata"><span class="hs-identifier hs-var">AsDRepMetadata</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytes"><span class="hs-identifier hs-type">SerialiseAsRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-type">serialiseToRawBytes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span id="local-6989586621681145441"><span class="annot"><span class="annottext">serialiseToRawBytes :: Hash DRepMetadata -&gt; ByteString
+</span><a href="Cardano.Api.Serialise.Raw.html#serialiseToRawBytes"><span class="hs-identifier hs-var hs-var hs-var hs-var">serialiseToRawBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadataHash"><span class="hs-identifier hs-type">DRepMetadataHash</span></a></span><span> </span><span id="local-6989586621681145442"><span class="annot"><span class="annottext">Hash HASH ByteString
+</span><a href="#local-6989586621681145442"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; ByteString
+forall h a. Hash h a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytes"><span class="hs-identifier hs-var">Crypto.hashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH ByteString
+</span><a href="#local-6989586621681145442"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#deserialiseFromRawBytes"><span class="hs-identifier hs-type">deserialiseFromRawBytes</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-type">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier hs-type">SerialiseAsRawBytesError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621681145448"><span class="annot"><span class="annottext">deserialiseFromRawBytes :: AsType (Hash DRepMetadata)
+-&gt; ByteString
+-&gt; Either SerialiseAsRawBytesError (Hash DRepMetadata)
+</span><a href="Cardano.Api.Serialise.Raw.html#deserialiseFromRawBytes"><span class="hs-identifier hs-var hs-var hs-var hs-var">deserialiseFromRawBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Hash.html#AsHash"><span class="hs-identifier hs-type">AsHash</span></a></span><span> </span><span class="annot"><span class="annottext">AsType DRepMetadata
+R:AsTypeDRepMetadata
+</span><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#AsDRepMetadata"><span class="hs-identifier hs-var">AsDRepMetadata</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681145450"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145450"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">SerialiseAsRawBytesError
+-&gt; Maybe (Hash DRepMetadata)
+-&gt; Either SerialiseAsRawBytesError (Hash DRepMetadata)
+forall b a. b -&gt; Maybe a -&gt; Either b a
+</span><span class="hs-identifier hs-var">maybeToRight</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; SerialiseAsRawBytesError
+</span><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier hs-var">SerialiseAsRawBytesError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unable to deserialise Hash DRepMetadata&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (Hash DRepMetadata)
+ -&gt; Either SerialiseAsRawBytesError (Hash DRepMetadata))
+-&gt; Maybe (Hash DRepMetadata)
+-&gt; Either SerialiseAsRawBytesError (Hash DRepMetadata)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; Hash DRepMetadata
+</span><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadataHash"><span class="hs-identifier hs-var">DRepMetadataHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash HASH ByteString -&gt; Hash DRepMetadata)
+-&gt; Maybe (Hash HASH ByteString) -&gt; Maybe (Hash DRepMetadata)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (Hash HASH ByteString)
+forall h a. HashAlgorithm h =&gt; ByteString -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytes"><span class="hs-identifier hs-var">Crypto.hashFromBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145450"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><span class="hs-comment">-- | Return the decoded metadata and the hash of the original bytes.</span></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#hashDRepMetadata"><span class="hs-identifier hs-type">hashDRepMetadata</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-type">DRepMetadata</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span id="hashDRepMetadata"><span class="annot"><span class="annottext">hashDRepMetadata :: ByteString -&gt; (DRepMetadata, Hash DRepMetadata)
+</span><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#hashDRepMetadata"><span class="hs-identifier hs-var hs-var">hashDRepMetadata</span></a></span></span><span> </span><span id="local-6989586621681145454"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145454"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681145455"><span class="annot"><span class="annottext">md :: DRepMetadata
+</span><a href="#local-6989586621681145455"><span class="hs-identifier hs-var hs-var">md</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; DRepMetadata
+</span><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadata"><span class="hs-identifier hs-var">DRepMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145454"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span id="local-6989586621681145456"><span class="annot"><span class="annottext">mdh :: Hash DRepMetadata
+</span><a href="#local-6989586621681145456"><span class="hs-identifier hs-var hs-var">mdh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; Hash DRepMetadata
+</span><a href="Cardano.Api.Certificate.Internal.DRepMetadata.html#DRepMetadataHash"><span class="hs-identifier hs-var">DRepMetadataHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; Hash HASH ByteString
+forall h a. HashAlgorithm h =&gt; (a -&gt; ByteString) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashWith"><span class="hs-identifier hs-var">Crypto.hashWith</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145454"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DRepMetadata
+</span><a href="#local-6989586621681145455"><span class="hs-identifier hs-var">md</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Hash DRepMetadata
+</span><a href="#local-6989586621681145456"><span class="hs-identifier hs-var">mdh</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span></pre></body></html>

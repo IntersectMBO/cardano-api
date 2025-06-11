@@ -1,0 +1,308 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Query.Internal.Type.DelegationsAndRewards</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier">DelegationsAndRewards</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#mergeDelegsAndRewards"><span class="hs-identifier">mergeDelegsAndRewards</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html"><span class="hs-identifier">Cardano.Api.Certificate.Internal</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.OldList.html#nub"><span class="hs-identifier">nub</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- | A mapping of Shelley reward accounts to both the stake pool that they</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- delegate to and their reward account balance.</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- TODO: Move to cardano-api</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">newtype</span><span> </span><span id="DelegationsAndRewards"><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-var">DelegationsAndRewards</span></a></span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="DelegationsAndRewards"><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-var">DelegationsAndRewards</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeAddress"><span class="hs-identifier hs-type">StakeAddress</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeAddress"><span class="hs-identifier hs-type">StakeAddress</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681180558"><span id="local-6989586621681180565"><span class="annot"><span class="annottext">DelegationsAndRewards -&gt; DelegationsAndRewards -&gt; Bool
+(DelegationsAndRewards -&gt; DelegationsAndRewards -&gt; Bool)
+-&gt; (DelegationsAndRewards -&gt; DelegationsAndRewards -&gt; Bool)
+-&gt; Eq DelegationsAndRewards
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DelegationsAndRewards -&gt; DelegationsAndRewards -&gt; Bool
+== :: DelegationsAndRewards -&gt; DelegationsAndRewards -&gt; Bool
+$c/= :: DelegationsAndRewards -&gt; DelegationsAndRewards -&gt; Bool
+/= :: DelegationsAndRewards -&gt; DelegationsAndRewards -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180580"><span id="local-6989586621681180588"><span id="local-6989586621681180592"><span class="annot"><span class="annottext">Int -&gt; DelegationsAndRewards -&gt; ShowS
+[DelegationsAndRewards] -&gt; ShowS
+DelegationsAndRewards -&gt; String
+(Int -&gt; DelegationsAndRewards -&gt; ShowS)
+-&gt; (DelegationsAndRewards -&gt; String)
+-&gt; ([DelegationsAndRewards] -&gt; ShowS)
+-&gt; Show DelegationsAndRewards
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DelegationsAndRewards -&gt; ShowS
+showsPrec :: Int -&gt; DelegationsAndRewards -&gt; ShowS
+$cshow :: DelegationsAndRewards -&gt; String
+show :: DelegationsAndRewards -&gt; String
+$cshowList :: [DelegationsAndRewards] -&gt; ShowS
+showList :: [DelegationsAndRewards] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681180604"><span id="local-6989586621681180608"><span id="local-6989586621681180611"><span id="local-6989586621681180614"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-type">DelegationsAndRewards</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621681180638"><span class="annot"><span class="annottext">toJSON :: DelegationsAndRewards -&gt; Value
+</span><a href="#local-6989586621681180638"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span id="local-6989586621681180640"><span class="annot"><span class="annottext">DelegationsAndRewards
+</span><a href="#local-6989586621681180640"><span class="hs-identifier hs-var">delegsAndRwds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">Array -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.Array</span></span><span>
+</span><span id="line-29"></span><span>      </span><span class="annot"><span class="annottext">(Array -&gt; Value)
+-&gt; ([(StakeAddress, Maybe Coin, Maybe PoolId)] -&gt; Array)
+-&gt; [(StakeAddress, Maybe Coin, Maybe PoolId)]
+-&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Item Array] -&gt; Array
+[Value] -&gt; Array
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span>
+</span><span id="line-30"></span><span>      </span><span class="annot"><span class="annottext">([Value] -&gt; Array)
+-&gt; ([(StakeAddress, Maybe Coin, Maybe PoolId)] -&gt; [Value])
+-&gt; [(StakeAddress, Maybe Coin, Maybe PoolId)]
+-&gt; Array
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((StakeAddress, Maybe Coin, Maybe PoolId) -&gt; Value)
+-&gt; [(StakeAddress, Maybe Coin, Maybe PoolId)] -&gt; [Value]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(StakeAddress, Maybe Coin, Maybe PoolId) -&gt; Value
+</span><a href="#local-6989586621681180643"><span class="hs-identifier hs-var">delegAndRwdToJson</span></a></span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">([(StakeAddress, Maybe Coin, Maybe PoolId)] -&gt; Value)
+-&gt; [(StakeAddress, Maybe Coin, Maybe PoolId)] -&gt; Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DelegationsAndRewards -&gt; [(StakeAddress, Maybe Coin, Maybe PoolId)]
+</span><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#mergeDelegsAndRewards"><span class="hs-identifier hs-var">mergeDelegsAndRewards</span></a></span><span> </span><span class="annot"><span class="annottext">DelegationsAndRewards
+</span><a href="#local-6989586621681180640"><span class="hs-identifier hs-var">delegsAndRwds</span></a></span><span>
+</span><span id="line-32"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="#local-6989586621681180643"><span class="hs-identifier hs-type">delegAndRwdToJson</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Address.html#StakeAddress"><span class="hs-identifier hs-type">StakeAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621681180643"><span class="annot"><span class="annottext">delegAndRwdToJson :: (StakeAddress, Maybe Coin, Maybe PoolId) -&gt; Value
+</span><a href="#local-6989586621681180643"><span class="hs-identifier hs-var hs-var">delegAndRwdToJson</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681180644"><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180644"><span class="hs-identifier hs-var">addr</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180645"><span class="annot"><span class="annottext">Maybe Coin
+</span><a href="#local-6989586621681180645"><span class="hs-identifier hs-var">mRewards</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180646"><span class="annot"><span class="annottext">Maybe PoolId
+</span><a href="#local-6989586621681180646"><span class="hs-identifier hs-var">mPoolId</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">Aeson.object</span></span><span>
+</span><span id="line-36"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;address&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; StakeAddress -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180644"><span class="hs-identifier hs-var">addr</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;delegation&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe PoolId -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe PoolId
+</span><a href="#local-6989586621681180646"><span class="hs-identifier hs-var">mPoolId</span></a></span><span>
+</span><span id="line-38"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;rewardAccountBalance&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Maybe Coin -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">Maybe Coin
+</span><a href="#local-6989586621681180645"><span class="hs-identifier hs-var">mRewards</span></a></span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681180651"><span id="local-6989586621681180655"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-type">DelegationsAndRewards</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621681180686"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser DelegationsAndRewards
+</span><a href="#local-6989586621681180686"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Array -&gt; Parser DelegationsAndRewards)
+-&gt; Value
+-&gt; Parser DelegationsAndRewards
+forall a. String -&gt; (Array -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withArray</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DelegationsAndRewards&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Array -&gt; Parser DelegationsAndRewards)
+ -&gt; Value -&gt; Parser DelegationsAndRewards)
+-&gt; (Array -&gt; Parser DelegationsAndRewards)
+-&gt; Value
+-&gt; Parser DelegationsAndRewards
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681180689"><span class="annot"><span class="annottext">Array
+</span><a href="#local-6989586621681180689"><span class="hs-identifier hs-var">arr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681180691"><span class="annot"><span class="annottext">vals :: [Item Array]
+</span><a href="#local-6989586621681180691"><span class="hs-identifier hs-var hs-var">vals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Array -&gt; [Item Array]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">Array
+</span><a href="#local-6989586621681180689"><span class="hs-identifier hs-var">arr</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621681180692"><span class="annot"><span class="annottext">[(StakeAddress, Maybe Coin, Maybe PoolId)]
+</span><a href="#local-6989586621681180692"><span class="hs-identifier hs-var">decoded</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId))
+-&gt; [Value] -&gt; Parser [(StakeAddress, Maybe Coin, Maybe PoolId)]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Traversable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m (t b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Traversable.html#mapM"><span class="hs-identifier hs-var">mapM</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId)
+</span><a href="#local-6989586621681180694"><span class="hs-identifier hs-var">decodeObject</span></a></span><span> </span><span class="annot"><span class="annottext">[Value]
+</span><a href="#local-6989586621681180691"><span class="hs-identifier hs-var">vals</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">DelegationsAndRewards -&gt; Parser DelegationsAndRewards
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(DelegationsAndRewards -&gt; Parser DelegationsAndRewards)
+-&gt; DelegationsAndRewards -&gt; Parser DelegationsAndRewards
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[(StakeAddress, Maybe Coin, Maybe PoolId)] -&gt; DelegationsAndRewards
+</span><a href="#local-6989586621681180695"><span class="hs-identifier hs-var">zipper</span></a></span><span> </span><span class="annot"><span class="annottext">[(StakeAddress, Maybe Coin, Maybe PoolId)]
+</span><a href="#local-6989586621681180692"><span class="hs-identifier hs-var">decoded</span></a></span><span>
+</span><span id="line-46"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><a href="#local-6989586621681180695"><span class="hs-identifier hs-type">zipper</span></a></span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Address.html#StakeAddress"><span class="hs-identifier hs-type">StakeAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-type">DelegationsAndRewards</span></a></span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621681180695"><span class="annot"><span class="annottext">zipper :: [(StakeAddress, Maybe Coin, Maybe PoolId)] -&gt; DelegationsAndRewards
+</span><a href="#local-6989586621681180695"><span class="hs-identifier hs-var hs-var">zipper</span></a></span></span><span> </span><span id="local-6989586621681180696"><span class="annot"><span class="annottext">[(StakeAddress, Maybe Coin, Maybe PoolId)]
+</span><a href="#local-6989586621681180696"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681180700"><span class="annot"><span class="annottext">maps :: [(Map StakeAddress Coin, Map StakeAddress PoolId)]
+</span><a href="#local-6989586621681180700"><span class="hs-identifier hs-var hs-var">maps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-52"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Map StakeAddress Coin
+-&gt; (Coin -&gt; Map StakeAddress Coin)
+-&gt; Maybe Coin
+-&gt; Map StakeAddress Coin
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress Coin
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeAddress -&gt; Coin -&gt; Map StakeAddress Coin
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180703"><span class="hs-identifier hs-var">sa</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe Coin
+</span><a href="#local-6989586621681180704"><span class="hs-identifier hs-var">delegAmt</span></a></span><span>
+</span><span id="line-53"></span><span>              </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+-&gt; (PoolId -&gt; Map StakeAddress PoolId)
+-&gt; Maybe PoolId
+-&gt; Map StakeAddress PoolId
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeAddress -&gt; PoolId -&gt; Map StakeAddress PoolId
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180703"><span class="hs-identifier hs-var">sa</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe PoolId
+</span><a href="#local-6989586621681180705"><span class="hs-identifier hs-var">mPool</span></a></span><span>
+</span><span id="line-54"></span><span>              </span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681180703"><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180703"><span class="hs-identifier hs-var">sa</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180704"><span class="annot"><span class="annottext">Maybe Coin
+</span><a href="#local-6989586621681180704"><span class="hs-identifier hs-var">delegAmt</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180705"><span class="annot"><span class="annottext">Maybe PoolId
+</span><a href="#local-6989586621681180705"><span class="hs-identifier hs-var">mPool</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(StakeAddress, Maybe Coin, Maybe PoolId)]
+</span><a href="#local-6989586621681180696"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-56"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">(Map StakeAddress Coin, Map StakeAddress PoolId)
+-&gt; DelegationsAndRewards
+</span><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-var">DelegationsAndRewards</span></a></span><span> </span><span class="annot"><span class="annottext">((Map StakeAddress Coin, Map StakeAddress PoolId)
+ -&gt; DelegationsAndRewards)
+-&gt; (Map StakeAddress Coin, Map StakeAddress PoolId)
+-&gt; DelegationsAndRewards
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span class="annot"><span class="annottext">((Map StakeAddress Coin, Map StakeAddress PoolId)
+ -&gt; (Map StakeAddress Coin, Map StakeAddress PoolId)
+ -&gt; (Map StakeAddress Coin, Map StakeAddress PoolId))
+-&gt; (Map StakeAddress Coin, Map StakeAddress PoolId)
+-&gt; [(Map StakeAddress Coin, Map StakeAddress PoolId)]
+-&gt; (Map StakeAddress Coin, Map StakeAddress PoolId)
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#foldl"><span class="hs-identifier hs-var">foldl</span></a></span><span>
+</span><span id="line-59"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621681180707"><span class="annot"><span class="annottext">Map StakeAddress Coin
+</span><a href="#local-6989586621681180707"><span class="hs-identifier hs-var">amtA</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180708"><span class="annot"><span class="annottext">Map StakeAddress PoolId
+</span><a href="#local-6989586621681180708"><span class="hs-identifier hs-var">delegA</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681180709"><span class="annot"><span class="annottext">Map StakeAddress Coin
+</span><a href="#local-6989586621681180709"><span class="hs-identifier hs-var">amtB</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180710"><span class="annot"><span class="annottext">Map StakeAddress PoolId
+</span><a href="#local-6989586621681180710"><span class="hs-identifier hs-var">delegB</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map StakeAddress Coin
+</span><a href="#local-6989586621681180707"><span class="hs-identifier hs-var">amtA</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress Coin
+-&gt; Map StakeAddress Coin -&gt; Map StakeAddress Coin
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress Coin
+</span><a href="#local-6989586621681180709"><span class="hs-identifier hs-var">amtB</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+</span><a href="#local-6989586621681180708"><span class="hs-identifier hs-var">delegA</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+-&gt; Map StakeAddress PoolId -&gt; Map StakeAddress PoolId
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+</span><a href="#local-6989586621681180710"><span class="hs-identifier hs-var">delegB</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map StakeAddress Coin
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>          </span><span class="annot"><span class="annottext">[(Map StakeAddress Coin, Map StakeAddress PoolId)]
+</span><a href="#local-6989586621681180700"><span class="hs-identifier hs-var">maps</span></a></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><a href="#local-6989586621681180694"><span class="hs-identifier hs-type">decodeObject</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Address.html#StakeAddress"><span class="hs-identifier hs-type">StakeAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621681180694"><span class="annot"><span class="annottext">decodeObject :: Value -&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId)
+</span><a href="#local-6989586621681180694"><span class="hs-identifier hs-var hs-var">decodeObject</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId))
+-&gt; Value
+-&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId)
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DelegationsAndRewards&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId))
+ -&gt; Value -&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId))
+-&gt; (Object -&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId))
+-&gt; Value
+-&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681180712"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681180712"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-67"></span><span>      </span><span id="local-6989586621681180713"><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180713"><span class="hs-identifier hs-var">address</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681180712"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser StakeAddress
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;address&quot;</span></span><span>
+</span><span id="line-68"></span><span>      </span><span id="local-6989586621681180715"><span class="annot"><span class="annottext">Maybe PoolId
+</span><a href="#local-6989586621681180715"><span class="hs-identifier hs-var">delegation</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681180712"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe PoolId)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;delegation&quot;</span></span><span>
+</span><span id="line-69"></span><span>      </span><span id="local-6989586621681180717"><span class="annot"><span class="annottext">Maybe Coin
+</span><a href="#local-6989586621681180717"><span class="hs-identifier hs-var">rewardAccountBalance</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681180712"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Coin)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;rewardAccountBalance&quot;</span></span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">(StakeAddress, Maybe Coin, Maybe PoolId)
+-&gt; Parser (StakeAddress, Maybe Coin, Maybe PoolId)
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180713"><span class="hs-identifier hs-var">address</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe Coin
+</span><a href="#local-6989586621681180717"><span class="hs-identifier hs-var">rewardAccountBalance</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe PoolId
+</span><a href="#local-6989586621681180715"><span class="hs-identifier hs-var">delegation</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#mergeDelegsAndRewards"><span class="hs-identifier hs-type">mergeDelegsAndRewards</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-type">DelegationsAndRewards</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Address.html#StakeAddress"><span class="hs-identifier hs-type">StakeAddress</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-73"></span><span id="mergeDelegsAndRewards"><span class="annot"><span class="annottext">mergeDelegsAndRewards :: DelegationsAndRewards -&gt; [(StakeAddress, Maybe Coin, Maybe PoolId)]
+</span><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#mergeDelegsAndRewards"><span class="hs-identifier hs-var hs-var">mergeDelegsAndRewards</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DelegationsAndRewards.html#DelegationsAndRewards"><span class="hs-identifier hs-type">DelegationsAndRewards</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681180718"><span class="annot"><span class="annottext">Map StakeAddress Coin
+</span><a href="#local-6989586621681180718"><span class="hs-identifier hs-var">rewardsMap</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180719"><span class="annot"><span class="annottext">Map StakeAddress PoolId
+</span><a href="#local-6989586621681180719"><span class="hs-identifier hs-var">delegMap</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180720"><span class="hs-identifier hs-var">stakeAddr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeAddress -&gt; Map StakeAddress Coin -&gt; Maybe Coin
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180720"><span class="hs-identifier hs-var">stakeAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress Coin
+</span><a href="#local-6989586621681180718"><span class="hs-identifier hs-var">rewardsMap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">StakeAddress -&gt; Map StakeAddress PoolId -&gt; Maybe PoolId
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180720"><span class="hs-identifier hs-var">stakeAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+</span><a href="#local-6989586621681180719"><span class="hs-identifier hs-var">delegMap</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621681180720"><span class="annot"><span class="annottext">StakeAddress
+</span><a href="#local-6989586621681180720"><span class="hs-identifier hs-var">stakeAddr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[StakeAddress] -&gt; [StakeAddress]
+forall a. Eq a =&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.OldList.html#nub"><span class="hs-identifier hs-var">nub</span></a></span><span> </span><span class="annot"><span class="annottext">([StakeAddress] -&gt; [StakeAddress])
+-&gt; [StakeAddress] -&gt; [StakeAddress]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress Coin -&gt; [StakeAddress]
+forall k a. Map k a -&gt; [k]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#keys"><span class="hs-identifier hs-var">Map.keys</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress Coin
+</span><a href="#local-6989586621681180718"><span class="hs-identifier hs-var">rewardsMap</span></a></span><span> </span><span class="annot"><span class="annottext">[StakeAddress] -&gt; [StakeAddress] -&gt; [StakeAddress]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId -&gt; [StakeAddress]
+forall k a. Map k a -&gt; [k]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#keys"><span class="hs-identifier hs-var">Map.keys</span></a></span><span> </span><span class="annot"><span class="annottext">Map StakeAddress PoolId
+</span><a href="#local-6989586621681180719"><span class="hs-identifier hs-var">delegMap</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-77"></span></pre></body></html>

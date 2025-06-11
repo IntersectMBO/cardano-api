@@ -1,0 +1,412 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Gen.Cardano.Api</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genMetadata"><span class="hs-identifier">genMetadata</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genAlonzoGenesis"><span class="hs-identifier">genAlonzoGenesis</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Core.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Genesis</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Alonzo</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Alonzo.Scripts</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Alonzo</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html"><span class="hs-identifier">Cardano.Ledger.Plutus.CostModels</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plutus</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Alonzo</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.TxAuxData.html"><span class="hs-identifier">Cardano.Ledger.Shelley.TxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#Metadatum"><span class="hs-identifier">Metadatum</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.TxAuxData.html#ShelleyTxAuxData"><span class="hs-identifier">ShelleyTxAuxData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Typed.html"><span class="hs-identifier">Test.Gen.Cardano.Api.Typed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Gen.Cardano.Api.Typed.html#genCostModel"><span class="hs-identifier">genCostModel</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Gen.Cardano.Api.Typed.html#genRational"><span class="hs-identifier">genRational</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Gen</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Range</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog.Gen</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gen</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Hedgehog.Internal.Range</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Range</span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span id="local-6989586621679471554"><span class="annot"><a href="Test.Gen.Cardano.Api.html#genMetadata"><span class="hs-identifier hs-type">genMetadata</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#Era"><span class="hs-identifier hs-type">Ledger.Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471554"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.TxAuxData.html#ShelleyTxAuxData"><span class="hs-identifier hs-type">ShelleyTxAuxData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679471554"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-32"></span><span id="genMetadata"><span class="annot"><span class="annottext">genMetadata :: forall era. Era era =&gt; Gen (ShelleyTxAuxData era)
+</span><a href="Test.Gen.Cardano.Api.html#genMetadata"><span class="hs-identifier hs-var hs-var">genMetadata</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679471754"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679471754"><span class="hs-identifier hs-var">numberOfIndices</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Int
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">15</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679471771"><span class="annot"><span class="annottext">indices :: [Word64]
+</span><a href="#local-6989586621679471771"><span class="hs-identifier hs-var hs-var">indices</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Word64) -&gt; [Int] -&gt; [Word64]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679471772"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679471772"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679471772"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">..</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679471754"><span class="hs-identifier hs-var">numberOfIndices</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679471773"><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471773"><span class="hs-identifier hs-var">mData</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Metadatum -&gt; GenT Identity [Metadatum]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">Gen.list</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Range Int
+forall a. a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.singleton</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679471754"><span class="hs-identifier hs-var">numberOfIndices</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GenT Identity Metadatum
+</span><a href="Test.Gen.Cardano.Api.html#genMetadatum"><span class="hs-identifier hs-var">genMetadatum</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">ShelleyTxAuxData era -&gt; Gen (ShelleyTxAuxData era)
+forall a. a -&gt; GenT Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyTxAuxData era -&gt; Gen (ShelleyTxAuxData era))
+-&gt; ([(Word64, Metadatum)] -&gt; ShelleyTxAuxData era)
+-&gt; [(Word64, Metadatum)]
+-&gt; Gen (ShelleyTxAuxData era)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map Word64 Metadatum -&gt; ShelleyTxAuxData era
+forall era. Era era =&gt; Map Word64 Metadatum -&gt; ShelleyTxAuxData era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.TxAuxData.html#ShelleyTxAuxData"><span class="hs-identifier hs-var">ShelleyTxAuxData</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Word64 Metadatum -&gt; ShelleyTxAuxData era)
+-&gt; ([(Word64, Metadatum)] -&gt; Map Word64 Metadatum)
+-&gt; [(Word64, Metadatum)]
+-&gt; ShelleyTxAuxData era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(Word64, Metadatum)] -&gt; Map Word64 Metadatum
+[Item (Map Word64 Metadatum)] -&gt; Map Word64 Metadatum
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([(Word64, Metadatum)] -&gt; Gen (ShelleyTxAuxData era))
+-&gt; [(Word64, Metadatum)] -&gt; Gen (ShelleyTxAuxData era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Word64] -&gt; [Metadatum] -&gt; [(Word64, Metadatum)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.List.html#zip"><span class="hs-identifier hs-var">zip</span></a></span><span> </span><span class="annot"><span class="annottext">[Word64]
+</span><a href="#local-6989586621679471771"><span class="hs-identifier hs-var">indices</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471773"><span class="hs-identifier hs-var">mData</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genMetadatum"><span class="hs-identifier hs-type">genMetadatum</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#Metadatum"><span class="hs-identifier hs-type">Metadatum</span></a></span><span>
+</span><span id="line-39"></span><span id="genMetadatum"><span class="annot"><span class="annottext">genMetadatum :: GenT Identity Metadatum
+</span><a href="Test.Gen.Cardano.Api.html#genMetadatum"><span class="hs-identifier hs-var hs-var">genMetadatum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679471779"><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471779"><span class="hs-identifier hs-var">int</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Metadatum -&gt; GenT Identity [Metadatum]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">Gen.list</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#I"><span class="hs-identifier hs-var">I</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Metadatum)
+-&gt; GenT Identity Integer -&gt; GenT Identity Metadatum
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Range Integer -&gt; GenT Identity Integer
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Range Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">100</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679471782"><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471782"><span class="hs-identifier hs-var">bytes</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Metadatum -&gt; GenT Identity [Metadatum]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">Gen.list</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#B"><span class="hs-identifier hs-var">B</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Metadatum)
+-&gt; GenT Identity ByteString -&gt; GenT Identity Metadatum
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity ByteString
+forall (m :: * -&gt; *). MonadGen m =&gt; Range Int -&gt; m ByteString
+</span><span class="hs-identifier hs-var">Gen.bytes</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">20</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679471785"><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471785"><span class="hs-identifier hs-var">str</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Metadatum -&gt; GenT Identity [Metadatum]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">Gen.list</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#S"><span class="hs-identifier hs-var">S</span></a></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Metadatum)
+-&gt; GenT Identity Text -&gt; GenT Identity Metadatum
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity Char -&gt; GenT Identity Text
+forall (m :: * -&gt; *). MonadGen m =&gt; Range Int -&gt; m Char -&gt; m Text
+</span><span class="hs-identifier hs-var">Gen.text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">20</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GenT Identity Char
+forall (m :: * -&gt; *). MonadGen m =&gt; m Char
+</span><span class="hs-identifier hs-var">Gen.alphaNum</span></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679471789"><span class="annot"><span class="annottext">mDatumList :: [Metadatum]
+</span><a href="#local-6989586621679471789"><span class="hs-identifier hs-var hs-var">mDatumList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471779"><span class="hs-identifier hs-var">int</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum] -&gt; [Metadatum] -&gt; [Metadatum]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471782"><span class="hs-identifier hs-var">bytes</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum] -&gt; [Metadatum] -&gt; [Metadatum]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471785"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679471790"><span class="annot"><span class="annottext">Metadatum
+</span><a href="#local-6989586621679471790"><span class="hs-identifier hs-var">singleMetadatum</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Metadatum] -&gt; GenT Identity Metadatum
+forall (f :: * -&gt; *) (m :: * -&gt; *) a.
+(Foldable f, MonadGen m) =&gt;
+f a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.element</span></span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471789"><span class="hs-identifier hs-var">mDatumList</span></a></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">[Metadatum] -&gt; GenT Identity Metadatum
+forall (f :: * -&gt; *) (m :: * -&gt; *) a.
+(Foldable f, MonadGen m) =&gt;
+f a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.element</span></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">[Metadatum] -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471789"><span class="hs-identifier hs-var">mDatumList</span></a></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(Metadatum, Metadatum)] -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#Map"><span class="hs-identifier hs-var">Map</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Metadatum
+</span><a href="#local-6989586621679471790"><span class="hs-identifier hs-var">singleMetadatum</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Metadatum
+</span><a href="#local-6989586621679471790"><span class="hs-identifier hs-var">singleMetadatum</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(Metadatum, Metadatum)] -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#Map"><span class="hs-identifier hs-var">Map</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Metadatum] -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471789"><span class="hs-identifier hs-var">mDatumList</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Metadatum
+</span><a href="#local-6989586621679471790"><span class="hs-identifier hs-var">singleMetadatum</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(Metadatum, Metadatum)] -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#Map"><span class="hs-identifier hs-var">Map</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Metadatum
+</span><a href="#local-6989586621679471790"><span class="hs-identifier hs-var">singleMetadatum</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Metadatum] -&gt; Metadatum
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Metadata.html#List"><span class="hs-identifier hs-var">List</span></a></span><span> </span><span class="annot"><span class="annottext">[Metadatum]
+</span><a href="#local-6989586621679471789"><span class="hs-identifier hs-var">mDatumList</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genCoin"><span class="hs-identifier hs-type">genCoin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Range</span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-bignum-1.3-inplace/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Ledger.Coin</span></a></span><span>
+</span><span id="line-55"></span><span id="genCoin"><span class="annot"><span class="annottext">genCoin :: Range Integer -&gt; Gen Coin
+</span><a href="Test.Gen.Cardano.Api.html#genCoin"><span class="hs-identifier hs-var hs-var">genCoin</span></a></span></span><span> </span><span id="local-6989586621679471795"><span class="annot"><span class="annottext">Range Integer
+</span><a href="#local-6989586621679471795"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679471796"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679471796"><span class="hs-identifier hs-var">unCoin'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Integer -&gt; GenT Identity Integer
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="annot"><span class="annottext">Range Integer
+</span><a href="#local-6989586621679471795"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">Coin -&gt; Gen Coin
+forall a. a -&gt; GenT Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Coin -&gt; Gen Coin) -&gt; Coin -&gt; Gen Coin
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-var">Ledger.Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679471796"><span class="hs-identifier hs-var">unCoin'</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genPrice"><span class="hs-identifier hs-type">genPrice</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html#NonNegativeInterval"><span class="hs-identifier hs-type">Ledger.NonNegativeInterval</span></a></span><span>
+</span><span id="line-60"></span><span id="genPrice"><span class="annot"><span class="annottext">genPrice :: Gen NonNegativeInterval
+</span><a href="Test.Gen.Cardano.Api.html#genPrice"><span class="hs-identifier hs-var hs-var">genPrice</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679471799"><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679471799"><span class="hs-identifier hs-var">unPrice</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen Rational
+</span><a href="Test.Gen.Cardano.Api.Typed.html#genRational"><span class="hs-identifier hs-var">genRational</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Rational -&gt; Maybe NonNegativeInterval
+forall r. BoundedRational r =&gt; Rational -&gt; Maybe r
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html#boundRational"><span class="hs-identifier hs-var">Ledger.boundRational</span></a></span><span> </span><span class="annot"><span class="annottext">Rational
+</span><a href="#local-6989586621679471799"><span class="hs-identifier hs-var">unPrice</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">Maybe NonNegativeInterval
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Gen NonNegativeInterval
+forall a. String -&gt; GenT Identity a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;genPrice: genRational should give us a bounded rational&quot;</span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679471801"><span class="annot"><span class="annottext">NonNegativeInterval
+</span><a href="#local-6989586621679471801"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval -&gt; Gen NonNegativeInterval
+forall a. a -&gt; GenT Identity a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval
+</span><a href="#local-6989586621679471801"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genPrices"><span class="hs-identifier hs-type">genPrices</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier hs-type">Alonzo.Prices</span></a></span><span>
+</span><span id="line-67"></span><span id="genPrices"><span class="annot"><span class="annottext">genPrices :: Gen Prices
+</span><a href="Test.Gen.Cardano.Api.html#genPrices"><span class="hs-identifier hs-var hs-var">genPrices</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679471803"><span class="annot"><span class="annottext">NonNegativeInterval
+</span><a href="#local-6989586621679471803"><span class="hs-identifier hs-var">prMem'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen NonNegativeInterval
+</span><a href="Test.Gen.Cardano.Api.html#genPrice"><span class="hs-identifier hs-var">genPrice</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679471804"><span class="annot"><span class="annottext">NonNegativeInterval
+</span><a href="#local-6989586621679471804"><span class="hs-identifier hs-var">prSteps'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen NonNegativeInterval
+</span><a href="Test.Gen.Cardano.Api.html#genPrice"><span class="hs-identifier hs-var">genPrice</span></a></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="annottext">Prices -&gt; Gen Prices
+forall a. a -&gt; GenT Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#Prices"><span class="hs-identifier hs-type">Alonzo.Prices</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">prMem :: NonNegativeInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#prMem"><span class="hs-identifier hs-var">Alonzo.prMem</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval
+</span><a href="#local-6989586621679471803"><span class="hs-identifier hs-var">prMem'</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">prSteps :: NonNegativeInterval
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#prSteps"><span class="hs-identifier hs-var">Alonzo.prSteps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NonNegativeInterval
+</span><a href="#local-6989586621679471804"><span class="hs-identifier hs-var">prSteps'</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genExUnits"><span class="hs-identifier hs-type">genExUnits</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">Alonzo.ExUnits</span></a></span><span>
+</span><span id="line-78"></span><span id="genExUnits"><span class="annot"><span class="annottext">genExUnits :: Gen ExUnits
+</span><a href="Test.Gen.Cardano.Api.html#genExUnits"><span class="hs-identifier hs-var hs-var">genExUnits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679471809"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471809"><span class="hs-identifier hs-var">exUnitsMem'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Natural -&gt; GenT Identity Natural
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Range Natural
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679471810"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471810"><span class="hs-identifier hs-var">exUnitsSteps'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Natural -&gt; GenT Identity Natural
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Range Natural
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">ExUnits -&gt; Gen ExUnits
+forall a. a -&gt; GenT Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#ExUnits"><span class="hs-identifier hs-type">Alonzo.ExUnits</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">exUnitsMem :: Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#exUnitsMem"><span class="hs-identifier hs-var">Alonzo.exUnitsMem</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471809"><span class="hs-identifier hs-var">exUnitsMem'</span></a></span><span>
+</span><span id="line-84"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">exUnitsSteps :: Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.ExUnits.html#exUnitsSteps"><span class="hs-identifier hs-var">Alonzo.exUnitsSteps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471810"><span class="hs-identifier hs-var">exUnitsSteps'</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genCostModels"><span class="hs-identifier hs-type">genCostModels</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#CostModels"><span class="hs-identifier hs-type">Alonzo.CostModels</span></a></span><span>
+</span><span id="line-88"></span><span id="genCostModels"><span class="annot"><span class="annottext">genCostModels :: Gen CostModels
+</span><a href="Test.Gen.Cardano.Api.html#genCostModels"><span class="hs-identifier hs-var hs-var">genCostModels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679471815"><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621679471815"><span class="hs-identifier hs-var">alonzoCostModel</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">GenT Identity CostModel
+forall (m :: * -&gt; *). MonadGen m =&gt; m CostModel
+</span><a href="Test.Gen.Cardano.Api.Typed.html#genCostModel"><span class="hs-identifier hs-var">genCostModel</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><span class="annottext">Map Language CostModel -&gt; CostModels
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#mkCostModels"><span class="hs-identifier hs-var">Plutus.mkCostModels</span></a></span><span> </span><span class="annot"><span class="annottext">(Map Language CostModel -&gt; CostModels)
+-&gt; ([CostModel] -&gt; Map Language CostModel)
+-&gt; [CostModel]
+-&gt; CostModels
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[CostModel] -&gt; Map Language CostModel
+</span><a href="#local-6989586621679471817"><span class="hs-identifier hs-var">conv</span></a></span><span> </span><span class="annot"><span class="annottext">([CostModel] -&gt; CostModels)
+-&gt; GenT Identity [CostModel] -&gt; Gen CostModels
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Range Int -&gt; GenT Identity CostModel -&gt; GenT Identity [CostModel]
+forall (m :: * -&gt; *) a. MonadGen m =&gt; Range Int -&gt; m a -&gt; m [a]
+</span><span class="hs-identifier hs-var">Gen.list</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Range Int
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModel -&gt; GenT Identity CostModel
+forall a. a -&gt; GenT Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621679471815"><span class="hs-identifier hs-var">alonzoCostModel</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="#local-6989586621679471817"><span class="hs-identifier hs-type">conv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#CostModel"><span class="hs-identifier hs-type">Alonzo.CostModel</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#Language"><span class="hs-identifier hs-type">Alonzo.Language</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#CostModel"><span class="hs-identifier hs-type">Alonzo.CostModel</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span id="local-6989586621679471817"><span class="annot"><span class="annottext">conv :: [CostModel] -&gt; Map Language CostModel
+</span><a href="#local-6989586621679471817"><span class="hs-identifier hs-var hs-var">conv</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Language CostModel
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><a href="#local-6989586621679471817"><span class="hs-identifier hs-var">conv</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679471818"><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621679471818"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621679471819"><span class="annot"><span class="annottext">[CostModel]
+</span><a href="#local-6989586621679471819"><span class="hs-identifier hs-var">rest</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Language -&gt; CostModel -&gt; Map Language CostModel
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CostModel -&gt; Language
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.CostModels.html#getCostModelLanguage"><span class="hs-identifier hs-var">Alonzo.getCostModelLanguage</span></a></span><span> </span><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621679471818"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">CostModel
+</span><a href="#local-6989586621679471818"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Map Language CostModel
+-&gt; Map Language CostModel -&gt; Map Language CostModel
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[CostModel] -&gt; Map Language CostModel
+</span><a href="#local-6989586621679471817"><span class="hs-identifier hs-var">conv</span></a></span><span> </span><span class="annot"><span class="annottext">[CostModel]
+</span><a href="#local-6989586621679471819"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Test.Gen.Cardano.Api.html#genAlonzoGenesis"><span class="hs-identifier hs-type">genAlonzoGenesis</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gen</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">Alonzo.AlonzoGenesis</span></a></span><span>
+</span><span id="line-97"></span><span id="genAlonzoGenesis"><span class="annot"><span class="annottext">genAlonzoGenesis :: Gen AlonzoGenesis
+</span><a href="Test.Gen.Cardano.Api.html#genAlonzoGenesis"><span class="hs-identifier hs-var hs-var">genAlonzoGenesis</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-98"></span><span>  </span><span id="local-6989586621679471822"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679471822"><span class="hs-identifier hs-var">coinsPerUTxOWord</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Integer -&gt; Gen Coin
+</span><a href="Test.Gen.Cardano.Api.html#genCoin"><span class="hs-identifier hs-var">genCoin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Range Integer
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-comment">-- TODO: Babbage: Figure out how to deal with the asymmetric cost model JSON</span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679471823"><span class="annot"><span class="annottext">CostModels
+</span><a href="#local-6989586621679471823"><span class="hs-identifier hs-var">_costmdls'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen CostModels
+</span><a href="Test.Gen.Cardano.Api.html#genCostModels"><span class="hs-identifier hs-var">genCostModels</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679471824"><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679471824"><span class="hs-identifier hs-var">prices'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen Prices
+</span><a href="Test.Gen.Cardano.Api.html#genPrices"><span class="hs-identifier hs-var">genPrices</span></a></span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679471825"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679471825"><span class="hs-identifier hs-var">maxTxExUnits'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen ExUnits
+</span><a href="Test.Gen.Cardano.Api.html#genExUnits"><span class="hs-identifier hs-var">genExUnits</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span id="local-6989586621679471826"><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679471826"><span class="hs-identifier hs-var">maxBlockExUnits'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Gen ExUnits
+</span><a href="Test.Gen.Cardano.Api.html#genExUnits"><span class="hs-identifier hs-var">genExUnits</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span id="local-6989586621679471827"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471827"><span class="hs-identifier hs-var">maxValSize'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Natural -&gt; GenT Identity Natural
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Range Natural
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679471828"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471828"><span class="hs-identifier hs-var">collateralPercentage'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Natural -&gt; GenT Identity Natural
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Range Natural
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>  </span><span id="local-6989586621679471829"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471829"><span class="hs-identifier hs-var">maxCollateralInputs'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Range Natural -&gt; GenT Identity Natural
+forall (m :: * -&gt; *) a. (MonadGen m, Integral a) =&gt; Range a -&gt; m a
+</span><span class="hs-identifier hs-var">Gen.integral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Range Natural
+forall a. Integral a =&gt; a -&gt; a -&gt; Range a
+</span><span class="hs-identifier hs-var">Range.linear</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="annottext">AlonzoGenesis -&gt; Gen AlonzoGenesis
+forall a. a -&gt; GenT Identity a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#AlonzoGenesis"><span class="hs-identifier hs-type">Alonzo.AlonzoGenesis</span></a></span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">agCoinsPerUTxOWord :: CoinPerWord
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agCoinsPerUTxOWord"><span class="hs-identifier hs-var">Alonzo.agCoinsPerUTxOWord</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin -&gt; CoinPerWord
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.PParams.html#CoinPerWord"><span class="hs-identifier hs-var">Ledger.CoinPerWord</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679471822"><span class="hs-identifier hs-var">coinsPerUTxOWord</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">agCostModels :: CostModels
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agCostModels"><span class="hs-identifier hs-var">Alonzo.agCostModels</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CostModels
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">agPrices :: Prices
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agPrices"><span class="hs-identifier hs-var">Alonzo.agPrices</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Prices
+</span><a href="#local-6989586621679471824"><span class="hs-identifier hs-var">prices'</span></a></span><span>
+</span><span id="line-113"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">agMaxTxExUnits :: ExUnits
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agMaxTxExUnits"><span class="hs-identifier hs-var">Alonzo.agMaxTxExUnits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679471825"><span class="hs-identifier hs-var">maxTxExUnits'</span></a></span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">agMaxBlockExUnits :: ExUnits
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agMaxBlockExUnits"><span class="hs-identifier hs-var">Alonzo.agMaxBlockExUnits</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ExUnits
+</span><a href="#local-6989586621679471826"><span class="hs-identifier hs-var">maxBlockExUnits'</span></a></span><span>
+</span><span id="line-115"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">agMaxValSize :: Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agMaxValSize"><span class="hs-identifier hs-var">Alonzo.agMaxValSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471827"><span class="hs-identifier hs-var">maxValSize'</span></a></span><span>
+</span><span id="line-116"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">agCollateralPercentage :: Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agCollateralPercentage"><span class="hs-identifier hs-var">Alonzo.agCollateralPercentage</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471828"><span class="hs-identifier hs-var">collateralPercentage'</span></a></span><span>
+</span><span id="line-117"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">agMaxCollateralInputs :: Natural
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-alonzo-1.13.0.0-ee4bb4cbf765a6685d624789201e174e56395cc93348686fee704b4c095304a5/share/doc/html/src/Cardano.Ledger.Alonzo.Genesis.html#agMaxCollateralInputs"><span class="hs-identifier hs-var">Alonzo.agMaxCollateralInputs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679471829"><span class="hs-identifier hs-var">maxCollateralInputs'</span></a></span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-119"></span></pre></body></html>

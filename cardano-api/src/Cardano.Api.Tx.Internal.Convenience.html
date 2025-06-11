@@ -1,0 +1,359 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">-- | Convenience transaction construction functions</span></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Tx.Internal.Convenience</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#constructBalancedTx"><span class="hs-identifier">constructBalancedTx</span></a></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Misc</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsExistError"><span class="hs-identifier">TxInsExistError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxInsError"><span class="hs-identifier">ScriptLockedTxInsError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#notScriptLockedTxIns"><span class="hs-identifier">notScriptLockedTxIns</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#renderNotScriptLockedTxInsError"><span class="hs-identifier">renderNotScriptLockedTxInsError</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#renderTxInsExistError"><span class="hs-identifier">renderTxInsExistError</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#txInsExistInUTxO"><span class="hs-identifier">txInsExistInUTxO</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html"><span class="hs-identifier">Cardano.Api.Certificate.Internal</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyBasedEra</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Pretty.html"><span class="hs-identifier">Cardano.Api.Pretty</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html"><span class="hs-identifier">Cardano.Api.ProtocolParameters</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html"><span class="hs-identifier">Cardano.Api.Query.Internal.Type.QueryInMode</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Fee</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Sign</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html"><span class="hs-identifier">Cardano.Api.UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier">UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Credential.html"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">List</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | Construct a balanced transaction.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- See Cardano.Api.Query.Internal.Convenience.queryStateForBalancedTx for a</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- convenient way of querying the node to get the required arguements</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- for constructBalancedTx.</span><span>
+</span><span id="line-43"></span><span id="local-6989586621681177846"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#constructBalancedTx"><span class="hs-identifier hs-type">constructBalancedTx</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxBodyContent"><span class="hs-identifier hs-type">TxBodyContent</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">BuildTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#AddressInEra"><span class="hs-identifier hs-type">AddressInEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Change address</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#Word"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Override key witnesses</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Just the transaction inputs, not the entire 'UTxO'.</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.ProtocolParameters.html#LedgerProtocolParameters"><span class="hs-identifier hs-type">LedgerProtocolParameters</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177846"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#LedgerEpochInfo"><span class="hs-identifier hs-type">LedgerEpochInfo</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-slotting-0.2.0.0-1062762da5e24b3256026b7bf7ed7ea570deea61ae8ec963e4334bb658f0121b/share/doc/html/src/Cardano.Slotting.Time.html#SystemStart"><span class="hs-identifier hs-type">SystemStart</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#PoolId"><span class="hs-identifier hs-type">PoolId</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ The set of registered stake pools</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">StakeCredential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Credential.html#Credential"><span class="hs-identifier hs-type">L.Credential</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-type">L.DRepRole</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">L.Coin</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyWitnessSigningKey"><span class="hs-identifier hs-type">ShelleyWitnessSigningKey</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#TxBodyErrorAutoBalance"><span class="hs-identifier hs-type">TxBodyErrorAutoBalance</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177846"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier hs-type">Tx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177846"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-62"></span><span id="constructBalancedTx"><span class="annot"><span class="annottext">constructBalancedTx :: forall era.
+ShelleyBasedEra era
+-&gt; TxBodyContent BuildTx era
+-&gt; AddressInEra era
+-&gt; Maybe Word
+-&gt; UTxO era
+-&gt; LedgerProtocolParameters era
+-&gt; LedgerEpochInfo
+-&gt; SystemStart
+-&gt; Set PoolId
+-&gt; Map StakeCredential Coin
+-&gt; Map (Credential 'DRepRole) Coin
+-&gt; [ShelleyWitnessSigningKey]
+-&gt; Either (TxBodyErrorAutoBalance era) (Tx era)
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#constructBalancedTx"><span class="hs-identifier hs-var hs-var">constructBalancedTx</span></a></span></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621681177945"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681177945"><span class="hs-identifier hs-var">sbe</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621681177946"><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681177946"><span class="hs-identifier hs-var">txbodcontent</span></a></span></span><span>
+</span><span id="line-65"></span><span>  </span><span id="local-6989586621681177947"><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621681177947"><span class="hs-identifier hs-var">changeAddr</span></a></span></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621681177948"><span class="annot"><span class="annottext">Maybe Word
+</span><a href="#local-6989586621681177948"><span class="hs-identifier hs-var">mOverrideWits</span></a></span></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621681177949"><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621681177949"><span class="hs-identifier hs-var">utxo</span></a></span></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621681177950"><span class="annot"><span class="annottext">LedgerProtocolParameters era
+</span><a href="#local-6989586621681177950"><span class="hs-identifier hs-var">lpp</span></a></span></span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621681177951"><span class="annot"><span class="annottext">LedgerEpochInfo
+</span><a href="#local-6989586621681177951"><span class="hs-identifier hs-var">ledgerEpochInfo</span></a></span></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621681177952"><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621681177952"><span class="hs-identifier hs-var">systemStart</span></a></span></span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621681177953"><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621681177953"><span class="hs-identifier hs-var">stakePools</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621681177954"><span class="annot"><span class="annottext">Map StakeCredential Coin
+</span><a href="#local-6989586621681177954"><span class="hs-identifier hs-var">stakeDelegDeposits</span></a></span></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621681177955"><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Coin
+</span><a href="#local-6989586621681177955"><span class="hs-identifier hs-var">drepDelegDeposits</span></a></span></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621681177956"><span class="annot"><span class="annottext">[ShelleyWitnessSigningKey]
+</span><a href="#local-6989586621681177956"><span class="hs-identifier hs-var">shelleyWitSigningKeys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#BalancedTxBody"><span class="hs-identifier hs-type">BalancedTxBody</span></a></span><span> </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681177958"><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621681177958"><span class="hs-identifier hs-var">txbody</span></a></span></span><span> </span><span id="local-6989586621681177959"><span class="annot"><span class="annottext">TxOut CtxTx era
+</span><a href="#local-6989586621681177959"><span class="hs-identifier hs-var">_txBalanceOutput</span></a></span></span><span> </span><span id="local-6989586621681177960"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621681177960"><span class="hs-identifier hs-var">_fee</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; SystemStart
+-&gt; LedgerEpochInfo
+-&gt; LedgerProtocolParameters era
+-&gt; Set PoolId
+-&gt; Map StakeCredential Coin
+-&gt; Map (Credential 'DRepRole) Coin
+-&gt; UTxO era
+-&gt; TxBodyContent BuildTx era
+-&gt; AddressInEra era
+-&gt; Maybe Word
+-&gt; Either (TxBodyErrorAutoBalance era) (BalancedTxBody era)
+forall era.
+HasCallStack =&gt;
+ShelleyBasedEra era
+-&gt; SystemStart
+-&gt; LedgerEpochInfo
+-&gt; LedgerProtocolParameters era
+-&gt; Set PoolId
+-&gt; Map StakeCredential Coin
+-&gt; Map (Credential 'DRepRole) Coin
+-&gt; UTxO era
+-&gt; TxBodyContent BuildTx era
+-&gt; AddressInEra era
+-&gt; Maybe Word
+-&gt; Either (TxBodyErrorAutoBalance era) (BalancedTxBody era)
+</span><a href="Cardano.Api.Tx.Internal.Fee.html#makeTransactionBodyAutoBalance"><span class="hs-identifier hs-var">makeTransactionBodyAutoBalance</span></a></span><span>
+</span><span id="line-77"></span><span>        </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681177945"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-78"></span><span>        </span><span class="annot"><span class="annottext">SystemStart
+</span><a href="#local-6989586621681177952"><span class="hs-identifier hs-var">systemStart</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span class="annot"><span class="annottext">LedgerEpochInfo
+</span><a href="#local-6989586621681177951"><span class="hs-identifier hs-var">ledgerEpochInfo</span></a></span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">LedgerProtocolParameters era
+</span><a href="#local-6989586621681177950"><span class="hs-identifier hs-var">lpp</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">Set PoolId
+</span><a href="#local-6989586621681177953"><span class="hs-identifier hs-var">stakePools</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">Map StakeCredential Coin
+</span><a href="#local-6989586621681177954"><span class="hs-identifier hs-var">stakeDelegDeposits</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><span class="annottext">Map (Credential 'DRepRole) Coin
+</span><a href="#local-6989586621681177955"><span class="hs-identifier hs-var">drepDelegDeposits</span></a></span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">UTxO era
+</span><a href="#local-6989586621681177949"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">TxBodyContent BuildTx era
+</span><a href="#local-6989586621681177946"><span class="hs-identifier hs-var">txbodcontent</span></a></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621681177947"><span class="hs-identifier hs-var">changeAddr</span></a></span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><span class="annottext">Maybe Word
+</span><a href="#local-6989586621681177948"><span class="hs-identifier hs-var">mOverrideWits</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681177962"><span class="annot"><span class="annottext">keyWits :: [KeyWitness era]
+</span><a href="#local-6989586621681177962"><span class="hs-identifier hs-var hs-var">keyWits</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ShelleyWitnessSigningKey -&gt; KeyWitness era)
+-&gt; [ShelleyWitnessSigningKey] -&gt; [KeyWitness era]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; TxBody era -&gt; ShelleyWitnessSigningKey -&gt; KeyWitness era
+forall era.
+ShelleyBasedEra era
+-&gt; TxBody era -&gt; ShelleyWitnessSigningKey -&gt; KeyWitness era
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleyKeyWitness"><span class="hs-identifier hs-var">makeShelleyKeyWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681177945"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621681177958"><span class="hs-identifier hs-var">txbody</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ShelleyWitnessSigningKey]
+</span><a href="#local-6989586621681177956"><span class="hs-identifier hs-var">shelleyWitSigningKeys</span></a></span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">Tx era -&gt; Either (TxBodyErrorAutoBalance era) (Tx era)
+forall a. a -&gt; Either (TxBodyErrorAutoBalance era) a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Tx era -&gt; Either (TxBodyErrorAutoBalance era) (Tx era))
+-&gt; Tx era -&gt; Either (TxBodyErrorAutoBalance era) (Tx era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[KeyWitness era] -&gt; TxBody era -&gt; Tx era
+forall era. [KeyWitness era] -&gt; TxBody era -&gt; Tx era
+</span><a href="Cardano.Api.Tx.Internal.Sign.html#makeSignedTransaction"><span class="hs-identifier hs-var">makeSignedTransaction</span></a></span><span> </span><span class="annot"><span class="annottext">[KeyWitness era]
+</span><a href="#local-6989586621681177962"><span class="hs-identifier hs-var">keyWits</span></a></span><span> </span><span class="annot"><span class="annottext">TxBody era
+</span><a href="#local-6989586621681177958"><span class="hs-identifier hs-var">txbody</span></a></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">data</span><span> </span><span id="TxInsExistError"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsExistError"><span class="hs-identifier hs-var">TxInsExistError</span></a></span></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="TxInsDoNotExist"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsDoNotExist"><span class="hs-identifier hs-var">TxInsDoNotExist</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EmptyUTxO"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#EmptyUTxO"><span class="hs-identifier hs-var">EmptyUTxO</span></a></span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#renderTxInsExistError"><span class="hs-identifier hs-type">renderTxInsExistError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsExistError"><span class="hs-identifier hs-type">TxInsExistError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-97"></span><span id="renderTxInsExistError"><span class="annot"><span class="annottext">renderTxInsExistError :: TxInsExistError -&gt; Text
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#renderTxInsExistError"><span class="hs-identifier hs-var hs-var">renderTxInsExistError</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxInsExistError
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#EmptyUTxO"><span class="hs-identifier hs-var">EmptyUTxO</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The UTxO is empty&quot;</span></span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#renderTxInsExistError"><span class="hs-identifier hs-var">renderTxInsExistError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsDoNotExist"><span class="hs-identifier hs-type">TxInsDoNotExist</span></a></span><span> </span><span id="local-6989586621681177967"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177967"><span class="hs-identifier hs-var">txins</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The following tx input(s) were not present in the UTxO: &quot;</span></span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">Text.intercalate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; Text
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Show.html#singleton"><span class="hs-identifier hs-var">Text.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'\n'</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxIn -&gt; Text) -&gt; [TxIn] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Text
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier hs-var">renderTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177967"><span class="hs-identifier hs-var">txins</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621681177887"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#txInsExistInUTxO"><span class="hs-identifier hs-type">txInsExistInUTxO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177887"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsExistError"><span class="hs-identifier hs-type">TxInsExistError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-105"></span><span id="txInsExistInUTxO"><span class="annot"><span class="annottext">txInsExistInUTxO :: forall era. [TxIn] -&gt; UTxO era -&gt; Either TxInsExistError ()
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#txInsExistInUTxO"><span class="hs-identifier hs-var hs-var">txInsExistInUTxO</span></a></span></span><span> </span><span id="local-6989586621681177981"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177981"><span class="hs-identifier hs-var">ins</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621681177982"><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era)
+</span><a href="#local-6989586621681177982"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era) -&gt; Bool
+forall a. Map TxIn a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era)
+</span><a href="#local-6989586621681177982"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxInsExistError -&gt; Either TxInsExistError ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TxInsExistError
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#EmptyUTxO"><span class="hs-identifier hs-var">EmptyUTxO</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681177984"><span class="annot"><span class="annottext">utxoIns :: [TxIn]
+</span><a href="#local-6989586621681177984"><span class="hs-identifier hs-var hs-var">utxoIns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era) -&gt; [TxIn]
+forall k a. Map k a -&gt; [k]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#keys"><span class="hs-identifier hs-var">Map.keys</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era)
+</span><a href="#local-6989586621681177982"><span class="hs-identifier hs-var">utxo</span></a></span><span>
+</span><span id="line-109"></span><span>          </span><span id="local-6989586621681177988"><span class="annot"><span class="annottext">occursInUtxo :: [TxIn]
+</span><a href="#local-6989586621681177988"><span class="hs-identifier hs-var hs-var">occursInUtxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681177989"><span class="hs-identifier hs-var">txin</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621681177989"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681177989"><span class="hs-identifier hs-var">txin</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177981"><span class="hs-identifier hs-var">ins</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681177989"><span class="hs-identifier hs-var">txin</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; [TxIn] -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177984"><span class="hs-identifier hs-var">utxoIns</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[TxIn] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177988"><span class="hs-identifier hs-var">occursInUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn] -&gt; Int
+forall a. [a] -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#length"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177981"><span class="hs-identifier hs-var">ins</span></a></span><span>
+</span><span id="line-111"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either TxInsExistError ()
+forall a. a -&gt; Either TxInsExistError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">TxInsExistError -&gt; Either TxInsExistError ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(TxInsExistError -&gt; Either TxInsExistError ())
+-&gt; ([TxIn] -&gt; TxInsExistError)
+-&gt; [TxIn]
+-&gt; Either TxInsExistError ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn] -&gt; TxInsExistError
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsDoNotExist"><span class="hs-identifier hs-var">TxInsDoNotExist</span></a></span><span> </span><span class="annot"><span class="annottext">([TxIn] -&gt; Either TxInsExistError ())
+-&gt; [TxIn] -&gt; Either TxInsExistError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177981"><span class="hs-identifier hs-var">ins</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn] -&gt; [TxIn] -&gt; [TxIn]
+forall a. Eq a =&gt; [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.OldList.html#%5C%5C"><span class="hs-operator hs-var">List.\\</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177988"><span class="hs-identifier hs-var">occursInUtxo</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">newtype</span><span> </span><span id="ScriptLockedTxInsError"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxInsError"><span class="hs-identifier hs-var">ScriptLockedTxInsError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ScriptLockedTxIns"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxIns"><span class="hs-identifier hs-var">ScriptLockedTxIns</span></a></span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#renderNotScriptLockedTxInsError"><span class="hs-identifier hs-type">renderNotScriptLockedTxInsError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxInsError"><span class="hs-identifier hs-type">ScriptLockedTxInsError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-117"></span><span id="renderNotScriptLockedTxInsError"><span class="annot"><span class="annottext">renderNotScriptLockedTxInsError :: ScriptLockedTxInsError -&gt; Text
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#renderNotScriptLockedTxInsError"><span class="hs-identifier hs-var hs-var">renderNotScriptLockedTxInsError</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxIns"><span class="hs-identifier hs-type">ScriptLockedTxIns</span></a></span><span> </span><span id="local-6989586621681177995"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177995"><span class="hs-identifier hs-var">txins</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;The followings tx inputs were expected to be key witnessed but are actually script witnessed: &quot;</span></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Cardano.Api.Pretty.html#textShow"><span class="hs-identifier hs-var">textShow</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TxIn -&gt; Text) -&gt; [TxIn] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; Text
+</span><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier hs-var">renderTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177995"><span class="hs-identifier hs-var">txins</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span id="local-6989586621681177906"><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#notScriptLockedTxIns"><span class="hs-identifier hs-type">notScriptLockedTxIns</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681177906"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxInsError"><span class="hs-identifier hs-type">ScriptLockedTxInsError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-122"></span><span id="notScriptLockedTxIns"><span class="annot"><span class="annottext">notScriptLockedTxIns :: forall era. [TxIn] -&gt; UTxO era -&gt; Either ScriptLockedTxInsError ()
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#notScriptLockedTxIns"><span class="hs-identifier hs-var hs-var">notScriptLockedTxIns</span></a></span></span><span> </span><span id="local-6989586621681177999"><span class="annot"><span class="annottext">[TxIn]
+</span><a href="#local-6989586621681177999"><span class="hs-identifier hs-var">collTxIns</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier hs-type">UTxO</span></a></span><span> </span><span id="local-6989586621681178000"><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era)
+</span><a href="#local-6989586621681178000"><span class="hs-identifier hs-var">utxo</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681178005"><span class="annot"><span class="annottext">onlyCollateralUTxOs :: Map TxIn (TxOut CtxUTxO era)
+</span><a href="#local-6989586621681178005"><span class="hs-identifier hs-var hs-var">onlyCollateralUTxOs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era)
+-&gt; Set TxIn -&gt; Map TxIn (TxOut CtxUTxO era)
+forall k a. Ord k =&gt; Map k a -&gt; Set k -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#restrictKeys"><span class="hs-identifier hs-var">Map.restrictKeys</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era)
+</span><a href="#local-6989586621681178000"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="annot"><span class="annottext">(Set TxIn -&gt; Map TxIn (TxOut CtxUTxO era))
+-&gt; Set TxIn -&gt; Map TxIn (TxOut CtxUTxO era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)] -&gt; Set TxIn
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">[Item (Set TxIn)]
+[TxIn]
+</span><a href="#local-6989586621681177999"><span class="hs-identifier hs-var">collTxIns</span></a></span><span>
+</span><span id="line-124"></span><span>      </span><span id="local-6989586621681178007"><span class="annot"><span class="annottext">scriptLockedTxIns :: [(TxIn, TxOut CtxUTxO era)]
+</span><a href="#local-6989586621681178007"><span class="hs-identifier hs-var hs-var">scriptLockedTxIns</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>        </span><span class="annot"><span class="annottext">((TxIn, TxOut CtxUTxO era) -&gt; Bool)
+-&gt; [(TxIn, TxOut CtxUTxO era)] -&gt; [(TxIn, TxOut CtxUTxO era)]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span id="local-6989586621681178009"><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621681178009"><span class="hs-identifier hs-var">aInEra</span></a></span></span><span> </span><span class="annot"><span class="annottext">TxOutValue era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">TxOutDatum CtxUTxO era
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ReferenceScript era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; Bool -&gt; Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra era -&gt; Bool
+forall era. AddressInEra era -&gt; Bool
+</span><a href="Cardano.Api.Address.html#isKeyAddress"><span class="hs-identifier hs-var">isKeyAddress</span></a></span><span> </span><span class="annot"><span class="annottext">AddressInEra era
+</span><a href="#local-6989586621681178009"><span class="hs-identifier hs-var">aInEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([(TxIn, TxOut CtxUTxO era)] -&gt; [(TxIn, TxOut CtxUTxO era)])
+-&gt; [(TxIn, TxOut CtxUTxO era)] -&gt; [(TxIn, TxOut CtxUTxO era)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era) -&gt; [(TxIn, TxOut CtxUTxO era)]
+forall k a. Map k a -&gt; [(k, a)]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#assocs"><span class="hs-identifier hs-var">Map.assocs</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOut CtxUTxO era)
+</span><a href="#local-6989586621681178005"><span class="hs-identifier hs-var">onlyCollateralUTxOs</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[(TxIn, TxOut CtxUTxO era)] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[(TxIn, TxOut CtxUTxO era)]
+</span><a href="#local-6989586621681178007"><span class="hs-identifier hs-var">scriptLockedTxIns</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either ScriptLockedTxInsError ()
+forall a. a -&gt; Either ScriptLockedTxInsError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ScriptLockedTxInsError -&gt; Either ScriptLockedTxInsError ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptLockedTxInsError -&gt; Either ScriptLockedTxInsError ())
+-&gt; ([TxIn] -&gt; ScriptLockedTxInsError)
+-&gt; [TxIn]
+-&gt; Either ScriptLockedTxInsError ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[TxIn] -&gt; ScriptLockedTxInsError
+</span><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxIns"><span class="hs-identifier hs-var">ScriptLockedTxIns</span></a></span><span> </span><span class="annot"><span class="annottext">([TxIn] -&gt; Either ScriptLockedTxInsError ())
+-&gt; [TxIn] -&gt; Either ScriptLockedTxInsError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((TxIn, TxOut CtxUTxO era) -&gt; TxIn)
+-&gt; [(TxIn, TxOut CtxUTxO era)] -&gt; [TxIn]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(TxIn, TxOut CtxUTxO era) -&gt; TxIn
+forall a b. (a, b) -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Tuple.html#fst"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">[(TxIn, TxOut CtxUTxO era)]
+</span><a href="#local-6989586621681178007"><span class="hs-identifier hs-var">scriptLockedTxIns</span></a></span><span>
+</span><span id="line-129"></span></pre></body></html>

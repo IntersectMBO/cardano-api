@@ -1,0 +1,268 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralisedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE KindSignatures #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.IO.Internal.Base</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#FileDirection"><span class="hs-identifier">FileDirection</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier">File</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#Socket"><span class="hs-identifier">Socket</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#SocketPath"><span class="hs-identifier">SocketPath</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#VRFPrivateKeyFilePermissionError"><span class="hs-identifier">VRFPrivateKeyFilePermissionError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.String.html"><span class="hs-identifier">Data.String</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.String.html#IsString"><span class="hs-identifier">IsString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">data</span><span> </span><span id="FileDirection"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#FileDirection"><span class="hs-identifier hs-var">FileDirection</span></a></span></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Indicate the file is to be used for reading.</span></span><span>
+</span><span id="line-21"></span><span>    </span><span id="In"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#In"><span class="hs-identifier hs-var">In</span></a></span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Indicate the file is to be used for writing.</span></span><span>
+</span><span id="line-23"></span><span>    </span><span id="Out"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#Out"><span class="hs-identifier hs-var">Out</span></a></span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Indicate the file is to be used for both reading and writing.</span></span><span>
+</span><span id="line-25"></span><span>    </span><span id="InOut"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#InOut"><span class="hs-identifier hs-var">InOut</span></a></span></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | A file path with additional type information to indicate what the file is meant to</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- contain and whether it is to be used for reading or writing.</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">newtype</span><span> </span><span id="File"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-var">File</span></a></span></span><span> </span><span id="local-6989586621681100926"><span class="annot"><a href="#local-6989586621681100926"><span class="hs-identifier hs-type">content</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681100927"><span class="annot"><a href="#local-6989586621681100927"><span class="hs-identifier hs-type">direction</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#FileDirection"><span class="hs-identifier hs-type">FileDirection</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="File"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-var">File</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unFile"><span class="annot"><span class="annottext">forall content (direction :: FileDirection).
+File content direction -&gt; FilePath
+</span><a href="Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var hs-var">unFile</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681100993"><span id="local-6989586621681100999"><span class="annot"><span class="annottext">File content direction -&gt; File content direction -&gt; Bool
+(File content direction -&gt; File content direction -&gt; Bool)
+-&gt; (File content direction -&gt; File content direction -&gt; Bool)
+-&gt; Eq (File content direction)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+$c== :: forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+== :: File content direction -&gt; File content direction -&gt; Bool
+$c/= :: forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+/= :: File content direction -&gt; File content direction -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681101009"><span id="local-6989586621681101015"><span id="local-6989586621681101020"><span id="local-6989586621681101025"><span id="local-6989586621681101030"><span id="local-6989586621681101035"><span id="local-6989586621681101040"><span class="annot"><span class="annottext">Eq (File content direction)
+Eq (File content direction) =&gt;
+(File content direction -&gt; File content direction -&gt; Ordering)
+-&gt; (File content direction -&gt; File content direction -&gt; Bool)
+-&gt; (File content direction -&gt; File content direction -&gt; Bool)
+-&gt; (File content direction -&gt; File content direction -&gt; Bool)
+-&gt; (File content direction -&gt; File content direction -&gt; Bool)
+-&gt; (File content direction
+    -&gt; File content direction -&gt; File content direction)
+-&gt; (File content direction
+    -&gt; File content direction -&gt; File content direction)
+-&gt; Ord (File content direction)
+File content direction -&gt; File content direction -&gt; Bool
+File content direction -&gt; File content direction -&gt; Ordering
+File content direction
+-&gt; File content direction -&gt; File content direction
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall content (direction :: FileDirection).
+Eq (File content direction)
+forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Ordering
+forall content (direction :: FileDirection).
+File content direction
+-&gt; File content direction -&gt; File content direction
+$ccompare :: forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Ordering
+compare :: File content direction -&gt; File content direction -&gt; Ordering
+$c&lt; :: forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+&lt; :: File content direction -&gt; File content direction -&gt; Bool
+$c&lt;= :: forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+&lt;= :: File content direction -&gt; File content direction -&gt; Bool
+$c&gt; :: forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+&gt; :: File content direction -&gt; File content direction -&gt; Bool
+$c&gt;= :: forall content (direction :: FileDirection).
+File content direction -&gt; File content direction -&gt; Bool
+&gt;= :: File content direction -&gt; File content direction -&gt; Bool
+$cmax :: forall content (direction :: FileDirection).
+File content direction
+-&gt; File content direction -&gt; File content direction
+max :: File content direction
+-&gt; File content direction -&gt; File content direction
+$cmin :: forall content (direction :: FileDirection).
+File content direction
+-&gt; File content direction -&gt; File content direction
+min :: File content direction
+-&gt; File content direction -&gt; File content direction
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681101048"><span id="local-6989586621681101054"><span id="local-6989586621681101059"><span id="local-6989586621681101064"><span class="annot"><span class="annottext">ReadPrec [File content direction]
+ReadPrec (File content direction)
+Int -&gt; ReadS (File content direction)
+ReadS [File content direction]
+(Int -&gt; ReadS (File content direction))
+-&gt; ReadS [File content direction]
+-&gt; ReadPrec (File content direction)
+-&gt; ReadPrec [File content direction]
+-&gt; Read (File content direction)
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+forall content (direction :: FileDirection).
+ReadPrec [File content direction]
+forall content (direction :: FileDirection).
+ReadPrec (File content direction)
+forall content (direction :: FileDirection).
+Int -&gt; ReadS (File content direction)
+forall content (direction :: FileDirection).
+ReadS [File content direction]
+$creadsPrec :: forall content (direction :: FileDirection).
+Int -&gt; ReadS (File content direction)
+readsPrec :: Int -&gt; ReadS (File content direction)
+$creadList :: forall content (direction :: FileDirection).
+ReadS [File content direction]
+readList :: ReadS [File content direction]
+$creadPrec :: forall content (direction :: FileDirection).
+ReadPrec (File content direction)
+readPrec :: ReadPrec (File content direction)
+$creadListPrec :: forall content (direction :: FileDirection).
+ReadPrec [File content direction]
+readListPrec :: ReadPrec [File content direction]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Read.html#Read"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681101072"><span id="local-6989586621681101078"><span id="local-6989586621681101083"><span class="annot"><span class="annottext">Int -&gt; File content direction -&gt; FilePath -&gt; FilePath
+[File content direction] -&gt; FilePath -&gt; FilePath
+File content direction -&gt; FilePath
+(Int -&gt; File content direction -&gt; FilePath -&gt; FilePath)
+-&gt; (File content direction -&gt; FilePath)
+-&gt; ([File content direction] -&gt; FilePath -&gt; FilePath)
+-&gt; Show (File content direction)
+forall a.
+(Int -&gt; a -&gt; FilePath -&gt; FilePath)
+-&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; FilePath -&gt; FilePath) -&gt; Show a
+forall content (direction :: FileDirection).
+Int -&gt; File content direction -&gt; FilePath -&gt; FilePath
+forall content (direction :: FileDirection).
+[File content direction] -&gt; FilePath -&gt; FilePath
+forall content (direction :: FileDirection).
+File content direction -&gt; FilePath
+$cshowsPrec :: forall content (direction :: FileDirection).
+Int -&gt; File content direction -&gt; FilePath -&gt; FilePath
+showsPrec :: Int -&gt; File content direction -&gt; FilePath -&gt; FilePath
+$cshow :: forall content (direction :: FileDirection).
+File content direction -&gt; FilePath
+show :: File content direction -&gt; FilePath
+$cshowList :: forall content (direction :: FileDirection).
+[File content direction] -&gt; FilePath -&gt; FilePath
+showList :: [File content direction] -&gt; FilePath -&gt; FilePath
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681101091"><span class="annot"><span class="annottext">FilePath -&gt; File content direction
+(FilePath -&gt; File content direction)
+-&gt; IsString (File content direction)
+forall a. (FilePath -&gt; a) -&gt; IsString a
+forall content (direction :: FileDirection).
+FilePath -&gt; File content direction
+$cfromString :: forall content (direction :: FileDirection).
+FilePath -&gt; File content direction
+fromString :: FilePath -&gt; File content direction
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.String.html#IsString"><span class="hs-identifier hs-var hs-var hs-var hs-var">IsString</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681101099"><span id="local-6989586621681101105"><span id="local-6989586621681101110"><span class="annot"><span class="annottext">Maybe (File content direction)
+Value -&gt; Parser [File content direction]
+Value -&gt; Parser (File content direction)
+(Value -&gt; Parser (File content direction))
+-&gt; (Value -&gt; Parser [File content direction])
+-&gt; Maybe (File content direction)
+-&gt; FromJSON (File content direction)
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+forall content (direction :: FileDirection).
+Maybe (File content direction)
+forall content (direction :: FileDirection).
+Value -&gt; Parser [File content direction]
+forall content (direction :: FileDirection).
+Value -&gt; Parser (File content direction)
+$cparseJSON :: forall content (direction :: FileDirection).
+Value -&gt; Parser (File content direction)
+parseJSON :: Value -&gt; Parser (File content direction)
+$cparseJSONList :: forall content (direction :: FileDirection).
+Value -&gt; Parser [File content direction]
+parseJSONList :: Value -&gt; Parser [File content direction]
+$comittedField :: forall content (direction :: FileDirection).
+Maybe (File content direction)
+omittedField :: Maybe (File content direction)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681101118"><span id="local-6989586621681101124"><span id="local-6989586621681101129"><span id="local-6989586621681101134"><span id="local-6989586621681101139"><span class="annot"><span class="annottext">[File content direction] -&gt; Value
+[File content direction] -&gt; Encoding
+File content direction -&gt; Bool
+File content direction -&gt; Value
+File content direction -&gt; Encoding
+(File content direction -&gt; Value)
+-&gt; (File content direction -&gt; Encoding)
+-&gt; ([File content direction] -&gt; Value)
+-&gt; ([File content direction] -&gt; Encoding)
+-&gt; (File content direction -&gt; Bool)
+-&gt; ToJSON (File content direction)
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+forall content (direction :: FileDirection).
+[File content direction] -&gt; Value
+forall content (direction :: FileDirection).
+[File content direction] -&gt; Encoding
+forall content (direction :: FileDirection).
+File content direction -&gt; Bool
+forall content (direction :: FileDirection).
+File content direction -&gt; Value
+forall content (direction :: FileDirection).
+File content direction -&gt; Encoding
+$ctoJSON :: forall content (direction :: FileDirection).
+File content direction -&gt; Value
+toJSON :: File content direction -&gt; Value
+$ctoEncoding :: forall content (direction :: FileDirection).
+File content direction -&gt; Encoding
+toEncoding :: File content direction -&gt; Encoding
+$ctoJSONList :: forall content (direction :: FileDirection).
+[File content direction] -&gt; Value
+toJSONList :: [File content direction] -&gt; Value
+$ctoEncodingList :: forall content (direction :: FileDirection).
+[File content direction] -&gt; Encoding
+toEncodingList :: [File content direction] -&gt; Encoding
+$comitField :: forall content (direction :: FileDirection).
+File content direction -&gt; Bool
+omitField :: File content direction -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">data</span><span> </span><span id="Socket"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#Socket"><span class="hs-identifier hs-var">Socket</span></a></span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">type</span><span> </span><span id="SocketPath"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#SocketPath"><span class="hs-identifier hs-var">SocketPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#Socket"><span class="hs-identifier hs-type">Socket</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#InOut"><span class="hs-identifier hs-type">InOut</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">data</span><span> </span><span id="VRFPrivateKeyFilePermissionError"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#VRFPrivateKeyFilePermissionError"><span class="hs-identifier hs-var">VRFPrivateKeyFilePermissionError</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="OtherPermissionsExist"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#OtherPermissionsExist"><span class="hs-identifier hs-var">OtherPermissionsExist</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GroupPermissionsExist"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#GroupPermissionsExist"><span class="hs-identifier hs-var">GroupPermissionsExist</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenericPermissionsExist"><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#GenericPermissionsExist"><span class="hs-identifier hs-var">GenericPermissionsExist</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681101150"><span id="local-6989586621681101160"><span id="local-6989586621681101164"><span class="annot"><span class="annottext">Int -&gt; VRFPrivateKeyFilePermissionError -&gt; FilePath -&gt; FilePath
+[VRFPrivateKeyFilePermissionError] -&gt; FilePath -&gt; FilePath
+VRFPrivateKeyFilePermissionError -&gt; FilePath
+(Int -&gt; VRFPrivateKeyFilePermissionError -&gt; FilePath -&gt; FilePath)
+-&gt; (VRFPrivateKeyFilePermissionError -&gt; FilePath)
+-&gt; ([VRFPrivateKeyFilePermissionError] -&gt; FilePath -&gt; FilePath)
+-&gt; Show VRFPrivateKeyFilePermissionError
+forall a.
+(Int -&gt; a -&gt; FilePath -&gt; FilePath)
+-&gt; (a -&gt; FilePath) -&gt; ([a] -&gt; FilePath -&gt; FilePath) -&gt; Show a
+$cshowsPrec :: Int -&gt; VRFPrivateKeyFilePermissionError -&gt; FilePath -&gt; FilePath
+showsPrec :: Int -&gt; VRFPrivateKeyFilePermissionError -&gt; FilePath -&gt; FilePath
+$cshow :: VRFPrivateKeyFilePermissionError -&gt; FilePath
+show :: VRFPrivateKeyFilePermissionError -&gt; FilePath
+$cshowList :: [VRFPrivateKeyFilePermissionError] -&gt; FilePath -&gt; FilePath
+showList :: [VRFPrivateKeyFilePermissionError] -&gt; FilePath -&gt; FilePath
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-43"></span></pre></body></html>

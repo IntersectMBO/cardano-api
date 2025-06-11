@@ -1,0 +1,191 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Query.Internal.Type.DebugLedgerState</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier">DebugLedgerState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#toDebugLedgerStatePair"><span class="hs-identifier">toDebugLedgerStatePair</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyBasedEra</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Internal.Orphans.html"><span class="hs-identifier">Cardano.Api.Internal.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.html"><span class="hs-identifier">Cardano.Binary</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-binary-1.6.0.0-4db43560ca09da1e7ccc422c471dcbb90e29e38fe00a11350deec1914b5b3436/share/doc/html/src/Cardano.Ledger.Binary.Plain.html"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plain</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.API.html"><span class="hs-identifier">Cardano.Ledger.Shelley.API</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Shelley</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">object</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.=)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">newtype</span><span> </span><span id="DebugLedgerState"><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier hs-var">DebugLedgerState</span></a></span></span><span> </span><span id="local-6989586621681116038"><span class="annot"><a href="#local-6989586621681116038"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DebugLedgerState"><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier hs-var">DebugLedgerState</span></a></span></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unDebugLedgerState"><span class="annot"><span class="annottext">forall era.
+DebugLedgerState era -&gt; NewEpochState (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#unDebugLedgerState"><span class="hs-identifier hs-var hs-var">unDebugLedgerState</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">Shelley.NewEpochState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116038"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681116056"><span id="local-6989586621681116185"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116056"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier hs-type">DebugLedgerState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116056"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>  </span><span id="local-6989586621681116195"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (DebugLedgerState era)
+</span><a href="#local-6989586621681116195"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Decoder s (DebugLedgerState era))
+-&gt; Decoder s (DebugLedgerState era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681116056"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt;
+  Decoder s (DebugLedgerState era))
+ -&gt; Decoder s (DebugLedgerState era))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Decoder s (DebugLedgerState era))
+-&gt; Decoder s (DebugLedgerState era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-28"></span><span>      </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era) -&gt; DebugLedgerState era
+forall era.
+NewEpochState (ShelleyLedgerEra era) -&gt; DebugLedgerState era
+</span><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier hs-var">DebugLedgerState</span></a></span><span>
+</span><span id="line-29"></span><span>        </span><span class="annot"><span class="annottext">(NewEpochState (ShelleyLedgerEra era) -&gt; DebugLedgerState era)
+-&gt; Decoder s (NewEpochState (ShelleyLedgerEra era))
+-&gt; Decoder s (DebugLedgerState era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681116218"><span class="annot"><span class="annottext">Decoder s (NewEpochState (ShelleyLedgerEra era))
+forall {s}. Decoder s (NewEpochState (ShelleyLedgerEra era))
+forall a s. FromCBOR a =&gt; Decoder s a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var">fromCBOR</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Plain.Decoder</span></span><span> </span><span class="annot"><a href="#local-6989586621681116218"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#NewEpochState"><span class="hs-identifier hs-type">Shelley.NewEpochState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116056"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681116139"><span id="local-6989586621681116225"><span id="local-6989586621681116229"><span id="local-6989586621681116232"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116139"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier hs-type">DebugLedgerState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116139"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621681116242"><span class="annot"><span class="annottext">toJSON :: DebugLedgerState era -&gt; Value
+</span><a href="#local-6989586621681116242"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681116248"><span class="annot"><span class="annottext">sbe :: ShelleyBasedEra era
+</span><a href="#local-6989586621681116248"><span class="hs-identifier hs-var hs-var">sbe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681116139"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-34"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="annot"><span class="annottext">([Pair] -&gt; Value)
+-&gt; (DebugLedgerState era -&gt; [Pair])
+-&gt; DebugLedgerState era
+-&gt; Value
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; DebugLedgerState era -&gt; [Pair]
+forall e a era.
+KeyValue e a =&gt;
+ShelleyBasedEra era -&gt; DebugLedgerState era -&gt; [a]
+</span><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#toDebugLedgerStatePair"><span class="hs-identifier hs-var">toDebugLedgerStatePair</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681116248"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621681116254"><span class="annot"><span class="annottext">toEncoding :: DebugLedgerState era -&gt; Encoding
+</span><a href="#local-6989586621681116254"><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681116260"><span class="annot"><span class="annottext">sbe :: ShelleyBasedEra era
+</span><a href="#local-6989586621681116260"><span class="hs-identifier hs-var hs-var">sbe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681116139"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-37"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Series -&gt; Encoding
+</span><span class="hs-identifier hs-var">Aeson.pairs</span></span><span> </span><span class="annot"><span class="annottext">(Series -&gt; Encoding)
+-&gt; (DebugLedgerState era -&gt; Series)
+-&gt; DebugLedgerState era
+-&gt; Encoding
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Series] -&gt; Series
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">([Series] -&gt; Series)
+-&gt; (DebugLedgerState era -&gt; [Series])
+-&gt; DebugLedgerState era
+-&gt; Series
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; DebugLedgerState era -&gt; [Series]
+forall e a era.
+KeyValue e a =&gt;
+ShelleyBasedEra era -&gt; DebugLedgerState era -&gt; [a]
+</span><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#toDebugLedgerStatePair"><span class="hs-identifier hs-var">toDebugLedgerStatePair</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681116260"><span class="hs-identifier hs-var">sbe</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span id="local-6989586621681116149"><span id="local-6989586621681116150"><span id="local-6989586621681116151"><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#toDebugLedgerStatePair"><span class="hs-identifier hs-type">toDebugLedgerStatePair</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.KeyValue</span></span><span> </span><span class="annot"><a href="#local-6989586621681116149"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116150"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyBasedEra"><span class="hs-identifier hs-type">ShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116151"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier hs-type">DebugLedgerState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681116151"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621681116150"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span></span></span><span>
+</span><span id="line-45"></span><span id="toDebugLedgerStatePair"><span class="annot"><span class="annottext">toDebugLedgerStatePair :: forall e a era.
+KeyValue e a =&gt;
+ShelleyBasedEra era -&gt; DebugLedgerState era -&gt; [a]
+</span><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#toDebugLedgerStatePair"><span class="hs-identifier hs-var hs-var">toDebugLedgerStatePair</span></a></span></span><span> </span><span id="local-6989586621681116263"><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681116263"><span class="hs-identifier hs-var">sbe</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.DebugLedgerState.html#DebugLedgerState"><span class="hs-identifier hs-type">DebugLedgerState</span></a></span><span> </span><span id="local-6989586621681116264"><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116264"><span class="hs-identifier hs-var">newEpochS</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt; [a]) -&gt; [a]
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681116263"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt; [a]) -&gt; [a])
+-&gt; (ShelleyBasedEraConstraints era =&gt; [a]) -&gt; [a]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621681116300"><span class="annot"><span class="annottext">nesEL :: EpochNo
+</span><a href="#local-6989586621681116300"><span class="hs-identifier hs-var hs-var">nesEL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era) -&gt; EpochNo
+forall era. NewEpochState era -&gt; EpochNo
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEL"><span class="hs-identifier hs-var">Shelley.nesEL</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116264"><span class="hs-identifier hs-var">newEpochS</span></a></span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-glyph">!</span><span id="local-6989586621681116302"><span class="annot"><span class="annottext">nesBprev :: BlocksMade
+</span><a href="#local-6989586621681116302"><span class="hs-identifier hs-var hs-var">nesBprev</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era) -&gt; BlocksMade
+forall era. NewEpochState era -&gt; BlocksMade
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesBprev"><span class="hs-identifier hs-var">Shelley.nesBprev</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116264"><span class="hs-identifier hs-var">newEpochS</span></a></span><span>
+</span><span id="line-49"></span><span>        </span><span class="hs-glyph">!</span><span id="local-6989586621681116304"><span class="annot"><span class="annottext">nesBcur :: BlocksMade
+</span><a href="#local-6989586621681116304"><span class="hs-identifier hs-var hs-var">nesBcur</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era) -&gt; BlocksMade
+forall era. NewEpochState era -&gt; BlocksMade
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesBcur"><span class="hs-identifier hs-var">Shelley.nesBcur</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116264"><span class="hs-identifier hs-var">newEpochS</span></a></span><span>
+</span><span id="line-50"></span><span>        </span><span class="hs-glyph">!</span><span id="local-6989586621681116306"><span class="annot"><span class="annottext">nesEs :: EpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116306"><span class="hs-identifier hs-var hs-var">nesEs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+-&gt; EpochState (ShelleyLedgerEra era)
+forall era. NewEpochState era -&gt; EpochState era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesEs"><span class="hs-identifier hs-var">Shelley.nesEs</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116264"><span class="hs-identifier hs-var">newEpochS</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="hs-glyph">!</span><span id="local-6989586621681116308"><span class="annot"><span class="annottext">nesRu :: StrictMaybe PulsingRewUpdate
+</span><a href="#local-6989586621681116308"><span class="hs-identifier hs-var hs-var">nesRu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+-&gt; StrictMaybe PulsingRewUpdate
+forall era. NewEpochState era -&gt; StrictMaybe PulsingRewUpdate
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesRu"><span class="hs-identifier hs-var">Shelley.nesRu</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116264"><span class="hs-identifier hs-var">newEpochS</span></a></span><span>
+</span><span id="line-52"></span><span>        </span><span class="hs-glyph">!</span><span id="local-6989586621681116310"><span class="annot"><span class="annottext">nesPd :: PoolDistr
+</span><a href="#local-6989586621681116310"><span class="hs-identifier hs-var hs-var">nesPd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era) -&gt; PoolDistr
+forall era. NewEpochState era -&gt; PoolDistr
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.LedgerState.Types.html#nesPd"><span class="hs-identifier hs-var">Shelley.nesPd</span></a></span><span> </span><span class="annot"><span class="annottext">NewEpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116264"><span class="hs-identifier hs-var">newEpochS</span></a></span><span>
+</span><span id="line-53"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;lastEpoch&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; EpochNo -&gt; a
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; a
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621681116300"><span class="hs-identifier hs-var">nesEL</span></a></span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;blocksBefore&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; BlocksMade -&gt; a
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; a
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621681116302"><span class="hs-identifier hs-var">nesBprev</span></a></span><span>
+</span><span id="line-55"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;blocksCurrent&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; BlocksMade -&gt; a
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; a
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">BlocksMade
+</span><a href="#local-6989586621681116304"><span class="hs-identifier hs-var">nesBcur</span></a></span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;stateBefore&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; EpochState (ShelleyLedgerEra era) -&gt; a
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; a
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">EpochState (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681116306"><span class="hs-identifier hs-var">nesEs</span></a></span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;possibleRewardUpdate&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; StrictMaybe PulsingRewUpdate -&gt; a
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; a
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">StrictMaybe PulsingRewUpdate
+</span><a href="#local-6989586621681116308"><span class="hs-identifier hs-var">nesRu</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;stakeDistrib&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; PoolDistr -&gt; a
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; a
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span> </span><span class="annot"><span class="annottext">PoolDistr
+</span><a href="#local-6989586621681116310"><span class="hs-identifier hs-var">nesPd</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span></pre></body></html>

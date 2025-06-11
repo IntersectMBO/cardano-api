@@ -1,0 +1,627 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE EmptyCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.Certificate</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#mkTxCertificates"><span class="hs-identifier">mkTxCertificates</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#convertToOldApiCertificate"><span class="hs-identifier">convertToOldApiCertificate</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#convertToNewCertificate"><span class="hs-identifier">convertToNewCertificate</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html"><span class="hs-identifier">Cardano.Api.Certificate.Internal</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.Convert.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.Convert</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ConwayEraOnwards</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html"><span class="hs-identifier">Cardano.Api.Experimental.Era</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Experimental.Plutus.Internal.Script</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Exp</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.Plutus.Internal.ScriptWitness</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Exp</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Simple.Script.html"><span class="hs-identifier">Cardano.Api.Experimental.Simple.Script</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Exp</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html"><span class="hs-identifier">Cardano.Api.Experimental.Tx.Internal.AnyWitness</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Ledger.html"><span class="hs-identifier">Cardano.Api.Ledger</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxCertificates"><span class="hs-identifier">TxCertificates</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Api</span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-allegra-1.7.0.0-2ebd62dfd0261c706e91d8f22a5256e05e6b3751d77f697a9115a405a7d8f2a6/share/doc/html/src/Cardano.Ledger.Allegra.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Allegra.Scripts</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html"><span class="hs-identifier">Cardano.Ledger.Plutus.Language</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Plutus</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html"><span class="hs-identifier">GHC.IsList</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="Certificate"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span></span><span> </span><span id="local-6989586621681219130"><span class="annot"><a href="#local-6989586621681219130"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621681219016"><span id="Certificate"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.TxCert.html#TxCert"><span class="hs-identifier hs-type">L.TxCert</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219016"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219016"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span id="local-6989586621681219001"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#convertToOldApiCertificate"><span class="hs-identifier hs-type">convertToOldApiCertificate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219001"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219001"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#Certificate"><span class="hs-identifier hs-type">Api.Certificate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219001"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-41"></span><span id="convertToOldApiCertificate"><span class="annot"><span class="annottext">convertToOldApiCertificate :: forall era.
+Era era -&gt; Certificate (LedgerEra era) -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#convertToOldApiCertificate"><span class="hs-identifier hs-var hs-var">convertToOldApiCertificate</span></a></span></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span id="local-6989586621681219136"><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681219136"><span class="hs-identifier hs-var">cert</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; ConwayTxCert (ShelleyLedgerEra era) -&gt; Certificate era
+forall era.
+Typeable era =&gt;
+ConwayEraOnwards era
+-&gt; ConwayTxCert (ShelleyLedgerEra era) -&gt; Certificate era
+</span><a href="Cardano.Api.Certificate.Internal.html#ConwayCertificate"><span class="hs-identifier hs-var">Api.ConwayCertificate</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+ConwayEraOnwards ConwayEra
+</span><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwardsConway"><span class="hs-identifier hs-var">ConwayEraOnwardsConway</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+ConwayTxCert (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681219136"><span class="hs-identifier hs-var">cert</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span id="local-6989586621681219013"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#convertToNewCertificate"><span class="hs-identifier hs-type">convertToNewCertificate</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219013"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#Certificate"><span class="hs-identifier hs-type">Api.Certificate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219013"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219013"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-45"></span><span id="convertToNewCertificate"><span class="annot"><span class="annottext">convertToNewCertificate :: forall era.
+Era era -&gt; Certificate era -&gt; Certificate (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#convertToNewCertificate"><span class="hs-identifier hs-var hs-var">convertToNewCertificate</span></a></span></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#ConwayCertificate"><span class="hs-identifier hs-type">Api.ConwayCertificate</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681219141"><span class="annot"><span class="annottext">ConwayTxCert (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681219141"><span class="hs-identifier hs-var">cert</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxCert ConwayEra -&gt; Certificate ConwayEra
+forall era. TxCert era -&gt; Certificate era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-var">Certificate</span></a></span><span> </span><span class="annot"><span class="annottext">TxCert ConwayEra
+ConwayTxCert (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681219141"><span class="hs-identifier hs-var">cert</span></a></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#convertToNewCertificate"><span class="hs-identifier hs-var">convertToNewCertificate</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#ShelleyRelatedCertificate"><span class="hs-identifier hs-type">Api.ShelleyRelatedCertificate</span></a></span><span> </span><span id="local-6989586621681219145"><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+</span><a href="#local-6989586621681219145"><span class="hs-identifier hs-var">sToBab</span></a></span></span><span> </span><span class="annot"><span class="annottext">ShelleyTxCert (ShelleyLedgerEra era)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ShelleyToBabbageEra era
+ShelleyToBabbageEra ConwayEra
+</span><a href="#local-6989586621681219145"><span class="hs-identifier hs-var">sToBab</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra.html#ShelleyToBabbageEra"><span class="hs-identifier hs-type">Api.ShelleyToBabbageEra</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Core.html#ConwayEra"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#mkTxCertificates"><span class="hs-identifier hs-type">mkTxCertificates</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681219019"><span class="annot"><a href="#local-6989586621681219019"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-51"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#IsEra"><span class="hs-identifier hs-type">IsEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219019"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219019"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyWitness"><span class="hs-identifier hs-type">AnyWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219019"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxCertificates"><span class="hs-identifier hs-type">Api.TxCertificates</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">Api.BuildTx</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219019"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-54"></span><span id="mkTxCertificates"><span class="annot"><span class="annottext">mkTxCertificates :: forall era.
+IsEra era =&gt;
+[(Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
+-&gt; TxCertificates BuildTx era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#mkTxCertificates"><span class="hs-identifier hs-var hs-var">mkTxCertificates</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxCertificates BuildTx era
+forall build era. TxCertificates build era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#TxCertificatesNone"><span class="hs-identifier hs-var">TxCertificatesNone</span></a></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#mkTxCertificates"><span class="hs-identifier hs-var">mkTxCertificates</span></a></span><span> </span><span id="local-6989586621681219156"><span class="annot"><span class="annottext">[(Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681219156"><span class="hs-identifier hs-var">certs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; OMap
+     (Certificate era)
+     (BuildTxWith
+        BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+-&gt; TxCertificates BuildTx era
+forall era build.
+ShelleyBasedEra era
+-&gt; OMap
+     (Certificate era)
+     (BuildTxWith
+        build (Maybe (StakeCredential, Witness WitCtxStake era)))
+-&gt; TxCertificates build era
+</span><a href="Cardano.Api.Tx.Internal.Body.html#TxCertificates"><span class="hs-identifier hs-var">TxCertificates</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era era -&gt; ShelleyBasedEra era
+forall era. Era era -&gt; ShelleyBasedEra era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(OMap
+   (Certificate era)
+   (BuildTxWith
+      BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+ -&gt; TxCertificates BuildTx era)
+-&gt; OMap
+     (Certificate era)
+     (BuildTxWith
+        BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+-&gt; TxCertificates BuildTx era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Item
+   (OMap
+      (Certificate era)
+      (BuildTxWith
+         BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))))]
+-&gt; OMap
+     (Certificate era)
+     (BuildTxWith
+        BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+forall l. IsList l =&gt; [Item l] -&gt; l
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#fromList"><span class="hs-identifier hs-var">fromList</span></a></span><span> </span><span class="annot"><span class="annottext">([Item
+    (OMap
+       (Certificate era)
+       (BuildTxWith
+          BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))))]
+ -&gt; OMap
+      (Certificate era)
+      (BuildTxWith
+         BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))))
+-&gt; [Item
+      (OMap
+         (Certificate era)
+         (BuildTxWith
+            BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))))]
+-&gt; OMap
+     (Certificate era)
+     (BuildTxWith
+        BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((Certificate (LedgerEra era), AnyWitness (LedgerEra era))
+ -&gt; (Certificate era,
+     BuildTxWith
+       BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))))
+-&gt; [(Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
+-&gt; [(Certificate era,
+     BuildTxWith
+       BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era era
+-&gt; (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
+-&gt; (Certificate era,
+    BuildTxWith
+      BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+forall era.
+Era era
+-&gt; (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
+-&gt; (Certificate era,
+    BuildTxWith
+      BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+</span><a href="#local-6989586621681219160"><span class="hs-identifier hs-var">getStakeCred</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+forall era. IsEra era =&gt; Era era
+</span><a href="Cardano.Api.Experimental.Era.html#useEra"><span class="hs-identifier hs-var">useEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Certificate (LedgerEra era), AnyWitness (LedgerEra era))]
+</span><a href="#local-6989586621681219156"><span class="hs-identifier hs-var">certs</span></a></span><span>
+</span><span id="line-57"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621681219050"><span class="annot"><a href="#local-6989586621681219160"><span class="hs-identifier hs-type">getStakeCred</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219050"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219050"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyWitness"><span class="hs-identifier hs-type">AnyWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219050"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.html#Certificate"><span class="hs-identifier hs-type">Api.Certificate</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219050"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-62"></span><span>       </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTxWith"><span class="hs-identifier hs-type">Api.BuildTxWith</span></a></span><span>
+</span><span id="line-63"></span><span>           </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier hs-type">Api.BuildTx</span></a></span><span>
+</span><span id="line-64"></span><span>           </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Address.html#StakeCredential"><span class="hs-identifier hs-type">Api.StakeCredential</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#Witness"><span class="hs-identifier hs-type">Api.Witness</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#WitCtxStake"><span class="hs-identifier hs-type">Api.WitCtxStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219050"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>       </span><span class="hs-special">)</span></span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621681219160"><span class="annot"><span class="annottext">getStakeCred :: forall era.
+Era era
+-&gt; (Certificate (LedgerEra era), AnyWitness (LedgerEra era))
+-&gt; (Certificate era,
+    BuildTxWith
+      BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+</span><a href="#local-6989586621681219160"><span class="hs-identifier hs-var hs-var">getStakeCred</span></a></span></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span id="local-6989586621681219166"><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681219166"><span class="hs-identifier hs-var">cert</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">AnyWitness (LedgerEra era)
+</span><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyKeyWitnessPlaceholder"><span class="hs-identifier hs-var">AnyKeyWitnessPlaceholder</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; ConwayTxCert (ShelleyLedgerEra era) -&gt; Certificate era
+forall era.
+Typeable era =&gt;
+ConwayEraOnwards era
+-&gt; ConwayTxCert (ShelleyLedgerEra era) -&gt; Certificate era
+</span><a href="Cardano.Api.Certificate.Internal.html#ConwayCertificate"><span class="hs-identifier hs-var">Api.ConwayCertificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era era -&gt; ConwayEraOnwards era
+forall era. Era era -&gt; ConwayEraOnwards era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+ConwayTxCert (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681219166"><span class="hs-identifier hs-var">cert</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (StakeCredential, Witness WitCtxStake era)
+-&gt; BuildTxWith
+     BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))
+forall a. a -&gt; BuildTxWith BuildTx a
+</span><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTxWith"><span class="hs-identifier hs-var">Api.BuildTxWith</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (StakeCredential, Witness WitCtxStake era)
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="#local-6989586621681219160"><span class="hs-identifier hs-var">getStakeCred</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span id="local-6989586621681219179"><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681219179"><span class="hs-identifier hs-var">cert</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnySimpleScriptWitness"><span class="hs-identifier hs-type">AnySimpleScriptWitness</span></a></span><span> </span><span id="local-6989586621681219181"><span class="annot"><span class="annottext">SimpleScriptOrReferenceInput (LedgerEra era)
+</span><a href="#local-6989586621681219181"><span class="hs-identifier hs-var">ss</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681219182"><span class="annot"><span class="annottext">oldApiCert :: Certificate ConwayEra
+</span><a href="#local-6989586621681219182"><span class="hs-identifier hs-var hs-var">oldApiCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards ConwayEra
+-&gt; ConwayTxCert (ShelleyLedgerEra ConwayEra)
+-&gt; Certificate ConwayEra
+forall era.
+Typeable era =&gt;
+ConwayEraOnwards era
+-&gt; ConwayTxCert (ShelleyLedgerEra era) -&gt; Certificate era
+</span><a href="Cardano.Api.Certificate.Internal.html#ConwayCertificate"><span class="hs-identifier hs-var">Api.ConwayCertificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era ConwayEra -&gt; ConwayEraOnwards ConwayEra
+forall era. Era era -&gt; ConwayEraOnwards era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+ConwayTxCert (ShelleyLedgerEra ConwayEra)
+</span><a href="#local-6989586621681219179"><span class="hs-identifier hs-var">cert</span></a></span><span>
+</span><span id="line-70"></span><span>        </span><span id="local-6989586621681219183"><span class="annot"><span class="annottext">mStakeCred :: Maybe StakeCredential
+</span><a href="#local-6989586621681219183"><span class="hs-identifier hs-var hs-var">mStakeCred</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Certificate ConwayEra -&gt; Maybe StakeCredential
+forall era. Certificate era -&gt; Maybe StakeCredential
+</span><a href="Cardano.Api.Certificate.Internal.html#selectStakeCredentialWitness"><span class="hs-identifier hs-var">Api.selectStakeCredentialWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Certificate ConwayEra
+</span><a href="#local-6989586621681219182"><span class="hs-identifier hs-var">oldApiCert</span></a></span><span>
+</span><span id="line-71"></span><span>        </span><span id="local-6989586621681219185"><span class="annot"><span class="annottext">wit :: Witness WitCtxStake ConwayEra
+</span><a href="#local-6989586621681219185"><span class="hs-identifier hs-var hs-var">wit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ScriptWitnessInCtx WitCtxStake
+-&gt; ScriptWitness WitCtxStake ConwayEra
+-&gt; Witness WitCtxStake ConwayEra
+forall witctx era.
+ScriptWitnessInCtx witctx
+-&gt; ScriptWitness witctx era -&gt; Witness witctx era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitness"><span class="hs-identifier hs-var">Api.ScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessInCtx WitCtxStake
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitnessForStakeAddr"><span class="hs-identifier hs-var">Api.ScriptWitnessForStakeAddr</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptWitness WitCtxStake ConwayEra
+ -&gt; Witness WitCtxStake ConwayEra)
+-&gt; ScriptWitness WitCtxStake ConwayEra
+-&gt; Witness WitCtxStake ConwayEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+-&gt; SimpleScriptOrReferenceInput (LedgerEra ConwayEra)
+-&gt; ScriptWitness WitCtxStake ConwayEra
+forall era.
+AllegraEraScript (LedgerEra era) =&gt;
+Era era
+-&gt; SimpleScriptOrReferenceInput (LedgerEra era)
+-&gt; ScriptWitness WitCtxStake era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldSimpleScriptWitness"><span class="hs-identifier hs-var">newToOldSimpleScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">SimpleScriptOrReferenceInput (LedgerEra era)
+SimpleScriptOrReferenceInput (LedgerEra ConwayEra)
+</span><a href="#local-6989586621681219181"><span class="hs-identifier hs-var">ss</span></a></span><span>
+</span><span id="line-72"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Certificate era
+Certificate ConwayEra
+</span><a href="#local-6989586621681219182"><span class="hs-identifier hs-var">oldApiCert</span></a></span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (StakeCredential, Witness WitCtxStake era)
+-&gt; BuildTxWith
+     BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))
+forall a. a -&gt; BuildTxWith BuildTx a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (StakeCredential, Witness WitCtxStake era)
+ -&gt; BuildTxWith
+      BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+-&gt; Maybe (StakeCredential, Witness WitCtxStake era)
+-&gt; BuildTxWith
+     BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="annot"><span class="annottext">Witness WitCtxStake ConwayEra
+</span><a href="#local-6989586621681219185"><span class="hs-identifier hs-var">wit</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; (StakeCredential, Witness WitCtxStake era))
+-&gt; Maybe StakeCredential
+-&gt; Maybe (StakeCredential, Witness WitCtxStake era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe StakeCredential
+</span><a href="#local-6989586621681219183"><span class="hs-identifier hs-var">mStakeCred</span></a></span><span>
+</span><span id="line-74"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="#local-6989586621681219160"><span class="hs-identifier hs-var">getStakeCred</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#Certificate"><span class="hs-identifier hs-type">Certificate</span></a></span><span> </span><span id="local-6989586621681219191"><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+</span><a href="#local-6989586621681219191"><span class="hs-identifier hs-var">cert</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.AnyWitness.html#AnyPlutusScriptWitness"><span class="hs-identifier hs-type">AnyPlutusScriptWitness</span></a></span><span> </span><span id="local-6989586621681219197"><span class="annot"><span class="annottext">PlutusScriptWitness lang purpose (LedgerEra era)
+</span><a href="#local-6989586621681219197"><span class="hs-identifier hs-var">psw</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681219198"><span class="annot"><span class="annottext">oldApiCert :: Certificate ConwayEra
+</span><a href="#local-6989586621681219198"><span class="hs-identifier hs-var hs-var">oldApiCert</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards ConwayEra
+-&gt; ConwayTxCert (ShelleyLedgerEra ConwayEra)
+-&gt; Certificate ConwayEra
+forall era.
+Typeable era =&gt;
+ConwayEraOnwards era
+-&gt; ConwayTxCert (ShelleyLedgerEra era) -&gt; Certificate era
+</span><a href="Cardano.Api.Certificate.Internal.html#ConwayCertificate"><span class="hs-identifier hs-var">Api.ConwayCertificate</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era ConwayEra -&gt; ConwayEraOnwards ConwayEra
+forall era. Era era -&gt; ConwayEraOnwards era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">TxCert (LedgerEra era)
+ConwayTxCert (ShelleyLedgerEra ConwayEra)
+</span><a href="#local-6989586621681219191"><span class="hs-identifier hs-var">cert</span></a></span><span>
+</span><span id="line-77"></span><span>        </span><span id="local-6989586621681219199"><span class="annot"><span class="annottext">mStakeCred :: Maybe StakeCredential
+</span><a href="#local-6989586621681219199"><span class="hs-identifier hs-var hs-var">mStakeCred</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Certificate ConwayEra -&gt; Maybe StakeCredential
+forall era. Certificate era -&gt; Maybe StakeCredential
+</span><a href="Cardano.Api.Certificate.Internal.html#selectStakeCredentialWitness"><span class="hs-identifier hs-var">Api.selectStakeCredentialWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Certificate ConwayEra
+</span><a href="#local-6989586621681219198"><span class="hs-identifier hs-var">oldApiCert</span></a></span><span>
+</span><span id="line-78"></span><span>        </span><span id="local-6989586621681219200"><span class="annot"><span class="annottext">wit :: Witness WitCtxStake ConwayEra
+</span><a href="#local-6989586621681219200"><span class="hs-identifier hs-var hs-var">wit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>          </span><span class="annot"><span class="annottext">ScriptWitnessInCtx WitCtxStake
+-&gt; ScriptWitness WitCtxStake ConwayEra
+-&gt; Witness WitCtxStake ConwayEra
+forall witctx era.
+ScriptWitnessInCtx witctx
+-&gt; ScriptWitness witctx era -&gt; Witness witctx era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitness"><span class="hs-identifier hs-var">Api.ScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">ScriptWitnessInCtx WitCtxStake
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitnessForStakeAddr"><span class="hs-identifier hs-var">Api.ScriptWitnessForStakeAddr</span></a></span><span> </span><span class="annot"><span class="annottext">(ScriptWitness WitCtxStake ConwayEra
+ -&gt; Witness WitCtxStake ConwayEra)
+-&gt; ScriptWitness WitCtxStake ConwayEra
+-&gt; Witness WitCtxStake ConwayEra
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-80"></span><span>            </span><span class="annot"><span class="annottext">Era ConwayEra
+-&gt; PlutusScriptWitness lang purpose (LedgerEra ConwayEra)
+-&gt; ScriptWitness WitCtxStake ConwayEra
+forall era (lang :: Language) (purpose :: PlutusScriptPurpose).
+Era era
+-&gt; PlutusScriptWitness lang purpose (LedgerEra era)
+-&gt; ScriptWitness WitCtxStake era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusCertificateScriptWitness"><span class="hs-identifier hs-var">newToOldPlutusCertificateScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptWitness lang purpose (LedgerEra era)
+PlutusScriptWitness lang purpose (LedgerEra ConwayEra)
+</span><a href="#local-6989586621681219197"><span class="hs-identifier hs-var">psw</span></a></span><span>
+</span><span id="line-81"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Certificate era
+Certificate ConwayEra
+</span><a href="#local-6989586621681219198"><span class="hs-identifier hs-var">oldApiCert</span></a></span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (StakeCredential, Witness WitCtxStake era)
+-&gt; BuildTxWith
+     BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))
+forall a. a -&gt; BuildTxWith BuildTx a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (StakeCredential, Witness WitCtxStake era)
+ -&gt; BuildTxWith
+      BuildTx (Maybe (StakeCredential, Witness WitCtxStake era)))
+-&gt; Maybe (StakeCredential, Witness WitCtxStake era)
+-&gt; BuildTxWith
+     BuildTx (Maybe (StakeCredential, Witness WitCtxStake era))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="annot"><span class="annottext">Witness WitCtxStake ConwayEra
+</span><a href="#local-6989586621681219200"><span class="hs-identifier hs-var">wit</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(StakeCredential -&gt; (StakeCredential, Witness WitCtxStake era))
+-&gt; Maybe StakeCredential
+-&gt; Maybe (StakeCredential, Witness WitCtxStake era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe StakeCredential
+</span><a href="#local-6989586621681219199"><span class="hs-identifier hs-var">mStakeCred</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span id="local-6989586621681219061"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldSimpleScriptWitness"><span class="hs-identifier hs-type">newToOldSimpleScriptWitness</span></a></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-allegra-1.7.0.0-2ebd62dfd0261c706e91d8f22a5256e05e6b3751d77f697a9115a405a7d8f2a6/share/doc/html/src/Cardano.Ledger.Allegra.Scripts.html#AllegraEraScript"><span class="hs-identifier hs-type">L.AllegraEraScript</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219061"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219061"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Simple.Script.html#SimpleScriptOrReferenceInput"><span class="hs-identifier hs-type">Exp.SimpleScriptOrReferenceInput</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219061"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitness"><span class="hs-identifier hs-type">Api.ScriptWitness</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#WitCtxStake"><span class="hs-identifier hs-type">Api.WitCtxStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219061"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-88"></span><span id="newToOldSimpleScriptWitness"><span class="annot"><span class="annottext">newToOldSimpleScriptWitness :: forall era.
+AllegraEraScript (LedgerEra era) =&gt;
+Era era
+-&gt; SimpleScriptOrReferenceInput (LedgerEra era)
+-&gt; ScriptWitness WitCtxStake era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldSimpleScriptWitness"><span class="hs-identifier hs-var hs-var">newToOldSimpleScriptWitness</span></a></span></span><span> </span><span id="local-6989586621681219204"><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681219204"><span class="hs-identifier hs-var">era</span></a></span></span><span> </span><span id="local-6989586621681219205"><span class="annot"><span class="annottext">SimpleScriptOrReferenceInput (LedgerEra era)
+</span><a href="#local-6989586621681219205"><span class="hs-identifier hs-var">simple</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">SimpleScriptOrReferenceInput (LedgerEra era)
+</span><a href="#local-6989586621681219205"><span class="hs-identifier hs-var">simple</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><a href="Cardano.Api.Experimental.Simple.Script.html#SScript"><span class="hs-identifier hs-type">Exp.SScript</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Simple.Script.html#SimpleScript"><span class="hs-identifier hs-type">Exp.SimpleScript</span></a></span><span> </span><span id="local-6989586621681219211"><span class="annot"><span class="annottext">NativeScript (LedgerEra era)
+</span><a href="#local-6989586621681219211"><span class="hs-identifier hs-var">script</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">ScriptLanguageInEra SimpleScript' era
+-&gt; SimpleScriptOrReferenceInput SimpleScript'
+-&gt; ScriptWitness WitCtxStake era
+forall era witctx.
+ScriptLanguageInEra SimpleScript' era
+-&gt; SimpleScriptOrReferenceInput SimpleScript'
+-&gt; ScriptWitness witctx era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#SimpleScriptWitness"><span class="hs-identifier hs-var">Api.SimpleScriptWitness</span></a></span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era
+forall era.
+ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#sbeToSimpleScriptLanguageInEra"><span class="hs-identifier hs-var">sbeToSimpleScriptLanguageInEra</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era)
+-&gt; ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Era era -&gt; ShelleyBasedEra era
+forall era. Era era -&gt; ShelleyBasedEra era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681219204"><span class="hs-identifier hs-var">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SimpleScript -&gt; SimpleScriptOrReferenceInput SimpleScript'
+forall lang. SimpleScript -&gt; SimpleScriptOrReferenceInput lang
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#SScript"><span class="hs-identifier hs-var">Api.SScript</span></a></span><span> </span><span class="annot"><span class="annottext">(SimpleScript -&gt; SimpleScriptOrReferenceInput SimpleScript')
+-&gt; SimpleScript -&gt; SimpleScriptOrReferenceInput SimpleScript'
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NativeScript (LedgerEra era) -&gt; SimpleScript
+forall era.
+AllegraEraScript era =&gt;
+NativeScript era -&gt; SimpleScript
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#fromAllegraTimelock"><span class="hs-identifier hs-var">fromAllegraTimelock</span></a></span><span> </span><span class="annot"><span class="annottext">NativeScript (LedgerEra era)
+</span><a href="#local-6989586621681219211"><span class="hs-identifier hs-var">script</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><a href="Cardano.Api.Experimental.Simple.Script.html#SReferenceScript"><span class="hs-identifier hs-type">Exp.SReferenceScript</span></a></span><span> </span><span id="local-6989586621681219217"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681219217"><span class="hs-identifier hs-var">inp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-95"></span><span>      </span><span class="annot"><span class="annottext">ScriptLanguageInEra SimpleScript' era
+-&gt; SimpleScriptOrReferenceInput SimpleScript'
+-&gt; ScriptWitness WitCtxStake era
+forall era witctx.
+ScriptLanguageInEra SimpleScript' era
+-&gt; SimpleScriptOrReferenceInput SimpleScript'
+-&gt; ScriptWitness witctx era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#SimpleScriptWitness"><span class="hs-identifier hs-var">Api.SimpleScriptWitness</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era
+forall era.
+ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#sbeToSimpleScriptLanguageInEra"><span class="hs-identifier hs-var">sbeToSimpleScriptLanguageInEra</span></a></span><span> </span><span class="annot"><span class="annottext">(ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era)
+-&gt; ShelleyBasedEra era -&gt; ScriptLanguageInEra SimpleScript' era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Era era -&gt; ShelleyBasedEra era
+forall era. Era era -&gt; ShelleyBasedEra era
+forall a (f :: a -&gt; *) (g :: a -&gt; *) (era :: a).
+Convert f g =&gt;
+f era -&gt; g era
+</span><a href="Cardano.Api.Era.Internal.Eon.Convert.html#convert"><span class="hs-identifier hs-var">convert</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="#local-6989586621681219204"><span class="hs-identifier hs-var">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxIn -&gt; SimpleScriptOrReferenceInput SimpleScript'
+forall lang. TxIn -&gt; SimpleScriptOrReferenceInput lang
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#SReferenceScript"><span class="hs-identifier hs-var">Api.SReferenceScript</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681219217"><span class="hs-identifier hs-var">inp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span id="local-6989586621681219072"><span id="local-6989586621681219073"><span id="local-6989586621681219074"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusCertificateScriptWitness"><span class="hs-identifier hs-type">newToOldPlutusCertificateScriptWitness</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219072"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptWitness"><span class="hs-identifier hs-type">Exp.PlutusScriptWitness</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219073"><span class="hs-identifier hs-type">lang</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219074"><span class="hs-identifier hs-type">purpose</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219072"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#ScriptWitness"><span class="hs-identifier hs-type">Api.ScriptWitness</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#WitCtxStake"><span class="hs-identifier hs-type">Api.WitCtxStake</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219072"><span class="hs-identifier hs-type">era</span></a></span></span></span></span><span>
+</span><span id="line-103"></span><span id="newToOldPlutusCertificateScriptWitness"><span class="annot"><span class="annottext">newToOldPlutusCertificateScriptWitness :: forall era (lang :: Language) (purpose :: PlutusScriptPurpose).
+Era era
+-&gt; PlutusScriptWitness lang purpose (LedgerEra era)
+-&gt; ScriptWitness WitCtxStake era
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusCertificateScriptWitness"><span class="hs-identifier hs-var hs-var">newToOldPlutusCertificateScriptWitness</span></a></span></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptWitness"><span class="hs-identifier hs-type">Exp.PlutusScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage lang
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#SPlutusV1"><span class="hs-identifier hs-var">Plutus.SPlutusV1</span></a></span><span> </span><span id="local-6989586621681219225"><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput lang (LedgerEra era)
+</span><a href="#local-6989586621681219225"><span class="hs-identifier hs-var">scriptOrRef</span></a></span></span><span> </span><span class="annot"><span class="annottext">PlutusScriptDatum lang purpose
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681219226"><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621681219226"><span class="hs-identifier hs-var">redeemer</span></a></span></span><span> </span><span id="local-6989586621681219227"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621681219227"><span class="hs-identifier hs-var">execUnits</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><span class="annottext">ScriptLanguageInEra PlutusScriptV1 era
+-&gt; PlutusScriptVersion PlutusScriptV1
+-&gt; PlutusScriptOrReferenceInput PlutusScriptV1
+-&gt; ScriptDatum WitCtxStake
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; ScriptWitness WitCtxStake era
+forall lang era witctx.
+IsPlutusScriptLanguage lang =&gt;
+ScriptLanguageInEra lang era
+-&gt; PlutusScriptVersion lang
+-&gt; PlutusScriptOrReferenceInput lang
+-&gt; ScriptDatum witctx
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; ScriptWitness witctx era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptWitness"><span class="hs-identifier hs-var">Api.PlutusScriptWitness</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><span class="annottext">ScriptLanguageInEra PlutusScriptV1 era
+ScriptLanguageInEra PlutusScriptV1 ConwayEra
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptV1InConway"><span class="hs-identifier hs-var">Api.PlutusScriptV1InConway</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">PlutusScriptVersion PlutusScriptV1
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptV1"><span class="hs-identifier hs-var">Api.PlutusScriptV1</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era ConwayEra
+-&gt; PlutusScriptOrReferenceInput lang (LedgerEra ConwayEra)
+-&gt; PlutusScriptOrReferenceInput PlutusScriptV1
+forall era (lang :: Language) oldlang.
+Era era
+-&gt; PlutusScriptOrReferenceInput lang (LedgerEra era)
+-&gt; PlutusScriptOrReferenceInput oldlang
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusScriptOrReferenceInput"><span class="hs-identifier hs-var">newToOldPlutusScriptOrReferenceInput</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput lang (LedgerEra era)
+PlutusScriptOrReferenceInput lang (LedgerEra ConwayEra)
+</span><a href="#local-6989586621681219225"><span class="hs-identifier hs-var">scriptOrRef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>    </span><span class="annot"><span class="annottext">ScriptDatum WitCtxStake
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#NoScriptDatumForStake"><span class="hs-identifier hs-var">Api.NoScriptDatumForStake</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621681219226"><span class="hs-identifier hs-var">redeemer</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621681219227"><span class="hs-identifier hs-var">execUnits</span></a></span><span>
+</span><span id="line-111"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusCertificateScriptWitness"><span class="hs-identifier hs-var">newToOldPlutusCertificateScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptWitness"><span class="hs-identifier hs-type">Exp.PlutusScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage lang
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#SPlutusV2"><span class="hs-identifier hs-var">Plutus.SPlutusV2</span></a></span><span> </span><span id="local-6989586621681219238"><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput lang (LedgerEra era)
+</span><a href="#local-6989586621681219238"><span class="hs-identifier hs-var">scriptOrRef</span></a></span></span><span> </span><span class="annot"><span class="annottext">PlutusScriptDatum lang purpose
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681219239"><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621681219239"><span class="hs-identifier hs-var">redeemer</span></a></span></span><span> </span><span id="local-6989586621681219240"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621681219240"><span class="hs-identifier hs-var">execUnits</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="annottext">ScriptLanguageInEra PlutusScriptV2 era
+-&gt; PlutusScriptVersion PlutusScriptV2
+-&gt; PlutusScriptOrReferenceInput PlutusScriptV2
+-&gt; ScriptDatum WitCtxStake
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; ScriptWitness WitCtxStake era
+forall lang era witctx.
+IsPlutusScriptLanguage lang =&gt;
+ScriptLanguageInEra lang era
+-&gt; PlutusScriptVersion lang
+-&gt; PlutusScriptOrReferenceInput lang
+-&gt; ScriptDatum witctx
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; ScriptWitness witctx era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptWitness"><span class="hs-identifier hs-var">Api.PlutusScriptWitness</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">ScriptLanguageInEra PlutusScriptV2 era
+ScriptLanguageInEra PlutusScriptV2 ConwayEra
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptV2InConway"><span class="hs-identifier hs-var">Api.PlutusScriptV2InConway</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">PlutusScriptVersion PlutusScriptV2
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptV2"><span class="hs-identifier hs-var">Api.PlutusScriptV2</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era ConwayEra
+-&gt; PlutusScriptOrReferenceInput lang (LedgerEra ConwayEra)
+-&gt; PlutusScriptOrReferenceInput PlutusScriptV2
+forall era (lang :: Language) oldlang.
+Era era
+-&gt; PlutusScriptOrReferenceInput lang (LedgerEra era)
+-&gt; PlutusScriptOrReferenceInput oldlang
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusScriptOrReferenceInput"><span class="hs-identifier hs-var">newToOldPlutusScriptOrReferenceInput</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput lang (LedgerEra era)
+PlutusScriptOrReferenceInput lang (LedgerEra ConwayEra)
+</span><a href="#local-6989586621681219238"><span class="hs-identifier hs-var">scriptOrRef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">ScriptDatum WitCtxStake
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#NoScriptDatumForStake"><span class="hs-identifier hs-var">Api.NoScriptDatumForStake</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621681219239"><span class="hs-identifier hs-var">redeemer</span></a></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621681219240"><span class="hs-identifier hs-var">execUnits</span></a></span><span>
+</span><span id="line-119"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusCertificateScriptWitness"><span class="hs-identifier hs-var">newToOldPlutusCertificateScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.ScriptWitness.html#PlutusScriptWitness"><span class="hs-identifier hs-type">Exp.PlutusScriptWitness</span></a></span><span> </span><span class="annot"><span class="annottext">SLanguage lang
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#SPlutusV3"><span class="hs-identifier hs-var">Plutus.SPlutusV3</span></a></span><span> </span><span id="local-6989586621681219248"><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput lang (LedgerEra era)
+</span><a href="#local-6989586621681219248"><span class="hs-identifier hs-var">scriptOrRef</span></a></span></span><span> </span><span class="annot"><span class="annottext">PlutusScriptDatum lang purpose
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681219249"><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621681219249"><span class="hs-identifier hs-var">redeemer</span></a></span></span><span> </span><span id="local-6989586621681219250"><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621681219250"><span class="hs-identifier hs-var">execUnits</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><span class="annottext">ScriptLanguageInEra PlutusScriptV3 era
+-&gt; PlutusScriptVersion PlutusScriptV3
+-&gt; PlutusScriptOrReferenceInput PlutusScriptV3
+-&gt; ScriptDatum WitCtxStake
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; ScriptWitness WitCtxStake era
+forall lang era witctx.
+IsPlutusScriptLanguage lang =&gt;
+ScriptLanguageInEra lang era
+-&gt; PlutusScriptVersion lang
+-&gt; PlutusScriptOrReferenceInput lang
+-&gt; ScriptDatum witctx
+-&gt; ScriptRedeemer
+-&gt; ExecutionUnits
+-&gt; ScriptWitness witctx era
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptWitness"><span class="hs-identifier hs-var">Api.PlutusScriptWitness</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="annottext">ScriptLanguageInEra PlutusScriptV3 era
+ScriptLanguageInEra PlutusScriptV3 ConwayEra
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptV3InConway"><span class="hs-identifier hs-var">Api.PlutusScriptV3InConway</span></a></span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="annottext">PlutusScriptVersion PlutusScriptV3
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptV3"><span class="hs-identifier hs-var">Api.PlutusScriptV3</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Era ConwayEra
+-&gt; PlutusScriptOrReferenceInput lang (LedgerEra ConwayEra)
+-&gt; PlutusScriptOrReferenceInput PlutusScriptV3
+forall era (lang :: Language) oldlang.
+Era era
+-&gt; PlutusScriptOrReferenceInput lang (LedgerEra era)
+-&gt; PlutusScriptOrReferenceInput oldlang
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusScriptOrReferenceInput"><span class="hs-identifier hs-var">newToOldPlutusScriptOrReferenceInput</span></a></span><span> </span><span class="annot"><span class="annottext">Era ConwayEra
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusScriptOrReferenceInput lang (LedgerEra era)
+PlutusScriptOrReferenceInput lang (LedgerEra ConwayEra)
+</span><a href="#local-6989586621681219248"><span class="hs-identifier hs-var">scriptOrRef</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">ScriptDatum WitCtxStake
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#NoScriptDatumForStake"><span class="hs-identifier hs-var">Api.NoScriptDatumForStake</span></a></span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">ScriptRedeemer
+</span><a href="#local-6989586621681219249"><span class="hs-identifier hs-var">redeemer</span></a></span><span>
+</span><span id="line-126"></span><span>    </span><span class="annot"><span class="annottext">ExecutionUnits
+</span><a href="#local-6989586621681219250"><span class="hs-identifier hs-var">execUnits</span></a></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span id="local-6989586621681219104"><span id="local-6989586621681219105"><span id="local-6989586621681219106"><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusScriptOrReferenceInput"><span class="hs-identifier hs-type">newToOldPlutusScriptOrReferenceInput</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#Era"><span class="hs-identifier hs-type">Era</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219104"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptOrReferenceInput"><span class="hs-identifier hs-type">Exp.PlutusScriptOrReferenceInput</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219105"><span class="hs-identifier hs-type">lang</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Era.html#LedgerEra"><span class="hs-identifier hs-type">LedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219104"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptOrReferenceInput"><span class="hs-identifier hs-type">Api.PlutusScriptOrReferenceInput</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681219106"><span class="hs-identifier hs-type">oldlang</span></a></span></span></span></span><span>
+</span><span id="line-132"></span><span id="newToOldPlutusScriptOrReferenceInput"><span class="annot"><span class="annottext">newToOldPlutusScriptOrReferenceInput :: forall era (lang :: Language) oldlang.
+Era era
+-&gt; PlutusScriptOrReferenceInput lang (LedgerEra era)
+-&gt; PlutusScriptOrReferenceInput oldlang
+</span><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusScriptOrReferenceInput"><span class="hs-identifier hs-var hs-var">newToOldPlutusScriptOrReferenceInput</span></a></span></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PReferenceScript"><span class="hs-identifier hs-type">Exp.PReferenceScript</span></a></span><span> </span><span id="local-6989586621681219255"><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681219255"><span class="hs-identifier hs-var">txin</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TxIn -&gt; PlutusScriptOrReferenceInput oldlang
+forall lang. TxIn -&gt; PlutusScriptOrReferenceInput lang
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PReferenceScript"><span class="hs-identifier hs-var">Api.PReferenceScript</span></a></span><span> </span><span class="annot"><span class="annottext">TxIn
+</span><a href="#local-6989586621681219255"><span class="hs-identifier hs-var">txin</span></a></span><span>
+</span><span id="line-133"></span><span class="annot"><a href="Cardano.Api.Experimental.Tx.Internal.Certificate.html#newToOldPlutusScriptOrReferenceInput"><span class="hs-identifier hs-var">newToOldPlutusScriptOrReferenceInput</span></a></span><span> </span><span class="annot"><span class="annottext">Era era
+</span><a href="Cardano.Api.Experimental.Era.html#ConwayEra"><span class="hs-identifier hs-var">ConwayEra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PScript"><span class="hs-identifier hs-type">Exp.PScript</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Experimental.Plutus.Internal.Script.html#PlutusScriptInEra"><span class="hs-identifier hs-type">Exp.PlutusScriptInEra</span></a></span><span> </span><span id="local-6989586621681219260"><span class="annot"><span class="annottext">PlutusRunnable lang
+</span><a href="#local-6989586621681219260"><span class="hs-identifier hs-var">plutusRunnable</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681219261"><span class="annot"><span class="annottext">oldScript :: ShortByteString
+</span><a href="#local-6989586621681219261"><span class="hs-identifier hs-var hs-var">oldScript</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PlutusBinary -&gt; ShortByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#unPlutusBinary"><span class="hs-identifier hs-var">L.unPlutusBinary</span></a></span><span> </span><span class="annot"><span class="annottext">(PlutusBinary -&gt; ShortByteString)
+-&gt; (Plutus lang -&gt; PlutusBinary) -&gt; Plutus lang -&gt; ShortByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Plutus lang -&gt; PlutusBinary
+forall (l :: Language). Plutus l -&gt; PlutusBinary
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#plutusBinary"><span class="hs-identifier hs-var">L.plutusBinary</span></a></span><span> </span><span class="annot"><span class="annottext">(Plutus lang -&gt; ShortByteString) -&gt; Plutus lang -&gt; ShortByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusRunnable lang -&gt; Plutus lang
+forall (l :: Language). PlutusRunnable l -&gt; Plutus l
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Plutus.Language.html#plutusFromRunnable"><span class="hs-identifier hs-var">L.plutusFromRunnable</span></a></span><span> </span><span class="annot"><span class="annottext">PlutusRunnable lang
+</span><a href="#local-6989586621681219260"><span class="hs-identifier hs-var">plutusRunnable</span></a></span><span>
+</span><span id="line-135"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">PlutusScript oldlang -&gt; PlutusScriptOrReferenceInput oldlang
+forall lang. PlutusScript lang -&gt; PlutusScriptOrReferenceInput lang
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PScript"><span class="hs-identifier hs-var">Api.PScript</span></a></span><span> </span><span class="annot"><span class="annottext">(PlutusScript oldlang -&gt; PlutusScriptOrReferenceInput oldlang)
+-&gt; PlutusScript oldlang -&gt; PlutusScriptOrReferenceInput oldlang
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString -&gt; PlutusScript oldlang
+forall lang. ShortByteString -&gt; PlutusScript lang
+</span><a href="Cardano.Api.Plutus.Internal.Script.html#PlutusScriptSerialised"><span class="hs-identifier hs-var">Api.PlutusScriptSerialised</span></a></span><span> </span><span class="annot"><span class="annottext">ShortByteString
+</span><a href="#local-6989586621681219261"><span class="hs-identifier hs-var">oldScript</span></a></span><span>
+</span><span id="line-136"></span></pre></body></html>

@@ -1,0 +1,790 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralisedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Network.IPC.Internal.Monad</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier">LocalStateQueryExpr</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#executeLocalStateQueryExpr"><span class="hs-identifier">executeLocalStateQueryExpr</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#queryExpr"><span class="hs-identifier">queryExpr</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Block.html"><span class="hs-identifier">Cardano.Api.Block</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html"><span class="hs-identifier">Cardano.Api.Network.IPC.Internal</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html"><span class="hs-identifier">Cardano.Api.Network.IPC.Internal.Version</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html"><span class="hs-identifier">Cardano.Api.Query.Internal.Type.QueryInMode</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-shelley-1.16.0.0-c94e4acbae2c451b736d7fa131482fce1d6ffd0e83dcc66450421e4714554169/share/doc/html/src/Cardano.Ledger.Shelley.Scripts.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Scripts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html"><span class="hs-identifier">Ouroboros.Network.Protocol.LocalStateQuery.Client</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Net.Query</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Type.html"><span class="hs-identifier">Ouroboros.Network.Protocol.LocalStateQuery.Type</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Net.Query</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.STM</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Reader.html"><span class="hs-identifier">Control.Monad.Reader</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Cont.html"><span class="hs-identifier">Control.Monad.Trans.Cont</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">{- HLINT ignore &quot;Use const&quot; -}</span><span>
+</span><span id="line-28"></span><span class="hs-comment">{- HLINT ignore &quot;Use let&quot; -}</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Monadic type for constructing local state query expressions.</span><span>
+</span><span id="line-31"></span><span class="hs-comment">--</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- Use 'queryExpr' in a do block to construct queries of this type and convert</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- the expression to a 'Net.Query.LocalStateQueryClient' with 'setupLocalStateQueryExpr'.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- Some consideration was made to use Applicative instead of Monad as the abstraction in</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- order to support pipelining, but we actually have a fair amount of code where the next</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- query depends on the result of the former and therefore actually need Monad.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- In order to make pipelining still possible we can explore the use of Selective Functors</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- which would allow us to straddle both worlds.</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">newtype</span><span> </span><span id="LocalStateQueryExpr"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-var">LocalStateQueryExpr</span></a></span></span><span> </span><span id="local-6989586621681179912"><span class="annot"><a href="#local-6989586621681179912"><span class="hs-identifier hs-type">block</span></a></span></span><span> </span><span id="local-6989586621681179913"><span class="annot"><a href="#local-6989586621681179913"><span class="hs-identifier hs-type">point</span></a></span></span><span> </span><span id="local-6989586621681179914"><span class="annot"><a href="#local-6989586621681179914"><span class="hs-identifier hs-type">query</span></a></span></span><span> </span><span id="local-6989586621681179915"><span class="annot"><a href="#local-6989586621681179915"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span id="local-6989586621681179916"><span class="annot"><a href="#local-6989586621681179916"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621681179917"><span class="annot"><a href="#local-6989586621681179917"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LocalStateQueryExpr"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-var">LocalStateQueryExpr</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="runLocalStateQueryExpr"><span class="annot"><span class="annottext">forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+LocalStateQueryExpr block point query r m a
+-&gt; ReaderT
+     NodeToClientVersion
+     (ContT (ClientStAcquired block point query m r) m)
+     a
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#runLocalStateQueryExpr"><span class="hs-identifier hs-var hs-var">runLocalStateQueryExpr</span></a></span></span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier hs-type">NodeToClientVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Cont.html#ContT"><span class="hs-identifier hs-type">ContT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#ClientStAcquired"><span class="hs-identifier hs-type">Net.Query.ClientStAcquired</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681179912"><span class="hs-identifier hs-type">block</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681179913"><span class="hs-identifier hs-type">point</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681179914"><span class="hs-identifier hs-type">query</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681179916"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681179915"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621681179916"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621681179917"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681180171"><span id="local-6989586621681180177"><span class="annot"><span class="annottext">(forall a b.
+ (a -&gt; b)
+ -&gt; LocalStateQueryExpr block point query r m a
+ -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; (forall a b.
+    a
+    -&gt; LocalStateQueryExpr block point query r m b
+    -&gt; LocalStateQueryExpr block point query r m a)
+-&gt; Functor (LocalStateQueryExpr block point query r m)
+forall a b.
+a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+forall a b.
+(a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+(a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+(a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+fmap :: forall a b.
+(a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+$c&lt;$ :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+&lt;$ :: forall a b.
+a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#Functor"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180187"><span id="local-6989586621681180193"><span id="local-6989586621681180198"><span id="local-6989586621681180203"><span id="local-6989586621681180208"><span class="annot"><span class="annottext">Functor (LocalStateQueryExpr block point query r m)
+Functor (LocalStateQueryExpr block point query r m) =&gt;
+(forall a. a -&gt; LocalStateQueryExpr block point query r m a)
+-&gt; (forall a b.
+    LocalStateQueryExpr block point query r m (a -&gt; b)
+    -&gt; LocalStateQueryExpr block point query r m a
+    -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c)
+    -&gt; LocalStateQueryExpr block point query r m a
+    -&gt; LocalStateQueryExpr block point query r m b
+    -&gt; LocalStateQueryExpr block point query r m c)
+-&gt; (forall a b.
+    LocalStateQueryExpr block point query r m a
+    -&gt; LocalStateQueryExpr block point query r m b
+    -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; (forall a b.
+    LocalStateQueryExpr block point query r m a
+    -&gt; LocalStateQueryExpr block point query r m b
+    -&gt; LocalStateQueryExpr block point query r m a)
+-&gt; Applicative (LocalStateQueryExpr block point query r m)
+forall a. a -&gt; LocalStateQueryExpr block point query r m a
+forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+forall a b.
+LocalStateQueryExpr block point query r m (a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m c
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *).
+Functor (LocalStateQueryExpr block point query r m)
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+a -&gt; LocalStateQueryExpr block point query r m a
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m (a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b c.
+(a -&gt; b -&gt; c)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m c
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+$cpure :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+a -&gt; LocalStateQueryExpr block point query r m a
+pure :: forall a. a -&gt; LocalStateQueryExpr block point query r m a
+$c&lt;*&gt; :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m (a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+&lt;*&gt; :: forall a b.
+LocalStateQueryExpr block point query r m (a -&gt; b)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+$cliftA2 :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b c.
+(a -&gt; b -&gt; c)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m c
+liftA2 :: forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m c
+$c*&gt; :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+*&gt; :: forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+$c&lt;* :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+&lt;* :: forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180218"><span id="local-6989586621681180224"><span id="local-6989586621681180229"><span class="annot"><span class="annottext">Applicative (LocalStateQueryExpr block point query r m)
+Applicative (LocalStateQueryExpr block point query r m) =&gt;
+(forall a b.
+ LocalStateQueryExpr block point query r m a
+ -&gt; (a -&gt; LocalStateQueryExpr block point query r m b)
+ -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; (forall a b.
+    LocalStateQueryExpr block point query r m a
+    -&gt; LocalStateQueryExpr block point query r m b
+    -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; (forall a. a -&gt; LocalStateQueryExpr block point query r m a)
+-&gt; Monad (LocalStateQueryExpr block point query r m)
+forall a. a -&gt; LocalStateQueryExpr block point query r m a
+forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; (a -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; LocalStateQueryExpr block point query r m b
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *).
+Applicative (LocalStateQueryExpr block point query r m)
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+a -&gt; LocalStateQueryExpr block point query r m a
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; (a -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; LocalStateQueryExpr block point query r m b
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+(forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+$c&gt;&gt;= :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; (a -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; LocalStateQueryExpr block point query r m b
+&gt;&gt;= :: forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; (a -&gt; LocalStateQueryExpr block point query r m b)
+-&gt; LocalStateQueryExpr block point query r m b
+$c&gt;&gt; :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+&gt;&gt; :: forall a b.
+LocalStateQueryExpr block point query r m a
+-&gt; LocalStateQueryExpr block point query r m b
+-&gt; LocalStateQueryExpr block point query r m b
+$creturn :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+a -&gt; LocalStateQueryExpr block point query r m a
+return :: forall a. a -&gt; LocalStateQueryExpr block point query r m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#Monad"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180239"><span id="local-6989586621681180245"><span id="local-6989586621681180250"><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Reader.Class.html#MonadReader"><span class="hs-identifier hs-type">MonadReader</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier hs-type">NodeToClientVersion</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681180260"><span class="annot"><span class="annottext">Monad (LocalStateQueryExpr block point query r m)
+Monad (LocalStateQueryExpr block point query r m) =&gt;
+(forall a. IO a -&gt; LocalStateQueryExpr block point query r m a)
+-&gt; MonadIO (LocalStateQueryExpr block point query r m)
+forall a. IO a -&gt; LocalStateQueryExpr block point query r m a
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *).
+MonadIO m =&gt;
+Monad (LocalStateQueryExpr block point query r m)
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+MonadIO m =&gt;
+IO a -&gt; LocalStateQueryExpr block point query r m a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a. IO a -&gt; m a) -&gt; MonadIO m
+$cliftIO :: forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+MonadIO m =&gt;
+IO a -&gt; LocalStateQueryExpr block point query r m a
+liftIO :: forall a. IO a -&gt; LocalStateQueryExpr block point query r m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadIO</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><span class="hs-comment">-- | Execute a local state query expression.</span></span><span>
+</span><span id="line-48"></span><span id="local-6989586621681180060"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#executeLocalStateQueryExpr"><span class="hs-identifier hs-type">executeLocalStateQueryExpr</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeConnectInfo"><span class="hs-identifier hs-type">LocalNodeConnectInfo</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Type.html#Target"><span class="hs-identifier hs-type">Net.Query.Target</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-type">LocalStateQueryExpr</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180060"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#AcquiringFailure"><span class="hs-identifier hs-type">AcquiringFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180060"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-54"></span><span id="executeLocalStateQueryExpr"><span class="annot"><span class="annottext">executeLocalStateQueryExpr :: forall a.
+LocalNodeConnectInfo
+-&gt; Target ChainPoint
+-&gt; LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+-&gt; IO (Either AcquiringFailure a)
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#executeLocalStateQueryExpr"><span class="hs-identifier hs-var hs-var">executeLocalStateQueryExpr</span></a></span></span><span> </span><span id="local-6989586621681180273"><span class="annot"><span class="annottext">LocalNodeConnectInfo
+</span><a href="#local-6989586621681180273"><span class="hs-identifier hs-var">connectInfo</span></a></span></span><span> </span><span id="local-6989586621681180274"><span class="annot"><span class="annottext">Target ChainPoint
+</span><a href="#local-6989586621681180274"><span class="hs-identifier hs-var">target</span></a></span></span><span> </span><span id="local-6989586621681180275"><span class="annot"><span class="annottext">LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+</span><a href="#local-6989586621681180275"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621681180276"><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180276"><span class="hs-identifier hs-var">tmvResultLocalState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (TMVar (Either AcquiringFailure a))
+forall a. IO (TMVar a)
+</span><span class="hs-identifier hs-var">newEmptyTMVarIO</span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681180278"><span class="annot"><span class="annottext">waitResult :: STM (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180278"><span class="hs-identifier hs-var hs-var">waitResult</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+-&gt; STM (Either AcquiringFailure a)
+forall a. TMVar a -&gt; STM a
+</span><span class="hs-identifier hs-var">readTMVar</span></span><span> </span><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180276"><span class="hs-identifier hs-var">tmvResultLocalState</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+-&gt; (NodeToClientVersion -&gt; LocalNodeClientProtocolsInMode) -&gt; IO ()
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+LocalNodeConnectInfo
+-&gt; (NodeToClientVersion -&gt; LocalNodeClientProtocolsInMode) -&gt; m ()
+</span><a href="Cardano.Api.Network.IPC.Internal.html#connectToLocalNodeWithVersion"><span class="hs-identifier hs-var">connectToLocalNodeWithVersion</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">LocalNodeConnectInfo
+</span><a href="#local-6989586621681180273"><span class="hs-identifier hs-var">connectInfo</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681180281"><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681180281"><span class="hs-identifier hs-var">ntcVersion</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeClientProtocols"><span class="hs-identifier hs-type">LocalNodeClientProtocols</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">localChainSyncClient :: LocalChainSyncClient BlockInMode ChainPoint ChainTip IO
+</span><a href="Cardano.Api.Network.IPC.Internal.html#localChainSyncClient"><span class="hs-identifier hs-var">localChainSyncClient</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LocalChainSyncClient BlockInMode ChainPoint ChainTip IO
+forall block point tip (m :: * -&gt; *).
+LocalChainSyncClient block point tip m
+</span><a href="Cardano.Api.Network.IPC.Internal.html#NoLocalChainSyncClient"><span class="hs-identifier hs-var">NoLocalChainSyncClient</span></a></span><span>
+</span><span id="line-63"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">localStateQueryClient :: Maybe
+  (LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ())
+</span><a href="Cardano.Api.Network.IPC.Internal.html#localStateQueryClient"><span class="hs-identifier hs-var">localStateQueryClient</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>              </span><span class="annot"><span class="annottext">LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+-&gt; Maybe
+     (LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ())
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+ -&gt; Maybe
+      (LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()))
+-&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+-&gt; Maybe
+     (LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM (Either AcquiringFailure a)
+-&gt; Target ChainPoint
+-&gt; TMVar (Either AcquiringFailure a)
+-&gt; NodeToClientVersion
+-&gt; LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+-&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+forall x a.
+STM x
+-&gt; Target ChainPoint
+-&gt; TMVar (Either AcquiringFailure a)
+-&gt; NodeToClientVersion
+-&gt; LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+-&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#setupLocalStateQueryExpr"><span class="hs-identifier hs-var">setupLocalStateQueryExpr</span></a></span><span> </span><span class="annot"><span class="annottext">STM (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180278"><span class="hs-identifier hs-var">waitResult</span></a></span><span> </span><span class="annot"><span class="annottext">Target ChainPoint
+</span><a href="#local-6989586621681180274"><span class="hs-identifier hs-var">target</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180276"><span class="hs-identifier hs-var">tmvResultLocalState</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681180281"><span class="hs-identifier hs-var">ntcVersion</span></a></span><span> </span><span class="annot"><span class="annottext">LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+</span><a href="#local-6989586621681180275"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-65"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">localTxSubmissionClient :: Maybe
+  (LocalTxSubmissionClient
+     TxInMode TxValidationErrorInCardanoMode IO ())
+</span><a href="Cardano.Api.Network.IPC.Internal.html#localTxSubmissionClient"><span class="hs-identifier hs-var">localTxSubmissionClient</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe
+  (LocalTxSubmissionClient
+     TxInMode TxValidationErrorInCardanoMode IO ())
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-66"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">localTxMonitoringClient :: Maybe (LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ())
+</span><a href="Cardano.Api.Network.IPC.Internal.html#localTxMonitoringClient"><span class="hs-identifier hs-var">localTxMonitoringClient</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (LocalTxMonitorClient TxIdInMode TxInMode SlotNo IO ())
+forall a. Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-67"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><span class="annottext">STM (Either AcquiringFailure a) -&gt; IO (Either AcquiringFailure a)
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">STM (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180278"><span class="hs-identifier hs-var">waitResult</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><span class="hs-comment">-- | Use 'queryExpr' in a do block to construct monadic local state queries.</span></span><span>
+</span><span id="line-73"></span><span id="local-6989586621681180086"><span id="local-6989586621681180087"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#setupLocalStateQueryExpr"><span class="hs-identifier hs-type">setupLocalStateQueryExpr</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Conc.Sync.html#STM"><span class="hs-identifier hs-type">STM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180086"><span class="hs-identifier hs-type">x</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-comment">-- ^ An STM expression that only returns when all protocols are complete.</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-comment">-- Protocols must wait until 'waitDone' returns because premature exit will</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-comment">-- cause other incomplete protocols to abort which may lead to deadlock.</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Type.html#Target"><span class="hs-identifier hs-type">Net.Query.Target</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TMVar</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#AcquiringFailure"><span class="hs-identifier hs-type">AcquiringFailure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180087"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier hs-type">NodeToClientVersion</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-type">LocalStateQueryExpr</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180087"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#LocalStateQueryClient"><span class="hs-identifier hs-type">Net.Query.LocalStateQueryClient</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier hs-type">BlockInMode</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#ChainPoint"><span class="hs-identifier hs-type">ChainPoint</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-83"></span><span id="setupLocalStateQueryExpr"><span class="annot"><span class="annottext">setupLocalStateQueryExpr :: forall x a.
+STM x
+-&gt; Target ChainPoint
+-&gt; TMVar (Either AcquiringFailure a)
+-&gt; NodeToClientVersion
+-&gt; LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+-&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#setupLocalStateQueryExpr"><span class="hs-identifier hs-var hs-var">setupLocalStateQueryExpr</span></a></span></span><span> </span><span id="local-6989586621681180301"><span class="annot"><span class="annottext">STM x
+</span><a href="#local-6989586621681180301"><span class="hs-identifier hs-var">waitDone</span></a></span></span><span> </span><span id="local-6989586621681180302"><span class="annot"><span class="annottext">Target ChainPoint
+</span><a href="#local-6989586621681180302"><span class="hs-identifier hs-var">mPointVar'</span></a></span></span><span> </span><span id="local-6989586621681180303"><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180303"><span class="hs-identifier hs-var">resultVar'</span></a></span></span><span> </span><span id="local-6989586621681180304"><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681180304"><span class="hs-identifier hs-var">ntcVersion</span></a></span></span><span> </span><span id="local-6989586621681180305"><span class="annot"><span class="annottext">LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+</span><a href="#local-6989586621681180305"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+-&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+forall block point (query :: * -&gt; *) (m :: * -&gt; *) a.
+m (ClientStIdle block point query m a)
+-&gt; LocalStateQueryClient block point query m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#LocalStateQueryClient"><span class="hs-identifier hs-var">LocalStateQueryClient</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+ -&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ())
+-&gt; (ClientStAcquiring BlockInMode ChainPoint QueryInMode IO ()
+    -&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ()))
+-&gt; ClientStAcquiring BlockInMode ChainPoint QueryInMode IO ()
+-&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+ -&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ()))
+-&gt; (ClientStAcquiring BlockInMode ChainPoint QueryInMode IO ()
+    -&gt; ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+-&gt; ClientStAcquiring BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Target ChainPoint
+-&gt; ClientStAcquiring BlockInMode ChainPoint QueryInMode IO ()
+-&gt; ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+forall point block (query :: * -&gt; *) (m :: * -&gt; *) a.
+Target point
+-&gt; ClientStAcquiring block point query m a
+-&gt; ClientStIdle block point query m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#SendMsgAcquire"><span class="hs-identifier hs-var">Net.Query.SendMsgAcquire</span></a></span><span> </span><span class="annot"><span class="annottext">Target ChainPoint
+</span><a href="#local-6989586621681180302"><span class="hs-identifier hs-var">mPointVar'</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStAcquiring BlockInMode ChainPoint QueryInMode IO ()
+ -&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ())
+-&gt; ClientStAcquiring BlockInMode ChainPoint QueryInMode IO ()
+-&gt; LocalStateQueryClient BlockInMode ChainPoint QueryInMode IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#ClientStAcquiring"><span class="hs-identifier hs-type">Net.Query.ClientStAcquiring</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">recvMsgAcquired :: IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ())
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#recvMsgAcquired"><span class="hs-identifier hs-var">Net.Query.recvMsgAcquired</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681180310"><span class="annot"><span class="annottext">allQueries :: ContT
+  (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()) IO a
+</span><a href="#local-6989586621681180310"><span class="hs-identifier hs-var hs-var">allQueries</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT
+  NodeToClientVersion
+  (ContT
+     (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()) IO)
+  a
+-&gt; NodeToClientVersion
+-&gt; ContT
+     (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()) IO a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Reader.html#runReaderT"><span class="hs-identifier hs-var">runReaderT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+-&gt; ReaderT
+     NodeToClientVersion
+     (ContT
+        (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()) IO)
+     a
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+LocalStateQueryExpr block point query r m a
+-&gt; ReaderT
+     NodeToClientVersion
+     (ContT (ClientStAcquired block point query m r) m)
+     a
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#runLocalStateQueryExpr"><span class="hs-identifier hs-var">runLocalStateQueryExpr</span></a></span><span> </span><span class="annot"><span class="annottext">LocalStateQueryExpr BlockInMode ChainPoint QueryInMode () IO a
+</span><a href="#local-6989586621681180305"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681180304"><span class="hs-identifier hs-var">ntcVersion</span></a></span><span>
+</span><span id="line-88"></span><span>           </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">ContT
+  (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()) IO a
+-&gt; (a
+    -&gt; IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()))
+-&gt; IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ())
+forall {k} (r :: k) (m :: k -&gt; *) a.
+ContT r m a -&gt; (a -&gt; m r) -&gt; m r
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Cont.html#runContT"><span class="hs-identifier hs-var">runContT</span></a></span><span> </span><span class="annot"><span class="annottext">ContT
+  (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()) IO a
+</span><a href="#local-6989586621681180310"><span class="hs-identifier hs-var">allQueries</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ())
+</span><a href="#local-6989586621681180313"><span class="hs-identifier hs-var">finalContinuation</span></a></span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">recvMsgFailure :: AcquireFailure
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#recvMsgFailure"><span class="hs-identifier hs-var">Net.Query.recvMsgFailure</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681180315"><span class="annot"><span class="annottext">AcquireFailure
+</span><a href="#local-6989586621681180315"><span class="hs-identifier hs-var">failure</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>          </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+-&gt; Either AcquiringFailure a -&gt; STM ()
+forall a. TMVar a -&gt; a -&gt; STM ()
+</span><span class="hs-identifier hs-var">putTMVar</span></span><span> </span><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180303"><span class="hs-identifier hs-var">resultVar'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AcquiringFailure -&gt; Either AcquiringFailure a
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AcquireFailure -&gt; AcquiringFailure
+</span><a href="Cardano.Api.Network.IPC.Internal.html#toAcquiringFailure"><span class="hs-identifier hs-var">toAcquiringFailure</span></a></span><span> </span><span class="annot"><span class="annottext">AcquireFailure
+</span><a href="#local-6989586621681180315"><span class="hs-identifier hs-var">failure</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>          </span><span class="annot"><span class="annottext">IO x -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO x -&gt; IO ()) -&gt; IO x -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM x -&gt; IO x
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">STM x
+</span><a href="#local-6989586621681180301"><span class="hs-identifier hs-var">waitDone</span></a></span><span> </span><span class="hs-comment">-- Wait for all protocols to complete before exiting.</span><span>
+</span><span id="line-92"></span><span>          </span><span class="annot"><span class="annottext">ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+ -&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ()))
+-&gt; ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+forall a block point (query :: * -&gt; *) (m :: * -&gt; *).
+a -&gt; ClientStIdle block point query m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#SendMsgDone"><span class="hs-identifier hs-var">Net.Query.SendMsgDone</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-94"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- We wait for all queries to finish before exiting.</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621681180313"><span class="annot"><span class="annottext">finalContinuation :: a -&gt; IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ())
+</span><a href="#local-6989586621681180313"><span class="hs-identifier hs-var hs-var">finalContinuation</span></a></span></span><span> </span><span id="local-6989586621681180320"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681180320"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+-&gt; Either AcquiringFailure a -&gt; STM ()
+forall a. TMVar a -&gt; a -&gt; STM ()
+</span><span class="hs-identifier hs-var">putTMVar</span></span><span> </span><span class="annot"><span class="annottext">TMVar (Either AcquiringFailure a)
+</span><a href="#local-6989586621681180303"><span class="hs-identifier hs-var">resultVar'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Either AcquiringFailure a
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681180320"><span class="hs-identifier hs-var">result</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">IO x -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO x -&gt; IO ()) -&gt; IO x -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">STM x -&gt; IO x
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">STM x
+</span><a href="#local-6989586621681180301"><span class="hs-identifier hs-var">waitDone</span></a></span><span> </span><span class="hs-comment">-- Wait for all protocols to complete before exiting.</span><span>
+</span><span id="line-99"></span><span>    </span><span class="annot"><span class="annottext">ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ())
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()
+ -&gt; IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()))
+-&gt; ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStAcquired BlockInMode ChainPoint QueryInMode IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+-&gt; ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()
+forall (m :: * -&gt; *) block point (query :: * -&gt; *) a.
+m (ClientStIdle block point query m a)
+-&gt; ClientStAcquired block point query m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#SendMsgRelease"><span class="hs-identifier hs-var">Net.Query.SendMsgRelease</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+ -&gt; ClientStAcquired BlockInMode ChainPoint QueryInMode IO ())
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+-&gt; ClientStAcquired BlockInMode ChainPoint QueryInMode IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+ -&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ()))
+-&gt; ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+-&gt; IO (ClientStIdle BlockInMode ChainPoint QueryInMode IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; ClientStIdle BlockInMode ChainPoint QueryInMode IO ()
+forall a block point (query :: * -&gt; *) (m :: * -&gt; *).
+a -&gt; ClientStIdle block point query m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#SendMsgDone"><span class="hs-identifier hs-var">Net.Query.SendMsgDone</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="annot"><span class="hs-comment">-- | Get the node server's Node-to-Client version.</span></span><span>
+</span><span id="line-102"></span><span id="local-6989586621681180124"><span id="local-6989586621681180125"><span id="local-6989586621681180126"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#getNtcVersion"><span class="hs-identifier hs-type">getNtcVersion</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-type">LocalStateQueryExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180124"><span class="hs-identifier hs-type">block</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180125"><span class="hs-identifier hs-type">point</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180126"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier hs-type">NodeToClientVersion</span></a></span></span></span></span><span>
+</span><span id="line-103"></span><span id="getNtcVersion"><span class="annot"><span class="annottext">getNtcVersion :: forall block point r.
+LocalStateQueryExpr
+  block point QueryInMode r IO NodeToClientVersion
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#getNtcVersion"><span class="hs-identifier hs-var hs-var">getNtcVersion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT
+  NodeToClientVersion
+  (ContT (ClientStAcquired block point QueryInMode IO r) IO)
+  NodeToClientVersion
+-&gt; LocalStateQueryExpr
+     block point QueryInMode r IO NodeToClientVersion
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+ReaderT
+  NodeToClientVersion
+  (ContT (ClientStAcquired block point query m r) m)
+  a
+-&gt; LocalStateQueryExpr block point query r m a
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-var">LocalStateQueryExpr</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT
+  NodeToClientVersion
+  (ContT (ClientStAcquired block point QueryInMode IO r) IO)
+  NodeToClientVersion
+forall r (m :: * -&gt; *). MonadReader r m =&gt; m r
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Reader.Class.html#ask"><span class="hs-identifier hs-var">ask</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="annot"><span class="hs-comment">-- | Use 'queryExpr' in a do block to construct monadic local state queries.</span></span><span>
+</span><span id="line-106"></span><span id="local-6989586621681180130"><span id="local-6989586621681180131"><span id="local-6989586621681180132"><span id="local-6989586621681180133"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#queryExpr"><span class="hs-identifier hs-type">queryExpr</span></a></span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180130"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-type">LocalStateQueryExpr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180131"><span class="hs-identifier hs-type">block</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180132"><span class="hs-identifier hs-type">point</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180133"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier hs-type">UnsupportedNtcVersionError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180130"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-109"></span><span id="queryExpr"><span class="annot"><span class="annottext">queryExpr :: forall a block point r.
+QueryInMode a
+-&gt; LocalStateQueryExpr
+     block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#queryExpr"><span class="hs-identifier hs-var hs-var">queryExpr</span></a></span></span><span> </span><span id="local-6989586621681180331"><span class="annot"><span class="annottext">QueryInMode a
+</span><a href="#local-6989586621681180331"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>  </span><span id="local-6989586621681180332"><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681180332"><span class="hs-identifier hs-var">ntcVersion</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">LocalStateQueryExpr
+  block point QueryInMode r IO NodeToClientVersion
+forall block point r.
+LocalStateQueryExpr
+  block point QueryInMode r IO NodeToClientVersion
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#getNtcVersion"><span class="hs-identifier hs-var">getNtcVersion</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Some (Query (CardanoBlock StandardCrypto))
+-&gt; NodeToClientVersion -&gt; Either UnsupportedNtcVersionError ()
+</span><a href="Cardano.Api.Network.IPC.Internal.Version.html#isQuerySupportedInNtcVersion"><span class="hs-identifier hs-var">isQuerySupportedInNtcVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">QueryInMode a -&gt; Some (Query (CardanoBlock StandardCrypto))
+forall block result.
+(CardanoBlock StandardCrypto ~ block) =&gt;
+QueryInMode result -&gt; Some (Query block)
+</span><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#toConsensusQuery"><span class="hs-identifier hs-var">toConsensusQuery</span></a></span><span> </span><span class="annot"><span class="annottext">QueryInMode a
+</span><a href="#local-6989586621681180331"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681180332"><span class="hs-identifier hs-var">ntcVersion</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">(a -&gt; Either UnsupportedNtcVersionError a)
+-&gt; LocalStateQueryExpr block point QueryInMode r IO a
+-&gt; LocalStateQueryExpr
+     block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
+forall a b.
+(a -&gt; b)
+-&gt; LocalStateQueryExpr block point QueryInMode r IO a
+-&gt; LocalStateQueryExpr block point QueryInMode r IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Either UnsupportedNtcVersionError a
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(LocalStateQueryExpr block point QueryInMode r IO a
+ -&gt; LocalStateQueryExpr
+      block point QueryInMode r IO (Either UnsupportedNtcVersionError a))
+-&gt; ((NodeToClientVersion
+     -&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a)
+    -&gt; LocalStateQueryExpr block point QueryInMode r IO a)
+-&gt; (NodeToClientVersion
+    -&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a)
+-&gt; LocalStateQueryExpr
+     block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ReaderT
+  NodeToClientVersion
+  (ContT (ClientStAcquired block point QueryInMode IO r) IO)
+  a
+-&gt; LocalStateQueryExpr block point QueryInMode r IO a
+forall block point (query :: * -&gt; *) r (m :: * -&gt; *) a.
+ReaderT
+  NodeToClientVersion
+  (ContT (ClientStAcquired block point query m r) m)
+  a
+-&gt; LocalStateQueryExpr block point query r m a
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier hs-var">LocalStateQueryExpr</span></a></span><span> </span><span class="annot"><span class="annottext">(ReaderT
+   NodeToClientVersion
+   (ContT (ClientStAcquired block point QueryInMode IO r) IO)
+   a
+ -&gt; LocalStateQueryExpr block point QueryInMode r IO a)
+-&gt; ((NodeToClientVersion
+     -&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a)
+    -&gt; ReaderT
+         NodeToClientVersion
+         (ContT (ClientStAcquired block point QueryInMode IO r) IO)
+         a)
+-&gt; (NodeToClientVersion
+    -&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a)
+-&gt; LocalStateQueryExpr block point QueryInMode r IO a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeToClientVersion
+ -&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a)
+-&gt; ReaderT
+     NodeToClientVersion
+     (ContT (ClientStAcquired block point QueryInMode IO r) IO)
+     a
+forall r (m :: * -&gt; *) a. (r -&gt; m a) -&gt; ReaderT r m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-var">ReaderT</span></a></span><span> </span><span class="annot"><span class="annottext">((NodeToClientVersion
+  -&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a)
+ -&gt; LocalStateQueryExpr
+      block point QueryInMode r IO (Either UnsupportedNtcVersionError a))
+-&gt; (NodeToClientVersion
+    -&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a)
+-&gt; LocalStateQueryExpr
+     block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">NodeToClientVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">QueryInMode a
+-&gt; ContT (ClientStAcquired block point QueryInMode IO r) IO a
+forall (m :: * -&gt; *) result block point a.
+Applicative m =&gt;
+QueryInMode result
+-&gt; ContT (ClientStAcquired block point QueryInMode m a) m result
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#constructQueryContinuation"><span class="hs-identifier hs-var">constructQueryContinuation</span></a></span><span> </span><span class="annot"><span class="annottext">QueryInMode a
+</span><a href="#local-6989586621681180331"><span class="hs-identifier hs-var">q</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681180337"><span class="annot"><span class="annottext">UnsupportedNtcVersionError
+</span><a href="#local-6989586621681180337"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either UnsupportedNtcVersionError a
+-&gt; LocalStateQueryExpr
+     block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
+forall a. a -&gt; LocalStateQueryExpr block point QueryInMode r IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Either UnsupportedNtcVersionError a
+ -&gt; LocalStateQueryExpr
+      block point QueryInMode r IO (Either UnsupportedNtcVersionError a))
+-&gt; Either UnsupportedNtcVersionError a
+-&gt; LocalStateQueryExpr
+     block point QueryInMode r IO (Either UnsupportedNtcVersionError a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; Either UnsupportedNtcVersionError a
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError
+</span><a href="#local-6989586621681180337"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-comment">{-  The client sends a query with the following data constructor:
+
+data ClientStAcquired block point query m a where
+  SendMsgQuery     :: query result
+                   -&gt; ClientStQuerying block point query m a result
+                   -&gt; ClientStAcquired block point query m a
+
+The client is then awaiting a result from the server which is represented by:
+
+data ClientStQuerying block point query m a result = ClientStQuerying {
+      recvMsgResult :: result -&gt; m (ClientStAcquired block point query m a)
+    }
+
+When constructing the `ClientStQuerying` value we can send another query (`SendMsgQuery`) or
+release (`SendMsgRelease`) and this recursion is nicely modelled with the `ContT` monad transformer.
+
+The final continuation in our case is waiting for all the queries to be returned and then returning
+`SendMsgRelease`.
+-}</span><span>
+</span><span id="line-135"></span><span id="local-6989586621681180148"><span id="local-6989586621681180149"><span id="local-6989586621681180150"><span id="local-6989586621681180151"><span id="local-6989586621681180152"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#constructQueryContinuation"><span class="hs-identifier hs-type">constructQueryContinuation</span></a></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#Applicative"><span class="hs-identifier hs-type">Applicative</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180148"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180149"><span class="hs-identifier hs-type">result</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Cont.html#ContT"><span class="hs-identifier hs-type">ContT</span></a></span><span>
+</span><span id="line-139"></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#ClientStAcquired"><span class="hs-identifier hs-type">Net.Query.ClientStAcquired</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180150"><span class="hs-identifier hs-type">block</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180151"><span class="hs-identifier hs-type">point</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier hs-type">QueryInMode</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180148"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681180152"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>       </span><span class="annot"><a href="#local-6989586621681180148"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-141"></span><span>       </span><span class="annot"><a href="#local-6989586621681180149"><span class="hs-identifier hs-type">result</span></a></span></span></span></span></span></span><span>
+</span><span id="line-142"></span><span id="constructQueryContinuation"><span class="annot"><span class="annottext">constructQueryContinuation :: forall (m :: * -&gt; *) result block point a.
+Applicative m =&gt;
+QueryInMode result
+-&gt; ContT (ClientStAcquired block point QueryInMode m a) m result
+</span><a href="Cardano.Api.Network.IPC.Internal.Monad.html#constructQueryContinuation"><span class="hs-identifier hs-var hs-var">constructQueryContinuation</span></a></span></span><span> </span><span id="local-6989586621681180340"><span class="annot"><span class="annottext">QueryInMode result
+</span><a href="#local-6989586621681180340"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><span class="annottext">((result -&gt; m (ClientStAcquired block point QueryInMode m a))
+ -&gt; m (ClientStAcquired block point QueryInMode m a))
+-&gt; ContT (ClientStAcquired block point QueryInMode m a) m result
+forall {k} (r :: k) (m :: k -&gt; *) a.
+((a -&gt; m r) -&gt; m r) -&gt; ContT r m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Cont.html#ContT"><span class="hs-identifier hs-var">ContT</span></a></span><span> </span><span class="annot"><span class="annottext">(((result -&gt; m (ClientStAcquired block point QueryInMode m a))
+  -&gt; m (ClientStAcquired block point QueryInMode m a))
+ -&gt; ContT (ClientStAcquired block point QueryInMode m a) m result)
+-&gt; ((result -&gt; m (ClientStAcquired block point QueryInMode m a))
+    -&gt; m (ClientStAcquired block point QueryInMode m a))
+-&gt; ContT (ClientStAcquired block point QueryInMode m a) m result
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681180342"><span class="annot"><span class="annottext">result -&gt; m (ClientStAcquired block point QueryInMode m a)
+</span><a href="#local-6989586621681180342"><span class="hs-identifier hs-var">final</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><span class="annottext">ClientStAcquired block point QueryInMode m a
+-&gt; m (ClientStAcquired block point QueryInMode m a)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStAcquired block point QueryInMode m a
+ -&gt; m (ClientStAcquired block point QueryInMode m a))
+-&gt; ClientStAcquired block point QueryInMode m a
+-&gt; m (ClientStAcquired block point QueryInMode m a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">QueryInMode result
+-&gt; ClientStQuerying block point QueryInMode m a result
+-&gt; ClientStAcquired block point QueryInMode m a
+forall (query :: * -&gt; *) result block point (m :: * -&gt; *) a.
+query result
+-&gt; ClientStQuerying block point query m a result
+-&gt; ClientStAcquired block point query m a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#SendMsgQuery"><span class="hs-identifier hs-var">Net.Query.SendMsgQuery</span></a></span><span> </span><span class="annot"><span class="annottext">QueryInMode result
+</span><a href="#local-6989586621681180340"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">(ClientStQuerying block point QueryInMode m a result
+ -&gt; ClientStAcquired block point QueryInMode m a)
+-&gt; ClientStQuerying block point QueryInMode m a result
+-&gt; ClientStAcquired block point QueryInMode m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#ClientStQuerying"><span class="hs-identifier hs-type">Net.Query.ClientStQuerying</span></a></span><span>
+</span><span id="line-147"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">recvMsgResult :: result -&gt; m (ClientStAcquired block point QueryInMode m a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#recvMsgResult"><span class="hs-identifier hs-var">Net.Query.recvMsgResult</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">result -&gt; m (ClientStAcquired block point QueryInMode m a)
+</span><a href="#local-6989586621681180342"><span class="hs-identifier hs-var">final</span></a></span><span>
+</span><span id="line-148"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-149"></span></pre></body></html>

@@ -1,0 +1,885 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621681125966"><span id="local-6989586621681125967"><span id="local-6989586621681125968"><span id="local-6989586621681125969"></span></span></span></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="annot"><span class="hs-comment">-- | Class of errors used in the Api.</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Serialise.DeserialiseAnyOf</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier">InputFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier">InputDecodeError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInput"><span class="hs-identifier">deserialiseInput</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInputAnyOf"><span class="hs-identifier">deserialiseInputAnyOf</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFile"><span class="hs-identifier">readFormattedFile</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFileTextEnvelope"><span class="hs-identifier">readFormattedFileTextEnvelope</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFileAnyOf"><span class="hs-identifier">readFormattedFileAnyOf</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#renderInputDecodeError"><span class="hs-identifier">renderInputDecodeError</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html"><span class="hs-identifier">Cardano.Api.Error</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.IO.html"><span class="hs-identifier">Cardano.Api.IO</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html"><span class="hs-identifier">Cardano.Api.Serialise.Bech32</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html"><span class="hs-identifier">Cardano.Api.Serialise.TextEnvelope.Internal</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- import Cardano.Api.Internal.Utils</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/mtl-2.3.1-inplace/src/Control.Monad.Except.html"><span class="hs-identifier">Control.Monad.Except</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier">runExceptT</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSC</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Unicode.html#toLower"><span class="hs-identifier">toLower</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#NonEmpty"><span class="hs-identifier">NonEmpty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Encoding.html"><span class="hs-identifier">Data.Text.Encoding</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Exts.html"><span class="hs-identifier">GHC.Exts</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#IsList"><span class="hs-identifier">IsList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Formatted/encoded input deserialisation</span><span>
+</span><span id="line-45"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="annot"><span class="hs-comment">-- | Input format/encoding.</span></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="InputFormat"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier hs-var">InputFormat</span></a></span></span><span> </span><span id="local-6989586621681125978"><span class="annot"><a href="#local-6989586621681125978"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Bech32 encoding.</span></span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621681125979"><span id="InputFormatBech32"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormatBech32"><span class="hs-identifier hs-var">InputFormatBech32</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html#SerialiseAsBech32"><span class="hs-identifier hs-type">SerialiseAsBech32</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125979"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier hs-type">InputFormat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125979"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Hex/Base16 encoding.</span></span><span>
+</span><span id="line-52"></span><span>  </span><span id="local-6989586621681125981"><span id="InputFormatHex"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormatHex"><span class="hs-identifier hs-var">InputFormatHex</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytes"><span class="hs-identifier hs-type">SerialiseAsRawBytes</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125981"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier hs-type">InputFormat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125981"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-comment">-- TODO: Specify TextEnvelope CBOR hex</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="hs-comment">-- | Text envelope format.</span></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621681125983"><span id="InputFormatTextEnvelope"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormatTextEnvelope"><span class="hs-identifier hs-var">InputFormatTextEnvelope</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125983"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier hs-type">InputFormat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125983"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- TODO: Add constructor for TextEnvelope Bech32</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><span class="hs-comment">-- | Input decoding error.</span></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">data</span><span> </span><span id="InputDecodeError"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-var">InputDecodeError</span></a></span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | The provided data seems to be a valid text envelope, but some error</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- occurred in deserialising it.</span><span>
+</span><span id="line-64"></span><span>    </span><span id="InputTextEnvelopeError"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputTextEnvelopeError"><span class="hs-identifier hs-var">InputTextEnvelopeError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | The provided data is valid Bech32, but some error occurred in</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- deserialising it.</span><span>
+</span><span id="line-67"></span><span>    </span><span id="InputBech32DecodeError"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputBech32DecodeError"><span class="hs-identifier hs-var">InputBech32DecodeError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html#Bech32DecodeError"><span class="hs-identifier hs-type">Bech32DecodeError</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | The provided data does not represent a valid value of the provided</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- type.</span><span>
+</span><span id="line-70"></span><span>    </span><span id="InputInvalidError"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputInvalidError"><span class="hs-identifier hs-var">InputInvalidError</span></a></span></span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681125989"><span id="local-6989586621681125995"><span class="annot"><span class="annottext">InputDecodeError -&gt; InputDecodeError -&gt; Bool
+(InputDecodeError -&gt; InputDecodeError -&gt; Bool)
+-&gt; (InputDecodeError -&gt; InputDecodeError -&gt; Bool)
+-&gt; Eq InputDecodeError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: InputDecodeError -&gt; InputDecodeError -&gt; Bool
+== :: InputDecodeError -&gt; InputDecodeError -&gt; Bool
+$c/= :: InputDecodeError -&gt; InputDecodeError -&gt; Bool
+/= :: InputDecodeError -&gt; InputDecodeError -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681126000"><span id="local-6989586621681126009"><span id="local-6989586621681126013"><span class="annot"><span class="annottext">Int -&gt; InputDecodeError -&gt; ShowS
+[InputDecodeError] -&gt; ShowS
+InputDecodeError -&gt; String
+(Int -&gt; InputDecodeError -&gt; ShowS)
+-&gt; (InputDecodeError -&gt; String)
+-&gt; ([InputDecodeError] -&gt; ShowS)
+-&gt; Show InputDecodeError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; InputDecodeError -&gt; ShowS
+showsPrec :: Int -&gt; InputDecodeError -&gt; ShowS
+$cshow :: InputDecodeError -&gt; String
+show :: InputDecodeError -&gt; String
+$cshowList :: [InputDecodeError] -&gt; ShowS
+showList :: [InputDecodeError] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681126019"><span id="local-6989586621681126025"><span id="local-6989586621681126029"><span id="local-6989586621681126031"><span id="local-6989586621681126033"><span id="local-6989586621681126039"><span id="local-6989586621681126044"><span id="local-6989586621681126047"><span id="local-6989586621681126050"><span id="local-6989586621681126053"><span id="local-6989586621681126056"><span id="local-6989586621681126059"><span id="local-6989586621681126064"><span id="local-6989586621681126069"><span class="annot"><span class="annottext">Typeable InputDecodeError
+Typeable InputDecodeError =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; InputDecodeError -&gt; c InputDecodeError)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c InputDecodeError)
+-&gt; (InputDecodeError -&gt; Constr)
+-&gt; (InputDecodeError -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c InputDecodeError))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c InputDecodeError))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; InputDecodeError -&gt; InputDecodeError)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; [u])
+-&gt; (forall u.
+    Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; InputDecodeError -&gt; m InputDecodeError)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; InputDecodeError -&gt; m InputDecodeError)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; InputDecodeError -&gt; m InputDecodeError)
+-&gt; Data InputDecodeError
+InputDecodeError -&gt; Constr
+InputDecodeError -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; InputDecodeError -&gt; InputDecodeError
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c InputDecodeError
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; InputDecodeError -&gt; c InputDecodeError
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c InputDecodeError)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c InputDecodeError)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; InputDecodeError -&gt; c InputDecodeError
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; InputDecodeError -&gt; c InputDecodeError
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c InputDecodeError
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c InputDecodeError
+$ctoConstr :: InputDecodeError -&gt; Constr
+toConstr :: InputDecodeError -&gt; Constr
+$cdataTypeOf :: InputDecodeError -&gt; DataType
+dataTypeOf :: InputDecodeError -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c InputDecodeError)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c InputDecodeError)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c InputDecodeError)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c InputDecodeError)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; InputDecodeError -&gt; InputDecodeError
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; InputDecodeError -&gt; InputDecodeError
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; InputDecodeError -&gt; r
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; [u]
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; [u]
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; u
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; InputDecodeError -&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; InputDecodeError -&gt; m InputDecodeError
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621681126077"><span class="annot"><span class="annottext">prettyError :: forall ann. InputDecodeError -&gt; Doc ann
+</span><a href="#local-6989586621681126077"><span class="hs-identifier hs-var hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; Doc ann
+forall ann. InputDecodeError -&gt; Doc ann
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#renderInputDecodeError"><span class="hs-identifier hs-var">renderInputDecodeError</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><span class="hs-comment">-- | Render an error message for a 'InputDecodeError'.</span></span><span>
+</span><span id="line-77"></span><span id="local-6989586621681126079"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#renderInputDecodeError"><span class="hs-identifier hs-type">renderInputDecodeError</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Doc</span></span><span> </span><span class="annot"><a href="#local-6989586621681126079"><span class="hs-identifier hs-type">ann</span></a></span></span><span>
+</span><span id="line-78"></span><span id="renderInputDecodeError"><span class="annot"><span class="annottext">renderInputDecodeError :: forall ann. InputDecodeError -&gt; Doc ann
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#renderInputDecodeError"><span class="hs-identifier hs-var hs-var">renderInputDecodeError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputTextEnvelopeError"><span class="hs-identifier hs-type">InputTextEnvelopeError</span></a></span><span> </span><span id="local-6989586621681126086"><span class="annot"><span class="annottext">TextEnvelopeError
+</span><a href="#local-6989586621681126086"><span class="hs-identifier hs-var">textEnvErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><span class="annottext">TextEnvelopeError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. TextEnvelopeError -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError
+</span><a href="#local-6989586621681126086"><span class="hs-identifier hs-var">textEnvErr</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputBech32DecodeError"><span class="hs-identifier hs-type">InputBech32DecodeError</span></a></span><span> </span><span id="local-6989586621681126087"><span class="annot"><span class="annottext">Bech32DecodeError
+</span><a href="#local-6989586621681126087"><span class="hs-identifier hs-var">decodeErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">Bech32DecodeError -&gt; Doc ann
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. Bech32DecodeError -&gt; Doc ann
+</span><a href="Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span> </span><span class="annot"><span class="annottext">Bech32DecodeError
+</span><a href="#local-6989586621681126087"><span class="hs-identifier hs-var">decodeErr</span></a></span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputInvalidError"><span class="hs-identifier hs-var">InputInvalidError</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Invalid key.&quot;</span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | The result of a deserialisation function.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- Note that this type isn't intended to be exported, but only used as a</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- helper within the 'deserialiseInput' function.</span><span>
+</span><span id="line-90"></span><span class="hs-keyword">data</span><span> </span><span id="DeserialiseInputResult"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-var">DeserialiseInputResult</span></a></span></span><span> </span><span id="local-6989586621681125887"><span class="annot"><a href="#local-6989586621681125887"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Input successfully deserialised.</span></span><span>
+</span><span id="line-92"></span><span>    </span><span id="DeserialiseInputSuccess"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-var">DeserialiseInputSuccess</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="#local-6989586621681125887"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | The provided data is of the expected format/encoding, but an error</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- occurred in deserialising it.</span><span>
+</span><span id="line-95"></span><span>    </span><span id="DeserialiseInputError"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-var">DeserialiseInputError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | The provided data's formatting/encoding does not match that which was</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- expected. This error is an indication that one could attempt to</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-comment">-- deserialise the input again, but instead expecting a different format.</span><span>
+</span><span id="line-99"></span><span>    </span><span id="DeserialiseInputErrorFormatMismatch"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="annot"><span class="hs-comment">-- | Deserialise an input of some type that is formatted in some way.</span></span><span>
+</span><span id="line-102"></span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInput"><span class="hs-identifier hs-type">deserialiseInput</span></a></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681125860"><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-104"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#NonEmpty"><span class="hs-identifier hs-type">NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier hs-type">InputFormat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-107"></span><span id="deserialiseInput"><span class="annot"><span class="annottext">deserialiseInput :: forall a.
+NonEmpty (InputFormat a) -&gt; ByteString -&gt; Either InputDecodeError a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInput"><span class="hs-identifier hs-var hs-var">deserialiseInput</span></a></span></span><span> </span><span id="local-6989586621681126100"><span class="annot"><span class="annottext">NonEmpty (InputFormat a)
+</span><a href="#local-6989586621681126100"><span class="hs-identifier hs-var">acceptedFormats</span></a></span></span><span> </span><span id="local-6989586621681126101"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126101"><span class="hs-identifier hs-var">inputBs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="annottext">[InputFormat a] -&gt; Either InputDecodeError a
+</span><a href="#local-6989586621681126102"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NonEmpty (InputFormat a) -&gt; [Item (NonEmpty (InputFormat a))]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IsList.html#toList"><span class="hs-identifier hs-var">toList</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (InputFormat a)
+</span><a href="#local-6989586621681126100"><span class="hs-identifier hs-var">acceptedFormats</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><a href="#local-6989586621681126103"><span class="hs-identifier hs-type">inputText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621681126103"><span class="annot"><span class="annottext">inputText :: Text
+</span><a href="#local-6989586621681126103"><span class="hs-identifier hs-var hs-var">inputText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Encoding.html#decodeUtf8"><span class="hs-identifier hs-var">Text.decodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126101"><span class="hs-identifier hs-var">inputBs</span></a></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><a href="#local-6989586621681126102"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier hs-type">InputFormat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621681126102"><span class="annot"><span class="annottext">go :: [InputFormat a] -&gt; Either InputDecodeError a
+</span><a href="#local-6989586621681126102"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; Either InputDecodeError a
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputInvalidError"><span class="hs-identifier hs-var">InputInvalidError</span></a></span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><a href="#local-6989586621681126102"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621681126105"><span class="annot"><span class="annottext">InputFormat a
+</span><a href="#local-6989586621681126105"><span class="hs-identifier hs-var">kf</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#%3A"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span id="local-6989586621681126106"><span class="annot"><span class="annottext">[InputFormat a]
+</span><a href="#local-6989586621681126106"><span class="hs-identifier hs-var">kfs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681126107"><span class="annot"><span class="annottext">res :: DeserialiseInputResult a
+</span><a href="#local-6989586621681126107"><span class="hs-identifier hs-var hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">InputFormat a
+</span><a href="#local-6989586621681126105"><span class="hs-identifier hs-var">kf</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-118"></span><span>            </span><span class="annot"><span class="annottext">InputFormat a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormatBech32"><span class="hs-identifier hs-var">InputFormatBech32</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+SerialiseAsBech32 a =&gt; DeserialiseInputResult a
+</span><a href="#local-6989586621681126110"><span class="hs-identifier hs-var">deserialiseBech32</span></a></span><span>
+</span><span id="line-119"></span><span>            </span><span class="annot"><span class="annottext">InputFormat a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormatHex"><span class="hs-identifier hs-var">InputFormatHex</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+SerialiseAsRawBytes a =&gt; DeserialiseInputResult a
+</span><a href="#local-6989586621681126113"><span class="hs-identifier hs-var">deserialiseHex</span></a></span><span>
+</span><span id="line-120"></span><span>            </span><span class="annot"><span class="annottext">InputFormat a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormatTextEnvelope"><span class="hs-identifier hs-var">InputFormatTextEnvelope</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+HasTextEnvelope a =&gt; DeserialiseInputResult a
+</span><a href="#local-6989586621681126116"><span class="hs-identifier hs-var">deserialiseTextEnvelope</span></a></span><span>
+</span><span id="line-121"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+</span><a href="#local-6989586621681126107"><span class="hs-identifier hs-var">res</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-122"></span><span>          </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-type">DeserialiseInputSuccess</span></a></span><span> </span><span id="local-6989586621681126117"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126117"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; Either InputDecodeError a
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126117"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-123"></span><span>          </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-type">DeserialiseInputError</span></a></span><span> </span><span id="local-6989586621681126118"><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="#local-6989586621681126118"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; Either InputDecodeError a
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="#local-6989586621681126118"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-124"></span><span>          </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[InputFormat a] -&gt; Either InputDecodeError a
+</span><a href="#local-6989586621681126102"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">[InputFormat a]
+</span><a href="#local-6989586621681126106"><span class="hs-identifier hs-var">kfs</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="#local-6989586621681126116"><span class="hs-identifier hs-type">deserialiseTextEnvelope</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621681126116"><span class="annot"><span class="annottext">deserialiseTextEnvelope :: HasTextEnvelope a =&gt; DeserialiseInputResult a
+</span><a href="#local-6989586621681126116"><span class="hs-identifier hs-var hs-var">deserialiseTextEnvelope</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621681126127"><span class="hs-identifier hs-type">textEnvRes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-129"></span><span>        </span><span id="local-6989586621681126127"><span class="annot"><span class="annottext">textEnvRes :: Either TextEnvelopeError a
+</span><a href="#local-6989586621681126127"><span class="hs-identifier hs-var hs-var">textEnvRes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>          </span><span class="annot"><span class="annottext">TextEnvelope -&gt; Either TextEnvelopeError a
+forall a.
+HasTextEnvelope a =&gt;
+TextEnvelope -&gt; Either TextEnvelopeError a
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#deserialiseFromTextEnvelope"><span class="hs-identifier hs-var">deserialiseFromTextEnvelope</span></a></span><span>
+</span><span id="line-131"></span><span>            </span><span class="annot"><span class="annottext">(TextEnvelope -&gt; Either TextEnvelopeError a)
+-&gt; Either TextEnvelopeError TextEnvelope
+-&gt; Either TextEnvelopeError a
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; TextEnvelopeError)
+-&gt; Either String TextEnvelope
+-&gt; Either TextEnvelopeError TextEnvelope
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; TextEnvelopeError
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeAesonDecodeError"><span class="hs-identifier hs-var">TextEnvelopeAesonDecodeError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Either String TextEnvelope
+forall a. FromJSON a =&gt; ByteString -&gt; Either String a
+</span><span class="hs-identifier hs-var">Aeson.eitherDecodeStrict'</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126101"><span class="hs-identifier hs-var">inputBs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either TextEnvelopeError a
+</span><a href="#local-6989586621681126127"><span class="hs-identifier hs-var">textEnvRes</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681126133"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126133"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; DeserialiseInputResult a
+forall a. a -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-var">DeserialiseInputSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126133"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-134"></span><span>      </span><span class="hs-comment">-- The input was valid a text envelope, but there was a type mismatch</span><span>
+</span><span id="line-135"></span><span>      </span><span class="hs-comment">-- error.</span><span>
+</span><span id="line-136"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681126134"><span class="annot"><span class="annottext">err :: TextEnvelopeError
+</span><a href="#local-6989586621681126134"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeTypeError"><span class="hs-identifier hs-type">TextEnvelopeTypeError</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">InputDecodeError -&gt; DeserialiseInputResult a
+forall a. InputDecodeError -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-var">DeserialiseInputError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TextEnvelopeError -&gt; InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputTextEnvelopeError"><span class="hs-identifier hs-var">InputTextEnvelopeError</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError
+</span><a href="#local-6989586621681126134"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>      </span><span class="hs-comment">-- The input was not valid a text envelope.</span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+forall a. DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><a href="#local-6989586621681126110"><span class="hs-identifier hs-type">deserialiseBech32</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html#SerialiseAsBech32"><span class="hs-identifier hs-type">SerialiseAsBech32</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span id="local-6989586621681126110"><span class="annot"><span class="annottext">deserialiseBech32 :: SerialiseAsBech32 a =&gt; DeserialiseInputResult a
+</span><a href="#local-6989586621681126110"><span class="hs-identifier hs-var hs-var">deserialiseBech32</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Bech32DecodeError a
+forall a. SerialiseAsBech32 a =&gt; Text -&gt; Either Bech32DecodeError a
+</span><a href="Cardano.Api.Serialise.Bech32.html#deserialiseFromBech32"><span class="hs-identifier hs-var">deserialiseFromBech32</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681126103"><span class="hs-identifier hs-var">inputText</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681126139"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126139"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; DeserialiseInputResult a
+forall a. a -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-var">DeserialiseInputSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126139"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-145"></span><span>      </span><span class="hs-comment">-- The input was not valid Bech32.</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html#Bech32DecodingError"><span class="hs-identifier hs-type">Bech32DecodingError</span></a></span><span> </span><span class="annot"><span class="annottext">DecodingError
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+forall a. DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="hs-comment">-- The input was valid Bech32, but some other error occurred.</span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681126141"><span class="annot"><span class="annottext">Bech32DecodeError
+</span><a href="#local-6989586621681126141"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; DeserialiseInputResult a
+forall a. InputDecodeError -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-var">DeserialiseInputError</span></a></span><span> </span><span class="annot"><span class="annottext">(InputDecodeError -&gt; DeserialiseInputResult a)
+-&gt; InputDecodeError -&gt; DeserialiseInputResult a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bech32DecodeError -&gt; InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputBech32DecodeError"><span class="hs-identifier hs-var">InputBech32DecodeError</span></a></span><span> </span><span class="annot"><span class="annottext">Bech32DecodeError
+</span><a href="#local-6989586621681126141"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="#local-6989586621681126113"><span class="hs-identifier hs-type">deserialiseHex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytes"><span class="hs-identifier hs-type">SerialiseAsRawBytes</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125860"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-151"></span><span>  </span><span id="local-6989586621681126113"><span class="annot"><span class="annottext">deserialiseHex :: SerialiseAsRawBytes a =&gt; DeserialiseInputResult a
+</span><a href="#local-6989586621681126113"><span class="hs-identifier hs-var hs-var">deserialiseHex</span></a></span></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="#local-6989586621681126144"><span class="hs-identifier hs-var">isValidHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126101"><span class="hs-identifier hs-var">inputBs</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either RawBytesHexError a
+forall a.
+SerialiseAsRawBytes a =&gt;
+ByteString -&gt; Either RawBytesHexError a
+</span><a href="Cardano.Api.Serialise.Raw.html#deserialiseFromRawBytesHex"><span class="hs-identifier hs-var">deserialiseFromRawBytesHex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126101"><span class="hs-identifier hs-var">inputBs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-154"></span><span>          </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">RawBytesHexError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; DeserialiseInputResult a
+forall a. InputDecodeError -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-var">DeserialiseInputError</span></a></span><span> </span><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputInvalidError"><span class="hs-identifier hs-var">InputInvalidError</span></a></span><span>
+</span><span id="line-155"></span><span>          </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681126146"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126146"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; DeserialiseInputResult a
+forall a. a -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-var">DeserialiseInputSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621681126146"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult a
+forall a. DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><a href="#local-6989586621681126144"><span class="hs-identifier hs-type">isValidHex</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621681126144"><span class="annot"><span class="annottext">isValidHex :: ByteString -&gt; Bool
+</span><a href="#local-6989586621681126144"><span class="hs-identifier hs-var hs-var">isValidHex</span></a></span></span><span> </span><span id="local-6989586621681126147"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126147"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; String -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#all"><span class="hs-identifier hs-var">all</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Char -&gt; String -&gt; Bool
+forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#elem"><span class="hs-operator hs-var">`elem`</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681126150"><span class="hs-identifier hs-var">hexAlpha</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; (Char -&gt; Char) -&gt; Char -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Unicode.html#toLower"><span class="hs-identifier hs-var">toLower</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Char8.html#unpack"><span class="hs-identifier hs-var">BSC.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126147"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Bool
+forall a. Integral a =&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Real.html#even"><span class="hs-identifier hs-var">even</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BSC.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126147"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><a href="#local-6989586621681126150"><span class="hs-identifier hs-type">hexAlpha</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-164"></span><span>    </span><span id="local-6989586621681126150"><span class="annot"><span class="annottext">hexAlpha :: String
+</span><a href="#local-6989586621681126150"><span class="hs-identifier hs-var hs-var">hexAlpha</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;0123456789abcdef&quot;</span></span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- | Deserialise an input of some type that is formatted in some way.</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- The provided 'ByteString' can either be Bech32-encoded or in the text</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- envelope format.</span><span>
+</span><span id="line-170"></span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInputAnyOf"><span class="hs-identifier hs-type">deserialiseInputAnyOf</span></a></span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681125904"><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-172"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-type">FromSomeType</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html#SerialiseAsBech32"><span class="hs-identifier hs-type">SerialiseAsBech32</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-173"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-type">FromSomeType</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-176"></span><span id="deserialiseInputAnyOf"><span class="annot"><span class="annottext">deserialiseInputAnyOf :: forall b.
+[FromSomeType SerialiseAsBech32 b]
+-&gt; [FromSomeType HasTextEnvelope b]
+-&gt; ByteString
+-&gt; Either InputDecodeError b
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInputAnyOf"><span class="hs-identifier hs-var hs-var">deserialiseInputAnyOf</span></a></span></span><span> </span><span id="local-6989586621681126159"><span class="annot"><span class="annottext">[FromSomeType SerialiseAsBech32 b]
+</span><a href="#local-6989586621681126159"><span class="hs-identifier hs-var">bech32Types</span></a></span></span><span> </span><span id="local-6989586621681126160"><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope b]
+</span><a href="#local-6989586621681126160"><span class="hs-identifier hs-var">textEnvTypes</span></a></span></span><span> </span><span id="local-6989586621681126161"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126161"><span class="hs-identifier hs-var">inputBs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126162"><span class="hs-identifier hs-var">deserialiseBech32</span></a></span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+-&gt; DeserialiseInputResult b -&gt; DeserialiseInputResult b
+</span><a href="#local-6989586621681126163"><span class="hs-operator hs-var">`orTry`</span></a></span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126164"><span class="hs-identifier hs-var">deserialiseTextEnvelope</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-type">DeserialiseInputSuccess</span></a></span><span> </span><span id="local-6989586621681126165"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681126165"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">b -&gt; Either InputDecodeError b
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681126165"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-type">DeserialiseInputError</span></a></span><span> </span><span id="local-6989586621681126166"><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="#local-6989586621681126166"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; Either InputDecodeError b
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="#local-6989586621681126166"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; Either InputDecodeError b
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputInvalidError"><span class="hs-identifier hs-var">InputInvalidError</span></a></span><span>
+</span><span id="line-181"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-182"></span><span>  </span><span class="annot"><a href="#local-6989586621681126167"><span class="hs-identifier hs-type">inputText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-183"></span><span>  </span><span id="local-6989586621681126167"><span class="annot"><span class="annottext">inputText :: Text
+</span><a href="#local-6989586621681126167"><span class="hs-identifier hs-var hs-var">inputText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Encoding.html#decodeUtf8"><span class="hs-identifier hs-var">Text.decodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126161"><span class="hs-identifier hs-var">inputBs</span></a></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><a href="#local-6989586621681126163"><span class="hs-identifier hs-type">orTry</span></a></span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-189"></span><span>  </span><span id="local-6989586621681126163"><span class="annot"><span class="annottext">orTry :: DeserialiseInputResult b
+-&gt; DeserialiseInputResult b -&gt; DeserialiseInputResult b
+</span><a href="#local-6989586621681126163"><span class="hs-identifier hs-var hs-var">orTry</span></a></span></span><span> </span><span id="local-6989586621681126168"><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126168"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621681126169"><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126169"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126168"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-191"></span><span>      </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-type">DeserialiseInputSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126168"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-192"></span><span>      </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-type">DeserialiseInputError</span></a></span><span> </span><span class="annot"><span class="annottext">InputDecodeError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126168"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-193"></span><span>      </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+</span><a href="#local-6989586621681126169"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><a href="#local-6989586621681126164"><span class="hs-identifier hs-type">deserialiseTextEnvelope</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-196"></span><span>  </span><span id="local-6989586621681126164"><span class="annot"><span class="annottext">deserialiseTextEnvelope :: DeserialiseInputResult b
+</span><a href="#local-6989586621681126164"><span class="hs-identifier hs-var hs-var">deserialiseTextEnvelope</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621681126170"><span class="hs-identifier hs-type">textEnvRes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeError"><span class="hs-identifier hs-type">TextEnvelopeError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-198"></span><span>        </span><span id="local-6989586621681126170"><span class="annot"><span class="annottext">textEnvRes :: Either TextEnvelopeError b
+</span><a href="#local-6989586621681126170"><span class="hs-identifier hs-var hs-var">textEnvRes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-199"></span><span>          </span><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope b]
+-&gt; TextEnvelope -&gt; Either TextEnvelopeError b
+forall b.
+[FromSomeType HasTextEnvelope b]
+-&gt; TextEnvelope -&gt; Either TextEnvelopeError b
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#deserialiseFromTextEnvelopeAnyOf"><span class="hs-identifier hs-var">deserialiseFromTextEnvelopeAnyOf</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope b]
+</span><a href="#local-6989586621681126160"><span class="hs-identifier hs-var">textEnvTypes</span></a></span><span>
+</span><span id="line-200"></span><span>            </span><span class="annot"><span class="annottext">(TextEnvelope -&gt; Either TextEnvelopeError b)
+-&gt; Either TextEnvelopeError TextEnvelope
+-&gt; Either TextEnvelopeError b
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; TextEnvelopeError)
+-&gt; Either String TextEnvelope
+-&gt; Either TextEnvelopeError TextEnvelope
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; TextEnvelopeError
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeAesonDecodeError"><span class="hs-identifier hs-var">TextEnvelopeAesonDecodeError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Either String TextEnvelope
+forall a. FromJSON a =&gt; ByteString -&gt; Either String a
+</span><span class="hs-identifier hs-var">Aeson.eitherDecodeStrict'</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126161"><span class="hs-identifier hs-var">inputBs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either TextEnvelopeError b
+</span><a href="#local-6989586621681126170"><span class="hs-identifier hs-var">textEnvRes</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-202"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681126172"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681126172"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">b -&gt; DeserialiseInputResult b
+forall a. a -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-var">DeserialiseInputSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681126172"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-203"></span><span>      </span><span class="hs-comment">-- The input was valid a text envelope, but there was a type mismatch</span><span>
+</span><span id="line-204"></span><span>      </span><span class="hs-comment">-- error.</span><span>
+</span><span id="line-205"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681126173"><span class="annot"><span class="annottext">err :: TextEnvelopeError
+</span><a href="#local-6989586621681126173"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#TextEnvelopeTypeError"><span class="hs-identifier hs-type">TextEnvelopeTypeError</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-206"></span><span>        </span><span class="annot"><span class="annottext">InputDecodeError -&gt; DeserialiseInputResult b
+forall a. InputDecodeError -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-var">DeserialiseInputError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TextEnvelopeError -&gt; InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputTextEnvelopeError"><span class="hs-identifier hs-var">InputTextEnvelopeError</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError
+</span><a href="#local-6989586621681126173"><span class="hs-identifier hs-var">err</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>      </span><span class="hs-comment">-- The input was not valid a text envelope.</span><span>
+</span><span id="line-208"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+forall a. DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span>  </span><span class="annot"><a href="#local-6989586621681126162"><span class="hs-identifier hs-type">deserialiseBech32</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputResult"><span class="hs-identifier hs-type">DeserialiseInputResult</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125904"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-211"></span><span>  </span><span id="local-6989586621681126162"><span class="annot"><span class="annottext">deserialiseBech32 :: DeserialiseInputResult b
+</span><a href="#local-6989586621681126162"><span class="hs-identifier hs-var hs-var">deserialiseBech32</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-212"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[FromSomeType SerialiseAsBech32 b]
+-&gt; Text -&gt; Either Bech32DecodeError b
+forall b.
+[FromSomeType SerialiseAsBech32 b]
+-&gt; Text -&gt; Either Bech32DecodeError b
+</span><a href="Cardano.Api.Serialise.Bech32.html#deserialiseAnyOfFromBech32"><span class="hs-identifier hs-var">deserialiseAnyOfFromBech32</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType SerialiseAsBech32 b]
+</span><a href="#local-6989586621681126159"><span class="hs-identifier hs-var">bech32Types</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681126167"><span class="hs-identifier hs-var">inputText</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-213"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681126175"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681126175"><span class="hs-identifier hs-var">res</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">b -&gt; DeserialiseInputResult b
+forall a. a -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputSuccess"><span class="hs-identifier hs-var">DeserialiseInputSuccess</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621681126175"><span class="hs-identifier hs-var">res</span></a></span><span>
+</span><span id="line-214"></span><span>      </span><span class="hs-comment">-- The input was not valid Bech32.</span><span>
+</span><span id="line-215"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html#Bech32DecodingError"><span class="hs-identifier hs-type">Bech32DecodingError</span></a></span><span> </span><span class="annot"><span class="annottext">DecodingError
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DeserialiseInputResult b
+forall a. DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputErrorFormatMismatch"><span class="hs-identifier hs-var">DeserialiseInputErrorFormatMismatch</span></a></span><span>
+</span><span id="line-216"></span><span>      </span><span class="hs-comment">-- The input was valid Bech32, but some other error occurred.</span><span>
+</span><span id="line-217"></span><span>      </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681126176"><span class="annot"><span class="annottext">Bech32DecodeError
+</span><a href="#local-6989586621681126176"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InputDecodeError -&gt; DeserialiseInputResult b
+forall a. InputDecodeError -&gt; DeserialiseInputResult a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#DeserialiseInputError"><span class="hs-identifier hs-var">DeserialiseInputError</span></a></span><span> </span><span class="annot"><span class="annottext">(InputDecodeError -&gt; DeserialiseInputResult b)
+-&gt; InputDecodeError -&gt; DeserialiseInputResult b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bech32DecodeError -&gt; InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputBech32DecodeError"><span class="hs-identifier hs-var">InputBech32DecodeError</span></a></span><span> </span><span class="annot"><span class="annottext">Bech32DecodeError
+</span><a href="#local-6989586621681126176"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span class="annot"><span class="hs-comment">-- | Read formatted file</span></span><span>
+</span><span id="line-220"></span><span id="local-6989586621681125909"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFile"><span class="hs-identifier hs-type">readFormattedFile</span></a></span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#NonEmpty"><span class="hs-identifier hs-type">NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputFormat"><span class="hs-identifier hs-type">InputFormat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125909"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-222"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ one of expected input formats</span></span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621681125909"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-225"></span><span id="readFormattedFile"><span class="annot"><span class="annottext">readFormattedFile :: forall a.
+NonEmpty (InputFormat a)
+-&gt; String -&gt; IO (Either (FileError InputDecodeError) a)
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFile"><span class="hs-identifier hs-var hs-var">readFormattedFile</span></a></span></span><span> </span><span id="local-6989586621681126185"><span class="annot"><span class="annottext">NonEmpty (InputFormat a)
+</span><a href="#local-6989586621681126185"><span class="hs-identifier hs-var">acceptedFormats</span></a></span></span><span> </span><span id="local-6989586621681126186"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681126186"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-226"></span><span>  </span><span id="local-6989586621681126187"><span class="annot"><span class="annottext">Either (FileError InputDecodeError) ByteString
+</span><a href="#local-6989586621681126187"><span class="hs-identifier hs-var">eContent</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ExceptT (FileError InputDecodeError) IO ByteString
+-&gt; IO (Either (FileError InputDecodeError) ByteString)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError InputDecodeError) IO ByteString
+ -&gt; IO (Either (FileError InputDecodeError) ByteString))
+-&gt; ExceptT (FileError InputDecodeError) IO ByteString
+-&gt; IO (Either (FileError InputDecodeError) ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (String -&gt; IO ByteString)
+-&gt; ExceptT (FileError InputDecodeError) IO ByteString
+forall (m :: * -&gt; *) s e.
+MonadIO m =&gt;
+String -&gt; (String -&gt; IO s) -&gt; ExceptT (FileError e) m s
+</span><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier hs-var">fileIOExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681126186"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ByteString
+</span><a href="Cardano.Api.IO.html#readFileBlocking"><span class="hs-identifier hs-var">readFileBlocking</span></a></span><span>
+</span><span id="line-227"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either (FileError InputDecodeError) ByteString
+</span><a href="#local-6989586621681126187"><span class="hs-identifier hs-var">eContent</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-228"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681126190"><span class="annot"><span class="annottext">FileError InputDecodeError
+</span><a href="#local-6989586621681126190"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either (FileError InputDecodeError) a
+-&gt; IO (Either (FileError InputDecodeError) a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (FileError InputDecodeError) a
+ -&gt; IO (Either (FileError InputDecodeError) a))
+-&gt; Either (FileError InputDecodeError) a
+-&gt; IO (Either (FileError InputDecodeError) a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FileError InputDecodeError -&gt; Either (FileError InputDecodeError) a
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">FileError InputDecodeError
+</span><a href="#local-6989586621681126190"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-229"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681126191"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126191"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-230"></span><span>      </span><span class="annot"><span class="annottext">Either (FileError InputDecodeError) a
+-&gt; IO (Either (FileError InputDecodeError) a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (FileError InputDecodeError) a
+ -&gt; IO (Either (FileError InputDecodeError) a))
+-&gt; (Either InputDecodeError a
+    -&gt; Either (FileError InputDecodeError) a)
+-&gt; Either InputDecodeError a
+-&gt; IO (Either (FileError InputDecodeError) a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(InputDecodeError -&gt; FileError InputDecodeError)
+-&gt; Either InputDecodeError a
+-&gt; Either (FileError InputDecodeError) a
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; InputDecodeError -&gt; FileError InputDecodeError
+forall e. String -&gt; e -&gt; FileError e
+</span><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-var">FileError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681126186"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either InputDecodeError a
+ -&gt; IO (Either (FileError InputDecodeError) a))
+-&gt; Either InputDecodeError a
+-&gt; IO (Either (FileError InputDecodeError) a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (InputFormat a) -&gt; ByteString -&gt; Either InputDecodeError a
+forall a.
+NonEmpty (InputFormat a) -&gt; ByteString -&gt; Either InputDecodeError a
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInput"><span class="hs-identifier hs-var">deserialiseInput</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty (InputFormat a)
+</span><a href="#local-6989586621681126185"><span class="hs-identifier hs-var">acceptedFormats</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126191"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span class="annot"><span class="hs-comment">-- | Read text envelope file</span></span><span>
+</span><span id="line-233"></span><span id="local-6989586621681125923"><span id="local-6989586621681125924"><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFileTextEnvelope"><span class="hs-identifier hs-type">readFormattedFileTextEnvelope</span></a></span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125923"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-235"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125924"><span class="hs-identifier hs-type">content</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#In"><span class="hs-identifier hs-type">In</span></a></span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621681125923"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-237"></span><span id="readFormattedFileTextEnvelope"><span class="annot"><span class="annottext">readFormattedFileTextEnvelope :: forall a content.
+HasTextEnvelope a =&gt;
+File content 'In -&gt; IO (Either (FileError InputDecodeError) a)
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFileTextEnvelope"><span class="hs-identifier hs-var hs-var">readFormattedFileTextEnvelope</span></a></span></span><span> </span><span id="local-6989586621681126200"><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621681126200"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-238"></span><span>  </span><span class="annot"><span class="annottext">(FileError TextEnvelopeError -&gt; FileError InputDecodeError)
+-&gt; Either (FileError TextEnvelopeError) a
+-&gt; Either (FileError InputDecodeError) a
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(TextEnvelopeError -&gt; InputDecodeError)
+-&gt; FileError TextEnvelopeError -&gt; FileError InputDecodeError
+forall a b. (a -&gt; b) -&gt; FileError a -&gt; FileError b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">TextEnvelopeError -&gt; InputDecodeError
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputTextEnvelopeError"><span class="hs-identifier hs-var">InputTextEnvelopeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either (FileError TextEnvelopeError) a
+ -&gt; Either (FileError InputDecodeError) a)
+-&gt; IO (Either (FileError TextEnvelopeError) a)
+-&gt; IO (Either (FileError InputDecodeError) a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'In -&gt; IO (Either (FileError TextEnvelopeError) a)
+forall a content.
+HasTextEnvelope a =&gt;
+File content 'In -&gt; IO (Either (FileError TextEnvelopeError) a)
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#readFileTextEnvelope"><span class="hs-identifier hs-var">readFileTextEnvelope</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621681126200"><span class="hs-identifier hs-var">fp</span></a></span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span class="annot"><span class="hs-comment">-- | Read in in any of the format in the text envelope</span></span><span>
+</span><span id="line-241"></span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFileAnyOf"><span class="hs-identifier hs-type">readFormattedFileAnyOf</span></a></span><span>
+</span><span id="line-242"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621681125938"><span class="annot"><a href="#local-6989586621681125938"><span class="hs-identifier hs-type">content</span></a></span></span><span> </span><span id="local-6989586621681125937"><span class="annot"><a href="#local-6989586621681125937"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-243"></span><span>   </span><span class="hs-operator">.</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-type">FromSomeType</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Bech32.html#SerialiseAsBech32"><span class="hs-identifier hs-type">SerialiseAsBech32</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125937"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#FromSomeType"><span class="hs-identifier hs-type">FromSomeType</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125937"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681125938"><span class="hs-identifier hs-type">content</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.IO.Internal.Base.html#In"><span class="hs-identifier hs-type">In</span></a></span><span>
+</span><span id="line-246"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-type">FileError</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#InputDecodeError"><span class="hs-identifier hs-type">InputDecodeError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621681125937"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-247"></span><span id="readFormattedFileAnyOf"><span class="annot"><span class="annottext">readFormattedFileAnyOf :: forall content b.
+[FromSomeType SerialiseAsBech32 b]
+-&gt; [FromSomeType HasTextEnvelope b]
+-&gt; File content 'In
+-&gt; IO (Either (FileError InputDecodeError) b)
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#readFormattedFileAnyOf"><span class="hs-identifier hs-var hs-var">readFormattedFileAnyOf</span></a></span></span><span> </span><span id="local-6989586621681126208"><span class="annot"><span class="annottext">[FromSomeType SerialiseAsBech32 b]
+</span><a href="#local-6989586621681126208"><span class="hs-identifier hs-var">bech32Types</span></a></span></span><span> </span><span id="local-6989586621681126209"><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope b]
+</span><a href="#local-6989586621681126209"><span class="hs-identifier hs-var">textEnvTypes</span></a></span></span><span> </span><span id="local-6989586621681126210"><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621681126210"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-248"></span><span>  </span><span id="local-6989586621681126211"><span class="annot"><span class="annottext">Either (FileError InputDecodeError) ByteString
+</span><a href="#local-6989586621681126211"><span class="hs-identifier hs-var">eContent</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ExceptT (FileError InputDecodeError) IO ByteString
+-&gt; IO (Either (FileError InputDecodeError) ByteString)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/transformers-0.6.1.0-inplace/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT (FileError InputDecodeError) IO ByteString
+ -&gt; IO (Either (FileError InputDecodeError) ByteString))
+-&gt; ExceptT (FileError InputDecodeError) IO ByteString
+-&gt; IO (Either (FileError InputDecodeError) ByteString)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (String -&gt; IO ByteString)
+-&gt; ExceptT (FileError InputDecodeError) IO ByteString
+forall (m :: * -&gt; *) s e.
+MonadIO m =&gt;
+String -&gt; (String -&gt; IO s) -&gt; ExceptT (FileError e) m s
+</span><a href="Cardano.Api.Error.html#fileIOExceptT"><span class="hs-identifier hs-var">fileIOExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">File content 'In -&gt; String
+forall content (direction :: FileDirection).
+File content direction -&gt; String
+</span><a href="Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621681126210"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ByteString
+</span><a href="Cardano.Api.IO.html#readFileBlocking"><span class="hs-identifier hs-var">readFileBlocking</span></a></span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either (FileError InputDecodeError) ByteString
+</span><a href="#local-6989586621681126211"><span class="hs-identifier hs-var">eContent</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-250"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621681126213"><span class="annot"><span class="annottext">FileError InputDecodeError
+</span><a href="#local-6989586621681126213"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either (FileError InputDecodeError) b
+-&gt; IO (Either (FileError InputDecodeError) b)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (FileError InputDecodeError) b
+ -&gt; IO (Either (FileError InputDecodeError) b))
+-&gt; Either (FileError InputDecodeError) b
+-&gt; IO (Either (FileError InputDecodeError) b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FileError InputDecodeError -&gt; Either (FileError InputDecodeError) b
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">FileError InputDecodeError
+</span><a href="#local-6989586621681126213"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-251"></span><span>    </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621681126214"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126214"><span class="hs-identifier hs-var">content</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-252"></span><span>      </span><span class="annot"><span class="annottext">Either (FileError InputDecodeError) b
+-&gt; IO (Either (FileError InputDecodeError) b)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Either (FileError InputDecodeError) b
+ -&gt; IO (Either (FileError InputDecodeError) b))
+-&gt; (Either InputDecodeError b
+    -&gt; Either (FileError InputDecodeError) b)
+-&gt; Either InputDecodeError b
+-&gt; IO (Either (FileError InputDecodeError) b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(InputDecodeError -&gt; FileError InputDecodeError)
+-&gt; Either InputDecodeError b
+-&gt; Either (FileError InputDecodeError) b
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; InputDecodeError -&gt; FileError InputDecodeError
+forall e. String -&gt; e -&gt; FileError e
+</span><a href="Cardano.Api.Error.html#FileError"><span class="hs-identifier hs-var">FileError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">File content 'In -&gt; String
+forall content (direction :: FileDirection).
+File content direction -&gt; String
+</span><a href="Cardano.Api.IO.Internal.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><span class="annottext">File content 'In
+</span><a href="#local-6989586621681126210"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Either InputDecodeError b
+ -&gt; IO (Either (FileError InputDecodeError) b))
+-&gt; Either InputDecodeError b
+-&gt; IO (Either (FileError InputDecodeError) b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType SerialiseAsBech32 b]
+-&gt; [FromSomeType HasTextEnvelope b]
+-&gt; ByteString
+-&gt; Either InputDecodeError b
+forall b.
+[FromSomeType SerialiseAsBech32 b]
+-&gt; [FromSomeType HasTextEnvelope b]
+-&gt; ByteString
+-&gt; Either InputDecodeError b
+</span><a href="Cardano.Api.Serialise.DeserialiseAnyOf.html#deserialiseInputAnyOf"><span class="hs-identifier hs-var">deserialiseInputAnyOf</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType SerialiseAsBech32 b]
+</span><a href="#local-6989586621681126208"><span class="hs-identifier hs-var">bech32Types</span></a></span><span> </span><span class="annot"><span class="annottext">[FromSomeType HasTextEnvelope b]
+</span><a href="#local-6989586621681126209"><span class="hs-identifier hs-var">textEnvTypes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681126214"><span class="hs-identifier hs-var">content</span></a></span><span>
+</span><span id="line-253"></span></pre></body></html>

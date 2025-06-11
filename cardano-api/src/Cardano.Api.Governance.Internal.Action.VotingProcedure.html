@@ -1,0 +1,796 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE QuantifiedConstraints #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Governance.Internal.Action.VotingProcedure</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Address.html"><span class="hs-identifier">Cardano.Api.Address</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ConwayEraOnwards</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html"><span class="hs-identifier">Cardano.Api.Era.Internal.Eon.ShelleyBasedEra</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.ProposalProcedure.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Action.ProposalProcedure</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Ledger.Internal.Reexport.html"><span class="hs-identifier">Cardano.Api.Ledger.Internal.Reexport</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ledger</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Cbor.html"><span class="hs-identifier">Cardano.Api.Serialise.Cbor</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html"><span class="hs-identifier">Cardano.Api.Serialise.TextEnvelope.Internal</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.html"><span class="hs-identifier">Cardano.Binary</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CBOR</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-api-1.11.0.0-9852118f7dfe14ab1340be707d67c9317fb07912c1725cb4a7204d287e446e2f/share/doc/html/src/Cardano.Ledger.Api.html"><span class="hs-identifier">Cardano.Ledger.Api</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.html"><span class="hs-identifier">Cardano.Ledger.Core</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">L</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.html#foldM"><span class="hs-identifier">foldM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Encoding.html"><span class="hs-identifier">Data.Text.Encoding</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="Vote"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#Vote"><span class="hs-identifier hs-var">Vote</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="No"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#No"><span class="hs-identifier hs-var">No</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Yes"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#Yes"><span class="hs-identifier hs-var">Yes</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Abstain"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#Abstain"><span class="hs-identifier hs-var">Abstain</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681154191"><span id="local-6989586621681154193"><span id="local-6989586621681154197"><span class="annot"><span class="annottext">Int -&gt; Vote -&gt; ShowS
+[Vote] -&gt; ShowS
+Vote -&gt; String
+(Int -&gt; Vote -&gt; ShowS)
+-&gt; (Vote -&gt; String) -&gt; ([Vote] -&gt; ShowS) -&gt; Show Vote
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Vote -&gt; ShowS
+showsPrec :: Int -&gt; Vote -&gt; ShowS
+$cshow :: Vote -&gt; String
+show :: Vote -&gt; String
+$cshowList :: [Vote] -&gt; ShowS
+showList :: [Vote] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681154201"><span id="local-6989586621681154203"><span class="annot"><span class="annottext">Vote -&gt; Vote -&gt; Bool
+(Vote -&gt; Vote -&gt; Bool) -&gt; (Vote -&gt; Vote -&gt; Bool) -&gt; Eq Vote
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Vote -&gt; Vote -&gt; Bool
+== :: Vote -&gt; Vote -&gt; Bool
+$c/= :: Vote -&gt; Vote -&gt; Bool
+/= :: Vote -&gt; Vote -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#toVote"><span class="hs-identifier hs-type">toVote</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#Vote"><span class="hs-identifier hs-type">Vote</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#Vote"><span class="hs-identifier hs-type">Ledger.Vote</span></a></span><span>
+</span><span id="line-44"></span><span id="toVote"><span class="annot"><span class="annottext">toVote :: Vote -&gt; Vote
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#toVote"><span class="hs-identifier hs-var hs-var">toVote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="annottext">Vote
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#No"><span class="hs-identifier hs-var">No</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Vote
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VoteNo"><span class="hs-identifier hs-var">Ledger.VoteNo</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><span class="annottext">Vote
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#Yes"><span class="hs-identifier hs-var">Yes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Vote
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VoteYes"><span class="hs-identifier hs-var">Ledger.VoteYes</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">Vote
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#Abstain"><span class="hs-identifier hs-var">Abstain</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Vote
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#Abstain"><span class="hs-identifier hs-var">Ledger.Abstain</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span id="local-6989586621681153960"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#createVotingProcedure"><span class="hs-identifier hs-type">createVotingProcedure</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681153960"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#Vote"><span class="hs-identifier hs-type">Vote</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.BaseTypes.html#Url"><span class="hs-identifier hs-type">Ledger.Url</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Anchor</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681153960"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-56"></span><span id="createVotingProcedure"><span class="annot"><span class="annottext">createVotingProcedure :: forall era.
+ConwayEraOnwards era
+-&gt; Vote -&gt; Maybe (Url, Text) -&gt; VotingProcedure era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#createVotingProcedure"><span class="hs-identifier hs-var hs-var">createVotingProcedure</span></a></span></span><span> </span><span id="local-6989586621681154216"><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681154216"><span class="hs-identifier hs-var">eon</span></a></span></span><span> </span><span id="local-6989586621681154217"><span class="annot"><span class="annottext">Vote
+</span><a href="#local-6989586621681154217"><span class="hs-identifier hs-var">vChoice</span></a></span></span><span> </span><span id="local-6989586621681154218"><span class="annot"><span class="annottext">Maybe (Url, Text)
+</span><a href="#local-6989586621681154218"><span class="hs-identifier hs-var">mProposalAnchor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681154219"><span class="annot"><span class="annottext">proposalAnchor :: Maybe (Url, ByteString)
+</span><a href="#local-6989586621681154219"><span class="hs-identifier hs-var hs-var">proposalAnchor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; (Url, Text) -&gt; (Url, ByteString)
+forall a b. (a -&gt; b) -&gt; (Url, a) -&gt; (Url, b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Encoding.html#encodeUtf8"><span class="hs-identifier hs-var">Text.encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">((Url, Text) -&gt; (Url, ByteString))
+-&gt; Maybe (Url, Text) -&gt; Maybe (Url, ByteString)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Url, Text)
+</span><a href="#local-6989586621681154218"><span class="hs-identifier hs-var">mProposalAnchor</span></a></span><span>
+</span><span id="line-58"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+-&gt; (ConwayEraOnwardsConstraints era =&gt; VotingProcedure era)
+-&gt; VotingProcedure era
+forall era a.
+ConwayEraOnwards era -&gt; (ConwayEraOnwardsConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#conwayEraOnwardsConstraints"><span class="hs-identifier hs-var">conwayEraOnwardsConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><a href="#local-6989586621681154216"><span class="hs-identifier hs-var">eon</span></a></span><span> </span><span class="annot"><span class="annottext">((ConwayEraOnwardsConstraints era =&gt; VotingProcedure era)
+ -&gt; VotingProcedure era)
+-&gt; (ConwayEraOnwardsConstraints era =&gt; VotingProcedure era)
+-&gt; VotingProcedure era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">VotingProcedure (ShelleyLedgerEra era) -&gt; VotingProcedure era
+forall era.
+VotingProcedure (ShelleyLedgerEra era) -&gt; VotingProcedure era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-var">VotingProcedure</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedure (ShelleyLedgerEra era) -&gt; VotingProcedure era)
+-&gt; VotingProcedure (ShelleyLedgerEra era) -&gt; VotingProcedure era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-60"></span><span>          </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedure"><span class="hs-identifier hs-type">Ledger.VotingProcedure</span></a></span><span>
+</span><span id="line-61"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">vProcVote :: Vote
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#vProcVote"><span class="hs-identifier hs-var">Ledger.vProcVote</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Vote -&gt; Vote
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#toVote"><span class="hs-identifier hs-var">toVote</span></a></span><span> </span><span class="annot"><span class="annottext">Vote
+</span><a href="#local-6989586621681154217"><span class="hs-identifier hs-var">vChoice</span></a></span><span>
+</span><span id="line-62"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">vProcAnchor :: StrictMaybe Anchor
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#vProcAnchor"><span class="hs-identifier hs-var">Ledger.vProcAnchor</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe Anchor -&gt; StrictMaybe Anchor
+forall a. Maybe a -&gt; StrictMaybe a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-strict-containers-0.1.4.0-6dc99dfc522ff52f7bc7d9ef37b830d252784681e297a02596ae4bf44e923047/share/doc/html/src/Data.Maybe.Strict.html#maybeToStrictMaybe"><span class="hs-identifier hs-var">Ledger.maybeToStrictMaybe</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe Anchor -&gt; StrictMaybe Anchor)
+-&gt; Maybe Anchor -&gt; StrictMaybe Anchor
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Url -&gt; ByteString -&gt; Anchor) -&gt; (Url, ByteString) -&gt; Anchor
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">Url -&gt; ByteString -&gt; Anchor
+</span><a href="Cardano.Api.Governance.Internal.Action.ProposalProcedure.html#createAnchor"><span class="hs-identifier hs-var">createAnchor</span></a></span><span> </span><span class="annot"><span class="annottext">((Url, ByteString) -&gt; Anchor)
+-&gt; Maybe (Url, ByteString) -&gt; Maybe Anchor
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Url, ByteString)
+</span><a href="#local-6989586621681154219"><span class="hs-identifier hs-var">proposalAnchor</span></a></span><span>
+</span><span id="line-63"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">newtype</span><span> </span><span id="VotingProcedure"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-var">VotingProcedure</span></a></span></span><span> </span><span id="local-6989586621681153983"><span class="annot"><a href="#local-6989586621681153983"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VotingProcedure"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-var">VotingProcedure</span></a></span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unVotingProcedure"><span class="annot"><span class="annottext">forall era.
+VotingProcedure era -&gt; VotingProcedure (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#unVotingProcedure"><span class="hs-identifier hs-var hs-var">unVotingProcedure</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedure"><span class="hs-identifier hs-type">Ledger.VotingProcedure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681153983"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681154234"><span id="local-6989586621681154240"><span id="local-6989586621681154244"><span class="annot"><span class="annottext">Int -&gt; VotingProcedure era -&gt; ShowS
+[VotingProcedure era] -&gt; ShowS
+VotingProcedure era -&gt; String
+(Int -&gt; VotingProcedure era -&gt; ShowS)
+-&gt; (VotingProcedure era -&gt; String)
+-&gt; ([VotingProcedure era] -&gt; ShowS)
+-&gt; Show (VotingProcedure era)
+forall era. Int -&gt; VotingProcedure era -&gt; ShowS
+forall era. [VotingProcedure era] -&gt; ShowS
+forall era. VotingProcedure era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; VotingProcedure era -&gt; ShowS
+showsPrec :: Int -&gt; VotingProcedure era -&gt; ShowS
+$cshow :: forall era. VotingProcedure era -&gt; String
+show :: VotingProcedure era -&gt; String
+$cshowList :: forall era. [VotingProcedure era] -&gt; ShowS
+showList :: [VotingProcedure era] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681154247"><span id="local-6989586621681154252"><span class="annot"><span class="annottext">VotingProcedure era -&gt; VotingProcedure era -&gt; Bool
+(VotingProcedure era -&gt; VotingProcedure era -&gt; Bool)
+-&gt; (VotingProcedure era -&gt; VotingProcedure era -&gt; Bool)
+-&gt; Eq (VotingProcedure era)
+forall era. VotingProcedure era -&gt; VotingProcedure era -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall era. VotingProcedure era -&gt; VotingProcedure era -&gt; Bool
+== :: VotingProcedure era -&gt; VotingProcedure era -&gt; Bool
+$c/= :: forall era. VotingProcedure era -&gt; VotingProcedure era -&gt; Bool
+/= :: VotingProcedure era -&gt; VotingProcedure era -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154012"><span id="local-6989586621681154263"><span id="local-6989586621681154267"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154012"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154012"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621681154276"><span class="annot"><span class="annottext">toCBOR :: VotingProcedure era -&gt; Encoding
+</span><a href="#local-6989586621681154276"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span id="local-6989586621681154278"><span class="annot"><span class="annottext">VotingProcedure (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681154278"><span class="hs-identifier hs-var">vp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt; Encoding) -&gt; Encoding
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+</span><a href="#local-6989586621681154280"><span class="hs-identifier hs-var">sbe</span></a></span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt; Encoding) -&gt; Encoding)
+-&gt; (ShelleyBasedEraConstraints era =&gt; Encoding) -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall era t. (Era era, EncCBOR t) =&gt; t -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#toEraCBOR"><span class="hs-identifier hs-var">L.toEraCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154012"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VotingProcedure (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681154278"><span class="hs-identifier hs-var">vp</span></a></span><span>
+</span><span id="line-72"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621681154280"><span class="annot"><span class="annottext">sbe :: ShelleyBasedEra era
+</span><a href="#local-6989586621681154280"><span class="hs-identifier hs-var hs-var">sbe</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154012"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154076"><span id="local-6989586621681154296"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154076"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154076"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621681154303"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (VotingProcedure era)
+</span><a href="#local-6989586621681154303"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Decoder s (VotingProcedure era))
+-&gt; Decoder s (VotingProcedure era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154076"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt;
+  Decoder s (VotingProcedure era))
+ -&gt; Decoder s (VotingProcedure era))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Decoder s (VotingProcedure era))
+-&gt; Decoder s (VotingProcedure era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-78"></span><span>      </span><span class="annot"><span class="annottext">VotingProcedure (ShelleyLedgerEra era) -&gt; VotingProcedure era
+forall era.
+VotingProcedure (ShelleyLedgerEra era) -&gt; VotingProcedure era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-var">VotingProcedure</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedure (ShelleyLedgerEra era) -&gt; VotingProcedure era)
+-&gt; Decoder s (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Decoder s (VotingProcedure era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era t s. (Era era, DecCBOR t) =&gt; Decoder s t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#fromEraCBOR"><span class="hs-identifier hs-var">L.fromEraCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154076"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154089"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154089"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Cbor.html#SerialiseAsCBOR"><span class="hs-identifier hs-type">SerialiseAsCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154089"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621681154325"><span class="annot"><span class="annottext">serialiseToCBOR :: VotingProcedure era -&gt; ByteString
+</span><a href="#local-6989586621681154325"><span class="hs-identifier hs-var hs-var hs-var hs-var">serialiseToCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    VotingProcedure era -&gt; ByteString)
+-&gt; VotingProcedure era
+-&gt; ByteString
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154089"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt; VotingProcedure era -&gt; ByteString
+VotingProcedure era -&gt; ByteString
+forall a. ToCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.Serialize.html#serialize%27"><span class="hs-identifier hs-var">CBOR.serialize'</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621681154331"><span class="annot"><span class="annottext">deserialiseFromCBOR :: AsType (VotingProcedure era)
+-&gt; ByteString -&gt; Either DecoderError (VotingProcedure era)
+</span><a href="#local-6989586621681154331"><span class="hs-identifier hs-var hs-var hs-var hs-var">deserialiseFromCBOR</span></a></span></span><span> </span><span id="local-6989586621681154333"><span class="annot"><span class="annottext">AsType (VotingProcedure era)
+</span><a href="#local-6989586621681154333"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    ByteString -&gt; Either DecoderError (VotingProcedure era))
+-&gt; ByteString
+-&gt; Either DecoderError (VotingProcedure era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154089"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt;
+ByteString -&gt; Either DecoderError (VotingProcedure era)
+ByteString -&gt; Either DecoderError (VotingProcedure era)
+forall a. FromCBOR a =&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.Deserialize.html#decodeFull%27"><span class="hs-identifier hs-var">CBOR.decodeFull'</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154098"><span id="local-6989586621681154342"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154098"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154098"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621681154348"><span class="annot"><span class="annottext">textEnvelopeType :: AsType (VotingProcedure era) -&gt; TextEnvelopeType
+</span><a href="#local-6989586621681154348"><span class="hs-identifier hs-var hs-var hs-var hs-var">textEnvelopeType</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType (VotingProcedure era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeType
+</span><span class="hs-string">&quot;Governance vote&quot;</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154090"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154090"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154090"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedure"><span class="hs-identifier hs-type">VotingProcedure</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154090"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsVote"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#AsVote"><span class="hs-identifier hs-var">AsVote</span></a></span></span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621681154358"><span class="annot"><span class="annottext">proxyToAsType :: Proxy (VotingProcedure era) -&gt; AsType (VotingProcedure era)
+</span><a href="#local-6989586621681154358"><span class="hs-identifier hs-var hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy (VotingProcedure era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType (VotingProcedure era)
+forall era. AsType (VotingProcedure era)
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#AsVote"><span class="hs-identifier hs-var">AsVote</span></a></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">newtype</span><span> </span><span id="VotingProcedures"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span></span><span> </span><span id="local-6989586621681154101"><span class="annot"><a href="#local-6989586621681154101"><span class="hs-identifier hs-type">era</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VotingProcedures"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unVotingProcedures"><span class="annot"><span class="annottext">forall era.
+VotingProcedures era -&gt; VotingProcedures (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#unVotingProcedures"><span class="hs-identifier hs-var hs-var">unVotingProcedures</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-type">L.VotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154101"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span id="local-6989586621681154107"><span id="local-6989586621681154363"><span id="local-6989586621681154368"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154107"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span id="local-6989586621681154112"><span id="local-6989586621681154373"><span id="local-6989586621681154375"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-type">Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154112"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span id="local-6989586621681154115"><span id="local-6989586621681154379"><span id="local-6989586621681154384"><span id="local-6989586621681154388"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154115"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154117"><span id="local-6989586621681154397"><span id="local-6989586621681154401"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154117"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#ToCBOR"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154117"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621681154406"><span class="annot"><span class="annottext">toCBOR :: VotingProcedures era -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.ToCBOR.html#toCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span id="local-6989586621681154407"><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681154407"><span class="hs-identifier hs-var">vp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt; Encoding) -&gt; Encoding
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154117"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt; Encoding) -&gt; Encoding)
+-&gt; (ShelleyBasedEraConstraints era =&gt; Encoding) -&gt; Encoding
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">forall era t. (Era era, EncCBOR t) =&gt; t -&gt; Encoding
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#toEraCBOR"><span class="hs-identifier hs-var">L.toEraCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154117"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681154407"><span class="hs-identifier hs-var">vp</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154120"><span id="local-6989586621681154421"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154120"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#FromCBOR"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621681154427"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (VotingProcedures era)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.FromCBOR.html#fromCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Decoder s (VotingProcedures era))
+-&gt; Decoder s (VotingProcedures era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((ShelleyBasedEraConstraints era =&gt;
+  Decoder s (VotingProcedures era))
+ -&gt; Decoder s (VotingProcedures era))
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    Decoder s (VotingProcedures era))
+-&gt; Decoder s (VotingProcedures era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-110"></span><span>      </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+forall era.
+VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era)
+-&gt; Decoder s (VotingProcedures (ShelleyLedgerEra era))
+-&gt; Decoder s (VotingProcedures era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era t s. (Era era, DecCBOR t) =&gt; Decoder s t
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Core.Era.html#fromEraCBOR"><span class="hs-identifier hs-var">L.fromEraCBOR</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154120"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154124"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154124"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Cbor.html#SerialiseAsCBOR"><span class="hs-identifier hs-type">SerialiseAsCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154124"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621681154445"><span class="annot"><span class="annottext">serialiseToCBOR :: VotingProcedures era -&gt; ByteString
+</span><a href="Cardano.Api.Serialise.Cbor.html#serialiseToCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">serialiseToCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    VotingProcedures era -&gt; ByteString)
+-&gt; VotingProcedures era
+-&gt; ByteString
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154124"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt;
+VotingProcedures era -&gt; ByteString
+VotingProcedures era -&gt; ByteString
+forall a. ToCBOR a =&gt; a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.Serialize.html#serialize%27"><span class="hs-identifier hs-var">CBOR.serialize'</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span id="local-6989586621681154449"><span class="annot"><span class="annottext">deserialiseFromCBOR :: AsType (VotingProcedures era)
+-&gt; ByteString -&gt; Either DecoderError (VotingProcedures era)
+</span><a href="Cardano.Api.Serialise.Cbor.html#deserialiseFromCBOR"><span class="hs-identifier hs-var hs-var hs-var hs-var">deserialiseFromCBOR</span></a></span></span><span> </span><span id="local-6989586621681154450"><span class="annot"><span class="annottext">AsType (VotingProcedures era)
+</span><a href="#local-6989586621681154450"><span class="hs-identifier hs-var">_proxy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEra era
+-&gt; (ShelleyBasedEraConstraints era =&gt;
+    ByteString -&gt; Either DecoderError (VotingProcedures era))
+-&gt; ByteString
+-&gt; Either DecoderError (VotingProcedures era)
+forall era a.
+ShelleyBasedEra era -&gt; (ShelleyBasedEraConstraints era =&gt; a) -&gt; a
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEraConstraints"><span class="hs-identifier hs-var">shelleyBasedEraConstraints</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. IsShelleyBasedEra era =&gt; ShelleyBasedEra era
+</span><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#shelleyBasedEra"><span class="hs-identifier hs-var">shelleyBasedEra</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621681154124"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ShelleyBasedEraConstraints era =&gt;
+ByteString -&gt; Either DecoderError (VotingProcedures era)
+ByteString -&gt; Either DecoderError (VotingProcedures era)
+forall a. FromCBOR a =&gt; ByteString -&gt; Either DecoderError a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-binary-1.7.1.0-c788b925b3e7aa91ee7284f8de362133b467647f6768b62a03a5b8d25abcee82/share/doc/html/src/Cardano.Binary.Deserialize.html#decodeFull%27"><span class="hs-identifier hs-var">CBOR.decodeFull'</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154127"><span id="local-6989586621681154458"><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#IsShelleyBasedEra"><span class="hs-identifier hs-type">IsShelleyBasedEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154127"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#HasTextEnvelope"><span class="hs-identifier hs-type">HasTextEnvelope</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154127"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-117"></span><span>  </span><span id="local-6989586621681154462"><span class="annot"><span class="annottext">textEnvelopeType :: AsType (VotingProcedures era) -&gt; TextEnvelopeType
+</span><a href="Cardano.Api.Serialise.TextEnvelope.Internal.html#textEnvelopeType"><span class="hs-identifier hs-var hs-var hs-var hs-var">textEnvelopeType</span></a></span></span><span> </span><span class="annot"><span class="annottext">AsType (VotingProcedures era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TextEnvelopeType
+</span><span class="hs-string">&quot;Governance voting procedures&quot;</span></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681154125"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154125"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154125"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154125"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsVotingProcedures"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#AsVotingProcedures"><span class="hs-identifier hs-var">AsVotingProcedures</span></a></span></span><span>
+</span><span id="line-121"></span><span>  </span><span id="local-6989586621681154470"><span class="annot"><span class="annottext">proxyToAsType :: Proxy (VotingProcedures era) -&gt; AsType (VotingProcedures era)
+</span><a href="Cardano.Api.HasTypeProxy.html#proxyToAsType"><span class="hs-identifier hs-var hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy (VotingProcedures era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType (VotingProcedures era)
+forall era. AsType (VotingProcedures era)
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#AsVotingProcedures"><span class="hs-identifier hs-var">AsVotingProcedures</span></a></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span id="local-6989586621681154130"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#emptyVotingProcedures"><span class="hs-identifier hs-type">emptyVotingProcedures</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154130"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-124"></span><span id="emptyVotingProcedures"><span class="annot"><span class="annottext">emptyVotingProcedures :: forall era. VotingProcedures era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#emptyVotingProcedures"><span class="hs-identifier hs-var hs-var">emptyVotingProcedures</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+forall era.
+VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era)
+-&gt; VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+forall era.
+Map Voter (Map GovActionId (VotingProcedure era))
+-&gt; VotingProcedures era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-var">L.VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span id="local-6989586621681154138"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#singletonVotingProcedures"><span class="hs-identifier hs-type">singletonVotingProcedures</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ConwayEraOnwards.html#ConwayEraOnwards"><span class="hs-identifier hs-type">ConwayEraOnwards</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154138"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#Voter"><span class="hs-identifier hs-type">L.Voter</span></a></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">L.GovActionId</span></a></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedure"><span class="hs-identifier hs-type">L.VotingProcedure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Era.Internal.Eon.ShelleyBasedEra.html#ShelleyLedgerEra"><span class="hs-identifier hs-type">ShelleyLedgerEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154138"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154138"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-133"></span><span id="singletonVotingProcedures"><span class="annot"><span class="annottext">singletonVotingProcedures :: forall era.
+ConwayEraOnwards era
+-&gt; Voter
+-&gt; GovActionId
+-&gt; VotingProcedure (ShelleyLedgerEra era)
+-&gt; VotingProcedures era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#singletonVotingProcedures"><span class="hs-identifier hs-var hs-var">singletonVotingProcedures</span></a></span></span><span> </span><span class="annot"><span class="annottext">ConwayEraOnwards era
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621681154475"><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154475"><span class="hs-identifier hs-var">voter</span></a></span></span><span> </span><span id="local-6989586621681154476"><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621681154476"><span class="hs-identifier hs-var">govActionId</span></a></span></span><span> </span><span id="local-6989586621681154477"><span class="annot"><span class="annottext">VotingProcedure (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681154477"><span class="hs-identifier hs-var">votingProcedure</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+forall era.
+VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era)
+-&gt; VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+forall era.
+Map Voter (Map GovActionId (VotingProcedure era))
+-&gt; VotingProcedures era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-var">L.VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+ -&gt; VotingProcedures (ShelleyLedgerEra era))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-136"></span><span>      </span><span class="annot"><span class="annottext">Voter
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154475"><span class="hs-identifier hs-var">voter</span></a></span><span> </span><span class="annot"><span class="annottext">(Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+ -&gt; Map
+      Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">GovActionId
+-&gt; VotingProcedure (ShelleyLedgerEra era)
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId
+</span><a href="#local-6989586621681154476"><span class="hs-identifier hs-var">govActionId</span></a></span><span> </span><span class="annot"><span class="annottext">VotingProcedure (ShelleyLedgerEra era)
+</span><a href="#local-6989586621681154477"><span class="hs-identifier hs-var">votingProcedure</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="annot"><span class="hs-comment">-- | A voter, and the conflicting votes of this voter (i.e. votes with the same governance action identifier)</span></span><span>
+</span><span id="line-140"></span><span class="hs-keyword">newtype</span><span> </span><span id="VotesMergingConflict"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotesMergingConflict"><span class="hs-identifier hs-var">VotesMergingConflict</span></a></span></span><span> </span><span id="local-6989586621681154172"><span class="annot"><a href="#local-6989586621681154172"><span class="hs-identifier hs-type">era</span></a></span></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="VotesMergingConflict"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotesMergingConflict"><span class="hs-identifier hs-var">VotesMergingConflict</span></a></span></span><span>
+</span><span id="line-142"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#Voter"><span class="hs-identifier hs-type">L.Voter</span></a></span><span>
+</span><span id="line-143"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#GovActionId"><span class="hs-identifier hs-type">L.GovActionId</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-144"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621681154481"><span id="local-6989586621681154488"><span id="local-6989586621681154492"><span class="annot"><span class="annottext">Int -&gt; VotesMergingConflict era -&gt; ShowS
+[VotesMergingConflict era] -&gt; ShowS
+VotesMergingConflict era -&gt; String
+(Int -&gt; VotesMergingConflict era -&gt; ShowS)
+-&gt; (VotesMergingConflict era -&gt; String)
+-&gt; ([VotesMergingConflict era] -&gt; ShowS)
+-&gt; Show (VotesMergingConflict era)
+forall era. Int -&gt; VotesMergingConflict era -&gt; ShowS
+forall era. [VotesMergingConflict era] -&gt; ShowS
+forall era. VotesMergingConflict era -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall era. Int -&gt; VotesMergingConflict era -&gt; ShowS
+showsPrec :: Int -&gt; VotesMergingConflict era -&gt; ShowS
+$cshow :: forall era. VotesMergingConflict era -&gt; String
+show :: VotesMergingConflict era -&gt; String
+$cshowList :: forall era. [VotesMergingConflict era] -&gt; ShowS
+showList :: [VotesMergingConflict era] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-146"></span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- | @mergeVotingProcedures vote1 vote2@ merges @vote1@ and @vote2@ into a single vote,</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- or fails if the votes are incompatible.</span><span>
+</span><span id="line-149"></span><span id="local-6989586621681154148"><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#mergeVotingProcedures"><span class="hs-identifier hs-type">mergeVotingProcedures</span></a></span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154148"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Votes to merge</span></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154148"><span class="hs-identifier hs-type">era</span></a></span><span>
+</span><span id="line-154"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Votes to merge</span></span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotesMergingConflict"><span class="hs-identifier hs-type">VotesMergingConflict</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154148"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-type">VotingProcedures</span></a></span><span> </span><span class="annot"><a href="#local-6989586621681154148"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Either the conflict found, or the merged votes</span></span><span>
+</span><span id="line-157"></span><span id="mergeVotingProcedures"><span class="annot"><span class="annottext">mergeVotingProcedures :: forall era.
+VotingProcedures era
+-&gt; VotingProcedures era
+-&gt; Either (VotesMergingConflict era) (VotingProcedures era)
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#mergeVotingProcedures"><span class="hs-identifier hs-var hs-var">mergeVotingProcedures</span></a></span></span><span> </span><span id="local-6989586621681154516"><span class="annot"><span class="annottext">VotingProcedures era
+</span><a href="#local-6989586621681154516"><span class="hs-identifier hs-var">vpsa</span></a></span></span><span> </span><span id="local-6989586621681154517"><span class="annot"><span class="annottext">VotingProcedures era
+</span><a href="#local-6989586621681154517"><span class="hs-identifier hs-var">vpsb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+forall era.
+VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotingProcedures"><span class="hs-identifier hs-var">VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">(VotingProcedures (ShelleyLedgerEra era) -&gt; VotingProcedures era)
+-&gt; (Map
+      Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+    -&gt; VotingProcedures (ShelleyLedgerEra era))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; VotingProcedures era
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; VotingProcedures (ShelleyLedgerEra era)
+forall era.
+Map Voter (Map GovActionId (VotingProcedure era))
+-&gt; VotingProcedures era
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#VotingProcedures"><span class="hs-identifier hs-var">L.VotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+ -&gt; VotingProcedures era)
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+-&gt; Either (VotesMergingConflict era) (VotingProcedures era)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+ -&gt; Voter
+ -&gt; Either
+      (VotesMergingConflict era)
+      (Map
+         Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Set Voter
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall (t :: * -&gt; *) (m :: * -&gt; *) b a.
+(Foldable t, Monad m) =&gt;
+(b -&gt; a -&gt; m b) -&gt; b -&gt; t a -&gt; m b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.html#foldM"><span class="hs-identifier hs-var">foldM</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Voter
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+</span><a href="#local-6989586621681154519"><span class="hs-identifier hs-var">mergeVotesOfOneVoter</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="annot"><span class="annottext">Set Voter
+</span><a href="#local-6989586621681154520"><span class="hs-identifier hs-var">allVoters</span></a></span><span>
+</span><span id="line-159"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-160"></span><span>  </span><span id="local-6989586621681154521"><span class="annot"><span class="annottext">mapa :: Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154521"><span class="hs-identifier hs-var hs-var">mapa</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era)
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall era.
+VotingProcedures era
+-&gt; Map Voter (Map GovActionId (VotingProcedure era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#unVotingProcedures"><span class="hs-identifier hs-var">L.unVotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VotingProcedures era -&gt; VotingProcedures (ShelleyLedgerEra era)
+forall era.
+VotingProcedures era -&gt; VotingProcedures (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#unVotingProcedures"><span class="hs-identifier hs-var">unVotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">VotingProcedures era
+</span><a href="#local-6989586621681154516"><span class="hs-identifier hs-var">vpsa</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-161"></span><span>  </span><span id="local-6989586621681154523"><span class="annot"><span class="annottext">mapb :: Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154523"><span class="hs-identifier hs-var hs-var">mapb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">VotingProcedures (ShelleyLedgerEra era)
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall era.
+VotingProcedures era
+-&gt; Map Voter (Map GovActionId (VotingProcedure era))
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-conway-1.19.0.0-770bcdb2e9afb5b190990807d7f578ed966881e59966f7bc1d4401fe578ab014/share/doc/html/src/Cardano.Ledger.Conway.Governance.Procedures.html#unVotingProcedures"><span class="hs-identifier hs-var">L.unVotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">VotingProcedures era -&gt; VotingProcedures (ShelleyLedgerEra era)
+forall era.
+VotingProcedures era -&gt; VotingProcedures (ShelleyLedgerEra era)
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#unVotingProcedures"><span class="hs-identifier hs-var">unVotingProcedures</span></a></span><span> </span><span class="annot"><span class="annottext">VotingProcedures era
+</span><a href="#local-6989586621681154517"><span class="hs-identifier hs-var">vpsb</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>  </span><span id="local-6989586621681154520"><span class="annot"><span class="annottext">allVoters :: Set Voter
+</span><a href="#local-6989586621681154520"><span class="hs-identifier hs-var hs-var">allVoters</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Voter -&gt; Set Voter -&gt; Set Voter
+forall a. Ord a =&gt; Set a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Set.Internal.html#union"><span class="hs-identifier hs-var">Set.union</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Set Voter
+forall k a. Map k a -&gt; Set k
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#keysSet"><span class="hs-identifier hs-var">Map.keysSet</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154521"><span class="hs-identifier hs-var">mapa</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Set Voter
+forall k a. Map k a -&gt; Set k
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#keysSet"><span class="hs-identifier hs-var">Map.keysSet</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154523"><span class="hs-identifier hs-var">mapb</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621681154519"><span class="annot"><span class="annottext">mergeVotesOfOneVoter :: Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Voter
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+</span><a href="#local-6989586621681154519"><span class="hs-identifier hs-var hs-var">mergeVotesOfOneVoter</span></a></span></span><span> </span><span id="local-6989586621681154526"><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154526"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span id="local-6989586621681154527"><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154527"><span class="hs-identifier hs-var">voter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#union"><span class="hs-identifier hs-var">Map.union</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154526"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+ -&gt; Map
+      Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Voter
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Maybe (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154527"><span class="hs-identifier hs-var">voter</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154521"><span class="hs-identifier hs-var">mapa</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Voter
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Maybe (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154527"><span class="hs-identifier hs-var">voter</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="#local-6989586621681154523"><span class="hs-identifier hs-var">mapb</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-165"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681154530"><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154530"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+ -&gt; Either
+      (VotesMergingConflict era)
+      (Map
+         Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154527"><span class="hs-identifier hs-var">voter</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154530"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-comment">-- Take only available value</span><span>
+</span><span id="line-166"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681154531"><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154531"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+ -&gt; Either
+      (VotesMergingConflict era)
+      (Map
+         Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154527"><span class="hs-identifier hs-var">voter</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154531"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-comment">-- Take only available value</span><span>
+</span><span id="line-167"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span> </span><span class="hs-comment">-- No value</span><span>
+</span><span id="line-168"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681154532"><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154532"><span class="hs-identifier hs-var">va</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621681154533"><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154533"><span class="hs-identifier hs-var">vb</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-169"></span><span>        </span><span class="hs-comment">-- Here's the case where we're unioning different votes for the same voter</span><span>
+</span><span id="line-170"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[GovActionId] -&gt; Bool
+forall a. [a] -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Foldable.html#null"><span class="hs-identifier hs-var">null</span></a></span><span> </span><span class="annot"><span class="annottext">[GovActionId]
+</span><a href="#local-6989586621681154535"><span class="hs-identifier hs-var">intersection</span></a></span><span> </span><span class="hs-comment">-- No conflict: sets of keys from left and right is disjoint</span><span>
+</span><span id="line-171"></span><span>          </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Map
+  Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(Map
+   Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+ -&gt; Either
+      (VotesMergingConflict era)
+      (Map
+         Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map
+     Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))
+forall k a. k -&gt; a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#singleton"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154527"><span class="hs-identifier hs-var">voter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#union"><span class="hs-identifier hs-var">Map.union</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154532"><span class="hs-identifier hs-var">va</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154533"><span class="hs-identifier hs-var">vb</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span><span>          </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">VotesMergingConflict era
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(VotesMergingConflict era
+ -&gt; Either
+      (VotesMergingConflict era)
+      (Map
+         Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era)))))
+-&gt; VotesMergingConflict era
+-&gt; Either
+     (VotesMergingConflict era)
+     (Map
+        Voter (Map GovActionId (VotingProcedure (ShelleyLedgerEra era))))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Voter, [GovActionId]) -&gt; VotesMergingConflict era
+forall era. (Voter, [GovActionId]) -&gt; VotesMergingConflict era
+</span><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html#VotesMergingConflict"><span class="hs-identifier hs-var">VotesMergingConflict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Voter
+</span><a href="#local-6989586621681154527"><span class="hs-identifier hs-var">voter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[GovActionId]
+</span><a href="#local-6989586621681154535"><span class="hs-identifier hs-var">intersection</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Ooops, a conflict! Let's report it!</span><span>
+</span><span id="line-173"></span><span>       </span><span class="hs-keyword">where</span><span>
+</span><span id="line-174"></span><span>        </span><span id="local-6989586621681154535"><span class="annot"><span class="annottext">intersection :: [GovActionId]
+</span><a href="#local-6989586621681154535"><span class="hs-identifier hs-var hs-var">intersection</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; [GovActionId]
+forall k a. Map k a -&gt; [k]
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#keys"><span class="hs-identifier hs-var">Map.keys</span></a></span><span> </span><span class="annot"><span class="annottext">(Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+ -&gt; [GovActionId])
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; [GovActionId]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+-&gt; Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+forall k a b. Ord k =&gt; Map k a -&gt; Map k b -&gt; Map k a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/containers-0.6.8-inplace/src/Data.Map.Internal.html#intersection"><span class="hs-identifier hs-var">Map.intersection</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154532"><span class="hs-identifier hs-var">va</span></a></span><span> </span><span class="annot"><span class="annottext">Map GovActionId (VotingProcedure (ShelleyLedgerEra era))
+</span><a href="#local-6989586621681154533"><span class="hs-identifier hs-var">vb</span></a></span><span>
+</span><span id="line-175"></span></pre></body></html>

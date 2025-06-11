@@ -1,0 +1,771 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621681144924"><span id="local-6989586621681144925"><span id="local-6989586621681144926"></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="annot"><span class="hs-comment">-- | Stake pool off-chain metadata</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Certificate.Internal.StakePoolMetadata</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Stake pool off-chain metadata</span></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier">StakePoolMetadata</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#validateAndHashStakePoolMetadata"><span class="hs-identifier">validateAndHashStakePoolMetadata</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataValidationError"><span class="hs-identifier">StakePoolMetadataValidationError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Data family instances</span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier">Hash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Byron.Internal.Key.html"><span class="hs-identifier">Cardano.Api.Byron.Internal.Key</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html"><span class="hs-identifier">Cardano.Api.Error</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html"><span class="hs-identifier">Cardano.Api.HasTypeProxy</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Key.Internal.Praos.html"><span class="hs-identifier">Cardano.Api.Key.Internal.Praos</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Plutus.Internal.Script.html"><span class="hs-identifier">Cardano.Api.Plutus.Internal.Script</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Json.html"><span class="hs-identifier">Cardano.Api.Serialise.Json</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html"><span class="hs-identifier">Cardano.Api.Serialise.Raw</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html"><span class="hs-identifier">Cardano.Crypto.Hash.Class</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Crypto</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier">HASH</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(.:)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html"><span class="hs-identifier">Data.Bifunctor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier">first</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html#Data"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Either.Combinators</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">maybeToRight</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Text</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Prettyprinter</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- ----------------------------------------------------------------------------</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- Stake pool metadata</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><span class="hs-comment">-- | A representation of the required fields for off-chain stake pool metadata.</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">data</span><span> </span><span id="StakePoolMetadata"><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-var">StakePoolMetadata</span></a></span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="StakePoolMetadata"><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-var">StakePoolMetadata</span></a></span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="stakePoolName"><span class="annot"><span class="annottext">StakePoolMetadata -&gt; Text
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#stakePoolName"><span class="hs-identifier hs-var hs-var">stakePoolName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ A name of up to 50 characters.</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="stakePoolDescription"><span class="annot"><span class="annottext">StakePoolMetadata -&gt; Text
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#stakePoolDescription"><span class="hs-identifier hs-var hs-var">stakePoolDescription</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ A description of up to 255 characters.</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="stakePoolTicker"><span class="annot"><span class="annottext">StakePoolMetadata -&gt; Text
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#stakePoolTicker"><span class="hs-identifier hs-var hs-var">stakePoolTicker</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-comment">-- ^ A ticker of 3-5 characters, for a compact display of stake pools in</span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-comment">-- a wallet.</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="stakePoolHomepage"><span class="annot"><span class="annottext">StakePoolMetadata -&gt; Text
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#stakePoolHomepage"><span class="hs-identifier hs-var hs-var">stakePoolHomepage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-comment">-- ^ A URL to a homepage with additional information about the pool.</span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-comment">-- n.b. the spec does not specify a character limit for this field.</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681144950"><span id="local-6989586621681144957"><span class="annot"><span class="annottext">StakePoolMetadata -&gt; StakePoolMetadata -&gt; Bool
+(StakePoolMetadata -&gt; StakePoolMetadata -&gt; Bool)
+-&gt; (StakePoolMetadata -&gt; StakePoolMetadata -&gt; Bool)
+-&gt; Eq StakePoolMetadata
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: StakePoolMetadata -&gt; StakePoolMetadata -&gt; Bool
+== :: StakePoolMetadata -&gt; StakePoolMetadata -&gt; Bool
+$c/= :: StakePoolMetadata -&gt; StakePoolMetadata -&gt; Bool
+/= :: StakePoolMetadata -&gt; StakePoolMetadata -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681144962"><span id="local-6989586621681144970"><span id="local-6989586621681144974"><span class="annot"><span class="annottext">Int -&gt; StakePoolMetadata -&gt; ShowS
+[StakePoolMetadata] -&gt; ShowS
+StakePoolMetadata -&gt; String
+(Int -&gt; StakePoolMetadata -&gt; ShowS)
+-&gt; (StakePoolMetadata -&gt; String)
+-&gt; ([StakePoolMetadata] -&gt; ShowS)
+-&gt; Show StakePoolMetadata
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; StakePoolMetadata -&gt; ShowS
+showsPrec :: Int -&gt; StakePoolMetadata -&gt; ShowS
+$cshow :: StakePoolMetadata -&gt; String
+show :: StakePoolMetadata -&gt; String
+$cshowList :: [StakePoolMetadata] -&gt; ShowS
+showList :: [StakePoolMetadata] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">newtype</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="Hash"><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-var">Hash</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="StakePoolMetadataHash"><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataHash"><span class="hs-identifier hs-var">StakePoolMetadataHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#Hash"><span class="hs-identifier hs-type">Crypto.Hash</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Hashes.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681144979"><span id="local-6989586621681144984"><span class="annot"><span class="annottext">Hash StakePoolMetadata -&gt; Hash StakePoolMetadata -&gt; Bool
+(Hash StakePoolMetadata -&gt; Hash StakePoolMetadata -&gt; Bool)
+-&gt; (Hash StakePoolMetadata -&gt; Hash StakePoolMetadata -&gt; Bool)
+-&gt; Eq (Hash StakePoolMetadata)
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Hash StakePoolMetadata -&gt; Hash StakePoolMetadata -&gt; Bool
+== :: Hash StakePoolMetadata -&gt; Hash StakePoolMetadata -&gt; Bool
+$c/= :: Hash StakePoolMetadata -&gt; Hash StakePoolMetadata -&gt; Bool
+/= :: Hash StakePoolMetadata -&gt; Hash StakePoolMetadata -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681144989"><span id="local-6989586621681144994"><span id="local-6989586621681144998"><span class="annot"><span class="annottext">Int -&gt; Hash StakePoolMetadata -&gt; ShowS
+[Hash StakePoolMetadata] -&gt; ShowS
+Hash StakePoolMetadata -&gt; String
+(Int -&gt; Hash StakePoolMetadata -&gt; ShowS)
+-&gt; (Hash StakePoolMetadata -&gt; String)
+-&gt; ([Hash StakePoolMetadata] -&gt; ShowS)
+-&gt; Show (Hash StakePoolMetadata)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Hash StakePoolMetadata -&gt; ShowS
+showsPrec :: Int -&gt; Hash StakePoolMetadata -&gt; ShowS
+$cshow :: Hash StakePoolMetadata -&gt; String
+show :: Hash StakePoolMetadata -&gt; String
+$cshowList :: [Hash StakePoolMetadata] -&gt; ShowS
+showList :: [Hash StakePoolMetadata] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#HasTypeProxy"><span class="hs-identifier hs-type">HasTypeProxy</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="AsType"><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier hs-var">AsType</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsStakePoolMetadata"><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#AsStakePoolMetadata"><span class="hs-identifier hs-var">AsStakePoolMetadata</span></a></span></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621681145006"><span class="annot"><span class="annottext">proxyToAsType :: Proxy StakePoolMetadata -&gt; AsType StakePoolMetadata
+</span><a href="#local-6989586621681145006"><span class="hs-identifier hs-var hs-var hs-var hs-var">proxyToAsType</span></a></span></span><span> </span><span class="annot"><span class="annottext">Proxy StakePoolMetadata
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AsType StakePoolMetadata
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#AsStakePoolMetadata"><span class="hs-identifier hs-var">AsStakePoolMetadata</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytes"><span class="hs-identifier hs-type">SerialiseAsRawBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-71"></span><span>  </span><span id="local-6989586621681145020"><span class="annot"><span class="annottext">serialiseToRawBytes :: Hash StakePoolMetadata -&gt; ByteString
+</span><a href="#local-6989586621681145020"><span class="hs-identifier hs-var hs-var hs-var hs-var">serialiseToRawBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataHash"><span class="hs-identifier hs-type">StakePoolMetadataHash</span></a></span><span> </span><span id="local-6989586621681145022"><span class="annot"><span class="annottext">Hash HASH ByteString
+</span><a href="#local-6989586621681145022"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; ByteString
+forall h a. Hash h a -&gt; ByteString
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashToBytes"><span class="hs-identifier hs-var">Crypto.hashToBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Hash HASH ByteString
+</span><a href="#local-6989586621681145022"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621681145027"><span class="annot"><span class="annottext">deserialiseFromRawBytes :: AsType (Hash StakePoolMetadata)
+-&gt; ByteString
+-&gt; Either SerialiseAsRawBytesError (Hash StakePoolMetadata)
+</span><a href="#local-6989586621681145027"><span class="hs-identifier hs-var hs-var hs-var hs-var">deserialiseFromRawBytes</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Hash.html#AsHash"><span class="hs-identifier hs-type">AsHash</span></a></span><span> </span><span class="annot"><span class="annottext">AsType StakePoolMetadata
+R:AsTypeStakePoolMetadata
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#AsStakePoolMetadata"><span class="hs-identifier hs-var">AsStakePoolMetadata</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681145030"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145030"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="annottext">SerialiseAsRawBytesError
+-&gt; Maybe (Hash StakePoolMetadata)
+-&gt; Either SerialiseAsRawBytesError (Hash StakePoolMetadata)
+forall b a. b -&gt; Maybe a -&gt; Either b a
+</span><span class="hs-identifier hs-var">maybeToRight</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; SerialiseAsRawBytesError
+</span><a href="Cardano.Api.Serialise.Raw.html#SerialiseAsRawBytesError"><span class="hs-identifier hs-var">SerialiseAsRawBytesError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unable to deserialise Hash StakePoolMetadata&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Maybe (Hash StakePoolMetadata)
+ -&gt; Either SerialiseAsRawBytesError (Hash StakePoolMetadata))
+-&gt; Maybe (Hash StakePoolMetadata)
+-&gt; Either SerialiseAsRawBytesError (Hash StakePoolMetadata)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; Hash StakePoolMetadata
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataHash"><span class="hs-identifier hs-var">StakePoolMetadataHash</span></a></span><span> </span><span class="annot"><span class="annottext">(Hash HASH ByteString -&gt; Hash StakePoolMetadata)
+-&gt; Maybe (Hash HASH ByteString) -&gt; Maybe (Hash StakePoolMetadata)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe (Hash HASH ByteString)
+forall h a. HashAlgorithm h =&gt; ByteString -&gt; Maybe (Hash h a)
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashFromBytes"><span class="hs-identifier hs-var">Crypto.hashFromBytes</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145030"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- TODO: instance ToJSON StakePoolMetadata where</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681145036"><span id="local-6989586621681145039"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621681145098"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser StakePoolMetadata
+</span><a href="#local-6989586621681145098"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser StakePoolMetadata)
+-&gt; Value
+-&gt; Parser StakePoolMetadata
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;StakePoolMetadata&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser StakePoolMetadata)
+ -&gt; Value -&gt; Parser StakePoolMetadata)
+-&gt; (Object -&gt; Parser StakePoolMetadata)
+-&gt; Value
+-&gt; Parser StakePoolMetadata
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681145101"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145101"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-82"></span><span>      </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text -&gt; Text -&gt; StakePoolMetadata
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-var">StakePoolMetadata</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><span class="annottext">(Text -&gt; Text -&gt; Text -&gt; Text -&gt; StakePoolMetadata)
+-&gt; Parser Text
+-&gt; Parser (Text -&gt; Text -&gt; Text -&gt; StakePoolMetadata)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser Text
+</span><a href="#local-6989586621681145102"><span class="hs-identifier hs-var">parseName</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145101"><span class="hs-identifier hs-var">obj</span></a></span><span>
+</span><span id="line-84"></span><span>        </span><span class="annot"><span class="annottext">Parser (Text -&gt; Text -&gt; Text -&gt; StakePoolMetadata)
+-&gt; Parser Text -&gt; Parser (Text -&gt; Text -&gt; StakePoolMetadata)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser Text
+</span><a href="#local-6989586621681145103"><span class="hs-identifier hs-var">parseDescription</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145101"><span class="hs-identifier hs-var">obj</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">Parser (Text -&gt; Text -&gt; StakePoolMetadata)
+-&gt; Parser Text -&gt; Parser (Text -&gt; StakePoolMetadata)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Parser Text
+</span><a href="#local-6989586621681145104"><span class="hs-identifier hs-var">parseTicker</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145101"><span class="hs-identifier hs-var">obj</span></a></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">Parser (Text -&gt; StakePoolMetadata)
+-&gt; Parser Text -&gt; Parser StakePoolMetadata
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145101"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;homepage&quot;</span></span><span>
+</span><span id="line-87"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- Parse and validate the stake pool metadata name from a JSON object.</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- The name must be 50 characters or fewer.</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><a href="#local-6989586621681145102"><span class="hs-identifier hs-type">parseName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Object</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span id="local-6989586621681145102"><span class="annot"><span class="annottext">parseName :: Object -&gt; Parser Text
+</span><a href="#local-6989586621681145102"><span class="hs-identifier hs-var hs-var">parseName</span></a></span></span><span> </span><span id="local-6989586621681145105"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145105"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-93"></span><span>      </span><span id="local-6989586621681145106"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145106"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145105"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;name&quot;</span></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html#length"><span class="hs-identifier hs-var">Text.length</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145106"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">50</span></span><span>
+</span><span id="line-95"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Parser Text
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145106"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-keyword">else</span><span>
+</span><span id="line-97"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; Parser Text
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Parser Text) -&gt; String -&gt; Parser Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-98"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\&quot;name\&quot; must have at most 50 characters, but it has &quot;</span></span><span>
+</span><span id="line-99"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html#length"><span class="hs-identifier hs-var">Text.length</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145106"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; characters.&quot;</span></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- Parse and validate the stake pool metadata description</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">-- The description must be 255 characters or fewer.</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span>    </span><span class="annot"><a href="#local-6989586621681145103"><span class="hs-identifier hs-type">parseDescription</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Object</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span id="local-6989586621681145103"><span class="annot"><span class="annottext">parseDescription :: Object -&gt; Parser Text
+</span><a href="#local-6989586621681145103"><span class="hs-identifier hs-var hs-var">parseDescription</span></a></span></span><span> </span><span id="local-6989586621681145110"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145110"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-107"></span><span>      </span><span id="local-6989586621681145111"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145111"><span class="hs-identifier hs-var">description</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145110"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;description&quot;</span></span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html#length"><span class="hs-identifier hs-var">Text.length</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145111"><span class="hs-identifier hs-var">description</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">255</span></span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Parser Text
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145111"><span class="hs-identifier hs-var">description</span></a></span><span>
+</span><span id="line-110"></span><span>        </span><span class="hs-keyword">else</span><span>
+</span><span id="line-111"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; Parser Text
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Parser Text) -&gt; String -&gt; Parser Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-112"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\&quot;description\&quot; must have at most 255 characters, but it has &quot;</span></span><span>
+</span><span id="line-113"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html#length"><span class="hs-identifier hs-var">Text.length</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145111"><span class="hs-identifier hs-var">description</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; characters.&quot;</span></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-comment">-- \| Parse and validate the stake pool ticker description</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-comment">-- The ticker must be 3 to 5 characters long.</span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><a href="#local-6989586621681145104"><span class="hs-identifier hs-type">parseTicker</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Object</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621681145104"><span class="annot"><span class="annottext">parseTicker :: Object -&gt; Parser Text
+</span><a href="#local-6989586621681145104"><span class="hs-identifier hs-var hs-var">parseTicker</span></a></span></span><span> </span><span id="local-6989586621681145112"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145112"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-120"></span><span>      </span><span id="local-6989586621681145113"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145113"><span class="hs-identifier hs-var">ticker</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681145112"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;ticker&quot;</span></span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681145114"><span class="annot"><span class="annottext">tickerLen :: Int
+</span><a href="#local-6989586621681145114"><span class="hs-identifier hs-var hs-var">tickerLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html#length"><span class="hs-identifier hs-var">Text.length</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145113"><span class="hs-identifier hs-var">ticker</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681145114"><span class="hs-identifier hs-var">tickerLen</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%3E%3D"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681145114"><span class="hs-identifier hs-var">tickerLen</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-123"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Parser Text
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145113"><span class="hs-identifier hs-var">ticker</span></a></span><span>
+</span><span id="line-124"></span><span>        </span><span class="hs-keyword">else</span><span>
+</span><span id="line-125"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; Parser Text
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Parser Text) -&gt; String -&gt; Parser Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-126"></span><span>            </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\&quot;ticker\&quot; must have at least 3 and at most 5 &quot;</span></span><span>
+</span><span id="line-127"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;characters, but it has &quot;</span></span><span>
+</span><span id="line-128"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html#length"><span class="hs-identifier hs-var">Text.length</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621681145113"><span class="hs-identifier hs-var">ticker</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>              </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot; characters.&quot;</span></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><span class="hs-comment">-- | A stake pool metadata validation error.</span></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">data</span><span> </span><span id="StakePoolMetadataValidationError"><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataValidationError"><span class="hs-identifier hs-var">StakePoolMetadataValidationError</span></a></span></span><span>
+</span><span id="line-133"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="StakePoolMetadataJsonDecodeError"><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataJsonDecodeError"><span class="hs-identifier hs-var">StakePoolMetadataJsonDecodeError</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | The length of the JSON-encoded stake pool metadata exceeds the</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-comment">-- maximum.</span><span>
+</span><span id="line-136"></span><span>    </span><span id="StakePoolMetadataInvalidLengthError"><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataInvalidLengthError"><span class="hs-identifier hs-var">StakePoolMetadataInvalidLengthError</span></a></span></span><span>
+</span><span id="line-137"></span><span>      </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-138"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Maximum byte length.</span></span><span>
+</span><span id="line-139"></span><span>      </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Actual byte length.</span></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681145119"><span id="local-6989586621681145127"><span class="annot"><span class="annottext">StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError -&gt; Bool
+(StakePoolMetadataValidationError
+ -&gt; StakePoolMetadataValidationError -&gt; Bool)
+-&gt; (StakePoolMetadataValidationError
+    -&gt; StakePoolMetadataValidationError -&gt; Bool)
+-&gt; Eq StakePoolMetadataValidationError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError -&gt; Bool
+== :: StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError -&gt; Bool
+$c/= :: StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError -&gt; Bool
+/= :: StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681145132"><span id="local-6989586621681145141"><span id="local-6989586621681145145"><span class="annot"><span class="annottext">Int -&gt; StakePoolMetadataValidationError -&gt; ShowS
+[StakePoolMetadataValidationError] -&gt; ShowS
+StakePoolMetadataValidationError -&gt; String
+(Int -&gt; StakePoolMetadataValidationError -&gt; ShowS)
+-&gt; (StakePoolMetadataValidationError -&gt; String)
+-&gt; ([StakePoolMetadataValidationError] -&gt; ShowS)
+-&gt; Show StakePoolMetadataValidationError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; StakePoolMetadataValidationError -&gt; ShowS
+showsPrec :: Int -&gt; StakePoolMetadataValidationError -&gt; ShowS
+$cshow :: StakePoolMetadataValidationError -&gt; String
+show :: StakePoolMetadataValidationError -&gt; String
+$cshowList :: [StakePoolMetadataValidationError] -&gt; ShowS
+showList :: [StakePoolMetadataValidationError] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681145151"><span id="local-6989586621681145159"><span id="local-6989586621681145165"><span id="local-6989586621681145167"><span id="local-6989586621681145169"><span id="local-6989586621681145175"><span id="local-6989586621681145180"><span id="local-6989586621681145183"><span id="local-6989586621681145186"><span id="local-6989586621681145189"><span id="local-6989586621681145192"><span id="local-6989586621681145195"><span id="local-6989586621681145200"><span id="local-6989586621681145205"><span class="annot"><span class="annottext">Typeable StakePoolMetadataValidationError
+Typeable StakePoolMetadataValidationError =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g)
+ -&gt; StakePoolMetadataValidationError
+ -&gt; c StakePoolMetadataValidationError)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r)
+    -&gt; Constr
+    -&gt; c StakePoolMetadataValidationError)
+-&gt; (StakePoolMetadataValidationError -&gt; Constr)
+-&gt; (StakePoolMetadataValidationError -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d))
+    -&gt; Maybe (c StakePoolMetadataValidationError))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e))
+    -&gt; Maybe (c StakePoolMetadataValidationError))
+-&gt; ((forall b. Data b =&gt; b -&gt; b)
+    -&gt; StakePoolMetadataValidationError
+    -&gt; StakePoolMetadataValidationError)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; StakePoolMetadataValidationError
+    -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r)
+    -&gt; r
+    -&gt; (forall d. Data d =&gt; d -&gt; r')
+    -&gt; StakePoolMetadataValidationError
+    -&gt; r)
+-&gt; (forall u.
+    (forall d. Data d =&gt; d -&gt; u)
+    -&gt; StakePoolMetadataValidationError -&gt; [u])
+-&gt; (forall u.
+    Int
+    -&gt; (forall d. Data d =&gt; d -&gt; u)
+    -&gt; StakePoolMetadataValidationError
+    -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; StakePoolMetadataValidationError
+    -&gt; m StakePoolMetadataValidationError)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; StakePoolMetadataValidationError
+    -&gt; m StakePoolMetadataValidationError)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d)
+    -&gt; StakePoolMetadataValidationError
+    -&gt; m StakePoolMetadataValidationError)
+-&gt; Data StakePoolMetadataValidationError
+StakePoolMetadataValidationError -&gt; Constr
+StakePoolMetadataValidationError -&gt; DataType
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError
+forall a.
+Typeable a =&gt;
+(forall (c :: * -&gt; *).
+ (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+ -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int
+-&gt; (forall d. Data d =&gt; d -&gt; u)
+-&gt; StakePoolMetadataValidationError
+-&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u)
+-&gt; StakePoolMetadataValidationError -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; StakePoolMetadataValidationError
+-&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; StakePoolMetadataValidationError
+-&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r)
+-&gt; Constr
+-&gt; c StakePoolMetadataValidationError
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; StakePoolMetadataValidationError
+-&gt; c StakePoolMetadataValidationError
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d))
+-&gt; Maybe (c StakePoolMetadataValidationError)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c StakePoolMetadataValidationError)
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; StakePoolMetadataValidationError
+-&gt; c StakePoolMetadataValidationError
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; StakePoolMetadataValidationError
+-&gt; c StakePoolMetadataValidationError
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r)
+-&gt; Constr
+-&gt; c StakePoolMetadataValidationError
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r)
+-&gt; Constr
+-&gt; c StakePoolMetadataValidationError
+$ctoConstr :: StakePoolMetadataValidationError -&gt; Constr
+toConstr :: StakePoolMetadataValidationError -&gt; Constr
+$cdataTypeOf :: StakePoolMetadataValidationError -&gt; DataType
+dataTypeOf :: StakePoolMetadataValidationError -&gt; DataType
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d))
+-&gt; Maybe (c StakePoolMetadataValidationError)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d))
+-&gt; Maybe (c StakePoolMetadataValidationError)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c StakePoolMetadataValidationError)
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c StakePoolMetadataValidationError)
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; StakePoolMetadataValidationError
+-&gt; StakePoolMetadataValidationError
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; StakePoolMetadataValidationError
+-&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; StakePoolMetadataValidationError
+-&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; StakePoolMetadataValidationError
+-&gt; r
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r
+-&gt; (forall d. Data d =&gt; d -&gt; r')
+-&gt; StakePoolMetadataValidationError
+-&gt; r
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u)
+-&gt; StakePoolMetadataValidationError -&gt; [u]
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u)
+-&gt; StakePoolMetadataValidationError -&gt; [u]
+$cgmapQi :: forall u.
+Int
+-&gt; (forall d. Data d =&gt; d -&gt; u)
+-&gt; StakePoolMetadataValidationError
+-&gt; u
+gmapQi :: forall u.
+Int
+-&gt; (forall d. Data d =&gt; d -&gt; u)
+-&gt; StakePoolMetadataValidationError
+-&gt; u
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; StakePoolMetadataValidationError
+-&gt; m StakePoolMetadataValidationError
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Data.html#Data"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Api.Error.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataValidationError"><span class="hs-identifier hs-type">StakePoolMetadataValidationError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-144"></span><span>  </span><span id="local-6989586621681145227"><span class="annot"><span class="annottext">prettyError :: forall ann. StakePoolMetadataValidationError -&gt; Doc ann
+</span><a href="#local-6989586621681145227"><span class="hs-identifier hs-var hs-var hs-var hs-var">prettyError</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataJsonDecodeError"><span class="hs-identifier hs-type">StakePoolMetadataJsonDecodeError</span></a></span><span> </span><span id="local-6989586621681145229"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681145229"><span class="hs-identifier hs-var">errStr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">String -&gt; Doc ann
+forall ann. String -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621681145229"><span class="hs-identifier hs-var">errStr</span></a></span><span>
+</span><span id="line-147"></span><span>    </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataInvalidLengthError"><span class="hs-identifier hs-type">StakePoolMetadataInvalidLengthError</span></a></span><span> </span><span id="local-6989586621681145231"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681145231"><span class="hs-identifier hs-var">maxLen</span></a></span></span><span> </span><span id="local-6989586621681145232"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681145232"><span class="hs-identifier hs-var">actualLen</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#mconcat"><span class="hs-identifier hs-var">mconcat</span></a></span><span>
+</span><span id="line-149"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Stake pool metadata must consist of at most &quot;</span></span><span>
+</span><span id="line-150"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann
+forall ann. Int -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681145231"><span class="hs-identifier hs-var">maxLen</span></a></span><span>
+</span><span id="line-151"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot; bytes, but it consists of &quot;</span></span><span>
+</span><span id="line-152"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Doc ann
+forall ann. Int -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><span class="hs-identifier hs-var">pretty</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621681145232"><span class="hs-identifier hs-var">actualLen</span></a></span><span>
+</span><span id="line-153"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot; bytes.&quot;</span></span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- | Decode and validate the provided JSON-encoded bytes as 'StakePoolMetadata'.</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- Return the decoded metadata and the hash of the original bytes.</span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#validateAndHashStakePoolMetadata"><span class="hs-identifier hs-type">validateAndHashStakePoolMetadata</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-160"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span>
+</span><span id="line-161"></span><span>       </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataValidationError"><span class="hs-identifier hs-type">StakePoolMetadataValidationError</span></a></span><span>
+</span><span id="line-162"></span><span>       </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadata"><span class="hs-identifier hs-type">StakePoolMetadata</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span id="validateAndHashStakePoolMetadata"><span class="annot"><span class="annottext">validateAndHashStakePoolMetadata :: ByteString
+-&gt; Either
+     StakePoolMetadataValidationError
+     (StakePoolMetadata, Hash StakePoolMetadata)
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#validateAndHashStakePoolMetadata"><span class="hs-identifier hs-var hs-var">validateAndHashStakePoolMetadata</span></a></span></span><span> </span><span id="local-6989586621681145233"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145233"><span class="hs-identifier hs-var">bs</span></a></span></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145233"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">512</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-165"></span><span>      </span><span id="local-6989586621681145235"><span class="annot"><span class="annottext">StakePoolMetadata
+</span><a href="#local-6989586621681145235"><span class="hs-identifier hs-var">md</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-166"></span><span>        </span><span class="annot"><span class="annottext">(String -&gt; StakePoolMetadataValidationError)
+-&gt; Either String StakePoolMetadata
+-&gt; Either StakePoolMetadataValidationError StakePoolMetadata
+forall a b c. (a -&gt; b) -&gt; Either a c -&gt; Either b c
+forall (p :: * -&gt; * -&gt; *) a b c.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; p a c -&gt; p b c
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Bifunctor.html#first"><span class="hs-identifier hs-var">first</span></a></span><span>
+</span><span id="line-167"></span><span>          </span><span class="annot"><span class="annottext">String -&gt; StakePoolMetadataValidationError
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataJsonDecodeError"><span class="hs-identifier hs-var">StakePoolMetadataJsonDecodeError</span></a></span><span>
+</span><span id="line-168"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Either String StakePoolMetadata
+forall a. FromJSON a =&gt; ByteString -&gt; Either String a
+</span><span class="hs-identifier hs-var">Aeson.eitherDecodeStrict'</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145233"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621681145237"><span class="annot"><span class="annottext">mdh :: Hash StakePoolMetadata
+</span><a href="#local-6989586621681145237"><span class="hs-identifier hs-var hs-var">mdh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hash HASH ByteString -&gt; Hash StakePoolMetadata
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataHash"><span class="hs-identifier hs-var">StakePoolMetadataHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; Hash HASH ByteString
+forall h a. HashAlgorithm h =&gt; (a -&gt; ByteString) -&gt; a -&gt; Hash h a
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-crypto-class-2.2.2.0-5b5c24c0a5e075be086fdfeb49d9642a4a960b0daee2fbffe1a8d65913264bc8/share/doc/html/src/Cardano.Crypto.Hash.Class.html#hashWith"><span class="hs-identifier hs-var">Crypto.hashWith</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+forall a. a -&gt; a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145233"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>      </span><span class="annot"><span class="annottext">(StakePoolMetadata, Hash StakePoolMetadata)
+-&gt; Either
+     StakePoolMetadataValidationError
+     (StakePoolMetadata, Hash StakePoolMetadata)
+forall a. a -&gt; Either StakePoolMetadataValidationError a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">StakePoolMetadata
+</span><a href="#local-6989586621681145235"><span class="hs-identifier hs-var">md</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Hash StakePoolMetadata
+</span><a href="#local-6989586621681145237"><span class="hs-identifier hs-var">mdh</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">StakePoolMetadataValidationError
+-&gt; Either
+     StakePoolMetadataValidationError
+     (StakePoolMetadata, Hash StakePoolMetadata)
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(StakePoolMetadataValidationError
+ -&gt; Either
+      StakePoolMetadataValidationError
+      (StakePoolMetadata, Hash StakePoolMetadata))
+-&gt; StakePoolMetadataValidationError
+-&gt; Either
+     StakePoolMetadataValidationError
+     (StakePoolMetadata, Hash StakePoolMetadata)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; StakePoolMetadataValidationError
+</span><a href="Cardano.Api.Certificate.Internal.StakePoolMetadata.html#StakePoolMetadataInvalidLengthError"><span class="hs-identifier hs-var">StakePoolMetadataInvalidLengthError</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">512</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/bytestring-0.12.1.0-inplace/src/Data.ByteString.html#length"><span class="hs-identifier hs-var">BS.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621681145233"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-172"></span></pre></body></html>

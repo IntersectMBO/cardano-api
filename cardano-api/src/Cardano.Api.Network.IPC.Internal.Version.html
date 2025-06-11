@@ -1,0 +1,110 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Network.IPC.Internal.Version</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#isQuerySupportedInNtcVersion"><span class="hs-identifier">isQuerySupportedInNtcVersion</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier">NodeToClientVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Error types</span></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier">UnsupportedNtcVersionError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-protocol-tpraos-1.4.0.0-1739c495f96e93e33d8a11e9cb0ca9102b3529e068a821f2e79fb7fa7325a9c2/share/doc/html/src/Cardano.Protocol.Crypto.html"><span class="hs-identifier">Cardano.Protocol.Crypto</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-cardano-0.25.1.0-582e32434684e3551683d7670b1accb15b237e2048628eacef46fe86e338c4c7/share/doc/html/src/Ouroboros.Consensus.Cardano.Block.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano.Block</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-cardano-0.25.1.0-582e32434684e3551683d7670b1accb15b237e2048628eacef46fe86e338c4c7/share/doc/html/src/Ouroboros.Consensus.Cardano.Node.html"><span class="hs-identifier">Ouroboros.Consensus.Cardano.Node</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.Ledger.Query.html"><span class="hs-identifier">Ouroboros.Consensus.Ledger.Query</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Consensus</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-cardano-0.25.1.0-582e32434684e3551683d7670b1accb15b237e2048628eacef46fe86e338c4c7/share/doc/html/src/Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol.html"><span class="hs-identifier">Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html"><span class="hs-identifier">Ouroboros.Network.NodeToClient.Version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier">NodeToClientVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Codec.html"><span class="hs-identifier">Ouroboros.Network.Protocol.LocalStateQuery.Codec</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- | LocalStateQuery uses versioned queries, which means it requires the Node to support a minimum</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- (and possibly maximum) Node-to-Client version.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- Background: The node to client LocalStateQuery protocol is such that it will disconnect on any</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- unrecognised queries.  This means that for a Node-to-Client connection, if a query is sent</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- that was introduced in a Node-to-Client version that is newer than the Node-To-Client version</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- of the connection, the node will disconnect the client.  The client will not get any</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- information about why the disconnect happened.  This is a bad user experience for tools</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- such as the CLI.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- To improve the user experience the API needs to prevent the sending of queries that are</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- newer than the Node-To-Client version of the connection by checking the version of the</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- query before sending it.  This affords the ability to return @'UnsupportedNtcVersionError'('UnsupportedNtcVersionError')@,</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- informing the caller of a Node-To-Client versioning issue.</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- For maintaining typeclass instances, see the 'NodeToClientVersion' type documentation for</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- a list of versions and the queries that were introduced for those versions.</span><span>
+</span><span id="line-35"></span><span class="hs-comment">--</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- More information about queries versioning can be found:</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--   * https://ouroboros-network.cardano.intersectmbo.org/ouroboros-network/Ouroboros-Network-NodeToClient.html#t:NodeToClientVersion</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--   * https://ouroboros-consensus.cardano.intersectmbo.org/docs/for-developers/QueryVersioning/#implementation</span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#isQuerySupportedInNtcVersion"><span class="hs-identifier hs-type">isQuerySupportedInNtcVersion</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Codec.html#Some"><span class="hs-identifier hs-type">Some</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.Ledger.Query.html#Query"><span class="hs-identifier hs-type">Consensus.Query</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-cardano-0.25.1.0-582e32434684e3551683d7670b1accb15b237e2048628eacef46fe86e338c4c7/share/doc/html/src/Ouroboros.Consensus.Cardano.Block.html#CardanoBlock"><span class="hs-identifier hs-type">Consensus.CardanoBlock</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-core-1.17.0.0-40627e0716da6172631bf6ceeb209e86ad7229267c6cb5633ce2346182bbd59c/share/doc/html/src/Cardano.Ledger.Crypto.Internal.html#StandardCrypto"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier hs-type">NodeToClientVersion</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier hs-type">UnsupportedNtcVersionError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span id="isQuerySupportedInNtcVersion"><span class="annot"><span class="annottext">isQuerySupportedInNtcVersion :: Some (Query (CardanoBlock StandardCrypto))
+-&gt; NodeToClientVersion -&gt; Either UnsupportedNtcVersionError ()
+</span><a href="Cardano.Api.Network.IPC.Internal.Version.html#isQuerySupportedInNtcVersion"><span class="hs-identifier hs-var hs-var">isQuerySupportedInNtcVersion</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-2ee06c4b8f9af1ec89a881193864771e11036eab1a452efff80be4f517c8d84d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Codec.html#Some"><span class="hs-identifier hs-type">Some</span></a></span><span> </span><span id="local-6989586621681102806"><span class="annot"><span class="annottext">Query (CardanoBlock StandardCrypto) a
+</span><a href="#local-6989586621681102806"><span class="hs-identifier hs-var">q</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621681102807"><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681102807"><span class="hs-identifier hs-var">ntc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Query (CardanoBlock StandardCrypto) a
+-&gt; NodeToClientVersion -&gt; Bool
+forall blk result.
+(SupportedNetworkProtocolVersion blk,
+ BlockSupportsLedgerQuery blk) =&gt;
+Query blk result -&gt; NodeToClientVersion -&gt; Bool
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.Ledger.Query.html#queryIsSupportedOnNodeToClientVersion"><span class="hs-identifier hs-var">Consensus.queryIsSupportedOnNodeToClientVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Query (CardanoBlock StandardCrypto) a
+</span><a href="#local-6989586621681102806"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681102807"><span class="hs-identifier hs-var">ntc</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either UnsupportedNtcVersionError ()
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; Either UnsupportedNtcVersionError ()
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(UnsupportedNtcVersionError
+ -&gt; Either UnsupportedNtcVersionError ())
+-&gt; UnsupportedNtcVersionError
+-&gt; Either UnsupportedNtcVersionError ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion
+-&gt; [NodeToClientVersion] -&gt; UnsupportedNtcVersionError
+</span><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier hs-var">UnsupportedNtcVersionError</span></a></span><span> </span><span class="annot"><span class="annottext">NodeToClientVersion
+</span><a href="#local-6989586621681102807"><span class="hs-identifier hs-var">ntc</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Query (CardanoBlock StandardCrypto) a -&gt; [NodeToClientVersion]
+forall blk result.
+(SupportedNetworkProtocolVersion blk,
+ BlockSupportsLedgerQuery blk) =&gt;
+Query blk result -&gt; [NodeToClientVersion]
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-consensus-0.27.0.0-98d4bbbb4794985db6f0fbc4f516e4cbc877408de54ac32fbd1eed03abfeb508/share/doc/html/src/Ouroboros.Consensus.Ledger.Query.html#querySupportedVersions"><span class="hs-identifier hs-var">Consensus.querySupportedVersions</span></a></span><span> </span><span class="annot"><span class="annottext">Query (CardanoBlock StandardCrypto) a
+</span><a href="#local-6989586621681102806"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="UnsupportedNtcVersionError"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier hs-var">UnsupportedNtcVersionError</span></a></span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="UnsupportedNtcVersionError"><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier hs-var">UnsupportedNtcVersionError</span></a></span></span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier hs-type">NodeToClientVersion</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The version we negotiated</span></span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-f9ac4167a7483066ff5c38ee539d7f1087ee9d8e8647ecbc989f3770fc07976e/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier hs-type">NodeToClientVersion</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The versions in which this query is supported</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681102811"><span id="local-6989586621681102817"><span class="annot"><span class="annottext">UnsupportedNtcVersionError -&gt; UnsupportedNtcVersionError -&gt; Bool
+(UnsupportedNtcVersionError -&gt; UnsupportedNtcVersionError -&gt; Bool)
+-&gt; (UnsupportedNtcVersionError
+    -&gt; UnsupportedNtcVersionError -&gt; Bool)
+-&gt; Eq UnsupportedNtcVersionError
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: UnsupportedNtcVersionError -&gt; UnsupportedNtcVersionError -&gt; Bool
+== :: UnsupportedNtcVersionError -&gt; UnsupportedNtcVersionError -&gt; Bool
+$c/= :: UnsupportedNtcVersionError -&gt; UnsupportedNtcVersionError -&gt; Bool
+/= :: UnsupportedNtcVersionError -&gt; UnsupportedNtcVersionError -&gt; Bool
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/ghc-prim-0.11.0-inplace/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681102822"><span id="local-6989586621681102830"><span id="local-6989586621681102834"><span class="annot"><span class="annottext">Int -&gt; UnsupportedNtcVersionError -&gt; ShowS
+[UnsupportedNtcVersionError] -&gt; ShowS
+UnsupportedNtcVersionError -&gt; String
+(Int -&gt; UnsupportedNtcVersionError -&gt; ShowS)
+-&gt; (UnsupportedNtcVersionError -&gt; String)
+-&gt; ([UnsupportedNtcVersionError] -&gt; ShowS)
+-&gt; Show UnsupportedNtcVersionError
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UnsupportedNtcVersionError -&gt; ShowS
+showsPrec :: Int -&gt; UnsupportedNtcVersionError -&gt; ShowS
+$cshow :: UnsupportedNtcVersionError -&gt; String
+show :: UnsupportedNtcVersionError -&gt; String
+$cshowList :: [UnsupportedNtcVersionError] -&gt; ShowS
+showList :: [UnsupportedNtcVersionError] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span></pre></body></html>

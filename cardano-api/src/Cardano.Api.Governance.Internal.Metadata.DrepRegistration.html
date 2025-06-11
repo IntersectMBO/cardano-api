@@ -1,0 +1,683 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE InstanceSigs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NoFieldSelectors #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Governance.Internal.Metadata.DrepRegistration</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * DRep off-chain metadata</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier">CIP119</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Metadata.Validation</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#Authors"><span class="hs-identifier">Authors</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#Body"><span class="hs-identifier">Body</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#GovActionMetadata"><span class="hs-identifier">GovActionMetadata</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#HashAlgorithm"><span class="hs-identifier">HashAlgorithm</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Serialise.Json.html"><span class="hs-identifier">Cardano.Api.Serialise.Json</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Serialise.Json.html#textWithMaxLength"><span class="hs-identifier">textWithMaxLength</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">withObject</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.:)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-operator">(.:?)</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Parser</span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">data</span><span> </span><span id="CIP119"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-var">CIP119</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DrepRegistrationMetadata"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DrepRegistrationMetadata"><span class="hs-identifier hs-var">DrepRegistrationMetadata</span></a></span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681107804"><span id="local-6989586621681107808"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#GovActionMetadata"><span class="hs-identifier hs-type">GovActionMetadata</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#GovActionMetadata"><span class="hs-identifier hs-type">GovActionMetadata</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621681107825"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (GovActionMetadata CIP119)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser (GovActionMetadata CIP119))
+-&gt; Value
+-&gt; Parser (GovActionMetadata CIP119)
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;CIP119Common&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser (GovActionMetadata CIP119))
+ -&gt; Value -&gt; Parser (GovActionMetadata CIP119))
+-&gt; (Object -&gt; Parser (GovActionMetadata CIP119))
+-&gt; Value
+-&gt; Parser (GovActionMetadata CIP119)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681107826"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107826"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="annottext">HashAlgorithm CIP119
+-&gt; Authors CIP119 -&gt; Body CIP119 -&gt; GovActionMetadata CIP119
+forall cip.
+HashAlgorithm cip
+-&gt; Authors cip -&gt; Body cip -&gt; GovActionMetadata cip
+</span><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#GovActionMetadata"><span class="hs-identifier hs-var">GovActionMetadata</span></a></span><span>
+</span><span id="line-34"></span><span>      </span><span class="annot"><span class="annottext">(HashAlgorithm CIP119
+ -&gt; Authors CIP119 -&gt; Body CIP119 -&gt; GovActionMetadata CIP119)
+-&gt; Parser (HashAlgorithm CIP119)
+-&gt; Parser
+     (Authors CIP119 -&gt; Body CIP119 -&gt; GovActionMetadata CIP119)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107826"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (HashAlgorithm CIP119)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;hashAlgorithm&quot;</span></span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><span class="annottext">Parser (Authors CIP119 -&gt; Body CIP119 -&gt; GovActionMetadata CIP119)
+-&gt; Parser (Authors CIP119)
+-&gt; Parser (Body CIP119 -&gt; GovActionMetadata CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Authors CIP119 -&gt; Parser (Authors CIP119)
+forall a. a -&gt; Parser a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">Authors CIP119
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Absent"><span class="hs-identifier hs-var">Absent</span></a></span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="annottext">Parser (Body CIP119 -&gt; GovActionMetadata CIP119)
+-&gt; Parser (Body CIP119) -&gt; Parser (GovActionMetadata CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107826"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Body CIP119)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;body&quot;</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- Hash Algorithm (Enum)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">data</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="HashAlgorithm"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#HashAlgorithm"><span class="hs-identifier hs-var">HashAlgorithm</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Blake2b256"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Blake2b256"><span class="hs-identifier hs-var">Blake2b256</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681107832"><span id="local-6989586621681107834"><span id="local-6989586621681107838"><span class="annot"><span class="annottext">Int -&gt; HashAlgorithm CIP119 -&gt; ShowS
+[HashAlgorithm CIP119] -&gt; ShowS
+HashAlgorithm CIP119 -&gt; String
+(Int -&gt; HashAlgorithm CIP119 -&gt; ShowS)
+-&gt; (HashAlgorithm CIP119 -&gt; String)
+-&gt; ([HashAlgorithm CIP119] -&gt; ShowS)
+-&gt; Show (HashAlgorithm CIP119)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; HashAlgorithm CIP119 -&gt; ShowS
+showsPrec :: Int -&gt; HashAlgorithm CIP119 -&gt; ShowS
+$cshow :: HashAlgorithm CIP119 -&gt; String
+show :: HashAlgorithm CIP119 -&gt; String
+$cshowList :: [HashAlgorithm CIP119] -&gt; ShowS
+showList :: [HashAlgorithm CIP119] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681107842"><span id="local-6989586621681107844"><span class="annot"><span class="annottext">(forall x. HashAlgorithm CIP119 -&gt; Rep (HashAlgorithm CIP119) x)
+-&gt; (forall x. Rep (HashAlgorithm CIP119) x -&gt; HashAlgorithm CIP119)
+-&gt; Generic (HashAlgorithm CIP119)
+forall x. Rep (HashAlgorithm CIP119) x -&gt; HashAlgorithm CIP119
+forall x. HashAlgorithm CIP119 -&gt; Rep (HashAlgorithm CIP119) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. HashAlgorithm CIP119 -&gt; Rep (HashAlgorithm CIP119) x
+from :: forall x. HashAlgorithm CIP119 -&gt; Rep (HashAlgorithm CIP119) x
+$cto :: forall x. Rep (HashAlgorithm CIP119) x -&gt; HashAlgorithm CIP119
+to :: forall x. Rep (HashAlgorithm CIP119) x -&gt; HashAlgorithm CIP119
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681107849"><span id="local-6989586621681107852"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#HashAlgorithm"><span class="hs-identifier hs-type">HashAlgorithm</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#HashAlgorithm"><span class="hs-identifier hs-type">HashAlgorithm</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621681107862"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (HashAlgorithm CIP119)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Text -&gt; Parser (HashAlgorithm CIP119))
+-&gt; Value
+-&gt; Parser (HashAlgorithm CIP119)
+forall a. String -&gt; (Text -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withText</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;HashAlgorithm&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Parser (HashAlgorithm CIP119))
+ -&gt; Value -&gt; Parser (HashAlgorithm CIP119))
+-&gt; (Text -&gt; Parser (HashAlgorithm CIP119))
+-&gt; Value
+-&gt; Parser (HashAlgorithm CIP119)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;blake2b-256&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HashAlgorithm CIP119 -&gt; Parser (HashAlgorithm CIP119)
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">HashAlgorithm CIP119
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Blake2b256"><span class="hs-identifier hs-var">Blake2b256</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser (HashAlgorithm CIP119)
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Invalid hashAlgorithm, it must be: blake2b-256&quot;</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- Body of the metadata document</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">data</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="Body"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#Body"><span class="hs-identifier hs-var">Body</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Body"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Body"><span class="hs-identifier hs-var">Body</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="paymentAddress"><span class="annot"><span class="annottext">Body CIP119 -&gt; Maybe Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#paymentAddress"><span class="hs-identifier hs-var hs-var">paymentAddress</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="givenName"><span class="annot"><span class="annottext">Body CIP119 -&gt; Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#givenName"><span class="hs-identifier hs-var hs-var">givenName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="image"><span class="annot"><span class="annottext">Body CIP119 -&gt; Maybe ImageObject
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#image"><span class="hs-identifier hs-var hs-var">image</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ImageObject"><span class="hs-identifier hs-type">ImageObject</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="objectives"><span class="annot"><span class="annottext">Body CIP119 -&gt; Maybe Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#objectives"><span class="hs-identifier hs-var hs-var">objectives</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="motivations"><span class="annot"><span class="annottext">Body CIP119 -&gt; Maybe Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#motivations"><span class="hs-identifier hs-var hs-var">motivations</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="qualifications"><span class="annot"><span class="annottext">Body CIP119 -&gt; Maybe Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#qualifications"><span class="hs-identifier hs-var hs-var">qualifications</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="doNotList"><span class="annot"><span class="annottext">Body CIP119 -&gt; Maybe DoNotList
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#doNotList"><span class="hs-identifier hs-var hs-var">doNotList</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotList"><span class="hs-identifier hs-type">DoNotList</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="references"><span class="annot"><span class="annottext">Body CIP119 -&gt; Maybe [Reference]
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#references"><span class="hs-identifier hs-var hs-var">references</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Reference"><span class="hs-identifier hs-type">Reference</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681107874"><span id="local-6989586621681107891"><span id="local-6989586621681107895"><span class="annot"><span class="annottext">Int -&gt; Body CIP119 -&gt; ShowS
+[Body CIP119] -&gt; ShowS
+Body CIP119 -&gt; String
+(Int -&gt; Body CIP119 -&gt; ShowS)
+-&gt; (Body CIP119 -&gt; String)
+-&gt; ([Body CIP119] -&gt; ShowS)
+-&gt; Show (Body CIP119)
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Body CIP119 -&gt; ShowS
+showsPrec :: Int -&gt; Body CIP119 -&gt; ShowS
+$cshow :: Body CIP119 -&gt; String
+show :: Body CIP119 -&gt; String
+$cshowList :: [Body CIP119] -&gt; ShowS
+showList :: [Body CIP119] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681107904"><span id="local-6989586621681107906"><span class="annot"><span class="annottext">(forall x. Body CIP119 -&gt; Rep (Body CIP119) x)
+-&gt; (forall x. Rep (Body CIP119) x -&gt; Body CIP119)
+-&gt; Generic (Body CIP119)
+forall x. Rep (Body CIP119) x -&gt; Body CIP119
+forall x. Body CIP119 -&gt; Rep (Body CIP119) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Body CIP119 -&gt; Rep (Body CIP119) x
+from :: forall x. Body CIP119 -&gt; Rep (Body CIP119) x
+$cto :: forall x. Rep (Body CIP119) x -&gt; Body CIP119
+to :: forall x. Rep (Body CIP119) x -&gt; Body CIP119
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681107910"><span id="local-6989586621681107913"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#Body"><span class="hs-identifier hs-type">Body</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#Body"><span class="hs-identifier hs-type">Body</span></a></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621681107957"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser (Body CIP119)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser (Body CIP119))
+-&gt; Value
+-&gt; Parser (Body CIP119)
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Body&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser (Body CIP119)) -&gt; Value -&gt; Parser (Body CIP119))
+-&gt; (Object -&gt; Parser (Body CIP119))
+-&gt; Value
+-&gt; Parser (Body CIP119)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681107958"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="annottext">Maybe Text
+-&gt; Text
+-&gt; Maybe ImageObject
+-&gt; Maybe Text
+-&gt; Maybe Text
+-&gt; Maybe Text
+-&gt; Maybe DoNotList
+-&gt; Maybe [Reference]
+-&gt; Body CIP119
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Body"><span class="hs-identifier hs-var">Body</span></a></span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><span class="annottext">(Maybe Text
+ -&gt; Text
+ -&gt; Maybe ImageObject
+ -&gt; Maybe Text
+ -&gt; Maybe Text
+ -&gt; Maybe Text
+ -&gt; Maybe DoNotList
+ -&gt; Maybe [Reference]
+ -&gt; Body CIP119)
+-&gt; Parser (Maybe Text)
+-&gt; Parser
+     (Text
+      -&gt; Maybe ImageObject
+      -&gt; Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe DoNotList
+      -&gt; Maybe [Reference]
+      -&gt; Body CIP119)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Text)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;paymentAddress&quot;</span></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Text
+   -&gt; Maybe ImageObject
+   -&gt; Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe DoNotList
+   -&gt; Maybe [Reference]
+   -&gt; Body CIP119)
+-&gt; Parser Text
+-&gt; Parser
+     (Maybe ImageObject
+      -&gt; Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe DoNotList
+      -&gt; Maybe [Reference]
+      -&gt; Body CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Value
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;givenName&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser Value -&gt; (Value -&gt; Parser Text) -&gt; Parser Text
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Value -&gt; Parser Text
+</span><a href="Cardano.Api.Serialise.Json.html#textWithMaxLength"><span class="hs-identifier hs-var">textWithMaxLength</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;givenName&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">80</span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe ImageObject
+   -&gt; Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe DoNotList
+   -&gt; Maybe [Reference]
+   -&gt; Body CIP119)
+-&gt; Parser (Maybe ImageObject)
+-&gt; Parser
+     (Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe DoNotList
+      -&gt; Maybe [Reference]
+      -&gt; Body CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe ImageObject)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;image&quot;</span></span><span>
+</span><span id="line-69"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe DoNotList
+   -&gt; Maybe [Reference]
+   -&gt; Body CIP119)
+-&gt; Parser (Maybe Text)
+-&gt; Parser
+     (Maybe Text
+      -&gt; Maybe Text
+      -&gt; Maybe DoNotList
+      -&gt; Maybe [Reference]
+      -&gt; Body CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Value)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;objectives&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Value)
+-&gt; (Maybe Value -&gt; Parser (Maybe Text)) -&gt; Parser (Maybe Text)
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Parser Text) -&gt; Maybe Value -&gt; Parser (Maybe Text)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Value -&gt; Parser Text
+</span><a href="Cardano.Api.Serialise.Json.html#textWithMaxLength"><span class="hs-identifier hs-var">textWithMaxLength</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;objectives&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe Text
+   -&gt; Maybe Text
+   -&gt; Maybe DoNotList
+   -&gt; Maybe [Reference]
+   -&gt; Body CIP119)
+-&gt; Parser (Maybe Text)
+-&gt; Parser
+     (Maybe Text -&gt; Maybe DoNotList -&gt; Maybe [Reference] -&gt; Body CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Value)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;motivations&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Value)
+-&gt; (Maybe Value -&gt; Parser (Maybe Text)) -&gt; Parser (Maybe Text)
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Parser Text) -&gt; Maybe Value -&gt; Parser (Maybe Text)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Value -&gt; Parser Text
+</span><a href="Cardano.Api.Serialise.Json.html#textWithMaxLength"><span class="hs-identifier hs-var">textWithMaxLength</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;motivations&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">Parser
+  (Maybe Text -&gt; Maybe DoNotList -&gt; Maybe [Reference] -&gt; Body CIP119)
+-&gt; Parser (Maybe Text)
+-&gt; Parser (Maybe DoNotList -&gt; Maybe [Reference] -&gt; Body CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Value)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;qualifications&quot;</span></span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Value)
+-&gt; (Maybe Value -&gt; Parser (Maybe Text)) -&gt; Parser (Maybe Text)
+forall a b. Parser a -&gt; (a -&gt; Parser b) -&gt; Parser b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; Parser Text) -&gt; Maybe Value -&gt; Parser (Maybe Text)
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Traversable t, Applicative f) =&gt;
+(a -&gt; f b) -&gt; t a -&gt; f (t b)
+forall (f :: * -&gt; *) a b.
+Applicative f =&gt;
+(a -&gt; f b) -&gt; Maybe a -&gt; f (Maybe b)
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Traversable.html#traverse"><span class="hs-identifier hs-var">traverse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Int -&gt; Value -&gt; Parser Text
+</span><a href="Cardano.Api.Serialise.Json.html#textWithMaxLength"><span class="hs-identifier hs-var">textWithMaxLength</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;qualifications&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe DoNotList -&gt; Maybe [Reference] -&gt; Body CIP119)
+-&gt; Parser (Maybe DoNotList)
+-&gt; Parser (Maybe [Reference] -&gt; Body CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe DoNotList)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;doNotList&quot;</span></span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe [Reference] -&gt; Body CIP119)
+-&gt; Parser (Maybe [Reference]) -&gt; Parser (Body CIP119)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107958"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe [Reference])
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;references&quot;</span></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- Profile picture</span><span>
+</span><span id="line-76"></span><span class="hs-keyword">data</span><span> </span><span id="ImageObject"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ImageObject"><span class="hs-identifier hs-var">ImageObject</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ImageObject"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ImageObject"><span class="hs-identifier hs-var">ImageObject</span></a></span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="contentUrl"><span class="annot"><span class="annottext">ImageObject -&gt; Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#contentUrl"><span class="hs-identifier hs-var hs-var">contentUrl</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-comment">-- Base64 encoded image or URL</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="sha256"><span class="annot"><span class="annottext">ImageObject -&gt; Maybe Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#sha256"><span class="hs-identifier hs-var hs-var">sha256</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-comment">-- Only present for URL images</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681107964"><span id="local-6989586621681107969"><span id="local-6989586621681107972"><span class="annot"><span class="annottext">Int -&gt; ImageObject -&gt; ShowS
+[ImageObject] -&gt; ShowS
+ImageObject -&gt; String
+(Int -&gt; ImageObject -&gt; ShowS)
+-&gt; (ImageObject -&gt; String)
+-&gt; ([ImageObject] -&gt; ShowS)
+-&gt; Show ImageObject
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ImageObject -&gt; ShowS
+showsPrec :: Int -&gt; ImageObject -&gt; ShowS
+$cshow :: ImageObject -&gt; String
+show :: ImageObject -&gt; String
+$cshowList :: [ImageObject] -&gt; ShowS
+showList :: [ImageObject] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681107975"><span id="local-6989586621681107977"><span class="annot"><span class="annottext">(forall x. ImageObject -&gt; Rep ImageObject x)
+-&gt; (forall x. Rep ImageObject x -&gt; ImageObject)
+-&gt; Generic ImageObject
+forall x. Rep ImageObject x -&gt; ImageObject
+forall x. ImageObject -&gt; Rep ImageObject x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ImageObject -&gt; Rep ImageObject x
+from :: forall x. ImageObject -&gt; Rep ImageObject x
+$cto :: forall x. Rep ImageObject x -&gt; ImageObject
+to :: forall x. Rep ImageObject x -&gt; ImageObject
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681107981"><span id="local-6989586621681107984"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ImageObject"><span class="hs-identifier hs-type">ImageObject</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ImageObject"><span class="hs-identifier hs-type">ImageObject</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span id="local-6989586621681107992"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ImageObject
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser ImageObject) -&gt; Value -&gt; Parser ImageObject
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ImageObject&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser ImageObject) -&gt; Value -&gt; Parser ImageObject)
+-&gt; (Object -&gt; Parser ImageObject) -&gt; Value -&gt; Parser ImageObject
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681107993"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107993"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; Maybe Text -&gt; ImageObject
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ImageObject"><span class="hs-identifier hs-var">ImageObject</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span class="annot"><span class="annottext">(Text -&gt; Maybe Text -&gt; ImageObject)
+-&gt; Parser Text -&gt; Parser (Maybe Text -&gt; ImageObject)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107993"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;contentUrl&quot;</span></span><span>
+</span><span id="line-87"></span><span>      </span><span class="annot"><span class="annottext">Parser (Maybe Text -&gt; ImageObject)
+-&gt; Parser (Maybe Text) -&gt; Parser ImageObject
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681107993"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser (Maybe Text)
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser (Maybe a)
+</span><span class="hs-operator hs-var">.:?</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;sha256&quot;</span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- DoNotList Enum</span><span>
+</span><span id="line-90"></span><span class="hs-keyword">data</span><span> </span><span id="DoNotList"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotList"><span class="hs-identifier hs-var">DoNotList</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DoNotListTrue"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotListTrue"><span class="hs-identifier hs-var">DoNotListTrue</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="DoNotListFalse"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotListFalse"><span class="hs-identifier hs-var">DoNotListFalse</span></a></span></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681107997"><span id="local-6989586621681107999"><span id="local-6989586621681108002"><span class="annot"><span class="annottext">Int -&gt; DoNotList -&gt; ShowS
+[DoNotList] -&gt; ShowS
+DoNotList -&gt; String
+(Int -&gt; DoNotList -&gt; ShowS)
+-&gt; (DoNotList -&gt; String)
+-&gt; ([DoNotList] -&gt; ShowS)
+-&gt; Show DoNotList
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DoNotList -&gt; ShowS
+showsPrec :: Int -&gt; DoNotList -&gt; ShowS
+$cshow :: DoNotList -&gt; String
+show :: DoNotList -&gt; String
+$cshowList :: [DoNotList] -&gt; ShowS
+showList :: [DoNotList] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681108005"><span id="local-6989586621681108007"><span class="annot"><span class="annottext">(forall x. DoNotList -&gt; Rep DoNotList x)
+-&gt; (forall x. Rep DoNotList x -&gt; DoNotList) -&gt; Generic DoNotList
+forall x. Rep DoNotList x -&gt; DoNotList
+forall x. DoNotList -&gt; Rep DoNotList x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. DoNotList -&gt; Rep DoNotList x
+from :: forall x. DoNotList -&gt; Rep DoNotList x
+$cto :: forall x. Rep DoNotList x -&gt; DoNotList
+to :: forall x. Rep DoNotList x -&gt; DoNotList
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681108011"><span id="local-6989586621681108014"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotList"><span class="hs-identifier hs-type">DoNotList</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotList"><span class="hs-identifier hs-type">DoNotList</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span id="local-6989586621681108023"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser DoNotList
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Text -&gt; Parser DoNotList) -&gt; Value -&gt; Parser DoNotList
+forall a. String -&gt; (Text -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withText</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DoNotList&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Parser DoNotList) -&gt; Value -&gt; Parser DoNotList)
+-&gt; (Text -&gt; Parser DoNotList) -&gt; Value -&gt; Parser DoNotList
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;true&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DoNotList -&gt; Parser DoNotList
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">DoNotList
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotListTrue"><span class="hs-identifier hs-var">DoNotListTrue</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;false&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DoNotList -&gt; Parser DoNotList
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">DoNotList
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#DoNotListFalse"><span class="hs-identifier hs-var">DoNotListFalse</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser DoNotList
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Invalid doNotList value, must be one of: true, false&quot;</span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- Reference type</span><span>
+</span><span id="line-102"></span><span class="hs-keyword">data</span><span> </span><span id="Reference"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Reference"><span class="hs-identifier hs-var">Reference</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Reference"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Reference"><span class="hs-identifier hs-var">Reference</span></a></span></span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="refType"><span class="annot"><span class="annottext">Reference -&gt; ReferenceType
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#refType"><span class="hs-identifier hs-var hs-var">refType</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ReferenceType"><span class="hs-identifier hs-type">ReferenceType</span></a></span><span>
+</span><span id="line-104"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="label"><span class="annot"><span class="annottext">Reference -&gt; Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#label"><span class="hs-keyword hs-var hs-var">label</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="uri"><span class="annot"><span class="annottext">Reference -&gt; Text
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#uri"><span class="hs-identifier hs-var hs-var">uri</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/text-2.1.1-inplace/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681108029"><span id="local-6989586621681108036"><span id="local-6989586621681108039"><span class="annot"><span class="annottext">Int -&gt; Reference -&gt; ShowS
+[Reference] -&gt; ShowS
+Reference -&gt; String
+(Int -&gt; Reference -&gt; ShowS)
+-&gt; (Reference -&gt; String)
+-&gt; ([Reference] -&gt; ShowS)
+-&gt; Show Reference
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Reference -&gt; ShowS
+showsPrec :: Int -&gt; Reference -&gt; ShowS
+$cshow :: Reference -&gt; String
+show :: Reference -&gt; String
+$cshowList :: [Reference] -&gt; ShowS
+showList :: [Reference] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681108042"><span id="local-6989586621681108044"><span class="annot"><span class="annottext">(forall x. Reference -&gt; Rep Reference x)
+-&gt; (forall x. Rep Reference x -&gt; Reference) -&gt; Generic Reference
+forall x. Rep Reference x -&gt; Reference
+forall x. Reference -&gt; Rep Reference x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Reference -&gt; Rep Reference x
+from :: forall x. Reference -&gt; Rep Reference x
+$cto :: forall x. Rep Reference x -&gt; Reference
+to :: forall x. Rep Reference x -&gt; Reference
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681108048"><span id="local-6989586621681108051"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Reference"><span class="hs-identifier hs-type">Reference</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-110"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Reference"><span class="hs-identifier hs-type">Reference</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span id="local-6989586621681108063"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser Reference
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; (Object -&gt; Parser Reference) -&gt; Value -&gt; Parser Reference
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Reference&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser Reference) -&gt; Value -&gt; Parser Reference)
+-&gt; (Object -&gt; Parser Reference) -&gt; Value -&gt; Parser Reference
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621681108064"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681108064"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">ReferenceType -&gt; Text -&gt; Text -&gt; Reference
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Reference"><span class="hs-identifier hs-var">Reference</span></a></span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">(ReferenceType -&gt; Text -&gt; Text -&gt; Reference)
+-&gt; Parser ReferenceType -&gt; Parser (Text -&gt; Text -&gt; Reference)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681108064"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser ReferenceType
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;@type&quot;</span></span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">Parser (Text -&gt; Text -&gt; Reference)
+-&gt; Parser Text -&gt; Parser (Text -&gt; Reference)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681108064"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;label&quot;</span></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><span class="annottext">Parser (Text -&gt; Reference) -&gt; Parser Text -&gt; Parser Reference
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621681108064"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Text
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;uri&quot;</span></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- ReferenceType Enum</span><span>
+</span><span id="line-118"></span><span class="hs-keyword">data</span><span> </span><span id="ReferenceType"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ReferenceType"><span class="hs-identifier hs-var">ReferenceType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GovernanceMetadata"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#GovernanceMetadata"><span class="hs-identifier hs-var">GovernanceMetadata</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Other"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Other"><span class="hs-identifier hs-var">Other</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Link"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Link"><span class="hs-identifier hs-var">Link</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Identity"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Identity"><span class="hs-identifier hs-var">Identity</span></a></span></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621681108070"><span id="local-6989586621681108072"><span id="local-6989586621681108075"><span class="annot"><span class="annottext">Int -&gt; ReferenceType -&gt; ShowS
+[ReferenceType] -&gt; ShowS
+ReferenceType -&gt; String
+(Int -&gt; ReferenceType -&gt; ShowS)
+-&gt; (ReferenceType -&gt; String)
+-&gt; ([ReferenceType] -&gt; ShowS)
+-&gt; Show ReferenceType
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ReferenceType -&gt; ShowS
+showsPrec :: Int -&gt; ReferenceType -&gt; ShowS
+$cshow :: ReferenceType -&gt; String
+show :: ReferenceType -&gt; String
+$cshowList :: [ReferenceType] -&gt; ShowS
+showList :: [ReferenceType] -&gt; ShowS
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621681108078"><span id="local-6989586621681108080"><span class="annot"><span class="annottext">(forall x. ReferenceType -&gt; Rep ReferenceType x)
+-&gt; (forall x. Rep ReferenceType x -&gt; ReferenceType)
+-&gt; Generic ReferenceType
+forall x. Rep ReferenceType x -&gt; ReferenceType
+forall x. ReferenceType -&gt; Rep ReferenceType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ReferenceType -&gt; Rep ReferenceType x
+from :: forall x. ReferenceType -&gt; Rep ReferenceType x
+$cto :: forall x. Rep ReferenceType x -&gt; ReferenceType
+to :: forall x. Rep ReferenceType x -&gt; ReferenceType
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621681108084"><span id="local-6989586621681108087"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ReferenceType"><span class="hs-identifier hs-type">ReferenceType</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">parseJSON</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Aeson.Value</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Parser</span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#ReferenceType"><span class="hs-identifier hs-type">ReferenceType</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621681108102"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser ReferenceType
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Text -&gt; Parser ReferenceType) -&gt; Value -&gt; Parser ReferenceType
+forall a. String -&gt; (Text -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">Aeson.withText</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ReferenceType&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Parser ReferenceType) -&gt; Value -&gt; Parser ReferenceType)
+-&gt; (Text -&gt; Parser ReferenceType) -&gt; Value -&gt; Parser ReferenceType
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;GovernanceMetadata&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReferenceType -&gt; Parser ReferenceType
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceType
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#GovernanceMetadata"><span class="hs-identifier hs-var">GovernanceMetadata</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Other&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReferenceType -&gt; Parser ReferenceType
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceType
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Other"><span class="hs-identifier hs-var">Other</span></a></span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Link&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReferenceType -&gt; Parser ReferenceType
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceType
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Link"><span class="hs-identifier hs-var">Link</span></a></span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Identity&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ReferenceType -&gt; Parser ReferenceType
+forall a. a -&gt; Parser a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ReferenceType
+</span><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Identity"><span class="hs-identifier hs-var">Identity</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; Parser ReferenceType
+forall a. String -&gt; Parser a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/0nnd5q47pns22rrwdhxyp0w9j7ym4k5h-ghc-9.8.2-doc/share/doc/ghc-9.8.2/html/libraries/base-4.19.1.0-inplace/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Invalid reference type, must be one of: GovernanceMetadata, Other, Link, Identity&quot;</span></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- We don't need to validate Authors because it is optional in CIP-119</span><span>
+</span><span id="line-133"></span><span class="hs-keyword">data</span><span> </span><span class="hs-keyword">instance</span><span> </span><span id="Authors"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html#Authors"><span class="hs-identifier hs-var">Authors</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier hs-type">CIP119</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Absent"><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#Absent"><span class="hs-identifier hs-var">Absent</span></a></span></span><span>
+</span><span id="line-134"></span></pre></body></html>

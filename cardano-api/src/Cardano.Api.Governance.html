@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Governance</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Actions</span></span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Proposal Procedure</span></span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.ProposalProcedure.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Action.ProposalProcedure</span></a></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Voting Procedure</span></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Action.VotingProcedure</span></a></span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Metadata</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** DRep off-chain metadata</span></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-comment">-- | This module implements validation of metadata for DRep registration and</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-comment">-- update actions, as specified bt the CIP-119 (https://cips.cardano.org/cip/CIP-0119).</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-comment">-- The constraints implemented in this module can be tested against a JSON</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-comment">-- 'ByteString' by using the function 'validateGovActionAnchorData' in</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Governance.Internal.Metadata.Validation&quot; with the parameter 'DrepRegistrationMetadata'.</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html#CIP119"><span class="hs-identifier">CIP119</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Government action metadata</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-comment">-- | This module implements validation of metadata for Government Actions in</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-comment">-- general, as specified bt the CIP-108 (https://cips.cardano.org/cip/CIP-0108),</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-comment">-- except for Government Actions covered by other CIPs.</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-comment">-- The constraints implemented in this module can be tested against a JSON</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-comment">-- 'ByteString' by using the function 'validateGovActionAnchorData' in</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Governance.Internal.Metadata.Validation&quot; with the parameter 'BaseGovActionMetadata'.</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.GovAction.html#CIP108"><span class="hs-identifier">CIP108</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Metadata anchor</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Anchor.html#AnchorUrl"><span class="hs-identifier">AnchorUrl</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Anchor.html#AnchorDataHash"><span class="hs-identifier">AnchorDataHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Metadata validation</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Metadata.Validation</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Poll</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Types</span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Poll.html#GovernancePoll"><span class="hs-identifier">GovernancePoll</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Poll.html#GovernancePollAnswer"><span class="hs-identifier">GovernancePollAnswer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Hash.html#Hash"><span class="hs-identifier">Hash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Errors</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Poll.html#GovernancePollError"><span class="hs-identifier">GovernancePollError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Poll.html#renderGovernancePollError"><span class="hs-identifier">renderGovernancePollError</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Functions</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Poll.html#hashGovernancePoll"><span class="hs-identifier">hashGovernancePoll</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Poll.html#verifyPollAnswer"><span class="hs-identifier">verifyPollAnswer</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.ProposalProcedure.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Action.ProposalProcedure</span></a></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Action.VotingProcedure.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Action.VotingProcedure</span></a></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Anchor.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Metadata.Anchor</span></a></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.DrepRegistration.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Metadata.DrepRegistration</span></a></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.GovAction.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Metadata.GovAction</span></a></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Metadata.Validation.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Metadata.Validation</span></a></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Governance.Internal.Poll.html"><span class="hs-identifier">Cardano.Api.Governance.Internal.Poll</span></a></span><span>
+</span><span id="line-65"></span></pre></body></html>
