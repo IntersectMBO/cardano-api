@@ -17,6 +17,7 @@ module Cardano.Api.UTxO
   , lookup
   , resolveTxIn
   , null
+  , size
 
     -- * Construction
   , empty
@@ -172,6 +173,10 @@ resolveTxIn = Cardano.Api.UTxO.lookup
 -- | Is the `UTxO` empty
 null :: UTxO era -> Bool
 null = Map.null . unUTxO
+
+-- | The number of `TxOut`s in the `UTxO`.
+size :: UTxO era -> Int
+size = Map.size . unUTxO
 
 {--------------------------------------------------------------------
   Construction
