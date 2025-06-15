@@ -16,6 +16,10 @@ module Cardano.Api.UTxO
     -- * Query
   , lookup
   , resolveTxIn
+  , null
+  , size
+  , totalValue
+  , totalLovelace
 
     -- * Construction
   , empty
@@ -82,8 +86,15 @@ import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
   , ShelleyBasedEra
   , ShelleyLedgerEra
   )
-import Cardano.Api.Tx.Internal.Output (CtxUTxO, TxOut (..), fromShelleyTxOut, toShelleyTxOut)
+import Cardano.Api.Tx.Internal.Output
+  ( CtxUTxO
+  , TxOut (..)
+  , fromShelleyTxOut
+  , toShelleyTxOut
+  , txOutValueToValue
+  )
 import Cardano.Api.Tx.Internal.TxIn (TxIn (..), fromShelleyTxIn, toShelleyTxIn)
+import Cardano.Api.Value.Internal (Coin, Value, selectLovelace)
 
 import Cardano.Ledger.Babbage ()
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
@@ -167,6 +178,22 @@ lookup k = Map.lookup k . unUTxO
 -- | Synonym for `lookup`.
 resolveTxIn :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
 resolveTxIn = Cardano.Api.UTxO.lookup
+
+-- | Is the `UTxO` empty
+null :: UTxO era -> Bool
+null = Map.null . unUTxO
+
+-- | The number of `TxOut`s in the `UTxO`.
+size :: UTxO era -> Prelude.Int
+size = Map.size . unUTxO
+
+-- | The total `Value` stored in this `UTxO`.
+totalValue :: UTxO era -> Value
+totalValue = Cardano.Api.UTxO.foldMap (\(TxOut _ v _ _) -> txOutValueToValue v)
+
+-- | The total `Lovelace` stored in this `UTxO`.
+totalLovelace :: UTxO era -> Coin
+totalLovelace = selectLovelace . totalValue
 
 {--------------------------------------------------------------------
   Construction
