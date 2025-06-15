@@ -1,5 +1,158 @@
 # Changelog for cardano-api
 
+## 10.17.0.0
+
+- Introduce new certificate type
+  (feature, compatible)
+  [PR 858](https://github.com/IntersectMBO/cardano-api/pull/858)
+
+- Breaking refactor: change module structure according to [ADR-009](https://github.com/input-output-hk/cardano-node-wiki/wiki/ADR-009-cardano-api-exports-convention)
+
+  Add new exported modules:
+
+    - Cardano.Api.Certificate
+    - Cardano.Api.Era
+    - Cardano.Api.Experimental.Plutus
+    - Cardano.Api.Genesis
+    - Cardano.Api.Governance
+    - Cardano.Api.Key
+    - Cardano.Api.IPC
+    - Cardano.Api.Plutus
+    - Cardano.Api.Query
+    - Cardano.Api.Serialise.DeserialiseAnyOf
+    - Cardano.Api.Serialise.TextEnvelope
+    - Cardano.Api.Serialise.Tx
+    - Cardano.Api.Value
+
+  Rename modules:
+
+    - Cardano.Api.Byron.Internal.Key -> Cardano.Api.Internal.Keys.Byron
+    - Cardano.Api.Byron.Internal.Proposal -> Cardano.Api.Internal.SpecialByron
+    - Cardano.Api.Certificate.Internal -> Cardano.Api.Internal.Certificate
+    - Cardano.Api.Certificate.Internal.OperationalCertificate -> Cardano.Api.Internal.OperationalCertificate
+    - Cardano.Api.Certificate.Internal.StakePoolMetadata -> Cardano.Api.Internal.StakePoolMetadata
+    - Cardano.Api.Certificate.Internal.DRepMetadata -> Cardano.Api.Internal.DRepMetadata
+    - Cardano.Api.Compatible.Tx -> Cardano.Api.Internal.Compatible.Tx
+    - Cardano.Api.ProtocolParameters -> Cardano.Api.Internal.ProtocolParameters
+    - Cardano.Api.Consensus.Internal.Reexport -> Cardano.Api.Internal.ReexposeConsensus
+    - Cardano.Api.Consensus.Internal.Mode -> Cardano.Api.Internal.Modes
+    - Cardano.Api.Consensus.Internal.InMode -> Cardano.Api.Internal.InMode
+    - Cardano.Api.Consensus.Internal.Protocol -> Cardano.Api.Internal.Protocol
+    - Cardano.Api.Era.Internal.Case -> Cardano.Api.Internal.Eras.Case
+    - Cardano.Api.Era.Internal.Core -> Cardano.Api.Internal.Eras.Core
+    - Cardano.Api.Era.Internal.Feature -> Cardano.Api.Internal.Feature
+    - Cardano.Api.Era.Internal.Eon.AllegraEraOnwards -> Cardano.Api.Internal.Eon.AllegraEraOnwards
+    - Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards -> Cardano.Api.Internal.Eon.AlonzoEraOnwards
+    - Cardano.Api.Era.Internal.Eon.BabbageEraOnwards -> Cardano.Api.Internal.Eon.BabbageEraOnwards
+    - Cardano.Api.Era.Internal.Eon.ByronToAlonzoEra -> Cardano.Api.Internal.Eon.ByronToAlonzoEra
+    - Cardano.Api.Era.Internal.Eon.Convert -> Cardano.Api.Internal.Eon.Convert
+    - Cardano.Api.Era.Internal.Eon.ConwayEraOnwards -> Cardano.Api.Internal.Eon.ConwayEraOnwards
+    - Cardano.Api.Era.Internal.Eon.MaryEraOnwards -> Cardano.Api.Internal.Eon.MaryEraOnwards
+    - Cardano.Api.Era.Internal.Eon.ShelleyBasedEra -> Cardano.Api.Internal.Eon.ShelleyBasedEra
+    - Cardano.Api.Era.Internal.Eon.ShelleyEraOnly -> Cardano.Api.Internal.Eon.ShelleyEraOnly
+    - Cardano.Api.Era.Internal.Eon.ShelleyToAllegraEra -> Cardano.Api.Internal.Eon.ShelleyToAllegraEra
+    - Cardano.Api.Era.Internal.Eon.ShelleyToAlonzoEra -> Cardano.Api.Internal.Eon.ShelleyToAlonzoEra
+    - Cardano.Api.Era.Internal.Eon.ShelleyToBabbageEra -> Cardano.Api.Internal.Eon.ShelleyToBabbageEra
+    - Cardano.Api.Era.Internal.Eon.ShelleyToMaryEra -> Cardano.Api.Internal.Eon.ShelleyToMaryEra
+    - Cardano.Api.Era -> Cardano.Api.Internal.Eras
+    - Cardano.Api.Experimental.Era -> Cardano.Api.Internal.Experimental.Eras
+    - Cardano.Api.Experimental.Plutus.Internal.IndexedPlutusScriptWitness -> Cardano.Api.Internal.Experimental.Plutus.IndexedPlutusScriptWitness
+    - Cardano.Api.Experimental.Plutus.Internal.ScriptWitness -> Cardano.Api.Internal.Experimental.Plutus.ScriptWitness
+    - Cardano.Api.Experimental.Plutus.Internal.Script -> Cardano.Api.Internal.Experimental.Plutus.Script
+    - Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts -> Cardano.Api.Internal.Experimental.Plutus.Shim.LegacyScripts
+    - Cardano.Api.Experimental.Simple.Script -> Cardano.Api.Internal.Experimental.Simple.Script
+    - Cardano.Api.Experimental.Tx -> Cardano.Api.Internal.Experimental.Tx
+    - Cardano.Api.Experimental.Tx.Internal.AnyWitness -> Cardano.Api.Internal.Experimental.Witness.AnyWitness
+    - Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements -> Cardano.Api.Internal.Experimental.Witness.TxScriptWitnessRequirements
+    - Cardano.Api.Genesis.Internal.Parameters -> Cardano.Api.Internal.GenesisParameters
+    - Cardano.Api.Genesis.Internal -> Cardano.Api.Internal.Genesis
+    - Cardano.Api.Governance.Internal.Action.ProposalProcedure -> Cardano.Api.Internal.Governance.Actions.ProposalProcedure
+    - Cardano.Api.Governance.Internal.Action.VotingProcedure -> Cardano.Api.Internal.Governance.Actions.VotingProcedure
+    - Cardano.Api.Governance.Internal.Metadata.Anchor -> Cardano.Api.Internal.Anchor
+    - Cardano.Api.Governance.Internal.Metadata.DrepRegistration -> Cardano.Api.Internal.Governance.Metadata.DrepRegistration
+    - Cardano.Api.Governance.Internal.Metadata.GovAction -> Cardano.Api.Internal.Governance.Metadata.GovAction
+    - Cardano.Api.Governance.Internal.Metadata.Validation -> Cardano.Api.Internal.Governance.Metadata.Validation
+    - Cardano.Api.Governance.Internal.Poll -> Cardano.Api.Internal.Governance.Poll
+    - Cardano.Api.IO.Internal.Compat.Posix -> Cardano.Api.Internal.IO.Compat.Posix
+    - Cardano.Api.IO.Internal.Compat.Win32 -> Cardano.Api.Internal.IO.Compat.Win32
+    - Cardano.Api.IO.Internal.Compat -> Cardano.Api.Internal.IO.Compat
+    - Cardano.Api.IO.Internal.Base -> Cardano.Api.Internal.IO.Base
+    - Cardano.Api.IO -> Cardano.Api.Internal.IO
+    - Cardano.Api.Key.Internal -> Cardano.Api.Internal.Keys.Shelley
+    - Cardano.Api.Key.Internal.Class -> Cardano.Api.Internal.Keys.Class
+    - Cardano.Api.Key.Internal.Mnemonic -> Cardano.Api.Internal.Keys.Mnemonics
+    - Cardano.Api.Key.Internal.Praos -> Cardano.Api.Internal.Keys.Praos
+    - Cardano.Api.Key.Internal.SomeAddressVerificationKey -> Cardano.Api.Internal.Keys.SomeAddressVerificationKey
+    - Cardano.Api.Ledger.Internal.Reexport -> Cardano.Api.Internal.ReexposeLedger
+    - Cardano.Api.LedgerState -> Cardano.Api.Internal.LedgerState
+    - Cardano.Api.LedgerState.Internal.ConvertLedgerEvent -> Cardano.Api.Internal.LedgerEvents.ConvertLedgerEvent
+    - Cardano.Api.LedgerState.Internal.LedgerEvent -> Cardano.Api.Internal.LedgerEvents.LedgerEvent
+    - Cardano.Api.LedgerState.Internal.Rule.BBODY.DELEGS -> Cardano.Api.Internal.LedgerEvents.Rule.BBODY.DELEGS
+    - Cardano.Api.LedgerState.Internal.Rule.BBODY.LEDGER -> Cardano.Api.Internal.LedgerEvents.Rule.BBODY.LEDGER
+    - Cardano.Api.LedgerState.Internal.Rule.BBODY.UTXOW -> Cardano.Api.Internal.LedgerEvents.Rule.BBODY.UTXOW
+    - Cardano.Api.LedgerState.Internal.Rule.TICK.RUPD -> Cardano.Api.Internal.LedgerEvents.Rule.TICK.RUPD
+    - Cardano.Api.LedgerState.Internal.Rule.TICK.NEWEPOCH -> Cardano.Api.Internal.LedgerEvents.Rule.TICK.NEWEPOCH
+    - Cardano.Api.Network.Internal.Reexport -> Cardano.Api.Internal.ReexposeNetwork
+    - Cardano.Api.Network.Internal.NetworkId -> Cardano.Api.Internal.NetworkId
+    - Cardano.Api.Network.IPC.Internal.ChainSync.ClientPipelined -> Cardano.Api.ChainSync.ClientPipelined
+    - Cardano.Api.Network.IPC.Internal.ChainSync.Client -> Cardano.Api.ChainSync.Client
+    - Cardano.Api.Network.IPC.Internal.Monad -> Cardano.Api.Internal.IPC.Monad
+    - Cardano.Api.Network.IPC.Internal.Version -> Cardano.Api.Internal.IPC.Version
+    - Cardano.Api.Network.IPC.Internal -> Cardano.Api.Internal.IPC
+    - Cardano.Api.Plutus.Internal -> Cardano.Api.Internal.Plutus
+    - Cardano.Api.Plutus.Internal.ScriptData -> Cardano.Api.Internal.ScriptData
+    - Cardano.Api.Plutus.Internal.Script -> Cardano.Api.Internal.Script
+    - Cardano.Api.Serialise.Bech32 -> Cardano.Api.Internal.SerialiseBech32
+    - Cardano.Api.Serialise.Cip129 -> Cardano.Api.Internal.CIP.Cip129
+    - Cardano.Api.Serialise.Cbor.Canonical -> Cardano.Api.Internal.Serialise.Cbor.Canonical
+    - Cardano.Api.Serialise.Cbor -> Cardano.Api.Internal.Serialise.Cbor
+    - Cardano.Api.Serialise.DeserialiseAnyOf -> Cardano.Api.Internal.DeserialiseAnyOf
+    - Cardano.Api.Serialise.Json -> Cardano.Api.Internal.SerialiseJSON
+    - Cardano.Api.Serialise.Raw -> Cardano.Api.Internal.SerialiseRaw
+    - Cardano.Api.Serialise.SerialiseUsing -> Cardano.Api.Internal.SerialiseUsing
+    - Cardano.Api.Serialise.TextEnvelope.Internal -> Cardano.Api.Internal.SerialiseTextEnvelope
+    - Cardano.Api.Serialise.TextEnvelope.Internal.Cddl -> Cardano.Api.Internal.SerialiseLedgerCddl
+    - Cardano.Api.Query.Internal.Convenience -> Cardano.Api.Internal.Convenience.Query
+    - Cardano.Api.Query.Internal.Expr -> Cardano.Api.Internal.Query.Expr
+    - Cardano.Api.Query.Internal.Type.DebugLedgerState -> Cardano.Api.Internal.Query.Types
+    - Cardano.Api.Query.Internal.Type.DelegationsAndRewards -> Cardano.Api.Internal.Rewards
+    - Cardano.Api.Query.Internal.Type.QueryInMode -> Cardano.Api.Internal.Query
+    - Cardano.Api.Tx.Internal.Body -> Cardano.Api.Internal.Tx.Body
+    - Cardano.Api.Tx.Internal.Body.Lens -> Cardano.Api.Ledger.Lens
+    - Cardano.Api.Tx.Internal.Convenience -> Cardano.Api.Internal.Convenience.Construction
+    - Cardano.Api.Tx.Internal.Fee -> Cardano.Api.Internal.Fees
+    - Cardano.Api.Tx.Internal.Sign -> Cardano.Api.Internal.Tx.Sign
+    - Cardano.Api.Tx.Internal.BuildTxWith -> Cardano.Api.Internal.Tx.BuildTxWith
+    - Cardano.Api.Tx.Internal.Output -> Cardano.Api.Internal.Tx.Output
+    - Cardano.Api.Tx.Internal.TxIn -> Cardano.Api.Internal.TxIn
+    - Cardano.Api.Tx.Internal.TxMetadata -> Cardano.Api.Internal.TxMetadata
+    - Cardano.Api.Address -> Cardano.Api.Internal.Address
+    - Cardano.Api.Block -> Cardano.Api.Internal.Block
+    - Cardano.Api.Error -> Cardano.Api.Internal.Error
+    - Cardano.Api.HasTypeProxy -> Cardano.Api.Internal.HasTypeProxy
+    - Cardano.Api.Hash -> Cardano.Api.Internal.Hash
+    - Cardano.Api.Monad.Error -> Cardano.Api.Internal.Monad.Error
+    - Cardano.Api.Pretty -> Cardano.Api.Internal.Pretty
+    - Cardano.Api.Pretty.Internal.ShowOf -> Cardano.Api.Internal.Via.ShowOf
+    - Cardano.Api.UTxO -> Cardano.Api.Internal.Tx.UTxO
+    - Cardano.Api.Value.Internal.Parser -> Cardano.Api.Internal.ValueParser
+    - Cardano.Api.Value.Internal -> Cardano.Api.Internal.Value
+  (breaking, refactoring)
+  [PR 840](https://github.com/IntersectMBO/cardano-api/pull/840)
+
+- Remove partial `IsString` instances. Use `deserialiseFromRawBytesHex` or specialised parser instead.
+  Make `SerialiseAsBech32` class use `HumanReadablePart` instead of `Text` for Bech32 prefix in `bech32PrefixFor` and `bech32PrefixesPermitted` functions.
+  (breaking, refactoring)
+  [PR 842](https://github.com/IntersectMBO/cardano-api/pull/842)
+
+- Add `genBlockHeader` and related functions to `Test.Gen.Cardano.Api.Typed`.
+  (compatible)
+  [PR 834](https://github.com/IntersectMBO/cardano-api/pull/834)
+
+- Add more `Data.Map` style functions to `Cardano.Api.Tx.UTxO`: `insert`, `delete`, `adjust`, `union`, `unions`, `difference`, `intersection`, `map`. `mapWithKey`, `mapKeys`, `foldMap`, `fromMap`, `find`, `findWithKey`.
+  (compatible)
+  [PR 841](https://github.com/IntersectMBO/cardano-api/pull/841)
+
 ## 10.16.3.0
 
 - Add `IsShelleyBasedEra` constraint to `EraCommonConstraints`
@@ -10,7 +163,7 @@
   (feature)
   [PR 848](https://github.com/IntersectMBO/cardano-api/pull/848)
 
-## 10.16.2.0 
+## 10.16.2.0
 
 - Add `IsCardanoEra` constraint to `EraCommonConstraints`
   (compatible)
@@ -20,7 +173,7 @@
   (compatible)
   [PR 845](https://github.com/IntersectMBO/cardano-api/pull/845)
 
-## 10.16.1.0 
+## 10.16.1.0
 
 - Bump network and consensus dependencies
   (compatible, maintenance)
@@ -30,7 +183,7 @@
   (compatible)
   [PR 839](https://github.com/IntersectMBO/cardano-api/pull/839)
 
-## 10.16.0.0 
+## 10.16.0.0
 
 - Allow providing of actual datum for reference inputs in `TxInsReference`.
   (feature, breaking)
@@ -133,7 +286,7 @@
   (feature, compatible)
   [PR 785](https://github.com/IntersectMBO/cardano-api/pull/785)
 
-- Fix bug in the construction of the redeemer pointer map. 
+- Fix bug in the construction of the redeemer pointer map.
   (breaking, bugfix)
   [PR 800](https://github.com/IntersectMBO/cardano-api/pull/800)
 
@@ -374,7 +527,7 @@
   [PR 688](https://github.com/IntersectMBO/cardano-api/pull/688)
 
 - We introduce the `Convert` type class as an alternative to cardano-ledger's `Inject` typeclass.
-  While `Inject` is more general, `Convert` is specifically designed for transformations between era-indexed types, 
+  While `Inject` is more general, `Convert` is specifically designed for transformations between era-indexed types,
   making the intent clearer at call sites where we're converting between eons.
   (feature)
   [PR 690](https://github.com/IntersectMBO/cardano-api/pull/690)
