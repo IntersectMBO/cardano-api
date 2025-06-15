@@ -16,6 +16,7 @@ module Cardano.Api.UTxO
     -- * Query
   , lookup
   , resolveTxIn
+  , null
 
     -- * Construction
   , empty
@@ -167,6 +168,10 @@ lookup k = Map.lookup k . unUTxO
 -- | Synonym for `lookup`.
 resolveTxIn :: TxIn -> UTxO era -> Maybe (TxOut CtxUTxO era)
 resolveTxIn = Cardano.Api.UTxO.lookup
+
+-- | Is the `UTxO` empty
+null :: UTxO era -> Bool
+null = Map.null . unUTxO
 
 {--------------------------------------------------------------------
   Construction
