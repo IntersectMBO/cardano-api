@@ -14,9 +14,7 @@ module Test.Cardano.Api.TxBody
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.Script
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import Data.Maybe (isJust)
 import Data.Set (Set)

@@ -146,18 +146,11 @@ where
 
 import Cardano.Api hiding (txIns)
 import Cardano.Api qualified as Api
-import Cardano.Api.Byron
-  ( KeyWitness (ByronKeyWitness)
-  , WitnessNetworkIdOrByronAddress (..)
-  )
 import Cardano.Api.Byron qualified as Byron
 import Cardano.Api.Experimental qualified as Exp
-import Cardano.Api.Internal.Error
-import Cardano.Api.Internal.Script (scriptInEraToRefScript)
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Ledger.Lens qualified as A
-import Cardano.Api.Shelley
-import Cardano.Api.Shelley qualified as ShelleyApi
+import Cardano.Api.Parser.Text qualified as P
+import Cardano.Api.Tx qualified as A
 
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
@@ -446,16 +439,23 @@ genAssetName :: Gen AssetName
 genAssetName =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
-    [ (9, Gen.element ["", "a", "b", "c"])
-    , (1, AssetName <$> Gen.bytes (Range.singleton 32))
-    , (1, AssetName <$> Gen.bytes (Range.constant 1 31))
+    [ (9, UnsafeAssetName <$> Gen.element ["", "a", "b", "c"])
+    , (1, UnsafeAssetName <$> Gen.bytes (Range.singleton 32))
+    , (1, UnsafeAssetName <$> Gen.bytes (Range.constant 1 31))
     ]
 
 genPolicyId :: Gen PolicyId
 genPolicyId =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
-    [ (9, Gen.element [fromString (x : replicate 55 '0') | x <- ['a' .. 'c']])
+    [
+      ( 9
+      , Gen.element
+          [ pid
+          | x <- ['a' .. 'c']
+          , pid <- P.runParserFail parsePolicyId (fromString $ x : replicate 55 '0')
+          ]
+      )
     , -- and some from the full range of the type
       (1, PolicyId <$> genScriptHash)
     ]
@@ -623,7 +623,7 @@ genPaymentCredential = do
   vKey <- genVerificationKey AsPaymentKey
   return . PaymentCredentialByKey $ verificationKeyHash vKey
 
-genSigningKey :: Key keyrole => ShelleyApi.AsType keyrole -> Gen (SigningKey keyrole)
+genSigningKey :: Key keyrole => AsType keyrole -> Gen (SigningKey keyrole)
 genSigningKey roletoken = do
   seed <- genSeed (fromIntegral seedSize)
   let sk = deterministicSigningKey roletoken seed
@@ -1118,7 +1118,7 @@ genVerificationKey
   :: ()
   => HasTypeProxy keyrole
   => Key keyrole
-  => ShelleyApi.AsType keyrole
+  => AsType keyrole
   -> Gen (VerificationKey keyrole)
 genVerificationKey roletoken = getVerificationKey <$> genSigningKey roletoken
 
@@ -1126,7 +1126,7 @@ genVerificationKeyHash
   :: ()
   => HasTypeProxy keyrole
   => Key keyrole
-  => ShelleyApi.AsType keyrole
+  => AsType keyrole
   -> Gen (Hash keyrole)
 genVerificationKeyHash roletoken =
   verificationKeyHash <$> genVerificationKey roletoken

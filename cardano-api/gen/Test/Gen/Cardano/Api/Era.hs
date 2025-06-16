@@ -11,7 +11,6 @@ module Test.Gen.Cardano.Api.Era
 where
 
 import Cardano.Api hiding (txIns)
-import Cardano.Api.Shelley
 
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger

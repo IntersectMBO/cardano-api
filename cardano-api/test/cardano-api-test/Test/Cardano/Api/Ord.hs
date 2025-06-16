@@ -4,7 +4,6 @@ module Test.Cardano.Api.Ord
 where
 
 import Cardano.Api
-import Cardano.Api.Shelley
 
 import Test.Gen.Cardano.Api.Typed
 

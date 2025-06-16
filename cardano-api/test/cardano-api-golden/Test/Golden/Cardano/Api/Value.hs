@@ -1,9 +1,7 @@
 module Test.Golden.Cardano.Api.Value where
 
 import Cardano.Api
-  ( MaryEraOnwards (..)
-  , ShelleyBasedEra (..)
-  , ValueNestedBundle (..)
+  ( ValueNestedBundle (..)
   , ValueNestedRep (..)
   , fromLedgerValue
   , parseMintingMultiAssetValue
@@ -16,7 +14,8 @@ import Cardano.Api
   , valueToNestedRep
   )
 import Cardano.Api qualified as Api
-import Cardano.Api.Internal.Eras
+import Cardano.Api.Era
+import Cardano.Api.Parser.Text qualified as P
 
 import Prelude
 
@@ -25,7 +24,6 @@ import Data.List (groupBy, sort)
 import Data.Map.Strict qualified as Map
 import Data.Text qualified as Text
 import GHC.Exts (IsList (..))
-import Text.Parsec qualified as Parsec (parse)
 
 import Test.Gen.Cardano.Api.Typed
 
@@ -43,7 +41,7 @@ hprop_roundtrip_txout_Value_parse_render =
     tripping
       value
       renderValue
-      (Parsec.parse parseTxOutMultiAssetValue "" . Text.unpack)
+      (P.runParser parseTxOutMultiAssetValue)
 
 hprop_roundtrip_txout_Value_parse_renderPretty :: Property
 hprop_roundtrip_txout_Value_parse_renderPretty =
@@ -52,7 +50,7 @@ hprop_roundtrip_txout_Value_parse_renderPretty =
     tripping
       value
       renderValuePretty
-      (Parsec.parse parseTxOutMultiAssetValue "" . Text.unpack)
+      (P.runParser parseTxOutMultiAssetValue)
 
 hprop_roundtrip_mint_Value_parse_render :: Property
 hprop_roundtrip_mint_Value_parse_render =
@@ -61,7 +59,7 @@ hprop_roundtrip_mint_Value_parse_render =
     tripping
       value
       renderMultiAsset
-      (Parsec.parse (parseMintingMultiAssetValue currentEra) "" . Text.unpack)
+      (P.runParser $ parseMintingMultiAssetValue currentEra)
 
 hprop_roundtrip_mint_Value_parse_renderPretty :: Property
 hprop_roundtrip_mint_Value_parse_renderPretty =
@@ -70,7 +68,7 @@ hprop_roundtrip_mint_Value_parse_renderPretty =
     tripping
       value
       renderMultiAssetPretty
-      (Parsec.parse (parseMintingMultiAssetValue currentEra) "" . Text.unpack)
+      (P.runParser (parseMintingMultiAssetValue currentEra))
 
 hprop_goldenValue_1_lovelace :: Property
 hprop_goldenValue_1_lovelace =
@@ -83,8 +81,10 @@ hprop_goldenValue_1_lovelace =
 hprop_goldenValue1 :: Property
 hprop_goldenValue1 =
   H.propertyOnce $ do
-    let policyId = Api.PolicyId "a0000000000000000000000000000000000000000000000000000000"
-        assetName = Api.AssetName "asset1"
+    policyId <-
+      H.leftFail $
+        P.runParser Api.parsePolicyId "a0000000000000000000000000000000000000000000000000000000"
+    let assetName = Api.UnsafeAssetName "asset1"
         valueList = [(Api.AssetId policyId assetName, 1)]
         value = Text.unpack $ Api.renderValuePretty $ fromList valueList
 

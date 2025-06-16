@@ -15,19 +15,14 @@ module Test.Cardano.Api.Transaction.Autobalance
 where
 
 import Cardano.Api
-import Cardano.Api.Internal.Address (toShelleyStakeCredential)
-import Cardano.Api.Internal.Fees
-import Cardano.Api.Internal.Script
+import Cardano.Api.Experimental.Tx
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Ledger.Lens qualified as L
-import Cardano.Api.Shelley
-  ( LedgerProtocolParameters (..)
-  , collectTxBodyScriptWitnessRequirements
-  , extractExecutionUnits
-  )
+import Cardano.Api.Parser.Text qualified as P
+import Cardano.Api.Tx qualified as L
 
 import Cardano.Ledger.Alonzo.Core qualified as L
 import Cardano.Ledger.Coin qualified as L
+import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
 import Cardano.Ledger.Val ((<->))
 import Cardano.Ledger.Val qualified as L
@@ -36,6 +31,7 @@ import Cardano.Slotting.Slot qualified as CS
 import Cardano.Slotting.Time qualified as CS
 
 import Control.Monad
+import Control.Monad.Trans.Fail (errorFail)
 import Data.Aeson (eitherDecodeStrict)
 import Data.Bifunctor (first)
 import Data.ByteString qualified as B
@@ -44,6 +40,7 @@ import Data.Function
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Ratio ((%))
+import Data.Text (Text)
 import Data.Time.Format qualified as DT
 import GHC.Exts (IsList (..))
 import GHC.Stack
@@ -173,15 +170,13 @@ prop_make_transaction_body_autobalance_no_change = H.propertyOnce $ do
           (ShelleyAddressInEra sbe)
           ( ShelleyAddress
               L.Testnet
-              (L.KeyHashObj "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+              (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
               L.StakeRefNull
           )
   let utxos =
         UTxO
           [
-            ( TxIn
-                "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
-                (TxIx 0)
+            ( mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
             , TxOut
                 address
                 ( TxOutValueShelleyBased
@@ -263,7 +258,7 @@ prop_make_transaction_body_autobalance_return_correct_fee_for_multi_asset = H.pr
   let txMint =
         TxMintValue
           meo
-          [(policyId', ([("eeee", 1)], BuildTxWith plutusWitness))]
+          [(policyId', ([(UnsafeAssetName "eeee", 1)], BuildTxWith plutusWitness))]
 
   -- tx body content without an asset in TxOut
   let content =
@@ -426,7 +421,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   let txMint =
         TxMintValue
           meo
-          [(policyId', ([("eeee", 1)], BuildTxWith plutusWitness))]
+          [(policyId', ([(UnsafeAssetName "eeee", 1)], BuildTxWith plutusWitness))]
 
   let content =
         defaultTxBodyContent sbe
@@ -467,7 +462,7 @@ prop_make_transaction_body_autobalance_multi_asset_collateral = H.propertyOnce $
   TxReturnCollateral _ (TxOut _ txOutValue _ _) <- H.noteShow $ txReturnCollateral balancedContent
   let assets = [a | a@(AssetId _ _, _) <- toList $ txOutValueToValue txOutValue]
   H.note_ "Check that all assets from UTXO, from the collateral txin, are in the return collateral."
-  [(AssetId policyId' "eeee", 1)] === assets
+  [(AssetId policyId' $ UnsafeAssetName "eeee", 1)] === assets
 
 -- | Implements collateral validation from Babbage spec, from
 -- https://github.com/IntersectMBO/cardano-ledger/releases, babbage-ledger.pdf, Figure 2.
@@ -574,7 +569,7 @@ prop_ensure_gov_actions_are_preserved_by_autobalance = H.propertyOnce $ do
           , L.pProcReturnAddr =
               L.RewardAccount
                 { L.raNetwork = L.Testnet
-                , L.raCredential = L.KeyHashObj "0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"
+                , L.raCredential = mkCredential "keyHash-0b1b872f7953bccfc4245f3282b3363f3d19e9e001a5c41e307363d7"
                 }
           , L.pProcGovAction = L.InfoAction
           , L.pProcAnchor = anchor
@@ -621,15 +616,13 @@ mkSimpleUTxOs :: ShelleyBasedEra ConwayEra -> UTxO ConwayEra
 mkSimpleUTxOs sbe =
   UTxO
     [
-      ( TxIn
-          "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
-          (TxIx 0)
+      ( mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       , TxOut
           ( AddressInEra
               (ShelleyAddressInEra sbe)
               ( ShelleyAddress
                   L.Testnet
-                  (L.KeyHashObj "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+                  (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
                   L.StakeRefNull
               )
           )
@@ -685,15 +678,13 @@ mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
   let sbe = convert beo
   UTxO
     [
-      ( TxIn
-          "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53"
-          (TxIx 0)
+      ( mkTxIn "01f4b788593d4f70de2a45c2e1e87088bfbdfa29577ae1b62aba60e095e3ab53#0"
       , TxOut
           ( AddressInEra
               (ShelleyAddressInEra sbe)
               ( ShelleyAddress
                   L.Testnet
-                  (L.KeyHashObj "ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
+                  (mkCredential "keyHash-ebe9de78a37f84cc819c0669791aa0474d4f0a764e54b9f90cfe2137")
                   L.StakeRefNull
               )
           )
@@ -703,7 +694,7 @@ mkUtxos beo mScriptHash = babbageEraOnwardsConstraints beo $ do
                   (L.Coin 4_000_000)
                   ( L.MultiAsset $
                       fromList
-                        [(L.PolicyID scriptHash, [("eeee", 1)]) | scriptHash <- maybeToList mScriptHash]
+                        [(L.PolicyID scriptHash, [(L.AssetName "eeee", 1)]) | scriptHash <- maybeToList mScriptHash]
                   )
               )
           )
@@ -742,7 +733,7 @@ mkTxOutput beo address coin mScriptHash = babbageEraOnwardsConstraints beo $ do
               coin
               ( L.MultiAsset $
                   fromList
-                    [(L.PolicyID scriptHash, [("eeee", 2)]) | scriptHash <- maybeToList mScriptHash]
+                    [(L.PolicyID scriptHash, [(L.AssetName "eeee", 2)]) | scriptHash <- maybeToList mScriptHash]
               )
           )
       )
@@ -764,6 +755,12 @@ getTxOutCoin
 getTxOutCoin txout = withFrozenCallStack $ maryEraOnwardsConstraints (maryBasedEra @era) $ do
   TxOut _ (TxOutValueShelleyBased _ (L.MaryValue changeCoin _)) _ _ <- pure txout
   pure changeCoin
+
+mkCredential :: HasCallStack => Text -> L.Credential k
+mkCredential = errorFail @String . L.parseCredential
+
+mkTxIn :: HasCallStack => Text -> TxIn
+mkTxIn = either error id . P.runParser parseTxIn
 
 tests :: TestTree
 tests =

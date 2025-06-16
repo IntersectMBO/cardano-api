@@ -11,8 +11,6 @@ import Cardano.Api (AlonzoEraOnwards (..))
 import Cardano.Api qualified as Api
 import Cardano.Api.Experimental
 import Cardano.Api.Ledger qualified as L
-import Cardano.Api.Shelley (fromAlonzoData)
-import Cardano.Api.Shelley qualified as Api
 
 import Cardano.Ledger.Alonzo.TxWits qualified as L
 import Cardano.Ledger.Conway qualified as L
@@ -78,7 +76,7 @@ prop_getAnyWitnessRedeemerPointerMap = property $ do
       ledgerRedeemers :: [L.Data L.ConwayEra]
       ledgerRedeemers = map fst $ Map.elems constructedRedeemerPointerMap
 
-      convertedRedeemers = map fromAlonzoData ledgerRedeemers
+      convertedRedeemers = map Api.fromAlonzoData ledgerRedeemers
 
   annotate "Initial Indexed Script Witnesses"
   annotateShow wits
@@ -108,7 +106,7 @@ prop_toAnyWitness =
 
     res <-
       evalEither $
-        (legacyWitnessConversion eon) $
+        legacyWitnessConversion eon $
           zip witnessables (map Api.BuildTxWith excludeReferenceScripts)
 
     annotateShow (extractSimpleScripts res)

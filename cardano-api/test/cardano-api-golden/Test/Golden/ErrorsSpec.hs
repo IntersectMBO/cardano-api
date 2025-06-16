@@ -31,7 +31,6 @@ module Test.Golden.ErrorsSpec
 where
 
 import Cardano.Api
-import Cardano.Api.Shelley
 
 import Cardano.Binary as CBOR
 import Cardano.Crypto.Seed qualified as Crypto
@@ -185,7 +184,7 @@ test_JsonDecodeError =
 test_LeadershipError :: TestTree
 test_LeadershipError =
   testAllErrorMessages_
-    "Cardano.Api.Internal.LedgerState"
+    "Cardano.Api.LedgerState"
     "LeadershipError"
     [ ("LeaderErrDecodeLedgerStateFailure", LeaderErrDecodeLedgerStateFailure)
     ,
@@ -222,7 +221,7 @@ test_OperationalCertIssueError =
 test_ProtocolParametersError :: TestTree
 test_ProtocolParametersError =
   testAllErrorMessages_
-    "Cardano.Api.Internal.ProtocolParameters"
+    "Cardano.Api.ProtocolParameters"
     "ProtocolParametersError"
     [ ("PParamsErrorMissingMinUTxoValue", PParamsErrorMissingMinUTxoValue (AnyCardanoEra ConwayEra))
     , ("PParamsErrorMissingAlonzoProtocolParameter", PParamsErrorMissingAlonzoProtocolParameter)
@@ -233,7 +232,10 @@ test_RawBytesHexError =
   testAllErrorMessages_
     "Cardano.Api.SerialiseRaw"
     "RawBytesHexError"
-    [ ("RawBytesHexErrorBase16DecodeFail", RawBytesHexErrorBase16DecodeFail bytestring string)
+    [
+      ( "RawBytesHexErrorBase16DecodeFail"
+      , RawBytesHexErrorBase16DecodeFail bytestring (typeRep AsTxId) string
+      )
     ,
       ( "RawBytesHexErrorRawBytesDecodeFail"
       , RawBytesHexErrorRawBytesDecodeFail
@@ -278,7 +280,7 @@ test_ScriptDataRangeError =
 test_ScriptExecutionError :: TestTree
 test_ScriptExecutionError =
   testAllErrorMessages_
-    "Cardano.Api.Internal.Fees"
+    "Cardano.Api.Tx.Internal.Fee"
     "ScriptExecutionError"
     [ ("ScriptErrorMissingTxIn", ScriptErrorMissingTxIn txin1)
     , ("ScriptErrorTxInWithoutDatum", ScriptErrorTxInWithoutDatum txin1)
@@ -388,7 +390,7 @@ testPastHorizonValue = Ledger.TimeTranslationPastHorizon text
 test_TransactionValidityError :: TestTree
 test_TransactionValidityError =
   testAllErrorMessages_
-    "Cardano.Api.Internal.Fees"
+    "Cardano.Api.Tx.Internal.Fee"
     "TransactionValidityError"
     [
       ( "TransactionValidityCostModelError"
@@ -425,7 +427,7 @@ test_TxBodyError =
 test_TxBodyErrorAutoBalance :: TestTree
 test_TxBodyErrorAutoBalance =
   testAllErrorMessages_
-    "Cardano.Api.Internal.Fees"
+    "Cardano.Api.Tx.Internal.Fee"
     "TxBodyErrorAutoBalance"
     [ ("TxBodyError", TxBodyError TxBodyEmptyTxIns)
     ,
