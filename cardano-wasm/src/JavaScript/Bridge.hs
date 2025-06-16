@@ -2,6 +2,7 @@
 
 #if !defined(wasm32_HOST_ARCH)
 module JavaScript.Bridge where
+import qualified Data.ByteString as Text
 #else
 
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,16 +15,20 @@ module JavaScript.Bridge where
 module JavaScript.Bridge where
 
 import qualified Cardano.Api as Api
-import qualified Cardano.Api.Ledger as Ledger
+import qualified Cardano.Api.Ledger as Ledger -- For Ledger.Coin
+
+-- For explicit JSString conversion
 
 import qualified Data.Aeson as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
 import qualified Data.Text as Text
-import GHC.Wasm.Prim
+import Data.Typeable (Typeable, typeRep)
 import GHC.Stack (HasCallStack)
+import GHC.Wasm.Prim
 
 import General.ExceptionHandling (rightOrError)
+import qualified WasmApi.Tx as Wasm
 import qualified WasmApi.WasmApi as WasmApi
 
 -- * JS helper functions
@@ -83,101 +88,138 @@ jsValToType expectedType val = do
         ("Error deserialising text envelope for parameter of type " ++ expectedType ++ ": " ++ show err)
     Right type_ -> return type_
 
+-- * Type Synonyms for JSVal representations
+
+type JSUnsignedTx = JSVal
+
+type JSSignedTx = JSVal
+
+type JSTxId = JSSigningKey
+
+type JSTxIx = Int
+
+type JSCoin = JSVal
+
+type JSSigningKey = JSString
+
 -- * High-level definitions for conversion between Haskell and JS
 
 -- | Type class that provides functions to convert values from Haskell to JavaScript.
 class ToJSVal haskellType jsType where
   toJSVal :: haskellType -> IO jsType
 
-type JSTxBody = JSVal
+instance Api.ToJSON a => ToJSVal a JSVal where
+  toJSVal = jsonToJSVal
 
-instance ToJSVal (Api.TxBody Api.ConwayEra) JSTxBody where
-  toJSVal txBody = do
-    let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") txBody
-    jsonToJSVal envelope
+instance ToJSVal String JSString where
+  toJSVal :: String -> IO JSString
+  toJSVal = return . toJSString
 
-type JSTx = JSVal
-
-instance ToJSVal (Api.Tx Api.ConwayEra) JSTx where
-  toJSVal txBody = do
-    let envelope = Api.serialiseToTextEnvelope (Just "Ledger Cddl Format") txBody
-    jsonToJSVal envelope
-
--- | Type class that provides functions to convert values from JavaScript to Haskell.
+-- |  Type class that provides functions to convert values from JavaScript to Haskell.
 class FromJSVal jsType haskellType where
   fromJSVal :: jsType -> IO haskellType
 
-type JSTxIn = JSVal
+instance {-# OVERLAPPING #-} FromJSVal JSCoin Ledger.Coin where
+  fromJSVal = fmap (Ledger.Coin . fromInteger) . fromJSBigInt
 
-instance FromJSVal JSTxIn Api.TxIn where
-  fromJSVal = jsValToJSON "TxIn"
+instance FromJSVal JSString Text where
+  fromJSVal :: JSString -> IO Text
+  fromJSVal = return . Text.pack . fromJSString
 
-type JSText = JSString
+instance FromJSVal JSString String where
+  fromJSVal :: JSString -> IO String
+  fromJSVal = return . fromJSString
 
-instance FromJSVal JSText Text where
-  fromJSVal = pure . Text.pack . fromJSString
-
-type JSBigInt = JSVal
-
-instance FromJSVal JSBigInt Integer where
-  fromJSVal = fromJSBigInt
-
-type JSCoin = JSVal
-
-instance FromJSVal JSCoin Ledger.Coin where
-  fromJSVal = fmap fromInteger . fromJSBigInt
-
-instance FromJSVal JSTxBody (Api.TxBody Api.ConwayEra) where
-  fromJSVal = jsValToType "TxBody ConwayEra"
-
-instance FromJSVal JSTx (Api.Tx Api.ConwayEra) where
-  fromJSVal = jsValToType "Tx ConwayEra"
-
-type JSSigningKey = JSString
+instance (Api.FromJSON a, Typeable a) => FromJSVal JSVal a where
+  fromJSVal = jsValToJSON (show . typeRep $ (Api.Proxy :: Api.Proxy a))
 
 instance FromJSVal JSSigningKey (Api.SigningKey Api.PaymentKey) where
   fromJSVal :: HasCallStack => JSSigningKey -> IO (Api.SigningKey Api.PaymentKey)
   fromJSVal jsString = do
     return $ rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
 
-type JSTxId = JSString
-
 instance FromJSVal JSTxId Api.TxId where
   fromJSVal :: HasCallStack => JSTxId -> IO Api.TxId
   fromJSVal jsString = do
     return $ rightOrError $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
 
-type JSTxIx = Int
-
 instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal = return . Api.TxIx . fromIntegral
 
--- * API functions to expose to JavaScript
+-- * UnsignedTxObject
 
--- | Combine a transaction ID and index into a transaction input.
-foreign export javascript "mkTxIn"
-  mkTxIn :: JSTxId -> JSTxIx -> IO JSTxIn
-mkTxIn txId txIx =
-  jsonToJSVal =<< Api.TxIn <$> fromJSVal txId <*> fromJSVal txIx
+foreign export javascript "newConwayTx"
+  newConwayTx :: IO JSUnsignedTx
 
--- | Create a transaction body from a transaction input, destination address, amount, and fees.
-foreign export javascript "mkTransaction"
-  mkTransaction :: JSTxIn -> JSText -> JSCoin -> JSCoin -> IO JSTxBody
-mkTransaction txIn destAddr bigIntAmount bigIntFees =
+foreign export javascript "addTxInput"
+  addTxInput :: JSUnsignedTx -> JSTxId -> JSTxIx -> IO JSUnsignedTx
+
+foreign export javascript "addSimpleTxOut"
+  addSimpleTxOut :: JSUnsignedTx -> JSString -> JSCoin -> IO JSUnsignedTx
+
+foreign export javascript "setFee"
+  setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
+
+foreign export javascript "addSigningKey"
+  addSigningKey :: JSUnsignedTx -> JSSigningKey -> IO JSUnsignedTx
+
+foreign export javascript "signTx"
+  signTx :: JSUnsignedTx -> IO JSSignedTx
+
+-- | Create a new Conway era unsigned transaction.
+newConwayTx :: IO JSUnsignedTx
+newConwayTx = toJSVal Wasm.newConwayTxImpl
+
+-- | Add a transaction input to an unsigned transaction.
+addTxInput :: JSUnsignedTx -> JSTxId -> JSTxIx -> IO JSUnsignedTx
+addTxInput jsUnsignedTx jsTxId jsTxIx =
   toJSVal
-    =<< WasmApi.mkTransactionImpl
-      <$> fromJSVal txIn
-      <*> fromJSVal destAddr
-      <*> fromJSVal bigIntAmount
-      <*> fromJSVal bigIntFees
+    =<< Wasm.addTxInputImpl
+      <$> fromJSVal jsUnsignedTx
+      <*> fromJSVal jsTxId
+      <*> fromJSVal jsTxIx
 
--- | Sign a transaction body with a private key.
-foreign export javascript "signTransaction"
-  signTransaction :: JSTxBody -> JSSigningKey -> IO JSTx
-signTransaction txBody privKey =
+-- | Add a simple transaction output (address and lovelace amount) to an unsigned transaction.
+addSimpleTxOut :: JSUnsignedTx -> JSString -> JSCoin -> IO JSUnsignedTx
+addSimpleTxOut jsUnsignedTx jsDestAddr jsCoin = do
   toJSVal
-    =<< WasmApi.signTransactionImpl
-      <$> fromJSVal txBody
-      <*> fromJSVal privKey
+    =<< ( Wasm.addSimpleTxOutImpl
+            <$> fromJSVal jsUnsignedTx
+            <*> fromJSVal jsDestAddr
+            <*> fromJSVal jsCoin
+        )
+
+-- | Set the transaction fee for an unsigned transaction.
+setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
+setFee jsUnsignedTx jsCoin =
+  toJSVal
+    =<< ( Wasm.setFeeImpl
+            <$> fromJSVal jsUnsignedTx
+            <*> fromJSVal jsCoin
+        )
+
+-- | Add a payment signing key to an unsigned transaction.
+addSigningKey :: JSUnsignedTx -> JSSigningKey -> IO JSUnsignedTx
+addSigningKey jsUnsignedTx jsSigningKey =
+  toJSVal
+    =<< ( Wasm.addSigningKeyImpl
+            <$> fromJSVal jsUnsignedTx
+            <*> fromJSVal jsSigningKey
+        )
+
+-- | Sign an unsigned transaction.
+signTx :: JSUnsignedTx -> IO JSSignedTx
+signTx jsUnsignedTx =
+  toJSVal =<< Wasm.signTxImpl <$> fromJSVal jsUnsignedTx
+
+-- *  SignedTxObject
+
+foreign export javascript "txToCbor"
+  txToCbor :: JSSignedTx -> IO JSString
+
+-- | Convert a signed transaction to its CBOR representation (hex-encoded string).
+txToCbor :: JSSignedTx -> IO JSString
+txToCbor jsSignedTx =
+  toJSVal =<< Wasm.toCborImpl <$> fromJSVal jsSignedTx
 
 #endif
