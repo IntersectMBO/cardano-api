@@ -317,12 +317,12 @@ getAPIInfo = do
                   }
               , MethodInfo
                   { methodName = "addSimpleTxOut"
-                  , methodParams = ["destAddr", "coin"]
+                  , methodParams = ["destAddr", "lovelaceAmount"]
                   , methodReturnType = Fluent
                   }
               , MethodInfo
                   { methodName = "setFee"
-                  , methodParams = ["coin"]
+                  , methodParams = ["lovelaceAmount"]
                   , methodReturnType = Fluent
                   }
               , MethodInfo
