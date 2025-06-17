@@ -141,6 +141,8 @@ module Test.Gen.Cardano.Api.Typed
   , genBlockHeader
   , genBlockHeaderAt
   , genBlockHeaderHash
+  , genChainPointAt
+  , genChainPoint
   )
 where
 
@@ -1520,3 +1522,16 @@ genBlockHeaderHash =
             <> " with error "
             <> show e
       Right h -> h
+
+-- | Generate a chain point with a likely invalid block header hash.
+genChainPoint :: Gen ChainPoint
+genChainPoint =
+  Gen.frequency
+    [ (1, pure ChainPointAtGenesis)
+    , (5, Q.arbitrary >>= genChainPointAt . SlotNo)
+    ]
+
+-- | Generate a chain point at given slot with a likely invalid block header hash.
+genChainPointAt :: SlotNo -> Gen ChainPoint
+genChainPointAt s =
+  ChainPoint s <$> genBlockHeaderHash
