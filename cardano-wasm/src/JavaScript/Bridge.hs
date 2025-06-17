@@ -31,6 +31,68 @@ import General.ExceptionHandling (rightOrError)
 import qualified WasmApi.Tx as Wasm
 import qualified WasmApi.WasmApi as WasmApi
 
+-- * API Information Data Types
+
+-- | Describes the return type of a method.
+data MethodReturnTypeInfo
+  = -- | Returns an instance of the same object type (fluent interface).
+    Fluent
+  | -- | Returns a new instance of a specified virtual object type.
+    NewObject String
+  | -- | Returns a non-virtual-object type (e.g., JSString, number).
+    OtherType String
+  deriving (Show, Eq)
+
+instance Aeson.ToJSON MethodReturnTypeInfo where
+  toJSON Fluent = Aeson.object ["type" Aeson..= Text.pack "fluent"]
+  toJSON (NewObject objTypeName) = Aeson.object ["type" Aeson..= Text.pack "newObject", "objectType" Aeson..= objTypeName]
+  toJSON (OtherType typeName) = Aeson.object ["type" Aeson..= Text.pack "other", "typeName" Aeson..= typeName]
+
+-- | Information about a single method of a virtual object.
+data MethodInfo = MethodInfo
+  { methodName :: String
+  , methodParams :: [String]
+  -- ^ Names of parameters, excluding 'this'.
+  , methodReturnType :: MethodReturnTypeInfo
+  }
+  deriving (Show, Eq)
+
+instance Aeson.ToJSON MethodInfo where
+  toJSON (MethodInfo name params retType) =
+    Aeson.object
+      [ "name" Aeson..= name
+      , "params" Aeson..= params
+      , "return" Aeson..= retType
+      ]
+
+-- | Information about a virtual object and its methods.
+data VirtualObjectInfo = VirtualObjectInfo
+  { virtualObjectName :: String
+  , virtualObjectMethods :: [MethodInfo]
+  }
+  deriving (Show, Eq)
+
+instance Aeson.ToJSON VirtualObjectInfo where
+  toJSON (VirtualObjectInfo name methods) =
+    Aeson.object
+      [ "objectName" Aeson..= name
+      , "methods" Aeson..= methods
+      ]
+
+-- | Aggregate type for all API information.
+data APIInfo = APIInfo
+  { staticMethods :: [MethodInfo]
+  , virtualObjects :: [VirtualObjectInfo]
+  }
+  deriving (Show, Eq)
+
+instance Aeson.ToJSON APIInfo where
+  toJSON (APIInfo staticObjs virtualObjs) =
+    Aeson.object
+      [ "staticMethods" Aeson..= staticObjs
+      , "virtualObjects" Aeson..= virtualObjs
+      ]
+
 -- * JS helper functions
 
 -- | Parse the JSON stored in a JavaScript string (@JSString@)
@@ -89,6 +151,8 @@ jsValToType expectedType val = do
     Right type_ -> return type_
 
 -- * Type Synonyms for JSVal representations
+
+type JSAPIInfo = JSVal
 
 type JSUnsignedTx = JSVal
 
@@ -221,5 +285,76 @@ foreign export javascript "txToCbor"
 txToCbor :: JSSignedTx -> IO JSString
 txToCbor jsSignedTx =
   toJSVal =<< Wasm.toCborImpl <$> fromJSVal jsSignedTx
+
+-- * API Information
+
+foreign export javascript "getAPIInfo"
+  getAPIInfo :: IO JSVal
+
+-- | Provides metadata about the "virtual objects" and their methods.
+-- This is intended to help generate JavaScript wrappers.
+getAPIInfo :: IO JSAPIInfo
+getAPIInfo = do
+  let unsignedTxObjectName = "UnsignedTx"
+  let signedTxObjectName = "SignedTx"
+
+  let staticApiMethods =
+        [ MethodInfo
+            { methodName = "newConwayTx"
+            , methodParams = []
+            , methodReturnType = NewObject unsignedTxObjectName
+            }
+        ]
+
+  let unsignedTxObj =
+        VirtualObjectInfo
+          { virtualObjectName = unsignedTxObjectName
+          , virtualObjectMethods =
+              [ MethodInfo
+                  { methodName = "addTxInput"
+                  , methodParams = ["txId", "txIx"]
+                  , methodReturnType = Fluent
+                  }
+              , MethodInfo
+                  { methodName = "addSimpleTxOut"
+                  , methodParams = ["destAddr", "coin"]
+                  , methodReturnType = Fluent
+                  }
+              , MethodInfo
+                  { methodName = "setFee"
+                  , methodParams = ["coin"]
+                  , methodReturnType = Fluent
+                  }
+              , MethodInfo
+                  { methodName = "addSigningKey"
+                  , methodParams = ["signingKey"]
+                  , methodReturnType = Fluent
+                  }
+              , MethodInfo
+                  { methodName = "signTx"
+                  , methodParams = []
+                  , methodReturnType = NewObject signedTxObjectName
+                  }
+              ]
+          }
+
+  let signedTxObj =
+        VirtualObjectInfo
+          { virtualObjectName = signedTxObjectName
+          , virtualObjectMethods =
+              [ MethodInfo
+                  { methodName = "txToCbor"
+                  , methodParams = []
+                  , methodReturnType = OtherType "string"
+                  }
+              ]
+          }
+
+  let apiInfo =
+        APIInfo
+          { staticMethods = staticApiMethods
+          , virtualObjects = [unsignedTxObj, signedTxObj]
+          }
+  toJSVal apiInfo
 
 #endif
