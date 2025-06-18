@@ -159,7 +159,6 @@ import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Conway qualified as Ledger
-import Cardano.Ledger.Conway.TxBody qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 

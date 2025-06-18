@@ -564,7 +564,8 @@ selectStakeCredentialWitness = \case
       getTxCertWitness (convert cEra) conwayCert
 
 filterUnRegCreds
-  :: Certificate era -> Maybe StakeCredential
+  :: forall era
+  .  Certificate era -> Maybe StakeCredential
 filterUnRegCreds =
   fmap fromShelleyStakeCredential . \case
     ShelleyRelatedCertificate stbEra shelleyCert -> shelleyToBabbageEraConstraints stbEra $
@@ -576,6 +577,7 @@ filterUnRegCreds =
         Ledger.RetirePoolTxCert _ _ -> Nothing
         Ledger.MirTxCert _ -> Nothing
         Ledger.GenesisDelegTxCert{} -> Nothing
+        _ -> error "Impossible"
     ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
       case conwayCert of
         Ledger.RegPoolTxCert _ -> Nothing
@@ -593,6 +595,7 @@ filterUnRegCreds =
         Ledger.RegTxCert _ -> Nothing
         -- stake cred deregistration w/o deposit
         Ledger.UnRegTxCert cred -> Just cred
+        _ -> error "Impossible"
 
 filterUnRegDRepCreds
   :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole)
@@ -615,6 +618,7 @@ filterUnRegDRepCreds = \case
       Ledger.RegTxCert _ -> Nothing
       -- stake cred deregistration w/o deposit
       Ledger.UnRegTxCert _ -> Nothing
+      _ -> error "Impossible"
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
@@ -803,6 +807,7 @@ getAnchorDataFromCertificate c =
           Ledger.RetirePoolTxCert _ _ -> return Nothing
           Ledger.GenesisDelegTxCert{} -> return Nothing
           Ledger.MirTxCert _ -> return Nothing
+          _ -> error "Impossible"
     ConwayCertificate ceo ccert ->
       conwayEraOnwardsConstraints ceo $
         case ccert of
@@ -819,6 +824,7 @@ getAnchorDataFromCertificate c =
           Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
           Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
           Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+          _ -> error "Impossible"
  where
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateError m

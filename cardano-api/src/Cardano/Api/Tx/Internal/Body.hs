@@ -280,7 +280,6 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
-import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Core ()
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Credential qualified as Shelley
