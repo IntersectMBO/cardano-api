@@ -2,7 +2,6 @@
 
 #if !defined(wasm32_HOST_ARCH)
 module Cardano.Wasm.JavaScript.Bridge where
-import qualified Data.ByteString as Text
 #else
 
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,22 +13,21 @@ import qualified Data.ByteString as Text
 
 module Cardano.Wasm.JavaScript.Bridge where
 
-import qualified Cardano.Api as Api
-import qualified Cardano.Api.Ledger as Ledger -- For Ledger.Coin
+import Cardano.Api qualified as Api
+import Cardano.Api.Ledger qualified as Ledger -- For Ledger.Coin
 
 -- For explicit JSString conversion
 
-import qualified Data.Aeson as Aeson
+import Cardano.Wasm.Api.Tx qualified as Wasm
+import Cardano.Wasm.General.ExceptionHandling (rightOrError)
+
+import Data.Aeson qualified as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Typeable (Typeable, typeRep)
 import GHC.Stack (HasCallStack)
 import GHC.Wasm.Prim
-
-import Cardano.Wasm.General.ExceptionHandling (rightOrError)
-import qualified Cardano.Wasm.Api.Tx as Wasm
-import qualified Cardano.Wasm.Api.Info as WasmApi
 
 -- * API Information Data Types
 
@@ -121,7 +119,7 @@ fromJSBigInt val = do
     _ -> error ("Wrong format for argument when deserialising, expected integer: " ++ show str)
 
 -- | Convert a Haskell value with @ToJSON@ instance to a JavaScript object (@JSVal)
-jsonToJSVal :: (HasCallStack, Api.ToJSON a) => a -> IO JSVal
+jsonToJSVal :: Api.ToJSON a => a -> IO JSVal
 jsonToJSVal a = do
   js_parse (toJSString (toString (Api.serialiseToJSON a)))
 

@@ -3,14 +3,14 @@
 
 module Cardano.Wasm.Api.Info where
 
-import qualified Cardano.Api as Api
-import qualified Cardano.Api.Ledger as Ledger
-import qualified Cardano.Api.Plutus as Script
+import Cardano.Api qualified as Api
+import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Plutus qualified as Script
 
 import Cardano.Wasm.General.ExceptionHandling (justOrError, rightOrError)
 
 import Data.Function ((&))
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
 
 -- | Create a transaction body from a transaction input, destination address, amount, and fees.

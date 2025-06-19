@@ -10,29 +10,27 @@
 module Cardano.Wasm.Api.Tx where
 
 import Cardano.Api (FromJSON)
-import qualified Cardano.Api as Api
+import Cardano.Api qualified as Api
 import Cardano.Api.Experimental (obtainCommonConstraints)
-import qualified Cardano.Api.Experimental as Exp
-import Cardano.Api.Ledger (txIxToInt)
-import qualified Cardano.Api.Ledger as Ledger
-import qualified Cardano.Api.Plutus as Shelley
-import qualified Cardano.Api.Tx as TxBody
+import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Plutus qualified as Shelley
+import Cardano.Api.Tx qualified as TxBody
 
-import qualified Cardano.Ledger.Api as Ledger
+import Cardano.Ledger.Api qualified as Ledger
 import Cardano.Ledger.Binary (Annotator, DecCBOR (decCBOR), EncCBOR, Version, decodeFullAnnotator)
-import qualified Cardano.Ledger.Core as Ledger
 import Cardano.Wasm.General.ExceptionHandling (justOrError, rightOrError)
 
-import qualified Codec.CBOR.Write as CBOR
+import Codec.CBOR.Write qualified as CBOR
 import Data.Aeson (ToJSON (toJSON), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import qualified Data.ByteString.Base16 as Base16
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
+import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (fromStrict)
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
+import Data.Sequence.Strict qualified as StrictSeq
+import Data.Set qualified as Set
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((%~), (&), (.~))
@@ -53,7 +51,7 @@ data UnsignedTxObject
   deriving Typeable
 
 instance ToJSON UnsignedTxObject where
-  toJSON :: HasCallStack => UnsignedTxObject -> Aeson.Value
+  toJSON :: UnsignedTxObject -> Aeson.Value
   toJSON (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) =
     obtainCommonConstraints era $
       let encode :: forall a. EncCBOR a => a -> Text.Text
@@ -145,7 +143,7 @@ data SignedTxObject
   deriving Typeable
 
 instance ToJSON SignedTxObject where
-  toJSON :: HasCallStack => SignedTxObject -> Aeson.Value
+  toJSON :: SignedTxObject -> Aeson.Value
   toJSON (SignedTxObject era ledgerTx) =
     obtainCommonConstraints era $
       let encode :: forall a. EncCBOR a => a -> Text.Text
