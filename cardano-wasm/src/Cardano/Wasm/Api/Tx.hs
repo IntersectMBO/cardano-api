@@ -31,7 +31,6 @@ import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
-import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((%~), (&), (.~))
 
@@ -48,7 +47,6 @@ eraToVersion era =
 -- It is meant to be an opaque object in JavaScript API.
 data UnsignedTxObject
   = forall era. UnsignedTxObject (Exp.Era era) [Ledger.WitVKey Ledger.Witness] (Exp.UnsignedTx era)
-  deriving Typeable
 
 instance ToJSON UnsignedTxObject where
   toJSON :: UnsignedTxObject -> Aeson.Value
@@ -140,7 +138,6 @@ signTxImpl (UnsignedTxObject era keyWitnesess unsignedTx) =
 -- | An object representing a signed transaction.
 data SignedTxObject
   = forall era. SignedTxObject (Exp.Era era) (Ledger.Tx (Exp.LedgerEra era))
-  deriving Typeable
 
 instance ToJSON SignedTxObject where
   toJSON :: SignedTxObject -> Aeson.Value

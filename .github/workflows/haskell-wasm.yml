@@ -82,7 +82,6 @@ jobs:
     - name: Record dependencies
       id: record-deps
       run: |
-        cd cardano-wasm
         cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
 
     - name: Store month number as environment variable used in cache version
@@ -103,7 +102,7 @@ jobs:
 #      with:
 #        path: |
 #          ${{ env.STORE }}
-#          cardano-wasm/dist-newstyle
+#          dist-newstyle
 #        key:
 #          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('cardano-wasm/dependencies.txt') }}
 #        restore-keys: |
@@ -111,7 +110,6 @@ jobs:
 
     - name: Restore cached deps
       run: |
-        cd cardano-wasm
         wget "https://agrius.feralhosting.com/palas/wasm-cache/4c200033737be4736cd2a363d64c49a385937d5ea57d8e52773f65d08bbd1342.tar.bz2"
         tar -jxf 4c200033737be4736cd2a363d64c49a385937d5ea57d8e52773f65d08bbd1342.tar.bz2
         rm -fr ~/.ghc-wasm/.cabal/store/
@@ -132,7 +130,7 @@ jobs:
 #      with:
 #        path: |
 #          ${{ env.STORE }}
-#          cardano-wasm/dist-newstyle
+#          dist-newstyle
 #        key:
 #          ${{ steps.cache.outputs.cache-primary-key }}
 
