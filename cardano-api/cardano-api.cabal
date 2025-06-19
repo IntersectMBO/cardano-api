@@ -38,7 +38,7 @@ common project-config
     -Wunused-packages
 
 common maybe-unix
-  if !os(windows)
+  if !(os(windows)|| arch(wasm32))
     build-depends: unix
 
 common maybe-Win32
@@ -234,6 +234,7 @@ library
     Cardano.Api.IO.Internal.Base
     Cardano.Api.IO.Internal.Compat
     Cardano.Api.IO.Internal.Compat.Posix
+    Cardano.Api.IO.Internal.Compat.Wasm
     Cardano.Api.IO.Internal.Compat.Win32
     Cardano.Api.Internal.Orphans
     Cardano.Api.Internal.Orphans.Misc
