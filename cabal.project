@@ -19,6 +19,7 @@ index-state:
 packages:
     cardano-api
     cardano-api-gen
+    cardano-wasm
 
 extra-packages: Cabal, process
 
@@ -58,4 +59,95 @@ if impl (ghc >= 9.12)
   allow-newer:
     -- https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
+
+-- WASM compilation specific
+
+if arch(wasm32)
+  source-repository-package
+    type: git
+    location: https://github.com/amesgen/plutus.git
+    tag: dc1edea4458d6fb794b245a26c730620265645f3
+    subdir:
+      plutus-core
+      plutus-ledger-api
+      plutus-tx
+    --sha256: sha256-QBtLmoS54b5QMAKIDOJIM6lmRC+1leBpuGKaFc7QQos=
+
+  package plutus-core
+    flags: +do-not-build-plutus-exec
+
+  source-repository-package
+    type: git
+    location: https://github.com/haskell-wasm/hs-memory.git
+    tag: a198a76c584dc2cfdcde6b431968de92a5fed65e
+    --sha256: sha256-LRC3L+J921+/moZS7F17vCfM/4usYy/eMR+w/mXsjeA=
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/ouroboros-network.git
+    tag: ef3e30603e4e45dac336a085114ee22b7aa8c9ed
+    subdir:
+      ouroboros-network
+      ouroboros-network-framework
+    --sha256: sha256-+IdAmWJqzRy+erKONywtk+5YLrm63q942nZavoEA4E4=
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/criterion.git
+    tag: dd160d2b5f051e918e72fe1957d77905682b8d6c
+    subdir:
+      criterion-measurement
+    --sha256: sha256-wzEwOUTeFL0C3QnS25/3X1ue2tUuedrLqtT0h1JZW6c=
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/haskell-lmdb-mock.git
+    tag: c8d61e6eee03ee271e7768c0576110da885aec48
+    --sha256: sha256-+gB1MmM6qRApz1p7tFsdvKoAWDrYB4a+bJ9Djm6ieYI=
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/double-conversion.git
+    tag: b2030245727ee56de76507fe305e3741f6ce3260
+    --sha256: sha256-kzwHHQzHPfPnIDtnSDAom7YGSzWjr0113x0zsfI/Tb0=
+
+  source-repository-package
+    type: git
+    location: https://github.com/amesgen/cborg
+    tag: 2dff24d241d9940c5a7f5e817fcf4c1aa4a8d4bf
+    subdir: cborg
+    --sha256: sha256-yuz1apKQ0EB9LtJkc/I1EEtB4oZnURMvCckvdFbT6qM=
+
+  source-repository-package
+    type: git
+    location: https://github.com/Jimbo4350/foundation.git
+    tag: b3cb78484fe6f6ce1dfcef59e72ceccc530e86ac
+    subdir:
+      basement
+      foundation
+    --sha256: sha256-QKKHl/XocxGD7bwAoGe7VaIg9o8x4dA20j3sJOgiTBw=
+
+  source-repository-package
+    type: git
+    location: https://github.com/palas/mempack.git
+    tag: 0211addbbbf51011e5348d3696566eb12ccbef07
+    --sha256: sha256-iLc+foF2AM3vG6deuZ51+faI6buMkubMP75md51hMe8=
+
+  source-repository-package
+    type: git
+    location: https://github.com/haskell-wasm/network
+    tag: ab92e48e9fdf3abe214f85fdbe5301c1280e14e9
+    --sha256: sha256-U+ln/gbXoQZpNjZHydNa0FG/9GdJFgL1+T3+7KTzDWo=
+
+  package cardano-crypto-praos
+    flags: -external-libsodium-vrf
+
+  package atomic-counter
+    flags: +no-cmm
+
+  constraints: time installed
+  allow-newer: time
+
+  package crypton
+    ghc-options: -optc-DARGON2_NO_THREADS
 

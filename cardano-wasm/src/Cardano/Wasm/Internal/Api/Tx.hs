@@ -7,36 +7,33 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module WasmApi.Tx where
+module Cardano.Wasm.Internal.Api.Tx where
 
 import Cardano.Api (FromJSON)
-import qualified Cardano.Api as Api
+import Cardano.Api qualified as Api
 import Cardano.Api.Experimental (obtainCommonConstraints)
-import qualified Cardano.Api.Experimental as Exp
-import Cardano.Api.Ledger (txIxToInt)
-import qualified Cardano.Api.Ledger as Ledger
-import qualified Cardano.Api.Plutus as Shelley
-import qualified Cardano.Api.Tx as TxBody
+import Cardano.Api.Experimental qualified as Exp
+import Cardano.Api.Ledger qualified as Ledger
+import Cardano.Api.Plutus qualified as Shelley
+import Cardano.Api.Tx qualified as TxBody
 
-import qualified Cardano.Ledger.Api as Ledger
+import Cardano.Ledger.Api qualified as Ledger
 import Cardano.Ledger.Binary (Annotator, DecCBOR (decCBOR), EncCBOR, Version, decodeFullAnnotator)
-import qualified Cardano.Ledger.Core as Ledger
+import Cardano.Wasm.Internal.ExceptionHandling (justOrError, rightOrError)
 
-import qualified Codec.CBOR.Write as CBOR
+import Codec.CBOR.Write qualified as CBOR
+import Control.Monad.Catch (Exception (displayException), MonadThrow)
 import Data.Aeson (ToJSON (toJSON), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import qualified Data.ByteString.Base16 as Base16
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
+import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (fromStrict)
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import Data.Typeable (Typeable)
+import Data.Sequence.Strict qualified as StrictSeq
+import Data.Set qualified as Set
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((%~), (&), (.~))
-
-import General.ExceptionHandling (justOrError, rightOrError)
 
 -- | Function to convert an era to its corresponding version
 eraToVersion :: Exp.Era era -> Version
@@ -51,10 +48,9 @@ eraToVersion era =
 -- It is meant to be an opaque object in JavaScript API.
 data UnsignedTxObject
   = forall era. UnsignedTxObject (Exp.Era era) [Ledger.WitVKey Ledger.Witness] (Exp.UnsignedTx era)
-  deriving Typeable
 
 instance ToJSON UnsignedTxObject where
-  toJSON :: HasCallStack => UnsignedTxObject -> Aeson.Value
+  toJSON :: UnsignedTxObject -> Aeson.Value
   toJSON (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) =
     obtainCommonConstraints era $
       let encode :: forall a. EncCBOR a => a -> Text.Text
@@ -69,15 +65,17 @@ instance FromJSON UnsignedTxObject where
   parseJSON :: HasCallStack => Aeson.Value -> Aeson.Parser UnsignedTxObject
   parseJSON = Aeson.withObject "UnsignedTxObject" $ \o -> do
     Exp.Some era <- o Aeson..: "era"
-    let decode :: forall a. DecCBOR (Annotator a) => Text.Text -> Text.Text -> a
+    let decode :: forall m a. (MonadThrow m, DecCBOR (Annotator a)) => Text.Text -> Text.Text -> m a
         decode desc cbor = do
-          let cddlBS = rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
+          cddlBS <- rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
           rightOrError $ decodeFullAnnotator (eraToVersion era) desc decCBOR (fromStrict cddlBS)
     keyWitnesses :: [Text.Text] <- o Aeson..: "keyWitnesess"
     tx :: Text.Text <- o Aeson..: "tx"
-    obtainCommonConstraints era $
+    obtainCommonConstraints era $ do
+      decodedWitnesses <- mapM (toMonadFail . decode "KeyWitness") keyWitnesses
+      decodedTx <- toMonadFail $ decode "Tx" tx
       return $
-        UnsignedTxObject era (map (decode "KeyWitness") keyWitnesses) (Exp.UnsignedTx (decode "Tx" tx))
+        UnsignedTxObject era decodedWitnesses (Exp.UnsignedTx decodedTx)
 
 -- | Create a new unsigned transaction object for making a Conway era transaction.
 newConwayTxImpl :: UnsignedTxObject
@@ -93,11 +91,12 @@ addTxInputImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) txId txIx
 
 -- | Add a simple transaction output to an unsigned transaction object.
 -- It takes a destination address and an amount in lovelace.
-addSimpleTxOutImpl :: UnsignedTxObject -> String -> Ledger.Coin -> UnsignedTxObject
+addSimpleTxOutImpl
+  :: (HasCallStack, MonadThrow m) => UnsignedTxObject -> String -> Ledger.Coin -> m UnsignedTxObject
 addSimpleTxOutImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) destAddr lovelaceAmount =
-  obtainCommonConstraints era $
-    let destAddress = deserialiseAddress era destAddr
-        sbe = Api.convert era
+  obtainCommonConstraints era $ do
+    destAddress <- deserialiseAddress era destAddr
+    let sbe = Api.convert era
         txOut =
           Api.TxOut
             destAddress
@@ -106,11 +105,11 @@ addSimpleTxOutImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) destA
             Shelley.ReferenceScriptNone
         shelleyTxOut = TxBody.toShelleyTxOutAny sbe txOut
         tx' = tx & Ledger.bodyTxL . Ledger.outputsTxBodyL %~ (<> StrictSeq.fromList [shelleyTxOut])
-     in UnsignedTxObject era keyWitnesess $ Exp.UnsignedTx tx'
+    return $ UnsignedTxObject era keyWitnesess $ Exp.UnsignedTx tx'
  where
   deserialiseAddress
-    :: Exp.EraCommonConstraints era
-    => Exp.Era era -> String -> Api.AddressInEra era
+    :: (HasCallStack, MonadThrow m, Exp.EraCommonConstraints era)
+    => Exp.Era era -> String -> m (Api.AddressInEra era)
   deserialiseAddress _eon destAddrStr =
     justOrError
       "Couldn't deserialise destination address"
@@ -143,10 +142,9 @@ signTxImpl (UnsignedTxObject era keyWitnesess unsignedTx) =
 -- | An object representing a signed transaction.
 data SignedTxObject
   = forall era. SignedTxObject (Exp.Era era) (Ledger.Tx (Exp.LedgerEra era))
-  deriving Typeable
 
 instance ToJSON SignedTxObject where
-  toJSON :: HasCallStack => SignedTxObject -> Aeson.Value
+  toJSON :: SignedTxObject -> Aeson.Value
   toJSON (SignedTxObject era ledgerTx) =
     obtainCommonConstraints era $
       let encode :: forall a. EncCBOR a => a -> Text.Text
@@ -160,14 +158,21 @@ instance FromJSON SignedTxObject where
   parseJSON :: HasCallStack => Aeson.Value -> Aeson.Parser SignedTxObject
   parseJSON = Aeson.withObject "SignedTxObject" $ \o -> do
     Exp.Some era <- o Aeson..: "era"
-    let decode :: forall a. DecCBOR (Annotator a) => Text.Text -> Text.Text -> a
+    let decode :: forall m a. (MonadThrow m, DecCBOR (Annotator a)) => Text.Text -> Text.Text -> m a
         decode desc cbor = do
-          let cddlBS = rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
+          cddlBS <- rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
           rightOrError $ decodeFullAnnotator (eraToVersion era) desc decCBOR (fromStrict cddlBS)
     tx :: Text.Text <- o Aeson..: "tx"
-    obtainCommonConstraints era $
+    obtainCommonConstraints era $ do
+      decodedTx <- toMonadFail $ decode "Tx" tx
       return $
-        SignedTxObject era (decode "Tx" tx)
+        SignedTxObject era decodedTx
+
+-- | Convert an 'Either' value to a 'MonadFail' monad. This can be useful for converting
+-- MonadThrow monads into Aeson Parser monads, but it loses the stack trace information.
+toMonadFail :: (Exception e, MonadFail m) => Either e a -> m a
+toMonadFail (Left e) = fail $ displayException e
+toMonadFail (Right a) = return a
 
 -- | Convert a signed transaction object to a base16 encoded string of its CBOR representation.
 toCborImpl :: SignedTxObject -> String

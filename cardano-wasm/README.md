@@ -1,6 +1,6 @@
 # cardano-wasm
 
-Part of an effort at IOG (@Jimbo4350, @palas, and @amesgen) to build Cardano Haskell libraries to Wasm.
+Part of an effort at IOG to build Cardano Haskell libraries to Wasm.
 
 ## Building the wasm module
 
@@ -45,9 +45,7 @@ Then we need to compile three libraries to WASM: `libblst`, `libsodium`, and `li
 In order to not interfere with the system library installation, we will create a folder to serve as our prefix:
 
 ```console
-mkdir ~/prefix
-mkdir ~/prefix/{lib,include}
-mkdir ~/prefix/lib/pkgconfig
+mkdir -p ~/prefix/{lib/pkgconfig,include}
 ```
 
 #### Installing `libblst`

@@ -1,4 +1,4 @@
-name: Compile to WASM
+name: Haskell CI (WASM)
 
 on:
   merge_group:
@@ -10,8 +10,8 @@ on:
       - master
   # GH caches are removed when not accessed within 7 days - this schedule runs the job every 6 days making
   # sure that we always have some caches on master
-  schedule:
-    - cron: '0 0 */6 * *'
+#  schedule:
+#    - cron: '0 0 */6 * *'
 
 jobs:
   build:
@@ -68,31 +68,34 @@ jobs:
 
     - name: Cabal update
       run: |
-        cd cardano-wasm
         wasm32-wasi-cabal update
 
     # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
     # indices to generate an install plan.
     - name: Build dry run
       run: |
-        cd cardano-wasm
-        wasm32-wasi-cabal build all --dry-run
+        wasm32-wasi-cabal build cardano-wasm --dry-run
 
     # From the install plan we generate a dependency list.
     - name: Record dependencies
       id: record-deps
       run: |
-        cd cardano-wasm
         cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
 
     - name: Store month number as environment variable used in cache version
       run: |
-        cd cardano-wasm
         cat <<EOF >> $GITHUB_ENV
         MONTHNUM=$(date -u '+%m')
         GHC=$(ghc --numeric-version)
         STORE=$(wasm32-wasi-cabal path --store | tail -n 1)
         EOF
+
+# Cache is disabled because GHA default builders are not able to build all dependencies
+# because they lack RAM, so having the cache expire would break the CI check.
+# For this reason, we are providing a build of the dependencies instead in
+# the "Restore cached deps" step, and we make the check not required.
+# When we are able to make this CI check self-sufficient, we should reenable the
+# caching and remove the manual restoring of cached deps.
 
     # From the dependency list we restore the cached dependencies.
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
@@ -103,7 +106,7 @@ jobs:
 #      with:
 #        path: |
 #          ${{ env.STORE }}
-#          cardano-wasm/dist-newstyle
+#          dist-newstyle
 #        key:
 #          wasm-cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ env.GHC }}-${{ hashFiles('cardano-wasm/dependencies.txt') }}
 #        restore-keys: |
@@ -111,7 +114,6 @@ jobs:
 
     - name: Restore cached deps
       run: |
-        cd cardano-wasm
         wget "https://agrius.feralhosting.com/palas/wasm-cache/4c200033737be4736cd2a363d64c49a385937d5ea57d8e52773f65d08bbd1342.tar.bz2"
         tar -jxf 4c200033737be4736cd2a363d64c49a385937d5ea57d8e52773f65d08bbd1342.tar.bz2
         rm -fr ~/.ghc-wasm/.cabal/store/
@@ -122,8 +124,7 @@ jobs:
     # cache it for the next step.
     - name: Install dependencies
       run: |
-        cd cardano-wasm
-        wasm32-wasi-cabal build all --only-dependencies --no-semaphore -j1 --ghc-options="-j1"
+        wasm32-wasi-cabal build cardano-wasm --only-dependencies --no-semaphore -j1 --ghc-options="-j1"
 
     # Always store the cabal cache.
 #    - name: Cache Cabal store
@@ -132,15 +133,14 @@ jobs:
 #      with:
 #        path: |
 #          ${{ env.STORE }}
-#          cardano-wasm/dist-newstyle
+#          dist-newstyle
 #        key:
 #          ${{ steps.cache.outputs.cache-primary-key }}
 
     # Now we build.
     - name: Build all
       run: |
-        cd cardano-wasm
-        wasm32-wasi-cabal build all --no-semaphore -j1 --ghc-options="-j1"
+        wasm32-wasi-cabal build cardano-wasm --no-semaphore -j1 --ghc-options="-j1"
 
     # - name: Run tests
     #   env:
@@ -166,7 +166,7 @@ jobs:
     #  with:
     #     limit-access-to-actor: true
 
-  build-complete:
+  wasm-builds-complete:
     needs: [build]
     if: ${{ always() }}
     runs-on: ubuntu-latest
