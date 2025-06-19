@@ -1,8 +1,7 @@
 {-# LANGUAGE CPP #-}
 
 #if !defined(wasm32_HOST_ARCH)
-module JavaScript.Bridge where
-import qualified Data.ByteString as Text
+module Cardano.Wasm.JavaScript.Bridge where
 #else
 
 {-# LANGUAGE FlexibleContexts #-}
@@ -12,86 +11,23 @@ import qualified Data.ByteString as Text
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module JavaScript.Bridge where
+module Cardano.Wasm.JavaScript.Bridge where
 
-import qualified Cardano.Api as Api
-import qualified Cardano.Api.Ledger as Ledger -- For Ledger.Coin
+import Cardano.Api qualified as Api
+import Cardano.Api.Ledger qualified as Ledger
 
--- For explicit JSString conversion
+import Cardano.Wasm.Api.Info (apiInfo)
+import Cardano.Wasm.Api.Tx qualified as Wasm
+import Cardano.Wasm.General.ExceptionHandling (rightOrErrorM)
 
-import qualified Data.Aeson as Aeson
+import Control.Exception (evaluate)
+import Data.Aeson qualified as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Typeable (Typeable, typeRep)
 import GHC.Stack (HasCallStack)
 import GHC.Wasm.Prim
-
-import General.ExceptionHandling (rightOrError)
-import qualified WasmApi.Tx as Wasm
-import qualified WasmApi.WasmApi as WasmApi
-
--- * API Information Data Types
-
--- | Describes the return type of a method.
-data MethodReturnTypeInfo
-  = -- | Returns an instance of the same object type (fluent interface).
-    Fluent
-  | -- | Returns a new instance of a specified virtual object type.
-    NewObject String
-  | -- | Returns a non-virtual-object type (e.g., JSString, number).
-    OtherType String
-  deriving (Show, Eq)
-
-instance Aeson.ToJSON MethodReturnTypeInfo where
-  toJSON Fluent = Aeson.object ["type" Aeson..= Text.pack "fluent"]
-  toJSON (NewObject objTypeName) = Aeson.object ["type" Aeson..= Text.pack "newObject", "objectType" Aeson..= objTypeName]
-  toJSON (OtherType typeName) = Aeson.object ["type" Aeson..= Text.pack "other", "typeName" Aeson..= typeName]
-
--- | Information about a single method of a virtual object.
-data MethodInfo = MethodInfo
-  { methodName :: String
-  , methodParams :: [String]
-  -- ^ Names of parameters, excluding 'this'.
-  , methodReturnType :: MethodReturnTypeInfo
-  }
-  deriving (Show, Eq)
-
-instance Aeson.ToJSON MethodInfo where
-  toJSON (MethodInfo name params retType) =
-    Aeson.object
-      [ "name" Aeson..= name
-      , "params" Aeson..= params
-      , "return" Aeson..= retType
-      ]
-
--- | Information about a virtual object and its methods.
-data VirtualObjectInfo = VirtualObjectInfo
-  { virtualObjectName :: String
-  , virtualObjectMethods :: [MethodInfo]
-  }
-  deriving (Show, Eq)
-
-instance Aeson.ToJSON VirtualObjectInfo where
-  toJSON (VirtualObjectInfo name methods) =
-    Aeson.object
-      [ "objectName" Aeson..= name
-      , "methods" Aeson..= methods
-      ]
-
--- | Aggregate type for all API information.
-data APIInfo = APIInfo
-  { staticMethods :: [MethodInfo]
-  , virtualObjects :: [VirtualObjectInfo]
-  }
-  deriving (Show, Eq)
-
-instance Aeson.ToJSON APIInfo where
-  toJSON (APIInfo staticObjs virtualObjs) =
-    Aeson.object
-      [ "staticMethods" Aeson..= staticObjs
-      , "virtualObjects" Aeson..= virtualObjs
-      ]
 
 -- * JS helper functions
 
@@ -121,7 +57,7 @@ fromJSBigInt val = do
     _ -> error ("Wrong format for argument when deserialising, expected integer: " ++ show str)
 
 -- | Convert a Haskell value with @ToJSON@ instance to a JavaScript object (@JSVal)
-jsonToJSVal :: (HasCallStack, Api.ToJSON a) => a -> IO JSVal
+jsonToJSVal :: Api.ToJSON a => a -> IO JSVal
 jsonToJSVal a = do
   js_parse (toJSString (toString (Api.serialiseToJSON a)))
 
@@ -138,7 +74,7 @@ jsValToJSON expectedType val = do
             ++ ": "
             ++ show err
         )
-    Right a -> return a
+    Right a -> evaluate a
 
 -- | Convert a JavaScript object (@JSVal@) to a Haskell type that has a @TextEnvelope@ instance.
 jsValToType :: (HasCallStack, Api.HasTextEnvelope a) => String -> JSVal -> IO a
@@ -158,7 +94,7 @@ type JSUnsignedTx = JSVal
 
 type JSSignedTx = JSVal
 
-type JSTxId = JSSigningKey
+type JSTxId = JSString
 
 type JSTxIx = Int
 
@@ -200,12 +136,12 @@ instance (Api.FromJSON a, Typeable a) => FromJSVal JSVal a where
 instance FromJSVal JSSigningKey (Api.SigningKey Api.PaymentKey) where
   fromJSVal :: HasCallStack => JSSigningKey -> IO (Api.SigningKey Api.PaymentKey)
   fromJSVal jsString = do
-    return $ rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
+    rightOrErrorM $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
 
 instance FromJSVal JSTxId Api.TxId where
   fromJSVal :: HasCallStack => JSTxId -> IO Api.TxId
   fromJSVal jsString = do
-    return $ rightOrError $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
+    rightOrErrorM $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
 
 instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal = return . Api.TxIx . fromIntegral
@@ -289,72 +225,9 @@ txToCbor jsSignedTx =
 -- * API Information
 
 foreign export javascript "getAPIInfo"
-  getAPIInfo :: IO JSVal
+  getAPIInfo :: IO JSAPIInfo
 
--- | Provides metadata about the "virtual objects" and their methods.
--- This is intended to help generate JavaScript wrappers.
 getAPIInfo :: IO JSAPIInfo
-getAPIInfo = do
-  let unsignedTxObjectName = "UnsignedTx"
-  let signedTxObjectName = "SignedTx"
-
-  let staticApiMethods =
-        [ MethodInfo
-            { methodName = "newConwayTx"
-            , methodParams = []
-            , methodReturnType = NewObject unsignedTxObjectName
-            }
-        ]
-
-  let unsignedTxObj =
-        VirtualObjectInfo
-          { virtualObjectName = unsignedTxObjectName
-          , virtualObjectMethods =
-              [ MethodInfo
-                  { methodName = "addTxInput"
-                  , methodParams = ["txId", "txIx"]
-                  , methodReturnType = Fluent
-                  }
-              , MethodInfo
-                  { methodName = "addSimpleTxOut"
-                  , methodParams = ["destAddr", "lovelaceAmount"]
-                  , methodReturnType = Fluent
-                  }
-              , MethodInfo
-                  { methodName = "setFee"
-                  , methodParams = ["lovelaceAmount"]
-                  , methodReturnType = Fluent
-                  }
-              , MethodInfo
-                  { methodName = "addSigningKey"
-                  , methodParams = ["signingKey"]
-                  , methodReturnType = Fluent
-                  }
-              , MethodInfo
-                  { methodName = "signTx"
-                  , methodParams = []
-                  , methodReturnType = NewObject signedTxObjectName
-                  }
-              ]
-          }
-
-  let signedTxObj =
-        VirtualObjectInfo
-          { virtualObjectName = signedTxObjectName
-          , virtualObjectMethods =
-              [ MethodInfo
-                  { methodName = "txToCbor"
-                  , methodParams = []
-                  , methodReturnType = OtherType "string"
-                  }
-              ]
-          }
-
-  let apiInfo =
-        APIInfo
-          { staticMethods = staticApiMethods
-          , virtualObjects = [unsignedTxObj, signedTxObj]
-          }
-  toJSVal apiInfo
+getAPIInfo = toJSVal apiInfo
 
 #endif

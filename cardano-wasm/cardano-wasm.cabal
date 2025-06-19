@@ -13,7 +13,7 @@ common project-config
     ImportQualifiedPost
     OverloadedStrings
 
-  build-depends: base >=4.14 && <5
+  build-depends: base >=4.18 && <5
   ghc-options:
     -Wall
     -Wcompat
@@ -25,6 +25,7 @@ common project-config
     -Wunused-packages
 
 executable cardano-wasm
+  import: project-config
   main-is: Main.hs
   hs-source-dirs:
     app
@@ -38,10 +39,10 @@ executable cardano-wasm
       -optl-mexec-model=reactor
       "-optl-Wl,--strip-all,--export=getAPIInfo,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=addSigningKey,--export=signTx,--export=txToCbor"
   other-modules:
-    General.ExceptionHandling
-    JavaScript.Bridge
-    WasmApi.Tx
-    WasmApi.WasmApi
+    Cardano.Wasm.Api.Info
+    Cardano.Wasm.Api.Tx
+    Cardano.Wasm.General.ExceptionHandling
+    Cardano.Wasm.JavaScript.Bridge
 
   build-depends:
     aeson,
@@ -51,14 +52,10 @@ executable cardano-wasm
     cardano-api,
     cardano-ledger-api,
     cardano-ledger-binary,
-    cardano-ledger-conway,
-    cardano-ledger-core,
     cardano-strict-containers,
     cborg,
     containers,
-    extra,
     microlens,
-    ordered-containers,
     text,
 
   if arch(wasm32)
