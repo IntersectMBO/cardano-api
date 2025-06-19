@@ -38,10 +38,10 @@ executable cardano-wasm
       -optl-mexec-model=reactor
       "-optl-Wl,--strip-all,--export=getAPIInfo,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=addSigningKey,--export=signTx,--export=txToCbor"
   other-modules:
-    General.ExceptionHandling
-    JavaScript.Bridge
-    WasmApi.Tx
-    WasmApi.WasmApi
+    Cardano.Wasm.Api.Info
+    Cardano.Wasm.Api.Tx
+    Cardano.Wasm.General.ExceptionHandling
+    Cardano.Wasm.JavaScript.Bridge
 
   build-depends:
     aeson,

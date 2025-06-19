@@ -1,17 +1,17 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module WasmApi.WasmApi where
+module Cardano.Wasm.Api.Info where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Ledger as Ledger
 import qualified Cardano.Api.Plutus as Script
 
+import Cardano.Wasm.General.ExceptionHandling (justOrError, rightOrError)
+
 import Data.Function ((&))
 import qualified Data.Text as Text
 import GHC.Stack (HasCallStack)
-
-import General.ExceptionHandling (justOrError, rightOrError)
 
 -- | Create a transaction body from a transaction input, destination address, amount, and fees.
 mkTransactionImpl

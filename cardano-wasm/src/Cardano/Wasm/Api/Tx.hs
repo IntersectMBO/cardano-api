@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module WasmApi.Tx where
+module Cardano.Wasm.Api.Tx where
 
 import Cardano.Api (FromJSON)
 import qualified Cardano.Api as Api
@@ -21,6 +21,7 @@ import qualified Cardano.Api.Tx as TxBody
 import qualified Cardano.Ledger.Api as Ledger
 import Cardano.Ledger.Binary (Annotator, DecCBOR (decCBOR), EncCBOR, Version, decodeFullAnnotator)
 import qualified Cardano.Ledger.Core as Ledger
+import Cardano.Wasm.General.ExceptionHandling (justOrError, rightOrError)
 
 import qualified Codec.CBOR.Write as CBOR
 import Data.Aeson (ToJSON (toJSON), (.=))
@@ -35,8 +36,6 @@ import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((%~), (&), (.~))
-
-import General.ExceptionHandling (justOrError, rightOrError)
 
 -- | Function to convert an era to its corresponding version
 eraToVersion :: Exp.Era era -> Version

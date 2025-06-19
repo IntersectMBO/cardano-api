@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 
 #if !defined(wasm32_HOST_ARCH)
-module JavaScript.Bridge where
+module Cardano.Wasm.JavaScript.Bridge where
 import qualified Data.ByteString as Text
 #else
 
@@ -12,7 +12,7 @@ import qualified Data.ByteString as Text
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module JavaScript.Bridge where
+module Cardano.Wasm.JavaScript.Bridge where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Ledger as Ledger -- For Ledger.Coin
@@ -27,9 +27,9 @@ import Data.Typeable (Typeable, typeRep)
 import GHC.Stack (HasCallStack)
 import GHC.Wasm.Prim
 
-import General.ExceptionHandling (rightOrError)
-import qualified WasmApi.Tx as Wasm
-import qualified WasmApi.WasmApi as WasmApi
+import Cardano.Wasm.General.ExceptionHandling (rightOrError)
+import qualified Cardano.Wasm.Api.Tx as Wasm
+import qualified Cardano.Wasm.Api.Info as WasmApi
 
 -- * API Information Data Types
 

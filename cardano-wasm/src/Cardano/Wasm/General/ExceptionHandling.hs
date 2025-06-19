@@ -1,4 +1,4 @@
-module General.ExceptionHandling where
+module Cardano.Wasm.General.ExceptionHandling where
 
 import GHC.Stack (HasCallStack, withFrozenCallStack)
 
