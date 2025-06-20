@@ -28,8 +28,8 @@ import GHC.Exts (IsList (..))
 import Test.Gen.Cardano.Api.Typed
 
 import Hedgehog
+import Hedgehog.Extras (UnitIO)
 import Hedgehog.Extras qualified as H
-import Hedgehog.Extras.Test.Golden qualified as H
 
 currentEra :: MaryEraOnwards ConwayEra
 currentEra = MaryEraOnwardsConway
@@ -70,27 +70,25 @@ hprop_roundtrip_mint_Value_parse_renderPretty =
       renderMultiAssetPretty
       (P.runParser (parseMintingMultiAssetValue currentEra))
 
-hprop_goldenValue_1_lovelace :: Property
-hprop_goldenValue_1_lovelace =
-  H.propertyOnce $ do
-    let valueList = [(Api.AdaAssetId, 1)]
-        value = Text.unpack $ Api.renderValuePretty $ fromList valueList
+tasty_goldenValue_1_lovelace :: UnitIO ()
+tasty_goldenValue_1_lovelace = do
+  let valueList = [(Api.AdaAssetId, 1)]
+      value = Text.unpack $ Api.renderValuePretty $ fromList valueList
 
-    H.diffVsGoldenFile value "test/cardano-api-golden/files/Cardano/Api/Value/value-ada-1.json"
+  H.diffVsGoldenFile value "test/cardano-api-golden/files/Cardano/Api/Value/value-ada-1.json"
 
-hprop_goldenValue1 :: Property
-hprop_goldenValue1 =
-  H.propertyOnce $ do
-    policyId <-
-      H.leftFail $
-        P.runParser Api.parsePolicyId "a0000000000000000000000000000000000000000000000000000000"
-    let assetName = Api.UnsafeAssetName "asset1"
-        valueList = [(Api.AssetId policyId assetName, 1)]
-        value = Text.unpack $ Api.renderValuePretty $ fromList valueList
+tasty_goldenValue1 :: UnitIO ()
+tasty_goldenValue1 = do
+  policyId <-
+    H.leftFail $
+      P.runParser Api.parsePolicyId "a0000000000000000000000000000000000000000000000000000000"
+  let assetName = Api.UnsafeAssetName "asset1"
+      valueList = [(Api.AssetId policyId assetName, 1)]
+      value = Text.unpack $ Api.renderValuePretty $ fromList valueList
 
-    H.diffVsGoldenFile
-      value
-      "test/cardano-api-golden/files/Cardano/Api/Value/value-asset1-1.json"
+  H.diffVsGoldenFile
+    value
+    "test/cardano-api-golden/files/Cardano/Api/Value/value-asset1-1.json"
 
 hprop_roundtrip_Value_JSON :: Property
 hprop_roundtrip_Value_JSON =

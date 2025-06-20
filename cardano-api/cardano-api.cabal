@@ -300,7 +300,6 @@ library gen
     Test.Hedgehog.Roundtrip.CBOR
 
   build-depends:
-    Diff,
     QuickCheck,
     aeson >=1.5.6.0,
     base16-bytestring,
@@ -315,7 +314,6 @@ library gen
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
     cardano-ledger-shelley >=1.13,
     containers,
-    directory,
     filepath,
     hedgehog >=1.1,
     hedgehog-extras,
@@ -425,11 +423,12 @@ test-suite cardano-api-golden
     errors,
     filepath,
     hedgehog >=1.1,
-    hedgehog-extras ^>=0.7,
+    hedgehog-extras ^>=0.7.2,
     microlens,
     plutus-core ^>=1.45,
     plutus-ledger-api,
     tasty,
+    tasty-discover,
     tasty-hedgehog,
     text,
     time,
