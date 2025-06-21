@@ -1324,7 +1324,10 @@ toAllegraTimelock = go
 -- | Conversion for the 'Timelock.Timelock' language that is shared between the
 -- Allegra and Mary eras.
 fromAllegraTimelock
-  :: Allegra.AllegraEraScript era
+  :: forall era
+   . ( Allegra.AllegraEraScript era
+     , Ledger.NativeScript era ~ Allegra.Timelock era
+     )
   => Ledger.NativeScript era -> SimpleScript
 fromAllegraTimelock = go
  where
@@ -1334,6 +1337,7 @@ fromAllegraTimelock = go
   go (Shelley.RequireAllOf s) = RequireAllOf (map go (toList s))
   go (Shelley.RequireAnyOf s) = RequireAnyOf (map go (toList s))
   go (Shelley.RequireMOf i s) = RequireMOf i (map go (toList s))
+  go _ = error "Impossible"
 
 type family ToLedgerPlutusLanguage lang where
   ToLedgerPlutusLanguage PlutusScriptV1 = Plutus.PlutusV1

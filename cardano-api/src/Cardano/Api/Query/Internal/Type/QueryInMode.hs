@@ -93,12 +93,12 @@ import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Api.State.Query qualified as L
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Plain qualified as Plain
-import Cardano.Ledger.CertState qualified as L
 import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Credential qualified as Shelley
 import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
 import Cardano.Ledger.Shelley.LedgerState qualified as L
+import Cardano.Ledger.State qualified as L
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -116,7 +116,6 @@ import Ouroboros.Consensus.Ledger.Query qualified as Consensus
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger qualified as Consensus
 import Ouroboros.Consensus.Shelley.Ledger.Query.Types qualified as Consensus
-import Ouroboros.Consensus.Shelley.Protocol.Abstract (ProtoCrypto)
 import Ouroboros.Network.Block (Serialised (..))
 import Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot)
 import Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
@@ -138,7 +137,7 @@ import Data.Singletons qualified as Singletons
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Word (Word64)
-import GHC.Exts (IsList (..))
+import GHC.Exts (IsList (..), coerce)
 import GHC.Stack
 
 -- ----------------------------------------------------------------------------
@@ -286,7 +285,7 @@ data QueryInShelleyBasedEra era result where
     :: Set StakeCredential
     -> QueryInShelleyBasedEra era (Map StakeCredential L.Coin)
   QueryAccountState
-    :: QueryInShelleyBasedEra era L.AccountState
+    :: QueryInShelleyBasedEra era L.ChainAccountState
   QueryConstitution
     :: QueryInShelleyBasedEra era (L.Constitution (ShelleyLedgerEra era))
   QueryGovState
@@ -476,8 +475,19 @@ fromLedgerUTxO sbe (Shelley.UTxO utxo) =
       . toList
     $ utxo
 
+-- FIXME: the following constructor is deprecated:
+--
+--  GetStakeDistribution ::
+--    BlockQuery (ShelleyBlock proto era) QFNoTables (PoolDistr (ProtoCrypto proto))
+--
+-- It is replaced by:
+--
+--  GetStakeDistribution2 ::
+--    BlockQuery (ShelleyBlock proto era) QFNoTables SL.PoolDistr
+--
+-- The changes in 'fromShelleyPoolDistr' might not be correct, double-check before merging!
 fromShelleyPoolDistr
-  :: Consensus.PoolDistr StandardCrypto
+  :: L.PoolDistr
   -> Map (Hash StakePoolKey) Rational
 fromShelleyPoolDistr =
   -- TODO: write an appropriate property to show it is safe to use
@@ -486,6 +496,7 @@ fromShelleyPoolDistr =
     . map (bimap StakePoolKeyHash Consensus.individualPoolStake)
     . toList
     . Consensus.unPoolDistr
+    . Consensus.fromLedgerPoolDistr
 
 fromShelleyDelegations
   :: Map
@@ -564,7 +575,7 @@ toConsensusQueryShelleyBased sbe = \case
   QueryProtocolParameters ->
     Some (consensusQueryInEraInMode era Consensus.GetCurrentPParams)
   QueryStakeDistribution ->
-    Some (consensusQueryInEraInMode era Consensus.GetStakeDistribution)
+    Some (consensusQueryInEraInMode era Consensus.GetStakeDistribution2)
   QueryUTxO QueryUTxOWhole ->
     Some (consensusQueryInEraInMode era Consensus.GetUTxOWhole)
   QueryUTxO (QueryUTxOByAddress addrs) ->
@@ -613,7 +624,7 @@ toConsensusQueryShelleyBased sbe = \case
       )
   QueryPoolDistribution poolIds ->
     Some
-      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetPoolDistr (getPoolIds <$> poolIds))))
+      (consensusQueryInEraInMode era (Consensus.GetCBOR (Consensus.GetPoolDistr2 (getPoolIds <$> poolIds))))
    where
     getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool)
     getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
@@ -858,7 +869,6 @@ fromConsensusQueryResultShelleyBased
    . HasCallStack
   => ShelleyLedgerEra era ~ ledgerera
   => ConsensusProtocol era ~ protocol
-  => ProtoCrypto protocol ~ StandardCrypto
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
   -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) fp result'
@@ -884,7 +894,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         _ -> fromConsensusQueryResultMismatch
     QueryStakeDistribution ->
       case q' of
-        Consensus.GetStakeDistribution -> fromShelleyPoolDistr r'
+        Consensus.GetStakeDistribution2 -> fromShelleyPoolDistr r'
         _ -> fromConsensusQueryResultMismatch
     QueryUTxO QueryUTxOWhole ->
       case q' of
@@ -937,10 +947,25 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
         Consensus.GetCBOR Consensus.GetPoolState{} ->
           SerialisedPoolState r'
         _ -> fromConsensusQueryResultMismatch
+    -- FIXME: the following constructor is deprecated: 
+    --  GetPoolDistr ::
+    --    Maybe (Set (SL.KeyHash 'SL.StakePool)) ->
+    --    BlockQuery
+    --      (ShelleyBlock proto era)
+    --      QFNoTables
+    --      (PoolDistr (ProtoCrypto proto))
+    -- It is replaced by:
+    --  GetPoolDistr2 ::
+    --    Maybe (Set (SL.KeyHash 'SL.StakePool)) ->
+    --    BlockQuery
+    --      (ShelleyBlock proto era)
+    --      QFNoTables
+    --      SL.PoolDistr
+    -- The changes here might not be correct, double-check before merging!
     QueryPoolDistribution{} ->
       case q' of
-        Consensus.GetCBOR Consensus.GetPoolDistr{} ->
-          SerialisedPoolDistribution r'
+        Consensus.GetCBOR Consensus.GetPoolDistr2{} ->
+          SerialisedPoolDistribution (coerce r')
         _ -> fromConsensusQueryResultMismatch
     QueryStakeSnapshot{} ->
       case q' of

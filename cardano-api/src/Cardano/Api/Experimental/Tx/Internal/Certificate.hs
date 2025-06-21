@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate
   ( Certificate (..)
@@ -28,8 +29,9 @@ import Cardano.Api.Plutus.Internal.Script qualified as Api
 import Cardano.Api.Tx.Internal.Body (TxCertificates (..))
 import Cardano.Api.Tx.Internal.Body qualified as Api
 
-import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Plutus.Language qualified as L
+import Cardano.Ledger.Core qualified as L
+import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Plutus.Language qualified as Plutus
 
 import GHC.IsList
@@ -83,7 +85,9 @@ mkTxCertificates certs =
         )
 
 newToOldSimpleScriptWitness
-  :: L.AllegraEraScript (LedgerEra era)
+  :: ( L.AllegraEraScript (LedgerEra era)
+     , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
+     )
   => Era era -> Exp.SimpleScriptOrReferenceInput (LedgerEra era) -> Api.ScriptWitness Api.WitCtxStake era
 newToOldSimpleScriptWitness era simple =
   case simple of

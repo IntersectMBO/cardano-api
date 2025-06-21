@@ -39,7 +39,7 @@ import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.Governance qualified as L
 import Cardano.Ledger.Conway.TxCert qualified as L
 import Cardano.Ledger.Mary.Value qualified as L
-import Cardano.Ledger.State qualified as L
+import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Protocol.Crypto qualified as L
 import Ouroboros.Consensus.Protocol.Abstract qualified as Consensus
 import Ouroboros.Consensus.Protocol.Praos.Common qualified as Consensus
@@ -101,6 +101,7 @@ type ConwayEraOnwardsConstraints era =
   , L.ConwayEraPParams (ShelleyLedgerEra era)
   , L.ConwayEraTxBody (ShelleyLedgerEra era)
   , L.ConwayEraTxCert (ShelleyLedgerEra era)
+  , L.ConwayEraCertState (ShelleyLedgerEra era)
   , L.Era (ShelleyLedgerEra era)
   , L.EraGov (ShelleyLedgerEra era)
   , L.EraPParams (ShelleyLedgerEra era)
