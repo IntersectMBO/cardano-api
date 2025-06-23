@@ -115,6 +115,8 @@
           # Skip cross compilers for the shell
           shell.crossPlatforms = _: [];
           shell.shellHook = ''
+            export LANG="en_US.UTF-8"
+            export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
             export PATH="$(git rev-parse --show-toplevel)/scripts/devshell:$PATH"
           '';
 
