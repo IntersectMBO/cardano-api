@@ -397,6 +397,16 @@ deriving instance Eq (TxTotalCollateral era)
 
 deriving instance Show (TxTotalCollateral era)
 
+-- | Transaction reference inputs. Those are not spent and do not require any witnessing to be included in a valid
+-- transaction. Any output can be a reference input. Reference inputs only affect the information that is passed to
+-- scripts by being included in @TxInfo@.
+--
+-- The third parameter of the 'TxInsReference' constructor stores actual resolved datums. When any outputs of referenced
+-- 'TxIns' store only datum hash, the only way to use them in the plutus script is to provide a resolved datum here.
+-- Note that inserting a datum with hash not present in the reference inputs will result in an error on transaction
+-- submission.
+--
+-- See also: https://github.com/intersectmbo/cardano-ledger/releases/latest/download/babbage-ledger.pdf, chapter 3.
 data TxInsReference build era where
   TxInsReferenceNone :: TxInsReference build era
   TxInsReference
@@ -404,9 +414,7 @@ data TxInsReference build era where
     -> [TxIn]
     -- ^ A list of reference inputs
     -> TxInsReferenceDatums build
-    -- ^ A set of public key inputs resolved datums, whose hashes are referenced in UTXO of reference inputs. Those
-    -- datums will be inserted to the datum map available to the scripts. Note that inserting a datum with hash not
-    -- present in the reference input will result in an error on transaction submission.
+    -- ^ A set of public key inputs resolved datums, whose hashes are referenced in UTXO of reference inputs.
     -> TxInsReference build era
 
 deriving instance Eq (TxInsReference build era)
