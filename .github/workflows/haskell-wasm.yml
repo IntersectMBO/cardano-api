@@ -1,4 +1,4 @@
-name: Compile to WASM
+name: Haskell CI (WASM)
 
 on:
   merge_group:
