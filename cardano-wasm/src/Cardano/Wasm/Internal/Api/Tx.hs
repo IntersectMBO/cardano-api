@@ -65,7 +65,10 @@ decodeDecCBOR era desc cbor = do
 -- been signed yet. It abstracts over the era of the transaction.
 -- It is meant to be an opaque object in JavaScript API.
 data UnsignedTxObject
-  = forall era. UnsignedTxObject (Exp.Era era) (Exp.UnsignedTx era)
+  = forall era. UnsignedTxObject
+  { unsignedTxEra :: Exp.Era era
+  , unsignedTx :: Exp.UnsignedTx era
+  }
 
 instance ToJSON UnsignedTxObject where
   toJSON :: UnsignedTxObject -> Aeson.Value
@@ -139,9 +142,9 @@ setFeeImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) fee =
 
 -- | Sign an unsigned transaction using a payment key.
 signWithPaymentKeyImpl :: UnsignedTxObject -> Api.SigningKey Api.PaymentKey -> SignedTxObject
-signWithPaymentKeyImpl (UnsignedTxObject era unsignedTx@(Exp.UnsignedTx tx)) signingKey =
+signWithPaymentKeyImpl (UnsignedTxObject era fullUnsignedTx@(Exp.UnsignedTx tx)) signingKey =
   obtainCommonConstraints era $
-    let witness = Exp.makeKeyWitness era unsignedTx . Api.WitnessPaymentKey $ signingKey
+    let witness = Exp.makeKeyWitness era fullUnsignedTx . Api.WitnessPaymentKey $ signingKey
         txWits =
           Ledger.mkBasicTxWits
             & Ledger.addrTxWitsL
@@ -153,6 +156,38 @@ signWithPaymentKeyImpl (UnsignedTxObject era unsignedTx@(Exp.UnsignedTx tx)) sig
      in SignedTxObject
           era
           txWithWits
+
+newtype ProtocolParamsJSON = ProtocolParamsJSON String
+
+-- | Estimate min fees for an unsigned transaction object.
+estimateMinFeeImpl
+  :: (HasCallStack, MonadThrow m)
+  => UnsignedTxObject
+  -- ^ The unsigned transaction object to estimate fees for.
+  -> ProtocolParamsJSON
+  -- ^ The JSON for the protocol parameters of the right era and network.
+  -> Int
+  -- ^ The number of key witnesses still to be added to the transaction.
+  -> Int
+  -- ^ The number of Byron key witnesses still to be added to the transaction.
+  -> Int
+  -- ^ The total size in bytes of reference scripts
+  -> m Ledger.Coin
+estimateMinFeeImpl
+  (UnsignedTxObject era (Exp.UnsignedTx ledgerTx))
+  (ProtocolParamsJSON protocolParamsJson)
+  numKeyWitnesses
+  numByronKeyWitnesses
+  totalRefScriptSize =
+    obtainCommonConstraints era $ do
+      protocolParams <- rightOrError $ Aeson.eitherDecodeStrictText (Text.pack protocolParamsJson)
+      return $
+        Ledger.estimateMinFeeTx
+          protocolParams
+          ledgerTx
+          numKeyWitnesses
+          numByronKeyWitnesses
+          totalRefScriptSize
 
 -- * @SignedTx@ object
 

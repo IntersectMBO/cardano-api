@@ -77,6 +77,12 @@ jsValToJSON expectedType val = do
         )
     Right a -> evaluate a
 
+-- | Convert a JavaScript object (@JSVal@) to a JSON @String@ but don't deserialise.
+jsValToJSONString :: JSVal -> IO String
+jsValToJSONString val = do
+  jsString <- js_stringify val
+  return $ fromJSString jsString
+
 -- | Convert a JavaScript object (@JSVal@) to a Haskell type that has a @TextEnvelope@ instance.
 jsValToType :: (HasCallStack, Api.HasTextEnvelope a) => String -> JSVal -> IO a
 jsValToType expectedType val = do
@@ -102,6 +108,8 @@ type JSTxIx = Int
 type JSCoin = JSVal
 
 type JSSigningKey = JSString
+
+type JSProtocolParams = JSVal
 
 -- * High-level definitions for conversion between Haskell and JS
 
@@ -147,6 +155,9 @@ instance FromJSVal JSTxId Api.TxId where
 instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal = return . Api.TxIx . fromIntegral
 
+instance {-# OVERLAPPING #-} FromJSVal JSVal Wasm.ProtocolParamsJSON where
+  fromJSVal = fmap Wasm.ProtocolParamsJSON . jsValToJSONString
+
 -- * UnsignedTxObject
 
 foreign export javascript "newConwayTx"
@@ -160,6 +171,9 @@ foreign export javascript "addSimpleTxOut"
 
 foreign export javascript "setFee"
   setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
+
+foreign export javascript "estimateMinFee"
+  estimateMinFee :: JSUnsignedTx -> JSProtocolParams -> Int -> Int -> Int -> IO JSCoin
 
 foreign export javascript "signWithPaymentKey"
   signWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
@@ -197,6 +211,19 @@ setFee jsUnsignedTx jsCoin =
             <*> fromJSVal jsCoin
         )
 
+-- | Estimate the minimum fee for an unsigned transaction.
+estimateMinFee :: JSUnsignedTx -> JSProtocolParams -> Int -> Int -> Int -> IO JSCoin
+estimateMinFee jsUnsignedTx jsProtocolParams numExtraKeyWitnesses numExtraByronKeyWitnesses totalRefScriptSize = do
+  toJSVal
+    =<< join
+      ( Wasm.estimateMinFeeImpl
+          <$> fromJSVal jsUnsignedTx
+          <*> fromJSVal jsProtocolParams
+          <*> pure numExtraKeyWitnesses
+          <*> pure numExtraByronKeyWitnesses
+          <*> pure totalRefScriptSize
+      )
+
 -- | Sign an unsigned transaction with a payment key.
 signWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
 signWithPaymentKey jsUnsignedTx jsSigningKey =
@@ -206,7 +233,7 @@ signWithPaymentKey jsUnsignedTx jsSigningKey =
             <*> fromJSVal jsSigningKey
         )
 
--- *  SignedTxObject
+-- * SignedTxObject
 
 foreign export javascript "alsoSignWithPaymentKey"
   alsoSignWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
