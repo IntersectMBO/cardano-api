@@ -10,8 +10,8 @@ on:
       - master
   # GH caches are removed when not accessed within 7 days - this schedule runs the job every 6 days making
   # sure that we always have some caches on master
-  schedule:
-    - cron: '0 0 */6 * *'
+#  schedule:
+#    - cron: '0 0 */6 * *'
 
 jobs:
   build:
@@ -159,7 +159,7 @@ jobs:
     #  with:
     #     limit-access-to-actor: true
 
-  build-complete:
+  wasm-builds-complete:
     needs: [build]
     if: ${{ always() }}
     runs-on: ubuntu-latest
