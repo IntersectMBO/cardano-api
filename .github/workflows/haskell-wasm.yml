@@ -90,6 +90,13 @@ jobs:
         STORE=$(wasm32-wasi-cabal path --store | tail -n 1)
         EOF
 
+# Cache is disabled because GHA default builders are not able to build all dependencies
+# because they lack RAM, so having the cache expire would break the CI check.
+# For this reason, we are providing a build of the dependencies instead in
+# the "Restore cached deps" step, and we make the check not required.
+# When we are able to make this CI check self-sufficient, we should reenable the
+# caching and remove the manual restoring of cached deps.
+
     # From the dependency list we restore the cached dependencies.
     # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
     # until the `index-state` values in the `cabal.project` file changes.
