@@ -114,6 +114,12 @@ apiInfo =
                   , methodParams = []
                   , methodReturnType = NewObject signedTxObjectName
                   }
+              , MethodInfo
+                  { methodName = "estimateMinFee"
+                  , methodParams =
+                      ["protocolParams", "numExtraKeyWitnesses", "numExtraByronKeyWitnesses", "totalRefScriptSize"]
+                  , methodReturnType = OtherType "BigInt"
+                  }
               ]
           }
 

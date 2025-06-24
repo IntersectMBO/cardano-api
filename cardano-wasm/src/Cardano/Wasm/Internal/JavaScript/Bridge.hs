@@ -77,6 +77,12 @@ jsValToJSON expectedType val = do
         )
     Right a -> evaluate a
 
+-- | Convert a JavaScript object (@JSVal@) to a JSON @String@ but don't deserialise.
+jsValToJSONString :: JSVal -> IO String
+jsValToJSONString val = do
+  jsString <- js_stringify val
+  return $ fromJSString jsString
+
 -- | Convert a JavaScript object (@JSVal@) to a Haskell type that has a @TextEnvelope@ instance.
 jsValToType :: (HasCallStack, Api.HasTextEnvelope a) => String -> JSVal -> IO a
 jsValToType expectedType val = do
@@ -102,6 +108,8 @@ type JSTxIx = Int
 type JSCoin = JSVal
 
 type JSSigningKey = JSString
+
+type JSProtocolParams = JSVal
 
 -- * High-level definitions for conversion between Haskell and JS
 
@@ -147,6 +155,9 @@ instance FromJSVal JSTxId Api.TxId where
 instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal = return . Api.TxIx . fromIntegral
 
+instance {-# OVERLAPPING #-} FromJSVal JSVal Wasm.ProtocolParamsJSON where
+  fromJSVal = fmap Wasm.ProtocolParamsJSON . jsValToJSONString
+
 -- * UnsignedTxObject
 
 foreign export javascript "newConwayTx"
@@ -166,6 +177,9 @@ foreign export javascript "addSigningKey"
 
 foreign export javascript "signTx"
   signTx :: JSUnsignedTx -> IO JSSignedTx
+
+foreign export javascript "estimateMinFee"
+  estimateMinFee :: JSUnsignedTx -> JSProtocolParams -> Int -> Int -> Int -> IO JSCoin
 
 -- | Create a new Conway era unsigned transaction.
 newConwayTx :: IO JSUnsignedTx
@@ -214,7 +228,20 @@ signTx :: JSUnsignedTx -> IO JSSignedTx
 signTx jsUnsignedTx =
   toJSVal . Wasm.signTxImpl =<< fromJSVal jsUnsignedTx
 
--- *  SignedTxObject
+-- | Estimate the minimum fee for an unsigned transaction.
+estimateMinFee :: JSUnsignedTx -> JSProtocolParams -> Int -> Int -> Int -> IO JSCoin
+estimateMinFee jsUnsignedTx jsProtocolParams numExtraKeyWitnesses numExtraByronKeyWitnesses totalRefScriptSize = do
+  toJSVal
+    =<< join
+      ( Wasm.estimateMinFeeImpl
+          <$> fromJSVal jsUnsignedTx
+          <*> fromJSVal jsProtocolParams
+          <*> pure numExtraKeyWitnesses
+          <*> pure numExtraByronKeyWitnesses
+          <*> pure totalRefScriptSize
+      )
+
+-- * SignedTxObject
 
 foreign export javascript "txToCbor"
   txToCbor :: JSSignedTx -> IO JSString

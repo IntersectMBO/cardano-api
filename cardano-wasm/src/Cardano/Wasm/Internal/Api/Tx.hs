@@ -79,7 +79,11 @@ decodeFromCBOR cbor = do
 -- been signed yet. It abstracts over the era of the transaction.
 -- It is meant to be an opaque object in JavaScript API.
 data UnsignedTxObject
-  = forall era. UnsignedTxObject (Exp.Era era) [Api.SigningKey Api.PaymentKey] (Exp.UnsignedTx era)
+  = forall era. UnsignedTxObject
+  { unsignedTxEra :: Exp.Era era
+  , unsignedTxSigningKeys :: [Api.SigningKey Api.PaymentKey]
+  , unsignedTx :: Exp.UnsignedTx era
+  }
 
 instance ToJSON UnsignedTxObject where
   toJSON :: UnsignedTxObject -> Aeson.Value
@@ -124,7 +128,7 @@ addTxInputImpl (UnsignedTxObject era signingKeys (Exp.UnsignedTx tx)) txId txIx 
 -- It takes a destination address and an amount in lovelace.
 addSimpleTxOutImpl
   :: (HasCallStack, MonadThrow m) => UnsignedTxObject -> String -> Ledger.Coin -> m UnsignedTxObject
-addSimpleTxOutImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) destAddr lovelaceAmount =
+addSimpleTxOutImpl (UnsignedTxObject era signingKeys (Exp.UnsignedTx tx)) destAddr lovelaceAmount =
   obtainCommonConstraints era $ do
     destAddress <- deserialiseAddress era destAddr
     let sbe = Api.convert era
@@ -136,7 +140,7 @@ addSimpleTxOutImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) destA
             Shelley.ReferenceScriptNone
         shelleyTxOut = TxBody.toShelleyTxOutAny sbe txOut
         tx' = tx & Ledger.bodyTxL . Ledger.outputsTxBodyL %~ (<> StrictSeq.fromList [shelleyTxOut])
-    return $ UnsignedTxObject era keyWitnesess $ Exp.UnsignedTx tx'
+    return $ UnsignedTxObject era signingKeys (Exp.UnsignedTx tx')
  where
   deserialiseAddress
     :: (HasCallStack, MonadThrow m, Exp.EraCommonConstraints era)
@@ -166,6 +170,39 @@ signTxImpl :: UnsignedTxObject -> SignedTxObject
 signTxImpl (UnsignedTxObject era signingKeys unsignedTxContent) =
   let witness = map (Exp.makeKeyWitness era unsignedTxContent . Api.WitnessPaymentKey) signingKeys
    in SignedTxObject era (Exp.signTx era [] witness unsignedTxContent)
+
+newtype ProtocolParamsJSON = ProtocolParamsJSON String
+
+-- | Estimate min fees for an unsigned transaction object.
+estimateMinFeeImpl
+  :: (HasCallStack, MonadThrow m)
+  => UnsignedTxObject
+  -- ^ The unsigned transaction object to estimate fees for.
+  -> ProtocolParamsJSON
+  -- ^ The JSON for the protocol parameters of the right era and network.
+  -> Int
+  -- ^ The number of key witnesses still to be added to the transaction.
+  -> Int
+  -- ^ The number of Byron key witnesses still to be added to the transaction.
+  -> Int
+  -- ^ The total size in bytes of reference scripts
+  -> m Ledger.Coin
+estimateMinFeeImpl
+  (UnsignedTxObject era signingKeys (Exp.UnsignedTx ledgerTx))
+  (ProtocolParamsJSON protocolParamsJson)
+  numExtraKeyWitnesses
+  numExtraByronKeyWitnesses
+  totalRefScriptSize =
+    obtainCommonConstraints era $ do
+      let numWitnesses = length signingKeys + numExtraKeyWitnesses
+      protocolParams <- rightOrError $ Aeson.eitherDecodeStrictText (Text.pack protocolParamsJson)
+      return $
+        Ledger.estimateMinFeeTx
+          protocolParams
+          ledgerTx
+          numWitnesses
+          numExtraByronKeyWitnesses
+          totalRefScriptSize
 
 -- * @SignedTx@ object
 
