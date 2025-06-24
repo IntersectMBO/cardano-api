@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Wasm.Api.Tx where
+module Cardano.Wasm.Internal.Api.Tx where
 
 import Cardano.Api (FromJSON)
 import Cardano.Api qualified as Api
@@ -19,7 +19,7 @@ import Cardano.Api.Tx qualified as TxBody
 
 import Cardano.Ledger.Api qualified as Ledger
 import Cardano.Ledger.Binary (Annotator, DecCBOR (decCBOR), EncCBOR, Version, decodeFullAnnotator)
-import Cardano.Wasm.General.ExceptionHandling (justOrError, rightOrError)
+import Cardano.Wasm.Internal.ExceptionHandling (justOrError, rightOrError)
 
 import Codec.CBOR.Write qualified as CBOR
 import Data.Aeson (ToJSON (toJSON), (.=))

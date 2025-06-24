@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 
 #if !defined(wasm32_HOST_ARCH)
-module Cardano.Wasm.JavaScript.Bridge where
+module Cardano.Wasm.Internal.JavaScript.Bridge where
 #else
 
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,14 +11,14 @@ module Cardano.Wasm.JavaScript.Bridge where
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Wasm.JavaScript.Bridge where
+module Cardano.Wasm.Internal.JavaScript.Bridge where
 
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
-import Cardano.Wasm.Api.Info (apiInfo)
-import Cardano.Wasm.Api.Tx qualified as Wasm
-import Cardano.Wasm.General.ExceptionHandling (rightOrErrorM)
+import Cardano.Wasm.Internal.Api.Info (apiInfo)
+import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
+import Cardano.Wasm.Internal.ExceptionHandling (rightOrErrorM)
 
 import Control.Exception (evaluate)
 import Data.Aeson qualified as Aeson

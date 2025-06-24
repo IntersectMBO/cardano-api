@@ -1,6 +1,6 @@
 {-# LANGUAGE InstanceSigs #-}
 
-module Cardano.Wasm.Api.Info (apiInfo) where
+module Cardano.Wasm.Internal.Api.Info (apiInfo) where
 
 import Data.Aeson qualified as Aeson
 import Data.Text qualified as Text

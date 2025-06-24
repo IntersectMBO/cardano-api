@@ -1,4 +1,4 @@
-module Cardano.Wasm.General.ExceptionHandling where
+module Cardano.Wasm.Internal.ExceptionHandling where
 
 import Control.Exception (Exception, throwIO)
 import GHC.Stack (HasCallStack, withFrozenCallStack)
