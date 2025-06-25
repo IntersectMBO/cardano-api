@@ -56,15 +56,15 @@ instance Aeson.ToJSON VirtualObjectInfo where
       ]
 
 -- | Aggregate type for all API information.
-data APIInfo = APIInfo
+data ApiInfo = ApiInfo
   { staticMethods :: [MethodInfo]
   , virtualObjects :: [VirtualObjectInfo]
   }
   deriving (Show, Eq)
 
-instance Aeson.ToJSON APIInfo where
-  toJSON :: APIInfo -> Aeson.Value
-  toJSON (APIInfo staticObjs virtualObjs) =
+instance Aeson.ToJSON ApiInfo where
+  toJSON :: ApiInfo -> Aeson.Value
+  toJSON (ApiInfo staticObjs virtualObjs) =
     Aeson.object
       [ "staticMethods" Aeson..= staticObjs
       , "virtualObjects" Aeson..= virtualObjs
@@ -72,7 +72,7 @@ instance Aeson.ToJSON APIInfo where
 
 -- | Provides metadata about the "virtual objects" and their methods.
 -- This is intended to help generate JavaScript wrappers.
-apiInfo :: APIInfo
+apiInfo :: ApiInfo
 apiInfo =
   let unsignedTxObjectName = "UnsignedTx"
       signedTxObjectName = "SignedTx"
@@ -128,7 +128,7 @@ apiInfo =
                   }
               ]
           }
-   in APIInfo
+   in ApiInfo
         { staticMethods = staticApiMethods
         , virtualObjects = [unsignedTxObj, signedTxObj]
         }

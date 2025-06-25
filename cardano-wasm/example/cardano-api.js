@@ -37,7 +37,7 @@ async function initialize() {
   }
 
   // Dynamically build the API
-  const apiInfo = await instance.exports.getAPIInfo();
+  const apiInfo = await instance.exports.getApiInfo();
   let makers = {};
   let cardanoAPI = { objectType: "cardano-api" };
   // Create maker functions for each virtual object type

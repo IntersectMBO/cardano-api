@@ -37,7 +37,7 @@ executable cardano-wasm
     ghc-options:
       -no-hs-main
       -optl-mexec-model=reactor
-      "-optl-Wl,--strip-all,--export=getAPIInfo,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=addSigningKey,--export=signTx,--export=txToCbor"
+      "-optl-Wl,--strip-all,--export=getApiInfo,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=addSigningKey,--export=signTx,--export=txToCbor"
   other-modules:
     Cardano.Wasm.Internal.Api.Info
     Cardano.Wasm.Internal.Api.Tx

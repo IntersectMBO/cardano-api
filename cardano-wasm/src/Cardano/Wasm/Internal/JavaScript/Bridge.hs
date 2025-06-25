@@ -88,7 +88,7 @@ jsValToType expectedType val = do
 
 -- * Type Synonyms for JSVal representations
 
-type JSAPIInfo = JSVal
+type JSApiInfo = JSVal
 
 type JSUnsignedTx = JSVal
 
@@ -224,10 +224,10 @@ txToCbor jsSignedTx =
 
 -- * API Information
 
-foreign export javascript "getAPIInfo"
-  getAPIInfo :: IO JSAPIInfo
+foreign export javascript "getApiInfo"
+  getApiInfo :: IO JSApiInfo
 
-getAPIInfo :: IO JSAPIInfo
-getAPIInfo = toJSVal apiInfo
+getApiInfo :: IO JSApiInfo
+getApiInfo = toJSVal apiInfo
 
 #endif
