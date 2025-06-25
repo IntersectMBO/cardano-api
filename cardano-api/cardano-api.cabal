@@ -129,7 +129,7 @@ library
     cardano-ledger-binary >=1.6,
     cardano-ledger-byron >=1.1,
     cardano-ledger-conway >=1.19,
-    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17 && <1.19,
     cardano-ledger-mary >=1.8,
     cardano-ledger-shelley >=1.16,
     cardano-protocol-tpraos >=1.4,
