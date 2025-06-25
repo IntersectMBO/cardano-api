@@ -100,6 +100,7 @@ fromConsensusGenTx = \case
   Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (S (Z tx')))))))) ->
     let Consensus.ShelleyTx _txid shelleyEraTx = tx'
      in TxInMode ShelleyBasedEraConway (ShelleyTx ShelleyBasedEraConway shelleyEraTx)
+  _ -> undefined
 
 toConsensusGenTx
   :: ()
@@ -302,3 +303,4 @@ fromConsensusApplyTxErr = \case
     TxValidationErrorInCardanoMode $ ShelleyTxValidationError ShelleyBasedEraConway err
   Consensus.ApplyTxErrWrongEra err ->
     TxValidationEraMismatch err
+  _ -> undefined

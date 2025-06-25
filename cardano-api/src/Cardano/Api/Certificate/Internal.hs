@@ -576,6 +576,7 @@ filterUnRegCreds =
         Ledger.RetirePoolTxCert _ _ -> Nothing
         Ledger.MirTxCert _ -> Nothing
         Ledger.GenesisDelegTxCert{} -> Nothing
+        _ -> undefined
     ConwayCertificate cEra conwayCert -> conwayEraOnwardsConstraints cEra $
       case conwayCert of
         Ledger.RegPoolTxCert _ -> Nothing
@@ -593,6 +594,7 @@ filterUnRegCreds =
         Ledger.RegTxCert _ -> Nothing
         -- stake cred deregistration w/o deposit
         Ledger.UnRegTxCert cred -> Just cred
+        _ -> undefined
 
 filterUnRegDRepCreds
   :: Certificate era -> Maybe (Ledger.Credential Ledger.DRepRole)
@@ -615,6 +617,7 @@ filterUnRegDRepCreds = \case
       Ledger.RegTxCert _ -> Nothing
       -- stake cred deregistration w/o deposit
       Ledger.UnRegTxCert _ -> Nothing
+      _ -> undefined
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
@@ -803,6 +806,7 @@ getAnchorDataFromCertificate c =
           Ledger.RetirePoolTxCert _ _ -> return Nothing
           Ledger.GenesisDelegTxCert{} -> return Nothing
           Ledger.MirTxCert _ -> return Nothing
+          _ -> undefined
     ConwayCertificate ceo ccert ->
       conwayEraOnwardsConstraints ceo $
         case ccert of
@@ -819,6 +823,7 @@ getAnchorDataFromCertificate c =
           Ledger.UpdateDRepTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
           Ledger.AuthCommitteeHotKeyTxCert _ _ -> return Nothing
           Ledger.ResignCommitteeColdTxCert _ mAnchor -> return $ Ledger.strictMaybeToMaybe mAnchor
+          _ -> undefined
  where
   anchorDataFromPoolMetadata
     :: MonadError AnchorDataFromCertificateError m

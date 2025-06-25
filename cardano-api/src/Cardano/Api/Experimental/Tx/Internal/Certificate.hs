@@ -127,6 +127,7 @@ newToOldPlutusCertificateScriptWitness ConwayEra (Exp.PlutusScriptWitness Plutus
     Api.NoScriptDatumForStake
     redeemer
     execUnits
+newToOldPlutusCertificateScriptWitness _ _ = undefined
 
 newToOldPlutusScriptOrReferenceInput
   :: Era era

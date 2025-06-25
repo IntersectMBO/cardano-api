@@ -368,6 +368,7 @@ fromAlonzoLanguage :: Plutus.Language -> AnyPlutusScriptVersion
 fromAlonzoLanguage Plutus.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoLanguage Plutus.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 fromAlonzoLanguage Plutus.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
+fromAlonzoLanguage _ = undefined
 
 class HasTypeProxy lang => IsScriptLanguage lang where
   scriptLanguage :: ScriptLanguage lang
@@ -1334,6 +1335,7 @@ fromAllegraTimelock = go
   go (Shelley.RequireAllOf s) = RequireAllOf (map go (toList s))
   go (Shelley.RequireAnyOf s) = RequireAnyOf (map go (toList s))
   go (Shelley.RequireMOf i s) = RequireMOf i (map go (toList s))
+  go _ = undefined
 
 type family ToLedgerPlutusLanguage lang where
   ToLedgerPlutusLanguage PlutusScriptV1 = Plutus.PlutusV1

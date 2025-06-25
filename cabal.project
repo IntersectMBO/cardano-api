@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2025-06-22T20:18:27Z
-  , cardano-haskell-packages 2025-06-20T09:11:51Z
+  , cardano-haskell-packages 2025-07-22T10:42:20Z
 
 packages:
     cardano-api
@@ -60,6 +60,7 @@ if impl (ghc >= 9.12)
   allow-newer:
     -- https://github.com/kapralVV/Unique/issues/11
     , Unique:hashable
+
 
 -- WASM compilation specific
 
@@ -156,3 +157,76 @@ if arch(wasm32)
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+allow-newer:
+  , cardano-ledger-core
+  , cardano-ledger-byron
+  , serdoc-core:tasty-quickcheck
+
+  , kes-agent:containers
+  -- , hedgehog-quickcheck:QuickCheck
+  , *:QuickCheck
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/kes-agent
+  tag: 60acf5d1c949695dc7822945b18fc916e7ef4391
+  --sha256: sha256-oTsxaFAs1c/H0oYLhiivO5mr48oHNsPi5k2XyXxwCJg=
+  subdir:
+      kes-agent
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: 253316ae1c5ec0eaf79f306eac1986969b7842a4
+  --sha256: sha256-0HZ49kIgCrv/H9I/aUb+wFfRiVuZMrUofJFdgWPG17o=
+  subdir: ouroboros-network-api
+          ouroboros-network
+          ouroboros-network-framework
+          ouroboros-network-protocols
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/cardano-ledger
+   tag: ca8d451bbce11dde3b68e99782c79f9b4c1dfca5
+   --sha256: sha256-YHIscWnp9GrFn0EYGM7xd8Ds8x0O00FWBAIZX22bWpA=
+   subdir:
+      eras/allegra/impl
+      eras/alonzo/impl
+      eras/alonzo/test-suite
+      eras/babbage/impl
+      eras/babbage/test-suite
+      eras/byron/chain/executable-spec
+      eras/byron/crypto
+      eras/byron/ledger/executable-spec
+      eras/byron/ledger/impl
+      eras/conway/impl
+      eras/conway/test-suite
+      eras/dijkstra/
+      eras/mary/impl
+      eras/shelley/impl
+      eras/shelley-ma/test-suite
+      eras/shelley/test-suite
+      libs/cardano-data
+      libs/cardano-ledger-api
+      libs/cardano-ledger-binary
+      libs/cardano-ledger-core
+      libs/cardano-ledger-test
+      libs/cardano-protocol-tpraos
+      libs/constrained-generators
+      libs/non-integral
+      libs/set-algebra
+      libs/small-steps
+      libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 26c831eb40bd15750ef8243285466fe9bd582cf7
+  --sha256: sha256-oTsxaFAs1c/H0oYLhiivO5mr48oHNsPi5k2XyXxwCJg=
+  subdir:
+      ouroboros-consensus
+      ouroboros-consensus-cardano
+      ouroboros-consensus-diffusion
+      ouroboros-consensus-protocol
+      sop-extras
+      strict-sop-core

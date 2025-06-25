@@ -1029,6 +1029,7 @@ fromAlonzoScriptLanguage :: Plutus.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Plutus.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Plutus.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 fromAlonzoScriptLanguage Plutus.PlutusV3 = AnyPlutusScriptVersion PlutusScriptV3
+fromAlonzoScriptLanguage _ = undefined
 
 toAlonzoCostModel
   :: CostModel -> Plutus.Language -> Either ProtocolParametersConversionError Alonzo.CostModel

@@ -211,7 +211,7 @@ connectToLocalNodeWithVersion
         Net.connectTo
           (Net.localSnocket iomgr)
           Net.NetworkConnectTracers
-            { Net.nctMuxTracer = nullTracer
+            { Net.nctMuxTracers = undefined
             , Net.nctHandshakeTracer = nullTracer
             }
           versionedProtocls
