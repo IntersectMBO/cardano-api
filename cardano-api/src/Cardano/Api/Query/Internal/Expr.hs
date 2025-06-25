@@ -64,6 +64,7 @@ import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Hashes hiding (Hash)
 import Cardano.Ledger.Keys qualified as L
+import Cardano.Ledger.State qualified as L
 import Cardano.Slotting.Slot
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras as Consensus

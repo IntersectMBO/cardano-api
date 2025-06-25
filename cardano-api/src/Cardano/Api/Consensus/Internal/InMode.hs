@@ -317,3 +317,4 @@ fromConsensusApplyTxErr = \case
     TxValidationErrorInCardanoMode $ ShelleyTxValidationError ShelleyBasedEraDijkstra err
   Consensus.ApplyTxErrWrongEra err ->
     TxValidationEraMismatch err
+  _ -> undefined
