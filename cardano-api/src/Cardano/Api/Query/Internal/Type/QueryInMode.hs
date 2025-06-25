@@ -99,6 +99,7 @@ import Cardano.Ledger.Conway.State qualified as L
 import Cardano.Ledger.Credential qualified as Shelley
 import Cardano.Ledger.Shelley.API qualified as Shelley
 import Cardano.Ledger.Shelley.Core qualified as Core
+import Cardano.Ledger.State qualified as L
 import Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
@@ -125,6 +126,7 @@ import Control.Monad.Trans.Except
 import Data.Bifunctor (bimap, first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.Coerce (coerce)
 import Data.Either.Combinators (rightToMaybe)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -483,7 +485,7 @@ fromLedgerUTxO sbe (Shelley.UTxO utxo) =
     $ utxo
 
 fromShelleyPoolDistr
-  :: Shelley.PoolDistr
+  :: L.PoolDistr
   -> Map (Hash StakePoolKey) Rational
 fromShelleyPoolDistr =
   -- TODO: write an appropriate property to show it is safe to use
@@ -491,7 +493,8 @@ fromShelleyPoolDistr =
   fromList
     . map (bimap StakePoolKeyHash Shelley.individualPoolStake)
     . toList
-    . Shelley.unPoolDistr
+    . Consensus.unPoolDistr
+    . Consensus.fromLedgerPoolDistr
 
 fromShelleyDelegations
   :: Map
@@ -643,7 +646,7 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era Consensus.GetFuturePParams))
       sbe
-  QueryDRepState creds ->
+  QueryDRepState _creds ->
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ error "toConsensusQueryShelleyBased: QueryDRepState is only available in the Conway era")
       ( \w ->
@@ -664,15 +667,16 @@ toConsensusQueryShelleyBased sbe = \case
       )
       (const $ Some (consensusQueryInEraInMode era (Consensus.GetSPOStakeDistr spos)))
       sbe
-  QueryCommitteeMembersState coldCreds hotCreds statuses ->
+  QueryCommitteeMembersState _coldCreds _hotCreds _statuses ->
     caseShelleyToBabbageOrConwayEraOnwards
       ( const $
           error "toConsensusQueryShelleyBased: QueryCommitteeMembersState is only available in the Conway era"
       )
-      ( const $
-          Some
-            (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
-      )
+      undefined
+      -- ( const $
+      --     Some
+      --       (consensusQueryInEraInMode era (Consensus.GetCommitteeMembersState coldCreds hotCreds statuses))
+      -- )
       sbe
   QueryStakeVoteDelegatees creds ->
     caseShelleyToBabbageOrConwayEraOnwards
@@ -960,7 +964,7 @@ fromConsensusQueryResultShelleyBased sbe sbeQuery q' r' =
     QueryPoolDistribution{} ->
       case q' of
         Consensus.GetCBOR Consensus.GetPoolDistr2{} ->
-          SerialisedPoolDistribution r'
+          SerialisedPoolDistribution (coerce r')
         _ -> fromConsensusQueryResultMismatch
     QueryStakeSnapshot{} ->
       case q' of
