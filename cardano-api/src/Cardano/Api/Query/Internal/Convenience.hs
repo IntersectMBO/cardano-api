@@ -40,6 +40,7 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.State (ChainAccountState (..), DRepState (..))
 import Cardano.Ledger.Credential qualified as L
 import Cardano.Ledger.Keys qualified as L
+import Cardano.Ledger.State (ChainAccountState (..), DRepState (..))
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..))
 import Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
@@ -167,11 +168,11 @@ queryStateForBalancedTx era allTxIns certs = runExceptT $ do
     caseShelleyToBabbageOrConwayEraOnwards
       (const $ pure Nothing)
       ( \cOnwards -> do
-          chainAccountState <-
+          ChainAccountState{casTreasury} <-
             lift (queryAccountState cOnwards)
               & onLeft (left . QceUnsupportedNtcVersion)
               & onLeft (left . QueryEraMismatch)
-          let txCurrentTreasuryValue = TxCurrentTreasuryValue $ casTreasury chainAccountState
+          let txCurrentTreasuryValue = TxCurrentTreasuryValue casTreasury
           return $ Just $ Featured cOnwards txCurrentTreasuryValue
       )
       sbe
