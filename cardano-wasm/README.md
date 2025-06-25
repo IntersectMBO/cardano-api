@@ -45,9 +45,7 @@ Then we need to compile three libraries to WASM: `libblst`, `libsodium`, and `li
 In order to not interfere with the system library installation, we will create a folder to serve as our prefix:
 
 ```console
-mkdir ~/prefix
-mkdir ~/prefix/{lib,include}
-mkdir ~/prefix/lib/pkgconfig
+mkdir -p ~/prefix/{lib/pkgconfig,include}
 ```
 
 #### Installing `libblst`
