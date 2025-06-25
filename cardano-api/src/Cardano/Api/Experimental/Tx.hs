@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -149,20 +150,28 @@ import Cardano.Api.Era.Internal.Feature
 import Cardano.Api.Experimental.Era
 import Cardano.Api.Experimental.Tx.Internal.AnyWitness
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
+import Cardano.Api.HasTypeProxy (HasTypeProxy (..), Proxy, asType)
 import Cardano.Api.Ledger.Internal.Reexport (StrictMaybe (..), maybeToStrictMaybe)
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty (docToString, pretty)
+import Cardano.Api.Serialise.Raw
+  ( SerialiseAsRawBytes (..)
+  , SerialiseAsRawBytesError (SerialiseAsRawBytesError)
+  )
 import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Crypto.Hash qualified as Hash
 import Cardano.Ledger.Alonzo.TxBody qualified as L
 import Cardano.Ledger.Api qualified as L
-import Cardano.Ledger.Conway qualified as Ledger
+import Cardano.Ledger.Binary qualified as Ledger
 import Cardano.Ledger.Conway.TxBody qualified as L
 import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Hashes qualified as L hiding (Hash)
 
+import Control.Exception (displayException)
+import Data.Bifunctor (bimap)
+import Data.ByteString.Lazy (fromStrict)
 import Data.Set qualified as Set
 import GHC.Exts (IsList (..))
 import GHC.Stack
@@ -170,12 +179,36 @@ import Lens.Micro
 
 -- | A transaction that can contain everything
 -- except key witnesses.
-newtype UnsignedTx era
-  = UnsignedTx (Ledger.Tx (LedgerEra era))
+data UnsignedTx era
+  = L.EraTx (LedgerEra era) => UnsignedTx (Ledger.Tx (LedgerEra era))
 
-instance IsEra era => Show (UnsignedTx era) where
-  showsPrec p (UnsignedTx tx) = case useEra @era of
-    ConwayEra -> showsPrec p (tx :: Ledger.Tx Ledger.ConwayEra)
+instance HasTypeProxy era => HasTypeProxy (UnsignedTx era) where
+  data AsType (UnsignedTx era) = AsUnsignedTx (AsType era)
+  proxyToAsType :: Proxy (UnsignedTx era) -> AsType (UnsignedTx era)
+  proxyToAsType _ = AsUnsignedTx (asType @era)
+
+instance
+  ( HasTypeProxy era
+  , L.EraTx (LedgerEra era)
+  )
+  => SerialiseAsRawBytes (UnsignedTx era)
+  where
+  serialiseToRawBytes (UnsignedTx tx) =
+    Ledger.serialize' (Ledger.eraProtVerHigh @(LedgerEra era)) tx
+  deserialiseFromRawBytes _ =
+    bimap wrapError UnsignedTx
+      . Ledger.decodeFullAnnotator
+        (Ledger.eraProtVerHigh @(LedgerEra era))
+        "UnsignedTx"
+        Ledger.decCBOR
+      . fromStrict
+   where
+    wrapError
+      :: Ledger.DecoderError -> SerialiseAsRawBytesError
+    wrapError = SerialiseAsRawBytesError . displayException
+
+instance Show (UnsignedTx era) where
+  showsPrec p (UnsignedTx tx) = showsPrec p tx
 
 newtype UnsignedTxError
   = UnsignedTxError TxBodyError
@@ -275,7 +308,8 @@ eraSpecificLedgerTxBody ConwayEra ledgerbody bc =
             .~ convProposalProcedures (maybe TxProposalProceduresNone unFeatured propProcedures)
           & L.votingProceduresTxBodyL
             .~ convVotingProcedures (maybe TxVotingProceduresNone unFeatured voteProcedures)
-          & L.treasuryDonationTxBodyL .~ maybe (L.Coin 0) unFeatured treasuryDonation
+          & L.treasuryDonationTxBodyL
+            .~ maybe (L.Coin 0) unFeatured treasuryDonation
           & L.currentTreasuryValueTxBodyL
             .~ L.maybeToStrictMaybe (unFeatured =<< currentTresuryValue)
 
@@ -328,5 +362,5 @@ convertTxBodyToUnsignedTx sbe txbody =
     (error $ "convertTxBodyToUnsignedTx: Error - unsupported era " <> docToString (pretty sbe))
     ( \w -> do
         let ShelleyTx _ unsignedLedgerTx = makeSignedTransaction [] txbody
-        UnsignedTx $ obtainCommonConstraints w unsignedLedgerTx
+        obtainCommonConstraints w $ UnsignedTx unsignedLedgerTx
     )
