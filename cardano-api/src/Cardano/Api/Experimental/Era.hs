@@ -31,7 +31,7 @@ module Cardano.Api.Experimental.Era
   )
 where
 
-import Cardano.Api qualified as Api
+import Cardano.Api.Era qualified as Api
 import Cardano.Api.Era.Internal.Core (BabbageEra, ConwayEra, Eon (..))
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
 import Cardano.Api.Era.Internal.Eon.BabbageEraOnwards
@@ -268,6 +268,7 @@ type EraCommonConstraints era =
   , L.BabbageEraPParams (LedgerEra era)
   , L.BabbageEraTxBody (LedgerEra era)
   , L.ConwayEraTxCert (LedgerEra era)
+  , L.TxCert (LedgerEra era) ~ L.ConwayTxCert (LedgerEra era)
   , L.Era (LedgerEra era)
   , L.EraScript (LedgerEra era)
   , L.EraTx (LedgerEra era)
