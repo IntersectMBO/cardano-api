@@ -22,6 +22,7 @@ import Cardano.Ledger.Binary (Annotator, DecCBOR (decCBOR), EncCBOR, Version, de
 import Cardano.Wasm.Internal.ExceptionHandling (justOrError, rightOrError)
 
 import Codec.CBOR.Write qualified as CBOR
+import Control.Monad.Catch (Exception (displayException), MonadThrow)
 import Data.Aeson (ToJSON (toJSON), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
@@ -64,15 +65,17 @@ instance FromJSON UnsignedTxObject where
   parseJSON :: HasCallStack => Aeson.Value -> Aeson.Parser UnsignedTxObject
   parseJSON = Aeson.withObject "UnsignedTxObject" $ \o -> do
     Exp.Some era <- o Aeson..: "era"
-    let decode :: forall a. DecCBOR (Annotator a) => Text.Text -> Text.Text -> a
+    let decode :: forall m a. (MonadThrow m, DecCBOR (Annotator a)) => Text.Text -> Text.Text -> m a
         decode desc cbor = do
-          let cddlBS = rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
+          cddlBS <- rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
           rightOrError $ decodeFullAnnotator (eraToVersion era) desc decCBOR (fromStrict cddlBS)
     keyWitnesses :: [Text.Text] <- o Aeson..: "keyWitnesess"
     tx :: Text.Text <- o Aeson..: "tx"
-    obtainCommonConstraints era $
+    obtainCommonConstraints era $ do
+      decodedWitnesses <- mapM (toMonadFail . decode "KeyWitness") keyWitnesses
+      decodedTx <- toMonadFail $ decode "Tx" tx
       return $
-        UnsignedTxObject era (map (decode "KeyWitness") keyWitnesses) (Exp.UnsignedTx (decode "Tx" tx))
+        UnsignedTxObject era decodedWitnesses (Exp.UnsignedTx decodedTx)
 
 -- | Create a new unsigned transaction object for making a Conway era transaction.
 newConwayTxImpl :: UnsignedTxObject
@@ -88,11 +91,12 @@ addTxInputImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) txId txIx
 
 -- | Add a simple transaction output to an unsigned transaction object.
 -- It takes a destination address and an amount in lovelace.
-addSimpleTxOutImpl :: HasCallStack => UnsignedTxObject -> String -> Ledger.Coin -> UnsignedTxObject
+addSimpleTxOutImpl
+  :: (HasCallStack, MonadThrow m) => UnsignedTxObject -> String -> Ledger.Coin -> m UnsignedTxObject
 addSimpleTxOutImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) destAddr lovelaceAmount =
-  obtainCommonConstraints era $
-    let destAddress = deserialiseAddress era destAddr
-        sbe = Api.convert era
+  obtainCommonConstraints era $ do
+    destAddress <- deserialiseAddress era destAddr
+    let sbe = Api.convert era
         txOut =
           Api.TxOut
             destAddress
@@ -101,12 +105,11 @@ addSimpleTxOutImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) destA
             Shelley.ReferenceScriptNone
         shelleyTxOut = TxBody.toShelleyTxOutAny sbe txOut
         tx' = tx & Ledger.bodyTxL . Ledger.outputsTxBodyL %~ (<> StrictSeq.fromList [shelleyTxOut])
-     in UnsignedTxObject era keyWitnesess $ Exp.UnsignedTx tx'
+    return $ UnsignedTxObject era keyWitnesess $ Exp.UnsignedTx tx'
  where
   deserialiseAddress
-    :: HasCallStack
-    => Exp.EraCommonConstraints era
-    => Exp.Era era -> String -> Api.AddressInEra era
+    :: (HasCallStack, MonadThrow m, Exp.EraCommonConstraints era)
+    => Exp.Era era -> String -> m (Api.AddressInEra era)
   deserialiseAddress _eon destAddrStr =
     justOrError
       "Couldn't deserialise destination address"
@@ -155,14 +158,21 @@ instance FromJSON SignedTxObject where
   parseJSON :: HasCallStack => Aeson.Value -> Aeson.Parser SignedTxObject
   parseJSON = Aeson.withObject "SignedTxObject" $ \o -> do
     Exp.Some era <- o Aeson..: "era"
-    let decode :: forall a. DecCBOR (Annotator a) => Text.Text -> Text.Text -> a
+    let decode :: forall m a. (MonadThrow m, DecCBOR (Annotator a)) => Text.Text -> Text.Text -> m a
         decode desc cbor = do
-          let cddlBS = rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
+          cddlBS <- rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
           rightOrError $ decodeFullAnnotator (eraToVersion era) desc decCBOR (fromStrict cddlBS)
     tx :: Text.Text <- o Aeson..: "tx"
-    obtainCommonConstraints era $
+    obtainCommonConstraints era $ do
+      decodedTx <- toMonadFail $ decode "Tx" tx
       return $
-        SignedTxObject era (decode "Tx" tx)
+        SignedTxObject era decodedTx
+
+-- | Convert an 'Either' value to a 'MonadFail' monad. This can be useful for converting
+-- MonadThrow monads into Aeson Parser monads, but it loses the stack trace information.
+toMonadFail :: (Exception e, MonadFail m) => Either e a -> m a
+toMonadFail (Left e) = fail $ displayException e
+toMonadFail (Right a) = return a
 
 -- | Convert a signed transaction object to a base16 encoded string of its CBOR representation.
 toCborImpl :: SignedTxObject -> String

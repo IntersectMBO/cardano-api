@@ -55,6 +55,7 @@ executable cardano-wasm
     cardano-strict-containers,
     cborg,
     containers,
+    exceptions,
     microlens,
     text,
 

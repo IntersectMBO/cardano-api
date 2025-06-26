@@ -18,9 +18,10 @@ import Cardano.Api.Ledger qualified as Ledger
 
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
-import Cardano.Wasm.Internal.ExceptionHandling (rightOrErrorM)
+import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
 
 import Control.Exception (evaluate)
+import Control.Monad (join)
 import Data.Aeson qualified as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
@@ -136,12 +137,12 @@ instance (Api.FromJSON a, Typeable a) => FromJSVal JSVal a where
 instance FromJSVal JSSigningKey (Api.SigningKey Api.PaymentKey) where
   fromJSVal :: HasCallStack => JSSigningKey -> IO (Api.SigningKey Api.PaymentKey)
   fromJSVal jsString = do
-    rightOrErrorM $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
+    rightOrError $ Api.deserialiseFromBech32 (Text.pack (fromJSString jsString))
 
 instance FromJSVal JSTxId Api.TxId where
   fromJSVal :: HasCallStack => JSTxId -> IO Api.TxId
   fromJSVal jsString = do
-    rightOrErrorM $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
+    rightOrError $ Api.deserialiseFromRawBytesHex (fromString (fromJSString jsString))
 
 instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal = return . Api.TxIx . fromIntegral
@@ -181,13 +182,14 @@ addTxInput jsUnsignedTx jsTxId jsTxIx =
 
 -- | Add a simple transaction output (address and lovelace amount) to an unsigned transaction.
 addSimpleTxOut :: JSUnsignedTx -> JSString -> JSCoin -> IO JSUnsignedTx
-addSimpleTxOut jsUnsignedTx jsDestAddr jsCoin = do
+addSimpleTxOut jsUnsignedTx jsDestAddr jsCoin =
   toJSVal
-    =<< ( Wasm.addSimpleTxOutImpl
-            <$> fromJSVal jsUnsignedTx
-            <*> fromJSVal jsDestAddr
-            <*> fromJSVal jsCoin
-        )
+    =<< join
+      ( Wasm.addSimpleTxOutImpl
+          <$> fromJSVal jsUnsignedTx
+          <*> fromJSVal jsDestAddr
+          <*> fromJSVal jsCoin
+      )
 
 -- | Set the transaction fee for an unsigned transaction.
 setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
@@ -210,7 +212,7 @@ addSigningKey jsUnsignedTx jsSigningKey =
 -- | Sign an unsigned transaction.
 signTx :: JSUnsignedTx -> IO JSSignedTx
 signTx jsUnsignedTx =
-  toJSVal =<< Wasm.signTxImpl <$> fromJSVal jsUnsignedTx
+  toJSVal . Wasm.signTxImpl =<< fromJSVal jsUnsignedTx
 
 -- *  SignedTxObject
 
@@ -220,7 +222,7 @@ foreign export javascript "txToCbor"
 -- | Convert a signed transaction to its CBOR representation (hex-encoded string).
 txToCbor :: JSSignedTx -> IO JSString
 txToCbor jsSignedTx =
-  toJSVal =<< Wasm.toCborImpl <$> fromJSVal jsSignedTx
+  toJSVal . Wasm.toCborImpl =<< fromJSVal jsSignedTx
 
 -- * API Information
 

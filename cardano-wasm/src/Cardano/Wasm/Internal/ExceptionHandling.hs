@@ -1,21 +1,23 @@
 module Cardano.Wasm.Internal.ExceptionHandling where
 
-import Control.Exception (Exception, throwIO)
+import Control.Exception (Exception)
+import Control.Monad.Catch (MonadThrow (..))
 import GHC.Stack (HasCallStack, withFrozenCallStack)
+
+newtype ExpectedJustException = ExpectedJustException String
+  deriving Show
+
+instance Exception ExpectedJustException
 
 newtype ExpectedRightException = ExpectedRightException String
   deriving Show
 
 instance Exception ExpectedRightException
 
-justOrError :: HasCallStack => String -> Maybe a -> a
-justOrError e Nothing = withFrozenCallStack $ error e
-justOrError _ (Just a) = a
+justOrError :: (HasCallStack, MonadThrow m) => String -> Maybe a -> m a
+justOrError e Nothing = withFrozenCallStack $ throwM $ ExpectedJustException e
+justOrError _ (Just a) = return a
 
-rightOrError :: (HasCallStack, Show e) => Either e a -> a
-rightOrError (Left e) = withFrozenCallStack $ error $ show e
-rightOrError (Right a) = a
-
-rightOrErrorM :: (HasCallStack, Show e) => Either e a -> IO a
-rightOrErrorM (Left e) = withFrozenCallStack $ throwIO $ ExpectedRightException (show e)
-rightOrErrorM (Right a) = return a
+rightOrError :: (HasCallStack, MonadThrow m, Show e) => Either e a -> m a
+rightOrError (Left e) = withFrozenCallStack $ throwM $ ExpectedRightException $ show e
+rightOrError (Right a) = return a
