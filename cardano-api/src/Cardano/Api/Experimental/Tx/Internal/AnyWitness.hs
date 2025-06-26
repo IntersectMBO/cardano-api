@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Api.Experimental.Tx.Internal.AnyWitness
   ( -- * Any witness (key, simple script, plutus script).
@@ -46,6 +47,8 @@ data AnyWitness era where
   AnyKeyWitnessPlaceholder :: AnyWitness era
   AnySimpleScriptWitness :: SimpleScriptOrReferenceInput era -> AnyWitness era
   AnyPlutusScriptWitness :: PlutusScriptWitness lang purpose era -> AnyWitness era
+
+deriving instance Show (AnyWitness era)
 
 getAnyWitnessPlutusLanguage :: AnyWitness era -> Maybe L.Language
 getAnyWitnessPlutusLanguage AnyKeyWitnessPlaceholder = Nothing

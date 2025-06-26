@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 
 module Cardano.Api.Experimental.Tx.Internal.Certificate
@@ -35,7 +36,13 @@ import Cardano.Ledger.Plutus.Language qualified as Plutus
 import GHC.IsList
 
 data Certificate era where
-  Certificate :: L.TxCert era -> Certificate era
+  Certificate :: L.EraTxCert era => L.TxCert era -> Certificate era
+
+deriving instance Show (Certificate era)
+
+deriving instance Eq (Certificate era)
+
+deriving instance Ord (Certificate era)
 
 convertToOldApiCertificate :: Era era -> Certificate (LedgerEra era) -> Api.Certificate era
 convertToOldApiCertificate ConwayEra (Certificate cert) =
@@ -63,24 +70,20 @@ mkTxCertificates certs =
            Api.BuildTx
            (Maybe (Api.StakeCredential, Api.Witness Api.WitCtxStake era))
        )
-  getStakeCred ConwayEra (Certificate cert, AnyKeyWitnessPlaceholder) =
-    (Api.ConwayCertificate (convert ConwayEra) cert, Api.BuildTxWith Nothing)
-  getStakeCred ConwayEra (Certificate cert, AnySimpleScriptWitness ss) =
-    let oldApiCert = Api.ConwayCertificate (convert ConwayEra) cert
-        mStakeCred = Api.selectStakeCredentialWitness oldApiCert
-        wit = Api.ScriptWitness Api.ScriptWitnessForStakeAddr $ newToOldSimpleScriptWitness ConwayEra ss
-     in ( oldApiCert
-        , pure $ (,wit) <$> mStakeCred
-        )
-  getStakeCred ConwayEra (Certificate cert, AnyPlutusScriptWitness psw) =
-    let oldApiCert = Api.ConwayCertificate (convert ConwayEra) cert
-        mStakeCred = Api.selectStakeCredentialWitness oldApiCert
-        wit =
-          Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
-            newToOldPlutusCertificateScriptWitness ConwayEra psw
-     in ( oldApiCert
-        , pure $ (,wit) <$> mStakeCred
-        )
+  getStakeCred era (Certificate cert, witness) =
+    case era of
+      ConwayEra -> do
+        let oldApiCert = Api.ConwayCertificate (convert era) cert
+            mStakeCred = Api.selectStakeCredentialWitness oldApiCert
+            wit =
+              case witness of
+                AnyKeyWitnessPlaceholder -> Api.KeyWitness Api.KeyWitnessForStakeAddr
+                AnySimpleScriptWitness ss ->
+                  Api.ScriptWitness Api.ScriptWitnessForStakeAddr $ newToOldSimpleScriptWitness era ss
+                AnyPlutusScriptWitness psw ->
+                  Api.ScriptWitness Api.ScriptWitnessForStakeAddr $
+                    newToOldPlutusCertificateScriptWitness ConwayEra psw
+        (oldApiCert, pure $ (,wit) <$> mStakeCred)
 
 newToOldSimpleScriptWitness
   :: L.AllegraEraScript (LedgerEra era)
