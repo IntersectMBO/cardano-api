@@ -112,7 +112,7 @@ apiInfo =
               , MethodInfo
                   { methodName = "estimateMinFee"
                   , methodParams =
-                      ["protocolParams", "numExtraKeyWitnesses", "numExtraByronKeyWitnesses", "totalRefScriptSize"]
+                      ["protocolParams", "numKeyWitnesses", "numByronKeyWitnesses", "totalRefScriptSize"]
                   , methodReturnType = OtherType "BigInt"
                   }
               ]
