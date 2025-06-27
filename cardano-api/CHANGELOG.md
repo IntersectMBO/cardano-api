@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 10.17.1.0
+
+- Cardano.Api.Experimental: Fix missing key witnesses in certificates
+  (compatible, bugfix)
+  [PR 879](https://github.com/IntersectMBO/cardano-api/pull/879)
+
+- Add `genChainPoint` and `genChainPointAt`.
+  (feature, compatible)
+  [PR 877](https://github.com/IntersectMBO/cardano-api/pull/877)
+
+- Add `null` `size` functions to `Cardano.Api.UTxO`.
+  (feature, compatible)
+  [PR 876](https://github.com/IntersectMBO/cardano-api/pull/876)
+
 ## 10.17.0.0
 
 - Introduce new certificate type
