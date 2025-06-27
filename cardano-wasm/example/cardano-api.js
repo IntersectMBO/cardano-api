@@ -1,3 +1,5 @@
+/// <reference path="./cardano-api.d.ts" />
+
 import { WASI } from "https://unpkg.com/@bjorn3/browser_wasi_shim@0.4.1/dist/index.js";
 import ghc_wasm_jsffi from "./cardano-wasm.js";
 const __exports = {};
