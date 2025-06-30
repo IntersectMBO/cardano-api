@@ -40,7 +40,9 @@ executable cardano-wasm
       "-optl-Wl,--strip-all,--export=getApiInfo,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=estimateMinFee,--export=signWithPaymentKey,--export=alsoSignWithPaymentKey,--export=txToCbor"
   other-modules:
     Cardano.Wasm.Internal.Api.Info
+    Cardano.Wasm.Internal.Api.InfoToTypeScript
     Cardano.Wasm.Internal.Api.Tx
+    Cardano.Wasm.Internal.Api.TypeScriptDefs
     Cardano.Wasm.Internal.ExceptionHandling
     Cardano.Wasm.Internal.JavaScript.Bridge
 
