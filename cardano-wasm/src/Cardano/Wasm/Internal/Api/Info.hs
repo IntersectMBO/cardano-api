@@ -1,6 +1,14 @@
 {-# LANGUAGE InstanceSigs #-}
 
-module Cardano.Wasm.Internal.Api.Info (apiInfo) where
+module Cardano.Wasm.Internal.Api.Info
+  ( apiInfo
+  , ApiInfo (..)
+  , VirtualObjectInfo (..)
+  , MethodInfo (..)
+  , ParamInfo (..)
+  , MethodReturnTypeInfo (..)
+  )
+where
 
 import Data.Aeson qualified as Aeson
 import Data.Text qualified as Text
@@ -18,56 +26,84 @@ data MethodReturnTypeInfo
   deriving (Show, Eq)
 
 instance Aeson.ToJSON MethodReturnTypeInfo where
+  toJSON :: MethodReturnTypeInfo -> Aeson.Value
   toJSON Fluent = Aeson.object ["type" Aeson..= Text.pack "fluent"]
   toJSON (NewObject objTypeName) = Aeson.object ["type" Aeson..= Text.pack "newObject", "objectType" Aeson..= objTypeName]
   toJSON (OtherType typeName) = Aeson.object ["type" Aeson..= Text.pack "other", "typeName" Aeson..= typeName]
 
+-- | Information about a single parameter of a method.
+data ParamInfo = ParamInfo
+  { paramName :: String
+  , paramType :: String
+  , paramDoc :: String
+  }
+  deriving (Show, Eq)
+
+instance Aeson.ToJSON ParamInfo where
+  toJSON :: ParamInfo -> Aeson.Value
+  toJSON (ParamInfo name pType doc) =
+    Aeson.object
+      [ "name" Aeson..= name
+      , "type" Aeson..= pType
+      , "doc" Aeson..= doc
+      ]
+
 -- | Information about a single method of a virtual object.
 data MethodInfo = MethodInfo
   { methodName :: String
-  , methodParams :: [String]
+  , methodDoc :: String
+  , methodParams :: [ParamInfo]
   -- ^ Names of parameters, excluding 'this'.
   , methodReturnType :: MethodReturnTypeInfo
+  , methodReturnDoc :: String
   }
   deriving (Show, Eq)
 
 instance Aeson.ToJSON MethodInfo where
   toJSON :: MethodInfo -> Aeson.Value
-  toJSON (MethodInfo name params retType) =
+  toJSON (MethodInfo name doc params retType retDoc) =
     Aeson.object
       [ "name" Aeson..= name
+      , "doc" Aeson..= doc
       , "params" Aeson..= params
       , "return" Aeson..= retType
+      , "returnDoc" Aeson..= retDoc
       ]
 
 -- | Information about a virtual object and its methods.
 data VirtualObjectInfo = VirtualObjectInfo
   { virtualObjectName :: String
+  , virtualObjectDoc :: String
   , virtualObjectMethods :: [MethodInfo]
   }
   deriving (Show, Eq)
 
 instance Aeson.ToJSON VirtualObjectInfo where
   toJSON :: VirtualObjectInfo -> Aeson.Value
-  toJSON (VirtualObjectInfo name methods) =
+  toJSON (VirtualObjectInfo name doc methods) =
     Aeson.object
       [ "objectName" Aeson..= name
+      , "doc" Aeson..= doc
       , "methods" Aeson..= methods
       ]
 
 -- | Aggregate type for all API information.
 data ApiInfo = ApiInfo
-  { staticMethods :: [MethodInfo]
+  { mainObject :: VirtualObjectInfo
   , virtualObjects :: [VirtualObjectInfo]
+  , initializeFunctionDoc :: String
+  , initializeFunctionReturnDoc :: String
   }
   deriving (Show, Eq)
 
 instance Aeson.ToJSON ApiInfo where
   toJSON :: ApiInfo -> Aeson.Value
-  toJSON (ApiInfo staticObjs virtualObjs) =
+  toJSON (ApiInfo mainObj virtualObjs initDoc initRetDoc) =
     Aeson.object
-      [ "staticMethods" Aeson..= staticObjs
+      [ "mainObject" Aeson..= mainObj
       , "virtualObjects" Aeson..= virtualObjs
+      , "initializeFunctionDoc" Aeson..= initDoc
+      , "initializeFunctionReturnDoc" Aeson..= initRetDoc
       ]
 
 -- | Provides metadata about the "virtual objects" and their methods.
@@ -77,43 +113,59 @@ apiInfo =
   let unsignedTxObjectName = "UnsignedTx"
       signedTxObjectName = "SignedTx"
 
-      staticApiMethods =
-        [ MethodInfo
-            { methodName = "newConwayTx"
-            , methodParams = []
-            , methodReturnType = NewObject unsignedTxObjectName
-            }
-        ]
-
       unsignedTxObj =
         VirtualObjectInfo
           { virtualObjectName = unsignedTxObjectName
+          , virtualObjectDoc = "Represents an unsigned transaction."
           , virtualObjectMethods =
               [ MethodInfo
                   { methodName = "addTxInput"
-                  , methodParams = ["txId", "txIx"]
+                  , methodDoc = "Adds a simple transaction input to the transaction."
+                  , methodParams =
+                      [ ParamInfo "txId" "string" "The transaction ID of the input UTxO."
+                      , ParamInfo "txIx" "number" "The index of the input within the UTxO."
+                      ]
                   , methodReturnType = Fluent
+                  , methodReturnDoc = "The `UnsignedTx` object with the added input."
                   }
               , MethodInfo
                   { methodName = "addSimpleTxOut"
-                  , methodParams = ["destAddr", "lovelaceAmount"]
+                  , methodDoc = "Adds a simple transaction output to the transaction."
+                  , methodParams =
+                      [ ParamInfo "destAddr" "string" "The destination address."
+                      , ParamInfo "lovelaceAmount" "bigint" "The amount in lovelace to output."
+                      ]
                   , methodReturnType = Fluent
+                  , methodReturnDoc = "The `UnsignedTx` object with the added output."
                   }
               , MethodInfo
                   { methodName = "setFee"
-                  , methodParams = ["lovelaceAmount"]
+                  , methodDoc = "Sets the fee for the transaction."
+                  , methodParams = [ParamInfo "lovelaceAmount" "bigint" "The fee amount in lovelace."]
                   , methodReturnType = Fluent
-                  }
-              , MethodInfo
-                  { methodName = "signWithPaymentKey"
-                  , methodParams = ["signingKey"]
-                  , methodReturnType = NewObject signedTxObjectName
+                  , methodReturnDoc = "The `UnsignedTx` object with the set fee."
                   }
               , MethodInfo
                   { methodName = "estimateMinFee"
+                  , methodDoc = "Estimates the minimum fee for the transaction."
                   , methodParams =
-                      ["protocolParams", "numKeyWitnesses", "numByronKeyWitnesses", "totalRefScriptSize"]
+                      [ ParamInfo "protocolParams" "any" "The protocol parameters."
+                      , ParamInfo
+                          "numKeyWitnesses"
+                          "number"
+                          "The number of key witnesses."
+                      , ParamInfo "numByronKeyWitnesses" "number" "The number of Byron key witnesses."
+                      , ParamInfo "totalRefScriptSize" "number" "The total size of reference scripts in bytes."
+                      ]
                   , methodReturnType = OtherType "BigInt"
+                  , methodReturnDoc = "A promise that resolves to the estimated minimum fee in lovelace."
+                  }
+              , MethodInfo
+                  { methodName = "signWithPaymentKey"
+                  , methodDoc = "Signs the transaction with a payment key."
+                  , methodParams = [ParamInfo "signingKey" "string" "The signing key to witness the transaction."]
+                  , methodReturnType = NewObject signedTxObjectName
+                  , methodReturnDoc = "A promise that resolves to a `SignedTx` object."
                   }
               ]
           }
@@ -121,20 +173,41 @@ apiInfo =
       signedTxObj =
         VirtualObjectInfo
           { virtualObjectName = signedTxObjectName
+          , virtualObjectDoc = "Represents a signed transaction."
           , virtualObjectMethods =
               [ MethodInfo
                   { methodName = "alsoSignWithPaymentKey"
-                  , methodParams = ["signingKey"]
+                  , methodDoc = "Adds an extra signature to the transaction with a payment key."
+                  , methodParams = [ParamInfo "signingKey" "string" "The signing key to witness the transaction."]
                   , methodReturnType = Fluent
+                  , methodReturnDoc = "The `SignedTx` object with the additional signature."
                   }
               , MethodInfo
                   { methodName = "txToCbor"
+                  , methodDoc = "Converts the signed transaction to its CBOR representation."
                   , methodParams = []
                   , methodReturnType = OtherType "string"
+                  , methodReturnDoc =
+                      "A promise that resolves to the CBOR representation of the transaction as a hex string."
                   }
               ]
           }
    in ApiInfo
-        { staticMethods = staticApiMethods
+        { mainObject =
+            VirtualObjectInfo
+              { virtualObjectName = "CardanoAPI"
+              , virtualObjectDoc = "The main Cardano API object with static methods."
+              , virtualObjectMethods =
+                  [ MethodInfo
+                      { methodName = "newConwayTx"
+                      , methodDoc = "Creates a new Conway-era transaction."
+                      , methodParams = []
+                      , methodReturnType = NewObject unsignedTxObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
+                      }
+                  ]
+              }
         , virtualObjects = [unsignedTxObj, signedTxObj]
+        , initializeFunctionDoc = "Initializes the Cardano API."
+        , initializeFunctionReturnDoc = "A promise that resolves to the main `CardanoAPI` object."
         }

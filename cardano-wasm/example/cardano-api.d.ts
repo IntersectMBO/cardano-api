@@ -43,12 +43,12 @@ declare interface UnsignedTx {
     /**
      * Estimates the minimum fee for the transaction.
      * @param protocolParams The protocol parameters.
-     * @param numExtraKeyWitnesses The number of extra key witnesses (in addition to the ones already added).
-     * @param numExtraByronKeyWitnesses The number of extra Byron key witnesses.
+     * @param numKeyWitnesses The number of key witnesses.
+     * @param numByronKeyWitnesses The number of Byron key witnesses.
      * @param totalRefScriptSize The total size of reference scripts in bytes.
      * @returns A promise that resolves to the estimated minimum fee in lovelace.
      */
-    estimateMinFee(protocolParams: any, numExtraKeyWitnesses: number, numExtraByronKeyWitnesses: number, totalRefScriptSize: number): Promise<bigint>;
+    estimateMinFee(protocolParams: any, numKeyWitnesses: number, numByronKeyWitnesses: number, totalRefScriptSize: number): Promise<BigInt>;
 
     /**
      * Signs the transaction with a payment key.
@@ -96,3 +96,4 @@ declare interface CardanoAPI {
      */
     newConwayTx(): Promise<UnsignedTx>;
 }
+
