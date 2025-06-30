@@ -95,3 +95,4 @@ declare interface CardanoAPI {
      */
     newConwayTx(): Promise<UnsignedTx>;
 }
+

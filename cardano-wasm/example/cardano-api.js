@@ -14,7 +14,7 @@ async function initialize() {
 
   // Wrap a function with variable arguments to make the parameters inspectable
   function fixateArgs(params, func) {
-    const paramString = params.join(',');
+    const paramString = params.map(p => p.name).join(',');
     // Dynamically create a function that captures 'func' from the closure.
     // 'this' and 'arguments' are passed through from the wrapper to 'func'.
     // Using eval allows the returned function to have named parameters for inspectability.
@@ -28,7 +28,7 @@ async function initialize() {
 
   // Same as fixateArgs but for async functions
   async function fixateArgsAsync(params, func) {
-    const paramString = params.join(',');
+    const paramString = params.map(p => p.name).join(',');
     // Dynamically create an async function.
     const wrapper = eval(`
       (async function(${paramString}) {
@@ -82,7 +82,7 @@ async function initialize() {
   });
 
   // Populate the main API object with static methods
-  apiInfo.staticMethods.forEach(method => {
+  apiInfo.mainObject.methods.forEach(method => {
     cardanoAPI[method.name] = async function (...args) {
       const resultPromise = instance.exports[method.name](...args);
 
