@@ -1,12 +1,12 @@
 // cardano-api.d.ts
 
-export default initialize;
+export default initialise;
 
 /**
- * Initializes the Cardano API.
+ * Initialises the Cardano API.
  * @returns A promise that resolves to the main `CardanoAPI` object.
  */
-declare function initialize(): Promise<CardanoAPI>;
+declare function initialise(): Promise<CardanoAPI>;
 
 /**
  * Represents an unsigned transaction.
@@ -28,14 +28,14 @@ declare interface UnsignedTx {
     /**
      * Adds a simple transaction output to the transaction.
      * @param destAddr The destination address.
-     * @param lovelaceAmount The amount in lovelace to output.
+     * @param lovelaceAmount The amount in lovelaces to output.
      * @returns The `UnsignedTx` object with the added output.
      */
     addSimpleTxOut(destAddr: string, lovelaceAmount: bigint): UnsignedTx;
 
     /**
      * Sets the fee for the transaction.
-     * @param lovelaceAmount The fee amount in lovelace.
+     * @param lovelaceAmount The fee amount in lovelaces.
      * @returns The `UnsignedTx` object with the set fee.
      */
     setFee(lovelaceAmount: bigint): UnsignedTx;
@@ -43,12 +43,12 @@ declare interface UnsignedTx {
     /**
      * Estimates the minimum fee for the transaction.
      * @param protocolParams The protocol parameters.
-     * @param numExtraKeyWitnesses The number of extra key witnesses (in addition to the ones already added).
-     * @param numExtraByronKeyWitnesses The number of extra Byron key witnesses.
+     * @param numKeyWitnesses The number of key witnesses.
+     * @param numByronKeyWitnesses The number of Byron key witnesses.
      * @param totalRefScriptSize The total size of reference scripts in bytes.
-     * @returns A promise that resolves to the estimated minimum fee in lovelace.
+     * @returns A promise that resolves to the estimated minimum fee in lovelaces.
      */
-    estimateMinFee(protocolParams: any, numExtraKeyWitnesses: number, numExtraByronKeyWitnesses: number, totalRefScriptSize: number): Promise<bigint>;
+    estimateMinFee(protocolParams: any, numKeyWitnesses: number, numByronKeyWitnesses: number, totalRefScriptSize: number): Promise<BigInt>;
 
     /**
      * Signs the transaction with a payment key.
@@ -96,3 +96,4 @@ declare interface CardanoAPI {
      */
     newConwayTx(): Promise<UnsignedTx>;
 }
+
