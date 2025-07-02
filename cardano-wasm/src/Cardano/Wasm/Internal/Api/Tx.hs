@@ -18,7 +18,16 @@ import Cardano.Api.Plutus qualified as Shelley
 import Cardano.Api.Tx qualified as TxBody
 
 import Cardano.Ledger.Api qualified as Ledger
-import Cardano.Ledger.Binary (Annotator, DecCBOR (decCBOR), EncCBOR, Version, decodeFullAnnotator)
+import Cardano.Ledger.Binary
+  ( Annotator
+  , DecCBOR (decCBOR)
+  , EncCBOR
+  , FromCBOR (..)
+  , ToCBOR (..)
+  , Version
+  , decodeFullAnnotator
+  )
+import Cardano.Ledger.Binary.Plain (decodeFull)
 import Cardano.Wasm.Internal.ExceptionHandling (justOrError, rightOrError)
 
 import Codec.CBOR.Write qualified as CBOR
@@ -41,41 +50,63 @@ eraToVersion era =
   case era of
     Exp.ConwayEra -> Ledger.eraProtVerHigh @(Exp.LedgerEra Exp.ConwayEra)
 
+-- | Encode a value to a base16 encoded string of its CBOR representation.
+encodeEncCBOR :: forall era a. EncCBOR a => Exp.Era era -> a -> Text.Text
+encodeEncCBOR era = Text.decodeUtf8 . Base16.encode . Ledger.serialize' (eraToVersion era)
+
+-- | Decode a base16 encoded string of the CBOR representation corresponding to the CDDL.
+decodeDecCBOR
+  :: forall era m a
+   . (MonadThrow m, DecCBOR (Annotator a)) => Exp.Era era -> Text.Text -> Text.Text -> m a
+decodeDecCBOR era desc cbor = do
+  cddlBS <- rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
+  rightOrError $ decodeFullAnnotator (eraToVersion era) desc decCBOR (fromStrict cddlBS)
+
+-- | Encode a value to a base16 encoded string of its CBOR representation from a 'ToCBOR' instance.
+encodeToCBOR
+  :: forall a. ToCBOR a => a -> Text.Text
+encodeToCBOR = Text.decodeUtf8 . Base16.encode . CBOR.toStrictByteString . toCBOR
+
+-- | Decode a base16 encoded string of the CBOR representation from a 'FromCBOR' instance.
+decodeFromCBOR :: forall m a. (MonadThrow m, FromCBOR a) => Text.Text -> m a
+decodeFromCBOR cbor = do
+  cddlBS <- rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
+  rightOrError $ decodeFull (fromStrict cddlBS)
+
 -- * @UnsignedTx@ object
 
 -- | An object representing a transaction that is being built and hasn't
 -- been signed yet. It abstracts over the era of the transaction.
 -- It is meant to be an opaque object in JavaScript API.
 data UnsignedTxObject
-  = forall era. UnsignedTxObject (Exp.Era era) [Ledger.WitVKey Ledger.Witness] (Exp.UnsignedTx era)
+  = forall era. UnsignedTxObject (Exp.Era era) [Api.SigningKey Api.PaymentKey] (Exp.UnsignedTx era)
 
 instance ToJSON UnsignedTxObject where
   toJSON :: UnsignedTxObject -> Aeson.Value
-  toJSON (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) =
+  toJSON (UnsignedTxObject era signingKeys (Exp.UnsignedTx tx)) =
     obtainCommonConstraints era $
       let encode :: forall a. EncCBOR a => a -> Text.Text
           encode = Text.decodeUtf8 . Base16.encode . Ledger.serialize' (eraToVersion era)
        in Aeson.object
             [ "era" .= Exp.Some era
-            , "keyWitnesess" .= map encode keyWitnesess
+            , "signingKeys" .= map encodeToCBOR signingKeys
             , "tx" .= encode tx
             ]
 
 instance FromJSON UnsignedTxObject where
-  parseJSON :: HasCallStack => Aeson.Value -> Aeson.Parser UnsignedTxObject
+  parseJSON :: Aeson.Value -> Aeson.Parser UnsignedTxObject
   parseJSON = Aeson.withObject "UnsignedTxObject" $ \o -> do
     Exp.Some era <- o Aeson..: "era"
-    let decode :: forall m a. (MonadThrow m, DecCBOR (Annotator a)) => Text.Text -> Text.Text -> m a
-        decode desc cbor = do
-          cddlBS <- rightOrError $ Base16.decode $ Text.encodeUtf8 cbor
-          rightOrError $ decodeFullAnnotator (eraToVersion era) desc decCBOR (fromStrict cddlBS)
-    keyWitnesses :: [Text.Text] <- o Aeson..: "keyWitnesess"
+    signingKeys :: [Text.Text] <- o Aeson..: "signingKeys"
     tx :: Text.Text <- o Aeson..: "tx"
     obtainCommonConstraints era $ do
-      decodedWitnesses <- mapM (toMonadFail . decode "KeyWitness") keyWitnesses
-      decodedTx <- toMonadFail $ decode "Tx" tx
+      decodedTx <- toMonadFail $ decodeDecCBOR era "Tx" tx
+      decodedSigningKeys <- mapM (toMonadFail . decodeFromCBOR) signingKeys
       return $
-        UnsignedTxObject era decodedWitnesses (Exp.UnsignedTx decodedTx)
+        UnsignedTxObject
+          era
+          decodedSigningKeys
+          (Exp.UnsignedTx decodedTx)
 
 -- | Create a new unsigned transaction object for making a Conway era transaction.
 newConwayTxImpl :: UnsignedTxObject
@@ -83,11 +114,11 @@ newConwayTxImpl = UnsignedTxObject Exp.ConwayEra [] (Exp.UnsignedTx (Ledger.mkBa
 
 -- | Add a simple transaction input to an unsigned transaction object.
 addTxInputImpl :: UnsignedTxObject -> Api.TxId -> Api.TxIx -> UnsignedTxObject
-addTxInputImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) txId txIx =
+addTxInputImpl (UnsignedTxObject era signingKeys (Exp.UnsignedTx tx)) txId txIx =
   obtainCommonConstraints era $
     let txIn = Api.TxIn txId txIx
         tx' = tx & Ledger.bodyTxL . Ledger.inputsTxBodyL %~ (<> Set.fromList [TxBody.toShelleyTxIn txIn])
-     in UnsignedTxObject era keyWitnesess $ Exp.UnsignedTx tx'
+     in UnsignedTxObject era signingKeys $ Exp.UnsignedTx tx'
 
 -- | Add a simple transaction output to an unsigned transaction object.
 -- It takes a destination address and an amount in lovelace.
@@ -119,23 +150,22 @@ addSimpleTxOutImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) destA
 
 -- | Set the fee for an unsigned transaction object.
 setFeeImpl :: UnsignedTxObject -> Ledger.Coin -> UnsignedTxObject
-setFeeImpl (UnsignedTxObject era keyWitnesess (Exp.UnsignedTx tx)) fee =
+setFeeImpl (UnsignedTxObject era signingKeys (Exp.UnsignedTx tx)) fee =
   obtainCommonConstraints era $
     let tx' = tx & Ledger.bodyTxL . Ledger.feeTxBodyL .~ fee
-     in UnsignedTxObject era keyWitnesess $ Exp.UnsignedTx tx'
+     in UnsignedTxObject era signingKeys $ Exp.UnsignedTx tx'
 
 -- | Add a payment key to the list of signatories for an unsigned transaction.
 addSigningKeyImpl :: UnsignedTxObject -> Api.SigningKey Api.PaymentKey -> UnsignedTxObject
-addSigningKeyImpl (UnsignedTxObject era keyWitnesess unsignedTx) signingKey =
+addSigningKeyImpl (UnsignedTxObject era signingKeys unsignedTxContent) signingKey =
   obtainCommonConstraints era $
-    let witness = Api.WitnessPaymentKey signingKey
-        keyWitness = Exp.makeKeyWitness era unsignedTx witness
-     in UnsignedTxObject era (keyWitnesess ++ [keyWitness]) unsignedTx
+    UnsignedTxObject era (signingKeys ++ [signingKey]) unsignedTxContent
 
 -- | Sign an unsigned transaction using the list of signatories.
 signTxImpl :: UnsignedTxObject -> SignedTxObject
-signTxImpl (UnsignedTxObject era keyWitnesess unsignedTx) =
-  SignedTxObject era (Exp.signTx era [] keyWitnesess unsignedTx)
+signTxImpl (UnsignedTxObject era signingKeys unsignedTxContent) =
+  let witness = map (Exp.makeKeyWitness era unsignedTxContent . Api.WitnessPaymentKey) signingKeys
+   in SignedTxObject era (Exp.signTx era [] witness unsignedTxContent)
 
 -- * @SignedTx@ object
 
