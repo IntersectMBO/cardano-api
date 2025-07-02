@@ -28,6 +28,7 @@ module Cardano.Api.Genesis
 
     -- * Utilities
   , unsafeBoundedRational
+  , fromShelleyGenesis
   )
 where
 
