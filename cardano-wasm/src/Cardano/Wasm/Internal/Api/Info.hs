@@ -105,13 +105,8 @@ apiInfo =
                   , methodReturnType = Fluent
                   }
               , MethodInfo
-                  { methodName = "addSigningKey"
+                  { methodName = "signWithPaymentKey"
                   , methodParams = ["signingKey"]
-                  , methodReturnType = Fluent
-                  }
-              , MethodInfo
-                  { methodName = "signTx"
-                  , methodParams = []
                   , methodReturnType = NewObject signedTxObjectName
                   }
               ]
@@ -122,6 +117,11 @@ apiInfo =
           { virtualObjectName = signedTxObjectName
           , virtualObjectMethods =
               [ MethodInfo
+                  { methodName = "alsoSignWithPaymentKey"
+                  , methodParams = ["signingKey"]
+                  , methodReturnType = Fluent
+                  }
+              , MethodInfo
                   { methodName = "txToCbor"
                   , methodParams = []
                   , methodReturnType = OtherType "string"

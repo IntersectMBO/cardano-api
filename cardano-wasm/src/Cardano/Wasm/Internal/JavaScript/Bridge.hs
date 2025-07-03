@@ -161,11 +161,8 @@ foreign export javascript "addSimpleTxOut"
 foreign export javascript "setFee"
   setFee :: JSUnsignedTx -> JSCoin -> IO JSUnsignedTx
 
-foreign export javascript "addSigningKey"
-  addSigningKey :: JSUnsignedTx -> JSSigningKey -> IO JSUnsignedTx
-
-foreign export javascript "signTx"
-  signTx :: JSUnsignedTx -> IO JSSignedTx
+foreign export javascript "signWithPaymentKey"
+  signWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
 
 -- | Create a new Conway era unsigned transaction.
 newConwayTx :: IO JSUnsignedTx
@@ -200,24 +197,31 @@ setFee jsUnsignedTx jsCoin =
             <*> fromJSVal jsCoin
         )
 
--- | Add a payment signing key to an unsigned transaction.
-addSigningKey :: JSUnsignedTx -> JSSigningKey -> IO JSUnsignedTx
-addSigningKey jsUnsignedTx jsSigningKey =
+-- | Sign an unsigned transaction with a payment key.
+signWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
+signWithPaymentKey jsUnsignedTx jsSigningKey =
   toJSVal
-    =<< ( Wasm.addSigningKeyImpl
+    =<< ( Wasm.signWithPaymentKeyImpl
             <$> fromJSVal jsUnsignedTx
             <*> fromJSVal jsSigningKey
         )
 
--- | Sign an unsigned transaction.
-signTx :: JSUnsignedTx -> IO JSSignedTx
-signTx jsUnsignedTx =
-  toJSVal . Wasm.signTxImpl =<< fromJSVal jsUnsignedTx
-
 -- *  SignedTxObject
+
+foreign export javascript "alsoSignWithPaymentKey"
+  alsoSignWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
 
 foreign export javascript "txToCbor"
   txToCbor :: JSSignedTx -> IO JSString
+
+-- | Sign an unsigned transaction with a payment key.
+alsoSignWithPaymentKey :: JSUnsignedTx -> JSSigningKey -> IO JSSignedTx
+alsoSignWithPaymentKey jsUnsignedTx jsSigningKey =
+  toJSVal
+    =<< ( Wasm.alsoSignWithPaymentKeyImpl
+            <$> fromJSVal jsUnsignedTx
+            <*> fromJSVal jsSigningKey
+        )
 
 -- | Convert a signed transaction to its CBOR representation (hex-encoded string).
 txToCbor :: JSSignedTx -> IO JSString
