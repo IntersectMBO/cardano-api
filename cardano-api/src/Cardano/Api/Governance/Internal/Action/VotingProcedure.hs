@@ -17,9 +17,11 @@ module Cardano.Api.Governance.Internal.Action.VotingProcedure where
 import Cardano.Api.Address
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
+import Cardano.Api.Error
 import Cardano.Api.Governance.Internal.Action.ProposalProcedure
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
+import Cardano.Api.Pretty (pshow)
 import Cardano.Api.Serialise.Cbor
 import Cardano.Api.Serialise.TextEnvelope.Internal
 
@@ -143,6 +145,9 @@ newtype VotesMergingConflict era
       , [L.GovActionId]
       )
   deriving Show
+
+instance Error (VotesMergingConflict era) where
+  prettyError = pshow
 
 -- | @mergeVotingProcedures vote1 vote2@ merges @vote1@ and @vote2@ into a single vote,
 -- or fails if the votes are incompatible.

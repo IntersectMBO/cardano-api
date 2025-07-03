@@ -37,6 +37,7 @@ module Cardano.Api.Governance.Internal.Poll
 where
 
 import Cardano.Api.Era
+import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Hash
 import Cardano.Api.Key.Internal
@@ -277,6 +278,9 @@ data GovernancePollError
   | ErrGovernancePollMalformedAnswer DecoderError
   | ErrGovernancePollInvalidAnswer GovernancePollInvalidAnswerError
   deriving Show
+
+instance Error GovernancePollError where
+  prettyError = pretty . renderGovernancePollError
 
 data GovernancePollInvalidAnswerError = GovernancePollInvalidAnswerError
   { invalidAnswerAcceptableAnswers :: [(Word, Text)]

@@ -18,6 +18,7 @@ where
 import Cardano.Api.Error
 import Cardano.Api.Pretty
 
+import Cardano.Chain.Genesis qualified as Byron
 import Cardano.Ledger.Alonzo.PParams qualified as Ledger
 import Cardano.Ledger.Babbage.PParams qualified as Ledger
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
@@ -28,6 +29,7 @@ import Cardano.Ledger.Coin qualified as L
 import Cardano.Ledger.Conway.PParams qualified as Ledger
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Shelley.PParams qualified as Ledger
+import Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import PlutusLedgerApi.Common qualified as P
 
 import Codec.Binary.Bech32 qualified as Bech32
@@ -36,8 +38,10 @@ import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
+import Data.Text.Encoding.Error qualified as T
 import GHC.Exts (IsList (..))
 import Network.Mux qualified as Mux
+import Text.Parsec.Error qualified as P
 
 deriving instance Data DecoderError
 
@@ -270,3 +274,21 @@ instance Error CBOR.DecoderError where
 
 instance Error P.ScriptDecodeError where
   prettyError = pshow
+
+instance Error T.UnicodeException where
+  prettyError = pshow
+
+instance Error EraMismatch where
+  prettyError (EraMismatch ledgerEraName' otherEraName') =
+    "The era of the node and the tx do not match. "
+      <> "The node is running in the "
+      <> pshow ledgerEraName'
+      <> " era, but the transaction is for the "
+      <> pshow otherEraName'
+      <> " era."
+
+instance Error Byron.GenesisDataGenerationError where
+  prettyError = pretty . show
+
+instance Error P.ParseError where
+  prettyError = pretty . show
