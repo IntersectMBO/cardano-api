@@ -74,12 +74,6 @@ data RawBytesHexError
       -- ^ error message
   deriving Show
 
-newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
-  -- TODO We can do better than use String to carry the error message
-  { unSerialiseAsRawBytesError :: String
-  }
-  deriving (Eq, Show)
-
 instance Error RawBytesHexError where
   prettyError = \case
     RawBytesHexErrorBase16DecodeFail input typeRep' message ->
@@ -95,3 +89,12 @@ instance Error RawBytesHexError where
     toText bs = case Text.decodeUtf8' bs of
       Right t -> Text.unpack t
       Left _ -> show bs
+
+newtype SerialiseAsRawBytesError = SerialiseAsRawBytesError
+  -- TODO We can do better than use String to carry the error message
+  { unSerialiseAsRawBytesError :: String
+  }
+  deriving (Eq, Show)
+
+instance Error SerialiseAsRawBytesError where
+  prettyError = pshow . unSerialiseAsRawBytesError

@@ -24,6 +24,7 @@ import Cardano.Api.Address
 import Cardano.Api.Certificate.Internal
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Era
+import Cardano.Api.Error
 import Cardano.Api.IO
 import Cardano.Api.Monad.Error
 import Cardano.Api.Network.IPC
@@ -61,6 +62,9 @@ data QueryConvenienceError
   | QceUnsupportedNtcVersion !UnsupportedNtcVersionError
   | QceUnexpectedException !SomeException
   deriving Show
+
+instance Error QueryConvenienceError where
+  prettyError = pshow . renderQueryConvenienceError
 
 renderQueryConvenienceError :: QueryConvenienceError -> Text
 renderQueryConvenienceError (AcqFailure e) =
