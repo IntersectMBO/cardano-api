@@ -1,0 +1,862 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Tx</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Creating transactions using the old API</span></span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-comment">-- Both the old and new APIs support transaction creation. Transactions can be</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-comment">-- converted between formats, as they share the same underlying representation.</span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- @cardano-api@ will be moving towards using the new API and deprecating</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-comment">-- the old way to ensure simplicity, closer alignment with the ledger, and</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-comment">-- easier maintenance.</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-comment">-- In both the new and old APIs, to construct a transaction, you need</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-comment">-- to construct a 'TxBodyContent', and you will need at least a</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-comment">-- witness (for example, a 'ShelleyWitnessSigningKey'), to sign the transaction.</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-comment">-- This process remains unchanged.</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-comment">-- To learn how to create a transaction using the new API, refer to</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Experimental.Tx&quot; documentation.</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-comment">-- The next examples use the following qualified modules:</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api.Script as Script      -- types related to scripts (Plutus and native)</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api.Ledger as Ledger      -- cardano-ledger re-exports</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Creating a 'TxBodyContent'</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-comment">-- To create a transaction, you first need to define the contents of its body. This section</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-comment">-- will show how to use the API to create a 'TxBodyContent' for a simple transaction.</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- 'TxBodyContent' datatype provides several fields because transactions can serve multiple</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-comment">-- purposes, but the function 'defaultTxBodyContent' (exported from &quot;Cardano.Api&quot;) already provides</span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-comment">-- a base 'TxBodyContent' with all fields set to their default values that you can use as a starting point</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-comment">-- so as not to have to set all fields manually.</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- The 'defaultTxBodyContent' takes, as the only parameter, the 'ShelleyBasedEra' witness for the era</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- you are working with. For example, if you are working with the 'ConwayEra', use 'shelleyBasedEra'</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">-- available in &quot;Cardano.Api&quot;, as follows:</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-comment">-- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">-- This is what creating a simple 'TxBodyContent' would look like.</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-comment">-- First, choose a transaction output to spend (a UTXO). Specify which UTXO to spend by</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">-- providing the transaction ID and the index of the output in that transaction that you want</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">-- to spend.</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-comment">-- To specify the transaction ID, you can use the 'deserialiseFromRawBytesHex' function on the</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">-- hexadecimal representation of the transaction hash. For example:</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- let (Right srcTxId) = Api.deserialiseFromRawBytesHex Api.AsTxId &quot;be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978&quot;</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- In real implementations, failure cases should be handled appropriately.</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- To specify the transaction index, use the 'TxIx' constructor. For example:</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- let srcTxIx = Api.TxIx 0</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">-- Now, combine both to create a 'TxIn' value and pair it with a witness requirement using 'BuildTxWith' :</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- let txIn = ( Api.TxIn srcTxId srcTxIx</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">--            , Api.BuildTxWith (Api.KeyWitness Api.KeyWitnessForSpending)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">--            )</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">-- Next, specify the address of the recipient of the transaction. If you have the bech32 representation,</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- you can use the 'deserialiseAddress' function to get the 'AddressInEra' type. For example:</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- let (Just destAddress) = Api.deserialiseAddress (Api.AsAddressInEra eraAsType) &quot;addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v&quot;</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- Now, you can create a 'TxOut' value. For simplicity, assume the output is a simple payment output</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- of 10 ada, with no datum or reference script attached to it:</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-comment">-- let txOut = Api.TxOut</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">--               destAddress</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">--               (Api.lovelaceToTxOutValue sbe 10_000_000)</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">--               Api.TxOutDatumNone</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-comment">--               Script.ReferenceScriptNone</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- Note to set the transaction fee. For example, set it to 2 ada:</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- let txFee = Api.TxFeeExplicit sbe 2_000_000</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-comment">-- Finally, you can create the 'TxBodyContent' by using the 'defaultTxBodyContent' function and</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">-- putting everything together:</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">-- let txBodyContent = Api.defaultTxBodyContent sbe</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">--                      &amp; Api.setTxIns [txIn]</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">--                      &amp; Api.setTxOuts [txOut]</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">--                      &amp; Api.setTxFee txFee</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- The 'txBodyContent' can now be used to create a transaction using the old or the new API.</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Balancing a transaction</span></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">-- If you have a UTXO with exactly 12 ada, you could just construct the transaction as in the</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-comment">-- previous section directly, and it would be a valid transaction, but:</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-comment">--   * It is probably wasting ADA</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-comment">--   * There may not be exactly one UTXO of 12 ada</span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-comment">--   * The transaciton may not be this simple.</span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-comment">-- For these reasons, it is recommended that you balance the transaction before proceeding with</span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-comment">-- signing and submitting.</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-comment">-- See how to balance a transaction in the &quot;Cardano.Api.Tx.Internal.Fee&quot; documentation.</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Creating a 'ShelleyWitnessSigningKey'</span></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-comment">-- Signing a transaction requires a witness, for example, a 'ShelleyWitnessSigningKey'.</span><span>
+</span><span id="line-131"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-comment">-- Learn how to create a 'ShelleyWitnessSigningKey' in the &quot;Cardano.Api.Tx.Internal.Sign&quot; documentation.</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Creating a transaction using the old API</span></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- Now that you have a 'TxBodyContent' and a 'ShelleyWitnessSigningKey', you can easily create a transaction using the old API.</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-comment">-- First, create a transaction body using the 'createTransactionBody' function and the 'ShelleyBasedEra' witness</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-comment">-- defined earlier.</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-comment">-- Create the transaction body using the 'TransactionBodyContent' created earlier:</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-comment">-- let (Right txBody) = Api.createTransactionBody sbe txBodyContent</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-comment">-- Then, sign the transaction using the 'signShelleyTransaction' function and the witness:</span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-comment">-- let oldApiSignedTx :: Api.Tx Api.ConwayEra = Api.signShelleyTransaction sbe txBody [witness]</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-comment">-- We now have a signed transaction. Learn how to submit it to the node by using the IPC protocol in</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-comment">-- the &quot;Cardano.Api.Network.IPC.Internal&quot;.</span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Inspecting transactions</span></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- To deconstruct an old-style 'TxBody' into a 'TxBodyContent', you can also use the</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-comment">-- 'TxBody' pattern. Note that this cannot be used for constructing. For that, use 'ShelleyTxBody'</span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-comment">-- or 'createTransactionBody', as in the example.</span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-comment">-- To extract the 'TxBody' and the 'KeyWitness'es from an old-style 'Tx', use</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-comment">-- the functions 'getTxBody' and 'getTxWitnesses' respectively, from &quot;Cardano.Api&quot;.</span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Appendix: Getting Shelley-based era witness from the new API</span></span><span>
+</span><span id="line-167"></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-comment">-- If you are using the new API, you can also derive the 'ShelleyBasedEra' of it from 'ConwayEra'</span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-comment">-- from &quot;Cardano.Api.Internal.Experimental&quot; using the 'convert' function:</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-comment">-- let era = Exp.ConwayEra</span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-comment">-- let sbe = Api.convert era</span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Transaction body</span></span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#TxBody"><span class="hs-identifier">TxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#createTransactionBody"><span class="hs-identifier">createTransactionBody</span></a></span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#createAndValidateTransactionBody"><span class="hs-identifier">createAndValidateTransactionBody</span></a></span><span>
+</span><span id="line-181"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxBodyContent"><span class="hs-identifier">TxBodyContent</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Byron only</span></span><span>
+</span><span id="line-184"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#makeByronTransactionBody"><span class="hs-identifier">makeByronTransactionBody</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Transaction body builders</span></span><span>
+</span><span id="line-187"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#defaultTxBodyContent"><span class="hs-identifier">defaultTxBodyContent</span></a></span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#defaultTxFee"><span class="hs-identifier">defaultTxFee</span></a></span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#defaultTxValidityUpperBound"><span class="hs-identifier">defaultTxValidityUpperBound</span></a></span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxIns"><span class="hs-identifier">setTxIns</span></a></span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxIns"><span class="hs-identifier">modTxIns</span></a></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxIn"><span class="hs-identifier">addTxIn</span></a></span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxIns"><span class="hs-identifier">addTxIns</span></a></span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxInsCollateral"><span class="hs-identifier">setTxInsCollateral</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxInsCollateral"><span class="hs-identifier">modTxInsCollateral</span></a></span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxInsCollateral"><span class="hs-identifier">addTxInsCollateral</span></a></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxInCollateral"><span class="hs-identifier">addTxInCollateral</span></a></span><span>
+</span><span id="line-198"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxInsReference"><span class="hs-identifier">setTxInsReference</span></a></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxInsReference"><span class="hs-identifier">modTxInsReference</span></a></span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxInsReference"><span class="hs-identifier">addTxInsReference</span></a></span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxInReference"><span class="hs-identifier">addTxInReference</span></a></span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxOuts"><span class="hs-identifier">setTxOuts</span></a></span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxOuts"><span class="hs-identifier">modTxOuts</span></a></span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxOut"><span class="hs-identifier">addTxOut</span></a></span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxOuts"><span class="hs-identifier">addTxOuts</span></a></span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxTotalCollateral"><span class="hs-identifier">setTxTotalCollateral</span></a></span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxTotalCollateral"><span class="hs-identifier">modTxTotalCollateral</span></a></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxReturnCollateral"><span class="hs-identifier">setTxReturnCollateral</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxReturnCollateral"><span class="hs-identifier">modTxReturnCollateral</span></a></span><span>
+</span><span id="line-210"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxFee"><span class="hs-identifier">setTxFee</span></a></span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxFee"><span class="hs-identifier">modTxFee</span></a></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxValidityLowerBound"><span class="hs-identifier">setTxValidityLowerBound</span></a></span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxValidityLowerBound"><span class="hs-identifier">modTxValidityLowerBound</span></a></span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxValidityUpperBound"><span class="hs-identifier">setTxValidityUpperBound</span></a></span><span>
+</span><span id="line-215"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxValidityUpperBound"><span class="hs-identifier">modTxValidityUpperBound</span></a></span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxMetadata"><span class="hs-identifier">setTxMetadata</span></a></span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxMetadata"><span class="hs-identifier">modTxMetadata</span></a></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxAuxScripts"><span class="hs-identifier">setTxAuxScripts</span></a></span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxAuxScripts"><span class="hs-identifier">modTxAuxScripts</span></a></span><span>
+</span><span id="line-220"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxExtraKeyWits"><span class="hs-identifier">setTxExtraKeyWits</span></a></span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxExtraKeyWits"><span class="hs-identifier">modTxExtraKeyWits</span></a></span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxExtraKeyWits"><span class="hs-identifier">addTxExtraKeyWits</span></a></span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxProtocolParams"><span class="hs-identifier">setTxProtocolParams</span></a></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxWithdrawals"><span class="hs-identifier">setTxWithdrawals</span></a></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxWithdrawals"><span class="hs-identifier">modTxWithdrawals</span></a></span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxCertificates"><span class="hs-identifier">setTxCertificates</span></a></span><span>
+</span><span id="line-227"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxCertificates"><span class="hs-identifier">modTxCertificates</span></a></span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxUpdateProposal"><span class="hs-identifier">setTxUpdateProposal</span></a></span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxUpdateProposal"><span class="hs-identifier">modTxUpdateProposal</span></a></span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxProposalProcedures"><span class="hs-identifier">setTxProposalProcedures</span></a></span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxVotingProcedures"><span class="hs-identifier">setTxVotingProcedures</span></a></span><span>
+</span><span id="line-232"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxMintValue"><span class="hs-identifier">setTxMintValue</span></a></span><span>
+</span><span id="line-233"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxMintValue"><span class="hs-identifier">modTxMintValue</span></a></span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#addTxMintValue"><span class="hs-identifier">addTxMintValue</span></a></span><span>
+</span><span id="line-235"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#subtractTxMintValue"><span class="hs-identifier">subtractTxMintValue</span></a></span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxScriptValidity"><span class="hs-identifier">setTxScriptValidity</span></a></span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#modTxScriptValidity"><span class="hs-identifier">modTxScriptValidity</span></a></span><span>
+</span><span id="line-238"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxCurrentTreasuryValue"><span class="hs-identifier">setTxCurrentTreasuryValue</span></a></span><span>
+</span><span id="line-239"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#setTxTreasuryDonation"><span class="hs-identifier">setTxTreasuryDonation</span></a></span><span>
+</span><span id="line-240"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxBodyError"><span class="hs-identifier">TxBodyError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-241"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutputError"><span class="hs-identifier">TxOutputError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#TxBodyScriptData"><span class="hs-identifier">TxBodyScriptData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#selectTxDatums"><span class="hs-identifier">selectTxDatums</span></a></span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#TxScriptValidity"><span class="hs-identifier">TxScriptValidity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ScriptValidity"><span class="hs-identifier">ScriptValidity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-246"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#scriptValidityToIsValid"><span class="hs-identifier">scriptValidityToIsValid</span></a></span><span>
+</span><span id="line-247"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#isValidToScriptValidity"><span class="hs-identifier">isValidToScriptValidity</span></a></span><span>
+</span><span id="line-248"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#txScriptValidityToIsValid"><span class="hs-identifier">txScriptValidityToIsValid</span></a></span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#txScriptValidityToScriptValidity"><span class="hs-identifier">txScriptValidityToScriptValidity</span></a></span><span>
+</span><span id="line-250"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html#UTxO"><span class="hs-identifier">UTxO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Transaction Ids</span></span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxId"><span class="hs-identifier">TxId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-254"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxId"><span class="hs-identifier">parseTxId</span></a></span><span>
+</span><span id="line-255"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#getTxId"><span class="hs-identifier">getTxId</span></a></span><span>
+</span><span id="line-256"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#getTxIdByron"><span class="hs-identifier">getTxIdByron</span></a></span><span>
+</span><span id="line-257"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#getTxIdShelley"><span class="hs-identifier">getTxIdShelley</span></a></span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Transaction inputs</span></span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-261"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIn"><span class="hs-identifier">parseTxIn</span></a></span><span>
+</span><span id="line-262"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxIns"><span class="hs-identifier">TxIns</span></a></span><span>
+</span><span id="line-263"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#indexTxIns"><span class="hs-identifier">indexTxIns</span></a></span><span>
+</span><span id="line-264"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#TxIx"><span class="hs-identifier">TxIx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#parseTxIx"><span class="hs-identifier">parseTxIx</span></a></span><span>
+</span><span id="line-266"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#genesisUTxOPseudoTxIn"><span class="hs-identifier">genesisUTxOPseudoTxIn</span></a></span><span>
+</span><span id="line-267"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#getReferenceInputsSizeForTxIds"><span class="hs-identifier">getReferenceInputsSizeForTxIds</span></a></span><span>
+</span><span id="line-268"></span><span>
+</span><span id="line-269"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Transaction outputs</span></span><span>
+</span><span id="line-270"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#CtxTx"><span class="hs-identifier">CtxTx</span></a></span><span>
+</span><span id="line-271"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#CtxUTxO"><span class="hs-identifier">CtxUTxO</span></a></span><span>
+</span><span id="line-272"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOut"><span class="hs-identifier">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-273"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutValue"><span class="hs-identifier">TxOutValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutDatum"><span class="hs-identifier">TxOutDatum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutDatumNone"><span class="hs-identifier">TxOutDatumNone</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutDatumHash"><span class="hs-identifier">TxOutDatumHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutSupplementalDatum"><span class="hs-identifier">TxOutSupplementalDatum</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutDatumInline"><span class="hs-identifier">TxOutDatumInline</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-275"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#toCtxUTxOTxOut"><span class="hs-identifier">toCtxUTxOTxOut</span></a></span><span>
+</span><span id="line-276"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#fromCtxUTxOTxOut"><span class="hs-identifier">fromCtxUTxOTxOut</span></a></span><span>
+</span><span id="line-277"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#lovelaceToTxOutValue"><span class="hs-identifier">lovelaceToTxOutValue</span></a></span><span>
+</span><span id="line-278"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#prettyRenderTxOut"><span class="hs-identifier">prettyRenderTxOut</span></a></span><span>
+</span><span id="line-279"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#txOutValueToLovelace"><span class="hs-identifier">txOutValueToLovelace</span></a></span><span>
+</span><span id="line-280"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#txOutValueToValue"><span class="hs-identifier">txOutValueToValue</span></a></span><span>
+</span><span id="line-281"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#TxOutInAnyEra"><span class="hs-identifier">TxOutInAnyEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-282"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#txOutInAnyEra"><span class="hs-identifier">txOutInAnyEra</span></a></span><span>
+</span><span id="line-283"></span><span>
+</span><span id="line-284"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Other transaction body types</span></span><span>
+</span><span id="line-285"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxInsCollateral"><span class="hs-identifier">TxInsCollateral</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-286"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxInsReference"><span class="hs-identifier">TxInsReference</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-287"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxInsReferenceDatums"><span class="hs-identifier">TxInsReferenceDatums</span></a></span><span>
+</span><span id="line-288"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#getReferenceInputDatumMap"><span class="hs-identifier">getReferenceInputDatumMap</span></a></span><span>
+</span><span id="line-289"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxReturnCollateral"><span class="hs-identifier">TxReturnCollateral</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-290"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxTotalCollateral"><span class="hs-identifier">TxTotalCollateral</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxFee"><span class="hs-identifier">TxFee</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-292"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxValidityLowerBound"><span class="hs-identifier">TxValidityLowerBound</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-293"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxValidityUpperBound"><span class="hs-identifier">TxValidityUpperBound</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-294"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxMetadataInEra"><span class="hs-identifier">TxMetadataInEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-295"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxAuxScripts"><span class="hs-identifier">TxAuxScripts</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-296"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxExtraKeyWitnesses"><span class="hs-identifier">TxExtraKeyWitnesses</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-297"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxWithdrawals"><span class="hs-identifier">TxWithdrawals</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-298"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#indexTxWithdrawals"><span class="hs-identifier">indexTxWithdrawals</span></a></span><span>
+</span><span id="line-299"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxCertificates"><span class="hs-identifier">TxCertificates</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-300"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#mkTxCertificates"><span class="hs-identifier">mkTxCertificates</span></a></span><span>
+</span><span id="line-301"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#indexTxCertificates"><span class="hs-identifier">indexTxCertificates</span></a></span><span>
+</span><span id="line-302"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxUpdateProposal"><span class="hs-identifier">TxUpdateProposal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-303"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxMintValue"><span class="hs-identifier">TxMintValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-304"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#mkTxMintValue"><span class="hs-identifier">mkTxMintValue</span></a></span><span>
+</span><span id="line-305"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#txMintValueToValue"><span class="hs-identifier">txMintValueToValue</span></a></span><span>
+</span><span id="line-306"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#indexTxMintValue"><span class="hs-identifier">indexTxMintValue</span></a></span><span>
+</span><span id="line-307"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxVotingProcedures"><span class="hs-identifier">TxVotingProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-308"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#mkTxVotingProcedures"><span class="hs-identifier">mkTxVotingProcedures</span></a></span><span>
+</span><span id="line-309"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#indexTxVotingProcedures"><span class="hs-identifier">indexTxVotingProcedures</span></a></span><span>
+</span><span id="line-310"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#TxProposalProcedures"><span class="hs-identifier">TxProposalProcedures</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-311"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#mkTxProposalProcedures"><span class="hs-identifier">mkTxProposalProcedures</span></a></span><span>
+</span><span id="line-312"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#indexTxProposalProcedures"><span class="hs-identifier">indexTxProposalProcedures</span></a></span><span>
+</span><span id="line-313"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#indexWitnessedTxProposalProcedures"><span class="hs-identifier">indexWitnessedTxProposalProcedures</span></a></span><span>
+</span><span id="line-314"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convProposalProcedures"><span class="hs-identifier">convProposalProcedures</span></a></span><span>
+</span><span id="line-315"></span><span>
+</span><span id="line-316"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Building vs viewing transactions</span></span><span>
+</span><span id="line-317"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTxWith"><span class="hs-identifier">BuildTxWith</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-318"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#BuildTx"><span class="hs-identifier">BuildTx</span></a></span><span>
+</span><span id="line-319"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#ViewTx"><span class="hs-identifier">ViewTx</span></a></span><span>
+</span><span id="line-320"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.BuildTxWith.html#buildTxWithToMaybe"><span class="hs-identifier">buildTxWithToMaybe</span></a></span><span>
+</span><span id="line-321"></span><span>
+</span><span id="line-322"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Inspecting 'ScriptWitness'es</span></span><span>
+</span><span id="line-323"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#AnyScriptWitness"><span class="hs-identifier">AnyScriptWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-324"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#ScriptWitnessIndex"><span class="hs-identifier">ScriptWitnessIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-325"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#renderScriptWitnessIndex"><span class="hs-identifier">renderScriptWitnessIndex</span></a></span><span>
+</span><span id="line-326"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#collectTxBodyScriptWitnesses"><span class="hs-identifier">collectTxBodyScriptWitnesses</span></a></span><span>
+</span><span id="line-327"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#collectTxBodyScriptWitnessRequirements"><span class="hs-identifier">collectTxBodyScriptWitnessRequirements</span></a></span><span>
+</span><span id="line-328"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#toScriptIndex"><span class="hs-identifier">toScriptIndex</span></a></span><span>
+</span><span id="line-329"></span><span>
+</span><span id="line-330"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Conversion to inline data</span></span><span>
+</span><span id="line-331"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#scriptDataToInlineDatum"><span class="hs-identifier">scriptDataToInlineDatum</span></a></span><span>
+</span><span id="line-332"></span><span>
+</span><span id="line-333"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Internal conversion functions &amp; types</span></span><span>
+</span><span id="line-334"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convCertificates"><span class="hs-identifier">convCertificates</span></a></span><span>
+</span><span id="line-335"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convCollateralTxIns"><span class="hs-identifier">convCollateralTxIns</span></a></span><span>
+</span><span id="line-336"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convExtraKeyWitnesses"><span class="hs-identifier">convExtraKeyWitnesses</span></a></span><span>
+</span><span id="line-337"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convLanguages"><span class="hs-identifier">convLanguages</span></a></span><span>
+</span><span id="line-338"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convMintValue"><span class="hs-identifier">convMintValue</span></a></span><span>
+</span><span id="line-339"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convPParamsToScriptIntegrityHash"><span class="hs-identifier">convPParamsToScriptIntegrityHash</span></a></span><span>
+</span><span id="line-340"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convReferenceInputs"><span class="hs-identifier">convReferenceInputs</span></a></span><span>
+</span><span id="line-341"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convReturnCollateral"><span class="hs-identifier">convReturnCollateral</span></a></span><span>
+</span><span id="line-342"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convScripts"><span class="hs-identifier">convScripts</span></a></span><span>
+</span><span id="line-343"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convScriptData"><span class="hs-identifier">convScriptData</span></a></span><span>
+</span><span id="line-344"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convTotalCollateral"><span class="hs-identifier">convTotalCollateral</span></a></span><span>
+</span><span id="line-345"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convTransactionFee"><span class="hs-identifier">convTransactionFee</span></a></span><span>
+</span><span id="line-346"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convTxIns"><span class="hs-identifier">convTxIns</span></a></span><span>
+</span><span id="line-347"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#convTxOuts"><span class="hs-identifier">convTxOuts</span></a></span><span>
+</span><span id="line-348"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convTxUpdateProposal"><span class="hs-identifier">convTxUpdateProposal</span></a></span><span>
+</span><span id="line-349"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convValidityLowerBound"><span class="hs-identifier">convValidityLowerBound</span></a></span><span>
+</span><span id="line-350"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convValidityUpperBound"><span class="hs-identifier">convValidityUpperBound</span></a></span><span>
+</span><span id="line-351"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convVotingProcedures"><span class="hs-identifier">convVotingProcedures</span></a></span><span>
+</span><span id="line-352"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#convWithdrawals"><span class="hs-identifier">convWithdrawals</span></a></span><span>
+</span><span id="line-353"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#getScriptIntegrityHash"><span class="hs-identifier">getScriptIntegrityHash</span></a></span><span>
+</span><span id="line-354"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#mkCommonTxBody"><span class="hs-identifier">mkCommonTxBody</span></a></span><span>
+</span><span id="line-355"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#toAuxiliaryData"><span class="hs-identifier">toAuxiliaryData</span></a></span><span>
+</span><span id="line-356"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toByronTxId"><span class="hs-identifier">toByronTxId</span></a></span><span>
+</span><span id="line-357"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxId"><span class="hs-identifier">toShelleyTxId</span></a></span><span>
+</span><span id="line-358"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#toShelleyTxIn"><span class="hs-identifier">toShelleyTxIn</span></a></span><span>
+</span><span id="line-359"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#toShelleyTxOut"><span class="hs-identifier">toShelleyTxOut</span></a></span><span>
+</span><span id="line-360"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#toShelleyTxOutAny"><span class="hs-identifier">toShelleyTxOutAny</span></a></span><span>
+</span><span id="line-361"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxId"><span class="hs-identifier">fromShelleyTxId</span></a></span><span>
+</span><span id="line-362"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromShelleyTxIn"><span class="hs-identifier">fromShelleyTxIn</span></a></span><span>
+</span><span id="line-363"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#fromShelleyTxOut"><span class="hs-identifier">fromShelleyTxOut</span></a></span><span>
+</span><span id="line-364"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#fromByronTxIn"><span class="hs-identifier">fromByronTxIn</span></a></span><span>
+</span><span id="line-365"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#fromLedgerTxOuts"><span class="hs-identifier">fromLedgerTxOuts</span></a></span><span>
+</span><span id="line-366"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#renderTxIn"><span class="hs-identifier">renderTxIn</span></a></span><span>
+</span><span id="line-367"></span><span>
+</span><span id="line-368"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Misc helpers</span></span><span>
+</span><span id="line-369"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#calculateExecutionUnitsLovelace"><span class="hs-identifier">calculateExecutionUnitsLovelace</span></a></span><span>
+</span><span id="line-370"></span><span>
+</span><span id="line-371"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Data family instances</span></span><span>
+</span><span id="line-372"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.HasTypeProxy.html#AsType"><span class="hs-identifier">AsType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxIn.html#AsTxId"><span class="hs-identifier">AsTxId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#AsTxBody"><span class="hs-identifier">AsTxBody</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#AsByronTxBody"><span class="hs-identifier">AsByronTxBody</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#AsShelleyTxBody"><span class="hs-identifier">AsShelleyTxBody</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#AsMaryTxBody"><span class="hs-identifier">AsMaryTxBody</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-373"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#getTxBodyContent"><span class="hs-identifier">getTxBodyContent</span></a></span><span>
+</span><span id="line-374"></span><span>  </span><span class="hs-comment">-- Temp</span><span>
+</span><span id="line-375"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#validateTxIns"><span class="hs-identifier">validateTxIns</span></a></span><span>
+</span><span id="line-376"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#guardShelleyTxInsOverflow"><span class="hs-identifier">guardShelleyTxInsOverflow</span></a></span><span>
+</span><span id="line-377"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Output.html#validateTxOuts"><span class="hs-identifier">validateTxOuts</span></a></span><span>
+</span><span id="line-378"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#validateMetadata"><span class="hs-identifier">validateMetadata</span></a></span><span>
+</span><span id="line-379"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#validateTxInsCollateral"><span class="hs-identifier">validateTxInsCollateral</span></a></span><span>
+</span><span id="line-380"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html#validateProtocolParameters"><span class="hs-identifier">validateProtocolParameters</span></a></span><span>
+</span><span id="line-381"></span><span>
+</span><span id="line-382"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Convenience construction functions</span></span><span>
+</span><span id="line-383"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#constructBalancedTx"><span class="hs-identifier">constructBalancedTx</span></a></span><span>
+</span><span id="line-384"></span><span>
+</span><span id="line-385"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Misc</span></span><span>
+</span><span id="line-386"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#TxInsExistError"><span class="hs-identifier">TxInsExistError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-387"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#ScriptLockedTxInsError"><span class="hs-identifier">ScriptLockedTxInsError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-388"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#notScriptLockedTxIns"><span class="hs-identifier">notScriptLockedTxIns</span></a></span><span>
+</span><span id="line-389"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#renderNotScriptLockedTxInsError"><span class="hs-identifier">renderNotScriptLockedTxInsError</span></a></span><span>
+</span><span id="line-390"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#renderTxInsExistError"><span class="hs-identifier">renderTxInsExistError</span></a></span><span>
+</span><span id="line-391"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html#txInsExistInUTxO"><span class="hs-identifier">txInsExistInUTxO</span></a></span><span>
+</span><span id="line-392"></span><span>
+</span><span id="line-393"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Ledger TxBody wrapper with useful lens</span></span><span>
+</span><span id="line-394"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#LedgerTxBody"><span class="hs-identifier">LedgerTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-395"></span><span>
+</span><span id="line-396"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Constructors</span></span><span>
+</span><span id="line-397"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#mkAdaOnlyTxOut"><span class="hs-identifier">mkAdaOnlyTxOut</span></a></span><span>
+</span><span id="line-398"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#mkAdaValue"><span class="hs-identifier">mkAdaValue</span></a></span><span>
+</span><span id="line-399"></span><span>
+</span><span id="line-400"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Lenses</span></span><span>
+</span><span id="line-401"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#strictMaybeL"><span class="hs-identifier">strictMaybeL</span></a></span><span>
+</span><span id="line-402"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-api-1.11.0.0-2bccda52a336038288c75deda6c562f463cb8e4b43f7e023557bf7a371da9262/share/doc/html/src/Cardano.Ledger.Api.Tx.Body.html#invalidBeforeL"><span class="hs-identifier">invalidBeforeL</span></a></span><span>
+</span><span id="line-403"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-api-1.11.0.0-2bccda52a336038288c75deda6c562f463cb8e4b43f7e023557bf7a371da9262/share/doc/html/src/Cardano.Ledger.Api.Tx.Body.html#invalidHereAfterL"><span class="hs-identifier">invalidHereAfterL</span></a></span><span>
+</span><span id="line-404"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#invalidBeforeStrictL"><span class="hs-identifier">invalidBeforeStrictL</span></a></span><span>
+</span><span id="line-405"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#invalidHereAfterStrictL"><span class="hs-identifier">invalidHereAfterStrictL</span></a></span><span>
+</span><span id="line-406"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#invalidBeforeTxBodyL"><span class="hs-identifier">invalidBeforeTxBodyL</span></a></span><span>
+</span><span id="line-407"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#invalidHereAfterTxBodyL"><span class="hs-identifier">invalidHereAfterTxBodyL</span></a></span><span>
+</span><span id="line-408"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#ttlAsInvalidHereAfterTxBodyL"><span class="hs-identifier">ttlAsInvalidHereAfterTxBodyL</span></a></span><span>
+</span><span id="line-409"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#updateTxBodyL"><span class="hs-identifier">updateTxBodyL</span></a></span><span>
+</span><span id="line-410"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#txBodyL"><span class="hs-identifier">txBodyL</span></a></span><span>
+</span><span id="line-411"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#mintTxBodyL"><span class="hs-identifier">mintTxBodyL</span></a></span><span>
+</span><span id="line-412"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#scriptIntegrityHashTxBodyL"><span class="hs-identifier">scriptIntegrityHashTxBodyL</span></a></span><span>
+</span><span id="line-413"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#collateralInputsTxBodyL"><span class="hs-identifier">collateralInputsTxBodyL</span></a></span><span>
+</span><span id="line-414"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#reqSignerHashesTxBodyL"><span class="hs-identifier">reqSignerHashesTxBodyL</span></a></span><span>
+</span><span id="line-415"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#referenceInputsTxBodyL"><span class="hs-identifier">referenceInputsTxBodyL</span></a></span><span>
+</span><span id="line-416"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#collateralReturnTxBodyL"><span class="hs-identifier">collateralReturnTxBodyL</span></a></span><span>
+</span><span id="line-417"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#totalCollateralTxBodyL"><span class="hs-identifier">totalCollateralTxBodyL</span></a></span><span>
+</span><span id="line-418"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#certsTxBodyL"><span class="hs-identifier">certsTxBodyL</span></a></span><span>
+</span><span id="line-419"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#votingProceduresTxBodyL"><span class="hs-identifier">votingProceduresTxBodyL</span></a></span><span>
+</span><span id="line-420"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#proposalProceduresTxBodyL"><span class="hs-identifier">proposalProceduresTxBodyL</span></a></span><span>
+</span><span id="line-421"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#currentTreasuryValueTxBodyL"><span class="hs-identifier">currentTreasuryValueTxBodyL</span></a></span><span>
+</span><span id="line-422"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#treasuryDonationTxBodyL"><span class="hs-identifier">treasuryDonationTxBodyL</span></a></span><span>
+</span><span id="line-423"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#adaAssetL"><span class="hs-identifier">adaAssetL</span></a></span><span>
+</span><span id="line-424"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#multiAssetL"><span class="hs-identifier">multiAssetL</span></a></span><span>
+</span><span id="line-425"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#valueTxOutL"><span class="hs-identifier">valueTxOutL</span></a></span><span>
+</span><span id="line-426"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html#valueTxOutAdaAssetL"><span class="hs-identifier">valueTxOutAdaAssetL</span></a></span><span>
+</span><span id="line-427"></span><span>
+</span><span id="line-428"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Fees calculation</span></span><span>
+</span><span id="line-429"></span><span>
+</span><span id="line-430"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-431"></span><span>    </span><span class="hs-comment">-- The &quot;Cardano.Api.Tx.Internal.Body&quot; documentation demonstrates how to create a 'TxBodyContent' for a</span><span>
+</span><span id="line-432"></span><span>    </span><span class="hs-comment">-- transaction that takes 12 ada and sends 10 ada to an address, and spends 2 ada for fees. If a</span><span>
+</span><span id="line-433"></span><span>    </span><span class="hs-comment">-- UTXO with exactly 12 ada is available, this would be a valid transaction, because it is balanced, and has</span><span>
+</span><span id="line-434"></span><span>    </span><span class="hs-comment">-- sufficient fees, as 2 ada is more than enough to cover the fees for such a simple transaction on mainnet</span><span>
+</span><span id="line-435"></span><span>    </span><span class="hs-comment">-- at the time of writing.</span><span>
+</span><span id="line-436"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-437"></span><span>    </span><span class="hs-comment">-- A simple transaction that spends UTXOs is considered balanced if the value consumed equals</span><span>
+</span><span id="line-438"></span><span>    </span><span class="hs-comment">-- the value produced. Simply put, a transaction that spends only lovelace must account for</span><span>
+</span><span id="line-439"></span><span>    </span><span class="hs-comment">-- the total lovelace at the inputs, output(s), and transaction fee.</span><span>
+</span><span id="line-440"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-441"></span><span>    </span><span class="hs-comment">-- In other words:</span><span>
+</span><span id="line-442"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-443"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-444"></span><span>    </span><span class="hs-comment">-- inputs = outputs + fee</span><span>
+</span><span id="line-445"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-446"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-447"></span><span>    </span><span class="hs-comment">-- In this equation, the inputs would include the minted tokens, and the outputs would include the</span><span>
+</span><span id="line-448"></span><span>    </span><span class="hs-comment">-- burned tokens.</span><span>
+</span><span id="line-449"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-450"></span><span>    </span><span class="hs-comment">-- However, we don't always want to spend all the ada from a UTXO. Balancing a transaction ensures</span><span>
+</span><span id="line-451"></span><span>    </span><span class="hs-comment">-- that we send the desired amount, pay only the necessary fees, and calculate any extra currency</span><span>
+</span><span id="line-452"></span><span>    </span><span class="hs-comment">-- to be sent back to a change address.</span><span>
+</span><span id="line-453"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-454"></span><span>    </span><span class="hs-comment">-- Since changes to the transaction body can affect the required, finding this balance can be</span><span>
+</span><span id="line-455"></span><span>    </span><span class="hs-comment">-- challenging. Fortunately, there are functions available to help achieve this.</span><span>
+</span><span id="line-456"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-457"></span><span>    </span><span class="hs-comment">-- This module offers several methods for calculating transaction fees or fully balancing a draft</span><span>
+</span><span id="line-458"></span><span>    </span><span class="hs-comment">-- transaction. Each method requires varying amounts of information and provides different levels</span><span>
+</span><span id="line-459"></span><span>    </span><span class="hs-comment">-- of accuracy and automation.</span><span>
+</span><span id="line-460"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-461"></span><span>    </span><span class="hs-comment">-- Next, this module explores three examples of fee calculation methods. Other methods exist</span><span>
+</span><span id="line-462"></span><span>    </span><span class="hs-comment">-- but they have similar requirements.</span><span>
+</span><span id="line-463"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-464"></span><span>    </span><span class="hs-comment">-- Examples below use the following qualified modules:</span><span>
+</span><span id="line-465"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-466"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-467"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api as Api                -- the general `cardano-api` exports</span><span>
+</span><span id="line-468"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-469"></span><span>
+</span><span id="line-470"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Example 1: Simple fee calculation and manual balancing</span></span><span>
+</span><span id="line-471"></span><span>
+</span><span id="line-472"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-473"></span><span>    </span><span class="hs-comment">-- This method requires minimal information and some manual work.</span><span>
+</span><span id="line-474"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-475"></span><span>    </span><span class="hs-comment">-- It calculates the transaction fees, but we need to balance the transaction manually.</span><span>
+</span><span id="line-476"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-477"></span><span>    </span><span class="hs-comment">-- We need to know:</span><span>
+</span><span id="line-478"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-479"></span><span>    </span><span class="hs-comment">-- 1. The Shelley-based era witness for the current era, which can be obtained by using 'shelleyBasedEra'.</span><span>
+</span><span id="line-480"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-481"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-482"></span><span>    </span><span class="hs-comment">-- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra</span><span>
+</span><span id="line-483"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-484"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-485"></span><span>    </span><span class="hs-comment">-- 2. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'</span><span>
+</span><span id="line-486"></span><span>    </span><span class="hs-comment">-- query defined in &quot;Cardano.Api.Query.Internal.Type.QueryInMode&quot;. &quot;Cardano.Api.Network.IPC.Internal&quot; documentation illustrates how</span><span>
+</span><span id="line-487"></span><span>    </span><span class="hs-comment">-- to make a query using IPC protocol.</span><span>
+</span><span id="line-488"></span><span>    </span><span class="hs-comment">-- Let's assume they are stored in the @exampleProtocolParams@ variable.</span><span>
+</span><span id="line-489"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-490"></span><span>    </span><span class="hs-comment">-- 3. The draft transaction body, which can be created using 'createTransactionBody' defined in &quot;Cardano.Api.Tx.Internal.Body&quot;:</span><span>
+</span><span id="line-491"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-492"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-493"></span><span>    </span><span class="hs-comment">-- let (Right txBody) = Api.createTransactionBody sbe txBodyContent</span><span>
+</span><span id="line-494"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-495"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-496"></span><span>    </span><span class="hs-comment">-- 4. The number of Byron and Shelley key witnesses, which corresponds to the number of keys required</span><span>
+</span><span id="line-497"></span><span>    </span><span class="hs-comment">-- to sign the transaction. We can estimate this by using 'estimateTransactionKeyWitnessCount'.</span><span>
+</span><span id="line-498"></span><span>    </span><span class="hs-comment">-- For a simple transaction with a single UTXO locked by a single modern Shelley key,</span><span>
+</span><span id="line-499"></span><span>    </span><span class="hs-comment">-- there would be @0@ Byron witnesses and @1@ Shelley witness.</span><span>
+</span><span id="line-500"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-501"></span><span>    </span><span class="hs-comment">-- 5. The size of any reference scripts in bytes (if any). For simple transactions,</span><span>
+</span><span id="line-502"></span><span>    </span><span class="hs-comment">-- this would be @0@.</span><span>
+</span><span id="line-503"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-504"></span><span>    </span><span class="hs-comment">-- With this in mind, it is possible to estimate the fees required by the transaction by calling</span><span>
+</span><span id="line-505"></span><span>    </span><span class="hs-comment">-- 'evaluateTransactionFee' as follows:</span><span>
+</span><span id="line-506"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-507"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-508"></span><span>    </span><span class="hs-comment">-- let fees = Api.evaluateTransactionFee sbe exampleProtocolParams txBody 0 1 0</span><span>
+</span><span id="line-509"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-510"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-511"></span><span>    </span><span class="hs-comment">-- Once we know the required fees, we can balance the transaction by</span><span>
+</span><span id="line-512"></span><span>    </span><span class="hs-comment">-- subtracting fees from the total value of the UTXO being spent.</span><span>
+</span><span id="line-513"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-514"></span><span>    </span><span class="hs-comment">-- For example, if we have a UTXO with 12 ada, the fees are 0.2 ada, and we want</span><span>
+</span><span id="line-515"></span><span>    </span><span class="hs-comment">-- to send 10 ada to an address, the transaction could look like this:</span><span>
+</span><span id="line-516"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-517"></span><span>    </span><span class="hs-comment">-- * 1 input of 12 ada (from the UTXO)</span><span>
+</span><span id="line-518"></span><span>    </span><span class="hs-comment">-- * 1 output of 10 ada (to the recipient address)</span><span>
+</span><span id="line-519"></span><span>    </span><span class="hs-comment">-- * 1 output of 1.8 ada (to the change address)</span><span>
+</span><span id="line-520"></span><span>    </span><span class="hs-comment">-- * 0.2 ada in fees (calculated fees, in this case, an overestimation).</span><span>
+</span><span id="line-521"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-522"></span><span>    </span><span class="hs-comment">-- We would then have to update the 'TxBodyContent' accordingly and continue building</span><span>
+</span><span id="line-523"></span><span>    </span><span class="hs-comment">-- the transaction as demonstrated in &quot;Cardano.Api.Experimental.Tx&quot;.</span><span>
+</span><span id="line-524"></span><span>
+</span><span id="line-525"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Example 2: Automated balancing without chain information (no UTXO, no ledger state)</span></span><span>
+</span><span id="line-526"></span><span>
+</span><span id="line-527"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-528"></span><span>    </span><span class="hs-comment">-- This method requires more information, but better automates the process, reducing</span><span>
+</span><span id="line-529"></span><span>    </span><span class="hs-comment">-- the need for estimation. It also works with a 'TxBodyContent', rather than a</span><span>
+</span><span id="line-530"></span><span>    </span><span class="hs-comment">-- full 'TxBody'.</span><span>
+</span><span id="line-531"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-532"></span><span>    </span><span class="hs-comment">-- The following information is required:</span><span>
+</span><span id="line-533"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-534"></span><span>    </span><span class="hs-comment">-- 1. The MaryEraOnwards witness for the current era. In this case, we use the</span><span>
+</span><span id="line-535"></span><span>    </span><span class="hs-comment">-- one for the 'Conway' era:</span><span>
+</span><span id="line-536"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-537"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-538"></span><span>    </span><span class="hs-comment">-- let meo = Api.MaryEraOnwardsConway</span><span>
+</span><span id="line-539"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-540"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-541"></span><span>    </span><span class="hs-comment">-- 2. The draft 'TxBodyContent' for the transaction we want to balance. See how to create one</span><span>
+</span><span id="line-542"></span><span>    </span><span class="hs-comment">-- in &quot;Cardano.Api.Tx.Internal.Body&quot;. It is assumed to be stored in the @txBodyContent@ variable.</span><span>
+</span><span id="line-543"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-544"></span><span>    </span><span class="hs-comment">-- 3. The protocol parameters for the current era, which can be obtained using the 'QueryProtocolParameters'</span><span>
+</span><span id="line-545"></span><span>    </span><span class="hs-comment">-- query defined in &quot;Cardano.Api.Query.Internal.Type.QueryInMode&quot;. &quot;Cardano.Api.Network.IPC.Internal&quot; documentation illustrates how</span><span>
+</span><span id="line-546"></span><span>    </span><span class="hs-comment">-- to make a query using IPC protocol. Let's assume they are stored in the @exampleProtocolParams@ variable.</span><span>
+</span><span id="line-547"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-548"></span><span>    </span><span class="hs-comment">-- 4. For stake pool and governance actions, we will also need:</span><span>
+</span><span id="line-549"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-550"></span><span>    </span><span class="hs-comment">--     * The set of registered stake pools being unregistered in this transaction</span><span>
+</span><span id="line-551"></span><span>    </span><span class="hs-comment">--     * The map of all deposits for stake credentials being unregistered in this transaction</span><span>
+</span><span id="line-552"></span><span>    </span><span class="hs-comment">--     * The map of all deposits for DRep credentials that are unregistered in this transaction</span><span>
+</span><span id="line-553"></span><span>    </span><span class="hs-comment">--     * Plutus script execution units for all script witnesses used in the transaction.</span><span>
+</span><span id="line-554"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-555"></span><span>    </span><span class="hs-comment">--    This example assumes we are only spending key-locked UTXOs. Therefore, we can ignore the above</span><span>
+</span><span id="line-556"></span><span>    </span><span class="hs-comment">--    and use 'mempty'.</span><span>
+</span><span id="line-557"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-558"></span><span>    </span><span class="hs-comment">-- 5. The following amounts:</span><span>
+</span><span id="line-559"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-560"></span><span>    </span><span class="hs-comment">--     * Collateral amount: required only for transactions involving Plutus scripts. Since</span><span>
+</span><span id="line-561"></span><span>    </span><span class="hs-comment">--       this transaction does not include any, the collateral is @0@.</span><span>
+</span><span id="line-562"></span><span>    </span><span class="hs-comment">--     * Amount of Shelley key witnesses to be added: estimated using 'estimateTransactionKeyWitnessCount'.</span><span>
+</span><span id="line-563"></span><span>    </span><span class="hs-comment">--       For a simple transaction spending a single UTXO locked by a modern Shelley key, there is @1@</span><span>
+</span><span id="line-564"></span><span>    </span><span class="hs-comment">--       Shelley witness.</span><span>
+</span><span id="line-565"></span><span>    </span><span class="hs-comment">--     * Amount of Byron key witnesses to be added: assumed to be @0@ for this transaction.</span><span>
+</span><span id="line-566"></span><span>    </span><span class="hs-comment">--     * Size of all reference scripts (in bytes): since no reference scripts are used, this value is @0@.</span><span>
+</span><span id="line-567"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-568"></span><span>    </span><span class="hs-comment">-- 6. The address for sending the change. We can deserialize it from its bech32 representation</span><span>
+</span><span id="line-569"></span><span>    </span><span class="hs-comment">-- using the 'deserialiseAddress' function defined in &quot;Cardano.Api.Address&quot;:</span><span>
+</span><span id="line-570"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-571"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-572"></span><span>    </span><span class="hs-comment">-- let Just exampleChangeAddress =</span><span>
+</span><span id="line-573"></span><span>    </span><span class="hs-comment">--            Api.deserialiseAddress</span><span>
+</span><span id="line-574"></span><span>    </span><span class="hs-comment">--              (Api.AsAddressInEra eraAsType)</span><span>
+</span><span id="line-575"></span><span>    </span><span class="hs-comment">--              &quot;addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v&quot;</span><span>
+</span><span id="line-576"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-577"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-578"></span><span>    </span><span class="hs-comment">-- Alternatively, we can get it from our signing key:</span><span>
+</span><span id="line-579"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-580"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-581"></span><span>    </span><span class="hs-comment">-- let exampleChangeAddress =</span><span>
+</span><span id="line-582"></span><span>    </span><span class="hs-comment">--       Api.shelleyAddressInEra sbe $</span><span>
+</span><span id="line-583"></span><span>    </span><span class="hs-comment">--         Api.makeShelleyAddress</span><span>
+</span><span id="line-584"></span><span>    </span><span class="hs-comment">--           (Api.Testnet $ Api.NetworkMagic 2)    -- The magic for the network we are using</span><span>
+</span><span id="line-585"></span><span>    </span><span class="hs-comment">--           (Api.PaymentCredentialByKey</span><span>
+</span><span id="line-586"></span><span>    </span><span class="hs-comment">--              $ Api.verificationKeyHash</span><span>
+</span><span id="line-587"></span><span>    </span><span class="hs-comment">--                  $ Api.getVerificationKey</span><span>
+</span><span id="line-588"></span><span>    </span><span class="hs-comment">--                      signingKey)</span><span>
+</span><span id="line-589"></span><span>    </span><span class="hs-comment">--           Api.NoStakeAddress                    -- Potentially, the stake credential if we want to use one</span><span>
+</span><span id="line-590"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-591"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-592"></span><span>    </span><span class="hs-comment">-- 7. Finally, we need the total amount of ada (and other tokens) in the UTXOs being spent. In this example,</span><span>
+</span><span id="line-593"></span><span>    </span><span class="hs-comment">-- the transaction spends 12 ada:</span><span>
+</span><span id="line-594"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-595"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-596"></span><span>    </span><span class="hs-comment">-- let totalUTxOValue = Api.lovelaceToValue 12_000_000</span><span>
+</span><span id="line-597"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-598"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-599"></span><span>    </span><span class="hs-comment">-- With all this information, a balanced transaction can be obtained by calling 'estimateBalancedTxBody'</span><span>
+</span><span id="line-600"></span><span>    </span><span class="hs-comment">-- as follows:</span><span>
+</span><span id="line-601"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-602"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-603"></span><span>    </span><span class="hs-comment">-- let (Right (Api.BalancedTxBody</span><span>
+</span><span id="line-604"></span><span>    </span><span class="hs-comment">--               updatedTxBodyContent</span><span>
+</span><span id="line-605"></span><span>    </span><span class="hs-comment">--               updatedTxBody</span><span>
+</span><span id="line-606"></span><span>    </span><span class="hs-comment">--               changeOutput</span><span>
+</span><span id="line-607"></span><span>    </span><span class="hs-comment">--               fees)) =</span><span>
+</span><span id="line-608"></span><span>    </span><span class="hs-comment">--       Api.estimateBalancedTxBody</span><span>
+</span><span id="line-609"></span><span>    </span><span class="hs-comment">--         meo</span><span>
+</span><span id="line-610"></span><span>    </span><span class="hs-comment">--         txBodyContent</span><span>
+</span><span id="line-611"></span><span>    </span><span class="hs-comment">--         exampleProtocolParams</span><span>
+</span><span id="line-612"></span><span>    </span><span class="hs-comment">--         mempty</span><span>
+</span><span id="line-613"></span><span>    </span><span class="hs-comment">--         mempty</span><span>
+</span><span id="line-614"></span><span>    </span><span class="hs-comment">--         mempty</span><span>
+</span><span id="line-615"></span><span>    </span><span class="hs-comment">--         mempty</span><span>
+</span><span id="line-616"></span><span>    </span><span class="hs-comment">--         0</span><span>
+</span><span id="line-617"></span><span>    </span><span class="hs-comment">--         1</span><span>
+</span><span id="line-618"></span><span>    </span><span class="hs-comment">--         0</span><span>
+</span><span id="line-619"></span><span>    </span><span class="hs-comment">--         0</span><span>
+</span><span id="line-620"></span><span>    </span><span class="hs-comment">--         exampleChangeAddress</span><span>
+</span><span id="line-621"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-622"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-623"></span><span>    </span><span class="hs-comment">-- This will produce a balanced transaction body with calculated fees and a change output, but</span><span>
+</span><span id="line-624"></span><span>    </span><span class="hs-comment">-- it still needs to be signed and submitted.</span><span>
+</span><span id="line-625"></span><span>
+</span><span id="line-626"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Example 3: Fully automated balancing with chain information (requires UTXO and ledger state data)</span></span><span>
+</span><span id="line-627"></span><span>
+</span><span id="line-628"></span><span>    </span><span class="hs-comment">-- |</span><span>
+</span><span id="line-629"></span><span>    </span><span class="hs-comment">-- The previous example required manually providing various details, which was feasible for a simple</span><span>
+</span><span id="line-630"></span><span>    </span><span class="hs-comment">-- transaction. However, for more complex transactions involving scripts or advanced functionalities</span><span>
+</span><span id="line-631"></span><span>    </span><span class="hs-comment">-- such as governance actions, a more automated approach is available. This method performs most</span><span>
+</span><span id="line-632"></span><span>    </span><span class="hs-comment">-- calculations in exchange for general ledger information.</span><span>
+</span><span id="line-633"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-634"></span><span>    </span><span class="hs-comment">-- The following details are required:</span><span>
+</span><span id="line-635"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-636"></span><span>    </span><span class="hs-comment">-- 1. Shelley-based era witness for the current era, retrievable using 'shelleyBasedEra'.</span><span>
+</span><span id="line-637"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-638"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-639"></span><span>    </span><span class="hs-comment">-- let sbe :: Api.ShelleyBasedEra Api.ConwayEra = Api.shelleyBasedEra</span><span>
+</span><span id="line-640"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-641"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-642"></span><span>    </span><span class="hs-comment">-- 2. Network start time, obtainable using the 'QuerySystemStart' query defined in</span><span>
+</span><span id="line-643"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Query.Internal.Type.QueryInMode&quot;. &quot;Cardano.Api.Network.IPC.Internal&quot; documentation illustrates how</span><span>
+</span><span id="line-644"></span><span>    </span><span class="hs-comment">-- to make a query using IPC protocol. Assume we have it in the @exampleSystemStart@ variable.</span><span>
+</span><span id="line-645"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-646"></span><span>    </span><span class="hs-comment">-- 3. Ledger epoch information, derivable by applying 'toLedgerEpochInfo' to the</span><span>
+</span><span id="line-647"></span><span>    </span><span class="hs-comment">-- 'EraHistory', which can be retrieved using the 'QueryEraHistory' query defined in</span><span>
+</span><span id="line-648"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Query.Internal.Type.QueryInMode&quot;. Assume this is stored in the @exampleLedgerEpochInfo@ variable.</span><span>
+</span><span id="line-649"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-650"></span><span>    </span><span class="hs-comment">-- 4. Protocol parameters for the current era, accessible through the 'QueryProtocolParameters'</span><span>
+</span><span id="line-651"></span><span>    </span><span class="hs-comment">-- query defined in &quot;Cardano.Api.Query.Internal.Type.QueryInMode&quot;. Assume this is stored in the @exampleProtocolParams@ variable.</span><span>
+</span><span id="line-652"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-653"></span><span>    </span><span class="hs-comment">-- 5. For stake pool and gov actions, additional data is requried:</span><span>
+</span><span id="line-654"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-655"></span><span>    </span><span class="hs-comment">--      * The set of registered stake pools being unregistered in this transaction</span><span>
+</span><span id="line-656"></span><span>    </span><span class="hs-comment">--      * The map of all deposits associated with stake credentials being unregistered in this transaction</span><span>
+</span><span id="line-657"></span><span>    </span><span class="hs-comment">--      * The map of all deposits associated with DRep credentials being unregistered in this transaction.</span><span>
+</span><span id="line-658"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-659"></span><span>    </span><span class="hs-comment">--    For this example, no stake pool deregistration or governance actions are considered, so 'mempty' is used</span><span>
+</span><span id="line-660"></span><span>    </span><span class="hs-comment">--    for the corresponding parameters.</span><span>
+</span><span id="line-661"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-662"></span><span>    </span><span class="hs-comment">-- 6. UTXO set being spent -- the full UTXO set can be obtained using the 'QueryUTxO' query</span><span>
+</span><span id="line-663"></span><span>    </span><span class="hs-comment">-- from &quot;Cardano.Api.Query.Internal.Type.QueryInMode&quot;. Assume this is stored in the @utxoToUse@ variable.</span><span>
+</span><span id="line-664"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-665"></span><span>    </span><span class="hs-comment">-- 7. Draft transaction body content -- the 'TxBodyContent' for the transaction that requires balancing.</span><span>
+</span><span id="line-666"></span><span>    </span><span class="hs-comment">-- The process for creating this structure is demonstrated in &quot;Cardano.Api.Tx.Internal.Body&quot;.</span><span>
+</span><span id="line-667"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-668"></span><span>    </span><span class="hs-comment">-- 8. Change address -- the address where any remaining balance should be returned. This can be</span><span>
+</span><span id="line-669"></span><span>    </span><span class="hs-comment">-- deserialized from its Bech32 representation using the 'deserialiseAddress' function from</span><span>
+</span><span id="line-670"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Address&quot;:</span><span>
+</span><span id="line-671"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-672"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-673"></span><span>    </span><span class="hs-comment">-- let (Just exampleChangeAddress) =</span><span>
+</span><span id="line-674"></span><span>    </span><span class="hs-comment">--             Api.deserialiseAddress</span><span>
+</span><span id="line-675"></span><span>    </span><span class="hs-comment">--               (Api.AsAddressInEra eraAsType)</span><span>
+</span><span id="line-676"></span><span>    </span><span class="hs-comment">--               &quot;addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v&quot;</span><span>
+</span><span id="line-677"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-678"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-679"></span><span>    </span><span class="hs-comment">-- Alternatively, it is possible to get it from the signing key:</span><span>
+</span><span id="line-680"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-681"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-682"></span><span>    </span><span class="hs-comment">-- let exampleChangeAddress =</span><span>
+</span><span id="line-683"></span><span>    </span><span class="hs-comment">--       Api.shelleyAddressInEra sbe $</span><span>
+</span><span id="line-684"></span><span>    </span><span class="hs-comment">--         Api.makeShelleyAddress</span><span>
+</span><span id="line-685"></span><span>    </span><span class="hs-comment">--           (Api.Testnet $ Api.NetworkMagic 2)    -- The magic for the network we are using</span><span>
+</span><span id="line-686"></span><span>    </span><span class="hs-comment">--           (Api.PaymentCredentialByKey</span><span>
+</span><span id="line-687"></span><span>    </span><span class="hs-comment">--              $ Api.verificationKeyHash</span><span>
+</span><span id="line-688"></span><span>    </span><span class="hs-comment">--                  $ Api.getVerificationKey</span><span>
+</span><span id="line-689"></span><span>    </span><span class="hs-comment">--                      signingKey)</span><span>
+</span><span id="line-690"></span><span>    </span><span class="hs-comment">--           Api.NoStakeAddress                    -- Potentially, the stake credential if we want to use one</span><span>
+</span><span id="line-691"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-692"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-693"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-694"></span><span>    </span><span class="hs-comment">-- 9. Finally, the number of key witnesses required for the transaction can be manually specified.</span><span>
+</span><span id="line-695"></span><span>    </span><span class="hs-comment">-- However, if set to 'Nothing', the function will automatically estimate the required number.</span><span>
+</span><span id="line-696"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-697"></span><span>    </span><span class="hs-comment">-- With all the necessary information available, a balanced transaction can be obtained</span><span>
+</span><span id="line-698"></span><span>    </span><span class="hs-comment">-- by calling 'makeTransactionBodyAutoBalance' as follows:</span><span>
+</span><span id="line-699"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-700"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-701"></span><span>    </span><span class="hs-comment">-- let Right (Api.BalancedTxBody</span><span>
+</span><span id="line-702"></span><span>    </span><span class="hs-comment">--              updatedTxBodyContent</span><span>
+</span><span id="line-703"></span><span>    </span><span class="hs-comment">--              updatedTxBody</span><span>
+</span><span id="line-704"></span><span>    </span><span class="hs-comment">--              changeOutput</span><span>
+</span><span id="line-705"></span><span>    </span><span class="hs-comment">--              fees) =</span><span>
+</span><span id="line-706"></span><span>    </span><span class="hs-comment">--    Api.makeTransactionBodyAutoBalance</span><span>
+</span><span id="line-707"></span><span>    </span><span class="hs-comment">--      sbe</span><span>
+</span><span id="line-708"></span><span>    </span><span class="hs-comment">--      exampleSystemStart</span><span>
+</span><span id="line-709"></span><span>    </span><span class="hs-comment">--      exampleLedgerEpochInfo</span><span>
+</span><span id="line-710"></span><span>    </span><span class="hs-comment">--      (Api.LedgerProtocolParameters exampleProtocolParams)</span><span>
+</span><span id="line-711"></span><span>    </span><span class="hs-comment">--      mempty</span><span>
+</span><span id="line-712"></span><span>    </span><span class="hs-comment">--      mempty</span><span>
+</span><span id="line-713"></span><span>    </span><span class="hs-comment">--      mempty</span><span>
+</span><span id="line-714"></span><span>    </span><span class="hs-comment">--      utxoToUse</span><span>
+</span><span id="line-715"></span><span>    </span><span class="hs-comment">--      txBodyContent</span><span>
+</span><span id="line-716"></span><span>    </span><span class="hs-comment">--      exampleChangeAddress</span><span>
+</span><span id="line-717"></span><span>    </span><span class="hs-comment">--      Nothing</span><span>
+</span><span id="line-718"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-719"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-720"></span><span>    </span><span class="hs-comment">-- This will give us a balanced transaction with the fees calculated and the change output</span><span>
+</span><span id="line-721"></span><span>    </span><span class="hs-comment">-- included. The transaction can now be signed and submitted.</span><span>
+</span><span id="line-722"></span><span>
+</span><span id="line-723"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Transaction fees</span></span><span>
+</span><span id="line-724"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#evaluateTransactionFee"><span class="hs-identifier">evaluateTransactionFee</span></a></span><span>
+</span><span id="line-725"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#calculateMinTxFee"><span class="hs-identifier">calculateMinTxFee</span></a></span><span>
+</span><span id="line-726"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#estimateTransactionKeyWitnessCount"><span class="hs-identifier">estimateTransactionKeyWitnessCount</span></a></span><span>
+</span><span id="line-727"></span><span>
+</span><span id="line-728"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Script execution units</span></span><span>
+</span><span id="line-729"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#evaluateTransactionExecutionUnits"><span class="hs-identifier">evaluateTransactionExecutionUnits</span></a></span><span>
+</span><span id="line-730"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#evaluateTransactionExecutionUnitsShelley"><span class="hs-identifier">evaluateTransactionExecutionUnitsShelley</span></a></span><span>
+</span><span id="line-731"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#ScriptExecutionError"><span class="hs-identifier">ScriptExecutionError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-732"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#TransactionValidityError"><span class="hs-identifier">TransactionValidityError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-733"></span><span>
+</span><span id="line-734"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Transaction balance</span></span><span>
+</span><span id="line-735"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#evaluateTransactionBalance"><span class="hs-identifier">evaluateTransactionBalance</span></a></span><span>
+</span><span id="line-736"></span><span>
+</span><span id="line-737"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Automated transaction building</span></span><span>
+</span><span id="line-738"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#estimateBalancedTxBody"><span class="hs-identifier">estimateBalancedTxBody</span></a></span><span>
+</span><span id="line-739"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#estimateOrCalculateBalancedTxBody"><span class="hs-identifier">estimateOrCalculateBalancedTxBody</span></a></span><span>
+</span><span id="line-740"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#makeTransactionBodyAutoBalance"><span class="hs-identifier">makeTransactionBodyAutoBalance</span></a></span><span>
+</span><span id="line-741"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#calcReturnAndTotalCollateral"><span class="hs-identifier">calcReturnAndTotalCollateral</span></a></span><span>
+</span><span id="line-742"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#AutoBalanceError"><span class="hs-identifier">AutoBalanceError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-743"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#BalancedTxBody"><span class="hs-identifier">BalancedTxBody</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-744"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#FeeEstimationMode"><span class="hs-identifier">FeeEstimationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-745"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#RequiredShelleyKeyWitnesses"><span class="hs-identifier">RequiredShelleyKeyWitnesses</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-746"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#RequiredByronKeyWitnesses"><span class="hs-identifier">RequiredByronKeyWitnesses</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-747"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#TotalReferenceScriptsSize"><span class="hs-identifier">TotalReferenceScriptsSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-748"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#TxBodyErrorAutoBalance"><span class="hs-identifier">TxBodyErrorAutoBalance</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-749"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#TxFeeEstimationError"><span class="hs-identifier">TxFeeEstimationError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-750"></span><span>
+</span><span id="line-751"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Minimum UTxO calculation</span></span><span>
+</span><span id="line-752"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#calculateMinimumUTxO"><span class="hs-identifier">calculateMinimumUTxO</span></a></span><span>
+</span><span id="line-753"></span><span>
+</span><span id="line-754"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Internal helpers</span></span><span>
+</span><span id="line-755"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#ResolvablePointers"><span class="hs-identifier">ResolvablePointers</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-756"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#substituteExecutionUnits"><span class="hs-identifier">substituteExecutionUnits</span></a></span><span>
+</span><span id="line-757"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html#handleExUnitsErrors"><span class="hs-identifier">handleExUnitsErrors</span></a></span><span>
+</span><span id="line-758"></span><span>
+</span><span id="line-759"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Signing a transaction</span></span><span>
+</span><span id="line-760"></span><span>
+</span><span id="line-761"></span><span>    </span><span class="hs-comment">-- | Example: Creating a 'ShelleyWitnessSigningKey'</span><span>
+</span><span id="line-762"></span><span>    </span><span class="hs-comment">-- Signing a transaction requires a witness, for example, a 'ShelleyWitnessSigningKey'.</span><span>
+</span><span id="line-763"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-764"></span><span>    </span><span class="hs-comment">-- This example uses the following qualified module:</span><span>
+</span><span id="line-765"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-766"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-767"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api as Api                -- the general `cardano-api` exports (including the old API)</span><span>
+</span><span id="line-768"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-769"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-770"></span><span>    </span><span class="hs-comment">-- There are several ways of signing a transaction and representing a signing key. If the</span><span>
+</span><span id="line-771"></span><span>    </span><span class="hs-comment">-- bech32 representation of the signing key is available, it is possible to use the</span><span>
+</span><span id="line-772"></span><span>    </span><span class="hs-comment">-- 'deserialiseFromBech32' function as follows:</span><span>
+</span><span id="line-773"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-774"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-775"></span><span>    </span><span class="hs-comment">-- let (Right signingKey) = Api.deserialiseFromBech32 (Api.AsSigningKey Api.AsPaymentKey) &quot;addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms&quot;</span><span>
+</span><span id="line-776"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-777"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-778"></span><span>    </span><span class="hs-comment">-- Then, simply wrap the signing key in a 'ShelleyWitnessSigningKey' value:</span><span>
+</span><span id="line-779"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-780"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-781"></span><span>    </span><span class="hs-comment">-- let witness = Api.WitnessPaymentKey signingKey</span><span>
+</span><span id="line-782"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-783"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-784"></span><span>    </span><span class="hs-comment">-- This could also be done using an extended key, such as 'AsPaymentExtendedKey' and 'WitnessPaymentExtendedKey'.</span><span>
+</span><span id="line-785"></span><span>
+</span><span id="line-786"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Signing transactions</span></span><span>
+</span><span id="line-787"></span><span>
+</span><span id="line-788"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Creating transaction witnesses one by one, or all in one go.</span></span><span>
+</span><span id="line-789"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#Tx"><span class="hs-identifier">Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-790"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/cardano-ledger-byron-1.1.0.0-21e13d8f1b04012eea5ab8c9003ac338169298c9350d37a1f3936dac4651a896/share/doc/html/src/Cardano.Chain.UTxO.TxAux.html#ATxAux"><span class="hs-identifier">ATxAux</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-791"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#getTxBody"><span class="hs-identifier">getTxBody</span></a></span><span>
+</span><span id="line-792"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#getByronTxBody"><span class="hs-identifier">getByronTxBody</span></a></span><span>
+</span><span id="line-793"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#getTxWitnesses"><span class="hs-identifier">getTxWitnesses</span></a></span><span>
+</span><span id="line-794"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#getTxWitnessesByron"><span class="hs-identifier">getTxWitnessesByron</span></a></span><span>
+</span><span id="line-795"></span><span>
+</span><span id="line-796"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Signing in one go</span></span><span>
+</span><span id="line-797"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleySigningKey"><span class="hs-identifier">ShelleySigningKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-798"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#toShelleySigningKey"><span class="hs-identifier">toShelleySigningKey</span></a></span><span>
+</span><span id="line-799"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#signByronTransaction"><span class="hs-identifier">signByronTransaction</span></a></span><span>
+</span><span id="line-800"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#signShelleyTransaction"><span class="hs-identifier">signShelleyTransaction</span></a></span><span>
+</span><span id="line-801"></span><span>
+</span><span id="line-802"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Incremental signing and separate witnesses</span></span><span>
+</span><span id="line-803"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeSignedByronTransaction"><span class="hs-identifier">makeSignedByronTransaction</span></a></span><span>
+</span><span id="line-804"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeSignedTransaction"><span class="hs-identifier">makeSignedTransaction</span></a></span><span>
+</span><span id="line-805"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeSignedTransaction%27"><span class="hs-identifier">makeSignedTransaction'</span></a></span><span>
+</span><span id="line-806"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#KeyWitness"><span class="hs-identifier">KeyWitness</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-807"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeByronKeyWitness"><span class="hs-identifier">makeByronKeyWitness</span></a></span><span>
+</span><span id="line-808"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#ShelleyWitnessSigningKey"><span class="hs-identifier">ShelleyWitnessSigningKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-809"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleyKeyWitness"><span class="hs-identifier">makeShelleyKeyWitness</span></a></span><span>
+</span><span id="line-810"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleyKeyWitness%27"><span class="hs-identifier">makeShelleyKeyWitness'</span></a></span><span>
+</span><span id="line-811"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#WitnessNetworkIdOrByronAddress"><span class="hs-identifier">WitnessNetworkIdOrByronAddress</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-812"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleyBootstrapWitness"><span class="hs-identifier">makeShelleyBootstrapWitness</span></a></span><span>
+</span><span id="line-813"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleyBasedBootstrapWitness"><span class="hs-identifier">makeShelleyBasedBootstrapWitness</span></a></span><span>
+</span><span id="line-814"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#makeShelleySignature"><span class="hs-identifier">makeShelleySignature</span></a></span><span>
+</span><span id="line-815"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#getShelleyKeyWitnessVerificationKey"><span class="hs-identifier">getShelleyKeyWitnessVerificationKey</span></a></span><span>
+</span><span id="line-816"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html#getTxBodyAndWitnesses"><span class="hs-identifier">getTxBodyAndWitnesses</span></a></span><span>
+</span><span id="line-817"></span><span>
+</span><span id="line-818"></span><span>    </span><span class="annot"><span class="hs-comment">-- * TxMetadata</span></span><span>
+</span><span id="line-819"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#TxMetadata"><span class="hs-identifier">TxMetadata</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-820"></span><span>
+</span><span id="line-821"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Constructing metadata</span></span><span>
+</span><span id="line-822"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#TxMetadataValue"><span class="hs-identifier">TxMetadataValue</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-823"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#makeTransactionMetadata"><span class="hs-identifier">makeTransactionMetadata</span></a></span><span>
+</span><span id="line-824"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#mergeTransactionMetadata"><span class="hs-identifier">mergeTransactionMetadata</span></a></span><span>
+</span><span id="line-825"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#metaTextChunks"><span class="hs-identifier">metaTextChunks</span></a></span><span>
+</span><span id="line-826"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#metaBytesChunks"><span class="hs-identifier">metaBytesChunks</span></a></span><span>
+</span><span id="line-827"></span><span>
+</span><span id="line-828"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Validating metadata</span></span><span>
+</span><span id="line-829"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#validateTxMetadata"><span class="hs-identifier">validateTxMetadata</span></a></span><span>
+</span><span id="line-830"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#TxMetadataRangeError"><span class="hs-identifier">TxMetadataRangeError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-831"></span><span>
+</span><span id="line-832"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Conversion to\/from JSON</span></span><span>
+</span><span id="line-833"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#TxMetadataJsonSchema"><span class="hs-identifier">TxMetadataJsonSchema</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-834"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#metadataFromJson"><span class="hs-identifier">metadataFromJson</span></a></span><span>
+</span><span id="line-835"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#metadataToJson"><span class="hs-identifier">metadataToJson</span></a></span><span>
+</span><span id="line-836"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#metadataValueFromJsonNoSchema"><span class="hs-identifier">metadataValueFromJsonNoSchema</span></a></span><span>
+</span><span id="line-837"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#metadataValueToJsonNoSchema"><span class="hs-identifier">metadataValueToJsonNoSchema</span></a></span><span>
+</span><span id="line-838"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#TxMetadataJsonError"><span class="hs-identifier">TxMetadataJsonError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-839"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#TxMetadataJsonSchemaError"><span class="hs-identifier">TxMetadataJsonSchemaError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-840"></span><span>
+</span><span id="line-841"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Internal conversion functions</span></span><span>
+</span><span id="line-842"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#toShelleyMetadata"><span class="hs-identifier">toShelleyMetadata</span></a></span><span>
+</span><span id="line-843"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#fromShelleyMetadata"><span class="hs-identifier">fromShelleyMetadata</span></a></span><span>
+</span><span id="line-844"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#toShelleyMetadatum"><span class="hs-identifier">toShelleyMetadatum</span></a></span><span>
+</span><span id="line-845"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#fromShelleyMetadatum"><span class="hs-identifier">fromShelleyMetadatum</span></a></span><span>
+</span><span id="line-846"></span><span>
+</span><span id="line-847"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Shared parsing utils</span></span><span>
+</span><span id="line-848"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#parseAll"><span class="hs-identifier">parseAll</span></a></span><span>
+</span><span id="line-849"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#pUnsigned"><span class="hs-identifier">pUnsigned</span></a></span><span>
+</span><span id="line-850"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#pSigned"><span class="hs-identifier">pSigned</span></a></span><span>
+</span><span id="line-851"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html#pBytes"><span class="hs-identifier">pBytes</span></a></span><span>
+</span><span id="line-852"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-853"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-854"></span><span>
+</span><span id="line-855"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body</span></a></span><span>
+</span><span id="line-856"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Body.Lens.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Body.Lens</span></a></span><span>
+</span><span id="line-857"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Convenience.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Convenience</span></a></span><span>
+</span><span id="line-858"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Fee.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Fee</span></a></span><span>
+</span><span id="line-859"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.Sign.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.Sign</span></a></span><span>
+</span><span id="line-860"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Tx.Internal.TxMetadata.html"><span class="hs-identifier">Cardano.Api.Tx.Internal.TxMetadata</span></a></span><span>
+</span><span id="line-861"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.UTxO.html"><span class="hs-identifier">Cardano.Api.UTxO</span></a></span><span>
+</span><span id="line-862"></span></pre></body></html>

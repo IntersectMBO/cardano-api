@@ -1,0 +1,251 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | Node IPC protocols</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- This module provides the client side of the node-to-client interprocess</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- communication (IPC) for interacting with a local Cardano node. It supports</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- querying the node for information, submitting transactions, monitoring</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- the local mempool, and retrieving historical chain data using the</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @ChainSync@ protocol.</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Api.Network.IPC</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Examples</span></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-comment">-- | This section provides two examples:</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-comment">--    1. Querying the node to obtain basic information</span><span>
+</span><span id="line-14"></span><span>    </span><span class="hs-comment">--    2. Submitting a transaction to the node.</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span>    </span><span class="hs-comment">-- For details on how to create a transaction, see the</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-comment">-- &quot;Cardano.Api.Tx.Internal.Body&quot; documentation.</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-comment">-- The following qualified imports from @cardano-api@ are</span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-comment">-- used in the examples below:</span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api as Api</span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api.Consensus as Consensus</span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-comment">-- import qualified Cardano.Api.Network as Network</span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-comment">-- The following explicit import from @base@ is also required:</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-comment">-- import Control.Monad.Except (runExceptT)</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- The examples assume the use of the @IO@ monad and unqualified</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-comment">-- access to the @Prelude@ module.</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Constructing connection information</span></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- | Regardless of whether the goal is to query the node or submit transactions,</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- the first step is to gather the connection information.</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">-- The following information is required:</span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-comment">--    * __The number of slots per epoch__. This value depends on the network the</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-comment">--      node is connected to. It can be obtained by inspecting the @epochLength@</span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-comment">--      key in the @shelley-genesis.json@ file used by the node. On the preview</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">--      network, the value is, at the time of writing, @86_400@, but it can</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">--      change. This value and other genesis parameters can also be obtained</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-comment">--      using the 'QueryGenesisParameters' query.</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">--    * __Network identifier__. When connecting to a testnet, the network identifier</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-comment">--      is also required. It can be obtained by looking for the @networkId@</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-comment">--      obtained by looking up the @networkMagic@ key in the @shelley-genesis.json@</span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-comment">--      file that the node uses to connect to the network. For the preview</span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-comment">--      network, the current identifier is @2@.</span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-comment">--    * __Socket path__. The path to the node's socket file. It can be set using</span><span>
+</span><span id="line-56"></span><span>    </span><span class="hs-comment">--      the @--socket-path@ parameter when starting the node. By default, it is</span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">--      typically located in the @db@ subfolder of the node's working directory.</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">--  Then, combine all the required information into a 'LocalNodeConnectInfo' value.</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-comment">--  For example, assume the node is connected to the preview network and the socket</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">--  file is located at @\/home\/user\/cardano-node\/db\/node.socket@. The</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">--  'LocalNodeConnectInfo' value can then be constructed as follows:</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-comment">-- let connectionInfo =</span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">--       Api.LocalNodeConnectInfo</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">--          { Api.localConsensusModeParams = Api.CardanoModeParams (Api.EpochSlots 86_400)</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">--          , Api.localNodeNetworkId = Api.Testnet (Api.NetworkMagic 2)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">--          , Api.localNodeSocketPath = Api.File &quot;\/home\/user\/cardano-node\/db\/node.socket&quot;</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">--          }</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Querying the node for the UTXO set</span></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">-- | To obtain the set of unspent transaction outputs (UTXO set) from the network,</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- the current era must first be determined.</span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Obtaining the current era</span></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- | Many queries require knowing the current era. This can be hardcoded using one of</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- the 'ShelleyBasedEra' constructors, but it is also possible to retreive it from</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- the node:</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">-- eEra &lt;- runExceptT $ Api.queryNodeLocalState connectionInfo Network.VolatileTip Api.QueryCurrentEra</span><span>
+</span><span id="line-87"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- 'VolatileTip' requests information from the most recent block the node is aware of.</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">-- It is important to note that this information is not guaranteed to remain valid, as</span><span>
+</span><span id="line-91"></span><span>    </span><span class="hs-comment">-- it may be rolled back.</span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- Alternatively, 'ImmutableTip' can be used to obtain information from the most recent</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- block considered as final by the consensus algorithm. While this data is stable and will</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-comment">-- not be rolled back, it is less recent &#8211; on mainnet, it is typically about 36 hours</span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">-- behind the current time.</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-98"></span><span>    </span><span class="hs-comment">-- 'QueryCurrentEra' is the constructor of the query that retrieves the node's current</span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-comment">-- era.</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span>    </span><span class="hs-comment">-- The query returns an 'ExceptT' monad, which can be run using the 'runExceptT'</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-comment">-- function. This yields an @eEra@ value of type @Either AcquiringFailure AnyCardanoEra@.</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span>    </span><span class="hs-comment">-- Below is an example of how to unwrap this value into a 'ShelleyBasedEra' based era, assuming the node</span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-comment">-- is not running Byron:</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- Api.AnyShelleyBasedEra sbe :: Api.AnyShelleyBasedEra &lt;- case eEra of</span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-comment">--   Right (Api.AnyCardanoEra era) -&gt;</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">--     Api.caseByronOrShelleyBasedEra</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">--       (error &quot;Error, we are in Byron era&quot;)</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-comment">--       (return . Api.AnyShelleyBasedEra)</span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">--       era</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">--   Left Shelley.AFPointTooOld -&gt; error &quot;Error, point queried in the chain is too old!&quot;</span><span>
+</span><span id="line-115"></span><span>    </span><span class="hs-comment">--   Left Shelley.AFPointNotOnChain -&gt; error &quot;Error, point queried is not on chain!&quot;</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-117"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span>    </span><span class="hs-comment">-- 'AFPointTooOld' and 'AFPointNotOnChain' errors should not occur when querying with</span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-comment">-- either 'VolatileTip' or 'ImmutableTip'.</span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Obtaining the UTXO set</span></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-comment">-- | After determining the current era, the node can be queried for the UTXO set using</span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-comment">-- the 'QueryUTxO' query as follows:</span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-126"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-127"></span><span>    </span><span class="hs-comment">-- eUtxo &lt;-</span><span>
+</span><span id="line-128"></span><span>    </span><span class="hs-comment">--   runExceptT $</span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-comment">--     Api.queryNodeLocalState</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-comment">--       connectionInfo</span><span>
+</span><span id="line-131"></span><span>    </span><span class="hs-comment">--       Network.VolatileTip</span><span>
+</span><span id="line-132"></span><span>    </span><span class="hs-comment">--       (Api.QueryInEra (Api.QueryInShelleyBasedEra sbe (Api.QueryUTxO Api.QueryUTxOWhole)))</span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-comment">-- This returns, a nested type of @Either AcquiringFailure (Either EraMismatch (UTXO era))@.</span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-comment">-- You can unwrap it as follows:</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-comment">-- utxo &lt;- case eUtxo of</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-comment">--   Right (Right (Api.UTxO utxo)) -&gt; do</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-comment">--     return utxo</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">--   Right (Left (Consensus.EraMismatch{Consensus.ledgerEraName, Consensus.otherEraName})) -&gt;</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">--     error</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-comment">--       ( &quot;Error, we assumed era was &quot;</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-comment">--           ++ show otherEraName</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-comment">--           ++ &quot; but it was &quot;</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-comment">--           ++ show ledgerEraName</span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-comment">--       )</span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-comment">--   Left Shelley.AFPointTooOld -&gt; error &quot;Error, point queried in the chain is too old!&quot;</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-comment">--   Left Shelley.AFPointNotOnChain -&gt; error &quot;Error, point queried is not on chain!&quot;</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-comment">-- Alternatively, to avoid nested result types, you can use convenience</span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-comment">-- functions and types from &quot;Cardano.Api.Query.Internal.Convenience&quot;.</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-comment">-- It is also posible to combine several queries into a single connection by using</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-comment">-- the monadic interface that can be found in the &quot;Cardano.Api.Network.IPC.Internal.Monad&quot;</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-comment">-- documentation.</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- The obtained @utxo@ variable is a standard @Map@ of type @Map TxIn (TxOut CtxUTxO era)@.</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Submitting a transaction</span></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-comment">-- | Assume there is a signed transaction in the latest era that you would like to submit</span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-comment">-- to the node. Assume it is stored in the variable @signedTx@ of type @Tx era@.</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-comment">-- For details on how to create such a transaction, see the &quot;Cardano.Api.Tx.Internal.Body&quot;</span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-comment">-- documentation.</span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-comment">-- To submit the transaction to the node, use the 'submitTxToNodeLocal' function as follows:</span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-comment">-- result &lt;- Api.submitTxToNodeLocal connectionInfo (Api.TxInMode sbe signedTx)</span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-174"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-175"></span><span>    </span><span class="hs-comment">-- The result is a 'SubmitResult' value, which can be inspected as follows:</span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-178"></span><span>    </span><span class="hs-comment">-- case result of</span><span>
+</span><span id="line-179"></span><span>    </span><span class="hs-comment">--   Api.SubmitSuccess -&gt; putStrLn &quot;Transaction submitted successfully!&quot;</span><span>
+</span><span id="line-180"></span><span>    </span><span class="hs-comment">--   Api.SubmitFail reason -&gt; error $ &quot;Error submitting transaction: &quot; ++ show reason</span><span>
+</span><span id="line-181"></span><span>    </span><span class="hs-comment">-- @</span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-comment">-- If the command succeeds, the transaction gets into the node's mempool, ready</span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-comment">-- to be included in a block.</span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Node interaction</span></span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Operations that involve talking to a local Cardano node.</span></span><span>
+</span><span id="line-189"></span><span>    </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#connectToLocalNode"><span class="hs-identifier">connectToLocalNode</span></a></span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#connectToLocalNodeWithVersion"><span class="hs-identifier">connectToLocalNodeWithVersion</span></a></span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeConnectInfo"><span class="hs-identifier">LocalNodeConnectInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeClientParams"><span class="hs-identifier">LocalNodeClientParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#mkLocalNodeClientParams"><span class="hs-identifier">mkLocalNodeClientParams</span></a></span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeClientProtocols"><span class="hs-identifier">LocalNodeClientProtocols</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalChainSyncClient"><span class="hs-identifier">LocalChainSyncClient</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalNodeClientProtocolsInMode"><span class="hs-identifier">LocalNodeClientProtocolsInMode</span></a></span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Chain sync protocol</span></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-660e1d4b866d753eb088094c3afdeea572232723c26d8189e317bb81a0baf68d/share/doc/html/src/Ouroboros.Network.Protocol.ChainSync.Client.html#ChainSyncClient"><span class="hs-identifier">ChainSyncClient</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-660e1d4b866d753eb088094c3afdeea572232723c26d8189e317bb81a0baf68d/share/doc/html/src/Ouroboros.Network.Protocol.ChainSync.ClientPipelined.html#ChainSyncClientPipelined"><span class="hs-identifier">ChainSyncClientPipelined</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Block.html#BlockInMode"><span class="hs-identifier">BlockInMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Local tx submission</span></span><span>
+</span><span id="line-204"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-660e1d4b866d753eb088094c3afdeea572232723c26d8189e317bb81a0baf68d/share/doc/html/src/Ouroboros.Network.Protocol.LocalTxSubmission.Client.html#LocalTxSubmissionClient"><span class="hs-identifier">LocalTxSubmissionClient</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Consensus.Internal.InMode.html#TxInMode"><span class="hs-identifier">TxInMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Consensus.Internal.InMode.html#TxValidationErrorInCardanoMode"><span class="hs-identifier">TxValidationErrorInCardanoMode</span></a></span><span>
+</span><span id="line-207"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Consensus.Internal.InMode.html#TxValidationError"><span class="hs-identifier">TxValidationError</span></a></span><span>
+</span><span id="line-208"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#submitTxToNodeLocal"><span class="hs-identifier">submitTxToNodeLocal</span></a></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-660e1d4b866d753eb088094c3afdeea572232723c26d8189e317bb81a0baf68d/share/doc/html/src/Ouroboros.Network.Protocol.LocalTxSubmission.Type.html#SubmitResult"><span class="hs-identifier">SubmitResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Local state query</span></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-660e1d4b866d753eb088094c3afdeea572232723c26d8189e317bb81a0baf68d/share/doc/html/src/Ouroboros.Network.Protocol.LocalStateQuery.Client.html#LocalStateQueryClient"><span class="hs-identifier">LocalStateQueryClient</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#AcquiringFailure"><span class="hs-identifier">AcquiringFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInMode"><span class="hs-identifier">QueryInMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-215"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInEra"><span class="hs-identifier">QueryInEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#QueryInShelleyBasedEra"><span class="hs-identifier">QueryInShelleyBasedEra</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#queryNodeLocalState"><span class="hs-identifier">queryNodeLocalState</span></a></span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span>    </span><span class="annot"><span class="hs-comment">-- **** Query monad</span></span><span>
+</span><span id="line-220"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#LocalStateQueryExpr"><span class="hs-identifier">LocalStateQueryExpr</span></a></span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#executeLocalStateQueryExpr"><span class="hs-identifier">executeLocalStateQueryExpr</span></a></span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html#queryExpr"><span class="hs-identifier">queryExpr</span></a></span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Local tx monitoring</span></span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-660e1d4b866d753eb088094c3afdeea572232723c26d8189e317bb81a0baf68d/share/doc/html/src/Ouroboros.Network.Protocol.LocalTxMonitor.Client.html#LocalTxMonitorClient"><span class="hs-identifier">LocalTxMonitorClient</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-226"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalTxMonitoringQuery"><span class="hs-identifier">LocalTxMonitoringQuery</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-227"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#LocalTxMonitoringResult"><span class="hs-identifier">LocalTxMonitoringResult</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-protocols-0.14.0.1-660e1d4b866d753eb088094c3afdeea572232723c26d8189e317bb81a0baf68d/share/doc/html/src/Ouroboros.Network.Protocol.LocalTxMonitor.Type.html#MempoolSizeAndCapacity"><span class="hs-identifier">MempoolSizeAndCapacity</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#queryTxMonitoringLocal"><span class="hs-identifier">queryTxMonitoringLocal</span></a></span><span>
+</span><span id="line-230"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#EraHistory"><span class="hs-identifier">EraHistory</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Query.Internal.Type.QueryInMode.html#getProgress"><span class="hs-identifier">getProgress</span></a></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Common queries</span></span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#getLocalChainTip"><span class="hs-identifier">getLocalChainTip</span></a></span><span>
+</span><span id="line-235"></span><span>
+</span><span id="line-236"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Query versioning</span></span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#isQuerySupportedInNtcVersion"><span class="hs-identifier">isQuerySupportedInNtcVersion</span></a></span><span>
+</span><span id="line-238"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.8.2-inplace/ouroboros-network-api-0.14.0.0-c4690f687d22aa4e2f1fcff423f81f9921f8b4e6efe6950ea0d1ba5067ae855c/share/doc/html/src/Ouroboros.Network.NodeToClient.Version.html#NodeToClientVersion"><span class="hs-identifier">NodeToClientVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-239"></span><span>
+</span><span id="line-240"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Error types</span></span><span>
+</span><span id="line-241"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html#UnsupportedNtcVersionError"><span class="hs-identifier">UnsupportedNtcVersionError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Helpers</span></span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html#toAcquiringFailure"><span class="hs-identifier">toAcquiringFailure</span></a></span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-246"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.html"><span class="hs-identifier">Cardano.Api.Network.IPC.Internal</span></a></span><span>
+</span><span id="line-249"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Monad.html"><span class="hs-identifier">Cardano.Api.Network.IPC.Internal.Monad</span></a></span><span>
+</span><span id="line-250"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Api.Network.IPC.Internal.Version.html"><span class="hs-identifier">Cardano.Api.Network.IPC.Internal.Version</span></a></span><span>
+</span><span id="line-251"></span></pre></body></html>
