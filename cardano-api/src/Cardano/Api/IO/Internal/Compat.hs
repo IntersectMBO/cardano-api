@@ -11,6 +11,7 @@ where
 import Cardano.Api.Error
 import Cardano.Api.IO.Internal.Base
 import Cardano.Api.IO.Internal.Compat.Posix
+import Cardano.Api.IO.Internal.Compat.Wasm
 import Cardano.Api.IO.Internal.Compat.Win32
 
 import Control.Monad.Except (ExceptT)
