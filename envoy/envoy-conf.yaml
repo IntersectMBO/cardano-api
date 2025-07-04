@@ -1,0 +1,188 @@
+static_resources:
+  listeners:
+  - name: main_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 8080
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          route_config:
+            name: local_route
+            max_direct_response_body_size_bytes: 104857600
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+              # ROUTE 1: Match gRPC-Web requests based on their content-type.
+              # This route is checked first.
+              - match:
+                  prefix: "/"
+                  headers:
+                  - name: "Content-Type"
+                    string_match:
+                      exact: "application/grpc-web"
+                route:
+                  cluster: grpc_service_unix_socket
+                  timeout: 60s
+
+              # ROUTE 2: Fallback for all other requests (e.g., your browser loading the page).
+              # This route is checked only if the first one doesn't match.
+              - match:
+                  path: "/"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/html"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/index.html"
+              - match:
+                  path: "/cardano-api.d.ts"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/javascript"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-api.d.ts"
+              - match:
+                  path: "/index.html"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/html"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/index.html"
+              - match:
+                  path: "/cardano-api.js"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/javascript"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-api.js"
+              - match:
+                  path: "/mainnet_pparams.json"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "application/json"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/mainnet_pparams.json"
+              - match:
+                  path: "/cardano-wasm.js"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/javascript"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-wasm.js"
+              - match:
+                  path: "/preprod_pparams.json"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "application/json"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/preprod_pparams.json"
+              - match:
+                  path: "/cardano-wasm.wasm"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "application/wasm"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-wasm.wasm"
+              - match:
+                  path: "/preview_pparams.json"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "application/json"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/preview_pparams.json"
+              - match:
+                  path: "/example.js"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/javascript"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/example.js"
+#               - match:
+#                   path: "/proto/node_pb.js"
+#                 response_headers_to_add:
+#                   - header:
+#                       key: "Content-Type"
+#                       value: "text/javascript"
+#                 direct_response:
+#                   status: 200
+#                   body:
+#                     filename: "/Users/palas/work/cardano-api/envoy/pub/proto/node_pb.js"
+#               - match:
+#                   path: "/proto/node_pb.d.ts"
+#                 response_headers_to_add:
+#                   - header:
+#                       key: "Content-Type"
+#                       value: "text/javascript"
+#                 direct_response:
+#                   status: 200
+#                   body:
+#                     filename: "/Users/palas/work/cardano-api/envoy/pub/proto/node_pb.d.ts"
+#               - match:
+#                   path: "/proto/NodeServiceClientPb.ts"
+#                 response_headers_to_add:
+#                   - header:
+#                       key: "Content-Type"
+#                       value: "text/javascript"
+#                 direct_response:
+#                   status: 200
+#                   body:
+#                     filename: "/Users/palas/work/cardano-api/envoy/pub/proto/NodeServiceClientPb.ts"
+          http_filters:
+          - name: envoy.filters.http.grpc_web
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+  - name: grpc_service_unix_socket
+    connect_timeout: 0.25s
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http2_protocol_options: {}
+    load_assignment:
+      cluster_name: grpc_service_unix_socket
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              pipe:
+                path: /Users/palas/work/cardano-api/rpc.socket
