@@ -17,9 +17,12 @@ where
 import Cardano.Api
 
 import Cardano.Rpc.Proto.Api.Node qualified as Rpc
+import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Env
 import Cardano.Rpc.Server.Internal.Monad
+import Cardano.Rpc.Server.Internal.Orphans ()
+import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 
 import RIO
 
@@ -49,6 +52,18 @@ methodsNodeRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf Rpc.Node)
 methodsNodeRpc = Method (mkNonStreaming getEraMethod) NoMoreMethods
+
+methodsUtxoRpc
+  :: MonadRpc e m
+  => Methods m (ProtobufMethodsOf UtxoRpc.QueryService)
+methodsUtxoRpc =
+  Method (mkNonStreaming readChainConfigMethod)
+    . Method (mkNonStreaming readDataMethod)
+    . Method (mkNonStreaming readParamsMethod)
+    . Method (mkNonStreaming readTxMethod)
+    . Method (mkNonStreaming readUtxosMethod)
+    . Method (mkNonStreaming searchUtxosMethod)
+    $ NoMoreMethods
 
 runRpcServer
   :: Tracer IO String
@@ -86,6 +101,7 @@ runRpcServer tracer loadRpcConfig = handleExceptions $ do
         runServerWithHandlers def config . fmap (hoistSomeRpcHandler runInIO) $
           mconcat
             [ fromMethods methodsNodeRpc
+            , fromMethods methodsUtxoRpc
             ]
  where
   handleExceptions :: (HasCallStack => IO ()) -> IO ()
