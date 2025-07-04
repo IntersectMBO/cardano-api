@@ -90,6 +90,6 @@ runRpcServer tracer loadRpcConfig = handleExceptions $ do
  where
   handleExceptions :: (HasCallStack => IO ()) -> IO ()
   handleExceptions = handleAny $ \e ->
-    putTrace $ "RPC server fatal error: " <> displayException e
+    putStrLn $ "RPC server fatal error: " <> displayException e
 
-  putTrace = traceWith tracer
+-- putTrace = traceWith tracer
