@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["9.6", "9.12"]
+        ghc: ["9.6", "9.10"]
         cabal: ["3.14"]
         sys:
           - { os: windows-latest, shell: 'C:/msys64/usr/bin/bash.exe -e {0}' }
@@ -79,6 +79,25 @@ jobs:
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: true # default is true
+
+    - name: "[Linux] Install grpc dependencies"
+      if: runner.os == 'Linux'
+      run: sudo apt install libsnappy-dev protobuf-compiler
+
+    - name: "[Windows] Install grpc dependencies"
+      if: runner.os == 'Windows'
+      run: /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-snappy mingw-w64-x86_64-protobuf
+
+    - name: "[macOS] Install grpc dependencies"
+      if: runner.os == 'macOS'
+      run: |
+        brew install snappy protobuf
+        SNAPPY_PREFIX=$(brew --prefix snappy)
+        # TODO generalise and move these paths fixups to https://github.com/input-output-hk/actions/blob/latest/base/action.yml
+        cat <<EOF >> $GITHUB_ENV
+        LIBRARY_PATH=$SNAPPY_PREFIX/lib
+        CPATH=$SNAPPY_PREFIX/include
+        EOF
 
     - uses: actions/checkout@v4
 
@@ -159,10 +178,10 @@ jobs:
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
     # - name: Setup tmate session
-    #  if: ${{ failure() }}
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
-    #     limit-access-to-actor: true
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #      limit-access-to-actor: true
 
   build-complete:
     needs: [build]
