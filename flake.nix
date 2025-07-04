@@ -9,6 +9,7 @@
     haskellNix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     # blst fails to build for x86_64-darwin
     # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
@@ -129,6 +130,7 @@
           # Skip cross compilers for the shell
           shell.crossPlatforms = _: [];
           shell.shellHook = ''
+            export LD_LIBRARY_PATH="${nixpkgs.snappy}/lib:$LD_LIBRARY_PATH"
             export PATH="$(git rev-parse --show-toplevel)/scripts/devshell:$PATH"
           '';
 
