@@ -20,47 +20,47 @@ where
 
 import Cardano.Api
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Parser.Text qualified as P
+
+import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
+import Cardano.Rpc.Server.Internal.Error
+import Cardano.Rpc.Server.Internal.Monad
+import Cardano.Rpc.Server.Internal.Orphans ()
 
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Binary.Version qualified as L
 import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Plutus qualified as L
-import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
-import Cardano.Rpc.Server.Internal.Error
-import Cardano.Rpc.Server.Internal.Monad
-import Cardano.Rpc.Server.Internal.Orphans ()
 
 import RIO
 
-import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
+import Data.Text.Encoding qualified as T
+import GHC.IsList (fromList)
 import Network.GRPC.Spec
 
 readParamsMethod
-  :: MonadRpc e m => Proto UtxoRpc.ReadParamsRequest -> m (Proto UtxoRpc.ReadParamsResponse)
+  :: MonadRpc e m
+  => Proto UtxoRpc.ReadParamsRequest
+  -> m (Proto UtxoRpc.ReadParamsResponse)
 readParamsMethod _req = do
   -- TODO: implement field masks - they are ignored for now
   -- they need to be normalised beforehand, see: https://github.com/protocolbuffers/protobuf/blob/main/java/util/src/main/java/com/google/protobuf/util/FieldMaskTree.java#L76
-  -- let fieldMask :: [Text] = req ^. #fieldMask ^. #paths
+  -- let fieldMask :: [Text] = req ^. #fieldMask . #paths
   nodeConnInfo <- grab
   AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
   eon <- forEraInEon era (error "Minimum Conway era required") pure
   let sbe = convert eon
 
   let target = VolatileTip
-  let qInMode = QueryInEra $ QueryInShelleyBasedEra sbe QueryProtocolParameters
   (pparams, chainPoint) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
-    pparams <- throwEither =<< throwEither =<< queryExpr qInMode
+    pparams <- throwEither =<< throwEither =<< queryProtocolParameters sbe
     chainPoint <- throwEither =<< queryChainPoint
     pure (pparams, chainPoint)
 
-  let (slotNo, blockHash) =
-        case chainPoint of
-          ChainPointAtGenesis -> (0, mempty)
-          ChainPoint (SlotNo slot) (HeaderHash hash) -> (slot, SBS.fromShort hash)
-      pparamsCostModels :: Map L.Language [Int64] =
+  let pparamsCostModels :: Map L.Language [Int64] =
         babbageEraOnwardsConstraints (convert eon) $
           L.getCostModelParams <$> pparams ^. L.ppCostModelsL . to L.costModelsValid
       poolVotingThresholds :: L.PoolVotingThresholds =
@@ -69,11 +69,6 @@ readParamsMethod _req = do
       drepVotingThresholds :: L.DRepVotingThresholds =
         conwayEraOnwardsConstraints eon $
           pparams ^. L.ppDRepVotingThresholdsL
-
-  let chainPointMsg =
-        defMessage
-          & #slot .~ slotNo
-          & #hash .~ blockHash
       pparamsMsg =
         conwayEraOnwardsConstraints eon $
           defMessage
@@ -140,24 +135,53 @@ readParamsMethod _req = do
             & #drepInactivityPeriod .~ pparams ^. L.ppDRepActivityL . to L.unEpochInterval . to fromIntegral
   pure $
     defMessage
-      & #ledgerTip .~ chainPointMsg
+      & #ledgerTip .~ inject chainPoint
       & #values . #cardano .~ pparamsMsg
 
 readChainConfigMethod
   :: MonadRpc e m => Proto UtxoRpc.ReadChainConfigRequest -> m (Proto UtxoRpc.ReadChainConfigResponse)
-readChainConfigMethod = pure $ pure defMessage -- TODO implement
+readChainConfigMethod _req = pure defMessage -- TODO implement
 
 readTxMethod :: MonadRpc e m => Proto UtxoRpc.ReadTxRequest -> m (Proto UtxoRpc.ReadTxResponse)
-readTxMethod = pure $ pure defMessage -- TODO implement
+readTxMethod _req = pure defMessage -- TODO implement
 
 readUtxosMethod
-  :: MonadRpc e m => Proto UtxoRpc.ReadUtxosRequest -> m (Proto UtxoRpc.ReadUtxosResponse)
-readUtxosMethod = pure $ pure defMessage -- TODO implement
+  :: MonadRpc e m
+  => Proto UtxoRpc.ReadUtxosRequest
+  -> m (Proto UtxoRpc.ReadUtxosResponse)
+readUtxosMethod req = do
+  txIns' <- mapM txoRefToTxIn $ req ^. #keys
+  let utxoFilter = QueryUTxOByTxIn . fromList . toList $ txIns'
+
+  nodeConnInfo <- grab
+  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
+  eon <- forEraInEon era (error "Minimum Shelley era required") pure
+
+  let target = VolatileTip
+  (utxo, chainPoint) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+    utxo <- throwEither =<< throwEither =<< queryUtxo eon utxoFilter
+    chainPoint <- throwEither =<< queryChainPoint
+    pure (utxo, chainPoint)
+
+  let responseUtxos = undefined
+
+  pure $
+    defMessage
+      & #ledgerTip .~ inject chainPoint
+      & #items .~ responseUtxos
+ where
+  txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
+  txoRefToTxIn r = do
+    txIdTxt <- throwEither $ T.decodeUtf8' $ r ^. #hash
+    txId' <-
+      throwEither . first stringException $
+        P.runParser parseTxId txIdTxt
+    pure $ TxIn txId' (TxIx . fromIntegral $ r ^. #index)
 
 readDataMethod
   :: MonadRpc e m => Proto UtxoRpc.ReadDataRequest -> m (Proto UtxoRpc.ReadDataResponse)
-readDataMethod = pure $ pure defMessage -- TODO implement
+readDataMethod _req = pure defMessage -- TODO implement
 
 searchUtxosMethod
   :: MonadRpc e m => Proto UtxoRpc.SearchUtxosRequest -> m (Proto UtxoRpc.SearchUtxosResponse)
-searchUtxosMethod = pure $ pure defMessage -- TODO implement
+searchUtxosMethod _req = pure defMessage -- TODO implement
