@@ -9,6 +9,7 @@
     haskellNix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     # blst fails to build for x86_64-darwin
     # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
