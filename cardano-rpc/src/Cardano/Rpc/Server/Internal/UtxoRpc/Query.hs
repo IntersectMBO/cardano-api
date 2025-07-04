@@ -33,11 +33,12 @@ import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Plutus qualified as L
 
-import RIO
+import RIO hiding (toList)
 
 import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
+import GHC.IsList (fromList, toList)
 import Network.GRPC.Spec
 
 readParamsMethod
@@ -69,8 +70,7 @@ readParamsMethod _req = do
       drepVotingThresholds :: L.DRepVotingThresholds =
         conwayEraOnwardsConstraints eon $
           pparams ^. L.ppDRepVotingThresholdsL
-
-  let pparamsMsg =
+      pparamsMsg =
         conwayEraOnwardsConstraints eon $
           defMessage
             & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to fromIntegral
@@ -179,7 +179,34 @@ readUtxosMethod
   :: MonadRpc e m
   => Proto UtxoRpc.ReadUtxosRequest
   -> m (Proto UtxoRpc.ReadUtxosResponse)
-readUtxosMethod _req = throwIO GrpcUnimplemented
+readUtxosMethod req = do
+  txIns' <- mapM txoRefToTxIn $ req ^. #keys
+  -- TODO Make this explicit in the request type definition in proto, that no txins will return whole utxo
+  let utxoFilter =
+        if null txIns'
+          then QueryUTxOWhole
+          else QueryUTxOByTxIn . fromList . toList $ txIns'
+
+  nodeConnInfo <- grab
+  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
+  eon <- forEraInEon era (error "Minimum Shelley era required") pure
+
+  let target = VolatileTip
+  (utxo, chainPoint, blockNo) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+    utxo <- throwEither =<< throwEither =<< queryUtxo eon utxoFilter
+    chainPoint <- throwEither =<< queryChainPoint
+    blockNo <- throwEither =<< queryChainBlockNo
+    pure (utxo, chainPoint, blockNo)
+
+  pure $
+    defMessage
+      & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
+      & #items .~ cardanoEraConstraints era (inject utxo)
+ where
+  txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
+  txoRefToTxIn r = do
+    txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. #hash
+    pure $ TxIn txId' (TxIx . fromIntegral $ r ^. #index)
 
 readDataMethod
   :: MonadRpc e m

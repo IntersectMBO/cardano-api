@@ -93,7 +93,7 @@ runRpcServer tracer loadRpcConfig = handleFatalExceptions $ do
 
   -- TODO this is logged by node configuration already, so it would make sense to log it again when
   -- configuration gets reloaded
-  -- traceWith $ "RPC configuration: " <> show rpcConfig
+  -- traceWith tracer $ "RPC configuration: " <> show rpcConfig
 
   when isEnabled $
     runRIO rpcEnv $
