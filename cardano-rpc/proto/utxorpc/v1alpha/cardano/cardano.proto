@@ -55,9 +55,9 @@ message PParams {
   RationalNumber monetary_expansion = 12; // The monetary expansion.
   RationalNumber treasury_expansion = 13; // The treasury expansion.
   uint64 min_pool_cost = 14; // The minimum pool cost.
-  ProtocolVersion protocol_version = 15; // The protocol version.
+  ProtocolVersion protocol_version = 15; // The maximum value size in an output.
   uint64 max_value_size = 16; // The maximum value size.
-  uint64 collateral_percentage = 17; // The collateral percentage.
+  uint64 collateral_percentage = 17; // Percentage of the txfee which must be provided as collateral when including non-native scripts.
   uint64 max_collateral_inputs = 18; // The maximum collateral inputs.
   CostModels cost_models = 19; // The cost models.
   ExPrices prices = 20; // The prices.
