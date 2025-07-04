@@ -52,7 +52,7 @@ runRpcServer
   -> IO (RpcConfig, NetworkMagic)
   -- ^ action which reloads RPC configuration
   -> IO ()
-runRpcServer tracer loadRpcConfig = handleExceptions $ do
+runRpcServer _tracer loadRpcConfig = handleExceptions $ do
   ( RpcConfig
       { isEnabled = Identity isEnabled
       , rpcSocketPath = Identity (File rpcSocketPathFp)
@@ -78,6 +78,6 @@ runRpcServer tracer loadRpcConfig = handleExceptions $ do
  where
   handleExceptions :: (HasCallStack => IO ()) -> IO ()
   handleExceptions = handleAny $ \e ->
-    putTrace $ "RPC server fatal error: " <> displayException e
+    putStrLn $ "RPC server fatal error: " <> displayException e
 
-  putTrace = traceWith tracer
+-- putTrace = traceWith tracer
