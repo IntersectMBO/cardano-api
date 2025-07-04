@@ -6,6 +6,7 @@ import-export-style: leading
 import-grouping:
   - rules:
     - glob: Cardano.Api**
+    - glob: Cardano.Rpc**
   - rules:
     - glob: Cardano**
     - glob: Ouroboros**

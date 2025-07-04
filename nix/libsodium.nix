@@ -1,9 +1,9 @@
-{ stdenvNoCC
-, fetchFromGitHub
-, autoreconfHook
-, wasi-sdk
+{
+  stdenvNoCC,
+  fetchFromGitHub,
+  autoreconfHook,
+  wasi-sdk,
 }:
-
 stdenvNoCC.mkDerivation {
   name = "libsodium";
 

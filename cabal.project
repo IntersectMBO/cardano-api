@@ -20,6 +20,7 @@ packages:
     cardano-api
     cardano-api-gen
     cardano-wasm
+    cardano-rpc
 
 extra-packages: Cabal, process
 
@@ -50,10 +51,6 @@ write-ghc-environment-files: always
 -- enable parallel builds
 jobs: $ncpus
 semaphore: True
-
--- IMPORTANT
--- Do NOT add more source-repository-package stanzas here unless they are strictly
--- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 if impl (ghc >= 9.12)
   allow-newer:
@@ -150,4 +147,8 @@ if arch(wasm32)
 
   package crypton
     ghc-options: -optc-DARGON2_NO_THREADS
+
+-- IMPORTANT
+-- Do NOT add more source-repository-package stanzas here unless they are strictly
+-- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
