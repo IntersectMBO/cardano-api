@@ -6,3 +6,4 @@
   (feature)
   [PR 885](https://github.com/IntersectMBO/cardano-api/pull/885)
 
+- Add UTxO RPC protocol parameters query
