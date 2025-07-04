@@ -5,16 +5,25 @@
 
 module Cardano.Rpc.Server.Internal.Orphans () where
 
+import Cardano.Api.Block (ChainPoint (..), Hash (..), SlotNo (..))
 import Cardano.Api.Era (Inject (..))
+import Cardano.Api.Error
+import Cardano.Api.Pretty
+
+import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 
 import Cardano.Ledger.Plutus qualified as L
-import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 
 import RIO
 
+import Data.ByteString.Short qualified as SBS
 import Data.ProtoLens (defMessage)
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Network.GRPC.Spec
+
+---------------
+-- Conversion
+---------------
 
 instance Inject (Proto UtxoRpc.RationalNumber) (Ratio Integer) where
   inject r = r ^. #numerator . to fromIntegral % r ^. #denominator . to fromIntegral
@@ -37,3 +46,22 @@ instance Inject L.ExUnits (Proto UtxoRpc.ExUnits) where
     defMessage
       & #memory .~ fromIntegral mem
       & #steps .~ fromIntegral steps
+
+instance Inject ChainPoint (Proto UtxoRpc.ChainPoint) where
+  inject chainPoint = do
+    let (slotNo, blockHash) =
+          case chainPoint of
+            ChainPointAtGenesis -> (0, mempty)
+            ChainPoint (SlotNo slot) (HeaderHash hash) -> (slot, SBS.fromShort hash)
+    defMessage
+      & #slot .~ slotNo
+      & #hash .~ blockHash
+
+-----------
+-- Errors
+-----------
+
+-- TODO add RIO to cardano-api and move this instance there
+
+instance Error StringException where
+  prettyError = pshow

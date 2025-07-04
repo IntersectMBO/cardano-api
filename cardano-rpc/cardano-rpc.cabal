@@ -111,3 +111,4 @@ library
     proto-lens-protobuf-types,
     proto-lens-runtime,
     rio,
+    text,

@@ -38,6 +38,7 @@ import Data.ListMap (ListMap)
 import Data.ListMap qualified as ListMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid
+import Data.Text.Encoding.Error qualified as T
 import GHC.Exts (IsList (..))
 import Network.Mux qualified as Mux
 import Text.Parsec.Error qualified as P
@@ -272,6 +273,9 @@ instance Error CBOR.DecoderError where
   prettyError = pshow
 
 instance Error P.ScriptDecodeError where
+  prettyError = pshow
+
+instance Error T.UnicodeException where
   prettyError = pshow
 
 instance Error EraMismatch where
