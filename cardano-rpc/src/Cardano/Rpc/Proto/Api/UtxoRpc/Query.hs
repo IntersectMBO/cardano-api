@@ -14,7 +14,12 @@ import Network.GRPC.Common.Protobuf
 
 import Proto.Utxorpc.V1alpha.Cardano.Cardano
 import Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields hiding
-  ( values
+  ( hash
+  , index
+  , items
+  , key
+  , values
+  , vec'items
   , vec'values
   )
 import Proto.Utxorpc.V1alpha.Query.Query
