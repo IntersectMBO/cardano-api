@@ -54,25 +54,42 @@ library
   exposed-modules:
     Cardano.Rpc.Client
     Cardano.Rpc.Proto.Api.Node
+    Cardano.Rpc.Proto.Api.UtxoRpc.Query
     Cardano.Rpc.Server
     Cardano.Rpc.Server.Config
     Cardano.Rpc.Server.Internal.Env
     Cardano.Rpc.Server.Internal.Error
     Cardano.Rpc.Server.Internal.Monad
+    Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Proto.Cardano.Rpc.Node
     Proto.Cardano.Rpc.Node_Fields
+    Proto.Utxorpc.V1alpha.Cardano.Cardano
+    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
+    Proto.Utxorpc.V1alpha.Query.Query
+    Proto.Utxorpc.V1alpha.Query.Query_Fields
 
   other-modules:
+    Cardano.Rpc.Server.Internal.Orphans
     Paths_cardano_rpc
 
   autogen-modules:
     Paths_cardano_rpc
     Proto.Cardano.Rpc.Node
     Proto.Cardano.Rpc.Node_Fields
+    Proto.Utxorpc.V1alpha.Cardano.Cardano
+    Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
+    Proto.Utxorpc.V1alpha.Query.Query
+    Proto.Utxorpc.V1alpha.Query.Query_Fields
 
   build-depends:
     base,
+    bytestring,
     cardano-api >=10.17,
+    cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-conway,
+    cardano-ledger-core,
+    containers,
     contra-tracer,
     filepath,
     generic-data,
