@@ -77,6 +77,9 @@ module Cardano.Api.UTxO
     -- * Find
   , find
   , findWithKey
+
+    -- * Render
+  , render
   )
 where
 
@@ -93,8 +96,8 @@ import Cardano.Api.Tx.Internal.Output
   , toShelleyTxOut
   , txOutValueToValue
   )
-import Cardano.Api.Tx.Internal.TxIn (TxIn (..), fromShelleyTxIn, toShelleyTxIn)
-import Cardano.Api.Value.Internal (Coin, Value, selectLovelace)
+import Cardano.Api.Tx.Internal.TxIn (TxIn (..), fromShelleyTxIn, renderTxIn, toShelleyTxIn)
+import Cardano.Api.Value.Internal (Coin, Value, renderValue, selectLovelace)
 
 import Cardano.Ledger.Babbage ()
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
@@ -109,6 +112,7 @@ import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
 import Data.Bool
 import Data.Eq
+import Data.Foldable qualified as F
 import Data.Function
 import Data.List qualified
 import Data.Map (Map)
@@ -119,6 +123,7 @@ import Data.Monoid
 import Data.Semigroup
 import Data.Set (Set)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Tuple (uncurry)
 import GHC.Exts qualified as GHC
 import Text.Show
@@ -363,3 +368,13 @@ fromShelleyUTxO sbe =
  where
   f i o =
     Map.singleton (fromShelleyTxIn i) (fromShelleyTxOut sbe o)
+
+{--------------------------------------------------------------------
+   Render
+--------------------------------------------------------------------}
+
+render :: UTxO era -> Text
+render utxo =
+  let f (k, TxOut _ v _ _) =
+        T.drop 54 (renderTxIn k) <> " ↦ " <> renderValue (txOutValueToValue v)
+   in F.foldMap f (toList utxo)
