@@ -37,7 +37,24 @@ executable cardano-wasm
     ghc-options:
       -no-hs-main
       -optl-mexec-model=reactor
-      "-optl-Wl,--strip-all"
+      "-optl-Wl,--strip-all,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=signWithPaymentKey,--export=alsoSignWithPaymentKey,--export=txToCbor"
+  other-modules:
+    Cardano.Wasm.Internal.Api.Tx
+    Cardano.Wasm.Internal.ExceptionHandling
+    Cardano.Wasm.Internal.JavaScript.Bridge
+
   build-depends:
+    aeson,
     base,
     cardano-api,
+    cardano-ledger-api,
+    cardano-strict-containers,
+    containers,
+    exceptions,
+    microlens,
+    text,
+
+  if arch(wasm32)
+    build-depends:
+      ghc-experimental,
+      utf8-string,

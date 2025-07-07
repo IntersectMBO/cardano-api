@@ -8,3 +8,6 @@ The changelogs of constituent packages:
 
 ### `cardano-rpc`
 [./cardano-rpc/CHANGELOG.md](./cardano-rpc/CHANGELOG.md)
+
+### `cardano-wasm`
+[./cardano-wasm/CHANGELOG.md](./cardano-wasm/CHANGELOG.md)
