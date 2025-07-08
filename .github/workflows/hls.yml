@@ -113,4 +113,10 @@ jobs:
 
       - name: Test HLS works
         if: steps.check_trivial_changes.outputs.CHECK_HLS_WORKS > 0
-        run: haskell-language-server
+        run: |
+          # workaround for https://github.com/haskell/haskell-language-server/issues/3735
+          cat <<EOF > hie.yaml
+          cradle:
+            cabal:
+          EOF
+          haskell-language-server
