@@ -9,6 +9,7 @@
     haskellNix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     # blst fails to build for x86_64-darwin
     # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
@@ -40,7 +41,7 @@
     ];
 
     # see flake `variants` below for alternative compilers
-    defaultCompiler = "ghc982";
+    defaultCompiler = "ghc9102";
     # Used for cross compilation, and so referenced in .github/workflows/release-upload.yml. Adapt the
     # latter if you change this value.
     crossCompilerVersion = "ghc966";
@@ -49,18 +50,27 @@
       system: let
         # setup our nixpkgs with the haskell.nix overlays, and the iohk-nix
         # overlays...
-        nixpkgs = import inputs.nixpkgs {
-          overlays = [
-            # iohkNix.overlays.crypto provide libsodium-vrf, libblst and libsecp256k1.
-            inputs.iohkNix.overlays.crypto
-            # haskellNix.overlay can be configured by later overlays, so need to come before them.
-            inputs.haskellNix.overlay
-            # configure haskell.nix to use iohk-nix crypto librairies.
-            inputs.iohkNix.overlays.haskell-nix-crypto
-          ];
-          inherit system;
-          inherit (inputs.haskellNix) config;
-        };
+        nixpkgs = let
+          abseilOverlay = final: prev:
+            prev.lib.optionalAttrs prev.stdenv.hostPlatform.isWindows {
+              abseil-cpp = prev.abseil-cpp.overrideAttrs (finalAttrs: previousAttrs: {
+                buildInputs = previousAttrs.buildInputs ++ [prev.pkgs.windows.mingw_w64_pthreads];
+              });
+            };
+        in
+          import inputs.nixpkgs {
+            overlays = [
+              # iohkNix.overlays.crypto provide libsodium-vrf, libblst and libsecp256k1.
+              inputs.iohkNix.overlays.crypto
+              # haskellNix.overlay can be configured by later overlays, so need to come before them.
+              inputs.haskellNix.overlay
+              # configure haskell.nix to use iohk-nix crypto librairies.
+              inputs.iohkNix.overlays.haskell-nix-crypto
+              abseilOverlay
+            ];
+            inherit system;
+            inherit (inputs.haskellNix) config;
+          };
         inherit (nixpkgs) lib;
 
         # We use cabalProject' to ensure we don't build the plan for
@@ -109,20 +119,18 @@
               ghcid = "0.8.9";
               cabal-gild = "1.3.1.2";
               fourmolu = "0.18.0.0";
-              haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
+              haskell-language-server = "latest";
               # This index-state makes it work for GHC 9.8.2 (it will need to tbe removed for 9.8.4)
-              hlint = {
-                version = "3.8";
-                index-state = "2024-12-01T00:00:00Z";
-              };
+              hlint = "3.10";
             };
           # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck];
+          shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck snappy protobuf];
           # disable Hoogle until someone request it
           shell.withHoogle = false;
           # Skip cross compilers for the shell
           shell.crossPlatforms = _: [];
           shell.shellHook = ''
+            export LD_LIBRARY_PATH="${nixpkgs.snappy}/lib:$LD_LIBRARY_PATH"
             export PATH="$(git rev-parse --show-toplevel)/scripts/devshell:$PATH"
           '';
 
@@ -146,6 +154,10 @@
                 substituteInPlace crypton-x509-system.cabal --replace 'Crypt32' 'crypt32'
               '';
             }
+            ({pkgs, ...}: {
+              packages.proto-lens-protobuf-types.components.library.build-tools = [pkgs.buildPackages.protobuf];
+              packages.cardano-rpc.components.library.build-tools = [pkgs.buildPackages.protobuf];
+            })
           ];
         });
         # ... and construct a flake from the cabal project

@@ -1,10 +1,10 @@
-{ stdenvNoCC
-, fetchFromGitHub
-, autoreconfHook
-, pkg-config
-, wasi-sdk
+{
+  stdenvNoCC,
+  fetchFromGitHub,
+  autoreconfHook,
+  pkg-config,
+  wasi-sdk,
 }:
-
 stdenvNoCC.mkDerivation {
   name = "libsecp256k1";
 

@@ -7,6 +7,9 @@ module Cardano.Api.Network.IPC.Internal.Version
   )
 where
 
+import Cardano.Api.Error
+import Cardano.Api.Pretty
+
 import Cardano.Protocol.Crypto
 import Ouroboros.Consensus.Cardano.Block qualified as Consensus
 import Ouroboros.Consensus.Cardano.Node ()
@@ -52,3 +55,13 @@ data UnsupportedNtcVersionError
       ![NodeToClientVersion]
       -- ^ The versions in which this query is supported
   deriving (Eq, Show)
+
+instance Error UnsupportedNtcVersionError where
+  prettyError (UnsupportedNtcVersionError minNtcVersion ntcVersion) =
+    "Unsupported feature for the node-to-client protocol version.\n"
+      <> "This query requires at least "
+      <> pshow minNtcVersion
+      <> " but the node negotiated "
+      <> pshow ntcVersion
+      <> ".\n"
+      <> "Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."

@@ -66,11 +66,13 @@ import Cardano.Api.Block
 import Cardano.Api.Consensus.Internal.InMode
 import Cardano.Api.Consensus.Internal.Mode
 import Cardano.Api.Consensus.Internal.Protocol
+import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.IO
 import Cardano.Api.Monad.Error (ExceptT (..))
 import Cardano.Api.Network.IPC.Internal.Version
 import Cardano.Api.Network.Internal.NetworkId
+import Cardano.Api.Pretty
 import Cardano.Api.Query.Internal.Type.QueryInMode
 import Cardano.Api.Tx.Internal.Body
 import Cardano.Api.Tx.Internal.Sign
@@ -565,6 +567,9 @@ data AcquiringFailure
   = AFPointTooOld
   | AFPointNotOnChain
   deriving (Eq, Show)
+
+instance Error AcquiringFailure where
+  prettyError = pshow
 
 toAcquiringFailure :: Net.Query.AcquireFailure -> AcquiringFailure
 toAcquiringFailure AcquireFailurePointTooOld = AFPointTooOld

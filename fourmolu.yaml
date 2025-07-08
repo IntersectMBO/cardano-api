@@ -6,6 +6,7 @@ import-export-style: leading
 import-grouping:
   - rules:
     - glob: Cardano.Api**
+    - glob: Cardano.Rpc**
   - rules:
     - glob: Cardano**
     - glob: Ouroboros**
@@ -54,6 +55,8 @@ sort-deriving-clauses: false
 trailing-section-operators: true
 unicode: never
 respectful: false
-fixities: []
+fixities: 
+  - infixl 1 &
+  - infixr 4 .~
 reexports: []
 local-modules: []

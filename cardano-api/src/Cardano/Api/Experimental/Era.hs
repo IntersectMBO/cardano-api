@@ -39,6 +39,7 @@ import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ConwayEraOnwards
 import Cardano.Api.Era.Internal.Eon.MaryEraOnwards
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra (ShelleyBasedEra (..), ShelleyLedgerEra)
+import Cardano.Api.Error
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty.Internal.ShowOf
 
@@ -231,6 +232,10 @@ newtype DeprecatedEra era
   deriving Show
 
 deriving via (ShowOf (DeprecatedEra era)) instance Pretty (DeprecatedEra era)
+
+instance Error (DeprecatedEra era) where
+  prettyError (DeprecatedEra era) =
+    "The era " <> pretty (show era) <> " is deprecated and no longer supported."
 
 sbeToEra
   :: MonadError (DeprecatedEra era) m
