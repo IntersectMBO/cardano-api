@@ -1,0 +1,43 @@
+cabal-version: 3.4
+name: cardano-wasm
+version: 10.0.0.0
+copyright: 2020-2025 Input Output Global Inc (IOG).
+author: IOHK
+maintainer: operations@iohk.io
+license: Apache-2.0
+build-type: Simple
+
+common project-config
+  default-language: Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
+
+  build-depends: base >=4.18 && <5
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wno-unticked-promoted-constructors
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
+
+executable cardano-wasm
+  import: project-config
+  main-is: Main.hs
+  hs-source-dirs:
+    app
+    src
+
+  default-language: Haskell2010
+
+  if arch(wasm32)
+    ghc-options:
+      -no-hs-main
+      -optl-mexec-model=reactor
+      "-optl-Wl,--strip-all"
+  build-depends:
+    base,
+    cardano-api,

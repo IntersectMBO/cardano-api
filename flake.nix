@@ -10,7 +10,7 @@
       url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackageNix";
     };
-    # blst fails to build for x86_64-darwin 
+    # blst fails to build for x86_64-darwin
     # nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
@@ -25,6 +25,10 @@
       url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
       flake = false;
     };
+
+    # wasm specific inputs
+    wasm-nixpkgs.follows = "ghc-wasm-meta/nixpkgs";
+    ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
   };
 
   outputs = inputs: let
@@ -88,7 +92,8 @@
           '';
           shell.packages = p: [
             # Packages in this repo
-            p.cardano-api p.cardano-api-gen
+            p.cardano-api
+            p.cardano-api-gen
             # Work around for issue created by our inability to register sublibs.
             # This package may need to be built and we need to make sure its dependencies
             # are included in `ghc-pkg list` (in particular `compact`)
@@ -106,7 +111,10 @@
               fourmolu = "0.18.0.0";
               haskell-language-server.src = nixpkgs.haskell-nix.sources."hls-2.9";
               # This index-state makes it work for GHC 9.8.2 (it will need to tbe removed for 9.8.4)
-              hlint = { version = "3.8"; index-state = "2024-12-01T00:00:00Z"; };
+              hlint = {
+                version = "3.8";
+                index-state = "2024-12-01T00:00:00Z";
+              };
             };
           # and from nixpkgs or other inputs
           shell.nativeBuildInputs = with nixpkgs; [gh jq yq-go actionlint shellcheck];
@@ -149,15 +157,45 @@
             });
           }
         );
+        # wasm shell
+        wasmShell = let
+          wasm-pkgs = inputs.wasm-nixpkgs.legacyPackages.${system};
+          wasi-sdk = inputs.ghc-wasm-meta.packages.${system}.wasi-sdk;
+          wasm = {
+            libsodium =
+              wasm-pkgs.callPackage ./nix/libsodium.nix {inherit wasi-sdk;};
+            secp256k1 = (wasm-pkgs.callPackage ./nix/secp256k1.nix {inherit wasi-sdk;}).overrideAttrs (_: {
+              src = inputs.iohkNix.inputs.secp256k1;
+            });
+            blst = (wasm-pkgs.callPackage ./nix/blst.nix {inherit wasi-sdk;}).overrideAttrs (_: {
+              src = inputs.iohkNix.inputs.blst;
+            });
+          };
+        in
+          lib.optionalAttrs (system != "x86_64-darwin") {
+            wasm = wasm-pkgs.mkShell {
+              packages = [
+                inputs.ghc-wasm-meta.packages.${system}.all_9_10
+                wasm-pkgs.pkg-config
+                wasm.libsodium
+                wasm.secp256k1
+                wasm.blst
+              ];
+            };
+          };
+        flakeWithWasmShell = nixpkgs.lib.recursiveUpdate flake {
+          devShells = wasmShell;
+          hydraJobs = {devShells = wasmShell;};
+        };
       in
-        nixpkgs.lib.recursiveUpdate flake rec {
+        nixpkgs.lib.recursiveUpdate flakeWithWasmShell rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
             {
               ciJobs =
-                flake.hydraJobs
+                flakeWithWasmShell.hydraJobs
                 // {
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
@@ -169,6 +207,7 @@
             inherit hydraJobs;
           };
           devShells = let
+            # profiling shell
             profilingShell = p: {
               # `nix develop .#profiling` (or `.#ghc927.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
