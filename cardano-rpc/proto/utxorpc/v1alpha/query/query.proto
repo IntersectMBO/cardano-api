@@ -15,6 +15,12 @@ message ChainPoint {
   uint64 timestamp = 4; // Block ms timestamp
 }
 
+// Represents a reference to a transaction output
+message TxoRef {
+  bytes hash = 1; // Tx hash.
+  uint32 index = 2; // Output index.
+}
+
 // Request to get the chain parameters
 message ReadParamsRequest {
   google.protobuf.FieldMask field_mask = 1; // Field mask to selectively return fields in the parsed response.
@@ -33,7 +39,29 @@ message ReadParamsResponse {
   ChainPoint ledger_tip = 2; // The chain point that represent the ledger current position.
 }
 
+// An evenlope that holds an UTxO from any of compatible chains
+message AnyUtxoData {
+  bytes native_bytes = 1; // Original bytes as defined by the chain
+  TxoRef txo_ref = 2; // Hash of the previous transaction.
+  oneof parsed_state {
+    utxorpc.v1alpha.cardano.TxOutput cardano = 3; // A cardano UTxO
+  }
+}
+
+// Request to get specific UTxOs
+message ReadUtxosRequest {
+  repeated TxoRef keys = 1; // List of keys UTxOs.
+  google.protobuf.FieldMask field_mask = 2; // Field mask to selectively return fields.
+}
+
+// Response containing the UTxOs associated with the requested addresses.
+message ReadUtxosResponse {
+  repeated AnyUtxoData items = 1; // List of UTxOs.
+  ChainPoint ledger_tip = 2; // The chain point that represent the ledger current position.
+}
+
 // Service definition for querying the state of the chain.
 service QueryService {
   rpc ReadParams(ReadParamsRequest) returns (ReadParamsResponse); // Get overall chain state.
+  rpc ReadUtxos(ReadUtxosRequest) returns (ReadUtxosResponse); // Read specific UTxOs by reference.
 }
