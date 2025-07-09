@@ -25,7 +25,7 @@ static_resources:
                   headers:
                   - name: "Content-Type"
                     string_match:
-                      exact: "application/grpc-web"
+                      exact: "application/grpc-web-text"
                 route:
                   cluster: grpc_service_unix_socket
                   timeout: 60s
@@ -132,8 +132,18 @@ static_resources:
                   status: 200
                   body:
                     filename: "/Users/palas/work/cardano-api/envoy/pub/example.js"
+              - match:
+                  path: "/node_grpc_web_pb.js"
+                response_headers_to_add:
+                  - header:
+                      key: "Content-Type"
+                      value: "text/javascript"
+                direct_response:
+                  status: 200
+                  body:
+                    filename: "/Users/palas/work/cardano-api/envoy/pub/node_grpc_web_pb.js"
 #               - match:
-#                   path: "/proto/node_pb.js"
+#                   path: "/node_pb.js"
 #                 response_headers_to_add:
 #                   - header:
 #                       key: "Content-Type"
@@ -141,27 +151,7 @@ static_resources:
 #                 direct_response:
 #                   status: 200
 #                   body:
-#                     filename: "/Users/palas/work/cardano-api/envoy/pub/proto/node_pb.js"
-#               - match:
-#                   path: "/proto/node_pb.d.ts"
-#                 response_headers_to_add:
-#                   - header:
-#                       key: "Content-Type"
-#                       value: "text/javascript"
-#                 direct_response:
-#                   status: 200
-#                   body:
-#                     filename: "/Users/palas/work/cardano-api/envoy/pub/proto/node_pb.d.ts"
-#               - match:
-#                   path: "/proto/NodeServiceClientPb.ts"
-#                 response_headers_to_add:
-#                   - header:
-#                       key: "Content-Type"
-#                       value: "text/javascript"
-#                 direct_response:
-#                   status: 200
-#                   body:
-#                     filename: "/Users/palas/work/cardano-api/envoy/pub/proto/NodeServiceClientPb.ts"
+#                     filename: "/Users/palas/work/cardano-api/envoy/pub/node_pb.js"
           http_filters:
           - name: envoy.filters.http.grpc_web
             typed_config:
