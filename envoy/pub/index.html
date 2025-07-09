@@ -2,9 +2,12 @@
 
 <body>
   <script type="module">
-    import * as api from './proto/node_pb.js';
-    console.log("hola");
-    console.log(proto);
+    import * as grpc from './node_grpc_web_pb.js';
+    proto = proto.proto;
+    const node = new proto.NodePromiseClient("http://localhost:8080");
+    const empty = new proto.Empty();
+    const eraPromise = node.getEra(empty, {});
+    eraPromise.then((era) => { console.log(eraPromise); }, (err) => { console.error(err); });
   </script>
   <script type="module" src="./example.js"></script>
 </body>
