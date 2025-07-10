@@ -1,0 +1,5 @@
+envoy -c envoy-conf.yaml
+browserify --standalone grpc cardano/rpc/node_grpc_web_pb.js > node_grpc_web_pb.js
+protoc -I../../cardano-rpc/proto --js_out=import_style=commonjs,binary:./ --grpc-web_out=import_style=typescript,mode=grpcweb:./ ../../cardano-rpc/proto/cardano/rpc/node.proto
+protoc -I=../../cardano-rpc/proto --grpc-web_out=import_style=commonjs,mode=grpcwebtext:. ../../cardano-rpc/proto/cardano/rpc/node.proto
+socat -d -d TCP4-LISTEN:15432,fork UNIX-CONNECT:../work/cardano-api/rpc.socket
