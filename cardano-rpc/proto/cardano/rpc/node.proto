@@ -23,3 +23,5 @@ enum Era {
 message CurrentEra {
    Era era = 1;
 }
+
+package cardano.rpc;
