@@ -41,7 +41,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/index.html"
+                    filename: "./pub/index.html"
               - match:
                   path: "/cardano-api.d.ts"
                 response_headers_to_add:
@@ -51,7 +51,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-api.d.ts"
+                    filename: "./pub/cardano-api.d.ts"
               - match:
                   path: "/index.html"
                 response_headers_to_add:
@@ -61,7 +61,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/index.html"
+                    filename: "./pub/index.html"
               - match:
                   path: "/cardano-api.js"
                 response_headers_to_add:
@@ -71,7 +71,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-api.js"
+                    filename: "./pub/cardano-api.js"
               - match:
                   path: "/mainnet_pparams.json"
                 response_headers_to_add:
@@ -81,7 +81,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/mainnet_pparams.json"
+                    filename: "./pub/mainnet_pparams.json"
               - match:
                   path: "/cardano-wasm.js"
                 response_headers_to_add:
@@ -91,7 +91,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-wasm.js"
+                    filename: "./pub/cardano-wasm.js"
               - match:
                   path: "/preprod_pparams.json"
                 response_headers_to_add:
@@ -101,7 +101,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/preprod_pparams.json"
+                    filename: "./pub/preprod_pparams.json"
               - match:
                   path: "/cardano-wasm.wasm"
                 response_headers_to_add:
@@ -111,7 +111,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/cardano-wasm.wasm"
+                    filename: "./pub/cardano-wasm.wasm"
               - match:
                   path: "/preview_pparams.json"
                 response_headers_to_add:
@@ -121,7 +121,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/preview_pparams.json"
+                    filename: "./pub/preview_pparams.json"
               - match:
                   path: "/example.js"
                 response_headers_to_add:
@@ -131,7 +131,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/example.js"
+                    filename: "./pub/example.js"
               - match:
                   path: "/node_grpc_web_pb.js"
                 response_headers_to_add:
@@ -141,7 +141,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "/Users/palas/work/cardano-api/envoy/pub/node_grpc_web_pb.js"
+                    filename: "./pub/node_grpc_web_pb.js"
 #               - match:
 #                   path: "/node_pb.js"
 #                 response_headers_to_add:
@@ -151,7 +151,7 @@ static_resources:
 #                 direct_response:
 #                   status: 200
 #                   body:
-#                     filename: "/Users/palas/work/cardano-api/envoy/pub/node_pb.js"
+#                     filename: "./pub/node_pb.js"
           http_filters:
           - name: envoy.filters.http.grpc_web
             typed_config:
