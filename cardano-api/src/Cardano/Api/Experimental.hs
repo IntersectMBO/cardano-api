@@ -12,6 +12,7 @@ module Cardano.Api.Experimental
     -- ** Transaction-related
     UnsignedTx (..)
   , UnsignedTxError (..)
+  , SignedTx (..)
   , makeUnsignedTx
   , makeKeyWitness
   , signTx
