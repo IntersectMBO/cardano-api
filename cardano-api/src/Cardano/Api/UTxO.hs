@@ -20,6 +20,7 @@ module Cardano.Api.UTxO
   , size
   , totalValue
   , totalLovelace
+  , containsOutputs
 
     -- * Construction
   , empty
@@ -194,6 +195,10 @@ totalValue = Cardano.Api.UTxO.foldMap (\(TxOut _ v _ _) -> txOutValueToValue v)
 -- | The total `Lovelace` stored in this `UTxO`.
 totalLovelace :: UTxO era -> Coin
 totalLovelace = selectLovelace . totalValue
+
+-- | Check if all the listed `TxOut`s are contained within this `UTxO`.
+containsOutputs :: UTxO era -> [TxOut CtxUTxO era] -> Bool
+containsOutputs a = Data.List.all (`Data.List.elem` txOutputs a)
 
 {--------------------------------------------------------------------
   Construction
