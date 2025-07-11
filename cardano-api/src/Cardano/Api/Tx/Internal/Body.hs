@@ -207,6 +207,8 @@ module Cardano.Api.Tx.Internal.Body
   , fromByronTxIn
   , fromLedgerTxOuts
   , renderTxIn
+  , toLedgerValidityInterval
+  , fromLedgerValidityInterval
 
     -- ** Misc helpers
   , calculateExecutionUnitsLovelace
@@ -276,7 +278,7 @@ import Cardano.Ledger.Alonzo.Tx qualified as Alonzo (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits qualified as Alonzo
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.Babbage.UTxO qualified as L
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Ledger.Binary qualified as CBOR
 import Cardano.Ledger.Coin qualified as L
@@ -3129,3 +3131,31 @@ getReferenceInputsSizeForTxIds beo utxo txIds = babbageEraOnwardsConstraints beo
 calculateExecutionUnitsLovelace :: Ledger.Prices -> ExecutionUnits -> Maybe L.Coin
 calculateExecutionUnitsLovelace prices eUnits =
   return $ Alonzo.txscriptfee prices (toAlonzoExUnits eUnits)
+
+toLedgerValidityInterval
+  :: (TxValidityLowerBound era, TxValidityUpperBound era)
+  -> L.ValidityInterval
+toLedgerValidityInterval (lowerBound, upperBound) =
+  L.ValidityInterval
+    { L.invalidBefore =
+        case lowerBound of
+          TxValidityNoLowerBound -> SNothing
+          TxValidityLowerBound _ s -> SJust s
+    , L.invalidHereafter =
+        case upperBound of
+          TxValidityUpperBound _ s -> maybeToStrictMaybe s
+    }
+
+fromLedgerValidityInterval
+  :: AllegraEraOnwards era
+  -> L.ValidityInterval
+  -> (TxValidityLowerBound era, TxValidityUpperBound era)
+fromLedgerValidityInterval aeo validityInterval =
+  let L.ValidityInterval{L.invalidBefore = invalidBefore, L.invalidHereafter = invalidHereAfter} = validityInterval
+      lowerBound = case invalidBefore of
+        SNothing -> TxValidityNoLowerBound
+        SJust s -> TxValidityLowerBound aeo s
+      upperBound = case invalidHereAfter of
+        SNothing -> TxValidityUpperBound (convert aeo) Nothing
+        SJust s -> TxValidityUpperBound (convert aeo) (Just s)
+   in (lowerBound, upperBound)
