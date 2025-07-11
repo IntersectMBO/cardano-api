@@ -3,3 +3,4 @@
 ## Unreleased
 
 - Initial version
+- Add UTxO RPC protocol parameters query
