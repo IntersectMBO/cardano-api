@@ -31,6 +31,7 @@ module Cardano.Api.Experimental.Era
   )
 where
 
+import Cardano.Api.Consensus
 import Cardano.Api.Era qualified as Api
 import Cardano.Api.Era.Internal.Core (BabbageEra, ConwayEra, Eon (..))
 import Cardano.Api.Era.Internal.Eon.AlonzoEraOnwards
@@ -43,6 +44,7 @@ import Cardano.Api.Error
 import Cardano.Api.Ledger.Internal.Reexport qualified as L
 import Cardano.Api.Pretty.Internal.ShowOf
 
+import Cardano.Binary
 import Cardano.Ledger.Allegra.Scripts qualified as L
 import Cardano.Ledger.Api qualified as L
 import Cardano.Ledger.BaseTypes (Inject (..))
@@ -280,9 +282,12 @@ type EraCommonConstraints era =
   , L.EraTxCert (LedgerEra era)
   , L.EraTxOut (LedgerEra era)
   , L.EraUTxO (LedgerEra era)
+  , FromCBOR (ChainDepState (ConsensusProtocol era))
   , L.NativeScript (LedgerEra era) ~ L.Timelock (LedgerEra era)
+  , PraosProtocolSupportsNode (ConsensusProtocol era)
   , L.ShelleyEraTxCert (LedgerEra era)
   , ShelleyLedgerEra era ~ LedgerEra era
+  , ToJSON (ChainDepState (ConsensusProtocol era))
   , L.HashAnnotated (Ledger.TxBody (LedgerEra era)) L.EraIndependentTxBody
   , Api.IsCardanoEra era
   , Api.IsShelleyBasedEra era
