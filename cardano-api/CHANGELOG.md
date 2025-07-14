@@ -1,5 +1,40 @@
 # Changelog for cardano-api
 
+## 10.17.2.0
+
+- Add JavaScript wrapper and HTML browser example of usage for the `cardano-wasm` API
+  (feature)
+  [PR 894](https://github.com/IntersectMBO/cardano-api/pull/894)
+
+- Add basic transaction creation functions to wasm API
+  (feature)
+  [PR 893](https://github.com/IntersectMBO/cardano-api/pull/893)
+
+- Add wrapper `SignedTx` for signed transactions in experimental API
+  (feature)
+  [PR 897](https://github.com/IntersectMBO/cardano-api/pull/897)
+
+- Add additional constraints to EraCommonConstraints
+  (compatible)
+  [PR 899](https://github.com/IntersectMBO/cardano-api/pull/899)
+
+- Add `Cardano.Api.UTxO.containsOutputs`.
+  (compatible)
+  [PR 890](https://github.com/IntersectMBO/cardano-api/pull/890)
+
+- cardano-rpc: Add cardano-rpc package with a dummy gRPC service
+  (feature)
+  [PR 885](https://github.com/IntersectMBO/cardano-api/pull/885)
+
+- Added support for compiling `cardano-api` to `wasm`
+  (feature)
+  [PR 852](https://github.com/IntersectMBO/cardano-api/pull/852)
+
+- Add `SerialiseAsRawBytes` instance to `UnsignedTx ConwayEra`
+  (feature)
+  [PR 880](https://github.com/IntersectMBO/cardano-api/pull/880)
+
+
 ## 10.17.1.0
 
 - Cardano.Api.Experimental: Fix missing key witnesses in certificates
