@@ -6,6 +6,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -208,8 +209,7 @@ instance
       :: Ledger.DecoderError -> SerialiseAsRawBytesError
     wrapError = SerialiseAsRawBytesError . displayException
 
-instance Show (UnsignedTx era) where
-  showsPrec p (UnsignedTx tx) = showsPrec p tx
+deriving instance Show (UnsignedTx era)
 
 newtype UnsignedTxError
   = UnsignedTxError TxBodyError
@@ -337,6 +337,8 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
 -- | A transaction that has been witnesssed
 data SignedTx era
   = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx (LedgerEra era))
+
+deriving instance Show (SignedTx era)
 
 instance HasTypeProxy era => HasTypeProxy (SignedTx era) where
   data AsType (SignedTx era) = AsSignedTx (AsType era)
