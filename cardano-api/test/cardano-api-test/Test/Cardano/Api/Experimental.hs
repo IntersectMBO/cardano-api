@@ -95,7 +95,7 @@ prop_created_transaction_with_both_apis_are_the_same = H.propertyOnce $ do
     let bootstrapWitnesses = []
         keyWitnesses = [witness]
 
-    let signedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
+    let Exp.SignedTx (signedTx :: Ledger.Tx (Exp.LedgerEra Exp.ConwayEra)) = Exp.signTx era bootstrapWitnesses keyWitnesses unsignedTx
     return signedTx
 
 prop_balance_transaction_two_ways :: Property

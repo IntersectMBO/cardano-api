@@ -116,6 +116,7 @@ module Cardano.Api.Experimental.Tx
     -- * Contents
     UnsignedTx (..)
   , UnsignedTxError (..)
+  , SignedTx (..)
   , makeUnsignedTx
   , makeKeyWitness
   , signTx
@@ -333,12 +334,41 @@ makeKeyWitness era (UnsignedTx unsignedTx) wsk =
         signature = makeShelleySignature txhash sk
      in L.WitVKey vk signature
 
+-- | A transaction that has been witnesssed
+data SignedTx era
+  = L.EraTx (LedgerEra era) => SignedTx (Ledger.Tx (LedgerEra era))
+
+instance HasTypeProxy era => HasTypeProxy (SignedTx era) where
+  data AsType (SignedTx era) = AsSignedTx (AsType era)
+  proxyToAsType :: Proxy (SignedTx era) -> AsType (SignedTx era)
+  proxyToAsType _ = AsSignedTx (asType @era)
+
+instance
+  ( HasTypeProxy era
+  , L.EraTx (LedgerEra era)
+  )
+  => SerialiseAsRawBytes (SignedTx era)
+  where
+  serialiseToRawBytes (SignedTx tx) =
+    Ledger.serialize' (Ledger.eraProtVerHigh @(LedgerEra era)) tx
+  deserialiseFromRawBytes _ =
+    bimap wrapError SignedTx
+      . Ledger.decodeFullAnnotator
+        (Ledger.eraProtVerHigh @(LedgerEra era))
+        "SignedTx"
+        Ledger.decCBOR
+      . fromStrict
+   where
+    wrapError
+      :: Ledger.DecoderError -> SerialiseAsRawBytesError
+    wrapError = SerialiseAsRawBytesError . displayException
+
 signTx
   :: Era era
   -> [L.BootstrapWitness]
   -> [L.WitVKey L.Witness]
   -> UnsignedTx era
-  -> Ledger.Tx (LedgerEra era)
+  -> SignedTx era
 signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
   obtainCommonConstraints era $
     let currentScriptWitnesses = unsigned ^. L.witsTxL
@@ -350,7 +380,7 @@ signTx era bootstrapWits shelleyKeyWits (UnsignedTx unsigned) =
               & L.bootAddrTxWitsL
                 .~ Set.fromList bootstrapWits
         signedTx = unsigned & L.witsTxL .~ (keyWits <> currentScriptWitnesses)
-     in signedTx
+     in SignedTx signedTx
 
 -- Compatibility related. Will be removed once the old api has been deprecated and deleted.
 
