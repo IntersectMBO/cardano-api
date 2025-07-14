@@ -16,6 +16,7 @@ module Cardano.Wasm.Internal.JavaScript.Bridge where
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
+import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
 
@@ -87,6 +88,8 @@ jsValToType expectedType val = do
     Right type_ -> return type_
 
 -- * Type Synonyms for JSVal representations
+
+type JSApiInfo = JSVal
 
 type JSUnsignedTx = JSVal
 
@@ -228,5 +231,13 @@ alsoSignWithPaymentKey jsUnsignedTx jsSigningKey =
 txToCbor :: HasCallStack => JSSignedTx -> IO JSString
 txToCbor jsSignedTx =
   toJSVal . Wasm.toCborImpl =<< fromJSVal jsSignedTx
+
+-- * API Information
+
+foreign export javascript "getApiInfo"
+  getApiInfo :: IO JSApiInfo
+
+getApiInfo :: IO JSApiInfo
+getApiInfo = toJSVal apiInfo
 
 #endif
