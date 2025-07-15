@@ -1,5 +1,8 @@
 # Changelog for cardano-rpc
 
-## Unreleased
+## 10.0.0.0 (unreleased)
 
-- Initial version
+- cardano-rpc: Add cardano-rpc package with a dummy gRPC service
+  (feature)
+  [PR 885](https://github.com/IntersectMBO/cardano-api/pull/885)
+
