@@ -22,19 +22,6 @@
   (compatible)
   [PR 890](https://github.com/IntersectMBO/cardano-api/pull/890)
 
-- cardano-rpc: Add cardano-rpc package with a dummy gRPC service
-  (feature)
-  [PR 885](https://github.com/IntersectMBO/cardano-api/pull/885)
-
-- Added support for compiling `cardano-api` to `wasm`
-  (feature)
-  [PR 852](https://github.com/IntersectMBO/cardano-api/pull/852)
-
-- Add `SerialiseAsRawBytes` instance to `UnsignedTx ConwayEra`
-  (feature)
-  [PR 880](https://github.com/IntersectMBO/cardano-api/pull/880)
-
-
 ## 10.17.1.0
 
 - Cardano.Api.Experimental: Fix missing key witnesses in certificates
