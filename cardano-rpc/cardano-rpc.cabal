@@ -91,6 +91,7 @@ library
     cardano-ledger-core,
     containers,
     contra-tracer,
+    data-default,
     filepath,
     generic-data,
     grapesy,

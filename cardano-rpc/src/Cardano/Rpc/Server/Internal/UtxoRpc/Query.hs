@@ -30,6 +30,7 @@ import Cardano.Ledger.Plutus qualified as L
 import RIO
 
 import Data.ByteString.Short qualified as SBS
+import Data.Default
 import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
 import Network.GRPC.Spec
@@ -66,7 +67,7 @@ readParamsMethod _req = do
 
   let pparamsMsg =
         conwayEraOnwardsConstraints eon $
-          defMessage
+          def
             & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to fromIntegral
             & #maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
             & #minFeeCoefficient .~ pparams ^. L.ppMinFeeBL . to fromIntegral
@@ -78,7 +79,6 @@ readParamsMethod _req = do
             & #poolRetirementEpochBound .~ pparams ^. L.ppEMaxL . to L.unEpochInterval . to fromIntegral
             & #desiredNumberOfPools .~ pparams ^. L.ppNOptL . to fromIntegral
             & #poolInfluence .~ pparams ^. L.ppA0L . to L.unboundRational . to inject
-            & #desiredNumberOfPools .~ pparams ^. L.ppNOptL . to fromIntegral
             & #monetaryExpansion .~ pparams ^. L.ppRhoL . to L.unboundRational . to inject
             & #minPoolCost .~ pparams ^. L.ppMinPoolCostL . to fromIntegral
             & #protocolVersion . #major .~ pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
