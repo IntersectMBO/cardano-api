@@ -166,6 +166,11 @@ jobs:
         KEEP_WORKSPACE: 1
       run: cabal test all --enable-tests --test-show-details=direct
 
+    - name: Check typescript declaration file
+      run: |
+        cabal run -v0 cardano-wasm > cardano-wasm/example/cardano-api.d.ts
+        git diff --exit-code cardano-wasm/example/cardano-api.d.ts
+
     # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
     # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
     # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
