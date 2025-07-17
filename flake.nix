@@ -213,6 +213,8 @@
             playwright = playwright-pkgs.mkShell {
               packages = [
                 playwright-pkgs.playwright-test
+                playwright-pkgs.python313Packages.docopt
+                playwright-pkgs.python313Packages.httpserver
               ];
             };
           };

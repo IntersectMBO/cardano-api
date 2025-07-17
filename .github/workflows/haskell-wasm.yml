@@ -142,6 +142,21 @@ jobs:
       run: |
         wasm32-wasi-cabal build cardano-wasm --no-semaphore -j1 --ghc-options="-j1"
 
+    - name: Prepare example
+      run: |
+        cp $(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1) cardano-wasm/example/
+        $(wasm32-wasi-ghc --print-libdir)/post-link.mjs -i "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)" -o cardano-wasm/example/cardano-wasm.js
+        cp cardano-wasm/lib-wrapper/* cardano-wasm/example/
+
+    - uses: rrbutani/use-nix-shell-action@v1
+      with:
+        devShell: .#playwright
+
+    - name: Run playwright test in example
+      run: |
+       httpserver -h localhost -a 127.0.0.1 -p 8080 cardano-wasm/example &
+       playwright test cardano-wasm/js-test/basic-test.spec.ts
+
     # - name: Run tests
     #   env:
     #     TMPDIR: ${{ runner.temp }}
