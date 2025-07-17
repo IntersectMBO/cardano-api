@@ -62,14 +62,14 @@ executable cardano-wasm
       ghc-experimental,
       utf8-string,
 
-test-suite cardano-wasm-test
+test-suite cardano-wasm-golden
   import: project-config
   hs-source-dirs: test
-  main-is: cardano-wasm-test.hs
+  main-is: cardano-wasm-golden.hs
   type: exitcode-stdio-1.0
   build-depends:
-    hedgehog,
-    hedgehog-extras,
+    hedgehog >=1.1,
+    hedgehog-extras ^>=0.8,
     tasty,
     tasty-hedgehog,
 
