@@ -1,7 +1,5 @@
 // cardano-api.d.ts
 
-// Wrong line to test validation
-
 export default initialise;
 
 /**

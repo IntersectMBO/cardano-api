@@ -16,6 +16,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
+    incl.url = "github:divnix/incl";
     # non-flake nix compatibility
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -137,7 +138,7 @@
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
           modules = [
-            ({pkgs, ...}: {
+            ({...}: {
               packages.cardano-api = {
                 configureFlags = ["--ghc-option=-Werror"];
                 components = {
@@ -148,6 +149,17 @@
                   };
                 };
               };
+            })
+            ({pkgs, config, ...}: let
+              generatedExampleFiles = ["cardano-wasm/example/cardano-api.d.ts"];
+              exportWasmPath = "export CARDANO_WASM=${config.hsPkgs.cardano-wasm.components.exes.cardano-wasm}/bin/cardano-wasm${pkgs.stdenv.hostPlatform.extensions.executable}";
+            in {
+              packages.cardano-wasm.components.tests.cardano-wasm-golden.preCheck = let
+                filteredProjectBase = inputs.incl ./. generatedExampleFiles;
+              in ''
+                ${exportWasmPath}
+                cp -r ${filteredProjectBase}/* ..
+              '';
             })
             {
               packages.crypton-x509-system.postPatch = ''
