@@ -63,24 +63,29 @@ executable cardano-wasm
       utf8-string,
 
 test-suite cardano-wasm-golden
-  import: project-config
-  hs-source-dirs: test
-  main-is: cardano-wasm-golden.hs
   type: exitcode-stdio-1.0
-  build-depends:
-    hedgehog >=1.1,
-    hedgehog-extras ^>=0.8,
-    tasty,
-    tasty-hedgehog,
+  main-is: cardano-wasm-golden.hs
+  hs-source-dirs: test
 
-  ghc-options:
-    -threaded
-    -rtsopts
-    "-with-rtsopts=-N -T"
+  if !arch(wasm32)
+    import: project-config
+    build-depends:
+      hedgehog >=1.1,
+      hedgehog-extras ^>=0.8,
+      tasty,
+      tasty-hedgehog,
 
-  build-tool-depends:
-    cardano-wasm:cardano-wasm,
-    tasty-discover:tasty-discover,
+    ghc-options:
+      -threaded
+      -rtsopts
+      "-with-rtsopts=-N -T"
 
-  other-modules:
-    Test.Golden.Cardano.Wasm.TypeScript
+    build-tool-depends:
+      cardano-wasm:cardano-wasm,
+      tasty-discover:tasty-discover,
+
+    other-modules:
+      Test.Golden.Cardano.Wasm.TypeScript
+  else
+    build-depends:
+      base
