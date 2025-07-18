@@ -45,9 +45,9 @@ import Lens.Micro ((%~), (&), (.~), (<>~))
 
 -- * @UnsignedTx@ object
 
--- | An object representing a transaction that is being built and hasn't
+-- | An object representing a transaction that is being built and has not
 -- been signed yet. It abstracts over the era of the transaction.
--- It is meant to be an opaque object in JavaScript API.
+-- It is meant to be an opaque object in the JavaScript API.
 data UnsignedTxObject
   = forall era. UnsignedTxObject
   { unsignedTxEra :: Exp.Era era
@@ -88,7 +88,7 @@ addTxInputImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) txId txIx =
      in UnsignedTxObject era $ Exp.UnsignedTx tx'
 
 -- | Add a simple transaction output to an unsigned transaction object.
--- It takes a destination address and an amount in lovelace.
+-- It takes a destination address and an amount in lovelaces.
 addSimpleTxOutImpl
   :: (HasCallStack, MonadThrow m) => UnsignedTxObject -> String -> Ledger.Coin -> m UnsignedTxObject
 addSimpleTxOutImpl (UnsignedTxObject era (Exp.UnsignedTx tx)) destAddr lovelaceAmount =
@@ -148,7 +148,7 @@ estimateMinFeeImpl
   => UnsignedTxObject
   -- ^ The unsigned transaction object to estimate fees for.
   -> ProtocolParamsJSON
-  -- ^ The JSON for the protocol parameters of the right era and network.
+  -- ^ The JSON for the protocol parameters of the correct era and network.
   -> Int
   -- ^ The number of key witnesses still to be added to the transaction.
   -> Int

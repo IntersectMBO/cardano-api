@@ -29,6 +29,10 @@ if impl(ghc < 9.8)
 
 constraints: process >= 1.6.26.1
 
+-- It may slow down build plan preparation, but without it cabal has problems
+-- with solving constraints. Remove this when not needed anymore.
+max-backjumps: 50000
+
 program-options
   ghc-options: -Werror
 

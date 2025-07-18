@@ -1,8 +1,10 @@
+/// <reference path="./cardano-api.d.ts" />
+
 import { WASI } from "https://unpkg.com/@bjorn3/browser_wasi_shim@0.4.1/dist/index.js";
 import ghc_wasm_jsffi from "./cardano-wasm.js";
 const __exports = {};
 const wasi = new WASI([], [], []);
-async function initialize() {
+async function initialise() {
   let { instance } = await WebAssembly.instantiateStreaming(fetch("./cardano-wasm.wasm"), {
     ghc_wasm_jsffi: ghc_wasm_jsffi(__exports),
     wasi_snapshot_preview1: wasi.wasiImport,
@@ -12,7 +14,7 @@ async function initialize() {
 
   // Wrap a function with variable arguments to make the parameters inspectable
   function fixateArgs(params, func) {
-    const paramString = params.join(',');
+    const paramString = params.map(p => p.name).join(',');
     // Dynamically create a function that captures 'func' from the closure.
     // 'this' and 'arguments' are passed through from the wrapper to 'func'.
     // Using eval allows the returned function to have named parameters for inspectability.
@@ -26,7 +28,7 @@ async function initialize() {
 
   // Same as fixateArgs but for async functions
   async function fixateArgsAsync(params, func) {
-    const paramString = params.join(',');
+    const paramString = params.map(p => p.name).join(',');
     // Dynamically create an async function.
     const wrapper = eval(`
       (async function(${paramString}) {
@@ -80,7 +82,7 @@ async function initialize() {
   });
 
   // Populate the main API object with static methods
-  apiInfo.staticMethods.forEach(method => {
+  apiInfo.mainObject.methods.forEach(method => {
     cardanoAPI[method.name] = async function (...args) {
       const resultPromise = instance.exports[method.name](...args);
 
@@ -93,4 +95,4 @@ async function initialize() {
   });
   return cardanoAPI;
 }
-export default initialize;
+export default initialise;
