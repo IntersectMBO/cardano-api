@@ -151,7 +151,7 @@
               };
             })
             ({pkgs, config, ...}: let
-              generatedExampleFiles = ["cardano-wasm/example/cardano-api.d.ts"];
+              generatedExampleFiles = ["cardano-wasm/lib-wrapper/cardano-api.d.ts"];
               exportWasmPath = "export CARDANO_WASM=${config.hsPkgs.cardano-wasm.components.exes.cardano-wasm}/bin/cardano-wasm${pkgs.stdenv.hostPlatform.extensions.executable}";
             in {
               packages.cardano-wasm.components.tests.cardano-wasm-golden.preCheck = let
