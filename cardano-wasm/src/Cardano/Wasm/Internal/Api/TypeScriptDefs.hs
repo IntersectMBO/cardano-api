@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | This module defines a basic AST for generating TypeScript
 -- declaration files, and basic pretty-printing functionality.
 --
@@ -31,10 +33,10 @@ printTypeScriptFile tsFile = do
 buildMultilineComment :: Int -> [String] -> TLB.Builder
 buildMultilineComment indentLevel commentLines =
   let indentation = TLB.fromLazyText $ TL.replicate (fromIntegral indentLevel) " "
-      bodyIndentation = indentation <> TLB.fromString " * "
-      firstLine = indentation <> TLB.fromString "/**"
+      bodyIndentation = indentation <> " * "
+      firstLine = indentation <> "/**"
       indentedCommentLines = map (\line -> (bodyIndentation <>) . TLB.fromString $ line <> "\n") commentLines
-      lastLine = indentation <> TLB.fromString " */"
+      lastLine = indentation <> " */"
    in mconcat [firstLine, "\n", mconcat indentedCommentLines, lastLine]
 
 -- | Represents the top-level structure of a TypeScript declaration file.
@@ -90,14 +92,14 @@ data DeclarationType
 -- | Creates a builder for a TypeScript declaration type and content.
 buildDeclarationType :: DeclarationType -> TLB.Builder
 buildDeclarationType (ExportDec isDefault symbolName) =
-  TLB.fromString "export "
-    <> TLB.fromString (if isDefault then "default " else "")
+  "export "
+    <> (if isDefault then "default " else "")
     <> TLB.fromString symbolName
-    <> TLB.fromString ";"
+    <> ";"
 buildDeclarationType (FunctionDec header) =
-  TLB.fromString "declare function " <> buildFunctionHeader header <> TLB.fromString ";"
+  "declare function " <> buildFunctionHeader header <> ";"
 buildDeclarationType (InterfaceDec name properties) =
-  TLB.fromString "declare interface "
+  "declare interface "
     <> TLB.fromString name
     <> " {"
     <> mconcat (map (\prop -> "\n" <> buildInterfaceContent prop <> "\n") properties)
@@ -131,7 +133,7 @@ buildFunctionHeader :: FunctionHeader -> TLB.Builder
 buildFunctionHeader (FunctionHeader name params returnType) =
   TLB.fromString name
     <> "("
-    <> mconcatWith (TLB.fromString ", ") (map buildFunctionParam params)
+    <> mconcatWith ", " (map buildFunctionParam params)
     <> "): "
     <> TLB.fromString returnType
 
@@ -177,7 +179,7 @@ buildInterfaceContentType (InterfaceProperty name pType) =
 buildInterfaceContentType (InterfaceMethod name params returnType) =
   TLB.fromString name
     <> "("
-    <> mconcatWith (TLB.fromString ", ") (map buildFunctionParam params)
+    <> mconcatWith ", " (map buildFunctionParam params)
     <> "): "
     <> TLB.fromString returnType
     <> ";"
