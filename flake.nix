@@ -74,6 +74,8 @@
           };
         inherit (nixpkgs) lib;
 
+        proto-js-bundle-drv = import ./nix/proto-to-js.nix { pkgs = nixpkgs; };
+
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -244,6 +246,9 @@
             inherit cabalProject nixpkgs;
             # also provide hydraJobs through legacyPackages to allow building without system prefix:
             inherit hydraJobs;
+          };
+          packages = lib.optionalAttrs (system != "aarch64-darwin") {
+            proto-js-bundle = proto-js-bundle-drv;
           };
           devShells = let
             # profiling shell
