@@ -65,7 +65,7 @@ executable cardano-wasm
 test-suite cardano-wasm-golden
   type: exitcode-stdio-1.0
   main-is: cardano-wasm-golden.hs
-  hs-source-dirs: test
+  hs-source-dirs: test/cardano-wasm-golden
 
   if !arch(wasm32)
     import: project-config
