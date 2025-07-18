@@ -2,26 +2,6 @@ syntax = "proto3";
 
 package utxorpc.v1alpha.cardano;
 
-// Purpose of the redeemer in a transaction.
-enum RedeemerPurpose {
-  REDEEMER_PURPOSE_UNSPECIFIED = 0;
-  REDEEMER_PURPOSE_SPEND = 1;
-  REDEEMER_PURPOSE_MINT = 2;
-  REDEEMER_PURPOSE_CERT = 3;
-  REDEEMER_PURPOSE_REWARD = 4;
-  REDEEMER_PURPOSE_VOTE = 5;
-  REDEEMER_PURPOSE_PROPOSE = 6;
-}
-
-// Redeemer information for a Plutus script.
-message Redeemer {
-  RedeemerPurpose purpose = 1; // Purpose of the redeemer.
-  PlutusData payload = 2; // Plutus data associated with the redeemer.
-  uint32 index = 3; // Index of the redeemer.
-  ExUnits ex_units = 4; // Execution units consumed by the redeemer.
-  bytes original_cbor = 5; // Original cbor-encoded data as seen on-chain
-}
-
 // Represents a transaction output in the Cardano blockchain.
 message TxOutput {
   bytes address = 1; // Address receiving the output.
@@ -37,18 +17,18 @@ message Datum {
   bytes original_cbor = 3; // Original cbor-encoded data as seen on-chain
 }
 
+// TODO u5c: mint_coin removed
 // Represents a custom asset in the Cardano blockchain.
 message Asset {
   bytes name = 1; // Name of the custom asset.
   uint64 output_coin = 2; // Quantity of the custom asset in case of an output.
-  int64 mint_coin = 3; // Quantity of the custom asset in case of a mint.
 }
 
+// TODO u5c: redeemer was removed
 // Represents a multi-asset group in the Cardano blockchain.
 message MultiAsset {
   bytes policy_id = 1; // Policy ID governing the custom assets.
   repeated Asset assets = 2; // List of custom assets.
-  Redeemer redeemer = 3; // Redeemer for the Plutus script.
 }
 
 // Represents a native script in Cardano.

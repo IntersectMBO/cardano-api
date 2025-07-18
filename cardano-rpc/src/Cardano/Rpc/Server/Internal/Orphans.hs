@@ -131,11 +131,9 @@ instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
                         defMessage
                           & #name .~ serialiseToRawBytes assetName
                           & #outputCoin .~ fromIntegral qty
-                          & #mintCoin .~ 0 -- TODO what is this supposed to mean?
                 defMessage
                   & #policyId .~ serialiseToRawBytes pId
                   & #assets .~ assets
-                  & #redeemer .~ defMessage -- TODO remove this field from proto
           datumRpc = case datum of
             TxOutDatumNone ->
               defMessage
