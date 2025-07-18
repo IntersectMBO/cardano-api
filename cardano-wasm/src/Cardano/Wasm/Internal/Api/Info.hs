@@ -34,8 +34,11 @@ instance Aeson.ToJSON MethodReturnTypeInfo where
 -- | Information about a single parameter of a method.
 data ParamInfo = ParamInfo
   { paramName :: String
+  -- ^ Name of the parameter.
   , paramType :: String
+  -- ^ Type of the parameter (as a TypeScript type).
   , paramDoc :: String
+  -- ^ Documentation for the parameter.
   }
   deriving (Show, Eq)
 
@@ -51,11 +54,15 @@ instance Aeson.ToJSON ParamInfo where
 -- | Information about a single method of a virtual object.
 data MethodInfo = MethodInfo
   { methodName :: String
+  -- ^ Name of the method in the virtual object of the JS API (which should match the exported function).
   , methodDoc :: String
+  -- ^ General documentation for the method.
   , methodParams :: [ParamInfo]
-  -- ^ Names of parameters, excluding 'this'.
+  -- ^ Info about parameters, excluding 'this'.
   , methodReturnType :: MethodReturnTypeInfo
+  -- ^ Return type of the method.
   , methodReturnDoc :: String
+  -- ^ Documentation for the return value of the method.
   }
   deriving (Show, Eq)
 
@@ -73,8 +80,11 @@ instance Aeson.ToJSON MethodInfo where
 -- | Information about a virtual object and its methods.
 data VirtualObjectInfo = VirtualObjectInfo
   { virtualObjectName :: String
+  -- ^ Name of the virtual object.
   , virtualObjectDoc :: String
+  -- ^ Documentation for the virtual object.
   , virtualObjectMethods :: [MethodInfo]
+  -- ^ Information about the methods of the virtual object.
   }
   deriving (Show, Eq)
 
@@ -90,9 +100,13 @@ instance Aeson.ToJSON VirtualObjectInfo where
 -- | Aggregate type for all API information.
 data ApiInfo = ApiInfo
   { mainObject :: VirtualObjectInfo
+  -- ^ Information about the main virtual object of the API, which serves as the entry point.
   , virtualObjects :: [VirtualObjectInfo]
+  -- ^ Info about all other (non-main) virtual objects and their methods.
   , initialiseFunctionDoc :: String
+  -- ^ Documentation for the initialise function of the API (which creates the main virtual object).
   , initialiseFunctionReturnDoc :: String
+  -- ^ Documentation for the return value of the initialise function (which is the main virtual object).
   }
   deriving (Show, Eq)
 
