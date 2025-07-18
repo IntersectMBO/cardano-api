@@ -80,6 +80,7 @@ library
     Cardano.Api.HasTypeProxy
     Cardano.Api.Hash
     Cardano.Api.IO
+    Cardano.Api.Internal.Utils
     Cardano.Api.Key
     Cardano.Api.Ledger
     Cardano.Api.LedgerState
@@ -241,7 +242,6 @@ library
     Cardano.Api.Internal.Orphans
     Cardano.Api.Internal.Orphans.Misc
     Cardano.Api.Internal.Orphans.Serialisation
-    Cardano.Api.Internal.Utils
     Cardano.Api.Key.Internal
     Cardano.Api.Key.Internal.Class
     Cardano.Api.Key.Internal.Mnemonic

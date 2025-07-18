@@ -16,9 +16,13 @@ where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley ()
 
-(?!) :: Maybe a -> e -> Either e a
-Nothing ?! e = Left e
-Just x ?! _ = Right x
+import Control.Monad.Error.Class
+
+(?!) :: MonadError e m => Maybe a -> e -> m a
+Nothing ?! e = throwError e
+Just x ?! _ = pure x
+
+infixl 8 ?!
 
 (?!.) :: Either e a -> (e -> e') -> Either e' a
 Left e ?!. f = Left (f e)
