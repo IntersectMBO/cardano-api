@@ -207,19 +207,34 @@
               ];
             };
           };
+        playwrightShell = let
+           playwright-pkgs = inputs.nixpkgs.legacyPackages.${system};
+          in {
+            playwright = playwright-pkgs.mkShell {
+              packages = [
+                playwright-pkgs.playwright-test
+                playwright-pkgs.python313Packages.docopt
+                playwright-pkgs.python313Packages.httpserver
+              ];
+            };
+          };
         flakeWithWasmShell = nixpkgs.lib.recursiveUpdate flake {
           devShells = wasmShell;
           hydraJobs = {devShells = wasmShell;};
         };
+        flakeWithPlaywrightShell = nixpkgs.lib.recursiveUpdate flakeWithWasmShell {
+          devShells = playwrightShell;
+          hydraJobs = {devShells = playwrightShell;};
+        };
       in
-        nixpkgs.lib.recursiveUpdate flakeWithWasmShell rec {
+        nixpkgs.lib.recursiveUpdate flakeWithPlaywrightShell rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
             nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
             {
               ciJobs =
-                flakeWithWasmShell.hydraJobs
+                flakeWithPlaywrightShell.hydraJobs
                 // {
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
