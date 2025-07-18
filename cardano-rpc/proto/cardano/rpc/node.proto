@@ -1,5 +1,6 @@
-
 syntax = "proto3";
+
+package cardano.rpc;
 
 import "google/protobuf/empty.proto";
 
@@ -10,7 +11,7 @@ service Node {
 }
 
 enum Era {
-    byron = 0; 
+    byron = 0;
     shelley = 1;
     allegra = 2;
     mary = 3;

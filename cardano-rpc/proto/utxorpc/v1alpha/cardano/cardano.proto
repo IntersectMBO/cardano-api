@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package utxorpc.v1alpha.cardano;
+
+// Represents a rational number as a fraction.
+message RationalNumber {
+  int32 numerator = 1;
+  uint32 denominator = 2;
+}
+
+// PARAMS
+// ======
+
+message ExUnits {
+  uint64 steps = 1;
+  uint64 memory = 2;
+}
+
+message ExPrices {
+  RationalNumber steps = 1;
+  RationalNumber memory = 2;
+}
+
+message ProtocolVersion {
+  uint32 major = 1;
+  uint32 minor = 2;
+}
+
+message CostModel {
+  repeated int64 values = 1;
+}
+
+message CostModels {
+  CostModel plutus_v1 = 1;
+  CostModel plutus_v2 = 2;
+  CostModel plutus_v3 = 3;
+}
+
+message VotingThresholds {
+  repeated RationalNumber thresholds = 1;
+}
+
+message PParams {
+  uint64 coins_per_utxo_byte = 1; // The number of coins per UTXO byte.
+  uint64 max_tx_size = 2; // The maximum transaction size.
+  uint64 min_fee_coefficient = 3; // The minimum fee coefficient.
+  uint64 min_fee_constant = 4; // The minimum fee constant.
+  uint64 max_block_body_size = 5; // The maximum block body size.
+  uint64 max_block_header_size = 6; // The maximum block header size.
+  uint64 stake_key_deposit = 7; // The stake key deposit.
+  uint64 pool_deposit = 8; // The pool deposit.
+  uint64 pool_retirement_epoch_bound = 9; // The pool retirement epoch bound.
+  uint64 desired_number_of_pools = 10; // The desired number of pools.
+  RationalNumber pool_influence = 11; // The pool influence.
+  RationalNumber monetary_expansion = 12; // The monetary expansion.
+  RationalNumber treasury_expansion = 13; // The treasury expansion.
+  uint64 min_pool_cost = 14; // The minimum pool cost.
+  ProtocolVersion protocol_version = 15; // The maximum value size in an output.
+  uint64 max_value_size = 16; // The maximum value size.
+  uint64 collateral_percentage = 17; // Percentage of the txfee which must be provided as collateral when including non-native scripts.
+  uint64 max_collateral_inputs = 18; // The maximum collateral inputs.
+  CostModels cost_models = 19; // The cost models.
+  ExPrices prices = 20; // The prices.
+  ExUnits max_execution_units_per_transaction = 21; // The maximum execution units per transaction.
+  ExUnits max_execution_units_per_block = 22; // The maximum execution units per block.
+  RationalNumber min_fee_script_ref_cost_per_byte = 23; // The minimum fee per script reference byte.
+  VotingThresholds pool_voting_thresholds = 24; // The pool voting thresholds.
+  VotingThresholds drep_voting_thresholds = 25; // The drep voting thresholds.
+  uint32 min_committee_size = 26; // The minimum committee size.
+  uint64 committee_term_limit = 27; // The committee term limit.
+  uint64 governance_action_validity_period = 28; // The governance action validity period.
+  uint64 governance_action_deposit = 29; // The governance action deposit.
+  uint64 drep_deposit = 30; // The drep deposit.
+  uint64 drep_inactivity_period = 31; // The drep inactivity period.
+}

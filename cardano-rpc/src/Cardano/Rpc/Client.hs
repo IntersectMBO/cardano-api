@@ -8,6 +8,8 @@ module Cardano.Rpc.Client
   )
 where
 
+import Cardano.Rpc.Server.Internal.Orphans ()
+
 import Data.ProtoLens.Field
 import Network.GRPC.Client
 import Network.GRPC.Client.StreamType.IO
