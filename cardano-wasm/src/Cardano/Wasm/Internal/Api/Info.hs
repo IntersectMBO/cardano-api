@@ -126,6 +126,7 @@ apiInfo :: ApiInfo
 apiInfo =
   let unsignedTxObjectName = "UnsignedTx"
       signedTxObjectName = "SignedTx"
+      grpcConnectionName = "GrpcConnection"
 
       unsignedTxObj =
         VirtualObjectInfo
@@ -206,6 +207,21 @@ apiInfo =
                   }
               ]
           }
+
+      grpcConnection =
+        VirtualObjectInfo
+          { virtualObjectName = grpcConnectionName
+          , virtualObjectDoc = "Represents a gRPC-web client connection to a Cardano node."
+          , virtualObjectMethods =
+              [ MethodInfo
+                  { methodName = "getEra"
+                  , methodDoc = "Get the era from the Cardano Node using a GRPC-web client."
+                  , methodParams = []
+                  , methodReturnType = OtherType "number"
+                  , methodReturnDoc = "A promise that resolves to the current era number."
+                  }
+              ]
+          }
    in ApiInfo
         { mainObject =
             VirtualObjectInfo
@@ -219,9 +235,16 @@ apiInfo =
                       , methodReturnType = NewObject unsignedTxObjectName
                       , methodReturnDoc = "A promise that resolves to a new `UnsignedTx` object."
                       }
+                  , MethodInfo
+                      { methodName = "newGrpcConnection"
+                      , methodDoc = "Create a new client connection for communicating with a Cardano node through gRPC-web."
+                      , methodParams = [ParamInfo "webGrpcUrl" "string" "The URL of the gRPC-web server."]
+                      , methodReturnType = NewObject grpcConnectionName
+                      , methodReturnDoc = "A promise that resolves to a new `GrpcConnection`."
+                      }
                   ]
               }
-        , virtualObjects = [unsignedTxObj, signedTxObj]
+        , virtualObjects = [unsignedTxObj, signedTxObj, grpcConnection]
         , initialiseFunctionDoc = "Initialises the Cardano API."
         , initialiseFunctionReturnDoc = "A promise that resolves to the main `CardanoAPI` object."
         }

@@ -37,14 +37,17 @@ executable cardano-wasm
     ghc-options:
       -no-hs-main
       -optl-mexec-model=reactor
-      "-optl-Wl,--strip-all,--export=getApiInfo,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=estimateMinFee,--export=signWithPaymentKey,--export=alsoSignWithPaymentKey,--export=txToCbor"
+      "-optl-Wl,--strip-all,--export=getApiInfo,--export=newConwayTx,--export=addTxInput,--export=addSimpleTxOut,--export=setFee,--export=estimateMinFee,--export=signWithPaymentKey,--export=alsoSignWithPaymentKey,--export=txToCbor,--export=newGrpcConnection,--export=getEra"
   other-modules:
+    Cardano.Wasm.Internal.Api.GRPC
     Cardano.Wasm.Internal.Api.Info
     Cardano.Wasm.Internal.Api.InfoToTypeScript
     Cardano.Wasm.Internal.Api.Tx
     Cardano.Wasm.Internal.Api.TypeScriptDefs
     Cardano.Wasm.Internal.ExceptionHandling
     Cardano.Wasm.Internal.JavaScript.Bridge
+    Cardano.Wasm.Internal.JavaScript.GRPC
+    Cardano.Wasm.Internal.JavaScript.GRPCTypes
 
   build-depends:
     aeson,
