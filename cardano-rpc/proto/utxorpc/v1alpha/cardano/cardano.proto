@@ -11,17 +11,18 @@ message TxOutput {
   Script script = 5; // Script associated with the output.
 }
 
+// TODO u5c: replaced plutus_data with just bytes
 message Datum {
   bytes hash = 1; // Hash of this datum as seen on-chain
-  PlutusData payload = 2; // Parsed Plutus data payload
   bytes original_cbor = 3; // Original cbor-encoded data as seen on-chain
 }
 
-// TODO u5c: mint_coin removed
+// TODO u5c: mint_coin made optional
 // Represents a custom asset in the Cardano blockchain.
 message Asset {
   bytes name = 1; // Name of the custom asset.
   uint64 output_coin = 2; // Quantity of the custom asset in case of an output.
+  optional int64 mint_coin = 3; // Quantity of the custom asset in case of a mint.
 }
 
 // TODO u5c: redeemer was removed
@@ -31,76 +32,11 @@ message MultiAsset {
   repeated Asset assets = 2; // List of custom assets.
 }
 
-// Represents a native script in Cardano.
-message NativeScript {
-  oneof native_script {
-    bytes script_pubkey = 1; // Script based on an address key hash.
-    NativeScriptList script_all = 2; // Script that requires all nested scripts to be satisfied.
-    NativeScriptList script_any = 3; // Script that requires any of the nested scripts to be satisfied.
-    ScriptNOfK script_n_of_k = 4; // Script that requires k out of n nested scripts to be satisfied.
-    uint64 invalid_before = 5; // Slot number before which the script is invalid.
-    uint64 invalid_hereafter = 6; // Slot number after which the script is invalid.
-  }
-}
-
-// Represents a list of native scripts.
-message NativeScriptList {
-  repeated NativeScript items = 1; // List of native scripts.
-}
-
-// Represents a "k out of n" native script.
-message ScriptNOfK {
-  uint32 k = 1; // The number of required satisfied scripts.
-  repeated NativeScript scripts = 2; // List of native scripts.
-}
-
-// Represents a constructor for Plutus data in Cardano.
-message Constr {
-  uint32 tag = 1;
-  uint64 any_constructor = 2;
-  repeated PlutusData fields = 3;
-}
-
-// Represents a big integer for Plutus data in Cardano.
-message BigInt {
-  oneof big_int {
-    int64 int = 1;
-    bytes big_u_int = 2;
-    bytes big_n_int = 3;
-  }
-}
-
-// Represents a key-value pair for Plutus data in Cardano.
-message PlutusDataPair {
-  PlutusData key = 1; // Key of the pair.
-  PlutusData value = 2; // Value of the pair.
-}
-
-// Represents a Plutus data item in Cardano.
-message PlutusData {
-  oneof plutus_data {
-    Constr constr = 2; // Constructor.
-    PlutusDataMap map = 3; // Map of Plutus data.
-    BigInt big_int = 4; // Big integer.
-    bytes bounded_bytes = 5; // Bounded bytes.
-    PlutusDataArray array = 6; // Array of Plutus data.
-  }
-}
-
-// Represents a map of Plutus data in Cardano.
-message PlutusDataMap {
-  repeated PlutusDataPair pairs = 1; // List of key-value pairs.
-}
-
-// Represents an array of Plutus data in Cardano.
-message PlutusDataArray {
-  repeated PlutusData items = 1; // List of Plutus data items.
-}
-
 // Represents a script in Cardano.
+// TODO u5c: removed native script representation
 message Script {
   oneof script {
-    NativeScript native = 1; // Native script.
+    bytes native = 1; // Native script.
     bytes plutus_v1 = 2; // Plutus V1 script.
     bytes plutus_v2 = 3; // Plutus V2 script.
     bytes plutus_v3 = 4; // Plutus V3 script.
