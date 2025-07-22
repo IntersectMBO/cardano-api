@@ -21,6 +21,7 @@ module Cardano.Api.Experimental.Era
   , IsEra (..)
   , Some (..)
   , Inject (..)
+  , Convert (..)
   , LedgerEra
   , DeprecatedEra (..)
   , EraCommonConstraints

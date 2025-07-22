@@ -44,9 +44,10 @@ message Script {
 }
 
 // Represents a rational number as a fraction.
+// TODO u5c increased precision to 64 bits
 message RationalNumber {
-  int32 numerator = 1;
-  uint32 denominator = 2;
+  int64 numerator = 1;
+  uint64 denominator = 2;
 }
 
 // PARAMS

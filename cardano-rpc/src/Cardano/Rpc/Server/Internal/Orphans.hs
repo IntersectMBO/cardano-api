@@ -2,6 +2,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -20,10 +22,18 @@ import Cardano.Api.Tx
 import Cardano.Api.Value
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 
+import Cardano.Ledger.Api qualified as L
+import Cardano.Ledger.BaseTypes qualified as L
+import Cardano.Ledger.Conway.PParams qualified as L
+import Cardano.Ledger.Plutus qualified as L
+
 import RIO hiding (toList)
 
+import Data.Default
+import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
-import Data.Ratio (Ratio, denominator, numerator, (%))
+import Data.ProtoLens.Message (Message)
+import Data.Ratio (denominator, numerator, (%))
 import Data.Text.Encoding qualified as T
 import GHC.IsList
 import Network.GRPC.Spec
@@ -34,12 +44,11 @@ import Network.GRPC.Spec
 
 -- It's easier to use 'Proto a' wrappers for RPC types, because it makes lens automatically available.
 
--- TODO: write property tests for bijections
-
-instance Inject (Proto UtxoRpc.RationalNumber) (Ratio Integer) where
+instance Inject (Proto UtxoRpc.RationalNumber) Rational where
   inject r = r ^. #numerator . to fromIntegral % r ^. #denominator . to fromIntegral
 
-instance Inject (Ratio Integer) (Proto UtxoRpc.RationalNumber) where
+-- NB. this clips value in Integer -> Int64/Word64 conversion here
+instance Inject Rational (Proto UtxoRpc.RationalNumber) where
   inject r =
     defMessage
       & #numerator .~ fromIntegral (numerator r)
@@ -121,6 +130,80 @@ instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
         & #txoRef .~ inject txIn
         & #cardano .~ protoTxOut
 
+instance L.ConwayEraPParams lera => Inject (L.PParams lera) (Proto UtxoRpc.PParams) where
+  inject pparams = do
+    let pparamsCostModels :: Map L.Language [Int64] =
+          L.getCostModelParams <$> pparams ^. L.ppCostModelsL . to L.costModelsValid
+        poolVotingThresholds :: L.PoolVotingThresholds =
+          pparams ^. L.ppPoolVotingThresholdsL
+        drepVotingThresholds :: L.DRepVotingThresholds =
+          pparams ^. L.ppDRepVotingThresholdsL
+    def
+      & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to fromIntegral
+      & #maxTxSize .~ pparams ^. L.ppMaxTxSizeL . to fromIntegral
+      & #minFeeCoefficient .~ pparams ^. L.ppMinFeeBL . to fromIntegral
+      & #minFeeConstant .~ pparams ^. L.ppMinFeeAL . to fromIntegral
+      & #maxBlockBodySize .~ pparams ^. L.ppMaxBBSizeL . to fromIntegral
+      & #maxBlockHeaderSize .~ pparams ^. L.ppMaxBHSizeL . to fromIntegral
+      & #stakeKeyDeposit .~ pparams ^. L.ppKeyDepositL . to fromIntegral
+      & #poolDeposit .~ pparams ^. L.ppPoolDepositL . to fromIntegral
+      & #poolRetirementEpochBound .~ pparams ^. L.ppEMaxL . to L.unEpochInterval . to fromIntegral
+      & #desiredNumberOfPools .~ pparams ^. L.ppNOptL . to fromIntegral
+      & #poolInfluence .~ pparams ^. L.ppA0L . to L.unboundRational . to inject
+      & #monetaryExpansion .~ pparams ^. L.ppRhoL . to L.unboundRational . to inject
+      & #treasuryExpansion .~ pparams ^. L.ppTauL . to L.unboundRational . to inject
+      & #minPoolCost .~ pparams ^. L.ppMinPoolCostL . to fromIntegral
+      & #protocolVersion . #major .~ pparams ^. L.ppProtocolVersionL . to L.pvMajor . to L.getVersion
+      & #protocolVersion . #minor .~ pparams ^. L.ppProtocolVersionL . to L.pvMinor . to fromIntegral
+      & #maxValueSize .~ pparams ^. L.ppMaxValSizeL . to fromIntegral
+      & #collateralPercentage .~ pparams ^. L.ppCollateralPercentageL . to fromIntegral
+      & #maxCollateralInputs .~ pparams ^. L.ppMaxCollateralInputsL . to fromIntegral
+      & #costModels . #plutusV1 . #values .~ (join . maybeToList) (M.lookup L.PlutusV1 pparamsCostModels)
+      & #costModels . #plutusV2 . #values .~ (join . maybeToList) (M.lookup L.PlutusV2 pparamsCostModels)
+      & #costModels . #plutusV3 . #values .~ (join . maybeToList) (M.lookup L.PlutusV3 pparamsCostModels)
+      & #prices . #steps .~ pparams ^. L.ppPricesL . to L.prSteps . to L.unboundRational . to inject
+      & #prices . #memory .~ pparams ^. L.ppPricesL . to L.prMem . to L.unboundRational . to inject
+      & #maxExecutionUnitsPerTransaction .~ pparams ^. L.ppMaxTxExUnitsL . to inject
+      & #maxExecutionUnitsPerBlock .~ pparams ^. L.ppMaxBlockExUnitsL . to inject
+      & #minFeeScriptRefCostPerByte
+        .~ pparams ^. L.ppMinFeeRefScriptCostPerByteL . to L.unboundRational . to inject
+      & #poolVotingThresholds . #thresholds
+        .~ ( inject . L.unboundRational
+               -- order taken from https://github.com/cardano-foundation/CIPs/blob/acb4b2348c968003dfc370cd3769615bfca1f159/CIP-1694/README.md#requirements
+               <$> [ poolVotingThresholds ^. L.pvtMotionNoConfidenceL
+                   , poolVotingThresholds ^. L.pvtCommitteeNormalL
+                   , poolVotingThresholds ^. L.pvtCommitteeNoConfidenceL
+                   , poolVotingThresholds ^. L.pvtHardForkInitiationL
+                   , poolVotingThresholds ^. L.pvtPPSecurityGroupL
+                   ]
+           )
+      & #drepVotingThresholds . #thresholds
+        .~ ( inject . L.unboundRational
+               -- order taken from https://github.com/cardano-foundation/CIPs/blob/acb4b2348c968003dfc370cd3769615bfca1f159/CIP-1694/README.md#requirements
+               <$> [ drepVotingThresholds ^. L.dvtMotionNoConfidenceL
+                   , drepVotingThresholds ^. L.dvtCommitteeNormalL
+                   , drepVotingThresholds ^. L.dvtCommitteeNoConfidenceL
+                   , drepVotingThresholds ^. L.dvtUpdateToConstitutionL
+                   , drepVotingThresholds ^. L.dvtHardForkInitiationL
+                   , drepVotingThresholds ^. L.dvtPPNetworkGroupL
+                   , drepVotingThresholds ^. L.dvtPPEconomicGroupL
+                   , drepVotingThresholds ^. L.dvtPPTechnicalGroupL
+                   , drepVotingThresholds ^. L.dvtPPGovGroupL
+                   , drepVotingThresholds ^. L.dvtTreasuryWithdrawalL
+                   ]
+           )
+      & #minCommitteeSize .~ pparams ^. L.ppCommitteeMinSizeL . to fromIntegral
+      & #committeeTermLimit
+        .~ pparams ^. L.ppCommitteeMaxTermLengthL . to L.unEpochInterval . to fromIntegral
+      & #governanceActionValidityPeriod
+        .~ pparams ^. L.ppGovActionLifetimeL . to L.unEpochInterval . to fromIntegral
+      & #governanceActionDeposit .~ pparams ^. L.ppGovActionDepositL . to fromIntegral
+      & #drepDeposit .~ pparams ^. L.ppDRepDepositL . to fromIntegral
+      & #drepInactivityPeriod .~ pparams ^. L.ppDRepActivityL . to L.unEpochInterval . to fromIntegral
+
+instance Message a => Default (Proto a) where
+  def = defMessage
+
 -----------
 -- Errors
 -----------
@@ -129,3 +212,6 @@ instance IsCardanoEra era => Inject (UTxO era) [Proto UtxoRpc.AnyUtxoData] where
 
 instance Error StringException where
   prettyError = pshow
+
+instance IsString e => MonadFail (Either e) where
+  fail = Left . fromString
