@@ -74,6 +74,8 @@
           };
         inherit (nixpkgs) lib;
 
+        proto-js-bundle-drv = import ./nix/proto-to-js.nix {pkgs = nixpkgs;};
+
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -150,7 +152,11 @@
                 };
               };
             })
-            ({pkgs, config, ...}: let
+            ({
+              pkgs,
+              config,
+              ...
+            }: let
               generatedExampleFiles = ["cardano-wasm/lib-wrapper/cardano-api.d.ts"];
               exportWasmPath = "export CARDANO_WASM=${config.hsPkgs.cardano-wasm.components.exes.cardano-wasm}/bin/cardano-wasm${pkgs.stdenv.hostPlatform.extensions.executable}";
             in {
@@ -208,16 +214,16 @@
             };
           };
         playwrightShell = let
-           playwright-pkgs = inputs.nixpkgs.legacyPackages.${system};
-          in {
-            playwright = playwright-pkgs.mkShell {
-              packages = [
-                playwright-pkgs.playwright-test
-                playwright-pkgs.python313Packages.docopt
-                playwright-pkgs.python313Packages.httpserver
-              ];
-            };
+          playwright-pkgs = inputs.nixpkgs.legacyPackages.${system};
+        in {
+          playwright = playwright-pkgs.mkShell {
+            packages = [
+              playwright-pkgs.playwright-test
+              playwright-pkgs.python313Packages.docopt
+              playwright-pkgs.python313Packages.httpserver
+            ];
           };
+        };
         flakeWithWasmShell = nixpkgs.lib.recursiveUpdate flake {
           devShells = wasmShell;
           hydraJobs = {devShells = wasmShell;};
@@ -238,12 +244,22 @@
                 // {
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
+                  proto-js-bundle = proto-js-bundle-drv;
                 };
+            }
+            // lib.optionalAttrs (system != "aarch64-darwin")
+            {
+              packages = {
+                proto-js-bundle = proto-js-bundle-drv;
+              };
             };
           legacyPackages = {
             inherit cabalProject nixpkgs;
             # also provide hydraJobs through legacyPackages to allow building without system prefix:
             inherit hydraJobs;
+          };
+          packages = lib.optionalAttrs (system != "aarch64-darwin") {
+            proto-js-bundle = proto-js-bundle-drv;
           };
           devShells = let
             # profiling shell
