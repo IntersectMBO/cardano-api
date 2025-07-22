@@ -20,7 +20,7 @@ where
 import Cardano.Api.Governance.Internal.Action.ProposalProcedure
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Orphans (AsType (..))
-import Cardano.Api.Internal.Utils
+import Cardano.Api.Monad.Error
 import Cardano.Api.Serialise.Bech32
 import Cardano.Api.Serialise.Raw
 import Cardano.Api.Tx.Internal.TxIn
@@ -98,7 +98,7 @@ deserialiseFromBech32Cip129
 deserialiseFromBech32Cip129 bech32Str = do
   (prefix, dataPart) <-
     Bech32.decodeLenient bech32Str
-      ?!. Bech32DecodingError
+      ?!& Bech32DecodingError
 
   let actualPrefix = Bech32.humanReadablePartToText prefix
       permittedPrefixes = cip129Bech32PrefixesPermitted (asType @a)
@@ -160,7 +160,7 @@ deserialiseGovActionIdFromBech32Cip129 bech32Str = do
   let permittedPrefixes = ["gov_action"]
   (prefix, dataPart) <-
     Bech32.decodeLenient bech32Str
-      ?!. Bech32DecodingError
+      ?!& Bech32DecodingError
   let actualPrefix = Bech32.humanReadablePartToText prefix
   guard (actualPrefix `elem` permittedPrefixes)
     ?! Bech32UnexpectedPrefix actualPrefix (fromList permittedPrefixes)

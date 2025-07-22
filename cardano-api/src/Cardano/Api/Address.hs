@@ -92,8 +92,8 @@ where
 import Cardano.Api.Byron.Internal.Key
 import Cardano.Api.Era
 import Cardano.Api.HasTypeProxy
-import Cardano.Api.Internal.Utils
 import Cardano.Api.Key.Internal
+import Cardano.Api.Monad.Error
 import Cardano.Api.Network.Internal.NetworkId
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Plutus.Internal.Script

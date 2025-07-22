@@ -248,9 +248,9 @@ import Cardano.Api.Experimental.Plutus.Internal.Shim.LegacyScripts
 import Cardano.Api.Experimental.Tx.Internal.TxScriptWitnessRequirements
 import Cardano.Api.Governance.Internal.Action.ProposalProcedure
 import Cardano.Api.Governance.Internal.Action.VotingProcedure
-import Cardano.Api.Internal.Utils
 import Cardano.Api.Key.Internal
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
+import Cardano.Api.Monad.Error
 import Cardano.Api.Network.Internal.NetworkId
 import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.Plutus.Internal.ScriptData

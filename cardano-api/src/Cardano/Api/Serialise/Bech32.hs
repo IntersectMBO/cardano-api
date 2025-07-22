@@ -18,7 +18,7 @@ where
 import Cardano.Api.Error
 import Cardano.Api.HasTypeProxy
 import Cardano.Api.Internal.Orphans.Misc ()
-import Cardano.Api.Internal.Utils
+import Cardano.Api.Monad.Error
 import Cardano.Api.Pretty
 import Cardano.Api.Serialise.Raw
 
@@ -52,7 +52,7 @@ deserialiseFromBech32
 deserialiseFromBech32 bech32Str = do
   (prefix, dataPart) <-
     Bech32.decodeLenient bech32Str
-      ?!. Bech32DecodingError
+      ?!& Bech32DecodingError
 
   let actualPrefix = Bech32.humanReadablePartToText prefix
       permittedPrefixes = bech32PrefixesPermitted (asType @a)
@@ -83,7 +83,7 @@ deserialiseAnyOfFromBech32
 deserialiseAnyOfFromBech32 types bech32Str = do
   (prefix, dataPart) <-
     Bech32.decodeLenient bech32Str
-      ?!. Bech32DecodingError
+      ?!& Bech32DecodingError
 
   let actualPrefix = Bech32.humanReadablePartToText prefix
 

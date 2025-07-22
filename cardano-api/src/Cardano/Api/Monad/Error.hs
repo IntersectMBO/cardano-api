@@ -15,6 +15,8 @@ module Cardano.Api.Monad.Error
   , liftMaybe
   , failEither
   , failEitherWith
+  , (?!)
+  , (?!&)
   , module Control.Monad.Except
   , module Control.Monad.IO.Class
   , module Control.Monad.Trans.Class
@@ -117,6 +119,18 @@ liftMaybe
   -> Maybe a
   -> m a
 liftMaybe e = maybe (throwError e) pure
+
+-- | Infix 'liftMaybe', with arguments flipped
+(?!) :: MonadError e m => Maybe a -> e -> m a
+(?!) = flip liftMaybe
+
+infixl 8 ?!
+
+-- | Map over the 'Left' value of 'Either e a'. Infix 'first' with its arguments flipped.
+(?!&) :: Either e a -> (e -> e') -> Either e' a
+(?!&) = flip first
+
+infixl 8 ?!&
 
 -- | Lift 'Either' to `MonadFail`
 failEither
