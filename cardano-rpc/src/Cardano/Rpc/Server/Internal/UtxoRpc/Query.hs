@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
@@ -10,11 +11,13 @@
 
 module Cardano.Rpc.Server.Internal.UtxoRpc.Query
   ( readParamsMethod
+  , readUtxosMethod
   )
 where
 
 import Cardano.Api
 import Cardano.Api.Ledger qualified as L
+import Cardano.Api.Parser.Text qualified as P
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
 import Cardano.Rpc.Server.Internal.Error
 import Cardano.Rpc.Server.Internal.Monad
@@ -27,11 +30,13 @@ import Cardano.Ledger.Conway.Core qualified as L
 import Cardano.Ledger.Conway.PParams qualified as L
 import Cardano.Ledger.Plutus qualified as L
 
-import RIO
+import RIO hiding (toList)
 
 import Data.ByteString.Short qualified as SBS
 import Data.Map.Strict qualified as M
 import Data.ProtoLens (defMessage)
+import Data.Text.Encoding qualified as T
+import GHC.IsList
 import Network.GRPC.Spec
 
 readParamsMethod
@@ -63,8 +68,7 @@ readParamsMethod _req = do
       drepVotingThresholds :: L.DRepVotingThresholds =
         conwayEraOnwardsConstraints eon $
           pparams ^. L.ppDRepVotingThresholdsL
-
-  let pparamsMsg =
+      pparamsMsg =
         conwayEraOnwardsConstraints eon $
           defMessage
             & #coinsPerUtxoByte .~ pparams ^. L.ppCoinsPerUTxOByteL . to L.unCoinPerByte . to fromIntegral
@@ -149,4 +153,40 @@ mkChainPointMsg chainPoint blockNo = do
     & #hash .~ blockHash
     & #height .~ blockHeight
 
--- & #timestamp .~ timestamp -- not supported currently
+readUtxosMethod
+  :: MonadRpc e m
+  => Proto UtxoRpc.ReadUtxosRequest
+  -> m (Proto UtxoRpc.ReadUtxosResponse)
+readUtxosMethod req = do
+  utxoFilter <-
+    if
+      | Just txoRefs <- req ^. #maybe'txoRefs ->
+          QueryUTxOByTxIn . fromList <$> mapM txoRefToTxIn (txoRefs ^. #items)
+      | Just addressesProto <- req ^. #maybe'addresses ->
+          QueryUTxOByAddress . fromList <$> mapM readAddress (addressesProto ^. #items)
+      | otherwise -> pure QueryUTxOWhole
+
+  nodeConnInfo <- grab
+  AnyCardanoEra era <- liftIO . throwExceptT $ determineEra nodeConnInfo
+  eon <- forEraInEon era (error "Minimum Shelley era required") pure
+
+  let target = VolatileTip
+  (utxo, chainPoint, blockNo) <- liftIO . (throwEither =<<) $ executeLocalStateQueryExpr nodeConnInfo target $ do
+    utxo <- throwEither =<< throwEither =<< queryUtxo eon utxoFilter
+    chainPoint <- throwEither =<< queryChainPoint
+    blockNo <- throwEither =<< queryChainBlockNo
+    pure (utxo, chainPoint, blockNo)
+
+  pure $
+    defMessage
+      & #ledgerTip .~ mkChainPointMsg chainPoint blockNo
+      & #items .~ cardanoEraConstraints era (inject utxo)
+ where
+  txoRefToTxIn :: MonadRpc e m => Proto UtxoRpc.TxoRef -> m TxIn
+  txoRefToTxIn r = do
+    txId' <- throwEither $ deserialiseFromRawBytes AsTxId $ r ^. #hash
+    pure $ TxIn txId' (TxIx . fromIntegral $ r ^. #index)
+
+  readAddress :: MonadRpc e m => ByteString -> m AddressAny
+  readAddress =
+    throwEither . first stringException . P.runParser parseAddressAny <=< throwEither . T.decodeUtf8'

@@ -2,6 +2,47 @@ syntax = "proto3";
 
 package utxorpc.v1alpha.cardano;
 
+// Represents a transaction output in the Cardano blockchain.
+message TxOutput {
+  bytes address = 1; // Address receiving the output.
+  uint64 coin = 2; // Amount of ADA in the output.
+  repeated MultiAsset assets = 3; // Additional native (non-ADA) assets in the output.
+  Datum datum = 4; // Plutus data associated with the output.
+  Script script = 5; // Script associated with the output.
+}
+
+// TODO u5c: replaced plutus_data with just bytes
+message Datum {
+  bytes hash = 1; // Hash of this datum as seen on-chain
+  bytes original_cbor = 3; // Original cbor-encoded data as seen on-chain
+}
+
+// TODO u5c: mint_coin made optional
+// Represents a custom asset in the Cardano blockchain.
+message Asset {
+  bytes name = 1; // Name of the custom asset.
+  uint64 output_coin = 2; // Quantity of the custom asset in case of an output.
+  optional int64 mint_coin = 3; // Quantity of the custom asset in case of a mint.
+}
+
+// TODO u5c: redeemer was removed
+// Represents a multi-asset group in the Cardano blockchain.
+message MultiAsset {
+  bytes policy_id = 1; // Policy ID governing the custom assets.
+  repeated Asset assets = 2; // List of custom assets.
+}
+
+// Represents a script in Cardano.
+// TODO u5c: removed native script representation
+message Script {
+  oneof script {
+    bytes native = 1; // Native script.
+    bytes plutus_v1 = 2; // Plutus V1 script.
+    bytes plutus_v2 = 3; // Plutus V2 script.
+    bytes plutus_v3 = 4; // Plutus V3 script.
+  }
+}
+
 // Represents a rational number as a fraction.
 message RationalNumber {
   int32 numerator = 1;
@@ -73,3 +114,4 @@ message PParams {
   uint64 drep_deposit = 30; // The drep deposit.
   uint64 drep_inactivity_period = 31; // The drep inactivity period.
 }
+

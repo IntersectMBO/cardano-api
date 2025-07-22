@@ -56,7 +56,9 @@ methodsUtxoRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf UtxoRpc.QueryService)
 methodsUtxoRpc =
-  Method (mkNonStreaming readParamsMethod) NoMoreMethods
+  Method (mkNonStreaming readParamsMethod)
+    . Method (mkNonStreaming readUtxosMethod)
+    $ NoMoreMethods
 
 runRpcServer
   :: Tracer IO String
@@ -86,7 +88,7 @@ runRpcServer tracer loadRpcConfig = handleFatalExceptions $ do
 
   -- TODO this is logged by node configuration already, so it would make sense to log it again when
   -- configuration gets reloaded
-  -- traceWith $ "RPC configuration: " <> show rpcConfig
+  -- traceWith tracer $ "RPC configuration: " <> show rpcConfig
 
   when isEnabled $
     runRIO rpcEnv $
