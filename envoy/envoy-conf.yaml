@@ -133,7 +133,7 @@ static_resources:
                   body:
                     filename: "./pub/example.js"
               - match:
-                  path: "/node_grpc_web_pb.js"
+                  path: "/cardano_node_grpc_web_pb.js"
                 response_headers_to_add:
                   - header:
                       key: "Content-Type"
@@ -141,17 +141,7 @@ static_resources:
                 direct_response:
                   status: 200
                   body:
-                    filename: "./pub/node_grpc_web_pb.js"
-#               - match:
-#                   path: "/node_pb.js"
-#                 response_headers_to_add:
-#                   - header:
-#                       key: "Content-Type"
-#                       value: "text/javascript"
-#                 direct_response:
-#                   status: 200
-#                   body:
-#                     filename: "./pub/node_pb.js"
+                    filename: "./pub/cardano_node_grpc_web_pb.js"
           http_filters:
           - name: envoy.filters.http.grpc_web
             typed_config:

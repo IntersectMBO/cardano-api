@@ -1,12 +1,17 @@
 <html>
 
 <body>
+  <script type="module" src="./cardano_node_grpc_web_pb.js"></script>
   <script type="module">
-    import * as library from './node_grpc_web_pb.js';
-    const node = new grpc.NodePromiseClient("http://localhost:8080", null, null);
-    const empty = new proto.Empty();
-    const eraPromise = node.getEra(empty, {});
-    eraPromise.then((era) => { console.log(Object.keys(grpc.Era).filter(function(key) {return grpc.Era[key] === era.getEra()})[0]); }, (err) => { console.error(err); });
+    console.log(node);
+    console.log(query);
+    // const node = new grpc.NodePromiseClient("http://localhost:8080", null, null);
+    // const empty = new proto.Empty();
+    // const eraPromise = node.getEra(empty, {});
+    //eraPromise.then((era) => { console.log(Object.keys(grpc.Era).filter(function(key) {return grpc.Era[key] === era.getEra()})[0]); }, (err) => { console.error(err); });
+    const query2 = new query.QueryServicePromiseClient("http://localhost:8080", null, null);
+    const pparams = query2.readParams(new proto.PParams(), null);
+    console.log(pparams);
   </script>
   <script type="module" src="./example.js"></script>
 </body>
