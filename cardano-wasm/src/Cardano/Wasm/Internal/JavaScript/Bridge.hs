@@ -16,9 +16,12 @@ module Cardano.Wasm.Internal.JavaScript.Bridge where
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
+import Cardano.Wasm.Internal.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
+import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient)
+import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
 
 import Control.Exception (evaluate)
 import Control.Monad (join)
@@ -111,13 +114,15 @@ type JSSigningKey = JSString
 
 type JSProtocolParams = JSVal
 
+type JSGrpc = JSGRPCClient
+
 -- * High-level definitions for conversion between Haskell and JS
 
 -- | Type class that provides functions to convert values from Haskell to JavaScript.
 class ToJSVal haskellType jsType where
   toJSVal :: HasCallStack => haskellType -> IO jsType
 
-instance Api.ToJSON a => ToJSVal a JSVal where
+instance {-# OVERLAPPABLE #-} Api.ToJSON a => ToJSVal a JSVal where
   toJSVal :: a -> IO JSVal
   toJSVal = jsonToJSVal
 
@@ -125,25 +130,29 @@ instance ToJSVal String JSString where
   toJSVal :: String -> IO JSString
   toJSVal = return . toJSString
 
+instance ToJSVal Wasm.GrpcObject JSGrpc where
+  toJSVal :: Wasm.GrpcObject -> IO JSGrpc
+  toJSVal (Wasm.GrpcObject client) = return client
+
 -- |  Type class that provides functions to convert values from JavaScript to Haskell.
 class FromJSVal jsType haskellType where
   fromJSVal :: HasCallStack => jsType -> IO haskellType
 
-instance {-# OVERLAPPING #-} FromJSVal JSCoin Ledger.Coin where
-  fromJSVal :: HasCallStack => JSCoin -> IO Ledger.Coin
-  fromJSVal = fmap (Ledger.Coin . fromInteger) . fromJSBigInt
+instance {-# OVERLAPPABLE #-} (Api.FromJSON a, Typeable a) => FromJSVal JSVal a where
+  fromJSVal :: HasCallStack => JSVal -> IO a
+  fromJSVal = jsValToJSON (show . typeRep $ (Api.Proxy :: Api.Proxy a))
 
 instance FromJSVal JSString Text where
   fromJSVal :: JSString -> IO Text
   fromJSVal = return . Text.pack . fromJSString
 
+instance FromJSVal JSCoin Ledger.Coin where
+  fromJSVal :: HasCallStack => JSCoin -> IO Ledger.Coin
+  fromJSVal = fmap (Ledger.Coin . fromInteger) . fromJSBigInt
+
 instance FromJSVal JSString String where
   fromJSVal :: JSString -> IO String
   fromJSVal = return . fromJSString
-
-instance (Api.FromJSON a, Typeable a) => FromJSVal JSVal a where
-  fromJSVal :: HasCallStack => JSVal -> IO a
-  fromJSVal = jsValToJSON (show . typeRep $ (Api.Proxy :: Api.Proxy a))
 
 instance FromJSVal JSSigningKey (Api.SigningKey Api.PaymentKey) where
   fromJSVal :: HasCallStack => JSSigningKey -> IO (Api.SigningKey Api.PaymentKey)
@@ -159,8 +168,12 @@ instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal :: JSTxIx -> IO Api.TxIx
   fromJSVal = return . Api.TxIx . fromIntegral
 
-instance {-# OVERLAPPING #-} FromJSVal JSVal Wasm.ProtocolParamsJSON where
+instance FromJSVal JSVal Wasm.ProtocolParamsJSON where
   fromJSVal = fmap Wasm.ProtocolParamsJSON . jsValToJSONString
+
+instance FromJSVal JSGrpc Wasm.GrpcObject where
+  fromJSVal :: JSGrpc -> IO Wasm.GrpcObject
+  fromJSVal jsVal = return $ Wasm.GrpcObject jsVal
 
 -- * UnsignedTxObject
 
@@ -258,6 +271,22 @@ alsoSignWithPaymentKey jsUnsignedTx jsSigningKey =
 txToCbor :: HasCallStack => JSSignedTx -> IO JSString
 txToCbor jsSignedTx =
   toJSVal . Wasm.toCborImpl =<< fromJSVal jsSignedTx
+
+-- * GrpcObject
+
+foreign export javascript "newGrpcConnection"
+  newGrpcConnection :: JSString -> IO JSGrpc
+
+foreign export javascript "getEra"
+  getEra :: JSGrpc -> IO Int
+
+-- | Create a new gRPC object for making Conway era transactions.
+newGrpcConnection :: HasCallStack => JSString -> IO JSGrpc
+newGrpcConnection webGrpcUrl = toJSVal =<< join (Wasm.newGrpcConnectionImpl js_newWebGrpcClient <$> fromJSVal webGrpcUrl)
+
+-- | Get the era from the Cardano Node using GRPC-web.
+getEra :: HasCallStack => JSGrpc -> IO Int
+getEra grpcObject = Wasm.getEraImpl js_getEra =<< fromJSVal grpcObject
 
 -- * API Information
 

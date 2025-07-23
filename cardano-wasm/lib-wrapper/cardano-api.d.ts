@@ -82,6 +82,22 @@ declare interface SignedTx {
 }
 
 /**
+ * Represents a gRPC-web client connection to a Cardano node.
+ */
+declare interface GrpcConnection {
+    /**
+     * The type of the object, used for identification (the "GrpcConnection" string).
+     */
+    objectType: string;
+
+    /**
+     * Get the era from the Cardano Node using a GRPC-web client.
+     * @returns A promise that resolves to the current era number.
+     */
+    getEra(): Promise<number>;
+}
+
+/**
  * The main Cardano API object with static methods.
  */
 declare interface CardanoAPI {
@@ -95,5 +111,12 @@ declare interface CardanoAPI {
      * @returns A promise that resolves to a new `UnsignedTx` object.
      */
     newConwayTx(): Promise<UnsignedTx>;
+
+    /**
+     * Create a new client connection for communicating with a Cardano node through gRPC-web.
+     * @param webGrpcUrl The URL of the gRPC-web server.
+     * @returns A promise that resolves to a new `GrpcConnection`.
+     */
+    newGrpcConnection(webGrpcUrl: string): Promise<GrpcConnection>;
 }
 
