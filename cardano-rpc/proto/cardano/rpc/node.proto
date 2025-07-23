@@ -29,4 +29,3 @@ message ProtocolParamsJson {
     bytes json = 1; // JSON representation of the protocol parameters
 }
 
-package cardano.rpc;
