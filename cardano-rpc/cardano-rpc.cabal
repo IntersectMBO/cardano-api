@@ -61,6 +61,7 @@ library
     Cardano.Rpc.Server.Internal.Error
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
+    Cardano.Rpc.Server.Internal.UtxoRpc.Type
     Proto.Cardano.Rpc.Node
     Proto.Cardano.Rpc.Node_Fields
     Proto.Utxorpc.V1alpha.Cardano.Cardano
@@ -91,6 +92,7 @@ library
     cardano-ledger-core,
     containers,
     contra-tracer,
+    data-default,
     filepath,
     generic-data,
     grapesy,
@@ -100,3 +102,30 @@ library
     proto-lens-runtime,
     rio,
     text,
+
+test-suite cardano-rpc-test
+  import: project-config
+  hs-source-dirs: test/cardano-rpc-test
+  main-is: cardano-rpc-test.hs
+  type: exitcode-stdio-1.0
+  build-depends:
+    cardano-api,
+    cardano-api:gen,
+    cardano-ledger-api,
+    cardano-ledger-conway,
+    cardano-ledger-core,
+    cardano-rpc,
+    containers,
+    hedgehog >=1.1,
+    rio,
+    tasty,
+    tasty-hedgehog,
+
+  ghc-options:
+    -threaded
+    -rtsopts
+    "-with-rtsopts=-N -T"
+
+  build-tool-depends: tasty-discover:tasty-discover
+  other-modules:
+    Test.Cardano.Rpc.ProtocolParameters

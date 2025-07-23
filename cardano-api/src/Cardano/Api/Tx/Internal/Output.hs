@@ -63,8 +63,8 @@ import Cardano.Api.Era.Internal.Eon.Convert
 import Cardano.Api.Era.Internal.Eon.ShelleyBasedEra
 import Cardano.Api.Error (Error (..), displayError)
 import Cardano.Api.Hash
-import Cardano.Api.Internal.Utils
 import Cardano.Api.Ledger.Internal.Reexport qualified as Ledger
+import Cardano.Api.Monad.Error
 import Cardano.Api.Parser.Text qualified as P
 import Cardano.Api.Plutus.Internal.Script
 import Cardano.Api.Plutus.Internal.ScriptData
