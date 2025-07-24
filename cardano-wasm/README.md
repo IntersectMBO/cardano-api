@@ -239,19 +239,8 @@ To run the example in the `example` subfolder:
 To run the example in the `grpc-example` subfolder:
 
 1.  Run an instance of the `cardano-node` with the GRPC server enabled and put the socket file for the GRPC server in the root folder of this repo with the name `rpc.socket`. (You can put it somewhere else, but you will have to update the `envoy-conf.yaml` function later.)
-2.  Generate the JS GRPC client bundle `node_grpc_web_pb.js` from the GRPC server proto files by either:
-  - Running `nix build .#proto-js-bundle`. (This will generate it under the `result` folder.)
-  - Or using `protoc`, `npm` and `browserify`:
-	```
-    protoc -I../../cardano-rpc/proto --js_out=import_style=commonjs,binary:./ --grpc-web_out=import_style=commonjs,mode=grpcwebtext:. ../../cardano-rpc/proto/cardano/rpc/node.proto
-
-    npm install grpc-web
-
-    npm install google-protobuf
-
-    browserify --standalone grpc cardano/rpc/node_grpc_web_pb.js > node_grpc_web_pb.js
-	```
-3.  Copy the generated `node_grpc_web_pb.js` file to the `grpc-example` subfolder.
+2.  Generate the JS GRPC client bundle `cardano_node_grpc_web_pb.js` from the GRPC server proto files by running `nix build .#proto-js-bundle`. (This will generate it under the `result` folder.)
+3.  Copy the generated `cardano_node_grpc_web_pb.js` file to the `grpc-example` subfolder.
 4.  Copy the generated `cardano-wasm.wasm` file to the `grpc-example` subfolder. You can find its location using:
     ```console
     echo "$(env -u CABAL_CONFIG wasm32-wasi-cabal list-bin exe:cardano-wasm | tail -n1)"

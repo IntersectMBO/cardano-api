@@ -43,8 +43,9 @@ in pkgs.stdenv.mkDerivation {
     mkdir -p "$GEN_JS_PATH"
     mkdir -p "$BUNDLE_PATH"
 
-    echo "--- Compiling .proto file: $PROTO_FILE ---"
+    echo "--- Compiling .proto files in $PROTO_INCLUDE_PATH ---"
 
+    # Find all .proto files and compile them.
     for PROTO_FILE in `find "$PROTO_INCLUDE_PATH" -type f -name "*.proto"`
     do
       protoc \
@@ -57,32 +58,55 @@ in pkgs.stdenv.mkDerivation {
     echo "--- Compilation finished. Generated files are in $GEN_JS_PATH ---"
     ls -R "$GEN_JS_PATH"
 
-    # Check if there are any files in the top-level generated directory
-    if [ ! "$(ls -1 "$GEN_JS_PATH" | head -n 1)" ]; then
-      echo "Error: protoc did not generate any gRPC-Web files!"
-      exit 1
-    fi
+    # Generate JS file that imports the generated files for Browserify
+    ENTRYPOINT_FILE=$GEN_JS_PATH/index.js
+    echo "--- Creating browserify entrypoint: $ENTRYPOINT_FILE ---"
+
+    # Ensure the entrypoint file is empty before we start.
+    rm -f $ENTRYPOINT_FILE
+    touch "$ENTRYPOINT_FILE"
+
+    # Find all *_grpc_web_pb.js files and build the entrypoint content.
+    for JS_FULLPATH in `find "$GEN_JS_PATH" -type f -name "*_grpc_web_pb.js"`
+    do
+      # Get the filename, e.g., "node_grpc_web_pb.js"
+      JS_FILENAME=$(basename "$JS_FULLPATH")
+
+      # Extract the module name by removing the suffix
+      MODULE_NAME=''${JS_FILENAME%_grpc_web_pb.js}
+
+      # Get the path relative to GEN_JS_PATH for the require() statement.
+      RELATIVE_PATH=''${JS_FULLPATH#$GEN_JS_PATH/}
+
+      echo "Adding module '$MODULE_NAME' from './$RELATIVE_PATH' to bundle."
+      # Append the export line to our entrypoint file.
+      # This creates the desired submodule structure.
+      echo "exports.$MODULE_NAME = require('./$RELATIVE_PATH');" >> "$ENTRYPOINT_FILE"
+    done
+
+    echo "--- Generated entrypoint content: ---"
+    cat "$ENTRYPOINT_FILE"
 
     echo "--- Setting up node_modules for browserify ---"
     ln -s ${node-deps}/node_modules ./node_modules
 
-    echo "--- Bundling generated JS with browserify ---"
+    echo "--- Bundling all generated JS gRPC modules with browserify ---"
 
-    for GENERATED_GRPC_FILE in `find "$GEN_JS_PATH" -type f -name "*.js"`
-    do
-      browserify --standalone grpc "$GENERATED_GRPC_FILE" > "$BUNDLE_PATH/$(basename $GENERATED_GRPC_FILE)"
-    done
+    # Bundle the entrypoint file into a single standalone module.
+    # The --standalone flag exposes the exports under the 'cardano_node' global variable.
+    browserify "$ENTRYPOINT_FILE" --standalone cardano_node > "$BUNDLE_PATH/cardano_node_grpc_web_pb.js"
 
-    echo "--- Bundling complete. Final files are in $BUNDLE_PATH ---"
-    ls "$BUNDLE_PATH"
+    echo "--- Bundling complete. Final file is in $BUNDLE_PATH ---"
+    ls -l "$BUNDLE_PATH"
 
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
-    mkdir -p "$out"
-    cp ./bundled-js/*_grpc_web_pb.js "$out/"
+    mkdir -p $out
+    # Copy the final, correctly named bundle to the output directory.
+    cp ./bundled-js/cardano_node_grpc_web_pb.js $out/
     runHook postInstall
   '';
 
