@@ -55,12 +55,14 @@ library
     Cardano.Rpc.Client
     Cardano.Rpc.Proto.Api.Node
     Cardano.Rpc.Proto.Api.UtxoRpc.Query
+    Cardano.Rpc.Proto.Api.UtxoRpc.Submit
     Cardano.Rpc.Server
     Cardano.Rpc.Server.Config
     Cardano.Rpc.Server.Internal.Env
     Cardano.Rpc.Server.Internal.Error
     Cardano.Rpc.Server.Internal.Monad
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
+    Cardano.Rpc.Server.Internal.UtxoRpc.Submit
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
     Proto.Cardano.Rpc.Node
     Proto.Cardano.Rpc.Node_Fields
@@ -68,6 +70,8 @@ library
     Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
     Proto.Utxorpc.V1alpha.Query.Query
     Proto.Utxorpc.V1alpha.Query.Query_Fields
+    Proto.Utxorpc.V1alpha.Submit.Submit
+    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
 
   other-modules:
     Cardano.Rpc.Server.Internal.Orphans
@@ -81,6 +85,8 @@ library
     Proto.Utxorpc.V1alpha.Cardano.Cardano_Fields
     Proto.Utxorpc.V1alpha.Query.Query
     Proto.Utxorpc.V1alpha.Query.Query_Fields
+    Proto.Utxorpc.V1alpha.Submit.Submit
+    Proto.Utxorpc.V1alpha.Submit.Submit_Fields
 
   build-depends:
     base,

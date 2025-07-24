@@ -17,11 +17,13 @@ where
 import Cardano.Api
 import Cardano.Rpc.Proto.Api.Node qualified as Rpc
 import Cardano.Rpc.Proto.Api.UtxoRpc.Query qualified as UtxoRpc
+import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Env
 import Cardano.Rpc.Server.Internal.Monad
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
+import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 
 import RIO
 
@@ -60,6 +62,12 @@ methodsUtxoRpc =
     . Method (mkNonStreaming readUtxosMethod)
     $ NoMoreMethods
 
+methodsUtxoRpcSubmit
+  :: MonadRpc e m
+  => Methods m (ProtobufMethodsOf UtxoRpc.SubmitService)
+methodsUtxoRpcSubmit =
+  Method (mkNonStreaming submitTxMethod) NoMoreMethods
+
 runRpcServer
   :: Tracer IO String
   -> IO (RpcConfig, NetworkMagic)
@@ -97,6 +105,7 @@ runRpcServer tracer loadRpcConfig = handleFatalExceptions $ do
           mconcat
             [ fromMethods methodsNodeRpc
             , fromMethods methodsUtxoRpc
+            , fromMethods methodsUtxoRpcSubmit
             ]
  where
   serverParams :: ServerParams
