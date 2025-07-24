@@ -3,7 +3,7 @@
 
 module Cardano.Wasm.Internal.ExceptionHandling where
 
-import Control.Exception (Exception)
+import Control.Exception (Exception, displayException)
 import Control.Monad.Catch (MonadThrow (..))
 import GHC.Exception (CallStack, prettyCallStack)
 import GHC.Stack (HasCallStack, callStack, withFrozenCallStack)
@@ -31,3 +31,9 @@ justOrError _ (Just a) = return a
 rightOrError :: (HasCallStack, MonadThrow m, Show e) => Either e a -> m a
 rightOrError (Left e) = withFrozenCallStack $ throwM $ ExpectedRightException callStack $ show e
 rightOrError (Right a) = return a
+
+-- | Convert an 'Either' value to a 'MonadFail' monad. This can be useful for converting
+-- MonadThrow monads into Aeson Parser monads, but it loses the stack trace information.
+toMonadFail :: (Exception e, MonadFail m) => Either e a -> m a
+toMonadFail (Left e) = fail $ displayException e
+toMonadFail (Right a) = return a
