@@ -40,27 +40,27 @@ in pkgs.stdenv.mkDerivation {
     GEN_JS_PATH=./generated-js
     BUNDLE_PATH=./bundled-js
 
-    mkdir -p $GEN_JS_PATH
-    mkdir -p $BUNDLE_PATH
-
-    PROTO_FILE=$PROTO_INCLUDE_PATH/cardano/rpc/node.proto
+    mkdir -p "$GEN_JS_PATH"
+    mkdir -p "$BUNDLE_PATH"
 
     echo "--- Compiling .proto file: $PROTO_FILE ---"
 
-    protoc \
-      -I=$PROTO_INCLUDE_PATH \
-      --js_out=import_style=commonjs,binary:$GEN_JS_PATH \
-      --grpc-web_out=import_style=commonjs,mode=grpcwebtext:$GEN_JS_PATH \
-      $PROTO_FILE
+    for PROTO_FILE in `find "$PROTO_INCLUDE_PATH" -type f -name "*.proto"`
+    do
+      protoc \
+        -I="$PROTO_INCLUDE_PATH" \
+        --js_out=import_style=commonjs,binary:"$GEN_JS_PATH" \
+        --grpc-web_out=import_style=commonjs,mode=grpcwebtext:"$GEN_JS_PATH" \
+        "$PROTO_FILE"
+    done
 
     echo "--- Compilation finished. Generated files are in $GEN_JS_PATH ---"
-    ls -R $GEN_JS_PATH
+    ls -R "$GEN_JS_PATH"
 
-    GENERATED_GRPC_FILE=$GEN_JS_PATH/cardano/rpc/node_grpc_web_pb.js
-
-    if [ ! -f "$GENERATED_GRPC_FILE" ]; then
-        echo "Error: Protoc did not generate the expected gRPC-Web file!"
-        exit 1
+    # Check if there are any files in the top-level generated directory
+    if [ ! "$(ls -1 "$GEN_JS_PATH" | head -n 1)" ]; then
+      echo "Error: protoc did not generate any gRPC-Web files!"
+      exit 1
     fi
 
     echo "--- Setting up node_modules for browserify ---"
@@ -68,18 +68,21 @@ in pkgs.stdenv.mkDerivation {
 
     echo "--- Bundling generated JS with browserify ---"
 
-    browserify --standalone grpc $GENERATED_GRPC_FILE > $BUNDLE_PATH/node_grpc_web_pb.js
+    for GENERATED_GRPC_FILE in `find "$GEN_JS_PATH" -type f -name "*.js"`
+    do
+      browserify --standalone grpc "$GENERATED_GRPC_FILE" > "$BUNDLE_PATH/$(basename $GENERATED_GRPC_FILE)"
+    done
 
-    echo "--- Bundling complete. Final file is in $BUNDLE_PATH ---"
-    ls $BUNDLE_PATH
+    echo "--- Bundling complete. Final files are in $BUNDLE_PATH ---"
+    ls "$BUNDLE_PATH"
 
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out
-    cp ./bundled-js/node_grpc_web_pb.js $out/
+    mkdir -p "$out"
+    cp ./bundled-js/*_grpc_web_pb.js "$out/"
     runHook postInstall
   '';
 
