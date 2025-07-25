@@ -98,6 +98,40 @@ declare interface GrpcConnection {
 }
 
 /**
+ * Represents an address.
+ */
+declare interface Address {
+    /**
+     * The type of the object, used for identification (the "Address" string).
+     */
+    objectType: string;
+
+    /**
+     * Get the Bech32 representation of the address. (Can be shared for receiving funds.)
+     * @returns The Bech32 representation of the address.
+     */
+    getAddressBech32(): Promise<string>;
+
+    /**
+     * Get the Bech32 representation of the verification key of the address. (Can be shared for verification.)
+     * @returns The Bech32 representation of the verification key.
+     */
+    getBech32ForVerificationKey(): Promise<string>;
+
+    /**
+     * Get the Bech32 representation of the signing key of the address. (Must be kept secret.)
+     * @returns The Bech32 representation of the signing key.
+     */
+    getBech32ForSigningKey(): Promise<string>;
+
+    /**
+     * Get the base16 representation of the hash of the verification key of the address.
+     * @returns The base16 representation of the verification key hash.
+     */
+    getBase16ForVerificationKeyHash(): Promise<string>;
+}
+
+/**
  * The main Cardano API object with static methods.
  */
 declare interface CardanoAPI {
@@ -118,5 +152,33 @@ declare interface CardanoAPI {
      * @returns A promise that resolves to a new `GrpcConnection`.
      */
     newGrpcConnection(webGrpcUrl: string): Promise<GrpcConnection>;
+
+    /**
+     * Generate a simple payment address for mainnet.
+     * @returns A promise that resolves to a new `Address` object.
+     */
+    generateMainnetPaymentAddress(): Promise<Address>;
+
+    /**
+     * Restore a mainnet payment address from a Bech32 encoded signing key.
+     * @param signingKeyBech32 The Bech32 encoded signing key.
+     * @returns A promise that resolves to a new `Address` object.
+     */
+    restoreMainnetPaymentAddressFromSigningKeyBech32(signingKeyBech32: string): Promise<Address>;
+
+    /**
+     * Generate a simple payment address for testnet, given the testnet's network magic.
+     * @param networkMagic The network magic for the testnet.
+     * @returns A promise that resolves to a new `Address` object.
+     */
+    generateTestnetPaymentAddress(networkMagic: number): Promise<Address>;
+
+    /**
+     * Restore a testnet payment address from a Bech32 encoded signing key.
+     * @param networkMagic The network magic for the testnet.
+     * @param signingKeyBech32 The Bech32 encoded signing key.
+     * @returns A promise that resolves to a new `Address` object.
+     */
+    restoreTestnetPaymentAddressFromSigningKeyBech32(networkMagic: number, signingKeyBech32: string): Promise<Address>;
 }
 

@@ -16,6 +16,7 @@ module Cardano.Wasm.Internal.JavaScript.Bridge where
 import Cardano.Api qualified as Api
 import Cardano.Api.Ledger qualified as Ledger
 
+import Cardano.Wasm.Internal.Api.Address qualified as Wasm
 import Cardano.Wasm.Internal.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
@@ -106,6 +107,8 @@ type JSSignedTx = JSVal
 
 type JSTxId = JSString
 
+type JSAddress = JSVal
+
 type JSTxIx = Int
 
 type JSCoin = JSVal
@@ -174,6 +177,80 @@ instance FromJSVal JSVal Wasm.ProtocolParamsJSON where
 instance FromJSVal JSGrpc Wasm.GrpcObject where
   fromJSVal :: JSGrpc -> IO Wasm.GrpcObject
   fromJSVal jsVal = return $ Wasm.GrpcObject jsVal
+
+-- * AddressObject
+
+foreign export javascript "generateMainnetPaymentAddress"
+  generateMainnetPaymentAddress :: IO JSAddress
+
+foreign export javascript "restoreMainnetPaymentAddressFromSigningKeyBech32"
+  restoreMainnetPaymentAddressFromSigningKeyBech32 :: JSString -> IO JSAddress
+
+foreign export javascript "generateTestnetPaymentAddress"
+  generateTestnetPaymentAddress :: Int -> IO JSAddress
+
+foreign export javascript "restoreTestnetPaymentAddressFromSigningKeyBech32"
+  restoreTestnetPaymentAddressFromSigningKeyBech32 :: Int -> JSString -> IO JSAddress
+
+foreign export javascript "getAddressBech32"
+  getAddressBech32 :: JSAddress -> IO JSString
+
+foreign export javascript "getBech32ForVerificationKey"
+  getBech32ForVerificationKey :: JSAddress -> IO JSString
+
+foreign export javascript "getBech32ForSigningKey"
+  getBech32ForSigningKey :: JSAddress -> IO JSString
+
+foreign export javascript "getBase16ForVerificationKeyHash"
+  getBase16ForVerificationKeyHash :: JSAddress -> IO JSString
+
+-- | Generate a simple payment address for mainnet.
+generateMainnetPaymentAddress :: HasCallStack => IO JSAddress
+generateMainnetPaymentAddress = toJSVal =<< Wasm.generateMainnetPaymentAddressImpl
+
+-- | Restore a mainnet payment address from a Bech32 encoded signing key.
+restoreMainnetPaymentAddressFromSigningKeyBech32 :: HasCallStack => JSString -> IO JSAddress
+restoreMainnetPaymentAddressFromSigningKeyBech32 jsSigningKeyBech32 =
+  toJSVal
+    =<< join
+      ( Wasm.restoreMainnetPaymentAddressFromSigningKeyBech32Impl
+          <$> fromJSVal jsSigningKeyBech32
+      )
+
+-- | Generate a simple payment address for testnet, given the testnet's network magic.
+generateTestnetPaymentAddress :: HasCallStack => Int -> IO JSAddress
+generateTestnetPaymentAddress networkMagic =
+  toJSVal
+    =<< Wasm.generateTestnetPaymentAddressImpl networkMagic
+
+-- | Restore a testnet payment address from a Bech32 encoded signing key.
+restoreTestnetPaymentAddressFromSigningKeyBech32 :: HasCallStack => Int -> JSString -> IO JSAddress
+restoreTestnetPaymentAddressFromSigningKeyBech32 networkMagic jsSigningKeyBech32 =
+  toJSVal
+    =<< join
+      ( Wasm.restoreTestnetPaymentAddressFromSigningKeyBech32Impl networkMagic
+          <$> fromJSVal jsSigningKeyBech32
+      )
+
+-- | Get the Bech32 representation of the address. (Can be shared for receiving funds.)
+getAddressBech32 :: HasCallStack => JSAddress -> IO JSString
+getAddressBech32 jsAddress =
+  toJSVal . Wasm.getAddressBech32 =<< fromJSVal jsAddress
+
+-- | Get the Bech32 representation of the verification key of the address. (Can be shared for verification.)
+getBech32ForVerificationKey :: HasCallStack => JSAddress -> IO JSString
+getBech32ForVerificationKey jsAddress =
+  toJSVal . Wasm.getBech32ForVerificationKeyImpl =<< fromJSVal jsAddress
+
+-- | Get the Bech32 representation of the signing key of the address. (Must be kept secret.)
+getBech32ForSigningKey :: HasCallStack => JSAddress -> IO JSString
+getBech32ForSigningKey jsAddress =
+  toJSVal . Wasm.getBech32ForSigningKeyImpl =<< fromJSVal jsAddress
+
+-- | Get the base16 representation of the hash of the verification key of the address.
+getBase16ForVerificationKeyHash :: HasCallStack => JSAddress -> IO JSString
+getBase16ForVerificationKeyHash jsAddress =
+  toJSVal . Wasm.getBase16ForVerificationKeyHashImpl =<< fromJSVal jsAddress
 
 -- * UnsignedTxObject
 

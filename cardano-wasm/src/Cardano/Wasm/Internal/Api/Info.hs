@@ -127,6 +127,45 @@ apiInfo =
   let unsignedTxObjectName = "UnsignedTx"
       signedTxObjectName = "SignedTx"
       grpcConnectionName = "GrpcConnection"
+      addressObjectName = "Address"
+
+      addressObj =
+        VirtualObjectInfo
+          { virtualObjectName = addressObjectName
+          , virtualObjectDoc = "Represents an address."
+          , virtualObjectMethods =
+              [ MethodInfo
+                  { methodName = "getAddressBech32"
+                  , methodDoc = "Get the Bech32 representation of the address. (Can be shared for receiving funds.)"
+                  , methodParams = []
+                  , methodReturnType = OtherType "string"
+                  , methodReturnDoc = "The Bech32 representation of the address."
+                  }
+              , MethodInfo
+                  { methodName = "getBech32ForVerificationKey"
+                  , methodDoc =
+                      "Get the Bech32 representation of the verification key of the address. (Can be shared for verification.)"
+                  , methodParams = []
+                  , methodReturnType = OtherType "string"
+                  , methodReturnDoc = "The Bech32 representation of the verification key."
+                  }
+              , MethodInfo
+                  { methodName = "getBech32ForSigningKey"
+                  , methodDoc =
+                      "Get the Bech32 representation of the signing key of the address. (Must be kept secret.)"
+                  , methodParams = []
+                  , methodReturnType = OtherType "string"
+                  , methodReturnDoc = "The Bech32 representation of the signing key."
+                  }
+              , MethodInfo
+                  { methodName = "getBase16ForVerificationKeyHash"
+                  , methodDoc = "Get the base16 representation of the hash of the verification key of the address."
+                  , methodParams = []
+                  , methodReturnType = OtherType "string"
+                  , methodReturnDoc = "The base16 representation of the verification key hash."
+                  }
+              ]
+          }
 
       unsignedTxObj =
         VirtualObjectInfo
@@ -242,9 +281,40 @@ apiInfo =
                       , methodReturnType = NewObject grpcConnectionName
                       , methodReturnDoc = "A promise that resolves to a new `GrpcConnection`."
                       }
+                  , MethodInfo
+                      { methodName = "generateMainnetPaymentAddress"
+                      , methodDoc = "Generate a simple payment address for mainnet."
+                      , methodParams = []
+                      , methodReturnType = NewObject addressObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      }
+                  , MethodInfo
+                      { methodName = "restoreMainnetPaymentAddressFromSigningKeyBech32"
+                      , methodDoc = "Restore a mainnet payment address from a Bech32 encoded signing key."
+                      , methodParams = [ParamInfo "signingKeyBech32" "string" "The Bech32 encoded signing key."]
+                      , methodReturnType = NewObject addressObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      }
+                  , MethodInfo
+                      { methodName = "generateTestnetPaymentAddress"
+                      , methodDoc = "Generate a simple payment address for testnet, given the testnet's network magic."
+                      , methodParams = [ParamInfo "networkMagic" "number" "The network magic for the testnet."]
+                      , methodReturnType = NewObject addressObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      }
+                  , MethodInfo
+                      { methodName = "restoreTestnetPaymentAddressFromSigningKeyBech32"
+                      , methodDoc = "Restore a testnet payment address from a Bech32 encoded signing key."
+                      , methodParams =
+                          [ ParamInfo "networkMagic" "number" "The network magic for the testnet."
+                          , ParamInfo "signingKeyBech32" "string" "The Bech32 encoded signing key."
+                          ]
+                      , methodReturnType = NewObject addressObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      }
                   ]
               }
-        , virtualObjects = [unsignedTxObj, signedTxObj, grpcConnection]
+        , virtualObjects = [unsignedTxObj, signedTxObj, grpcConnection, addressObj]
         , initialiseFunctionDoc = "Initialises the Cardano API."
         , initialiseFunctionReturnDoc = "A promise that resolves to the main `CardanoAPI` object."
         }

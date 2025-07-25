@@ -16,6 +16,7 @@ import Cardano.Api
   , PaymentKey
   , StakeAddressReference (..)
   , ToJSON
+  , deserialiseFromBech32
   , deserialiseFromRawBytesHex
   , fromNetworkMagic
   , generateSigningKey
@@ -32,6 +33,7 @@ import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import GHC.Generics (Generic)
 
@@ -72,27 +74,46 @@ generateMainnetPaymentAddressImpl = do
   key <- generateSigningKey (AsPaymentKey)
   return (PaymentAddress Mainnet key)
 
+-- | Restore a mainnet payment address from a Bech32 encoded signing key.
+restoreMainnetPaymentAddressFromSigningKeyBech32Impl :: String -> IO AddressObject
+restoreMainnetPaymentAddressFromSigningKeyBech32Impl signingKeyBech32 = do
+  let key = rightOrError $ deserialiseFromBech32 (Text.pack signingKeyBech32)
+  PaymentAddress Mainnet <$> toMonadFail key
+
 -- | Generate a simple payment address for testnet, given the testnet's network magic.
 generateTestnetPaymentAddressImpl :: Int -> IO AddressObject
-generateTestnetPaymentAddressImpl nm = do
+generateTestnetPaymentAddressImpl networkMagic = do
   key <- generateSigningKey (AsPaymentKey)
-  return (PaymentAddress (Testnet (NetworkMagic (fromIntegral nm))) key)
+  return (PaymentAddress (Testnet (NetworkMagic (fromIntegral networkMagic))) key)
 
--- | Get the Bech32 representation of the payment address. (Can be shared for receiving funds.)
-getPaymentAddressBech32 :: AddressObject -> Text
-getPaymentAddressBech32 (PaymentAddress nid key) =
-  serialiseAddress $
-    makeShelleyAddress
-      nid
-      (PaymentCredentialByKey (verificationKeyHash (getVerificationKey key)))
-      NoStakeAddress
+-- | Restore a testnet payment address from a Bech32 encoded signing key.
+restoreTestnetPaymentAddressFromSigningKeyBech32Impl :: Int -> String -> IO AddressObject
+restoreTestnetPaymentAddressFromSigningKeyBech32Impl networkMagic signingKeyHex = do
+  let key = rightOrError $ deserialiseFromBech32 (Text.pack signingKeyHex)
+  PaymentAddress (Testnet (NetworkMagic (fromIntegral networkMagic))) <$> toMonadFail key
 
--- | Get the Bech32 representation of the verification key of the payment address. (Can be shared for verification.)
-getBech32ForVerificationKeyImpl :: AddressObject -> Text
+-- | Get the Bech32 representation of the address. (Can be shared for receiving funds.)
+getAddressBech32 :: AddressObject -> String
+getAddressBech32 (PaymentAddress nid key) =
+  Text.unpack $
+    serialiseAddress $
+      makeShelleyAddress
+        nid
+        (PaymentCredentialByKey (verificationKeyHash (getVerificationKey key)))
+        NoStakeAddress
+
+-- | Get the Bech32 representation of the verification key of the address. (Can be shared for verification.)
+getBech32ForVerificationKeyImpl :: AddressObject -> String
 getBech32ForVerificationKeyImpl (PaymentAddress _ key) =
-  serialiseToBech32 (getVerificationKey key)
+  Text.unpack $ serialiseToBech32 (getVerificationKey key)
 
--- | Get the Bech32 representation of the signing key of the payment address. (Must be kept secret.)
-getBech32ForSigningKeyImpl :: AddressObject -> Text
+-- | Get the Bech32 representation of the signing key of the address. (Must be kept secret.)
+getBech32ForSigningKeyImpl :: AddressObject -> String
 getBech32ForSigningKeyImpl (PaymentAddress _ key) =
-  serialiseToBech32 key
+  Text.unpack $ serialiseToBech32 key
+
+-- | Get the base16 representation of the hash of the verification key of the address.
+getBase16ForVerificationKeyHashImpl :: AddressObject -> String
+getBase16ForVerificationKeyHashImpl (PaymentAddress _ key) =
+  Text.unpack $
+    Text.decodeUtf8 (serialiseToRawBytesHex (verificationKeyHash (getVerificationKey key)))
