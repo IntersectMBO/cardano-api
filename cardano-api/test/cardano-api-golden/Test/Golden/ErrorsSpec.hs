@@ -57,6 +57,7 @@ import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Word
 import GHC.Exts (IsList (..))
@@ -382,6 +383,8 @@ test_TextEnvelopeError =
     [ TextEnvelopeTypeError [TextEnvelopeType string, TextEnvelopeType string] (TextEnvelopeType string)
     , TextEnvelopeDecodeError CBOR.DecoderErrorVoid
     , TextEnvelopeAesonDecodeError string
+    , TextEnvelopeUnknownKeyWitness $ TextEnvelopeDescr string
+    , TextEnvelopeUnknownType $ Text.pack string
     ]
 
 testPastHorizonValue :: Ledger.AlonzoContextError Ledger.AlonzoEra
