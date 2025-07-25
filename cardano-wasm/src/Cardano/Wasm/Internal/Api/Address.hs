@@ -17,8 +17,8 @@ import Cardano.Api
   , ToJSON
   , deserialiseFromBech32
   , deserialiseFromRawBytesHex
+  , deterministicSigningKey
   , fromNetworkMagic
-  , generateSigningKey
   , makeShelleyAddress
   , serialiseAddress
   , serialiseToBech32
@@ -26,7 +26,9 @@ import Cardano.Api
   , toNetworkMagic
   )
 
+import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
+import Cardano.Wasm.Internal.JavaScript.Random (getRandomBytes)
 
 import Data.Aeson ((.=))
 import Data.Aeson qualified as Aeson
@@ -70,7 +72,10 @@ instance FromJSON AddressObject where
 -- | Generate a simple payment address for mainnet.
 generateMainnetPaymentAddressImpl :: IO AddressObject
 generateMainnetPaymentAddressImpl = do
-  key <- generateSigningKey AsPaymentKey
+  let seedSize = deterministicSigningKeySeedSize AsPaymentKey
+  randomBytes <- getRandomBytes seedSize
+  let seed = mkSeedFromBytes randomBytes
+      key = deterministicSigningKey AsPaymentKey seed
   return (PaymentAddress Mainnet key)
 
 -- | Restore a mainnet payment address from a Bech32 encoded signing key.
@@ -82,7 +87,10 @@ restoreMainnetPaymentAddressFromSigningKeyBech32Impl signingKeyBech32 = do
 -- | Generate a simple payment address for testnet, given the testnet's network magic.
 generateTestnetPaymentAddressImpl :: Int -> IO AddressObject
 generateTestnetPaymentAddressImpl networkMagic = do
-  key <- generateSigningKey AsPaymentKey
+  let seedSize = deterministicSigningKeySeedSize AsPaymentKey
+  randomBytes <- getRandomBytes seedSize
+  let seed = mkSeedFromBytes randomBytes
+      key = deterministicSigningKey AsPaymentKey seed
   return (PaymentAddress (Testnet (NetworkMagic (fromIntegral networkMagic))) key)
 
 -- | Restore a testnet payment address from a Bech32 encoded signing key.

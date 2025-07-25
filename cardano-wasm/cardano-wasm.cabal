@@ -49,11 +49,14 @@ executable cardano-wasm
     Cardano.Wasm.Internal.JavaScript.Bridge
     Cardano.Wasm.Internal.JavaScript.GRPC
     Cardano.Wasm.Internal.JavaScript.GRPCTypes
+    Cardano.Wasm.Internal.JavaScript.Random
 
   build-depends:
     aeson,
     base,
+    bytestring,
     cardano-api,
+    cardano-crypto-class,
     cardano-ledger-api,
     cardano-strict-containers,
     containers,
@@ -63,6 +66,7 @@ executable cardano-wasm
 
   if arch(wasm32)
     build-depends:
+      base16-bytestring,
       ghc-experimental,
       utf8-string,
 

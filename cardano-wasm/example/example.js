@@ -56,7 +56,7 @@ async function do_async_work() {
     log(emptyTx);
 
     let tx = await emptyTx.addTxInput("be6efd42a3d7b9a00d09d77a5d41e55ceaf0bd093a8aa8a893ce70d9caafd978", 0)
-	.addSimpleTxOut("addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v", 10_000_000n)
+        .addSimpleTxOut("addr_test1vzpfxhjyjdlgk5c0xt8xw26avqxs52rtf69993j4tajehpcue4v2v", 10_000_000n)
 
     let feeEstimate = await tx.estimateMinFee(protocolParams, 1, 0, 0);
     log("Estimated fee:");
