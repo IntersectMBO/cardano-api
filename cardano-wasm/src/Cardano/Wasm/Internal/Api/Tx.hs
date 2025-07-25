@@ -30,9 +30,9 @@ import Cardano.Api.Plutus qualified as Shelley
 import Cardano.Api.Tx qualified as TxBody
 
 import Cardano.Ledger.Api qualified as Ledger
-import Cardano.Wasm.Internal.ExceptionHandling (justOrError, rightOrError)
+import Cardano.Wasm.Internal.ExceptionHandling (justOrError, rightOrError, toMonadFail)
 
-import Control.Monad.Catch (Exception (displayException), MonadThrow)
+import Control.Monad.Catch (MonadThrow)
 import Data.Aeson (ToJSON (toJSON), (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
@@ -216,12 +216,6 @@ alsoSignWithPaymentKeyImpl (SignedTxObject era (Exp.SignedTx tx)) signingKey =
      in SignedTxObject
           era
           (Exp.SignedTx txWithWits)
-
--- | Convert an 'Either' value to a 'MonadFail' monad. This can be useful for converting
--- MonadThrow monads into Aeson Parser monads, but it loses the stack trace information.
-toMonadFail :: (Exception e, MonadFail m) => Either e a -> m a
-toMonadFail (Left e) = fail $ displayException e
-toMonadFail (Right a) = return a
 
 -- | Convert a signed transaction object to a base16 encoded string of its CBOR representation.
 toCborImpl :: SignedTxObject -> String
