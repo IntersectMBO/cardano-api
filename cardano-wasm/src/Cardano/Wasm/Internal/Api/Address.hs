@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -71,7 +70,7 @@ instance FromJSON AddressObject where
 -- | Generate a simple payment address for mainnet.
 generateMainnetPaymentAddressImpl :: IO AddressObject
 generateMainnetPaymentAddressImpl = do
-  key <- generateSigningKey (AsPaymentKey)
+  key <- generateSigningKey AsPaymentKey
   return (PaymentAddress Mainnet key)
 
 -- | Restore a mainnet payment address from a Bech32 encoded signing key.
@@ -83,7 +82,7 @@ restoreMainnetPaymentAddressFromSigningKeyBech32Impl signingKeyBech32 = do
 -- | Generate a simple payment address for testnet, given the testnet's network magic.
 generateTestnetPaymentAddressImpl :: Int -> IO AddressObject
 generateTestnetPaymentAddressImpl networkMagic = do
-  key <- generateSigningKey (AsPaymentKey)
+  key <- generateSigningKey AsPaymentKey
   return (PaymentAddress (Testnet (NetworkMagic (fromIntegral networkMagic))) key)
 
 -- | Restore a testnet payment address from a Bech32 encoded signing key.

@@ -16,18 +16,18 @@ document.body.appendChild(output);
 
 function log(out) {
     console.log(out);
-    if (typeof(out) == "object") {
-	output.innerText += "> [object] {\n";
-	for (let [key, val] of Object.entries(out)) {
-	    let text = val.toString();
-	    if (typeof(val) == "function") {
-		text = text.split("{")[0];
-	    }
-	    output.innerText += "    " + key + ": " + text + "\n";
-	}
-	output.innerText += "  }\n";
+    if (typeof (out) == "object") {
+        output.innerText += "> [object] {\n";
+        for (let [key, val] of Object.entries(out)) {
+            let text = val.toString();
+            if (typeof (val) == "function") {
+                text = text.split("{")[0];
+            }
+            output.innerText += "    " + key + ": " + text + "\n";
+        }
+        output.innerText += "  }\n";
     } else {
-	output.innerText += "> " + JSON.stringify(out) + "\n";
+        output.innerText += "> " + JSON.stringify(out) + "\n";
     }
 }
 
@@ -43,6 +43,14 @@ async function do_async_work() {
     log("Api object:");
     log(api);
 
+    let PREVIEW_MAGIC_NUMBER = 2;
+    let secretKey = "addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms";
+    let address = await api.restoreTestnetPaymentAddressFromSigningKeyBech32(PREVIEW_MAGIC_NUMBER, secretKey);
+    let bech32Address = await address.getAddressBech32();
+
+    log("Bech32 of address:");
+    log(bech32Address);
+
     let emptyTx = await api.newConwayTx();
     log("UnsignedTx object:");
     log(emptyTx);
@@ -55,7 +63,7 @@ async function do_async_work() {
     log(feeEstimate);
 
     let signedTx = await tx.setFee(feeEstimate)
-	.signWithPaymentKey("addr_sk1648253w4tf6fv5fk28dc7crsjsaw7d9ymhztd4favg3cwkhz7x8sl5u3ms");
+        .signWithPaymentKey(secretKey);
     log("SignedTx object:");
     log(signedTx);
 
