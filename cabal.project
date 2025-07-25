@@ -152,6 +152,11 @@ if arch(wasm32)
   package crypton
     ghc-options: -optc-DARGON2_NO_THREADS
 
+  -- make digest not look for zlib in pkg-config, which is desired on WASM
+  package digest
+     flags: -pkg-config
+
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
