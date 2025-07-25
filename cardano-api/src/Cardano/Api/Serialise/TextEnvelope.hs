@@ -33,8 +33,11 @@ module Cardano.Api.Serialise.TextEnvelope
     -- ** Reading one of several transaction or key witness types
   , readFileTextEnvelopeCddlAnyOf
   , deserialiseFromTextEnvelopeCddlAnyOf
+  , writeTxFileTextEnvelope
   , writeTxFileTextEnvelopeCddl
+  , writeTxFileTextEnvelopeCanonical
   , writeTxFileTextEnvelopeCanonicalCddl
+  , writeTxWitnessFileTextEnvelope
   , writeTxWitnessFileTextEnvelopeCddl
   -- Exported for testing
   , deserialiseByronTxCddl
@@ -43,9 +46,11 @@ module Cardano.Api.Serialise.TextEnvelope
 
     -- ** Byron tx serialization
   , serializeByronTx
+  , deserializeByronTx
   , writeByronTxFileTextEnvelopeCddl
   )
 where
 
 import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Serialise.TextEnvelope.Internal.Cddl
+import Cardano.Api.Tx.Internal.Sign
