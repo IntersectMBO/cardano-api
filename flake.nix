@@ -206,6 +206,7 @@
             wasm = wasm-pkgs.mkShell {
               packages = [
                 wasm-pkgs.curl
+                wasm-pkgs.git
                 inputs.ghc-wasm-meta.packages.${system}.all_9_10
                 wasm-pkgs.pkg-config
                 wasm.libsodium
