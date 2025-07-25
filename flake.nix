@@ -205,6 +205,7 @@
           lib.optionalAttrs (system != "x86_64-darwin") {
             wasm = wasm-pkgs.mkShell {
               packages = [
+                wasm-pkgs.curl
                 inputs.ghc-wasm-meta.packages.${system}.all_9_10
                 wasm-pkgs.pkg-config
                 wasm.libsodium
