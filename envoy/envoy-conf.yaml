@@ -165,4 +165,4 @@ static_resources:
         - endpoint:
             address:
               pipe:
-                path: /Users/palas/work/cardano-api/rpc.socket
+                path: /home/mgalazyn/workspace/iohk/cardano-api/rpc.socket
