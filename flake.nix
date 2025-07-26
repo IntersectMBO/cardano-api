@@ -205,10 +205,11 @@
           lib.optionalAttrs (system != "x86_64-darwin") {
             wasm = wasm-pkgs.mkShell {
               packages = [
+                wasm-pkgs.pkg-config
                 wasm-pkgs.curl
                 wasm-pkgs.git
+                wasm-pkgs.envoy
                 inputs.ghc-wasm-meta.packages.${system}.all_9_10
-                wasm-pkgs.pkg-config
                 wasm.libsodium
                 wasm.secp256k1
                 wasm.blst
