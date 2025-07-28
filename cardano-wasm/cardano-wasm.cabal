@@ -54,6 +54,8 @@ executable cardano-wasm
   build-depends:
     aeson,
     base,
+    base16-bytestring,
+    base64-bytestring,
     bytestring,
     cardano-api,
     cardano-crypto-class,

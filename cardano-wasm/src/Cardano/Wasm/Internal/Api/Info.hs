@@ -259,6 +259,13 @@ apiInfo =
                   , methodReturnType = OtherType "number"
                   , methodReturnDoc = "A promise that resolves to the current era number."
                   }
+              , MethodInfo
+                  { methodName = "submitTx"
+                  , methodDoc = "Submit a signed and CBOR-encoded transaction to the Cardano node."
+                  , methodParams = [ParamInfo "txCbor" "string" "The CBOR-encoded transaction as a hex string."]
+                  , methodReturnType = OtherType "string"
+                  , methodReturnDoc = "A promise that resolves to the transaction ID."
+                  }
               ]
           }
    in ApiInfo
