@@ -4,10 +4,22 @@
   <script type="module" src="./cardano_node_grpc_web_pb.js"></script>
   <script type="module">
     console.log(cardano_node);
-    //const node = new grpc.NodePromiseClient("http://localhost:8080", null, null);
-    // const empty = new proto.Empty();
-    // const eraPromise = node.getEra(empty, {});
-    //eraPromise.then((era) => { console.log(Object.keys(grpc.Era).filter(function(key) {return grpc.Era[key] === era.getEra()})[0]); }, (err) => { console.error(err); });
+
+    const submit = new cardano_node.submit.SubmitServicePromiseClient("http://localhost:8080", null, null)
+    let txBytes = new Uint8Array(3);
+    let tx = new cardano_node.submit.AnyChainTx();
+    let txList = new cardano_node.submit.SubmitTxRequest();
+    tx.setRaw(txBytes);
+    txList.addTx(tx);
+    submit.submitTx(txList, null).then((val) =>
+            console.log((val.toObject().resultsList[0].ref == "")?(val.toObject().resultsList[0].errorMessage):(val.toObject().resultsList[0].ref))
+	    );
+
+//    const node = new .NodePromiseClient("http://localhost:8080", null, null);
+//    const empty = new proto.Empty();
+//    const eraPromise = node.getEra(empty, {});
+//    eraPromise.then((era) => { console.log(Object.keys(grpc.Era).filter(function(key) {return node.Era[key] === era.getEra()})[0]); }, (err) => { console.error(err); });
+
     const query = new cardano_node.query.QueryServicePromiseClient("http://localhost:8080", null, null);
     const pparams = query.readParams(new proto.PParams(), null);
     console.log(pparams);
