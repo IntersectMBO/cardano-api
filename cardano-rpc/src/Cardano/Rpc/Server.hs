@@ -7,7 +7,6 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Rpc.Server
   ( runRpcServer
@@ -21,6 +20,7 @@ import Cardano.Rpc.Proto.Api.UtxoRpc.Submit qualified as UtxoRpc
 import Cardano.Rpc.Server.Config
 import Cardano.Rpc.Server.Internal.Env
 import Cardano.Rpc.Server.Internal.Monad
+import Cardano.Rpc.Server.Internal.Node
 import Cardano.Rpc.Server.Internal.Orphans ()
 import Cardano.Rpc.Server.Internal.UtxoRpc.Query
 import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
@@ -28,31 +28,20 @@ import Cardano.Rpc.Server.Internal.UtxoRpc.Submit
 import RIO
 
 import Control.Tracer
-import Data.ProtoLens (defMessage)
-import Data.ProtoLens.Field (field)
 import Network.GRPC.Common
 import Network.GRPC.Server
 import Network.GRPC.Server.Protobuf
 import Network.GRPC.Server.Run
 import Network.GRPC.Server.StreamType
-import Network.GRPC.Spec hiding (Identity)
-
-import Proto.Google.Protobuf.Empty
-
--- Individual handlers
-
-getEraMethod :: MonadRpc e m => Proto Empty -> m (Proto Rpc.CurrentEra)
-getEraMethod _ = pure mockNodeResponse
-
--- Mock node response
-mockNodeResponse :: Proto Rpc.CurrentEra
-mockNodeResponse = Proto $ defMessage & field @"era" .~ Rpc.Conway
 
 -- Server top level
 methodsNodeRpc
   :: MonadRpc e m
   => Methods m (ProtobufMethodsOf Rpc.Node)
-methodsNodeRpc = Method (mkNonStreaming getEraMethod) NoMoreMethods
+methodsNodeRpc =
+  Method (mkNonStreaming getEraMethod)
+    . Method (mkNonStreaming getProtocolParamsJsonMethod)
+    $ NoMoreMethods
 
 methodsUtxoRpc
   :: MonadRpc e m
