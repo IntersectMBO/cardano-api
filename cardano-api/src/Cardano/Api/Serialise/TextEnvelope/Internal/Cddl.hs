@@ -48,6 +48,7 @@ import Cardano.Api.Serialise.TextEnvelope.Internal
   , serialiseTextEnvelope
   , serialiseToTextEnvelope
   )
+import Cardano.Api.Tx.Internal.Serialise
 import Cardano.Api.Tx.Internal.Sign
 
 import Cardano.Chain.UTxO qualified as Byron
@@ -139,9 +140,9 @@ writeByronTxFileTextEnvelopeCddl
 writeByronTxFileTextEnvelopeCddl path =
   writeLazyByteStringFile path
     . serialiseTextEnvelope
-    . serializeByronTx
+    . serialiseByronTx
 
-{-# DEPRECATED deserialiseByronTxCddl "Use deserializeByronTx instead." #-}
+{-# DEPRECATED deserialiseByronTxCddl "Use deserialiseByronTx instead." #-}
 deserialiseByronTxCddl :: TextEnvelope -> Either TextEnvelopeCddlError (Byron.ATxAux ByteString)
 deserialiseByronTxCddl tec =
   first TextEnvelopeCddlErrCBORDecodingError $

@@ -45,12 +45,13 @@ module Cardano.Api.Serialise.TextEnvelope
   , deserialiseWitnessLedgerCddl
 
     -- ** Byron tx serialization
-  , serializeByronTx
-  , deserializeByronTx
+  , serialiseByronTx
+  , deserialiseByronTx
   , writeByronTxFileTextEnvelopeCddl
   )
 where
 
 import Cardano.Api.Serialise.TextEnvelope.Internal
 import Cardano.Api.Serialise.TextEnvelope.Internal.Cddl
+import Cardano.Api.Tx.Internal.Serialise
 import Cardano.Api.Tx.Internal.Sign
