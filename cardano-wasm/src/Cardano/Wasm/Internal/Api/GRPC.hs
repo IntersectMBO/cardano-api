@@ -1,6 +1,11 @@
 module Cardano.Wasm.Internal.Api.GRPC where
 
+import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
 import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
+
+import Data.ByteString.Base16 qualified as Base16
+import Data.ByteString.Base64 qualified as Base64
+import Data.ByteString.Char8 qualified as BS
 
 -- | Internal data for the GrpcConnection virtual object. Currently, it is just a wrapper around the JSGRPCClient,
 -- which is a JavaScript object that allows us to interact with the Cardano Node via gRPC-web.
@@ -14,3 +19,18 @@ newGrpcConnectionImpl createClientJsFunc host = GrpcObject <$> createClientJsFun
 -- | Get the era from the Cardano Node using GRPC-web.
 getEraImpl :: (JSGRPCClient -> IO Int) -> GrpcObject -> IO Int
 getEraImpl getEraJsFunc (GrpcObject client) = getEraJsFunc client
+
+-- | Submit a transaction to the Cardano Node using GRPC-web.
+submitTxImpl
+  :: (JSGRPCClient -> String -> IO (Either String String))
+  -> GrpcObject
+  -> String
+  -> IO String
+submitTxImpl submitTxJsFunc (GrpcObject client) tx =
+  toMonadFail . rightOrError . (base64ToBase16 =<<) =<< submitTxJsFunc client tx
+ where
+  -- We reencode as Base16 because it is a more common format for txIds
+  base64ToBase16 :: String -> Either String String
+  base64ToBase16 encoded = do
+    decoded <- Base64.decode $ BS.pack encoded
+    return $ BS.unpack $ Base16.encode decoded
