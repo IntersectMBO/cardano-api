@@ -102,6 +102,12 @@ declare interface GrpcConnection {
      * @returns A promise that resolves to the transaction ID.
      */
     submitTx(txCbor: string): Promise<string>;
+
+    /**
+     * Get the protocol parameters in the cardano-ledger format from the Cardano Node using a GRPC-web client.
+     * @returns A promise that resolves to the current protocol parameters.
+     */
+    getProtocolParams(): Promise<any>;
 }
 
 /**

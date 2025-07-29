@@ -4,9 +4,10 @@
 module Cardano.Wasm.Internal.JavaScript.GRPC where
 #else
 
-module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx) where
+module Cardano.Wasm.Internal.JavaScript.GRPC (js_newWebGrpcClient, js_getEra, js_submitTx, js_getProtocolParams) where
 
 import GHC.Wasm.Prim
+import Cardano.Wasm.Internal.Api.Tx (ProtocolParamsJSON(..))
 
 -- | Create a GRPC-web client for the Cardano API.
 foreign import javascript safe "{ node: new cardano_node.node.NodePromiseClient($1, null, null), \
@@ -21,6 +22,13 @@ js_newWebGrpcClient = js_newWebGrpcClientImpl . toJSString
 -- | Get the era from the Cardano API using a GRPC-web client.
 foreign import javascript safe "($1).node.getEra(new proto.Empty(), {})"
   js_getEra :: JSVal -> IO Int
+
+foreign import javascript safe "atob((await ($1).node.getProtocolParamsJson(new proto.Empty(), {})).toObject().json)"
+  js_getProtocolParamsImpl :: JSVal -> IO JSString
+
+js_getProtocolParams :: JSVal -> IO ProtocolParamsJSON
+js_getProtocolParams client =
+  ProtocolParamsJSON . fromJSString <$> js_getProtocolParamsImpl client
 
 -- | Submit a transaction to the Cardano API using a GRPC-web client.
 foreign import javascript safe "{ let tx = new cardano_node.submit.AnyChainTx(); \

@@ -45,6 +45,11 @@ async function do_async_work() {
     log("Era number:");
     log(eraNum);
 
+    let pparams = await grpcApi.getProtocolParams();
+    log("Protocol Parameters:");
+    log(pparams);
+    console.log(typeof pparams);
+
     finish_test();
 }
 

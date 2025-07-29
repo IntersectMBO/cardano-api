@@ -21,11 +21,11 @@ import Cardano.Wasm.Internal.Api.GRPC qualified as Wasm
 import Cardano.Wasm.Internal.Api.Info (apiInfo)
 import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError)
-import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient, js_submitTx)
+import Cardano.Wasm.Internal.JavaScript.GRPC (js_getEra, js_newWebGrpcClient, js_submitTx, js_getProtocolParams)
 import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
 
 import Control.Exception (evaluate)
-import Control.Monad (join)
+import Control.Monad 
 import Data.Aeson qualified as Aeson
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Text (Text)
@@ -133,6 +133,9 @@ instance ToJSVal String JSString where
   toJSVal :: String -> IO JSString
   toJSVal = return . toJSString
 
+instance ToJSVal Wasm.ProtocolParamsJSON JSProtocolParams where
+  toJSVal (Wasm.ProtocolParamsJSON json) = js_parse $ toJSString json
+
 instance ToJSVal Wasm.GrpcObject JSGrpc where
   toJSVal :: Wasm.GrpcObject -> IO JSGrpc
   toJSVal (Wasm.GrpcObject client) = return client
@@ -171,7 +174,7 @@ instance FromJSVal JSTxIx Api.TxIx where
   fromJSVal :: JSTxIx -> IO Api.TxIx
   fromJSVal = return . Api.TxIx . fromIntegral
 
-instance FromJSVal JSVal Wasm.ProtocolParamsJSON where
+instance FromJSVal JSProtocolParams Wasm.ProtocolParamsJSON where
   fromJSVal = fmap Wasm.ProtocolParamsJSON . jsValToJSONString
 
 instance FromJSVal JSGrpc Wasm.GrpcObject where
@@ -357,6 +360,9 @@ foreign export javascript "newGrpcConnection"
 foreign export javascript "getEra"
   getEra :: JSGrpc -> IO Int
 
+foreign export javascript "getProtocolParams"
+  getProtocolParams :: JSGrpc -> IO JSVal
+
 foreign export javascript "submitTx"
   submitTx :: JSGrpc -> JSString -> IO JSString
 
@@ -367,6 +373,10 @@ newGrpcConnection webGrpcUrl = toJSVal =<< join (Wasm.newGrpcConnectionImpl js_n
 -- | Get the era from the Cardano Node using GRPC-web.
 getEra :: HasCallStack => JSGrpc -> IO Int
 getEra grpcObject = Wasm.getEraImpl js_getEra =<< fromJSVal grpcObject
+
+-- | Get the protocol parameters from the Cardano Node using GRPC-web.
+getProtocolParams :: HasCallStack => JSGrpc -> IO JSProtocolParams
+getProtocolParams = toJSVal <=< Wasm.getProtocolParamsImpl js_getProtocolParams <=< fromJSVal
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTx :: HasCallStack => JSGrpc -> JSString -> IO JSString
