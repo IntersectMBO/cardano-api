@@ -127,12 +127,12 @@ apiInfo =
   let unsignedTxObjectName = "UnsignedTx"
       signedTxObjectName = "SignedTx"
       grpcConnectionName = "GrpcConnection"
-      addressObjectName = "Address"
+      walletObjectName = "Wallet"
 
-      addressObj =
+      walletObj =
         VirtualObjectInfo
-          { virtualObjectName = addressObjectName
-          , virtualObjectDoc = "Represents an address."
+          { virtualObjectName = walletObjectName
+          , virtualObjectDoc = "Represents a wallet."
           , virtualObjectMethods =
               [ MethodInfo
                   { methodName = "getAddressBech32"
@@ -144,7 +144,7 @@ apiInfo =
               , MethodInfo
                   { methodName = "getBech32ForVerificationKey"
                   , methodDoc =
-                      "Get the Bech32 representation of the verification key of the address. (Can be shared for verification.)"
+                      "Get the Bech32 representation of the verification key of the wallet. (Can be shared for verification.)"
                   , methodParams = []
                   , methodReturnType = OtherType "string"
                   , methodReturnDoc = "The Bech32 representation of the verification key."
@@ -152,14 +152,14 @@ apiInfo =
               , MethodInfo
                   { methodName = "getBech32ForSigningKey"
                   , methodDoc =
-                      "Get the Bech32 representation of the signing key of the address. (Must be kept secret.)"
+                      "Get the Bech32 representation of the signing key of the wallet. (Must be kept secret.)"
                   , methodParams = []
                   , methodReturnType = OtherType "string"
                   , methodReturnDoc = "The Bech32 representation of the signing key."
                   }
               , MethodInfo
                   { methodName = "getBase16ForVerificationKeyHash"
-                  , methodDoc = "Get the base16 representation of the hash of the verification key of the address."
+                  , methodDoc = "Get the base16 representation of the hash of the verification key of the wallet."
                   , methodParams = []
                   , methodReturnType = OtherType "string"
                   , methodReturnDoc = "The base16 representation of the verification key hash."
@@ -282,39 +282,39 @@ apiInfo =
                       , methodReturnDoc = "A promise that resolves to a new `GrpcConnection`."
                       }
                   , MethodInfo
-                      { methodName = "generateMainnetPaymentAddress"
-                      , methodDoc = "Generate a simple payment address for mainnet."
+                      { methodName = "generateMainnetPaymentWallet"
+                      , methodDoc = "Generate a simple payment wallet for mainnet."
                       , methodParams = []
-                      , methodReturnType = NewObject addressObjectName
-                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
-                      { methodName = "restoreMainnetPaymentAddressFromSigningKeyBech32"
-                      , methodDoc = "Restore a mainnet payment address from a Bech32 encoded signing key."
+                      { methodName = "restoreMainnetPaymentWalletFromSigningKeyBech32"
+                      , methodDoc = "Restore a mainnet payment wallet from a Bech32 encoded signing key."
                       , methodParams = [ParamInfo "signingKeyBech32" "string" "The Bech32 encoded signing key."]
-                      , methodReturnType = NewObject addressObjectName
-                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
-                      { methodName = "generateTestnetPaymentAddress"
-                      , methodDoc = "Generate a simple payment address for testnet, given the testnet's network magic."
+                      { methodName = "generateTestnetPaymentWallet"
+                      , methodDoc = "Generate a simple payment wallet for testnet, given the testnet's network magic."
                       , methodParams = [ParamInfo "networkMagic" "number" "The network magic for the testnet."]
-                      , methodReturnType = NewObject addressObjectName
-                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   , MethodInfo
-                      { methodName = "restoreTestnetPaymentAddressFromSigningKeyBech32"
-                      , methodDoc = "Restore a testnet payment address from a Bech32 encoded signing key."
+                      { methodName = "restoreTestnetPaymentWalletFromSigningKeyBech32"
+                      , methodDoc = "Restore a testnet payment wallet from a Bech32 encoded signing key."
                       , methodParams =
                           [ ParamInfo "networkMagic" "number" "The network magic for the testnet."
                           , ParamInfo "signingKeyBech32" "string" "The Bech32 encoded signing key."
                           ]
-                      , methodReturnType = NewObject addressObjectName
-                      , methodReturnDoc = "A promise that resolves to a new `Address` object."
+                      , methodReturnType = NewObject walletObjectName
+                      , methodReturnDoc = "A promise that resolves to a new `Wallet` object."
                       }
                   ]
               }
-        , virtualObjects = [unsignedTxObj, signedTxObj, grpcConnection, addressObj]
+        , virtualObjects = [unsignedTxObj, signedTxObj, grpcConnection, walletObj]
         , initialiseFunctionDoc = "Initialises the Cardano API."
         , initialiseFunctionReturnDoc = "A promise that resolves to the main `CardanoAPI` object."
         }

@@ -98,11 +98,11 @@ declare interface GrpcConnection {
 }
 
 /**
- * Represents an address.
+ * Represents a wallet.
  */
-declare interface Address {
+declare interface Wallet {
     /**
-     * The type of the object, used for identification (the "Address" string).
+     * The type of the object, used for identification (the "Wallet" string).
      */
     objectType: string;
 
@@ -113,19 +113,19 @@ declare interface Address {
     getAddressBech32(): Promise<string>;
 
     /**
-     * Get the Bech32 representation of the verification key of the address. (Can be shared for verification.)
+     * Get the Bech32 representation of the verification key of the wallet. (Can be shared for verification.)
      * @returns The Bech32 representation of the verification key.
      */
     getBech32ForVerificationKey(): Promise<string>;
 
     /**
-     * Get the Bech32 representation of the signing key of the address. (Must be kept secret.)
+     * Get the Bech32 representation of the signing key of the wallet. (Must be kept secret.)
      * @returns The Bech32 representation of the signing key.
      */
     getBech32ForSigningKey(): Promise<string>;
 
     /**
-     * Get the base16 representation of the hash of the verification key of the address.
+     * Get the base16 representation of the hash of the verification key of the wallet.
      * @returns The base16 representation of the verification key hash.
      */
     getBase16ForVerificationKeyHash(): Promise<string>;
@@ -154,31 +154,31 @@ declare interface CardanoAPI {
     newGrpcConnection(webGrpcUrl: string): Promise<GrpcConnection>;
 
     /**
-     * Generate a simple payment address for mainnet.
-     * @returns A promise that resolves to a new `Address` object.
+     * Generate a simple payment wallet for mainnet.
+     * @returns A promise that resolves to a new `Wallet` object.
      */
-    generateMainnetPaymentAddress(): Promise<Address>;
+    generateMainnetPaymentWallet(): Promise<Wallet>;
 
     /**
-     * Restore a mainnet payment address from a Bech32 encoded signing key.
+     * Restore a mainnet payment wallet from a Bech32 encoded signing key.
      * @param signingKeyBech32 The Bech32 encoded signing key.
-     * @returns A promise that resolves to a new `Address` object.
+     * @returns A promise that resolves to a new `Wallet` object.
      */
-    restoreMainnetPaymentAddressFromSigningKeyBech32(signingKeyBech32: string): Promise<Address>;
+    restoreMainnetPaymentWalletFromSigningKeyBech32(signingKeyBech32: string): Promise<Wallet>;
 
     /**
-     * Generate a simple payment address for testnet, given the testnet's network magic.
+     * Generate a simple payment wallet for testnet, given the testnet's network magic.
      * @param networkMagic The network magic for the testnet.
-     * @returns A promise that resolves to a new `Address` object.
+     * @returns A promise that resolves to a new `Wallet` object.
      */
-    generateTestnetPaymentAddress(networkMagic: number): Promise<Address>;
+    generateTestnetPaymentWallet(networkMagic: number): Promise<Wallet>;
 
     /**
-     * Restore a testnet payment address from a Bech32 encoded signing key.
+     * Restore a testnet payment wallet from a Bech32 encoded signing key.
      * @param networkMagic The network magic for the testnet.
      * @param signingKeyBech32 The Bech32 encoded signing key.
-     * @returns A promise that resolves to a new `Address` object.
+     * @returns A promise that resolves to a new `Wallet` object.
      */
-    restoreTestnetPaymentAddressFromSigningKeyBech32(networkMagic: number, signingKeyBech32: string): Promise<Address>;
+    restoreTestnetPaymentWalletFromSigningKeyBech32(networkMagic: number, signingKeyBech32: string): Promise<Wallet>;
 }
 

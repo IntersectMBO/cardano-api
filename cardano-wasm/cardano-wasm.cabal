@@ -39,12 +39,12 @@ executable cardano-wasm
       -optl-mexec-model=reactor
       "-optl-Wl,--strip-all"
   other-modules:
-    Cardano.Wasm.Internal.Api.Address
     Cardano.Wasm.Internal.Api.GRPC
     Cardano.Wasm.Internal.Api.Info
     Cardano.Wasm.Internal.Api.InfoToTypeScript
     Cardano.Wasm.Internal.Api.Tx
     Cardano.Wasm.Internal.Api.TypeScriptDefs
+    Cardano.Wasm.Internal.Api.Wallet
     Cardano.Wasm.Internal.ExceptionHandling
     Cardano.Wasm.Internal.JavaScript.Bridge
     Cardano.Wasm.Internal.JavaScript.GRPC
