@@ -1,5 +1,6 @@
 module Cardano.Wasm.Internal.Api.GRPC where
 
+import Cardano.Wasm.Internal.Api.Tx qualified as Wasm
 import Cardano.Wasm.Internal.ExceptionHandling (rightOrError, toMonadFail)
 import Cardano.Wasm.Internal.JavaScript.GRPCTypes (JSGRPCClient)
 
@@ -19,6 +20,11 @@ newGrpcConnectionImpl createClientJsFunc host = GrpcObject <$> createClientJsFun
 -- | Get the era from the Cardano Node using GRPC-web.
 getEraImpl :: (JSGRPCClient -> IO Int) -> GrpcObject -> IO Int
 getEraImpl getEraJsFunc (GrpcObject client) = getEraJsFunc client
+
+-- | Get the protocol parameters from the Cardano Node using GRPC-web.
+getProtocolParamsImpl
+  :: (JSGRPCClient -> IO Wasm.ProtocolParamsJSON) -> GrpcObject -> IO Wasm.ProtocolParamsJSON
+getProtocolParamsImpl getProtocolParamsJsFunc (GrpcObject client) = getProtocolParamsJsFunc client
 
 -- | Submit a transaction to the Cardano Node using GRPC-web.
 submitTxImpl
