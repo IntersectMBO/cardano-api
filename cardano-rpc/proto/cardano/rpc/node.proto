@@ -5,9 +5,9 @@ package cardano.rpc;
 import "google/protobuf/empty.proto";
 
 service Node {
-
     rpc GetEra(google.protobuf.Empty) returns (CurrentEra) {}
 
+    rpc GetPParamsJson(google.protobuf.Empty) returns (PParamsJson) {}
 }
 
 enum Era {
@@ -22,6 +22,10 @@ enum Era {
 
 
 message CurrentEra {
-   Era era = 1;
+    Era era = 1;
+}
+
+message PParamsJson {
+    bytes json = 1; // JSON representation of the protocol parameters
 }
 

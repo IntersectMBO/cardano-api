@@ -75,6 +75,7 @@ library
     Cardano.Rpc.Server.Internal.Env
     Cardano.Rpc.Server.Internal.Error
     Cardano.Rpc.Server.Internal.Monad
+    Cardano.Rpc.Server.Internal.Node
     Cardano.Rpc.Server.Internal.UtxoRpc.Query
     Cardano.Rpc.Server.Internal.UtxoRpc.Submit
     Cardano.Rpc.Server.Internal.UtxoRpc.Type
@@ -103,6 +104,7 @@ library
     Proto.Utxorpc.V1alpha.Submit.Submit_Fields
 
   build-depends:
+    aeson,
     base,
     bytestring,
     cardano-api >=10.17,
