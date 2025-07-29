@@ -1,3 +1,4 @@
+//@ts-check
 import cardano_api from "./cardano-api.js";
 
 let promise = cardano_api();

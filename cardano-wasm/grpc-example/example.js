@@ -1,3 +1,4 @@
+//@ts-check
 import cardano_api from "./cardano-api.js";
 
 let promise = cardano_api();
@@ -9,18 +10,18 @@ document.body.appendChild(output);
 
 function log(out) {
     console.log(out);
-    if (typeof(out) == "object") {
-	output.innerText += "> [object] {\n";
-	for (let [key, val] of Object.entries(out)) {
-	    let text = val.toString();
-	    if (typeof(val) == "function") {
-		text = text.split("{")[0];
-	    }
-	    output.innerText += "    " + key + ": " + text + "\n";
-	}
-	output.innerText += "  }\n";
+    if (typeof (out) == "object") {
+        output.innerText += "> [object] {\n";
+        for (let [key, val] of Object.entries(out)) {
+            let text = val.toString();
+            if (typeof (val) == "function") {
+                text = text.split("{")[0];
+            }
+            output.innerText += "    " + key + ": " + text + "\n";
+        }
+        output.innerText += "  }\n";
     } else {
-	output.innerText += "> " + JSON.stringify(out) + "\n";
+        output.innerText += "> " + JSON.stringify(out) + "\n";
     }
 }
 
