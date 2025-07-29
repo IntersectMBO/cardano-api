@@ -74,6 +74,7 @@ cardano-tracer/cardano-tracer-test
 
 # IntellIJ project folder
 .idea/
+
 cardano-wasm/grpc-example/cardano-wasm.wasm
 cardano-wasm/grpc-example/cardano-wasm.js
 cardano-wasm/grpc-example/cardano-api.d.ts
@@ -83,3 +84,6 @@ cardano-wasm/example/cardano-wasm.wasm
 cardano-wasm/example/cardano-wasm.js
 cardano-wasm/example/cardano-api.d.ts
 cardano-wasm/example/cardano-api.js
+.ghc-wasm/
+
+
