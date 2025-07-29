@@ -312,8 +312,7 @@ To run the example in the `grpc-example` subfolder:
     ```
 7.  Run `envoy -c envoy-conf.yaml` from the `grpc-example` subfolder.
     ```bash
-    cd cardano-wasm/grpc-example/
-    envoy -c envoy-conf.yaml
+    (cd cardano-wasm/grpc-example/ ; envoy -c envoy-conf.yaml)
     ```
 8.  Open your web browser and navigate to `http://localhost:8080/`. You should see a page titled `Test Output` with the results of the test.
 
