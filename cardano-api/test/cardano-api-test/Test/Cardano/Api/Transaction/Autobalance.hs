@@ -651,6 +651,7 @@ loadPlutusWitness ceo = do
     H.leftFail $ deserialiseFromTextEnvelopeAnyOf textEnvTypes envelope
   let scriptLangInEra = case ceo of
         ConwayEraOnwardsConway -> PlutusScriptV3InConway
+        ConwayEraOnwardsDijkstra -> PlutusScriptV3InDijkstra
   pure
     ( hashScript s
     , PlutusScriptWitness

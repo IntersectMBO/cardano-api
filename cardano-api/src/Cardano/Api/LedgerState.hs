@@ -1290,6 +1290,11 @@ getNewEpochState era x = do
         ConwayLedgerState conwayCurrent ->
           pure $ Shelley.shelleyLedgerState $ unFlip $ currentState conwayCurrent
         _ -> Left err
+    ShelleyBasedEraDijkstra ->
+      case tip of
+        DijkstraLedgerState dijkstraCurrent ->
+          pure $ Shelley.shelleyLedgerState $ unFlip $ currentState dijkstraCurrent
+        _ -> Left err
 
 {-# COMPLETE
   ShelleyLedgerState
@@ -1359,6 +1364,16 @@ pattern ConwayLedgerState
        )
   -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
 pattern ConwayLedgerState x = S (S (S (S (S (S (Z x))))))
+
+pattern DijkstraLedgerState
+  :: Current
+       (Flip Consensus.LedgerState mk)
+       ( Shelley.ShelleyBlock
+           (Praos.Praos Ledger.StandardCrypto)
+           Consensus.DijkstraEra
+       )
+  -> NS (Current (Flip Consensus.LedgerState mk)) (Consensus.CardanoEras Consensus.StandardCrypto)
+pattern DijkstraLedgerState x = S (S (S (S (S (S (S (Z x)))))))
 
 encodeLedgerState :: LedgerState -> CBOR.Encoding
 encodeLedgerState (LedgerState hst@(HFC.HardForkLedgerState st) tbs) =
@@ -2267,6 +2282,7 @@ getLedgerTablesUTxOValues sbe tbs =
       ShelleyBasedEraAlonzo -> ejectTables (IS (IS (IS (IS IZ))))
       ShelleyBasedEraBabbage -> ejectTables (IS (IS (IS (IS (IS IZ)))))
       ShelleyBasedEraConway -> ejectTables (IS (IS (IS (IS (IS (IS IZ))))))
+      ShelleyBasedEraDijkstra -> ejectTables (IS (IS (IS (IS (IS (IS (IS IZ)))))))
 
 -- | Reconstructs the ledger's new epoch state and applies a supplied condition to it for every block. This
 -- function only terminates if the condition is met or we have reached the termination epoch. We need to
