@@ -51,6 +51,7 @@ import Data.Typeable (Typeable)
 data BabbageEraOnwards era where
   BabbageEraOnwardsBabbage :: BabbageEraOnwards BabbageEra
   BabbageEraOnwardsConway :: BabbageEraOnwards ConwayEra
+  BabbageEraOnwardsDijkstra :: BabbageEraOnwards DijkstraEra
 
 deriving instance Show (BabbageEraOnwards era)
 
@@ -65,11 +66,13 @@ instance Eon BabbageEraOnwards where
     AlonzoEra -> no
     BabbageEra -> yes BabbageEraOnwardsBabbage
     ConwayEra -> yes BabbageEraOnwardsConway
+    DijkstraEra -> yes BabbageEraOnwardsDijkstra
 
 instance ToCardanoEra BabbageEraOnwards where
   toCardanoEra = \case
     BabbageEraOnwardsBabbage -> BabbageEra
     BabbageEraOnwardsConway -> ConwayEra
+    BabbageEraOnwardsDijkstra -> DijkstraEra
 
 instance Convert BabbageEraOnwards CardanoEra where
   convert = toCardanoEra
@@ -78,16 +81,19 @@ instance Convert BabbageEraOnwards ShelleyBasedEra where
   convert = \case
     BabbageEraOnwardsBabbage -> ShelleyBasedEraBabbage
     BabbageEraOnwardsConway -> ShelleyBasedEraConway
+    BabbageEraOnwardsDijkstra -> ShelleyBasedEraDijkstra
 
 instance Convert BabbageEraOnwards MaryEraOnwards where
   convert = \case
     BabbageEraOnwardsBabbage -> MaryEraOnwardsBabbage
     BabbageEraOnwardsConway -> MaryEraOnwardsConway
+    BabbageEraOnwardsDijkstra -> MaryEraOnwardsDijkstra
 
 instance Convert BabbageEraOnwards AlonzoEraOnwards where
   convert = \case
     BabbageEraOnwardsBabbage -> AlonzoEraOnwardsBabbage
     BabbageEraOnwardsConway -> AlonzoEraOnwardsConway
+    BabbageEraOnwardsDijkstra -> AlonzoEraOnwardsDijkstra
 
 type BabbageEraOnwardsConstraints era =
   ( C.HashAlgorithm L.HASH
@@ -131,6 +137,7 @@ babbageEraOnwardsConstraints
 babbageEraOnwardsConstraints = \case
   BabbageEraOnwardsBabbage -> id
   BabbageEraOnwardsConway -> id
+  BabbageEraOnwardsDijkstra -> id
 
 {-# DEPRECATED babbageEraOnwardsToShelleyBasedEra "Use 'convert' instead." #-}
 babbageEraOnwardsToShelleyBasedEra :: BabbageEraOnwards era -> ShelleyBasedEra era

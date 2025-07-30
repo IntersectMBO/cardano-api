@@ -57,6 +57,7 @@ instance Eon ShelleyEraOnly where
     AlonzoEra -> no
     BabbageEra -> no
     ConwayEra -> no
+    DijkstraEra -> no
 
 instance ToCardanoEra ShelleyEraOnly where
   toCardanoEra = \case
